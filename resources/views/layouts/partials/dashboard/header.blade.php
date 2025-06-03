@@ -1,6 +1,7 @@
-<header class="pc-header">
-    <div class="header-wrapper flex max-sm:px-[15px] px-[25px] grow"><!-- [Mobile Media Block] start -->
-        <div class="me-auto pc-mob-drp {{ App::getLocale() == 'ar' ? 'mr-0' : 'me-auto'}}">
+<header class="pc-header" id="header">
+    <div class="header-wrapper flex max-sm:px-[15px] px-[25px] grow">
+        <!-- [Mobile Media Block] start -->
+        <div class="me-auto pc-mob-drp">
             <ul class="inline-flex *:min-h-header-height *:inline-flex *:items-center">
                 <!-- ======= Menu collapse Icon ===== -->
                 <li class="pc-h-item pc-sidebar-collapse max-lg:hidden lg:inline-flex">
@@ -29,6 +30,11 @@
         <!-- [Mobile Media Block end] -->
         <div class="ms-auto">
             <ul class="inline-flex *:min-h-header-height *:inline-flex *:items-center">
+                <li class="nav-item ">
+                    <a class="nav-link" rel="alternate" hreflang="" href="">
+                        <img width="20" src="" alt="">
+                    </a>
+                </li>
                 <li class="dropdown pc-h-item">
                     <a class="pc-head-link dropdown-toggle me-0" data-pc-toggle="dropdown" href="#" role="button"
                         aria-haspopup="false" aria-expanded="false">
@@ -65,26 +71,15 @@
                         </svg>
                     </a>
                     <div class="dropdown-menu dropdown-menu-end pc-h-dropdown">
-                        <a href="#!" class="dropdown-item">
-                            <i class="ti ti-user"></i>
-                            <span>My Account</span>
-                        </a>
-                        <a href="#!" class="dropdown-item">
-                            <i class="ti ti-settings"></i>
-                            <span>Settings</span>
-                        </a>
-                        <a href="#!" class="dropdown-item">
-                            <i class="ti ti-headset"></i>
-                            <span>Support</span>
-                        </a>
-                        <a href="#!" class="dropdown-item">
-                            <i class="ti ti-lock"></i>
-                            <span>Lock Screen</span>
-                        </a>
-                        <a href="#!" class="dropdown-item">
-                            <i class="ti ti-power"></i>
-                            <span>Logout</span>
-                        </a>
+                        <button class="dropdown-item" data-value="false" onclick="layout_rtl_change('false');">
+                            <img src="{{asset('assets-dashboard/images/customizer/ltr.svg')}}" alt="img" class="img-fluid" width="30px" />
+                            <span>ltr</span>
+                        </button>
+                        <button class="dropdown-item" data-value="true" onclick="layout_rtl_change('true');">
+                            <img src="{{asset('assets-dashboard/images/customizer/rtl.svg')}}" alt="img" class="img-fluid" width="30px" />
+
+                            <span>rtl</span>
+                        </button>
                     </div>
                 </li>
                 <li class="dropdown pc-h-item">
@@ -93,66 +88,73 @@
                         <svg class="pc-icon">
                             <use xlink:href="#custom-notification"></use>
                         </svg>
-                        <span class="badge bg-success-500 text-white rounded-full z-10 absolute right-0 top-0">3</span>
+                        <span id="notifications_count" class="badge bg-success-500 text-white rounded-full z-10 absolute right-0 top-0">
+                        </span>
                     </a>
                     <div class="dropdown-menu dropdown-notification dropdown-menu-end pc-h-dropdown p-2">
                         <div class="dropdown-header flex items-center justify-between py-4 px-5">
-                            <h5 class="m-0">Notifications</h5>
-                            <a href="#!" class="btn btn-link btn-sm">Mark all read</a>
+                            <h5 class="m-0">{{__('Notifications')}}</h5>
                         </div>
-                        <div class="dropdown-body header-notification-scroll relative py-4 px-5"
+                        <div id="unread" class="dropdown-body header-notification-scroll relative py-4 px-5"
                             style="max-height: calc(100vh - 215px)">
-                            <p class="text-span mb-3">Today</p>
-                            <div class="card mb-2">
-                                <div class="card-body">
-                                    <div class="flex gap-4">
-                                        <div class="shrink-0">
-                                            <svg class="pc-icon text-primary w-[22px] h-[22px]">
-                                                <use xlink:href="#custom-layer"></use>
-                                            </svg>
-                                        </div>
-                                        <div class="grow">
-                                            <span class="float-end text-sm text-muted">2 min ago</span>
-                                            <h5 class="text-body mb-2">UI/UX Design</h5>
-                                            <p class="mb-0">
-                                                Lorem Ipsum has been the industry's standard dummy text ever since the
-                                                1500s, when an unknown printer took a galley of
-                                                type and scrambled it to make a type
-                                            </p>
+                           
+                                <div class="card mb-2">
+                                    <div class="card-body">
+                                        <div class="flex gap-4">
+                                            <div class="shrink-0">
+                                               
+                                                    <svg class="pc-icon text-primary w-[22px] h-[22px]">
+                                                        <use xlink:href="#custom-sms"></use>
+                                                    </svg>
+                                              
+                                                    <svg class="pc-icon text-primary w-[22px] h-[22px]">
+                                                        <use xlink:href="#custom-document-text"></use>
+                                                    </svg>
+                                              
+                                            </div>
+                                            <span>
+                                               
+                                            </span>
+                                           
+                                                <div class="grow">
+                                                    <span class="float-end text-sm text-muted"></span>
+                                                    <h5 class="text-body mb-2"></h5>
+                                                   
+                                                </div>
+                                           
+                                                <div class="grow">
+                                                    <span class="float-end text-sm text-muted"></span>
+                                                    <h5 class="text-body mb-2"></h5>
+                                                   
+                                                    
+                                                    
+                                                </div>
+                                          
+                                                <div class="grow">
+                                                    <span class="float-end text-sm text-muted"></span>
+                                                    <h5 class="text-body mb-2"</h5>
+                                                   
+                                                   
+                                                </div>
+                                           
                                         </div>
                                     </div>
+                                    {{-- <a href="" class="stretched-link"></a> --}}
+                                    {{-- <a href="" class="stretched-link"></a> --}}
+
+                                    {{-- <a href="" class="stretched-link"></a> --}}
+                                    <a href="" class="stretched-link"></a>
                                 </div>
-                            </div>
-                            <div class="card mb-2">
-                                <div class="card-body">
-                                    <div class="flex gap-4">
-                                        <div class="shrink-0">
-                                            <svg class="pc-icon text-primary w-[22px] h-[22px]">
-                                                <use xlink:href="#custom-sms"></use>
-                                            </svg>
-                                        </div>
-                                        <div class="grow">
-                                            <span class="float-end text-sm text-muted">1 hour ago</span>
-                                            <h5 class="text-body mb-2">Message</h5>
-                                            <p class="mb-0">Lorem Ipsum has been the industry's standard dummy text
-                                                ever since the 1500.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                           
                         </div>
-                        <div class="text-center py-2">
-                            <a href="#!"
-                                class="text-danger-500 hover:text-danger-600 focus:text-danger-600 active:text-danger-600">
-                                Clear all Notifications
-                            </a>
-                        </div>
+                       
                     </div>
                 </li>
                 <li class="dropdown pc-h-item header-user-profile">
                     <a class="pc-head-link dropdown-toggle arrow-none me-0" data-pc-toggle="dropdown" href="#"
                         role="button" aria-haspopup="false" data-pc-auto-close="outside" aria-expanded="false">
-                        <img src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}" alt="user-image" class="w-10 rounded-full" />
+                        <img src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}" alt="user-image"
+                            class="user-avtar w-10 h-10 rounded-full" />
                     </a>
                     <div class="dropdown-menu dropdown-user-profile dropdown-menu-end pc-h-dropdown p-2">
                         <div class="dropdown-header flex items-center justify-between py-4 px-5">
@@ -163,8 +165,7 @@
                                 style="max-height: calc(100vh - 225px)">
                                 <div class="flex mb-1 items-center">
                                     <div class="shrink-0">
-                                        <img src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}"
-                                            alt="user-image" class="w-10 rounded-full" />
+                                        <img src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}" alt="user-image" class="w-10 rounded-full" />
                                     </div>
                                     <div class="grow ms-3">
                                         <h6 class="mb-1">{{ Auth::user()->name }}</h6>
@@ -179,7 +180,7 @@
                                                 <svg class="pc-icon text-muted me-2 w-[22px] h-[22px]">
                                                     <use xlink:href="#custom-notification-outline"></use>
                                                 </svg>
-                                                Notification
+                                                {{__('Notifications')}}
                                             </h5>
                                             <label class="inline-flex items-center cursor-pointer">
                                                 <input type="checkbox" value="" class="sr-only peer" />
@@ -199,7 +200,6 @@
                                         <span>{{__('Settings')}}</span>
                                     </span>
                                 </a>
-
                                 <hr class="border-secondary-500/10 my-4" />
                                 <div class="grid mb-3">
                                     <form action="{{ route('logout') }}" method="post">
@@ -211,7 +211,6 @@
                                             {{__('Logout')}}
                                         </button>
                                     </form>
-
                                 </div>
                             </div>
                         </div>
