@@ -1,7 +1,9 @@
-@include('tamplate.layouts.head')
-@include('tamplate.layouts.header')
-
-
+<x-tamplate.layouts.index-layouts
+    title="بال قول لتكنولوجيا المعلومات - مواقع الكترونية واستضافة عربية"
+    description="شركة فلسطينية متخصصة في برمجة وتصميم المواقع الالكترونية تقدم خدمات استضافة مواقع، حجز دومين،مواقع ووردبريس،اعلانات جوجل،تحسين محركات البحث"
+    keywords="خدمات حجز دومين , افضل شركة برمجيات , استضافة مواقع , استضافة مشتركة , شركة استضافة مواقع , شركات استضافة مواقع , افضل شركة برمجة, خدمة كتابة محتوى , تحسين محركات البحث , web hosting service , shared hosting , best wordpress hosting , web hosting company, domain registration services , best IT company , information technology company , content writing service , best SEO services"
+    ogImage="{{ asset('assets/images/services.jpg') }}"
+>
 
 <!-- Hero Section -->
 <main>
@@ -649,17 +651,4 @@
     </a>
   </footer>
 </section>
-    <!-- [ Footer ] start -->
-    @include('tamplate.layouts.footer')
-    <!-- [ Footer ] end -->
-    <!-- [ Customizer ] start -->
-    @include('tamplate.layouts.end')
-    <!-- [ Customizer ] end -->
-
-
-
-
-
-
-
-
+</x-tamplate.layouts.index-layouts>
