@@ -1,9 +1,12 @@
+@php
+    $url = url()->current();
+@endphp
 <!doctype html>
-<html lang="en" class="preset-1" data-pc-sidebar-caption="true" data-pc-layout="vertical" data-pc-direction="ltr" dir="ltr" data-pc-theme_contrast="" data-pc-theme="light">
+<html lang="{{ app()->getLocale() }}" class="preset-1" data-pc-sidebar-caption="false" data-pc-layout="vertical" data-pc-direction="rtl" dir="{{ current_dir() }}" data-pc-theme_contrast="" data-pc-theme="light">
 <!-- [Head] start -->
 
 <head>
-    <title>{{ $title }}</title>
+    <title>{{ t('dashboard.features_title') }}</title>
     <!-- [Meta] -->
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui" />

@@ -1,0 +1,98 @@
+[
+    {
+        "code": "ar",
+        "name": "Arabic",
+        "native": "العربية",
+        "flag": "flags/ar.png"
+    },
+    {
+        "code": "en",
+        "name": "English",
+        "native": "English",
+        "flag": "flags/gb.png"
+    },
+    {
+        "code": "fr",
+        "name": "French",
+        "native": "Français",
+        "flag": "flags/fr.png"
+    },
+    {
+        "code": "de",
+        "name": "German",
+        "native": "Deutsch",
+        "flag": "flags/de.png"
+    },
+    {
+        "code": "es",
+        "name": "Spanish",
+        "native": "Español",
+        "flag": "flags/es.png"
+    },
+    {
+        "code": "it",
+        "name": "Italian",
+        "native": "Italiano",
+        "flag": "flags/it.png"
+    },
+    {
+        "code": "tr",
+        "name": "Turkish",
+        "native": "Türkçe",
+        "flag": "flags/tr.png"
+    },
+    {
+        "code": "ru",
+        "name": "Russian",
+        "native": "Русский",
+        "flag": "flags/ru.png"
+    },
+    {
+        "code": "zh",
+        "name": "Chinese",
+        "native": "中文",
+        "flag": "flags/cn.png"
+    },
+    {
+        "code": "pt",
+        "name": "Portuguese",
+        "native": "Português",
+        "flag": "flags/pt.png"
+    },
+    {
+        "code": "ja",
+        "name": "Japanese",
+        "native": "日本語",
+        "flag": "flags/jp.png"
+    },
+    {
+        "code": "ko",
+        "name": "Korean",
+        "native": "한국어",
+        "flag": "flags/kr.png"
+    },
+    {
+        "code": "hi",
+        "name": "Hindi",
+        "native": "हिन्दी",
+        "flag": "flags/in.png"
+    },
+    {
+        "code": "fa",
+        "name": "Persian",
+        "native": "فارسی",
+        "flag": "flags/ir.png"
+    },
+    {
+        "code": "ur",
+        "name": "Urdu",
+        "native": "اُردُو",
+        "flag": "flags/pk.png"
+    },
+    {
+        "code": "id",
+        "name": "Indonesian",
+        "native": "Bahasa Indonesia",
+        "flag": "flags/id.png"
+    }
+]

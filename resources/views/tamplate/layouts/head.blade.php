@@ -2,7 +2,7 @@
     $url = url()->current();
 @endphp
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" class="">
+<html lang="{{ app()->getLocale() }}" dir="{{ current_dir() }}">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />

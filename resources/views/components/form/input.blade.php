@@ -1,33 +1,21 @@
 @props([
-    'type' => 'text',
-    'value' => '',
-    'name',
-    'label'=>'',
-    're' => false
+  'label' => '',
+  'type'  => 'text',
+  'name'  => null,
 ])
-@if ($label)
-    <label  class="form-label" for="{{$name}}">
-        {{ $label }}
-        @if($re)
-            <span style="color: red">*</span>
-        @endif
-    </label>
-@endif
 
-<input
-    type="{{$type}}"
-    id="{{$name}}"
-    name="{{$name}}"
-    value="{{old($name, $value)}}"
-    {{$attributes->class([
-        'form-control',
-        'is-invalid' => $errors->has($name)
-    ])}}
-/>
 
-{{-- Validation --}}
-@error($name)
-    <div class="invalid-feedback">
-        {{$message}}
-    </div>
-@enderror
+<div class="mb-3">
+  @if($label)
+    <label for="{{ $name }}" class="form-label capitalize">{{ $label }}</label>
+  @endif
+
+  <input
+    id="{{ $name }}"
+    name="{{ $name }}"
+    type="{{ $type }}"
+    {{ $attributes->merge(['class' => 'form-control']) }}
+    placeholder="{{ $attributes->get('placeholder', 'Enter ' . $label) }}"
+  />
+    
+</div>

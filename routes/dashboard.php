@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\Dashboard\TranslationValueController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Dashboard\HomeController;
+use App\Http\Controllers\Dashboard\LanguageController;
 use App\Http\Controllers\Dashboard\UserController;
 
 Route::get('/admin', function () {
@@ -20,5 +22,22 @@ Route::group([
     Route::resources([
         'users' => UserController::class,
     ]);
-});
+    // Resource routes:
+    Route::resource('languages', LanguageController::class)->except(['show'])->names('languages');
+
+    // Extra AJAX routes:
+    Route::post('admin/languages/{language}/toggle-rtl', [LanguageController::class, 'toggleRtl'])
+        ->name('languages.toggle-rtl');
+
+    Route::post('admin/languages/{language}/toggle-status', [LanguageController::class, 'toggleStatus'])
+        ->name('languages.toggle-status');
+
+    Route::delete('admin/languages/{language}/delete', [LanguageController::class, 'destroy'])
+        ->name('dashboardlanguages.destroy-ajax');
+    Route::resource('translation-values', TranslationValueController::class)->except(['show', 'edit', 'update', 'destroy']);
+    Route::get('translation-values/{key}/edit', [TranslationValueController::class, 'edit'])->name('translation-values.edit');
+    Route::post('translation-values/{key}/update', [TranslationValueController::class, 'update'])->name('translation-values.update');
+    Route::delete('translation-values/{key}/delete', [TranslationValueController::class, 'destroy'])->name('translation-values.destroy');
+    });
+    
 

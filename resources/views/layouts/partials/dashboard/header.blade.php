@@ -35,6 +35,11 @@
                         <img width="20" src="" alt="">
                     </a>
                 </li>
+                <li class="nav-item ">
+                    <x-lang.language-switcher />
+                    
+                </li>
+                
                 <li class="dropdown pc-h-item">
                     <a class="pc-head-link dropdown-toggle me-0" data-pc-toggle="dropdown" href="#" role="button"
                         aria-haspopup="false" aria-expanded="false">
@@ -71,15 +76,12 @@
                         </svg>
                     </a>
                     <div class="dropdown-menu dropdown-menu-end pc-h-dropdown">
-                        <button class="dropdown-item" data-value="false" onclick="layout_rtl_change('false');">
+                        @foreach(available_locales() as $lang)
+                        <a href="{{ route('change_locale', ['locale' => $lang->code]) }}" class="dropdown-item" data-value="false" onclick="layout_rtl_change('false');">
                             <img src="{{asset('assets-dashboard/images/customizer/ltr.svg')}}" alt="img" class="img-fluid" width="30px" />
-                            <span>ltr</span>
-                        </button>
-                        <button class="dropdown-item" data-value="true" onclick="layout_rtl_change('true');">
-                            <img src="{{asset('assets-dashboard/images/customizer/rtl.svg')}}" alt="img" class="img-fluid" width="30px" />
-
-                            <span>rtl</span>
-                        </button>
+                            {{ $lang->native }}
+                        </a>
+                        @endforeach
                     </div>
                 </li>
                 <li class="dropdown pc-h-item">

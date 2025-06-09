@@ -55,7 +55,7 @@
                                 <i class="fas fa-home"></i>
                             </span>
                         </span>
-                        <span class="pc-mtext">{{__('Home')}}</span>
+                        <span class="pc-mtext">{{ t('dashboard.Home')}}</span>
                     </a>
                 </li>
                 <li class="pc-item pc-caption">
@@ -91,6 +91,16 @@
                             </a>
                         </li>
                     </ul>
+                </li>
+                <li class="pc-item">
+                    <a href="{{route('dashboard.languages.index')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-home"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.languages')}}</span>
+                    </a>
                 </li>
                 <!-- @endcan -->
 
