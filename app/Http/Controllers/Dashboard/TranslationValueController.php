@@ -15,14 +15,36 @@ class TranslationValueController extends Controller
     public function index(Request $request)
     {
         $localeFilter = $request->get('locale');
-
+        $search = $request->get('search');
+        $typeFilter = $request->get('type');
         $translations = TranslationValue::when($localeFilter, function ($query) use ($localeFilter) {
             $query->where('locale', $localeFilter);
-        })->get()->groupBy('key');
-
-        $languages = Language::where('is_active', true)->get();
-
-        return view('dashboard.lang.translation-values.index', compact('translations', 'languages', 'localeFilter'));
+        })
+        ->when($search, function ($query) use ($search) {
+            $query->where('key', 'like', "%$search%");
+        })
+        ->when($typeFilter, function ($query) use ($typeFilter) {
+            if ($typeFilter === 'dashboard') {
+                $query->where('key', 'like', 'dashboard.%');
+            } elseif ($typeFilter === 'frontend') {
+                $query->where('key', 'like', 'frontend.%');
+            } elseif ($typeFilter === 'general') {
+                $query->where(function ($q) {
+                    $q->where('key', 'not like', 'dashboard.%')
+                      ->where('key', 'not like', 'frontend.%');
+                });
+            }
+        })
+        ->get()
+        ->groupBy('key');
+        $languages = available_locales();
+        return view('dashboard.lang.translation-values.index', compact(
+            'translations',
+            'languages',
+            'localeFilter',
+            'search',
+            'typeFilter'
+        ));
     }
 
     /**
