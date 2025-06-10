@@ -38,6 +38,14 @@ Route::group([
     Route::get('translation-values/{key}/edit', [TranslationValueController::class, 'edit'])->name('translation-values.edit');
     Route::post('translation-values/{key}/update', [TranslationValueController::class, 'update'])->name('translation-values.update');
     Route::delete('translation-values/{key}/delete', [TranslationValueController::class, 'destroy'])->name('translation-values.destroy');
+    // Export Translations
+Route::get('translation-values/export', [TranslationValueController::class, 'export'])
+    ->name('translation-values.export');
+
+// Import Translations
+Route::post('translation-values/import', [TranslationValueController::class, 'import'])
+    ->name('translation-values.import');
+
     });
     
 

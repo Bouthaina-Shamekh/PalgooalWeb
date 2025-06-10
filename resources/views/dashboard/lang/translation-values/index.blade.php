@@ -21,7 +21,7 @@
                     <div class="sm:flex items-center justify-between">
                         <h5 class="mb-3 sm:mb-0">{{ t('dashboard.translation_values') }}</h5>
                         <div>
-                            <a href="{{ route('dashboard.translation-values.create') }}" class="btn btn-primary">{{ t('dashboard.Add_New_Translation') }}</a>
+                            <a href="{{ route('dashboard.translation-values.create') }}" class="btn btn-primary">{{ t('dashboard.Add_New_Translation', 'Add New Translation') }}</a>
                         </div>
                     </div>
                 </div>
@@ -30,47 +30,40 @@
                 @endif
                 <!-- Language Filter -->
                 <div class="flex items-center justify-between mb-4 px-5 py-4">
-  <form method="GET" action="{{ route('dashboard.translation-values.index') }}" class="flex items-center gap-3 flex-wrap">
-
-    <!-- Language Filter -->
-    <select name="locale" onchange="this.form.submit()" class="w-48 border px-2 py-1 rounded">
-        <option value="">-- All Languages --</option>
-        @foreach($languages as $lang)
-            <option value="{{ $lang->code }}" {{ $localeFilter == $lang->code ? 'selected' : '' }}>
-                {{ $lang->native }} ({{ $lang->code }})
-            </option>
-        @endforeach
-    </select>
-
-    <!-- Type Filter -->
-    <select name="type" onchange="this.form.submit()" class="w-48 border px-2 py-1 rounded">
-        <option value="">-- All Types --</option>
-        <option value="dashboard" {{ $typeFilter == 'dashboard' ? 'selected' : '' }}>Dashboard</option>
-        <option value="frontend" {{ $typeFilter == 'frontend' ? 'selected' : '' }}>Frontend</option>
-        <option value="general" {{ $typeFilter == 'general' ? 'selected' : '' }}>General</option>
-    </select>
-
-    <!-- Search -->
-    <input type="text" name="search" value="{{ $search }}" placeholder="Search keys..." class="border px-2 py-1 rounded w-64">
-
-    <button type="submit" class="btn btn-primary">Search</button>
-
-    <a href="{{ route('dashboard.translation-values.index') }}" class="btn btn-secondary">Reset</a>
-
-</form>
-
-                    {{-- <x-form.input type="text" wire:model="search" wire:input="updateSearch" placeholder="Search clients..." /> --}}
-                    {{-- <x-form.select
-                        wire:model="perPage"
-                        wire:change="updatePerPage"
-                        name="perPage"
-                        :options="[
-                           '5' => '5 per page',
-                           '10' => '10 per page',
-                           '25' => '25 per page',
-                        ]"
-                        /> --}}
+                    <form method="GET" action="{{ route('dashboard.translation-values.index') }}" class="flex items-center gap-3 flex-wrap">
+                        <!-- Language Filter -->
+                        <select name="locale" onchange="this.form.submit()" class="w-48 border px-2 py-1 rounded">
+                            <option value="">-- All Languages --</option>
+                            @foreach($languages as $lang)
+                            <option value="{{ $lang->code }}" {{ $localeFilter == $lang->code ? 'selected' : '' }}>
+                                {{ $lang->native }} ({{ $lang->code }})
+                            </option>
+                            @endforeach
+                        </select>
+                        <!-- Type Filter -->
+                        <select name="type" onchange="this.form.submit()" class="w-48 border px-2 py-1 rounded">
+                            <option value="">-- All Types --</option>
+                            <option value="dashboard" {{ $typeFilter == 'dashboard' ? 'selected' : '' }}>Dashboard</option>
+                            <option value="frontend" {{ $typeFilter == 'frontend' ? 'selected' : '' }}>Frontend</option>
+                            <option value="general" {{ $typeFilter == 'general' ? 'selected' : '' }}>General</option>
+                        </select>
+                        <!-- Search -->
+                        <input type="text" name="search" value="{{ $search }}" placeholder="Search keys..." class="border px-2 py-1 rounded w-64">
+                        <button type="submit" class="btn btn-primary">Search</button>
+                        <a href="{{ route('dashboard.translation-values.index') }}" class="btn btn-secondary">Reset</a>
+                    </form>
                 </div>
+                <div class="flex items-center gap-2 mb-4 px-5">
+                    <a href="{{ route('dashboard.translation-values.export') }}" class="btn btn-success">
+                        Export CSV
+                    </a>
+                    <form action="{{ route('dashboard.translation-values.import') }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-2">
+                        @csrf
+                        <input type="file" name="csv_file" accept=".csv" required class="border px-2 py-1 rounded">
+                        <button type="submit" class="btn btn-primary">Import CSV</button>
+                    </form>
+                </div>
+
                 <div class="card-body pt-3">
                     <div class="table-responsive">
                         <table class="table table-hover">

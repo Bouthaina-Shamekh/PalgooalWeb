@@ -109,30 +109,94 @@ class TranslationValueController extends Controller
     public function update(Request $request, $key)
     {
         $request->validate([
-            'values' => 'required|array',
-        ]);
+        'values' => 'required|array',
+    ]);
 
-        foreach ($request->values as $locale => $value) {
-            TranslationValue::updateOrCreate(
-                [
-                    'key'    => $key,
-                    'locale' => $locale,
-                ],
-                [
-                    'value' => $value,
-                ]
-            );
-        }
+    foreach ($request->values as $locale => $value) {
+        TranslationValue::updateOrCreate(
+            [
+                'key'    => $key,
+                'locale' => $locale,
+            ],
+            [
+                'value' => $value,
+            ]
+        );
 
-        return redirect()->route('dashboard.translation-values.index')->with('success', 'تم التحديث بنجاح');
+        // Clear cache to update translation immediately
+        cache()->forget("translation.{$locale}.{$key}");
     }
+
+    return redirect()->route('dashboard.translation-values.index')->with('success', 'تم التحديث بنجاح');
+}
+
 
     /**
      * Remove the specified resource from storage.
      */
     public function destroy($key)
     {
-        TranslationValue::where('key', $key)->delete();
+        // Get all translations for this key
+        $translations = TranslationValue::where('key', $key)->get();
+        
+        foreach ($translations as $translation) {
+            // Delete cache for this key and language
+            cache()->forget("translation.{$translation->locale}.{$translation->key}");
+            // Delete the translation itself
+            $translation->delete();
+        }
+
         return redirect()->route('dashboard.translation-values.index')->with('success', 'تم الحذف بنجاح');
+    }
+
+
+
+    public function export()
+    {
+        $translations = TranslationValue::all();
+        $csvHeader = ['key', 'locale', 'value'];
+        $rows = [];
+        foreach ($translations as $translation) {
+            $rows[] = [
+                $translation->key,
+                $translation->locale,
+                $translation->value,
+            ];
+        }
+        
+        $filename = 'translations_export_' . now()->format('Y_m_d_His') . '.csv';
+        $handle = fopen('php://output', 'w');
+        header('Content-Type: text/csv');
+        header("Content-Disposition: attachment; filename={$filename}");
+        
+        fputcsv($handle, $csvHeader);
+        foreach ($rows as $row) {
+            fputcsv($handle, $row);
+        }
+        fclose($handle);
+        exit;
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'csv_file' => 'required|file|mimes:csv,txt',
+        ]);
+        
+        $file = $request->file('csv_file');
+        $handle = fopen($file->getRealPath(), 'r');
+        $header = fgetcsv($handle);
+        while (($row = fgetcsv($handle)) !== false) {
+            TranslationValue::updateOrCreate(
+                ['key' => $row[0], 'locale' => $row[1]],
+                ['value' => $row[2]]
+            );
+
+            // Invalidate cache
+            cache()->forget("translation.{$row[1]}.{$row[0]}");
+        }
+
+        fclose($handle);
+        return redirect()->back()->with('success', 'تم استيراد الترجمات بنجاح');
     }
 }
