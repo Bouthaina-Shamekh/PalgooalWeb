@@ -102,6 +102,16 @@
                         <span class="pc-mtext">{{ t('dashboard.languages')}}</span>
                     </a>
                 </li>
+                <li class="pc-item">
+                    <a href="{{route('dashboard.media')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-home"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.media')}}</span>
+                    </a>
+                </li>
                 <!-- @endcan -->
 
             </ul>

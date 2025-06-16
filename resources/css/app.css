@@ -8,4 +8,14 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-Almarai: "Almarai";
+    --font-Cairo: "Cairo";
+    --color-primary: #240B36;
+    --color-secondary: #AE1028;
+    --color-tertiary: #5F4A72;
+    --color-background: #F9F6FB;
+    --text-title-h2: 1.875rem;
+    --text-title-h3: 1.5rem;
+    --text-suptitle: 1.125rem;    
+
 }

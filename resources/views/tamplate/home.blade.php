@@ -8,17 +8,17 @@
 <!-- Hero Section -->
 <main>
   <section class="relative bg-gradient-to-tr from-primary to-primary shadow-2xl overflow-hidden -mt-20">
-    <!-- Background Image as <img> -->
-    <img
-      src="{{ asset('assets/tamplate/images/template.webp') }}"
-      alt=""
-      fetchpriority="high"
-      class="absolute inset-0 z-0 opacity-80 w-full h-full object-cover object-center"
-      aria-hidden="true"
-      decoding="async"
-      loading="eager"
+  <!-- Background Image as <img> -->
+  <img
+    src="{{ asset('assets/tamplate/images/template.webp') }}"
+    alt=""
+    fetchpriority="high"
+    class="absolute inset-0 z-0 opacity-80 w-full h-full object-cover object-center ltr:scale-x-[-1] rtl:scale-x-100 transition-transform duration-500 ease-in-out"
+    aria-hidden="true"
+    decoding="async"
+    loading="eager"
     />
-
+    
     <!-- Content Container -->
     <div class="relative z-10 px-4 sm:px-8 lg:px-24 py-20 sm:py-28 lg:py-32 flex flex-col-reverse md:flex-row items-center justify-between gap-12 min-h-[600px] lg:min-h-[700px]">
       <!-- Text Content -->
@@ -167,7 +167,7 @@
   </div>
 </section>
 <!-- خدمات رقمية متكاملة -->
-<section class="py-20 px-4 sm:px-8 lg:px-24 bg-white" dir="rtl" aria-label="خدمات رقمية متكاملة">
+<section class="py-20 px-4 sm:px-8 lg:px-24 bg-white" dir="auto" aria-label="خدمات رقمية متكاملة">
   <div class="relative">
     <div class="relative z-10 max-w-7xl mx-auto">
       <div class="text-center mb-16">

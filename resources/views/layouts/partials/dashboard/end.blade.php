@@ -43,5 +43,7 @@
 </script>
 @stack('scripts')
 @stack('modals')
+@livewireScripts
+
 </body>
 </html>

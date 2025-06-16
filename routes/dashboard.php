@@ -39,12 +39,17 @@ Route::group([
     Route::post('translation-values/{key}/update', [TranslationValueController::class, 'update'])->name('translation-values.update');
     Route::delete('translation-values/{key}/delete', [TranslationValueController::class, 'destroy'])->name('translation-values.destroy');
     // Export Translations
-Route::get('translation-values/export', [TranslationValueController::class, 'export'])
+    Route::get('translation-values/export', [TranslationValueController::class, 'export'])
     ->name('translation-values.export');
-
-// Import Translations
-Route::post('translation-values/import', [TranslationValueController::class, 'import'])
+    // Import Translations
+    Route::post('translation-values/import', [TranslationValueController::class, 'import'])
     ->name('translation-values.import');
+
+    //media
+    Route::get('media', function () {
+        return view('dashboard.media');
+        })->middleware(['auth'])->name('media');
+
 
     });
     
