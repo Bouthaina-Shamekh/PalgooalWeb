@@ -112,6 +112,16 @@
                         <span class="pc-mtext">{{ t('dashboard.media')}}</span>
                     </a>
                 </li>
+                <li class="pc-item">
+                    <a href="{{route('dashboard.general_settings')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-cog"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">General Setting</span>
+                    </a>
+                </li>
                 <!-- @endcan -->
 
             </ul>

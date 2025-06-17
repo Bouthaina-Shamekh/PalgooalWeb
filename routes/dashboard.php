@@ -17,6 +17,9 @@ Route::group([
 {
     Route::get('/home', [HomeController::class, 'index'])->name('home');
 
+    Route::get('/general_settings', [HomeController::class, 'general_settings'])->name('general_settings');
+
+
     Route::get('users/{user}/profile', [UserController::class, 'profile'])->name('users.profile');
 
     Route::resources([
@@ -49,8 +52,6 @@ Route::group([
     Route::get('media', function () {
         return view('dashboard.media');
         })->middleware(['auth'])->name('media');
-
-
     });
-    
+
 

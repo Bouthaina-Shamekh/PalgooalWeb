@@ -13,4 +13,8 @@ class HomeController extends Controller
     {
         return view('dashboard.index');
     }
+    public function general_settings()
+    {
+        return view('dashboard.general-setting');
+    }
 }
