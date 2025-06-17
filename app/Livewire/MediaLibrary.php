@@ -5,12 +5,11 @@ namespace App\Livewire;
 use App\Models\Media;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
-use Livewire\Features\SupportFileUploads\WithFileUploads;
+use Livewire\WithFileUploads;
 
 class MediaLibrary extends Component
 {
     use WithFileUploads;
-    
 
     public $files = [];
     public $selectedMedia;
@@ -19,6 +18,8 @@ class MediaLibrary extends Component
     public $caption;
     public $description;
     public $showModal = false;
+    public $search = '';
+    public $fileTypeFilter = '';
 
     public function updatedFiles()
     {
@@ -49,12 +50,11 @@ class MediaLibrary extends Component
             $this->showModal = true;
         }
     }
-    
+
     public function closeModal()
     {
         $this->reset(['showModal', 'selectedMedia', 'alt', 'title', 'caption', 'description']);
     }
-
 
     public function saveMediaDetails()
     {
@@ -81,8 +81,45 @@ class MediaLibrary extends Component
 
     public function render()
     {
+        $query = Media::query();
+
+        if ($this->search) {
+            $query->where('name', 'like', '%' . $this->search . '%');
+        }
+
+        if ($this->fileTypeFilter) {
+            switch ($this->fileTypeFilter) {
+                case 'images':
+                    $query->where('mime_type', 'like', 'image/%');
+                    break;
+                case 'videos':
+                    $query->where('mime_type', 'like', 'video/%');
+                    break;
+                case 'documents':
+                    $query->whereIn('mime_type', [
+                        'application/pdf',
+                        'application/msword',
+                        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    ]);
+                    break;
+                case 'spreadsheets':
+                    $query->whereIn('mime_type', [
+                        'application/vnd.ms-excel',
+                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    ]);
+                    break;
+                case 'archives':
+                    $query->whereIn('mime_type', [
+                        'application/zip',
+                        'application/x-rar-compressed',
+                        'application/x-7z-compressed',
+                    ]);
+                    break;
+            }
+        }
+
         return view('livewire.media-library', [
-            'mediaItems' => Media::latest()->get(),
+            'mediaItems' => $query->latest()->get(),
         ]);
     }
 }

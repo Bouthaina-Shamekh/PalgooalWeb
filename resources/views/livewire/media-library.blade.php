@@ -1,7 +1,55 @@
 <div class="p-6">
-    <div class="mb-4">
-        <input type="file" wire:model="files" multiple>
+    <div
+    class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-primary transition"
+    x-data
+    x-on:dragover.prevent
+    x-on:drop.prevent="
+        let files = $event.dataTransfer.files;
+        $refs.fileInput.files = files;
+        $refs.fileInput.dispatchEvent(new Event('change'));
+    "
+>
+    <p class="text-gray-600 text-sm">🖱️ اسحب الملفات هنا أو انقر للرفع</p>
+    
+    <label class="inline-block mt-4 px-4 py-2 bg-primary text-white rounded cursor-pointer hover:bg-primary/80">
+        اختر ملفات
+        <input type="file" multiple wire:model="files" x-ref="fileInput" class="hidden" />
+    </label>
+</div>
+
+    
+    <!-- ✅ شريط الأدوات العلوي -->
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+
+    <!-- زر رفع الملفات -->
+    <label
+        class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded cursor-pointer hover:bg-primary/80">
+        📤 رفع ملفات
+        <input type="file" wire:model="files" multiple class="hidden">
+    </label>
+
+    <!-- حقل البحث -->
+    <div class="flex-1">
+        <input
+            type="text"
+            wire:model.debounce.300ms="search"
+            placeholder="🔍 ابحث باسم الملف..."
+            class="w-full md:max-w-xs border rounded px-4 py-2 text-sm focus:ring focus:ring-primary/30 focus:outline-none"
+        />
     </div>
+    <div>
+    <select wire:model="fileTypeFilter"
+        class="border rounded px-3 py-2 text-sm focus:ring-primary/30 focus:outline-none">
+        <option value="">كل الأنواع</option>
+        <option value="images">🖼️ الصور</option>
+        <option value="videos">🎥 الفيديو</option>
+        <option value="documents">📄 المستندات</option>
+        <option value="spreadsheets">📊 جداول البيانات</option>
+        <option value="archives">🗂️ الأرشيف</option>
+    </select>
+</div>
+</div>
+
     <!-- شبكة الوسائط -->
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         @foreach($mediaItems as $media)
@@ -106,5 +154,6 @@
 </div>
 @endif
 </div>
+<script src="https://unpkg.com/alpinejs" defer></script>
 
 
