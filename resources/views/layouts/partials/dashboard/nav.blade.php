@@ -27,17 +27,17 @@
                         <div class="pt-3 *:flex *:items-center *:py-2 *:gap-2.5 hover:*:text-primary-500">
                             <a href="{{route('dashboard.users.profile', Auth::user()->id)}}">
                                 <i class="text-lg leading-none ti ti-user"></i>
-                                <span>My Account</span>
+                                <span>{{ t('dashboard.My_Account', 'My Account' )}}</span>
                             </a>
                             <a href="#!">
                                 <i class="text-lg leading-none ti ti-settings"></i>
-                                <span>Settings</span>
+                                <span>{{ t('dashboard.Settings', 'Settings') }}</span>
                             </a>
                             <form action="{{ route('logout') }}" method="post">
                                 @csrf
                                 <button type="submit" style="display: flex; align-items: center; gap: 5px;">
                                     <i class="text-lg leading-none ti ti-power"></i>
-                                    <span>{{__('admin.Logout')}}</span>
+                                    <span>{{ t('dashboard.Logout', 'Logout')}}</span>
                                 </button>
                             </form>
                         </div>
@@ -46,7 +46,7 @@
             </div>
             <ul class="pc-navbar">
                 <li class="pc-item pc-caption">
-                    <label>Navigation</label>
+                    <label>{{ t('dashboard.Navigation', 'Navigation') }}</label>
                 </li>
                 <li class="pc-item">
                     <a href="{{route('dashboard.home')}}" class="pc-link">
@@ -55,11 +55,11 @@
                                 <i class="fas fa-home"></i>
                             </span>
                         </span>
-                        <span class="pc-mtext">{{ t('dashboard.Home')}}</span>
+                        <span class="pc-mtext">{{ t('dashboard.Home', 'Home') }}</span>
                     </a>
                 </li>
                 <li class="pc-item pc-caption">
-                    <label>Widget</label>
+                    <label>{{ t('dashboard.Widget','Widget') }}</label>
                     <svg class="pc-icon">
                         <use xlink:href="#custom-presentation-chart"></use>
                     </svg>
@@ -82,12 +82,12 @@
                     <ul class="pc-submenu">
                         <li class="pc-item">
                             <a class="pc-link" href="{{route('dashboard.users.index')}}">
-                                {{__('Users show')}}
+                                {{ t('dashboard.Users_show', 'Users show') }}
                             </a>
                         </li>
                         <li class="pc-item">
                             <a class="pc-link" href="{{route('dashboard.users.create')}}">
-                                {{__('Add User')}}
+                                {{ t('dashboard.Add_User', 'Add User')}}
                             </a>
                         </li>
                     </ul>
@@ -99,7 +99,7 @@
                                 <i class="fas fa-home"></i>
                             </span>
                         </span>
-                        <span class="pc-mtext">{{ t('dashboard.languages')}}</span>
+                        <span class="pc-mtext">{{ t('dashboard.languages', 'languages')}}</span>
                     </a>
                 </li>
                 <li class="pc-item">
@@ -109,7 +109,7 @@
                                 <i class="fas fa-home"></i>
                             </span>
                         </span>
-                        <span class="pc-mtext">{{ t('dashboard.media')}}</span>
+                        <span class="pc-mtext">{{ t('dashboard.media', 'Media')}}</span>
                     </a>
                 </li>
                 <li class="pc-item">
@@ -119,7 +119,7 @@
                                 <i class="fas fa-cog"></i>
                             </span>
                         </span>
-                        <span class="pc-mtext">General Setting</span>
+                        <span class="pc-mtext">{{ t('dashboard.General_Setting', 'General Setting') }}</span>
                     </a>
                 </li>
                 <!-- @endcan -->

@@ -18,7 +18,7 @@
         <div class="col-span-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">{{ t('dashboard.Edit_translation') }}</h5>
+                    <h5 class="mb-0">{{ t('dashboard.Edit_translation', 'Edit Translation') }}</h5>
                 </div>
                 <div class="card-body">
                     <form action="{{ route('dashboard.translation-values.store') }}" method="POST" class="grid grid-cols-12 gap-x-6">
