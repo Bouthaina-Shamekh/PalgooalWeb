@@ -3,12 +3,12 @@
     <div class="page-header">
         <div class="page-block">
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="#">Home</a></li>
-                <li class="breadcrumb-item"><a href="#">Languages</a></li>
-                <li class="breadcrumb-item" aria-current="page">Languages List</li>
+                <li class="breadcrumb-item"><a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('dashboard.languages.index') }}">{{ t('dashboard.Languages', 'Languages') }}</a></li>
+                <li class="breadcrumb-item" aria-current="page">{{ t('dashboard.Languages_List', 'Languages List') }}</li>
             </ul>
             <div class="page-header-title">
-                <h2 class="mb-0">Languages List</h2>
+                <h2 class="mb-0">{{ t('dashboard.Languages_List', 'Languages List') }}</h2>
             </div>
         </div>
     </div>
@@ -19,24 +19,11 @@
             <div class="card table-card">
                 <div class="card-header">
                     <div class="sm:flex items-center justify-between">
-                        <h5 class="mb-3 sm:mb-0">Languages List</h5>
+                        <h5 class="mb-3 sm:mb-0">{{ t('dashboard.Languages_List', 'Languages List') }}</h5>
                         <div>
-                            <a href="{{ route('dashboard.languages.create') }}" class="btn btn-primary">Add Languages</a>
+                            <a href="{{ route('dashboard.languages.create') }}" class="btn btn-primary">{{ t('dashboard.Add_Languages', 'Add Languages') }}</a>
                         </div>
                     </div>
-                </div>
-                <div class="flex items-center justify-between mb-4 px-5 py-4">
-                    {{-- <x-form.input type="text" wire:model="search" wire:input="updateSearch" placeholder="Search clients..." /> --}}
-                    {{-- <x-form.select
-                        wire:model="perPage"
-                        wire:change="updatePerPage"
-                        name="perPage"
-                        :options="[
-                           '5' => '5 per page',
-                           '10' => '10 per page',
-                           '25' => '25 per page',
-                        ]"
-                        /> --}}
                 </div>
                 <div class="card-body pt-3">
                     <div class="table-responsive">
@@ -44,13 +31,13 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Name</th>
-                                    <th>Native Name</th>
-                                    <th>Code</th>
-                                    <th>Flag</th>
-                                    <th>RTL</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
+                                    <th>{{ t('dashboard.Name', 'Name') }}</th>
+                                    <th>{{ t('dashboard.Native_Name', 'Native Name') }}</th>
+                                    <th>{{ t('dashboard.Code', 'Code') }}</th>
+                                    <th>{{ t('dashboard.Flag', 'Flag') }}</th>
+                                    <th>{{ t('dashboard.RTL', 'RTL') }}</th>
+                                    <th>{{ t('dashboard.Status', 'Status') }}</th>
+                                    <th>{{ t('dashboard.Actiont', 'Action') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -77,7 +64,7 @@
                                     </td>
                                     <td>
                                         <a href="{{ route('dashboard.translation-values.index', ['locale' => $lang->code]) }}" class="btn btn-sm btn-info">
-                                            تعديل الترجمات لهذه اللغة
+                                            {{ t('dashboard.languages_edit', 'Languages Edit') }}
                                         </a>
                                         <a href="{{ route('dashboard.languages.edit', $lang->id) }}" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                             <i class="ti ti-edit text-xl leading-none"></i>

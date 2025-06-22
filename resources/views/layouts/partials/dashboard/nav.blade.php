@@ -100,6 +100,7 @@
                             </span>
                         </span>
                         <span class="pc-mtext">{{ t('dashboard.languages', 'languages')}}</span>
+
                     </a>
                 </li>
                 <li class="pc-item">
@@ -110,6 +111,8 @@
                             </span>
                         </span>
                         <span class="pc-mtext">{{ t('dashboard.translation_values', 'translation_values')}}</span>
+
+
                     </a>
                 </li>
                 <li class="pc-item">

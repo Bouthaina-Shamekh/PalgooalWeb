@@ -59,9 +59,10 @@ class LanguageController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Request $request, string $id)
     {
-        return view('dashboard.lang.edit', compact('language'));
+        $language = $id;
+        return view('dashboard.lang.edit')->with('language', Language::find($id));
     }
 
     /**
