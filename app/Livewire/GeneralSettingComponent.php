@@ -39,14 +39,22 @@ class GeneralSettingComponent extends Component
         'site_title' => '',
         'site_discretion' => '',
         'logo' => '',
+        'logo_url' => '',
         'dark_logo' => '',
+        'dark_logo_url' => '',
         'sticky_logo' => '',
+        'sticky_logo_url' => '',
         'dark_sticky_logo' => '',
+        'dark_sticky_logo_url' => '',
         'admin_logo' => '',
+        'admin_logo_url' => '',
         'admin_dark_logo' => '',
+        'admin_dark_logo_url' => '',
         'favicon' => '',
+        'favicon_url' => '',
         'default_language' => '',
     ];
+
     public $languages = [];
     public function mount()
     {
@@ -54,13 +62,20 @@ class GeneralSettingComponent extends Component
         $this->generalSetting = [
             'site_title' => $generalSetting->site_title,
             'site_discretion' => $generalSetting->site_discretion,
-            'logo' => $generalSetting->logo,
-            'dark_logo' => $generalSetting->dark_logo,
-            'sticky_logo' => $generalSetting->sticky_logo,
-            'dark_sticky_logo' => $generalSetting->dark_sticky_logo,
-            'admin_logo' => $generalSetting->admin_logo,
-            'admin_dark_logo' => $generalSetting->admin_dark_logo,
-            'favicon' => $generalSetting->favicon,
+            'logo' => '',
+            'logo_url' => $generalSetting->logo,
+            'dark_logo' => '',
+            'dark_logo_url' => $generalSetting->dark_logo,
+            'sticky_logo' => '',
+            'sticky_logo_url' => $generalSetting->sticky_logo,
+            'dark_sticky_logo' => '',
+            'dark_sticky_logo_url' => $generalSetting->dark_sticky_logo,
+            'admin_logo' => '',
+            'admin_logo_url' => $generalSetting->admin_logo,
+            'admin_dark_logo' => '',
+            'admin_dark_logo_url' => $generalSetting->admin_dark_logo,
+            'favicon' => '',
+            'favicon_url' => $generalSetting->favicon,
             'default_language' => $generalSetting->default_language,
         ];
         $this->languages = Language::all();
@@ -71,12 +86,19 @@ class GeneralSettingComponent extends Component
             'site_title' => '',
             'site_discretion' => '',
             'logo' => '',
+            'logo_url' => '',
             'dark_logo' => '',
+            'dark_logo_url' => '',
             'sticky_logo' => '',
+            'sticky_logo_url' => '',
             'dark_sticky_logo' => '',
+            'dark_sticky_logo_url' => '',
             'admin_logo' => '',
+            'admin_logo_url' => '',
             'admin_dark_logo' => '',
+            'admin_dark_logo_url' => '',
             'favicon' => '',
+            'favicon_url' => '',
             'default_language' => '',
         ];
     }
@@ -112,8 +134,14 @@ class GeneralSettingComponent extends Component
 
             foreach ($fields as $field) {
                 $file = $this->generalSetting[$field] ?? null;
-                if (!empty($file)) {
+                if ($file instanceof UploadedFile) {
+                    if (!empty($generalSetting->$field) && Storage::disk('public')->exists($generalSetting->$field)) {
+                        Storage::disk('public')->delete($generalSetting->$field);
+                    }
+
                     $generalSettingValidated[$field] = $file->store('general_settings', 'public');
+                } else {
+                    $generalSettingValidated[$field] = $generalSetting->$field;
                 }
             }
 
@@ -129,7 +157,6 @@ class GeneralSettingComponent extends Component
                 'admin_dark_logo',
                 'favicon',
             ];
-
             foreach ($fields as $field) {
                 $file = $this->generalSetting[$field] ?? null;
                 if ($file instanceof UploadedFile) {
@@ -148,7 +175,7 @@ class GeneralSettingComponent extends Component
             $this->showAlert('General setting added successfully.', 'success');
         }
 
-        $this->resetForm();
+        // $this->resetForm();
         $this->resetPage();
         $this->mode = 'index';
     }

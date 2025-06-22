@@ -65,7 +65,6 @@ class TranslationValueController extends Controller
             'key'    => 'required|string|max:150',
             'values' => 'required|array',
         ]);
-
         foreach ($request->values as $locale => $value) {
             TranslationValue::updateOrCreate(
                 [
@@ -100,6 +99,7 @@ class TranslationValueController extends Controller
             ->get()
             ->keyBy('locale');
 
+
         return view('dashboard.lang.translation-values.edit', compact('key', 'languages', 'translations'));
     }
 
@@ -109,23 +109,23 @@ class TranslationValueController extends Controller
     public function update(Request $request, $key)
     {
         $request->validate([
-        'values' => 'required|array',
-    ]);
+            'values' => 'required|array',
+        ]);
 
-    foreach ($request->values as $locale => $value) {
-        TranslationValue::updateOrCreate(
-            [
-                'key'    => $key,
-                'locale' => $locale,
-            ],
-            [
-                'value' => $value,
-            ]
-        );
+        foreach ($request->values as $locale => $value) {
+            TranslationValue::updateOrCreate(
+                [
+                    'key'    => $key,
+                    'locale' => $locale,
+                ],
+                [
+                    'value' => $value,
+                ]
+            );
 
-        // Clear cache to update translation immediately
-        cache()->forget("translation.{$locale}.{$key}");
-    }
+            // Clear cache to update translation immediately
+            cache()->forget("translation.{$locale}.{$key}");
+        }
 
     return redirect()->route('dashboard.translation-values.index')->with('success', 'تم التحديث بنجاح');
 }
@@ -138,7 +138,7 @@ class TranslationValueController extends Controller
     {
         // Get all translations for this key
         $translations = TranslationValue::where('key', $key)->get();
-        
+
         foreach ($translations as $translation) {
             // Delete cache for this key and language
             cache()->forget("translation.{$translation->locale}.{$translation->key}");
@@ -163,12 +163,12 @@ class TranslationValueController extends Controller
                 $translation->value,
             ];
         }
-        
+
         $filename = 'translations_export_' . now()->format('Y_m_d_His') . '.csv';
         $handle = fopen('php://output', 'w');
         header('Content-Type: text/csv');
         header("Content-Disposition: attachment; filename={$filename}");
-        
+
         fputcsv($handle, $csvHeader);
         foreach ($rows as $row) {
             fputcsv($handle, $row);
@@ -182,7 +182,7 @@ class TranslationValueController extends Controller
         $request->validate([
             'csv_file' => 'required|file|mimes:csv,txt',
         ]);
-        
+
         $file = $request->file('csv_file');
         $handle = fopen($file->getRealPath(), 'r');
         $header = fgetcsv($handle);

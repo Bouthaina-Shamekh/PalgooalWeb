@@ -18,12 +18,12 @@
         <div class="col-span-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">{{ t('dashboard.Edit_translation') }}</h5>
+                    <h5 class="mb-0">{{ t('dashboard.Add_New_Translation', 'Add New Translation') }}</h5>
                 </div>
                 <div class="card-body">
                     <form action="{{ route('dashboard.translation-values.store') }}" method="POST" class="grid grid-cols-12 gap-x-6">
                         @csrf
-                        <div class="col-span-12 md:col-span-6">
+                        <div class="col-span-12">
                             <div class="mb-3">
                                 <x-form.input
                                     label="{{ t('dashboard.Key') }}"
@@ -47,8 +47,8 @@
                         @endforeach
 
                         <div class="col-span-12 text-right">
-                            <button type="button" wire:click="showIndex" class="btn btn-secondary">{{ t('dashboard.Cancel') }}</button>
-                            <button type="submit" class="btn btn-primary">{{ t('dashboard.Save') }}</button>
+                            <button type="button" wire:click="showIndex" class="btn btn-secondary">{{ t('dashboard.Cancel', 'Cancel') }}</button>
+                            <button type="submit" class="btn btn-primary">{{ t('dashboard.Save', 'Save') }}</button>
                         </div>
                     </form>
                 </div>

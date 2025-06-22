@@ -60,8 +60,8 @@
                                 wire:model="generalSetting.logo"
                                 accept="image/*"
                                 class="form-control" />
-                            @if ($generalSetting['logo'])
-                                <img src="{{ asset('storage/' . $generalSetting['logo']) }}" width="50" alt="Logo" class="mt-2">
+                            @if ($generalSetting['logo_url'])
+                                <img src="{{ asset('storage/' . $generalSetting['logo_url']) }}" width="50" alt="Logo" class="mt-2">
                             @endif
                             @error('generalSetting.logo') <span class="text-red-600">{{ $message }}</span> @enderror
                         </div>
@@ -73,8 +73,8 @@
                                 wire:model="generalSetting.dark_logo"
                                 accept="image/*"
                                 class="form-control" />
-                            @if ($generalSetting['dark_logo'])
-                                <img src="{{ asset('storage/' . $generalSetting['dark_logo']) }}" width="50" alt="Dark Logo" class="mt-2">
+                            @if ($generalSetting['dark_logo_url'])
+                                <img src="{{ asset('storage/' . $generalSetting['dark_logo_url']) }}" width="50" alt="Dark Logo" class="mt-2">
                             @endif
                             @error('generalSetting.dark_logo') <span class="text-red-600">{{ $message }}</span> @enderror
                         </div>
@@ -86,8 +86,8 @@
                                 wire:model="generalSetting.sticky_logo"
                                 accept="image/*"
                                 class="form-control" />
-                            @if ($generalSetting['sticky_logo'])
-                                <img src="{{ asset('storage/' . $generalSetting['sticky_logo']) }}" width="50" alt="Sticky Logo" class="mt-2">
+                            @if ($generalSetting['sticky_logo_url'])
+                                <img src="{{ asset('storage/' . $generalSetting['sticky_logo_url']) }}" width="50" alt="Sticky Logo" class="mt-2">
                             @endif
                             @error('generalSetting.sticky_logo') <span class="text-red-600">{{ $message }}</span> @enderror
                         </div>
@@ -99,8 +99,8 @@
                                 wire:model="generalSetting.dark_sticky_logo"
                                 accept="image/*"
                                 class="form-control" />
-                            @if ($generalSetting['dark_sticky_logo'])
-                                <img src="{{ asset('storage/' . $generalSetting['dark_sticky_logo']) }}" width="50" alt="Dark Sticky Logo" class="mt-2">
+                            @if ($generalSetting['dark_sticky_logo_url'])
+                                <img src="{{ asset('storage/' . $generalSetting['dark_sticky_logo_url']) }}" width="50" alt="Dark Sticky Logo" class="mt-2">
                             @endif
                             @error('generalSetting.dark_sticky_logo') <span class="text-red-600">{{ $message }}</span> @enderror
                         </div>
@@ -112,8 +112,8 @@
                                 wire:model="generalSetting.admin_logo"
                                 accept="image/*"
                                 class="form-control" />
-                            @if ($generalSetting['admin_logo'])
-                                <img src="{{ asset('storage/' . $generalSetting['admin_logo']) }}" width="50" alt="Admin Logo" class="mt-2">
+                            @if ($generalSetting['admin_logo_url'])
+                                <img src="{{ asset('storage/' . $generalSetting['admin_logo_url']) }}" width="50" alt="Admin Logo" class="mt-2">
                             @endif
                             @error('generalSetting.admin_logo') <span class="text-red-600">{{ $message }}</span> @enderror
                         </div>
@@ -125,8 +125,8 @@
                                 wire:model="generalSetting.admin_dark_logo"
                                 accept="image/*"
                                 class="form-control" />
-                            @if ($generalSetting['admin_dark_logo'])
-                                <img src="{{ asset('storage/' . $generalSetting['admin_dark_logo']) }}" width="50" alt="Admin Dark Logo" class="mt-2">
+                            @if ($generalSetting['admin_dark_logo_url'])
+                                <img src="{{ asset('storage/' . $generalSetting['admin_dark_logo_url']) }}" width="50" alt="Admin Dark Logo" class="mt-2">
                             @endif
                             @error('generalSetting.admin_dark_logo') <span class="text-red-600">{{ $message }}</span> @enderror
                         </div>
@@ -138,8 +138,8 @@
                                 wire:model="generalSetting.favicon"
                                 accept="image/*"
                                 class="form-control" />
-                            @if ($generalSetting['favicon'])
-                                <img src="{{ asset('storage/' . $generalSetting['favicon']) }}" width="50" alt="Favicon" class="mt-2">
+                            @if ($generalSetting['favicon_url'])
+                                <img src="{{ asset('storage/' . $generalSetting['favicon_url']) }}" width="50" alt="Favicon" class="mt-2">
                             @endif
                             @error('generalSetting.favicon') <span class="text-red-600">{{ $message }}</span> @enderror
                         </div>
@@ -149,7 +149,7 @@
                             <select wire:model="generalSetting.default_language" class="form-control">
                                 <option value="">Select Language</option>
                                 @foreach ($languages as $language)
-                                    <option value="{{ $language->code }}" @selected($language->code == $generalSetting->default_language)>{{ $language->name }}</option>
+                                    <option value="{{ $language['id'] }}" @selected($language['id'] == $generalSetting['default_language'])>{{ $language['name'] . ' - ' . $language['native'] }}</option>
                                 @endforeach
                             </select>
                             @error('generalSetting.default_language') <span class="text-red-600">{{ $message }}</span> @enderror

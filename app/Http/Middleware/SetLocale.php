@@ -2,10 +2,12 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\GeneralSetting;
 use App\Models\Language;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Support\Str;
 
 class SetLocale
 {
@@ -16,15 +18,20 @@ class SetLocale
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = session('locale', config('app.locale'));
+        $generalSetting = GeneralSetting::first();
+        if($generalSetting && $generalSetting->default_language){
+            $default_language = $generalSetting->default_language;
+        }else{
+            $default_language = config('app.locale');
+        }
+        $locale = Str::lower(session('locale', $default_language));
 
         // اجلب قائمة اللغات المدعومة من الجدول
-        $supportedLocales = Language::where('is_active', true)->pluck('code')->toArray();
-
-        if (in_array($locale, $supportedLocales)) {
+        $supportedLocales = array_map('strtolower', Language::where('is_active', true)->pluck('code')->toArray());
+        if (in_array(strtolower($locale), $supportedLocales)) {
             app()->setLocale($locale);
         } else {
-            app()->setLocale(config('app.locale'));
+            app()->setLocale($default_language);
         }
 
         return $next($request);

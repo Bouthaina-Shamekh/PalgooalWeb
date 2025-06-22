@@ -35,11 +35,9 @@
                         <img width="20" src="" alt="">
                     </a>
                 </li>
-                <li class="nav-item ">
+                <li class="dropdown nav-item">
                     <x-lang.language-switcher />
-                    
                 </li>
-                
                 <li class="dropdown pc-h-item">
                     <a class="pc-head-link dropdown-toggle me-0" data-pc-toggle="dropdown" href="#" role="button"
                         aria-haspopup="false" aria-expanded="false">
@@ -99,46 +97,46 @@
                         </div>
                         <div id="unread" class="dropdown-body header-notification-scroll relative py-4 px-5"
                             style="max-height: calc(100vh - 215px)">
-                           
+
                                 <div class="card mb-2">
                                     <div class="card-body">
                                         <div class="flex gap-4">
                                             <div class="shrink-0">
-                                               
+
                                                     <svg class="pc-icon text-primary w-[22px] h-[22px]">
                                                         <use xlink:href="#custom-sms"></use>
                                                     </svg>
-                                              
+
                                                     <svg class="pc-icon text-primary w-[22px] h-[22px]">
                                                         <use xlink:href="#custom-document-text"></use>
                                                     </svg>
-                                              
+
                                             </div>
                                             <span>
-                                               
+
                                             </span>
-                                           
+
                                                 <div class="grow">
                                                     <span class="float-end text-sm text-muted"></span>
                                                     <h5 class="text-body mb-2"></h5>
-                                                   
+
                                                 </div>
-                                           
+
                                                 <div class="grow">
                                                     <span class="float-end text-sm text-muted"></span>
                                                     <h5 class="text-body mb-2"></h5>
-                                                   
-                                                    
-                                                    
+
+
+
                                                 </div>
-                                          
+
                                                 <div class="grow">
                                                     <span class="float-end text-sm text-muted"></span>
                                                     <h5 class="text-body mb-2"</h5>
-                                                   
-                                                   
+
+
                                                 </div>
-                                           
+
                                         </div>
                                     </div>
                                     {{-- <a href="" class="stretched-link"></a> --}}
@@ -147,9 +145,9 @@
                                     {{-- <a href="" class="stretched-link"></a> --}}
                                     <a href="" class="stretched-link"></a>
                                 </div>
-                           
+
                         </div>
-                       
+
                     </div>
                 </li>
                 <li class="dropdown pc-h-item header-user-profile">

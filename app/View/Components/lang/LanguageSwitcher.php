@@ -20,7 +20,7 @@ class LanguageSwitcher extends Component
     {
         $this->languages = Language::where('is_active', true)->get();
         $this->currentLocale = app()->getLocale();
-        $this->currentLanguage = $this->languages->firstWhere('code', $this->currentLocale);
+        $this->currentLanguage = Language::where('code', $this->currentLocale)->first();
     }
 
     /**

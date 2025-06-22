@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('admin_logo')->nullable();
             $table->string('admin_dark_logo')->nullable();
             $table->string('favicon')->nullable();
-            $table->string('default_language', 10)->nullable();
+            $table->foreignId('default_language')->nullable()->constrained('languages')->cascadeOnDelete();
             $table->timestamps();
         });
     }

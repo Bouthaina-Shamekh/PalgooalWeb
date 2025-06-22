@@ -19,4 +19,9 @@ class GeneralSetting extends Model
         'favicon',
         'default_language',
     ];
+
+    public function language()
+    {
+        return $this->belongsTo(Language::class, 'default_language', 'id');
+    }
 }

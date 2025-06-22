@@ -3,12 +3,12 @@
     <div class="page-header">
         <div class="page-block">
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="#">Home</a></li>
-                <li class="breadcrumb-item"><a href="#">Languages</a></li>
-                <li class="breadcrumb-item" aria-current="page">Translation Values</li>
+                <li class="breadcrumb-item"><a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'translation_values') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('dashboard.languages.index') }}">{{ t('dashboard.Languages', 'Languages') }}</a></li>
+                <li class="breadcrumb-item" aria-current="page">{{ t('dashboard.Translation_Values', 'Translation Values') }}</li>
             </ul>
             <div class="page-header-title">
-                <h2 class="mb-0">{{ t('dashboard.translation_values') }}</h2>
+                <h2 class="mb-0">{{ t('dashboard.Translation_Values', 'Translation Values') }}</h2>
             </div>
         </div>
     </div>
@@ -19,7 +19,7 @@
             <div class="card table-card">
                 <div class="card-header">
                     <div class="sm:flex items-center justify-between">
-                        <h5 class="mb-3 sm:mb-0">{{ t('dashboard.translation_values') }}</h5>
+                        <h5 class="mb-3 sm:mb-0">{{ t('dashboard.Translation_Values', 'Translation Values') }}</h5>
                         <div>
                             <a href="{{ route('dashboard.translation-values.create') }}" class="btn btn-primary">{{ t('dashboard.Add_New_Translation', 'Add New Translation') }}</a>
                         </div>
@@ -33,7 +33,7 @@
                     <form method="GET" action="{{ route('dashboard.translation-values.index') }}" class="flex items-center gap-3 flex-wrap">
                         <!-- Language Filter -->
                         <select name="locale" onchange="this.form.submit()" class="w-48 border px-2 py-1 rounded">
-                            <option value="">-- All Languages --</option>
+                            <option value="">-- {{t('dashboard.All_Languages', 'All Languages') }} --</option>
                             @foreach($languages as $lang)
                             <option value="{{ $lang->code }}" {{ $localeFilter == $lang->code ? 'selected' : '' }}>
                                 {{ $lang->native }} ({{ $lang->code }})
@@ -42,25 +42,25 @@
                         </select>
                         <!-- Type Filter -->
                         <select name="type" onchange="this.form.submit()" class="w-48 border px-2 py-1 rounded">
-                            <option value="">-- All Types --</option>
-                            <option value="dashboard" {{ $typeFilter == 'dashboard' ? 'selected' : '' }}>Dashboard</option>
-                            <option value="frontend" {{ $typeFilter == 'frontend' ? 'selected' : '' }}>Frontend</option>
-                            <option value="general" {{ $typeFilter == 'general' ? 'selected' : '' }}>General</option>
+                            <option value="">-- {{t('dashboard.All_Types', 'All Types')}} --</option>
+                            <option value="dashboard" {{ $typeFilter == 'dashboard' ? 'selected' : '' }}>{{t('dashboard.Dashboard', 'Dashboard')}}</option>
+                            <option value="frontend" {{ $typeFilter == 'frontend' ? 'selected' : '' }}>{{t('dashboard.Frontend', 'Frontend')}}</option>
+                            <option value="general" {{ $typeFilter == 'general' ? 'selected' : '' }}>{{t('dashboard.General', 'General')}}</option>
                         </select>
                         <!-- Search -->
-                        <input type="text" name="search" value="{{ $search }}" placeholder="Search keys..." class="border px-2 py-1 rounded w-64">
-                        <button type="submit" class="btn btn-primary">Search</button>
-                        <a href="{{ route('dashboard.translation-values.index') }}" class="btn btn-secondary">Reset</a>
+                        <input type="text" name="search" value="{{ $search }}" placeholder="{{t('dashboard.Search_keys...', 'Search keys...')}}" class="border px-2 py-1 rounded w-64">
+                        <button type="submit" class="btn btn-primary">{{t('dashboard.Search', 'Search')}}</button>
+                        <a href="{{ route('dashboard.translation-values.index') }}" class="btn btn-secondary">{{t('dashboard.Reset', 'Reset')}}</a>
                     </form>
                 </div>
                 <div class="flex items-center gap-2 mb-4 px-5">
                     <a href="{{ route('dashboard.translation-values.export') }}" class="btn btn-success">
-                        Export CSV
+                        {{t('dashboard.Export_CSV', 'Export CSV')}}
                     </a>
                     <form action="{{ route('dashboard.translation-values.import') }}" method="POST" enctype="multipart/form-data" class="flex items-center gap-2">
                         @csrf
                         <input type="file" name="csv_file" accept=".csv" required class="border px-2 py-1 rounded">
-                        <button type="submit" class="btn btn-primary">Import CSV</button>
+                        <button type="submit" class="btn btn-primary">{{t('dashboard.Import_CSV', 'Import CSV')}}</button>
                     </form>
                 </div>
 
@@ -70,9 +70,10 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>Key</th>
-                                    <th>Type</th>
-                                    <th>Actions</th>
+                                    <th>{{ t('dashboard.Key', 'Key') }}</th>
+                                    <th>{{ t('dashboard.Value', 'Value') }}</th>
+                                    <th>{{ t('dashboard.Type', 'Type') }}</th>
+                                    <th>{{ t('dashboard.Actiont', 'Action') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -84,15 +85,16 @@
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
                                     <td>{{ $key }}</td>
+                                    <td>{{ isset($items[0]) ? $items[0]->value : '' }}</td>
                                     <td>{{ $type }}</td>
                                     <td>
                                         <a href="{{ route('dashboard.translation-values.edit', ['key' => $key]) }}" class="btn btn-sm btn-primary">
-                                            {{ t('dashboard.edit_translation') }}
+                                            {{ t('dashboard.edit_translation', 'Edit Translation') }}
                                         </a>
-                                        <form action="{{ route('dashboard.translation-values.destroy', ['key' => $key]) }}" method="POST" class="inline-block" onsubmit="return confirm('{{ t('dashboard.confirm_delete') }}');">
+                                        <form action="{{ route('dashboard.translation-values.destroy', ['key' => $key]) }}" method="POST" class="inline-block" onsubmit="return confirm('{{ t('dashboard.confirm_delete', 'Confirm Delete') }}');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger">{{ t('dashboard.delete') }}</button>
+                                            <button type="submit" class="btn btn-sm btn-danger">{{ t('dashboard.delete', 'Delete') }}</button>
                                         </form>
                                     </td>
                                 </tr>
