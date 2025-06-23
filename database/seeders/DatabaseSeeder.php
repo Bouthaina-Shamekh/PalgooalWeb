@@ -27,7 +27,8 @@ class DatabaseSeeder extends Seeder
         ]);
 
       
-        $this->call( GeneralSettingsSeeder::class);
+        // $this->call( GeneralSettingsSeeder::class);
+        $this->call(LanguageSeeder::class);
 
     }
 }
