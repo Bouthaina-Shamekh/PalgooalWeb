@@ -20,7 +20,7 @@ class SetLocale
     {
         $generalSetting = GeneralSetting::first();
         if($generalSetting && $generalSetting->default_language){
-            $default_language = $generalSetting->default_language;
+            $default_language = Language::where('id', $generalSetting->default_language)->first()->code;
         }else{
             $default_language = config('app.locale');
         }

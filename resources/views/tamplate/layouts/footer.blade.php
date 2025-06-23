@@ -1,3 +1,8 @@
+@php
+    $generalSettings = \App\Models\GeneralSetting::first();
+    $site_title = $generalSettings->site_title;
+    $site_discretion = $generalSettings->site_discretion;
+@endphp
 <!-- Contact Section -->
 <section class="py-20 px-4 sm:px-8 lg:px-24 bg-background -mb-25 -z-30 relative" aria-labelledby="support-heading"
          itemscope itemtype="https://schema.org/ContactPoint" itemprop="contactType" content="customer support">
@@ -37,10 +42,12 @@
         <div class="flex-1 mb-8 md:mb-0 text-center md:text-right">
             <a href="/" class="flex items-center justify-center md:justify-start gap-3 mb-4 group">
                 <img src="{{ asset('assets/tamplate/images/logo.svg') }}" alt="Palgoals Logo" class="h-12 w-auto transition-transform group-hover:scale-105" itemprop="logo" loading="lazy" />
-                <span class="font-extrabold text-xl tracking-tight group-hover:text-[#AE1028] transition hidden sm:inline">بال قول</span>
+                <span class="font-extrabold text-xl tracking-tight group-hover:text-[#AE1028] transition hidden sm:inline">
+                    {{ t($site_title) }}
+                </span>
             </a>
             <p class="text-white/80 text-sm max-w-xs mx-auto md:mx-0 leading-relaxed">
-                أنشئ موقعك أو متجرك الإلكتروني بكل سهولة مع Palgoals — حلول استضافة، تصميم، ودعم متواصل.
+                {{ t($site_discretion) }}
             </p>
             <div class="flex gap-3 mt-5" aria-label="روابط التواصل الاجتماعي">
                 <!-- Facebook -->
