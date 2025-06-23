@@ -36,7 +36,7 @@
                     </a>
                 </li>
                 <li class="dropdown nav-item">
-                    <x-lang.language-switcher />
+                    <x-lang.language-switcher-dashboard />
                 </li>
                 <li class="dropdown pc-h-item">
                     <a class="pc-head-link dropdown-toggle me-0" data-pc-toggle="dropdown" href="#" role="button"

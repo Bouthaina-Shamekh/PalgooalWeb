@@ -23,7 +23,6 @@
                 <div class="card-body">
                     <form action="{{ route('dashboard.translation-values.update', ['key' => $key]) }}" method="POST" enctype="multipart/form-data" class="grid grid-cols-12 gap-x-6">
                         @csrf
-                        @method('PUT')
                         <div class="col-span-12">
                             <div class="mb-3">
                                 <x-form.input

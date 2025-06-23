@@ -43,11 +43,11 @@
             <a href="/" class="flex items-center justify-center md:justify-start gap-3 mb-4 group">
                 <img src="{{ asset('assets/tamplate/images/logo.svg') }}" alt="Palgoals Logo" class="h-12 w-auto transition-transform group-hover:scale-105" itemprop="logo" loading="lazy" />
                 <span class="font-extrabold text-xl tracking-tight group-hover:text-[#AE1028] transition hidden sm:inline">
-                    {{ t($site_title) }}
+                    {{ t('General.'.$site_title, 'palgoals') }}
                 </span>
             </a>
             <p class="text-white/80 text-sm max-w-xs mx-auto md:mx-0 leading-relaxed">
-                {{ t($site_discretion) }}
+                {{ t('General.'.$site_discretion, 'discretion') }}
             </p>
             <div class="flex gap-3 mt-5" aria-label="روابط التواصل الاجتماعي">
                 <!-- Facebook -->
