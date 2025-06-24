@@ -6,17 +6,36 @@ use App\Models\Language;
 use App\Models\Service;
 use App\Models\ServiceTranslation;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
-use Livewire\Component;
+use Illuminate\Http\UploadedFile;
 
 class Services extends Component
 {
-    use WithPagination;
+    use WithPagination, WithFileUploads;
 
     public $alert = false;
     public $alertType = 'success';
     public $alertMessage = '';
+
+    public $mode = 'index';
+    public $search = '';
+    public $perPage = 10;
+    public $serviceId = null;
+
+    public $service = [
+        'icon' => '',
+        'order' => '',
+    ];
+
+    public $serviceTranslations = [];
+    public $languages = [];
+
+    public function mount()
+    {
+        $this->languages = Language::get();
+    }
 
     public function showAlert($message, $type = 'success')
     {
@@ -30,25 +49,6 @@ class Services extends Component
         $this->alert = false;
     }
 
-    public $mode = 'index';
-    public $search = '';
-    public $perPage = 10;
-    public $serviceId = null;
-
-    public $service = [
-        'icon' => '',
-        'order' => '',
-    ];
-
-    public $serviceTranslations = [];
-    public $serviceTranslation = [
-        'locale' => '',
-        'title' => '',
-        'description' => '',
-    ];
-
-    public $languages = [];
-
     public function showAdd()
     {
         $this->mode = 'add';
@@ -60,13 +60,24 @@ class Services extends Component
     {
         $this->mode = 'edit';
         $this->serviceId = $id;
+
         $service = Service::findOrFail($id);
-        $this->languages = Language::get();
+
         $this->service = [
             'icon' => $service->icon,
             'order' => $service->order,
         ];
-        $this->serviceTranslations = $service->servicetranslations()->get();
+
+        $this->serviceTranslations = [];
+        foreach ($this->languages as $lang) {
+            $trans = $service->translations->firstWhere('locale', $lang->code);
+            $this->serviceTranslations[] = [
+                'locale' => $lang->code,
+                'title' => $trans?->title ?? '',
+                'description' => $trans?->description ?? '',
+            ];
+        }
+
         $this->closeModal();
     }
 
@@ -78,69 +89,60 @@ class Services extends Component
 
     public function resetForm()
     {
-        $this->service = [
-            'icon' => '',
-            'order' => '',
-        ];
-        $this->serviceTranslations = [];
-        $this->serviceTranslation = [
-            'locale' => '',
-            'title' => '',
-            'description' => '',
-        ];
         $this->serviceId = null;
-    }
+        $this->service = ['icon' => '', 'order' => ''];
 
+        $this->serviceTranslations = [];
+        foreach ($this->languages as $lang) {
+            $this->serviceTranslations[] = [
+                'locale' => $lang->code,
+                'title' => '',
+                'description' => '',
+            ];
+        }
+    }
 
     public function save()
     {
         $validated = $this->validate([
-            'service.icon' => 'required',
-            'service.order' => 'required',
+            'service.order' => 'required|integer',
+            'service.icon' => 'nullable', // optional file
+            'serviceTranslations.*.title' => 'required|string',
+            'serviceTranslations.*.description' => 'required|string',
         ]);
 
-        $serviceValidated = $validated['service'];
+        $serviceData = $this->service;
 
         if ($this->serviceId) {
             $service = Service::findOrFail($this->serviceId);
 
-            if ($this->service['icon']) {
+            // تحقق إن كانت الأيقونة جديدة
+            if ($this->service['icon'] instanceof UploadedFile) {
                 if ($service->icon && Storage::disk('public')->exists($service->icon)) {
                     Storage::disk('public')->delete($service->icon);
                 }
-
-                $serviceValidated['icon'] = $this->service['icon']->store('icons', 'public');
-            }else{
-                $serviceValidated['icon'] = $service->icon;
+                $serviceData['icon'] = $this->service['icon']->store('icons', 'public');
+            } else {
+                $serviceData['icon'] = $service->icon;
             }
 
-            $service->update($serviceValidated);
-            foreach ($this->serviceTranslations as $serviceTranslation) {
-                ServiceTranslation::updateOrCreate([
-                    'service_id' => $service->id,
-                    'locale' => $serviceTranslation['locale'],
-                ], [
-                    'title' => $serviceTranslation['title'],
-                    'description' => $serviceTranslation['description'],
-                ]);
-            }
+            $service->update($serviceData);
             $this->showAlert('Service updated successfully.', 'success');
         } else {
-            if ($this->service['icon']) {
-                $serviceValidated['icon'] = $this->service['icon']->store('icons', 'public');
+            if ($this->service['icon'] instanceof UploadedFile) {
+                $serviceData['icon'] = $this->service['icon']->store('icons', 'public');
             }
 
-            $service = Service::create($serviceValidated);
-            foreach ($this->serviceTranslations as $serviceTranslation) {
-                ServiceTranslation::updateOrCreate([
-                    'service_id' => $service->id,
-                    'locale' => $serviceTranslation['locale'],
-                ], [
-                    'title' => $serviceTranslation['title'],
-                    'description' => $serviceTranslation['description'],
-                ]);
-            }
+            $service = Service::create($serviceData);
             $this->showAlert('Service added successfully.', 'success');
+        }
+
+        // حفظ الترجمات
+        foreach ($this->serviceTranslations as $translation) {
+            ServiceTranslation::updateOrCreate(
+                ['service_id' => $service->id, 'locale' => $translation['locale']],
+                ['title' => $translation['title'], 'description' => $translation['description']]
+            );
         }
 
         $this->resetForm();
@@ -151,8 +153,12 @@ class Services extends Component
     public function delete($id)
     {
         $service = Service::findOrFail($id);
-        $service->delete();
-        ServiceTranslation::where('service_id', $id)->delete();
+
+        if ($service->icon && Storage::disk('public')->exists($service->icon)) {
+            Storage::disk('public')->delete($service->icon);
+        }
+
+        $service->delete(); // الترجمات تُحذف تلقائيًا بـ onDelete('cascade')
 
         $this->showAlert('Service deleted successfully.', 'success');
         $this->resetPage();
@@ -160,8 +166,7 @@ class Services extends Component
 
     public function render()
     {
-        $services = Service::query()->paginate($this->perPage);
-
+        $services = Service::with('translations')->paginate($this->perPage);
         return view('livewire.services', compact('services'));
     }
 }

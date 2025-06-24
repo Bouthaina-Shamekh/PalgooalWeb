@@ -6,13 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class Service extends Model
 {
-     protected $fillable = [
-        'icon',
-        'order',
-    ];
+    protected $fillable = ['icon', 'order'];
 
-     public function servicetranslations()
+    public function translations()
     {
-        return $this->hasMany( ServiceTranslation::class);
+        return $this->hasMany(ServiceTranslation::class);
+    }
+
+    public function translation($locale = null)
+    {
+        $locale = $locale ?? app()->getLocale();
+        return $this->translations->where('locale', $locale)->first();
     }
 }
+

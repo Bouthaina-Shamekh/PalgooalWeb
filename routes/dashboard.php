@@ -7,6 +7,7 @@ use App\Http\Controllers\Dashboard\LanguageController;
 use App\Http\Controllers\Dashboard\ServicesController;
 use App\Http\Controllers\Dashboard\TranslationValueController;
 use App\Http\Controllers\Dashboard\ServicesTranslationController;
+use App\Livewire\Services;
 
 Route::get('/admin', function () {
     return redirect()->route('dashboard.home');
@@ -50,8 +51,12 @@ Route::group([
     Route::post('translation-values/import', [TranslationValueController::class, 'import'])
     ->name('translation-values.import');
     
-     Route::get('services', [ServicesController::class, 'index'])->name('services');
-     Route::get('service_translations', [ServicesTranslationController::class, 'index'])->name('service_translations');
+    //  Route::get('services', Services::class)->name('services');
+    //  Route::get('service_translations', [ServicesTranslationController::class, 'index'])->name('service_translations');
+        Route::get('services', function () {
+        return view('dashboard.services');
+        })->middleware(['auth'])->name('services');
+
 
     //media
     Route::get('media', function () {

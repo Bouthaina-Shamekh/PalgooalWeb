@@ -6,15 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class ServiceTranslation extends Model
 {
-    protected $fillable = [
-        'service_id',
-        'locale',
-        'title',
-        'description',
-    ];
+    protected $fillable = ['service_id', 'locale', 'title', 'description'];
 
-    public function services()
+    public function service()
     {
         return $this->belongsTo(Service::class);
     }
 }
+

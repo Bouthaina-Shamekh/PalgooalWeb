@@ -11,8 +11,8 @@
     <div class="page-header">
         <div class="page-block">
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard.home') }}">Home</a></li>
-                <li class="breadcrumb-item"><a href="javascript: void(0)">General Setting</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home')}}</a></li>
+                <li class="breadcrumb-item"><a href="javascript: void(0)">{{ t('dashboard.General_Setting', 'General Setting')}}</a></li>
             </ul>
             <div class="page-header-title">
                 <h2 class="mb-0">General Setting</h2>
@@ -166,4 +166,6 @@
         </div>
     </div>
     <!-- [ Main Content ] end -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 </div>
