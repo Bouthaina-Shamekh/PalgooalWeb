@@ -14,6 +14,7 @@ use Illuminate\Http\UploadedFile;
 class Services extends Component
 {
     use WithPagination, WithFileUploads;
+    protected $listeners = ['deleteServiceConfirmed'];
 
     public $alert = false;
     public $alertType = 'success';
@@ -149,21 +150,32 @@ class Services extends Component
         $this->resetPage();
         $this->mode = 'index';
     }
-
-    public function delete($id)
+    public function confirmDelete($id)
     {
+        // نرسل حدث إلى المتصفح لفتح SweetAlert
+        $this->dispatchBrowserEvent('show-delete-confirmation', ['id' => $id]);
+    }
+    public function deleteServiceConfirmed($id)
+    {
+        try {
         $service = Service::findOrFail($id);
 
         if ($service->icon && Storage::disk('public')->exists($service->icon)) {
             Storage::disk('public')->delete($service->icon);
         }
 
-        $service->delete(); // الترجمات تُحذف تلقائيًا بـ onDelete('cascade')
+        $service->delete();
 
-        $this->showAlert('Service deleted successfully.', 'success');
+        $this->dispatch('service-deleted-success');
+        $this->showAlert('✅ تم حذف الخدمة بنجاح', 'success');
+        } catch (\Exception $e) {
+        logger()->error('خطأ أثناء الحذف: ' . $e->getMessage());
+        $this->dispatch('service-delete-failed');
+        $this->showAlert('❌ حدث خطأ أثناء الحذف', 'danger');
+        }
         $this->resetPage();
     }
-
+    
     public function render()
     {
         $services = Service::with('translations')->paginate($this->perPage);

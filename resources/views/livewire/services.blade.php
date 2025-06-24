@@ -43,7 +43,7 @@
                         <td class="p-2">{{ $service->order }}</td>
                         <td class="p-2 space-x-2">
                             <button wire:click="showEdit({{ $service->id }})" class="btn btn-sm btn-warning">تعديل</button>
-                            <button wire:click="delete({{ $service->id }})" class="btn btn-sm btn-danger">حذف</button>
+                            <button onclick="confirmDeleteService({{ $service->id }})" class="btn btn-danger">حذف</button>
                         </td>
                     </tr>
                 @endforeach
@@ -104,4 +104,51 @@
             </div>
         </form>
     @endif
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    function confirmDeleteService(serviceId) {
+        Swal.fire({
+            title: 'هل أنت متأكد؟',
+            text: 'لن تتمكن من التراجع بعد الحذف!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، احذف',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Livewire.dispatch('deleteServiceConfirmed', { id: serviceId });
+            }
+        });
+    }
+
+    window.addEventListener('service-deleted-success', () => {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: '✅ تم حذف الخدمة بنجاح',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+        });
+    });
+
+    window.addEventListener('service-delete-failed', () => {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'error',
+            title: '❌ فشل حذف الخدمة',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+        });
+    });
+</script>
+
+
+
 </div>
