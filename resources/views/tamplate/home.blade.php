@@ -167,6 +167,9 @@
   </div>
 </section>
 <!-- خدمات رقمية متكاملة -->
+@php
+    $services = \App\Models\Service::with('translations')->orderBy('order')->get();
+@endphp
 <section class="py-20 px-4 sm:px-8 lg:px-24 bg-white" dir="auto" aria-label="خدمات رقمية متكاملة">
   <div class="relative">
     <div class="relative z-10 max-w-7xl mx-auto">
@@ -182,64 +185,22 @@
       <!-- Slider -->
       <div class="swiper mySwiper" aria-label="قائمة الخدمات الرقمية" role="region">
         <div class="swiper-wrapper">
-
-          <!-- بطاقة 1 -->
-          <div class="swiper-slide" data-aos="zoom-in" data-aos-delay="100">
-            <div class="group bg-white rounded-3xl shadow-xl p-8 flex flex-col items-center text-center border border-primary/10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 h-full">
-              <div class="bg-primary/10 group-hover:bg-primary/20 rounded-full p-4 mb-5 transition">
-                <img src="{{ asset('assets/tamplate/images/icons/Shared-hosting.svg') }}" alt="استضافة مشتركة لموقعك مع SSL مجاني" class="w-14 h-14" loading="lazy" />
+          @foreach($services as $service)
+            @php
+              $translation = $service->translations->firstWhere('locale', app()->getLocale()) 
+              ?? $service->translations->first();
+            @endphp                    
+            <div class="swiper-slide" data-aos="zoom-in" data-aos-delay="100">
+              <div class="group bg-white rounded-3xl shadow-xl p-8 flex flex-col items-center text-center border border-primary/10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 h-full">
+                <div class="bg-primary/10 group-hover:bg-primary/20 rounded-full p-4 mb-5 transition">
+                  <img src="{{ asset('storage/' . $service->icon) }}" alt="{{ $translation->title }}" class="w-14 h-14" loading="lazy" />
+                </div>
+                <h3 class="font-bold text-lg text-primary mb-2 group-hover:text-secondary transition">{{ $translation->title }}</h3>
+                <p class="text-tertiary text-sm mb-4">{{ $translation->description }}</p>
               </div>
-              <h3 class="font-bold text-lg text-primary mb-2 group-hover:text-secondary transition">الاستضافة المشتركة</h3>
-              <p class="text-tertiary text-sm mb-4">استضافة قوية واقتصادية لموقعك، مع شهادة SSL مجانية وسرعة تشغيل عالية.</p>
             </div>
-          </div>
-
-          <!-- بطاقة 2 -->
-          <div class="swiper-slide" data-aos="zoom-in" data-aos-delay="200">
-            <div class="group bg-white rounded-3xl shadow-xl p-8 flex flex-col items-center text-center border border-primary/10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 h-full">
-              <div class="bg-primary/10 group-hover:bg-primary/20 rounded-full p-4 mb-5 transition">
-                <img src="{{ asset('assets/tamplate/images/icons/wordpress-hosting.svg') }}" alt="استضافة ووردبريس سريعة وآمنة" class="w-14 h-14" loading="lazy" />
-              </div>
-              <h3 class="font-bold text-lg text-primary mb-2 group-hover:text-secondary transition">استضافة ووردبريس</h3>
-              <p class="text-tertiary text-sm mb-4">تمتع بأداء عالٍ وأمان كامل لموقعك على ووردبريس مع دعم فني دائم.</p>
-            </div>
-          </div>
-
-          <!-- بطاقة 3 -->
-          <div class="swiper-slide" data-aos="zoom-in" data-aos-delay="300">
-            <div class="group bg-white rounded-3xl shadow-xl p-8 flex flex-col items-center text-center border border-primary/10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 h-full">
-              <div class="bg-primary/10 group-hover:bg-primary/20 rounded-full p-4 mb-5 transition">
-                <img src="{{ asset('assets/tamplate/images/icons/domains.svg') }}" alt="حجز اسم نطاق لموقعك" class="w-14 h-14" loading="lazy" />
-              </div>
-              <h3 class="font-bold text-lg text-primary mb-2 group-hover:text-secondary transition">حجز اسم نطاق (دومين)</h3>
-              <p class="text-tertiary text-sm mb-4">احجز اسم موقعك بسهولة واختر من بين مجموعة واسعة من الامتدادات العالمية.</p>
-            </div>
-          </div>
-
-          <!-- بطاقة 4 -->
-          <div class="swiper-slide" data-aos="zoom-in" data-aos-delay="400">
-            <div class="group bg-white rounded-3xl shadow-xl p-8 flex flex-col items-center text-center border border-primary/10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 h-full">
-              <div class="bg-primary/10 group-hover:bg-primary/20 rounded-full p-4 mb-5 transition">
-                <img src="{{ asset('assets/tamplate/images/icons/Website-design.svg') }}" alt="تصميم مواقع احترافي متجاوب" class="w-14 h-14" loading="lazy" />
-              </div>
-              <h3 class="font-bold text-lg text-primary mb-2 group-hover:text-secondary transition">تصميم مواقع</h3>
-              <p class="text-tertiary text-sm mb-4">تصاميم مخصصة ومتجاوبة تعكس هوية مشروعك وتمنح الزائر تجربة احترافية.</p>
-            </div>
-          </div>
-
-          <!-- بطاقة 5 -->
-          <div class="swiper-slide" data-aos="zoom-in" data-aos-delay="500">
-            <div class="group bg-white rounded-3xl shadow-xl p-8 flex flex-col items-center text-center border border-primary/10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 h-full">
-              <div class="bg-primary/10 group-hover:bg-primary/20 rounded-full p-4 mb-5 transition">
-                <img src="{{ asset('assets/tamplate/images/icons/Special-programming.svg') }}" alt="حلول برمجية خاصة حسب الطلب" class="w-14 h-14" loading="lazy" />
-              </div>
-              <h3 class="font-bold text-lg text-primary mb-2 group-hover:text-secondary transition">برمجيات خاصة</h3>
-              <p class="text-tertiary text-sm mb-4">نطوّر حلولًا برمجية مخصصة تناسب احتياجاتك بدقة وتدعم نمو أعمالك.</p>
-            </div>
-          </div>
-
+          @endforeach
         </div>
-
         <!-- Pagination -->
         <div class="w-full flex justify-center items-center mt-8">
           <div class="swiper-pagination flex justify-center items-center"></div>

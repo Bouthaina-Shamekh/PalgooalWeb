@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\dashboard;
 
 use App\Models\Language;
 use App\Models\Service;

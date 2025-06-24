@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\dashboard;
 
 use Livewire\Component;
 use App\Models\GeneralSetting;
@@ -10,7 +10,7 @@ use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Storage;
 
-class GeneralSettingComponent extends Component
+class GeneralSettingPage extends Component
 {
     use WithFileUploads;
     use WithPagination;
@@ -206,6 +206,6 @@ class GeneralSettingComponent extends Component
     {
         $generalSettings = GeneralSetting::first();
 
-        return view('livewire.general-setting', compact('generalSettings'));
+        return view('livewire.general-setting-page', compact('generalSettings'));
     }
 }

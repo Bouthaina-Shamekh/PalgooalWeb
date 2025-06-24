@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\dashboard;
 
 use App\Models\Media;
 use Illuminate\Support\Facades\Storage;

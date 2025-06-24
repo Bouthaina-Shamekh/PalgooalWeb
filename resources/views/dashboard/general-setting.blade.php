@@ -1,3 +1,3 @@
 <x-dashboard-layout>
-    <livewire:general-setting-component />
+    <livewire:dashboard.general-setting-page />
 </x-dashboard-layout>

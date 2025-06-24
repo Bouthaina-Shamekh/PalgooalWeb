@@ -58,6 +58,16 @@
                         <span class="pc-mtext">{{ t('dashboard.Home', 'Home') }}</span>
                     </a>
                 </li>
+                <li class="pc-item">
+                    <a href="{{route('dashboard.services')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-home"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.services', 'services') }}</span>
+                    </a>
+                </li>
                 <li class="pc-item pc-caption">
                     <label>{{ t('dashboard.Widget','Widget') }}</label>
                     <svg class="pc-icon">
