@@ -1,10 +1,12 @@
 <?php
 
-use App\Http\Controllers\Dashboard\TranslationValueController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Dashboard\HomeController;
-use App\Http\Controllers\Dashboard\LanguageController;
 use App\Http\Controllers\Dashboard\UserController;
+use App\Http\Controllers\Dashboard\LanguageController;
+use App\Http\Controllers\Dashboard\ServicesController;
+use App\Http\Controllers\Dashboard\TranslationValueController;
+use App\Http\Controllers\Dashboard\ServicesTranslationController;
 
 Route::get('/admin', function () {
     return redirect()->route('dashboard.home');
@@ -47,6 +49,9 @@ Route::group([
     // Import Translations
     Route::post('translation-values/import', [TranslationValueController::class, 'import'])
     ->name('translation-values.import');
+    
+    Route::get('services ', ServicesController::class)->names('services');
+    Route::get('service_translations', ServicesTranslationController::class)->names('service_translations');
 
     //media
     Route::get('media', function () {
