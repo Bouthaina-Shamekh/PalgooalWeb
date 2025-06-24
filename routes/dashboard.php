@@ -50,8 +50,8 @@ Route::group([
     Route::post('translation-values/import', [TranslationValueController::class, 'import'])
     ->name('translation-values.import');
     
-    Route::get('services ', ServicesController::class)->names('services');
-    Route::get('service_translations', ServicesTranslationController::class)->names('service_translations');
+     Route::get('services', [ServicesController::class, 'index'])->name('services');
+     Route::get('service_translations', [ServicesTranslationController::class, 'index'])->name('service_translations');
 
     //media
     Route::get('media', function () {
