@@ -3,7 +3,7 @@
     <div class="page-header">
         <div class="page-block">
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'translation_values') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home') }}</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('dashboard.languages.index') }}">{{ t('dashboard.Languages', 'Languages') }}</a></li>
                 <li class="breadcrumb-item" aria-current="page">{{ t('dashboard.Translation_Values', 'Translation Values') }}</li>
             </ul>
