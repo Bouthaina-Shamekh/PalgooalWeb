@@ -1,7 +1,12 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\dashboard;
 
+use App\Models\Language;
+use App\Models\Feedback;
+use App\Models\FeedbackTranslation;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
@@ -19,14 +24,21 @@ class Feedbacks extends Component
     public $mode = 'index';
     public $search = '';
     public $perPage = 10;
-    public $serviceId = null;
+    public $feedbackId = null;
 
-    public $service = [
-        'icon' => '',
+    public $feedback = [
+        'image' => '',
+        'star' => '',
         'order' => '',
     ];
 
-    public $serviceTranslations = [];
+    public $feedbackTranslations = [];
+    public $feedbackTranslation = [
+        'feedback' => '',
+        'name' => '',
+        'major' => '',
+        'locale' => '',
+    ];
     public $languages = [];
 
     public function mount()
@@ -56,22 +68,24 @@ class Feedbacks extends Component
     public function showEdit($id)
     {
         $this->mode = 'edit';
-        $this->serviceId = $id;
+        $this->feedbackId = $id;
 
-        $service = Service::findOrFail($id);
+        $feedback = Feedback::findOrFail($id);
 
-        $this->service = [
-            'icon' => $service->icon,
-            'order' => $service->order,
+        $this->feedback = [
+            'image' => $feedback->image,
+            'star' => $feedback->star,
+            'order' => $feedback->order,
         ];
 
-        $this->serviceTranslations = [];
+        $this->feedbackTranslations = [];
         foreach ($this->languages as $lang) {
-            $trans = $service->translations->firstWhere('locale', $lang->code);
-            $this->serviceTranslations[] = [
+            $trans = $feedback->translations->firstWhere('locale', $lang->code);
+            $this->feedbackTranslations[] = [
                 'locale' => $lang->code,
-                'title' => $trans?->title ?? '',
-                'description' => $trans?->description ?? '',
+                'feedback' => $trans?->feedback ?? '',
+                'name' => $trans?->name ?? '',
+                'major' => $trans?->major ?? '',
             ];
         }
 
@@ -86,15 +100,16 @@ class Feedbacks extends Component
 
     public function resetForm()
     {
-        $this->serviceId = null;
-        $this->service = ['icon' => '', 'order' => ''];
+        $this->feedbackId = null;
+        $this->feedback = ['image' => '', 'star' => '', 'order' => ''];
 
-        $this->serviceTranslations = [];
+        $this->feedbackTranslations = [];
         foreach ($this->languages as $lang) {
-            $this->serviceTranslations[] = [
+            $this->feedbackTranslations[] = [
                 'locale' => $lang->code,
-                'title' => '',
-                'description' => '',
+                'feedback' => '',
+                'name' => '',
+                'major' => '',
             ];
         }
     }
@@ -102,43 +117,44 @@ class Feedbacks extends Component
     public function save()
     {
         $validated = $this->validate([
-            'service.order' => 'required|integer',
-            'service.icon' => 'nullable', // optional file
-            'serviceTranslations.*.title' => 'required|string',
-            'serviceTranslations.*.description' => 'required|string',
+            'feedback.order' => 'required|integer',
+            'feedback.image' => 'nullable', // optional file
+            'feedbackTranslations.*.feedback' => 'required|string',
+            'feedbackTranslations.*.name' => 'required|string',
+            'feedbackTranslations.*.major' => 'required|string',
         ]);
 
-        $serviceData = $this->service;
+        $feedbackData = $this->feedback;
 
-        if ($this->serviceId) {
-            $service = Service::findOrFail($this->serviceId);
+        if ($this->feedbackId) {
+            $feedback = Feedback::findOrFail($this->feedbackId);
 
             // تحقق إن كانت الأيقونة جديدة
-            if ($this->service['icon'] instanceof UploadedFile) {
-                if ($service->icon && Storage::disk('public')->exists($service->icon)) {
-                    Storage::disk('public')->delete($service->icon);
+            if ($this->feedback['image'] instanceof UploadedFile) {
+                if ($feedback->image && Storage::disk('public')->exists($feedback->image)) {
+                    Storage::disk('public')->delete($feedback->image);
                 }
-                $serviceData['icon'] = $this->service['icon']->store('icons', 'public');
+                $feedbackData['image'] = $this->feedback['image']->store('feedbacks', 'public');
             } else {
-                $serviceData['icon'] = $service->icon;
+                $feedbackData['image'] = $feedback->image;
             }
 
-            $service->update($serviceData);
-            $this->showAlert('Service updated successfully.', 'success');
+            $feedback->update($feedbackData);
+            $this->showAlert('Feedback updated successfully.', 'success');
         } else {
-            if ($this->service['icon'] instanceof UploadedFile) {
-                $serviceData['icon'] = $this->service['icon']->store('icons', 'public');
+            if ($this->feedback['image'] instanceof UploadedFile) {
+                $feedbackData['image'] = $this->feedback['image']->store('feedbacks', 'public');
             }
 
-            $service = Service::create($serviceData);
-            $this->showAlert('Service added successfully.', 'success');
+            $feedback = Feedback::create($feedbackData);
+            $this->showAlert('Feedback added successfully.', 'success');
         }
 
         // حفظ الترجمات
-        foreach ($this->serviceTranslations as $translation) {
-            ServiceTranslation::updateOrCreate(
-                ['service_id' => $service->id, 'locale' => $translation['locale']],
-                ['title' => $translation['title'], 'description' => $translation['description']]
+        foreach ($this->feedbackTranslations as $translation) {
+            FeedbackTranslation::updateOrCreate(
+                ['feedback_id' => $feedback->id, 'locale' => $translation['locale']],
+                ['feedback' => $translation['feedback'], 'name' => $translation['name'], 'major' => $translation['major']]
             );
         }
 
@@ -151,29 +167,30 @@ class Feedbacks extends Component
         // نرسل حدث إلى المتصفح لفتح SweetAlert
         $this->dispatchBrowserEvent('show-delete-confirmation', ['id' => $id]);
     }
-    public function deleteServiceConfirmed($id)
+    public function deleteFeedbackConfirmed($id)
     {
         try {
-        $service = Service::findOrFail($id);
+            $feedback = Feedback::findOrFail($id);
 
-        if ($service->icon && Storage::disk('public')->exists($service->icon)) {
-            Storage::disk('public')->delete($service->icon);
-        }
+            if ($feedback->icon && Storage::disk('public')->exists($feedback->icon)) {
+                Storage::disk('public')->delete($feedback->icon);
+            }
 
-        $service->delete();
+            $feedback->delete();
 
-        $this->dispatch('service-deleted-success');
-        $this->showAlert('✅ تم حذف الخدمة بنجاح', 'success');
+            $this->dispatch('feedback-deleted-success');
+            $this->showAlert('✅ تم حذف التقييم بنجاح', 'success');
         } catch (\Exception $e) {
-        logger()->error('خطأ أثناء الحذف: ' . $e->getMessage());
-        $this->dispatch('service-delete-failed');
-        $this->showAlert('❌ حدث خطأ أثناء الحذف', 'danger');
+            logger()->error('خطأ أثناء الحذف: ' . $e->getMessage());
+            $this->dispatch('feedback-delete-failed');
+            $this->showAlert('❌ حدث خطأ أثناء الحذف', 'danger');
         }
         $this->resetPage();
     }
-    
+
     public function render()
     {
-        return view('livewire.feedbacks');
+        $feedbacks = Feedback::with('translations')->paginate($this->perPage);
+        return view('livewire.feedbacks', compact('feedbacks'));
     }
 }

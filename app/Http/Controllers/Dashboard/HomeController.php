@@ -13,6 +13,10 @@ class HomeController extends Controller
     {
         return view('dashboard.index');
     }
+    public function feedbacks()
+    {
+        return view('dashboard.feedbacks');
+    }
     public function general_settings()
     {
         return view('dashboard.general-setting');

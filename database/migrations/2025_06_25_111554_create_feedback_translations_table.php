@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('feedback_translations', function (Blueprint $table) {
             $table->id();
             $table->string('feedback');
+            $table->string('locale');
             $table->string('name');
             $table->string('major');
             $table->foreignId('feedback_id')->constrained('feedbacks')->onDelete('cascade');

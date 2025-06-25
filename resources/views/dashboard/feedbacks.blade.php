@@ -1,3 +1,3 @@
-<x-dashboard-layout>  
-    <livewire:dashboard.services />
-</x-dashboard-layout>  
+<x-dashboard-layout>
+    <livewire:dashboard.feedbacks />
+</x-dashboard-layout>
