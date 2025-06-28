@@ -58,6 +58,11 @@ Route::group([
         return view('dashboard.portfolios');
     })->name('portfolios');
 
+    Route::get('pages', function () {
+        return view('dashboard.page');
+    })->middleware(['auth'])->name('pages');
+
+
     //media
     Route::get('media', function () {
         return view('dashboard.media');

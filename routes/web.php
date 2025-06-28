@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Language;
+use App\Models\Page;
 use Illuminate\Support\Facades\Route;
 
 // Route::get('/', function () {
@@ -9,8 +10,31 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['setLocale'])->group(function () {
 
+    // Route::get('/', function () {
+    //     return view('tamplate.home');
+    // });
+    // الصفحة الرئيسية
     Route::get('/', function () {
-        return view('tamplate.home');
+        $page = Page::with('translations')
+            ->where('is_home', true)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$page) {
+            abort(404, 'لم يتم تحديد الصفحة الرئيسية بعد.');
+        }
+
+        return view('tamplate.page', ['page' => $page]);
+    });
+    
+    // صفحات أخرى عبر slug
+    Route::get('/{slug}', function ($slug) {
+        $page = Page::with('translations')
+            ->where('slug', $slug)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        return view('tamplate.page', ['page' => $page]);
     });
 
     Route::get('change-locale/{locale}', function ($locale) {
