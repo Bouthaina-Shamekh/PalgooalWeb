@@ -78,6 +78,16 @@
                         <span class="pc-mtext">{{ t('dashboard.feedbacks', 'feedbacks') }}</span>
                     </a>
                 </li>
+                <li class="pc-item">
+                    <a href="{{route('dashboard.portfolios')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-home"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.portfolios', 'portfolios') }}</span>
+                    </a>
+                </li>
                 <li class="pc-item pc-caption">
                     <label>{{ t('dashboard.Widget','Widget') }}</label>
                     <svg class="pc-icon">

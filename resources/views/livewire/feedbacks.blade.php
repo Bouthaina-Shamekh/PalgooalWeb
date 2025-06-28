@@ -47,7 +47,7 @@
                         </td>
                         <td class="p-2 space-x-2">
                             <button wire:click="showEdit({{ $feedback->id }})" class="btn btn-sm btn-warning">تعديل</button>
-                            <button onclick="confirmDeleteService({{ $feedback->id }})" class="btn btn-danger">حذف</button>
+                            <button onclick="confirmDeleteFeedback({{ $feedback->id }})" class="btn btn-danger">حذف</button>
                         </td>
                     </tr>
                 @endforeach
@@ -123,7 +123,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    function confirmDeleteService(serviceId) {
+    function confirmDeleteFeedback(feedbackId) {
         Swal.fire({
             title: 'هل أنت متأكد؟',
             text: 'لن تتمكن من التراجع بعد الحذف!',
@@ -135,12 +135,12 @@
             cancelButtonColor: '#3085d6'
         }).then((result) => {
             if (result.isConfirmed) {
-                Livewire.dispatch('deleteServiceConfirmed', { id: serviceId });
+                Livewire.dispatch('deleteFeedbackConfirmed', { id: feedbackId });
             }
         });
     }
 
-    window.addEventListener('service-deleted-success', () => {
+    window.addEventListener('feedback-deleted-success', () => {
         Swal.fire({
             toast: true,
             position: 'top-end',
@@ -152,7 +152,7 @@
         });
     });
 
-    window.addEventListener('service-delete-failed', () => {
+    window.addEventListener('feedback-delete-failed', () => {
         Swal.fire({
             toast: true,
             position: 'top-end',
