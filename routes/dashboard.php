@@ -62,9 +62,15 @@ Route::group([
         return view('dashboard.page');
     })->middleware(['auth'])->name('pages');
 
+        Route::get('headers', function () {
+        return view('dashboard.header');
+    })->middleware(['auth'])->name('headers');
+
 
     //media
     Route::get('media', function () {
         return view('dashboard.media');
     })->name('media');
+
+
 });
