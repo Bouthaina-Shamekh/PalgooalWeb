@@ -1,13 +1,14 @@
 <div class="space-y-6">
     <!-- [ breadcrumb ] start -->
-    <div class="page-header bg-gray-50 py-4 px-6 rounded shadow">
+    <div class="page-header">
         <div class="page-block">
             <ul class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home') }}</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('dashboard.headers') }}">{{ t('dashboard.All_Menus', 'ALL Menus') }}</a></li>
+                {{-- <li class="breadcrumb-item" aria-current="page">{{ t('dashboard.All_Pages', 'ALL Pages') }}</li> --}}
             </ul>
             <div class="page-header-title">
-                <h2 class="mb-0 text-lg font-semibold text-gray-800">{{ t('dashboard.All_Menus', 'ALL Menus') }}</h2>
+                <h2 class="mb-0">{{ t('dashboard.All_Menus', 'ALL Menus') }}</h2>
             </div>
         </div>
     </div>
@@ -17,8 +18,6 @@
             {{ session('success') }}
         </div>
     @endif
-
-    <h2 class="text-xl font-bold text-primary">إدارة عناصر الهيدر</h2>
 
     <div class="bg-white dark:bg-gray-800 p-6 rounded shadow space-y-4 border border-gray-200 dark:border-gray-600">
         <h3 class="text-lg font-semibold text-gray-800 dark:text-white">
@@ -46,10 +45,7 @@
         <ul id="hs-basic-usage-example-sortable" class="w-full flex flex-col">
             @foreach ($newItem['children'] ?? [] as $index => $child)
             <li data-index="{{ $index }}" wire:key="child-{{ $index }}" class="inline-flex items-center gap-x-3 py-3 px-4 cursor-grab text-sm font-medium bg-white border border-gray-200 text-gray-800 -mt-px first:rounded-t-lg first:mt-0 last:rounded-b-lg dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-200">
-                <svg class="shrink-0 size-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
-                    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
-                </svg>
+                ☰
                 <div class="flex-1 space-y-2">
                     <input type="text" wire:model="newItem.children.{{ $index }}.url" placeholder="الرابط (مثال: /about)" class="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary text-sm dark:bg-gray-700 dark:text-white" />
                     <div class="grid md:grid-cols-3 gap-2">
@@ -67,7 +63,7 @@
             </li>
             @endforeach
         </ul>
-
+        @if ($newItem['type'] === 'dropdown')
         <div class="mt-4">
             <button wire:click="addChild" class="inline-flex items-center gap-2 bg-primary hover:bg-secondary text-white font-semibold px-5 py-2 text-sm rounded shadow transition">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -76,6 +72,7 @@
                 إضافة رابط فرعي
             </button>
         </div>
+        @endif
 
         @foreach ($languages as $lang)
             <div class="flex flex-col md:flex-row gap-4 items-center">
@@ -110,6 +107,11 @@
             @foreach ($items as $index => $item)
                 <li data-index="{{ $index }}" wire:key="item-{{ $item['id'] }}" class="cursor-grab bg-white dark:bg-gray-800 p-4 flex justify-between items-center">
                     <div>
+                        <span class="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 text-xl mt-2 select-none">
+                            ☰  
+                        </span>
+
+                        
                         <strong>{{ $item['translations'][app()->getLocale()] ?? '-' }}</strong>
                         <span class="text-sm text-gray-500 ml-2">({{ $item['type'] }})</span>
                         <div class="text-sm text-gray-600 dark:text-gray-300">{{ $item['url'] }}</div>
