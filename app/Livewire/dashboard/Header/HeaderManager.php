@@ -8,6 +8,8 @@ use App\Models\HeaderItemTranslation;
 use App\Models\Language;
 use Illuminate\Database\Eloquent\Collection;
 use Livewire\Component;
+use Livewire\Attributes\On;
+use Livewire\Livewire;
 
 class HeaderManager extends Component
 {
@@ -35,6 +37,7 @@ class HeaderManager extends Component
         $this->header = Header::firstOrCreate(['name' => 'Main Header']);
 
         $this->loadItems();
+        
     }
 
     public function loadItems()
@@ -155,18 +158,32 @@ public function removeChild($index)
     unset($this->newItem['children'][$index]);
     $this->newItem['children'] = array_values($this->newItem['children']); // إعادة ترتيب الفهارس
 }
-public function reorderChildren(array $order)
+
+public function reorderChildren($order)
 {
     $newChildren = [];
 
-    foreach ($order as $newIndex => $oldIndex) {
+    foreach ($order as $i => $oldIndex) {
         if (isset($this->newItem['children'][$oldIndex])) {
-            $newChildren[$newIndex] = $this->newItem['children'][$oldIndex];
+            $newChildren[$i] = $this->newItem['children'][$oldIndex];
         }
     }
 
-    $this->newItem['children'] = $newChildren;
+    $this->newItem['children'] = array_values($newChildren);
 }
+
+public function reorderItems($ids)
+{
+    // إعادة ترتيب المصفوفة محليًا فقط
+    $this->items = collect($ids)->map(function ($id) {
+        return collect($this->items)->firstWhere('id', (int) $id);
+    })->values()->toArray();
+    foreach ($ids as $index => $id) {
+    HeaderItem::where('id', $id)->update(['order' => $index]);
+}
+}
+
+
 
     public function render()
     {

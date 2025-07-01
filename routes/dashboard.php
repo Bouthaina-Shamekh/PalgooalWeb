@@ -62,7 +62,7 @@ Route::group([
         return view('dashboard.page');
     })->middleware(['auth'])->name('pages');
 
-        Route::get('headers', function () {
+        Route::get('menus', function () {
         return view('dashboard.header');
     })->middleware(['auth'])->name('headers');
 
