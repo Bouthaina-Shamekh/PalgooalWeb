@@ -58,7 +58,7 @@
                         <span class="pc-mtext">{{ t('dashboard.Home', 'Home') }}</span>
                     </a>
                 </li>
-                                <li class="pc-item">
+                <li class="pc-item">
                     <a href="{{route('dashboard.pages')}}" class="pc-link">
                         <span class="pc-micon">
                             <span class="pc-micon">
@@ -66,6 +66,16 @@
                             </span>
                         </span>
                         <span class="pc-mtext">{{ t('dashboard.Pages', 'Pages') }}</span>
+                    </a>
+                </li>
+                                <li class="pc-item">
+                    <a href="{{route('dashboard.headers')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-home"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.Menus', 'Menus') }}</span>
                     </a>
                 </li>
                 <li class="pc-item">
