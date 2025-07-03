@@ -17,6 +17,7 @@ class Sections extends Component
     public $sectionOrder = 0;
     public $translations = [];
     public $translationsData = [];
+    protected $listeners = ['deleteSection'];
 
     public $availableKeys = ['hero', 'features', 'services', 'templates', 'works', 'testimonials', 'blog'];
 
@@ -53,39 +54,80 @@ class Sections extends Component
     }
 
     public function addSection()
-    {
-        $this->validate([
-            'sectionKey' => 'required',
-        ]);
+{
+    $this->validate([
+        'sectionKey' => 'required',
+    ]);
 
-        $section = Section::create([
-            'page_id' => $this->pageId,
-            'key' => $this->sectionKey,
-            'order' => $this->sectionOrder,
-        ]);
+    // ✅ التحقق من عدم تكرار السكشن
+    if (Section::where('page_id', $this->pageId)->where('key', $this->sectionKey)->exists()) {
+        session()->flash('error', 'هذا السكشن موجود مسبقًا.');
+        return;
+    }
 
-        foreach ($this->languages as $lang) {
-            $locale = $lang->code;
-            $data = $this->translations[$locale] ?? [];
+    // ✅ ترتيب تلقائي إذا لم يُحدد
+    $order = $this->sectionOrder ?: (Section::where('page_id', $this->pageId)->max('order') + 1);
 
-            $content = [
-                'subtitle' => $data['subtitle'] ?? '',
-                'button_text' => $data['button_text'] ?? '',
-                'button_url' => $data['button_url'] ?? '',
-            ];
+    // ✅ إنشاء السكشن
+    $section = Section::create([
+        'page_id' => $this->pageId,
+        'key' => $this->sectionKey,
+        'order' => $order,
+    ]);
 
-            SectionTranslation::create([
-                'section_id' => $section->id,
-                'locale' => $locale,
-                'title' => $data['title'] ?? '',
-                'content' => $content,
-            ]);
+    foreach ($this->languages as $lang) {
+        $locale = $lang->code;
+        $data = $this->translations[$locale] ?? [];
+        $content = [];
+
+        // ⬇️ بناء المحتوى حسب نوع السكشن
+        switch ($this->sectionKey) {
+            case 'hero':
+                $content = [
+                    'subtitle' => $data['subtitle'] ?? '',
+                    'button_text' => $data['button_text'] ?? '',
+                    'button_url' => $data['button_url'] ?? '',
+                ];
+                break;
+
+            case 'features':
+                $featuresRaw = $data['features'] ?? '';
+                $content = [
+                    'subtitle' => $data['subtitle'] ?? '',
+                    'features' => is_array($featuresRaw)
+                        ? $featuresRaw
+                        : array_filter(array_map('trim', explode("\n", $featuresRaw))),
+                ];
+                break;
+
+            case 'services':
+                $content = [
+                    'subtitle' => $data['subtitle'] ?? '',
+                ];
+                break;
+
+            case 'templates':
+            case 'works':
+            case 'testimonials':
+            case 'blog':
+                // يمكنك إضافة منطق إضافي هنا لاحقًا عند تخصيص هذه السكشنات
+                $content = [];
+                break;
         }
 
-        $this->reset(['sectionKey', 'sectionOrder', 'translations']);
-        $this->loadSections();
-        session()->flash('success', 'تم إضافة السكشن بنجاح.');
+        SectionTranslation::create([
+            'section_id' => $section->id,
+            'locale' => $locale,
+            'title' => $data['title'] ?? '',
+            'content' => $content,
+        ]);
     }
+
+    $this->reset(['sectionKey', 'sectionOrder', 'translations', 'translationsData']);
+    $this->loadSections();
+    session()->flash('success', 'تم إضافة السكشن بنجاح.');
+}
+
 
     public function updateSection($sectionId, $locale = null)
     {
@@ -121,6 +163,8 @@ class Sections extends Component
     {
         Section::findOrFail($id)->delete();
         $this->loadSections();
+        $this->dispatch('$refresh');
+        session()->flash('success', 'تم حذف السكشن بنجاح.');
     }
 
     public function setActiveLang($code)
@@ -130,6 +174,12 @@ class Sections extends Component
 
     public function render()
     {
-        return view('livewire.dashboard.sections');
+        return view('livewire.dashboard.sections', [
+        'languages' => $this->languages,              // ضروري
+        'sections' => $this->sections,                // يُفضل تمريره
+        'availableKeys' => $this->availableKeys,      // يُستخدم في الواجهة
+        'activeLang' => $this->activeLang,            // يُستخدم في التبويبات
+        'sectionKey' => $this->sectionKey,
+    ]);
     }
 }

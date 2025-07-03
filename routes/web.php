@@ -15,7 +15,7 @@ Route::middleware(['setLocale'])->group(function () {
     // });
     // الصفحة الرئيسية
     Route::get('/', function () {
-        $page = Page::with('translations')
+        $page = Page::with(['translations', 'sections.translations'])
             ->where('is_home', true)
             ->where('is_active', true)
             ->first();
@@ -29,7 +29,7 @@ Route::middleware(['setLocale'])->group(function () {
     
     // صفحات أخرى عبر slug
     Route::get('/{slug}', function ($slug) {
-        $page = Page::with('translations')
+        $page = Page::with(['translations', 'sections.translations'])
             ->where('slug', $slug)
             ->where('is_active', true)
             ->firstOrFail();

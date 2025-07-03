@@ -1,10 +1,11 @@
-<x-tamplate.layouts.index-layouts
+<x-template.layouts.index-layouts
     title="بال قول لتكنولوجيا المعلومات - مواقع الكترونية واستضافة عربية"
-    description="شركة فلسطينية متخصصة في برمجة وتصميم المواقع الالكترونية تقدم خدمات استضافة مواقع، حجز دومين،مواقع ووردبريس،اعلانات جوجل،تحسين محركات البحث"
-    keywords="خدمات حجز دومين , افضل شركة برمجيات , استضافة مواقع , استضافة مشتركة , شركة استضافة مواقع , شركات استضافة مواقع , افضل شركة برمجة, خدمة كتابة محتوى , تحسين محركات البحث , web hosting service , shared hosting , best wordpress hosting , web hosting company, domain registration services , best IT company , information technology company , content writing service , best SEO services"
+    description="شركة فلسطينية متخصصة في برمجة وتصميم المواقع الالكترونية..."
+    keywords="خدمات حجز دومين , افضل شركة برمجيات , استضافة مواقع , ..."
     ogImage="{{ asset('assets/images/services.jpg') }}"
 >
-<div class="container mx-auto py-10">
+    {{-- محتوى الصفحة --}}
+    <div class="container mx-auto py-10">
         <h1 class="text-3xl font-bold mb-6">
             {{ $page->translation()?->title ?? 'عنوان غير متوفر' }}
         </h1>
@@ -14,27 +15,52 @@
         </div>
     </div>
 
-@php
-    $heroSection = $page->sections->where('key', 'hero')->first();
-    $hero = $heroSection?->translation()?->content ?? null;
-@endphp
-
-@if ($hero)
     @php
-  $heroSection = $page->sections->where('key', 'hero')->first();
-  $translation = $heroSection?->translation();
+        $sectionComponents = [
+            'hero' => 'hero',
+            'features' => 'features',
+            'services' => 'services',
+            'templates' => 'templates',
+            'works' => 'works',
+            'testimonials' => 'testimonials',
+            'blog' => 'blog',
+        ];
+    @endphp
 
-  $heroData = [
-      'title' => $translation?->title ?? '',
-      'subtitle' => $translation?->content['subtitle'] ?? '',
-      'button_text' => $translation?->content['button_text'] ?? '',
-      'button_url' => $translation?->content['button_url'] ?? '#',
-  ];
-@endphp
-<x-tamplate.sections.hero :data="$heroData" />
-@endif
-</x-tamplate.layouts.index-layouts>
+    @foreach ($page->sections as $section)
+        @php
+            $key = $section->key;
+            $component = $sectionComponents[$key] ?? null;
+            $translation = $section->translation();
+            $content = $translation?->content ?? [];
+            $title = $translation?->title ?? '';
 
+            $data = match ($key) {
+                'hero' => [
+                    'title' => $title,
+                    'subtitle' => $content['subtitle'] ?? '',
+                    'button_text' => $content['button_text'] ?? '',
+                    'button_url' => $content['button_url'] ?? '#',
+                ],
+                'features' => [
+                    'title' => $title,
+                    'subtitle' => $content['subtitle'] ?? '',
+                    'features' => is_array($content['features'] ?? null)
+                        ? $content['features']
+                        : array_filter(array_map('trim', explode("\n", $content['features'] ?? ''))),
+                ],
+                'services', 'templates', 'works', 'testimonials', 'blog' => [
+                    'title' => $title,
+                    'subtitle' => $content['subtitle'] ?? '',
+                ],
+                default => [],
+            };
+        @endphp
 
+        @if ($component && !empty($data))
+            <x-dynamic-component :component="'template.sections.' . $component" :data="$data" />
 
+        @endif
+    @endforeach
 
+</x-template.layouts.index-layouts>

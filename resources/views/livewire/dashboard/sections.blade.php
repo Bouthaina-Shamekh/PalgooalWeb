@@ -1,13 +1,19 @@
 <div class="space-y-6">
     <h2 class="text-xl font-bold mb-4">إدارة سكشنات الصفحة</h2>
 
+    {{-- ✅ رسائل النجاح --}}
     @if (session()->has('success'))
         <div class="bg-green-100 text-green-800 px-4 py-2 rounded">
             {{ session('success') }}
         </div>
     @endif
+    @if (session()->has('error'))
+        <div class="bg-red-100 text-red-800 px-4 py-2 rounded">
+            {{ session('error') }}
+        </div>
+    @endif
 
-    {{-- التبويبات للغات --}}
+    {{-- ✅ التبويبات للغات --}}
     <div class="flex flex-wrap gap-2 border-b pb-2 mb-6">
         @foreach($languages as $lang)
             <button wire:click="setActiveLang('{{ $lang->code }}')"
@@ -18,104 +24,152 @@
         @endforeach
     </div>
 
-    {{-- عرض السكشنات --}}
+    {{-- ✅ عرض السكشنات الحالية --}}
     @foreach ($sections as $section)
-        @if ($section->key === 'hero')
-            <div class="p-6 border rounded bg-white shadow space-y-6">
-                <div class="flex justify-between items-center">
-                    <h3 class="text-lg font-semibold">سكشن: {{ ucfirst($section->key) }}</h3>
-                    <button wire:click="deleteSection({{ $section->id }})"
-                            class="text-red-600 hover:underline">حذف</button>
-                </div>
-
+        @switch($section->key)
+            @case('hero')
                 @php
                     $data = $translationsData[$section->id][$activeLang] ?? [];
                 @endphp
+                <div class="p-6 border rounded bg-white shadow space-y-6">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold">سكشن: {{ ucfirst($section->key) }}</h3>
+                        <button wire:click="deleteSection({{ $section->id }})" class="text-red-600 hover:underline">حذف</button>
+                    </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">العنوان الرئيسي</label>
-                        <input type="text" wire:model.defer="translationsData.{{ $section->id }}.{{ $activeLang }}.title"
-                               class="w-full border p-2 rounded" placeholder="العنوان الرئيسي">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-sm font-medium mb-1 block">العنوان الرئيسي</label>
+                            <input type="text" wire:model.defer="translationsData.{{ $section->id }}.{{ $activeLang }}.title"
+                                   class="w-full border p-2 rounded" placeholder="العنوان الرئيسي">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium mb-1 block">النص الفرعي</label>
+                            <input type="text" wire:model.defer="translationsData.{{ $section->id }}.{{ $activeLang }}.subtitle"
+                                   class="w-full border p-2 rounded" placeholder="النص الفرعي">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium mb-1 block">نص الزر</label>
+                            <input type="text" wire:model.defer="translationsData.{{ $section->id }}.{{ $activeLang }}.button_text"
+                                   class="w-full border p-2 rounded" placeholder="نص الزر">
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium mb-1 block">رابط الزر</label>
+                            <input type="text" wire:model.defer="translationsData.{{ $section->id }}.{{ $activeLang }}.button_url"
+                                   class="w-full border p-2 rounded" placeholder="رابط الزر">
+                        </div>
                     </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">النص الفرعي</label>
-                        <input type="text" wire:model.defer="translationsData.{{ $section->id }}.{{ $activeLang }}.subtitle"
-                               class="w-full border p-2 rounded" placeholder="النص الفرعي">
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">نص الزر</label>
-                        <input type="text" wire:model.defer="translationsData.{{ $section->id }}.{{ $activeLang }}.button_text"
-                               class="w-full border p-2 rounded" placeholder="نص الزر">
-                    </div>
-                    <div>
-                        <label class="text-sm font-medium mb-1 block">رابط الزر</label>
-                        <input type="text" wire:model.defer="translationsData.{{ $section->id }}.{{ $activeLang }}.button_url"
-                               class="w-full border p-2 rounded" placeholder="رابط الزر">
+
+                    <div class="text-end">
+                        <button wire:click="updateSection({{ $section->id }}, '{{ $activeLang }}')"
+                                class="mt-4 bg-blue-600 text-white px-6 py-2 rounded shadow hover:bg-blue-700 transition">
+                            حفظ التعديلات للغة {{ $activeLang }}
+                        </button>
                     </div>
                 </div>
+                @break
 
-                <div class="text-end">
-                    <button wire:click="updateSection({{ $section->id }}, '{{ $activeLang }}')" ...>
-                        حفظ التعديلات للغة {{ $activeLang }}
-                    </button>
+            @case('features')
+                <livewire:dashboard.sections.features-section :section="$section" :key="$section->id" />
+                @break
+
+            @default
+                <div class="p-4 bg-gray-100 rounded shadow">
+                    سكشن غير مدعوم حالياً: {{ $section->key }}
                 </div>
-            </div>
-        @endif
+        @endswitch
     @endforeach
 
-    {{-- إضافة سكشن جديد --}}
+    {{-- ✅ إضافة سكشن جديد --}}
     <div class="mt-10 border-t pt-6 space-y-6">
         <h3 class="text-lg font-semibold">إضافة سكشن جديد</h3>
 
+        @php
+            $keyNames = [
+                'hero' => 'الواجهة الرئيسية (Hero)',
+                'features' => 'مميزات (Features)',
+                'services' => 'الخدمات (Services)',
+                'templates' => 'القوالب (Templates)',
+                'works' => 'الأعمال (Works)',
+                'testimonials' => 'آراء العملاء (Testimonials)',
+                'blog' => 'المدونة (Blog)',
+            ];
+        @endphp
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <select wire:model="sectionKey" class="border p-2 rounded w-full">
-                <option value="">اختر نوع السكشن</option>
-                @foreach ($availableKeys as $key)
-                    <option value="{{ $key }}">{{ ucfirst($key) }}</option>
+            <div>
+                <label class="block mb-1 text-sm font-medium">نوع السكشن</label>
+                <select wire:model.live="sectionKey" class="border p-2 rounded w-full">
+                    <option value="">اختر نوع السكشن</option>
+                    @foreach ($availableKeys as $key)
+                        <option value="{{ $key }}">{{ $keyNames[$key] ?? ucfirst($key) }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="block mb-1 text-sm font-medium">الترتيب (اختياري)</label>
+                <input type="number" wire:model="sectionOrder" class="border p-2 rounded w-full" placeholder="مثال: 1، 2، 3...">
+            </div>
+        </div>
+
+        @if ($sectionKey)
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                @foreach ($languages as $lang)
+                    <div class="col-span-2 border p-4 rounded bg-gray-50">
+                        <h4 class="font-bold mb-3">{{ $lang->name }} ({{ $lang->code }})</h4>
+
+                        @if ($sectionKey === 'hero')
+                            <label class="block text-sm mb-1">العنوان الرئيسي</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.title"
+                                   class="w-full border p-2 rounded mb-2" placeholder="العنوان الرئيسي">
+
+                            <label class="block text-sm mb-1">النص الفرعي</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
+                                   class="w-full border p-2 rounded mb-2" placeholder="النص الفرعي">
+
+                            <label class="block text-sm mb-1">نص الزر</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_text"
+                                   class="w-full border p-2 rounded mb-2" placeholder="مثال: اكتشف الآن">
+
+                            <label class="block text-sm mb-1">رابط الزر</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_url"
+                                   class="w-full border p-2 rounded" placeholder="https://example.com">
+
+                        @elseif ($sectionKey === 'features')
+                            <label class="block text-sm mb-1">عنوان القسم</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.title"
+                                   class="w-full border p-2 rounded mb-2" placeholder="ما الذي يميزنا؟">
+
+                            <label class="block text-sm mb-1">الوصف المختصر</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
+                                   class="w-full border p-2 rounded mb-2" placeholder="نقدم حلولًا احترافية...">
+
+                            <label class="block text-sm mb-1">المميزات (ميزة في كل سطر)</label>
+                            <textarea wire:model.defer="translations.{{ $lang->code }}.features"
+                                      rows="4"
+                                      class="w-full border p-2 rounded"
+                                      placeholder="ميزة 1&#10;ميزة 2&#10;ميزة 3"></textarea>
+
+                        @elseif ($sectionKey === 'services')
+                            <label class="block text-sm mb-1">عنوان الخدمات</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.title"
+                                   class="w-full border p-2 rounded mb-2" placeholder="خدماتنا الرقمية">
+
+                            <label class="block text-sm mb-1">الوصف</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
+                                   class="w-full border p-2 rounded mb-2" placeholder="نوفر لك أفضل الخدمات...">
+                        @endif
+                    </div>
                 @endforeach
-            </select>
+            </div>
 
-            <input type="number" wire:model="sectionOrder" class="border p-2 rounded w-full" placeholder="الترتيب">
-        </div>
+            <button wire:click="addSection"
+                    class="bg-primary text-white px-6 py-2 rounded hover:bg-primary/90 transition">
+                إضافة السكشن
+            </button>
+            
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            @foreach ($languages as $lang)
-                <div class="col-span-2 border p-4 rounded bg-gray-50">
-                    <h4 class="font-bold mb-3">{{ $lang->name }} ({{ $lang->code }})</h4>
-
-                    <label class="block text-sm mb-1">العنوان</label>
-                    <input type="text" wire:model.defer="translations.{{ $lang->code }}.title"
-                           class="w-full border p-2 rounded mb-2">
-
-                    <label class="block text-sm mb-1">النص الفرعي</label>
-                    <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
-                           class="w-full border p-2 rounded mb-2">
-
-                    <label class="block text-sm mb-1">نص الزر</label>
-                    <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_text"
-                           class="w-full border p-2 rounded mb-2">
-
-                    <label class="block text-sm mb-1">رابط الزر</label>
-                    <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_url"
-                           class="w-full border p-2 rounded">
-                </div>
-            @endforeach
-        </div>
-
-        <button wire:click="addSection"
-                class="bg-primary text-white px-6 py-2 rounded hover:bg-primary/90 transition">
-            إضافة سكشن
-        </button>
+        @endif
     </div>
 </div>
-<script>
-    document.querySelectorAll('button[wire\\:click^="setActiveLang"]').forEach(btn => {
-        btn.addEventListener('click', function (e) {
-            if (!confirm('⚠️ هل حفظت التعديلات قبل تغيير اللغة؟')) {
-                e.preventDefault();
-                e.stopImmediatePropagation();
-            }
-        });
-    });
-</script>

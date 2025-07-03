@@ -22,6 +22,7 @@ class Section extends Model
         return $this->translations->where('locale', $locale)->first()
             ?? $this->translations->first(); // fallback
     }
+    
 
     // ارتباط السكشن بالصفحة
     public function page()
