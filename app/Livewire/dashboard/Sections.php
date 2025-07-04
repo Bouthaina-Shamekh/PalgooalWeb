@@ -101,8 +101,13 @@ class Sections extends Component
                 break;
 
             case 'services':
+                $servicesRaw = $data['services'] ?? '';
                 $content = [
                     'subtitle' => $data['subtitle'] ?? '',
+                    'services' => is_array($servicesRaw)
+                        ? $servicesRaw
+                        : array_filter(array_map('trim', explode("\n", $servicesRaw))),
+
                 ];
                 break;
 

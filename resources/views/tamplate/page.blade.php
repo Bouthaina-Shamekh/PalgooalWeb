@@ -1,3 +1,6 @@
+@php
+    use App\Models\Service;
+@endphp
 <x-template.layouts.index-layouts
     title="بال قول لتكنولوجيا المعلومات - مواقع الكترونية واستضافة عربية"
     description="شركة فلسطينية متخصصة في برمجة وتصميم المواقع الالكترونية..."
@@ -34,6 +37,7 @@
             $translation = $section->translation();
             $content = $translation?->content ?? [];
             $title = $translation?->title ?? '';
+            
 
             $data = match ($key) {
                 'hero' => [
@@ -49,7 +53,12 @@
                         ? $content['features']
                         : array_filter(array_map('trim', explode("\n", $content['features'] ?? ''))),
                 ],
-                'services', 'templates', 'works', 'testimonials', 'blog' => [
+                'services' => [
+                    'title' => $title,
+                    'subtitle' => $content['subtitle'] ?? '',
+                    'services' => Service::with('translations')->orderBy('order')->get(),
+                ],
+                'templates', 'works', 'testimonials', 'blog' => [
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
                 ],

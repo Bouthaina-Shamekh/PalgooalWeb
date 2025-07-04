@@ -73,6 +73,11 @@
                 <livewire:dashboard.sections.features-section :section="$section" :key="$section->id" />
                 @break
 
+           
+            @case('services')
+                <livewire:dashboard.sections.services-section :section="$section" :key="$section->id" />
+            @break
+
             @default
                 <div class="p-4 bg-gray-100 rounded shadow">
                     سكشن غير مدعوم حالياً: {{ $section->key }}

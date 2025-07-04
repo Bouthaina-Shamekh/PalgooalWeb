@@ -135,7 +135,7 @@ class Services extends Component
             }
 
             $service = Service::create($serviceData);
-            $this->showAlert('Service added successfully.', 'success');
+            $this->showAlert('Service updated successfully.', 'success');
         }
 
         // حفظ الترجمات

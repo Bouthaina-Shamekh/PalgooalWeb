@@ -2,19 +2,19 @@
 
 namespace App\Livewire\Dashboard\Sections;
 
+use App\Models\Language;
 use App\Models\Section;
 use App\Models\SectionTranslation;
-use App\Models\Language;
 use Livewire\Component;
 
-class FeaturesSection extends Component
+class ServicesSection extends Component
 {
     public Section $section;
     public $translationsData = [];
     public $languages;
     public $activeLang;
 
-    public function mount()
+        public function mount()
     {
         $this->languages = Language::where('is_active', true)->get();
         $this->activeLang = app()->getLocale();
@@ -26,15 +26,15 @@ class FeaturesSection extends Component
             $this->translationsData[$lang->code] = [
                 'title' => $translation?->title ?? '',
                 'subtitle' => $content['subtitle'] ?? '',
-                'features' => $content['features'] ?? [],
+                'services' => $content['services'] ?? [],
             ];
         }
     }
 
-    public function updateFeatureSection()
+    public function updateservicesSection()
     {
         foreach ($this->translationsData as $locale => $data) {
-            $translation = SectionTranslation::firstOrNew([
+             $translation = SectionTranslation::firstOrNew([
                 'section_id' => $this->section->id,
                 'locale' => $locale,
             ]);
@@ -42,12 +42,20 @@ class FeaturesSection extends Component
             $translation->title = $data['title'] ?? '';
             $translation->content = [
                 'subtitle' => $data['subtitle'] ?? '',
-                'features' => $data['features'] ?? [],
+                'services' => $data['services'] ?? [],
             ];
             $translation->save();
         }
-
         session()->flash('success', 'تم تحديث قسم المميزات بنجاح.');
+    }
+
+        public function addservices($locale)
+    {
+        $this->translationsData[$locale]['services'][] = [
+            'icon' => '',
+            'title' => '',
+            'description' => '',
+        ];
     }
 
     public function setActiveLang($code)
@@ -55,10 +63,9 @@ class FeaturesSection extends Component
         $this->activeLang = $code;
     }
 
-    
     public function addFeature($locale)
     {
-        $this->translationsData[$locale]['features'][] = [
+        $this->translationsData[$locale]['services'][] = [
             'icon' => '',
             'title' => '',
             'description' => '',
@@ -67,21 +74,20 @@ class FeaturesSection extends Component
 
     public function removeFeature($locale, $index)
     {
-        if (isset($this->translationsData[$locale]['features'][$index])) {
-            unset($this->translationsData[$locale]['features'][$index]);
+        if (isset($this->translationsData[$locale]['services'][$index])) {
+            unset($this->translationsData[$locale]['services'][$index]);
             // إعادة ترتيب الفهارس لتجنب المشاكل
-            $this->translationsData[$locale]['features'] = array_values($this->translationsData[$locale]['features']);
+            $this->translationsData[$locale]['services'] = array_values($this->translationsData[$locale]['services']);
         }
     }
-
 
     public function deleteMySection()
     {
         $this->dispatch('deleteSection', $this->section->id);
     }
-
+    
     public function render()
     {
-        return view('livewire.dashboard.sections.features-section');
+        return view('livewire.dashboard.sections.services-section');
     }
 }
