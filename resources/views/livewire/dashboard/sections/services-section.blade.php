@@ -20,30 +20,6 @@
 
         <input type="text" wire:model="translationsData.{{ $activeLang }}.subtitle"
             placeholder="الوصف المختصر" class="form-input w-full px-4 py-2 rounded border" />
-
-        {{-- المميزات --}}
-        <div class="space-y-4">
-            @foreach ($translationsData[$activeLang]['services'] ?? [] as $index => $services)
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start border p-4 rounded relative">
-                    <input type="text" wire:model="translationsData.{{ $activeLang }}.services.{{ $index }}.icon"
-                        placeholder="كود SVG أو اسم الأيقونة"
-                        class="form-input w-full px-4 py-2 rounded border" />
-
-                    <input type="text" wire:model="translationsData.{{ $activeLang }}.services.{{ $index }}.title"
-                        placeholder="عنوان الميزة"
-                        class="form-input w-full px-4 py-2 rounded border" />
-
-                    <input type="text" wire:model="translationsData.{{ $activeLang }}.services.{{ $index }}.description"
-                        placeholder="وصف مختصر"
-                        class="form-input w-full px-4 py-2 rounded border" />
-
-                    <button wire:click="removeservices('{{ $activeLang }}', {{ $index }})"
-                        class="absolute -top-2 -left-2 bg-red-500 text-white text-sm rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition">
-                        &times;
-                    </button>
-                </div>
-            @endforeach
-        </div>
     </div>
 
     <button wire:click="updateservicesSection"

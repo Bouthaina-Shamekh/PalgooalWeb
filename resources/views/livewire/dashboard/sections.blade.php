@@ -28,57 +28,17 @@
     @foreach ($sections as $section)
         @switch($section->key)
             @case('hero')
-                @php
-                    $data = $translationsData[$section->id][$activeLang] ?? [];
-                @endphp
-                <div class="p-6 border rounded bg-white shadow space-y-6">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-lg font-semibold">سكشن: {{ ucfirst($section->key) }}</h3>
-                        <button wire:click="deleteSection({{ $section->id }})" class="text-red-600 hover:underline">حذف</button>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-sm font-medium mb-1 block">العنوان الرئيسي</label>
-                            <input type="text" wire:model.defer="translationsData.{{ $section->id }}.{{ $activeLang }}.title"
-                                   class="w-full border p-2 rounded" placeholder="العنوان الرئيسي">
-                        </div>
-                        <div>
-                            <label class="text-sm font-medium mb-1 block">النص الفرعي</label>
-                            <input type="text" wire:model.defer="translationsData.{{ $section->id }}.{{ $activeLang }}.subtitle"
-                                   class="w-full border p-2 rounded" placeholder="النص الفرعي">
-                        </div>
-                        <div>
-                            <label class="text-sm font-medium mb-1 block">نص الزر</label>
-                            <input type="text" wire:model.defer="translationsData.{{ $section->id }}.{{ $activeLang }}.button_text"
-                                   class="w-full border p-2 rounded" placeholder="نص الزر">
-                        </div>
-                        <div>
-                            <label class="text-sm font-medium mb-1 block">رابط الزر</label>
-                            <input type="text" wire:model.defer="translationsData.{{ $section->id }}.{{ $activeLang }}.button_url"
-                                   class="w-full border p-2 rounded" placeholder="رابط الزر">
-                        </div>
-                    </div>
-
-                    <div class="text-end">
-                        <button wire:click="updateSection({{ $section->id }}, '{{ $activeLang }}')"
-                                class="mt-4 bg-blue-600 text-white px-6 py-2 rounded shadow hover:bg-blue-700 transition">
-                            حفظ التعديلات للغة {{ $activeLang }}
-                        </button>
-                    </div>
-                </div>
+                <livewire:dashboard.sections.hero-section :section="$section" :key="$section->id" />
                 @break
-
             @case('features')
                 <livewire:dashboard.sections.features-section :section="$section" :key="$section->id" />
                 @break
-
-           
+         
             @case('services')
                 <livewire:dashboard.sections.services-section :section="$section" :key="$section->id" />
             @break
             @case('works')
-                <livewire:dashboard.sections.our-work-section :section="$section" :key="$section->id" />
+                <livewire:dashboard.sections.works-section :section="$section" :key="$section->id" />
             @break
             
 
@@ -137,13 +97,20 @@
                             <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
                                    class="w-full border p-2 rounded mb-2" placeholder="النص الفرعي">
 
-                            <label class="block text-sm mb-1">نص الزر</label>
-                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_text"
+                            <label class="block text-sm mb-1">نص الزر الاول</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_text-1"
                                    class="w-full border p-2 rounded mb-2" placeholder="مثال: اكتشف الآن">
 
-                            <label class="block text-sm mb-1">رابط الزر</label>
-                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_url"
+                            <label class="block text-sm mb-1">رابط الزر الاول</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_url-1"
                                    class="w-full border p-2 rounded" placeholder="https://example.com">
+                            <label class="block text-sm mb-1">نص الزر الثاني</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_text-2"
+                                   class="w-full border p-2 rounded mb-2" placeholder="مثال: اكتشف الآن">
+
+                            <label class="block text-sm mb-1">رابط الزر الثاني</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_url-2"
+                                   class="w-full border p-2 rounded" placeholder="https://example.com">       
 
                         @elseif ($sectionKey === 'features')
                             <label class="block text-sm mb-1">عنوان القسم</label>
@@ -168,7 +135,7 @@
                             <label class="block text-sm mb-1">الوصف</label>
                             <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
                                    class="w-full border p-2 rounded mb-2" placeholder="نوفر لك أفضل الخدمات...">
-                                   @elseif ($sectionKey === 'services')
+                        @elseif ($sectionKey === 'works')
                             <label class="block text-sm mb-1">عنوان الخدمات</label>
                             <input type="text" wire:model.defer="translations.{{ $lang->code }}.title"
                                    class="w-full border p-2 rounded mb-2" placeholder="خدماتنا الرقمية">
@@ -176,23 +143,6 @@
                             <label class="block text-sm mb-1">الوصف</label>
                             <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
                                    class="w-full border p-2 rounded mb-2" placeholder="نوفر لك أفضل الخدمات...">
-
-                            @elseif ($sectionKey === 'works')
-                            <label class="block text-sm mb-1">عنوان الخدمات</label>
-                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.title"
-                                   class="w-full border p-2 rounded mb-2" placeholder="خدماتنا الرقمية">
-
-                            <label class="block text-sm mb-1">الوصف</label>
-                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
-                                   class="w-full border p-2 rounded mb-2" placeholder="نوفر لك أفضل الخدمات...">
-                                   @elseif ($sectionKey === 'services')
-                            <label class="block text-sm mb-1">عنوان الخدمات</label>
-                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.title"
-                                   class="w-full border p-2 rounded mb-2" placeholder="خدماتنا الرقمية">
-
-                            <label class="block text-sm mb-1">الوصف</label>
-                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
-                                   class="w-full border p-2 rounded mb-2" placeholder="نوفر لك أفضل الخدمات...">       
                         @endif
                     </div>
                 @endforeach
