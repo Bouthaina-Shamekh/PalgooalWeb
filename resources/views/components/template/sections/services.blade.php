@@ -21,7 +21,7 @@
             @endphp
             <div class="swiper-slide" data-aos="zoom-in" data-aos-delay="100">
               <div class="group bg-white rounded-3xl shadow-xl p-8 flex flex-col items-center text-center border border-primary/10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 h-full">
-                <a href="#">
+                <a href="{{ $service->url ?? '#' }}">
                 <div class="bg-primary/10 group-hover:bg-primary/20 rounded-full p-4 mb-5 transition">
                   <img src="{{ asset('storage/' . $service->icon) }}" alt="استضافة مشتركة لموقعك مع SSL مجاني" class="w-14 h-14" loading="lazy" />
                 </div>

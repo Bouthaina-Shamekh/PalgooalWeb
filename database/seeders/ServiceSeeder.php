@@ -12,12 +12,13 @@ class ServiceSeeder extends Seeder
     {
         $services = [
             [
-                'icon' => 'icons/web-design.svg',
-                'order' => 1,
+                'icon' => '/assets/tamplate/images/icons/Shared-hosting.svg',
+                'order' => 0,
+                'url' => '#',
                 'translations' => [
                     'ar' => [
-                        'title' => 'تصميم مواقع',
-                        'description' => 'تصاميم مخصصة ومتجاوبة تعكس هوية مشروعك وتمنح الزائر تجربة احترافية.',
+                        'title' => 'الاستضافة المشتركة',
+                        'description' => 'استضافة قوية واقتصادية لموقعك، مع شهادة SSL مجانية وسرعة تشغيل عالية.',
                     ],
                     'en' => [
                         'title' => 'Website Design',
@@ -26,43 +27,61 @@ class ServiceSeeder extends Seeder
                 ],
             ],
             [
-                'icon' => 'icons/domain.svg',
-                'order' => 2,
+                'icon' => '/assets/tamplate/images/icons/wordpress-hosting.svg',
+                'order' => 1,
+                'url' => '#',
                 'translations' => [
                     'ar' => [
-                        'title' => 'حجز اسم نطاق (دومين)',
+                        'title' => 'استضافة ووردبريس',
                         'description' => 'احجز اسم موقعك بسهولة واختر من بين مجموعة واسعة من الامتدادات العالمية.',
                     ],
                     'en' => [
-                        'title' => 'Domain Name Registration',
+                        'title' => 'WordPress Hosting',
                         'description' => 'Easily register your domain name and choose from a wide variety of global extensions.',
                     ],
                 ],
             ],
             [
-                'icon' => 'icons/wordpress.svg',
-                'order' => 3,
+                'icon' => '/assets/tamplate/images/icons/domains.svg',
+                'order' => 2,
+                'url' => '#',
                 'translations' => [
                     'ar' => [
-                        'title' => 'استضافة ووردبريس',
+                        'title' => 'حجز اسم نطاق (دومين)',
                         'description' => 'تمتع بأداء عالٍ وأمان كامل لموقعك على ووردبريس مع دعم فني دائم.',
                     ],
                     'en' => [
-                        'title' => 'WordPress Hosting',
+                        'title' => 'Domain name reservation',
                         'description' => 'High-performance and secure hosting for your WordPress site with full-time support.',
                     ],
                 ],
             ],
             [
-                'icon' => 'icons/shared-hosting.svg',
-                'order' => 4,
+                'icon' => '/assets/tamplate/images/icons/Website-design.svg',
+                'order' => 3,
+                'url' => '#',
                 'translations' => [
                     'ar' => [
-                        'title' => 'الاستضافة المشتركة',
+                        'title' => 'تصميم مواقع',
                         'description' => 'استضافة قوية واقتصادية لموقعك، مع شهادة SSL مجانية وسرعة تشغيل عالية.',
                     ],
                     'en' => [
-                        'title' => 'Shared Hosting',
+                        'title' => 'Website design',
+                        'description' => 'Reliable and affordable hosting with free SSL and fast performance.',
+                    ],
+                ],
+            ],
+            [
+                'icon' => '/assets/tamplate/images/icons/Special-programming.svg',
+                'order' => 4,
+                'url' => '#',
+                'translations' => [
+                    'ar' => [
+                        'title' => 'برمجيات خاصة',
+                        'description' => 'استضافة قوية واقتصادية لموقعك، مع شهادة SSL مجانية وسرعة تشغيل عالية.',
+                    ],
+                    'en' => [
+                        'title' => 'Special software',
                         'description' => 'Reliable and affordable hosting with free SSL and fast performance.',
                     ],
                 ],

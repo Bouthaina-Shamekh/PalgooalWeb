@@ -77,6 +77,10 @@
             @case('services')
                 <livewire:dashboard.sections.services-section :section="$section" :key="$section->id" />
             @break
+            @case('works')
+                <livewire:dashboard.sections.our-work-section :section="$section" :key="$section->id" />
+            @break
+            
 
             @default
                 <div class="p-4 bg-gray-100 rounded shadow">
@@ -164,6 +168,31 @@
                             <label class="block text-sm mb-1">الوصف</label>
                             <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
                                    class="w-full border p-2 rounded mb-2" placeholder="نوفر لك أفضل الخدمات...">
+                                   @elseif ($sectionKey === 'services')
+                            <label class="block text-sm mb-1">عنوان الخدمات</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.title"
+                                   class="w-full border p-2 rounded mb-2" placeholder="خدماتنا الرقمية">
+
+                            <label class="block text-sm mb-1">الوصف</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
+                                   class="w-full border p-2 rounded mb-2" placeholder="نوفر لك أفضل الخدمات...">
+
+                            @elseif ($sectionKey === 'works')
+                            <label class="block text-sm mb-1">عنوان الخدمات</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.title"
+                                   class="w-full border p-2 rounded mb-2" placeholder="خدماتنا الرقمية">
+
+                            <label class="block text-sm mb-1">الوصف</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
+                                   class="w-full border p-2 rounded mb-2" placeholder="نوفر لك أفضل الخدمات...">
+                                   @elseif ($sectionKey === 'services')
+                            <label class="block text-sm mb-1">عنوان الخدمات</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.title"
+                                   class="w-full border p-2 rounded mb-2" placeholder="خدماتنا الرقمية">
+
+                            <label class="block text-sm mb-1">الوصف</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
+                                   class="w-full border p-2 rounded mb-2" placeholder="نوفر لك أفضل الخدمات...">       
                         @endif
                     </div>
                 @endforeach

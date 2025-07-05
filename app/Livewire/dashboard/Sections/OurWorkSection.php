@@ -7,7 +7,7 @@ use App\Models\Section;
 use App\Models\SectionTranslation;
 use Livewire\Component;
 
-class ServicesSection extends Component
+class OurWorkSection extends Component
 {
     public Section $section;
     public $translationsData = [];
@@ -26,12 +26,12 @@ class ServicesSection extends Component
             $this->translationsData[$lang->code] = [
                 'title' => $translation?->title ?? '',
                 'subtitle' => $content['subtitle'] ?? '',
-                'services' => $content['services'] ?? [],
+                'OurWorks' => $content['OurWorks'] ?? [],
             ];
         }
     }
 
-    public function updateservicesSection()
+    public function updateOurWorkSection()
     {
         foreach ($this->translationsData as $locale => $data) {
              $translation = SectionTranslation::firstOrNew([
@@ -42,19 +42,18 @@ class ServicesSection extends Component
             $translation->title = $data['title'] ?? '';
             $translation->content = [
                 'subtitle' => $data['subtitle'] ?? '',
-                'services' => $data['services'] ?? [],
+                'OurWorks' => $data['OurWorks'] ?? [],
             ];
             $translation->save();
         }
         session()->flash('success', 'تم تحديث قسم المميزات بنجاح.');
     }
 
-    public function addservices($locale)
+    public function addOurWorks($locale)
     {
-        $this->translationsData[$locale]['services'][] = [
+        $this->translationsData[$locale]['OurWorks'][] = [
             'icon' => '',
             'title' => '',
-            'description' => '',
         ];
     }
 
@@ -63,21 +62,12 @@ class ServicesSection extends Component
         $this->activeLang = $code;
     }
 
-    // public function addFeature($locale)
-    // {
-    //     $this->translationsData[$locale]['services'][] = [
-    //         'icon' => '',
-    //         'title' => '',
-    //         'description' => '',
-    //     ];
-    // }
-
-    public function removeservices($locale, $index)
+    public function removeOurWorks($locale, $index)
     {
-        if (isset($this->translationsData[$locale]['services'][$index])) {
-            unset($this->translationsData[$locale]['services'][$index]);
+        if (isset($this->translationsData[$locale]['OurWorks'][$index])) {
+            unset($this->translationsData[$locale]['OurWorks'][$index]);
             // إعادة ترتيب الفهارس لتجنب المشاكل
-            $this->translationsData[$locale]['services'] = array_values($this->translationsData[$locale]['services']);
+            $this->translationsData[$locale]['OurWorks'] = array_values($this->translationsData[$locale]['OurWorks']);
         }
     }
 
@@ -85,9 +75,11 @@ class ServicesSection extends Component
     {
         $this->dispatch('deleteSection', $this->section->id);
     }
-    
+
+
+
     public function render()
     {
-        return view('livewire.dashboard.sections.services-section');
+        return view('livewire.dashboard.sections.our-work-section');
     }
 }

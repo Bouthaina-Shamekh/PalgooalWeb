@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Service extends Model
 {
-    protected $fillable = ['icon', 'order'];
+    protected $fillable = ['icon', 'order', 'url'];
 
     public function translations()
     {
