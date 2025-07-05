@@ -45,18 +45,23 @@ class Portfolios extends Component
         $this->languages = $languages;
 
         $this->typeSuggestions = $languages->mapWithKeys(function ($lang) {
-            $types = PortfolioTranslation::where('locale', $lang->code)
-                        ->whereNotNull('type')
-                        ->distinct()
-                        ->pluck('type')
-                        ->filter() // إزالة القيم الفارغة
-                        ->values();
+            $rawTypes = PortfolioTranslation::where('locale', $lang->code)
+                            ->whereNotNull('type')
+                            ->pluck('type')
+                            ->toArray();
 
-            return [$lang->code => $types];
+            $allTypes = collect($rawTypes)
+                ->flatMap(function ($typeString) {
+                    // نفصل بالـ , أو الفاصلة العربية
+                    return collect(preg_split('/[,،]/u', $typeString))
+                            ->map(fn($v) => trim($v))
+                            ->filter();
+                })
+                ->unique()
+                ->values();
+
+            return [$lang->code => $allTypes];
         })->toArray();
-
-
-
     }
 
     public function showAlert($message, $type = 'success')

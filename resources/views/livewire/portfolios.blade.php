@@ -1,4 +1,28 @@
 <div class="p-6">
+    <style>
+        ul[id^="type_suggestions_"] li {
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        ul[id^="type_suggestions_"] li:hover {
+            background-color: #f3f3f3;
+            font-weight: 500;
+            border-radius: 5px;
+        }
+
+        ul[id^="type_suggestions_"] {
+            border-radius: 6px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
+            overflow-y: auto;
+            max-height: 200px;
+            width: 200px;
+        }
+    </style>
     {{-- SweetAlert Trigger --}}
     @if ($alert)
         <script>
@@ -122,6 +146,7 @@
                         <input type="text" class="form-control mb-2" placeholder="النوع"
                             wire:model="portfolioTranslations.{{ $index }}.type"
                             id="type_input_{{ $lang->code }}" oninput="showSuggestions('{{ $lang->code }}')"
+                            onfocus="showSuggestions('{{ $lang->code }}')"
                             onkeydown="handleTypeKeydown(event, '{{ $lang->code }}')" autocomplete="off">
 
                         <ul class="list-group shadow rounded border position-absolute"
@@ -199,34 +224,50 @@
         function showSuggestions(locale) {
             const input = document.getElementById('type_input_' + locale);
             const list = document.getElementById('type_suggestions_' + locale);
-            const value = input.value.toLowerCase();
-            const filtered = (allSuggestions[locale] || []).filter(type =>
-                type.toLowerCase().includes(value)
-            );
 
-            if (!value || !filtered.length) {
+            let allValue = input.value;
+            let parts = allValue.split(/[,،]\s*/).map(v => v.trim()).filter(v => v.length);
+            let current = parts[parts.length - 1]?.toLowerCase() || '';
+
+            const usedValues = parts.map(v => v.toLowerCase());
+
+            const filtered = (allSuggestions[locale] || []).filter(type => {
+                const typeLower = type.toLowerCase();
+                return typeLower.includes(current) && !usedValues.includes(typeLower);
+            });
+
+            if (!filtered.length) {
                 list.style.display = 'none';
                 list.innerHTML = '';
                 return;
             }
 
             list.innerHTML = filtered.map(type => `
-            <li class="list-group-item list-group-item-action"
-                onclick="selectType('${locale}', '${type}')">
-                ${type}
-            </li>
-        `).join('');
+        <li class="list-group-item list-group-item-action"
+            onclick="selectType('${locale}', '${type}')">
+            ${type}
+        </li>
+    `).join('');
             list.style.display = 'block';
         }
 
-        function selectType(locale, value) {
+
+
+        function selectType(locale, selectedValue) {
             const input = document.getElementById('type_input_' + locale);
             const list = document.getElementById('type_suggestions_' + locale);
-            input.value = value;
+
+            let allValue = input.value;
+            let parts = allValue.split(/[,،]\s*/); // يفصل حسب الفواصل
+            parts[parts.length - 1] = selectedValue; // استبدال آخر كلمة
+            let cleaned = parts.filter(p => p.trim().length > 0); // إزالة الفارغات
+
+            input.value = cleaned.join('، ') + '، '; // يعيد الصياغة ويضيف فاصلة
             list.style.display = 'none';
             list.innerHTML = '';
-            input.dispatchEvent(new Event('input')); // مهم لتحديث Livewire
+            input.dispatchEvent(new Event('input')); // تحديث Livewire
         }
+
 
         function handleTypeKeydown(e, locale) {
             if (e.key === 'Enter') {
@@ -238,6 +279,7 @@
                 }
             }
         }
+
 
         document.addEventListener('click', function(e) {
             document.querySelectorAll('ul[id^="type_suggestions_"]').forEach(list => {
