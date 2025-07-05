@@ -67,6 +67,7 @@ class Services extends Component
         $this->service = [
             'icon' => $service->icon,
             'order' => $service->order,
+            'url' => $service->url,
         ];
 
         $this->serviceTranslations = [];
@@ -91,7 +92,7 @@ class Services extends Component
     public function resetForm()
     {
         $this->serviceId = null;
-        $this->service = ['icon' => '', 'order' => ''];
+        $this->service = ['icon' => '', 'order' => '', 'url' => ''];
 
         $this->serviceTranslations = [];
         foreach ($this->languages as $lang) {
@@ -107,7 +108,8 @@ class Services extends Component
     {
         $validated = $this->validate([
             'service.order' => 'required|integer',
-            'service.icon' => 'nullable', // optional file
+            'service.icon' => 'nullable|image|max:2048', // optional file
+            'service.url' => 'nullable', 
             'serviceTranslations.*.title' => 'required|string',
             'serviceTranslations.*.description' => 'required|string',
         ]);

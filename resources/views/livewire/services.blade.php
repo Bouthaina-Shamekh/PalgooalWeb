@@ -78,6 +78,11 @@
                 <input type="number" wire:model="service.order" class="form-control">
                 @error('service.order') <span class="text-red-600">{{ $message }}</span> @enderror
             </div>
+            <div class="col-span-6">
+                <label class="block text-sm font-medium">رابط الخدمة</label>
+                <input type="text" wire:model="service.url" class="form-control">
+                @error('service.url') <span class="text-red-600">{{ $message }}</span> @enderror
+            </div>
 
             {{-- الترجمات --}}
             <div class="col-span-12 grid grid-cols-{{ count($languages) }} gap-4">
