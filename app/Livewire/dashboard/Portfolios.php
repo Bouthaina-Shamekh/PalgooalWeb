@@ -16,6 +16,7 @@ class Portfolios extends Component
     use WithPagination, WithFileUploads;
     protected $listeners = ['deletePortfolioConfirmed'];
 
+
     public $alert = false;
     public $alertType = 'success';
     public $alertMessage = '';
@@ -35,10 +36,27 @@ class Portfolios extends Component
 
     public $portfolioTranslations = [];
     public $languages = [];
+    public $typeSuggestions = [];
+
 
     public function mount()
     {
-        $this->languages = Language::get();
+        $languages = Language::get();
+        $this->languages = $languages;
+
+        $this->typeSuggestions = $languages->mapWithKeys(function ($lang) {
+            $types = PortfolioTranslation::where('locale', $lang->code)
+                        ->whereNotNull('type')
+                        ->distinct()
+                        ->pluck('type')
+                        ->filter() // إزالة القيم الفارغة
+                        ->values();
+
+            return [$lang->code => $types];
+        })->toArray();
+
+
+
     }
 
     public function showAlert($message, $type = 'success')
