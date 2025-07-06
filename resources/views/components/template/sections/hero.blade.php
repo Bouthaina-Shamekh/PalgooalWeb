@@ -1,5 +1,3 @@
-@props(['data' => []])
-
 <main>
   <section class="relative bg-gradient-to-tr from-primary to-primary shadow-2xl overflow-hidden -mt-20">
     <img
@@ -21,14 +19,14 @@
           {{ $data['subtitle'] ?? '' }}
         </p>
         <div class="flex flex-row flex-wrap gap-3 justify-center md:justify-start">
-          <a href="{{ $data['button_url'] ?? '#' }}"
-             aria-label="{{ $data['button_text'] ?? 'ابدأ الآن' }}"
+          <a href="{{ $data['button_url-1'] }}"
+             aria-label="{{ $data['button_text-1'] }}"
              class="bg-secondary hover:bg-primary text-white font-bold px-6 py-3 rounded-lg shadow transition text-sm sm:text-base">
-            {{ $data['button_text'] ?? 'ابدأ الآن' }}
+            {{ $data['button_text-1'] }}
           </a>
-          <a href="{{ $data['button_url1'] ?? '#' }}"
+          <a href="{{ $data['button_url-2'] ?? '#' }}"
              class="bg-white/10 text-white font-bold px-6 py-3 rounded-lg shadow transition hover:bg-white/20 text-sm sm:text-base border border-white/30">
-            {{ $data['button_text1'] ?? 'استعرض القوالب' }}
+            {{ $data['button_text-2'] ?? 'استعرض القوالب' }}
           </a>
         </div>
       </div>

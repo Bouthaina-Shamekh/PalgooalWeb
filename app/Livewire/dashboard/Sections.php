@@ -7,6 +7,7 @@ use App\Models\SectionTranslation;
 use App\Models\Language;
 use Livewire\Component;
 use App\Livewire\Dashboard\Sections\HeroSection; // 🔁 مهم
+use Exception;
 
 class Sections extends Component
 {
@@ -22,6 +23,7 @@ class Sections extends Component
 
     public $availableKeys = ['hero', 'features', 'services', 'templates', 'works', 'testimonials', 'blog'];
     public $activeLang;
+    
 
     public function mount($pageId)
     {
@@ -146,7 +148,8 @@ class Sections extends Component
 
             $translation->title = $data['title'] ?? '';
             $translation->content = $content;
-            $translation->save();
+            $section->order = $this->sectionOrder ?: $section->order;
+            $section->save();
         }
 
         $this->loadSections();
@@ -155,10 +158,17 @@ class Sections extends Component
 
     public function deleteSection($id)
     {
-        Section::findOrFail($id)->delete();
-        $this->loadSections();
-        $this->dispatch('$refresh');
-        session()->flash('success', 'تم حذف السكشن بنجاح.');
+        
+        try {
+            $section = Section::findOrFail($id);
+            $section->delete();
+            Section::findOrFail($id)->delete();
+            $this->loadSections();
+            $this->dispatch('section-deleted-success');
+            } catch (\Exception $e) {
+                logger()->error($e->getMessage());
+                $this->dispatch('section-delete-failed');
+        }
     }
 
     public function setActiveLang($code)

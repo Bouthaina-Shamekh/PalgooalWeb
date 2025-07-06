@@ -99,16 +99,6 @@ class HeroSection extends Component
         $this->activeLang = $code;
     }
 
-    // public function addhero($locale)
-    // {
-    //     $this->translationsData[$locale]['hero'][] = [
-    //             'button_text-1' => $data['button_text-1'] ?? '',
-    //             'button_url-1' => $data['button_url-1'] ?? '',
-    //             'button_text-2' => $data['button_text-2'] ?? '',
-    //             'button_url-2' => $content['button_url-2'] ?? '',
-    //     ];
-    // }
-
     public function removehero($locale, $index)
     {
         if (isset($this->translationsData[$locale]['hero']) && is_array($this->translationsData[$locale]['hero']) && isset($this->translationsData[$locale]['hero'][$index])) {
@@ -117,9 +107,12 @@ class HeroSection extends Component
         }
     }
 
-        public function deleteMySection()
+    public function deleteMySection()
     {
-        $this->dispatch('deleteSection', $this->section->id);
+         logger('🔥 تم الضغط على زر الحذف');
+        $this->dispatch('confirm-delete-section', [
+        'sectionId' => $this->section->id,
+    ]);
     }
 
 

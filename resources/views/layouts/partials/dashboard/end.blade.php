@@ -47,6 +47,5 @@
 {{-- <script src="{{asset('assets/dashboard/Sortable.min.js')}}"></script> --}}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
-
 </body>
 </html>

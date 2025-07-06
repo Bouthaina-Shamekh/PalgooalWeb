@@ -43,8 +43,10 @@
                 'hero' => [
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
-                    'button_text' => $content['button_text'] ?? '',
-                    'button_url' => $content['button_url'] ?? '#',
+                    'button_text-1' => $content['button_text-1'] ?? '',
+                    'button_url-1' => $content['button_url-1'] ?? '',
+                    'button_text-2' => $content['button_text-2'] ?? '',
+                    'button_url-2' => $content['button_url-2'] ?? '',
                 ],
                 'features' => [
                     'title' => $title,

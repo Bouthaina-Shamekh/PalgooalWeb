@@ -13,16 +13,7 @@
         </div>
     @endif
 
-    {{-- ✅ التبويبات للغات --}}
-    <div class="flex flex-wrap gap-2 border-b pb-2 mb-6">
-        @foreach($languages as $lang)
-            <button wire:click="setActiveLang('{{ $lang->code }}')"
-                    class="px-4 py-2 text-sm font-medium transition-all duration-200
-                        {{ $activeLang === $lang->code ? 'text-primary border-b-2 border-primary' : 'text-gray-600 hover:text-primary' }}">
-                {{ $lang->name }}
-            </button>
-        @endforeach
-    </div>
+
 
     {{-- ✅ عرض السكشنات الحالية --}}
     @foreach ($sections as $section)
@@ -156,4 +147,29 @@
 
         @endif
     </div>
+    @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    console.log("✅ سكربت SweetAlert جاهز");
+
+    window.addEventListener('confirm-delete-section', event => {
+        console.log("📢 تم استقبال حدث التأكيد", event.detail);
+
+        Swal.fire({
+            title: 'هل أنت متأكد؟',
+            text: 'لن تتمكن من التراجع بعد الحذف!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، احذف',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Livewire.emit('deleteSection', { sectionId: event.detail.sectionId }); // 👈 هنا
+            }
+        });
+    });
+</script>
+@endpush
 </div>
