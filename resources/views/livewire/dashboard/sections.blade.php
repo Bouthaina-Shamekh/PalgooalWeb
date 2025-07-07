@@ -24,15 +24,17 @@
             @case('features')
                 <livewire:dashboard.sections.features-section :section="$section" :key="$section->id" />
                 @break
-         
+            @case('panel')
+
+                <livewire:dashboard.sections.panel-section :section="$section" :key="$section->id" />
+                @break
+
             @case('services')
                 <livewire:dashboard.sections.services-section :section="$section" :key="$section->id" />
             @break
             @case('works')
                 <livewire:dashboard.sections.works-section :section="$section" :key="$section->id" />
             @break
-            
-
             @default
                 <div class="p-4 bg-gray-100 rounded shadow">
                     سكشن غير مدعوم حالياً: {{ $section->key }}
@@ -53,6 +55,7 @@
                 'works' => 'الأعمال (Works)',
                 'testimonials' => 'آراء العملاء (Testimonials)',
                 'blog' => 'المدونة (Blog)',
+                'panel' => 'اللوحة (Panel)',
             ];
         @endphp
 
@@ -101,7 +104,7 @@
 
                             <label class="block text-sm mb-1">رابط الزر الثاني</label>
                             <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_url-2"
-                                   class="w-full border p-2 rounded" placeholder="https://example.com">       
+                                   class="w-full border p-2 rounded" placeholder="https://example.com">
 
                         @elseif ($sectionKey === 'features')
                             <label class="block text-sm mb-1">عنوان القسم</label>
@@ -134,6 +137,22 @@
                             <label class="block text-sm mb-1">الوصف</label>
                             <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
                                    class="w-full border p-2 rounded mb-2" placeholder="نوفر لك أفضل الخدمات...">
+                        @elseif ($sectionKey === 'panel')
+                            <label class="block text-sm mb-1">العنوان</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.title"
+                                   class="w-full border p-2 rounded mb-2" placeholder="خدماتنا الرقمية">
+
+                            <label class="block text-sm mb-1">الوصف</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
+                                   class="w-full border p-2 rounded mb-2" placeholder="نوفر لك أفضل الخدمات...">
+
+                            <label class="block text-sm mb-1">نص الزر الاول</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_text-1"
+                                    class="w-full border p-2 rounded mb-2" placeholder="مثال: اكتشف الآن">
+
+                            <label class="block text-sm mb-1">رابط الزر الاول</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_url-1"
+                                    class="w-full border p-2 rounded" placeholder="https://example.com">
                         @endif
                     </div>
                 @endforeach
@@ -143,7 +162,7 @@
                     class="bg-primary text-white px-6 py-2 rounded hover:bg-primary/90 transition">
                 إضافة السكشن
             </button>
-            
+
 
         @endif
     </div>

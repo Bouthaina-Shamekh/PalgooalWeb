@@ -21,9 +21,9 @@ class Sections extends Component
     public $translationsData = [];
     protected $listeners = ['deleteSection'];
 
-    public $availableKeys = ['hero', 'features', 'services', 'templates', 'works', 'testimonials', 'blog'];
+    public $availableKeys = ['hero', 'features', 'services', 'templates', 'works', 'testimonials', 'blog', 'panel'];
     public $activeLang;
-    
+
 
     public function mount($pageId)
     {
@@ -104,7 +104,13 @@ class Sections extends Component
                                     : array_filter(array_map('trim', explode("\n", $servicesRaw))),
                             ];
                             break;
-
+                        case 'panel':
+                            $content = [
+                                'subtitle' => $data['subtitle'] ?? '',
+                                'button_text-1' => $data['button_text-1'] ?? '',
+                                'button_url-1' => $data['button_url-1'] ?? '',
+                            ];
+                            break;
                         case 'templates':
                         case 'works':
                         case 'testimonials':
@@ -130,7 +136,7 @@ class Sections extends Component
     public function updateSection($sectionId, $locale = null)
     {
         $section = Section::with('translations')->findOrFail($sectionId);
-        
+
 
         $targetLocales = $locale ? [$locale] : array_column($this->languages->toArray(), 'code');
 
@@ -158,7 +164,7 @@ class Sections extends Component
 
     public function deleteSection($id)
     {
-        
+
         try {
             $section = Section::findOrFail($id);
             $section->delete();

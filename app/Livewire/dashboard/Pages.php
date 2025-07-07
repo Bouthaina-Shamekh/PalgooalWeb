@@ -78,26 +78,26 @@ class Pages extends Component
     }
 
     public function edit($id)
-{
-    $page = Page::with('translations')->findOrFail($id);
+    {
+        $page = Page::with('translations')->findOrFail($id);
 
-    $this->editingPageId = $id;
-    $this->slug = $page->slug;
-    $this->is_active = $page->is_active;
-    $this->is_home = $page->is_home;
-    $this->mode = 'edit';
-    $this->activeLang = app()->getLocale();
+        $this->editingPageId = $id;
+        $this->slug = $page->slug;
+        $this->is_active = $page->is_active;
+        $this->is_home = $page->is_home;
+        $this->mode = 'edit';
+        $this->activeLang = app()->getLocale();
 
-    foreach ($this->languages as $lang) {
-        $trans = $page->translations->where('locale', $lang->code)->first();
-        $this->translations[$lang->code] = [
-            'title' => $trans->title ?? '',
-            'content' => $trans->content ?? '',
-        ];
+        foreach ($this->languages as $lang) {
+            $trans = $page->translations->where('locale', $lang->code)->first();
+            $this->translations[$lang->code] = [
+                'title' => $trans->title ?? '',
+                'content' => $trans->content ?? '',
+            ];
+        }
+
+        $this->view = 'edit-page';
     }
-
-    $this->view = 'edit-page';
-}
 
 
     public function resetForm()
@@ -115,27 +115,27 @@ class Pages extends Component
         $this->loadPages(); // تحديث القائمة
         session()->flash('success', t('dashboard.set_as_home_success', 'Page set as home successfully.'));
     }
-       public function confirmDelete($id)
-{
-    $this->dispatchBrowserEvent('show-delete-confirmation', ['id' => $id]);
-}
-
-public function deleteConfirmed($id)
-{
-    try {
-        $page = Page::findOrFail($id);
-        $page->delete();
-
-        $this->loadPages();
-
-        $this->dispatch('page-deleted-success');
-        session()->flash('success', '✅ تم حذف الصفحة بنجاح');
-    } catch (\Exception $e) {
-        logger()->error('فشل الحذف: ' . $e->getMessage());
-        $this->dispatch('page-delete-failed');
-        session()->flash('error', '❌ حدث خطأ أثناء حذف الصفحة');
+    public function confirmDelete($id)
+    {
+        $this->dispatchBrowserEvent('show-delete-confirmation', ['id' => $id]);
     }
-}
+
+    public function deleteConfirmed($id)
+    {
+        try {
+            $page = Page::findOrFail($id);
+            $page->delete();
+
+            $this->loadPages();
+
+            $this->dispatch('page-deleted-success');
+            session()->flash('success', '✅ تم حذف الصفحة بنجاح');
+        } catch (\Exception $e) {
+            logger()->error('فشل الحذف: ' . $e->getMessage());
+            $this->dispatch('page-delete-failed');
+            session()->flash('error', '❌ حدث خطأ أثناء حذف الصفحة');
+        }
+    }
 
 
     public function render()

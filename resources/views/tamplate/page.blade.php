@@ -27,6 +27,7 @@
             'works' => 'works',
             'testimonials' => 'testimonials',
             'blog' => 'blog',
+            'panel' => 'panel',
         ];
     @endphp
 
@@ -37,7 +38,7 @@
             $translation = $section->translation();
             $content = $translation?->content ?? [];
             $title = $translation?->title ?? '';
-            
+
 
             $data = match ($key) {
                 'hero' => [
@@ -63,6 +64,12 @@
                 'templates', 'works', 'testimonials', 'blog' => [
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
+                ],
+                'panel' => [
+                    'title' => $title,
+                    'subtitle' => $content['subtitle'] ?? '',
+                    'button_text-1' => $content['button_text-1'] ?? '',
+                    'button_url-1' => $content['button_url-1'] ?? '',
                 ],
                 default => [],
             };
