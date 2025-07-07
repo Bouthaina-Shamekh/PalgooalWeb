@@ -24,9 +24,8 @@
             @case('features')
                 <livewire:dashboard.sections.features-section :section="$section" :key="$section->id" />
                 @break
-            @case('panel')
-
-                <livewire:dashboard.sections.panel-section :section="$section" :key="$section->id" />
+            @case('banner')
+                <livewire:dashboard.sections.banner-section :section="$section" :key="$section->id" />
                 @break
 
             @case('services')
@@ -55,7 +54,7 @@
                 'works' => 'الأعمال (Works)',
                 'testimonials' => 'آراء العملاء (Testimonials)',
                 'blog' => 'المدونة (Blog)',
-                'panel' => 'اللوحة (Panel)',
+                'banner' => 'اللوحة (banner)',
             ];
         @endphp
 

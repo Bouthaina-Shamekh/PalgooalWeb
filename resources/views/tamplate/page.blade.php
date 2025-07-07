@@ -7,6 +7,7 @@
     keywords="خدمات حجز دومين , افضل شركة برمجيات , استضافة مواقع , ..."
     ogImage="{{ asset('assets/images/services.jpg') }}"
 >
+
     {{-- محتوى الصفحة --}}
     <div class="container mx-auto py-10">
         <h1 class="text-3xl font-bold mb-6">
@@ -27,7 +28,7 @@
             'works' => 'works',
             'testimonials' => 'testimonials',
             'blog' => 'blog',
-            'panel' => 'panel',
+            'banner' => 'banner',
         ];
     @endphp
 
@@ -65,11 +66,9 @@
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
                 ],
-                'panel' => [
+                'banner' => [
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
-                    'button_text-1' => $content['button_text-1'] ?? '',
-                    'button_url-1' => $content['button_url-1'] ?? '',
                 ],
                 default => [],
             };

@@ -21,7 +21,7 @@ class Sections extends Component
     public $translationsData = [];
     protected $listeners = ['deleteSection'];
 
-    public $availableKeys = ['hero', 'features', 'services', 'templates', 'works', 'testimonials', 'blog', 'panel'];
+    public $availableKeys = ['hero', 'features', 'services', 'templates', 'works', 'testimonials', 'blog', 'banner'];
     public $activeLang;
 
 
@@ -71,65 +71,60 @@ class Sections extends Component
             case 'hero':
                 HeroSection::create($this->pageId, $order, $this->translations);
                 break;
-
-            default:
+                default:
                 $section = Section::create([
                     'page_id' => $this->pageId,
                     'key' => $this->sectionKey,
                     'order' => $order,
                 ]);
-
                 foreach ($this->languages as $lang) {
                     $locale = $lang->code;
                     $data = $this->translations[$locale] ?? [];
                     $content = [];
-
-                    switch ($this->sectionKey) {
-                        case 'features':
-                            $featuresRaw = $data['features'] ?? '';
-                            $content = [
-                                'subtitle' => $data['subtitle'] ?? '',
-                                'features' => is_array($featuresRaw)
-                                    ? $featuresRaw
-                                    : array_filter(array_map('trim', explode("\n", $featuresRaw))),
-                            ];
-                            break;
-
-                        case 'services':
-                            $servicesRaw = $data['services'] ?? '';
-                            $content = [
-                                'subtitle' => $data['subtitle'] ?? '',
-                                'services' => is_array($servicesRaw)
-                                    ? $servicesRaw
-                                    : array_filter(array_map('trim', explode("\n", $servicesRaw))),
-                            ];
-                            break;
-                        case 'panel':
-                            $content = [
-                                'subtitle' => $data['subtitle'] ?? '',
-                                'button_text-1' => $data['button_text-1'] ?? '',
-                                'button_url-1' => $data['button_url-1'] ?? '',
-                            ];
-                            break;
-                        case 'templates':
-                        case 'works':
-                        case 'testimonials':
-                        case 'blog':
-                            $content = [];
-                            break;
-                    }
-
-                    SectionTranslation::create([
-                        'section_id' => $section->id,
-                        'locale' => $locale,
-                        'title' => $data['title'] ?? '',
-                        'content' => $content,
-                    ]);
-                }
+                    
+            switch ($this->sectionKey) {
+            case 'features':
+                $featuresRaw = $data['features'] ?? '';
+                $content = [
+                    'subtitle' => $data['subtitle'] ?? '',
+                    'features' => is_array($featuresRaw)
+                        ? $featuresRaw
+                        : array_filter(array_map('trim', explode("\n", $featuresRaw))),
+                ];
+                break;
+            case 'services':
+                $servicesRaw = $data['services'] ?? '';
+                $content = [
+                    'subtitle' => $data['subtitle'] ?? '',
+                    'services' => is_array($servicesRaw)
+                        ? $servicesRaw
+                        : array_filter(array_map('trim', explode("\n", $servicesRaw))),
+                    ];
+                    break;
+            case 'banner':
+                $content = [
+                    'subtitle' => $data['subtitle'] ?? '',
+                    'button_text-1' => $data['button_text-1'] ?? '',
+                    'button_url-1' => $data['button_url-1'] ?? '',
+                ];
+                break;
+            case 'templates':
+            case 'works':
+            case 'testimonials':
+            case 'blog':
+                $content = [];
+                break;
+            }
+            SectionTranslation::create([
+                'section_id' => $section->id,
+                'locale' => $locale,
+                'title' => $data['title'] ?? '',
+                'content' => $content,
+            ]);
         }
-
-        $this->reset(['sectionKey', 'sectionOrder', 'translations', 'translationsData']);
-        $this->loadSections();
+    }
+    $this->reset(['sectionKey', 'sectionOrder', 'translations', 'translationsData']);
+    $this->loadSections();
         session()->flash('success', 'تم إضافة السكشن بنجاح.');
     }
 

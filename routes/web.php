@@ -10,10 +10,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware(['setLocale'])->group(function () {
 
-    // Route::get('/', function () {
-    //     return view('tamplate.home');
-    // });
-    // الصفحة الرئيسية
     Route::get('/', function () {
         $page = Page::with(['translations', 'sections.translations'])
             ->where('is_home', true)
@@ -23,7 +19,7 @@ Route::middleware(['setLocale'])->group(function () {
         if (!$page) {
             abort(404, 'لم يتم تحديد الصفحة الرئيسية بعد.');
         }
-
+        view()->share('currentPage', $page);
         return view('tamplate.page', ['page' => $page]);
     });
     
@@ -33,8 +29,8 @@ Route::middleware(['setLocale'])->group(function () {
             ->where('slug', $slug)
             ->where('is_active', true)
             ->firstOrFail();
-
-        return view('tamplate.page', ['page' => $page]);
+            view()->share('currentPage', $page);
+            return view('tamplate.page', ['page' => $page]);
     });
 
     Route::get('change-locale/{locale}', function ($locale) {

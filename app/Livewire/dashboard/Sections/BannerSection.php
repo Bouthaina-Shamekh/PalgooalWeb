@@ -7,7 +7,7 @@ use App\Models\Section;
 use App\Models\SectionTranslation;
 use Livewire\Component;
 
-class PanelSection extends Component
+class BannerSection extends Component
 {
     public Section $section;
     public $translationsData = [];
@@ -110,6 +110,6 @@ class PanelSection extends Component
 
     public function render()
     {
-        return view('livewire.dashboard.sections.panel-section');
+        return view('livewire.dashboard.sections.banner-section');
     }
 }

@@ -2,10 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\Language;
+use App\Models\Page;
 use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\View;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+
         //Authouration
         Gate::before(function ($user, $ability) {
             if($user instanceof User) {
@@ -33,5 +37,22 @@ class AppServiceProvider extends ServiceProvider
                 }
             }
         });
+        view()->composer('*', function ($view) {
+            $currentLocale = app()->getLocale();
+            $currentLanguage = Language::where('code', $currentLocale)->first();
+            $languages = Language::where('is_active', true)->get();
+            $view->with([
+                'currentLocale' => $currentLocale,
+                'currentLanguage' => $currentLanguage,
+                'languages' => $languages,
+            ]);
+        });
+        View::composer('*', function ($view) {
+    // إذا تم تمرير المتغير 'page' داخل أي view رئيسي
+    if ($view->getData()['page'] ?? false) {
+        $page = $view->getData()['page'];
+        $view->with('currentPage', $page);
+    }
+});
     }
 }

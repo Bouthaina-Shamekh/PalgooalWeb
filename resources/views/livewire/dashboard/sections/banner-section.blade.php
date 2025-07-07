@@ -14,10 +14,10 @@
     </div>
 
     <!-- Section arrangement -->
-    {{-- <div class="col-span-12 md:col-span-2 mb-4">
+    <div class="col-span-12 md:col-span-2 mb-4">
         <label class="form-label">{{ t('section.Section_Arrangement', 'Section Arrangement')}}</label>
         <input type="number" wire:model.defer="order" class="form-control" placeholder="{{ t('section.Example:', 'Example: 1, 2, 3')}}" />
-    </div> --}}
+    </div>
 
     <!-- Language tabs -->
     <div class="flex flex-wrap gap-2 mt-4">
