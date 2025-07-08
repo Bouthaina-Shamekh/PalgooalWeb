@@ -8,6 +8,7 @@
 <script src="{{asset('assets/dashboard/js/component.js')}}"></script>
 <script src="{{asset('assets/dashboard/js/theme.js')}}"></script>
 <script src="{{asset('assets/dashboard/js/script.js')}}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     layout_change('false');

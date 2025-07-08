@@ -86,7 +86,7 @@
     </div>
     <!-- [ Main Content ] end -->
 </div>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+{{-- <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     function confirmDeletePage(pageId) {
         Swal.fire({
@@ -128,5 +128,93 @@
             timerProgressBar: true
         });
     });
+</script> --}}
+   @push('scripts')
+   <script>
+    function confirmDeletePage(pageId) {
+        Swal.fire({
+            title: 'هل أنت متأكد؟',
+            text: 'لن تتمكن من التراجع بعد الحذف!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، احذف',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Livewire.dispatch('deleteConfirmed', { id: pageId });
+            }
+        });
+    }
+
+    window.addEventListener('page-deleted-success', () => {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: '✅ تم حذف الصفحة بنجاح',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+        });
+    });
+
+    window.addEventListener('page-delete-failed', () => {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'error',
+            title: '❌ فشل حذف الصفحة',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+        });
+    });
 </script>
+    
+   <script>
+    function confirmDeleteSection(sectionId) {
+        Swal.fire({
+            title: 'هل أنت متأكد؟',
+            text: 'لن تتمكن من التراجع بعد الحذف!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'نعم، احذف',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Livewire.dispatch('deleteSection', { id: sectionId });
+            }
+        });
+    }
+
+    window.addEventListener('section-deleted-success', () => {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: '✅ تم حذف السكشن بنجاح',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+        });
+    });
+
+    window.addEventListener('section-delete-failed', () => {
+        Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'error',
+            title: '❌ فشل حذف السكشن',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+        });
+    });
+</script>
+
+@endpush
 

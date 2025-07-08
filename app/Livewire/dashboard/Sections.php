@@ -19,7 +19,9 @@ class Sections extends Component
     public $sectionOrder = 0;
     public $translations = [];
     public $translationsData = [];
+    // protected $listeners = ['section-deleted-success' => 'loadSections'];
     protected $listeners = ['deleteSection'];
+
 
     public $availableKeys = ['hero', 'features', 'services', 'templates', 'works','home-works', 'testimonials', 'blog', 'banner'];
     public $activeLang;
@@ -170,17 +172,15 @@ class Sections extends Component
 
     public function deleteSection($id)
     {
-
         try {
-            $section = Section::findOrFail($id);
-            $section->delete();
-            Section::findOrFail($id)->delete();
-            $this->loadSections();
-            $this->dispatch('section-deleted-success');
-            } catch (\Exception $e) {
-                logger()->error($e->getMessage());
-                $this->dispatch('section-delete-failed');
-        }
+        $section = Section::findOrFail($id);
+        $section->delete();
+        $this->loadSections();
+        $this->dispatch('section-deleted-success');
+    } catch (\Exception $e) {
+        logger()->error('فشل حذف السكشن: ' . $e->getMessage());
+        $this->dispatch('section-delete-failed');
+    }
     }
 
     public function setActiveLang($code)

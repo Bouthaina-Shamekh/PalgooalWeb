@@ -14,6 +14,7 @@ class HeroSection extends Component
     public $languages;
     public $activeLang;
     public $order;
+    protected $listeners = ['confirm-delete-section' => 'deleteMySection'];
 
 
     public function mount()
@@ -101,20 +102,19 @@ class HeroSection extends Component
 
     public function removehero($locale, $index)
     {
-        if (isset($this->translationsData[$locale]['hero']) && is_array($this->translationsData[$locale]['hero']) && isset($this->translationsData[$locale]['hero'][$index])) {
+        if (isset($this->translationsData[$locale]['hero'][$index])) {
             unset($this->translationsData[$locale]['hero'][$index]);
+            // إعادة ترتيب الفهارس لتجنب المشاكل
             $this->translationsData[$locale]['hero'] = array_values($this->translationsData[$locale]['hero']);
         }
     }
 
     public function deleteMySection()
     {
-         logger('🔥 تم الضغط على زر الحذف');
-        $this->dispatch('confirm-delete-section', [
-        'sectionId' => $this->section->id,
-    ]);
+        $this->section->delete();
+        session()->flash('success', 'تم حذف السكشن بنجاح.');
+        $this->redirect(request()->header('Referer'), navigate: true);
     }
-
 
     public function render()
     {
