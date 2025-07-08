@@ -1,66 +1,211 @@
-<!-- أحدث أعمالنا -->
-<section class="dark:bg-gray-900 text-primary dark:text-white py-16 px-4 sm:px-8 lg:px-24 rtl:text-right ltr:text-left" aria-labelledby="why-us-heading">
-  <header class="text-center mb-12">
-    <h2 id="why-us-heading" class="text-title-h2 font-extrabold animate-fade-in-up" data-aos="fade-up" data-aos-delay="200">
-      {{ $data['title'] ?? 'عنوان غير متوفر' }}
-    </h2>
-    <p class="text-tertiary mt-4 text-suptitle max-w-max mx-auto animate-fade-in-up delay-100" data-aos="fade-up" data-aos-delay="200">
-      {{ $data['subtitle'] ?? '' }}
-    </p>
-  </header>
-
-  <main class="relative group" aria-label="نماذج من أعمالنا" role="region" data-aos="zoom-in" data-aos-delay="200">
-    <div class="swiper" id="clients-swiper">
-      <div class="swiper-wrapper">
-        <div class="swiper-slide flex flex-col items-center text-center animate-fade-in-up hover:scale-105 transition-transform duration-300">
-          <div class="w-full max-w-xs overflow-hidden rounded-lg">
-            <img src="./assets/images/Group 34130.jpg" role="img" alt="موقع شركة مقاولات" class="rounded-lg hover:brightness-90 transition duration-300" loading="lazy" decoding="async" />
-          </div>
-          <h3 class="font-extrabold text-suptitle mt-4 animate-fade-in-up delay-150 text-center text-primary dark:text-white">موقع شركة مقاولات</h3>
-        </div>
-         <div class="swiper-slide flex flex-col items-center text-center animate-fade-in-up hover:scale-105 transition-transform duration-300">
-          <div class="w-full max-w-xs overflow-hidden rounded-lg">
-            <img src="./assets/images/Group 34130.jpg" role="img" alt="موقع شركة مقاولات" class="rounded-lg hover:brightness-90 transition duration-300" loading="lazy" decoding="async" />
-          </div>
-          <h3 class="font-extrabold text-suptitle mt-4 animate-fade-in-up delay-150 text-center text-primary dark:text-white">موقع شركة مقاولات</h3>
-        </div>
-        <div class="swiper-slide flex flex-col items-center text-center animate-fade-in-up hover:scale-105 transition-transform duration-300">
-          <div class="w-full max-w-xs overflow-hidden rounded-lg">
-            <img src="./assets/images/Group 34130.jpg" role="img" alt="موقع شركة مقاولات" class="rounded-lg hover:brightness-90 transition duration-300" loading="lazy" decoding="async" />
-          </div>
-          <h3 class="font-extrabold text-suptitle mt-4 animate-fade-in-up delay-150 text-center text-primary dark:text-white">موقع شركة مقاولات</h3>
-        </div>
-        <div class="swiper-slide flex flex-col items-center text-center animate-fade-in-up hover:scale-105 transition-transform duration-300">
-          <div class="w-full max-w-xs overflow-hidden rounded-lg">
-            <img src="./assets/images/Group 34130.jpg" role="img" alt="موقع شركة مقاولات" class="rounded-lg hover:brightness-90 transition duration-300" loading="lazy" decoding="async" />
-          </div>
-          <h3 class="font-extrabold text-suptitle mt-4 animate-fade-in-up delay-150 text-center text-primary dark:text-white">موقع شركة مقاولات</h3>
-        </div>
-        <div class="swiper-slide flex flex-col items-center text-center animate-fade-in-up hover:scale-105 transition-transform duration-300">
-          <div class="w-full max-w-xs overflow-hidden rounded-lg">
-            <img src="./assets/images/Group 34130.jpg" role="img" alt="موقع شركة مقاولات" class="rounded-lg hover:brightness-90 transition duration-300" loading="lazy" decoding="async" />
-          </div>
-          <h3 class="font-extrabold text-suptitle mt-4 animate-fade-in-up delay-150 text-center text-primary dark:text-white">موقع شركة مقاولات</h3>
-        </div>
-      </div>
-      
-      <!-- Pagination -->
-        <div class="w-full flex justify-center items-center mt-8">
-          <div class="swiper-pagination flex justify-center items-center mt-6"></div>
-        </div>
+<section class="py-24 px-4 sm:px-10 lg:px-20" dir="auto">
+    <!-- العنوان -->
+    <div class="text-center max-w-3xl mx-auto mb-16">
+        <h2 class="text-4xl md:text-5xl font-extrabold text-primary mb-4 font-almarai tracking-tight">
+            {{ $data['title'] ?? 'عنوان غير متوفر' }}
+        </h2>
+        <p class="text-lg md:text-xl text-tertiary font-cairo leading-relaxed">
+            {{ $data['subtitle'] ?? 'وصف غير متوفر' }}
+        </p>
     </div>
-
-    <!-- زر استعراض المزيد -->
-    <footer class="flex justify-center items-center gap-4 mt-10">
-      <a href="#" class="relative inline-flex items-center justify-center px-10 py-3 overflow-hidden font-extrabold text-lg text-white rounded-lg shadow-lg bg-primary transition-all duration-300 hover:bg-primary/30 focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2">
-        <span class="absolute inset-0 w-full h-full bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300"></span>
-        <span class="relative z-10 flex items-center gap-2 rtl:flex-row ltr:flex-row">
-          <svg class="w-5 h-5 text-white group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
-          مشاهدة المزيد
-        </span>
-      </a>
-    </footer>
-  </main>
+    <!-- الفلاتر -->
+    <div class="flex flex-wrap justify-center gap-3 mb-12">
+        <button onclick="filterProjects('all')"
+            class="filter-btn bg-primary text-white px-6 py-2 rounded-full text-base font-semibold shadow transition-all duration-200 hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-secondary">الكل</button>
+        <button onclick="filterProjects('store')"
+            class="filter-btn bg-gray-100 text-gray-800 px-6 py-2 rounded-full text-base font-semibold transition-all duration-200 hover:bg-secondary hover:text-white focus:outline-none focus:ring-2 focus:ring-secondary">متاجر</button>
+        <button onclick="filterProjects('website')"
+            class="filter-btn bg-gray-100 text-gray-800 px-6 py-2 rounded-full text-base font-semibold transition-all duration-200 hover:bg-secondary hover:text-white focus:outline-none focus:ring-2 focus:ring-secondary">مواقع</button>
+        <button onclick="filterProjects('app')"
+            class="filter-btn bg-gray-100 text-gray-800 px-6 py-2 rounded-full text-base font-semibold transition-all duration-200 hover:bg-secondary hover:text-white focus:outline-none focus:ring-2 focus:ring-secondary">تطبيقات</button>
+    </div>
+    <!-- الشبكة -->
+    <div id="projects-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
+        <!-- قالب البطاقة (للاستخدام مع JS إذا أردت) -->
+        <template id="project-card-template">
+            <div class="project-card group bg-white rounded-2xl shadow-lg hover:shadow-2xl overflow-hidden transition-transform duration-300 hover:-translate-y-2 border border-gray-100"
+                data-category="">
+                <div class="relative">
+                    <img src="../assets/images/Group 34130.jpg" alt=""
+                        class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                    <span
+                        class="absolute top-3 left-3 bg-secondary text-white text-xs px-3 py-1 rounded-full font-bold shadow tag"></span>
+                </div>
+                <div class="p-6 flex flex-col h-full">
+                    <h3
+                        class="text-xl font-extrabold text-primary mb-2 group-hover:text-secondary transition-colors title">
+                    </h3>
+                    <p class="text-gray-600 text-sm mb-4 leading-relaxed desc"></p>
+                    <a href="#"
+                        class="mt-auto inline-block text-sm font-semibold text-secondary hover:underline">مشاهدة
+                        المشروع</a>
+                </div>
+            </div>
+        </template>
+        <!-- بطاقات المشاريع -->
+        @php
+            $works = App\Models\Portfolio::get();
+        @endphp
+        @foreach ($works as $work)
+        <div class="project-card group bg-white rounded-2xl shadow-lg hover:shadow-2xl overflow-hidden transition-transform duration-300 hover:-translate-y-2 border border-gray-100"
+            data-category="store" data-visible="true">
+            <div class="relative">
+                <img src="{{ asset('storage/' . $work->default_image) }}" alt="متجر إلكتروني 1"
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                <span
+                    class="absolute top-3 left-3 bg-secondary text-white text-xs px-3 py-1 rounded-full font-bold shadow">
+                {{ $work->translations->firstWhere('locale', app()->getLocale())->type }}</span>
+            </div>
+            <div class="p-6 flex flex-col h-full">
+                <h3 class="text-xl font-extrabold text-primary mb-2 group-hover:text-secondary transition-colors">
+                    {{ $work->translations->firstWhere('locale', app()->getLocale())->title }}</h3>
+                <p class="text-gray-600 text-sm mb-4">{{ $work->translations->firstWhere('locale', app()->getLocale())->description }}</p>
+                <a href="/works/{{ $work->id }}" class="mt-auto text-sm font-semibold text-secondary hover:underline">مشاهدة
+                    المشروع</a>
+            </div>
+        </div>
+        @endforeach
+        {{-- <!-- بطاقات مخفية (تحميل المزيد) -->
+        <div class="project-card group bg-white rounded-2xl shadow-lg hover:shadow-2xl overflow-hidden transition-transform duration-300 hover:-translate-y-2 border border-gray-100 hidden"
+            data-category="store" data-visible="false">
+            <div class="relative">
+                <img src="https://via.placeholder.com/600x400/999/222?text=Store+3" alt="متجر 3"
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                <span
+                    class="absolute top-3 left-3 bg-secondary text-white text-xs px-3 py-1 rounded-full font-bold shadow">متجر</span>
+            </div>
+            <div class="p-6 flex flex-col h-full">
+                <h3 class="text-xl font-extrabold text-primary mb-2 group-hover:text-secondary transition-colors">
+                    متجر إلكتروني 3</h3>
+                <p class="text-gray-600 text-sm mb-4">متجر منتجات رقمية مع نظام عضويات متقدم.</p>
+                <a href="#" class="mt-auto text-sm font-semibold text-secondary hover:underline">مشاهدة
+                    المشروع</a>
+            </div>
+        </div>
+        <div class="project-card group bg-white rounded-2xl shadow-lg hover:shadow-2xl overflow-hidden transition-transform duration-300 hover:-translate-y-2 border border-gray-100 hidden"
+            data-category="website" data-visible="false">
+            <div class="relative">
+                <img src="https://via.placeholder.com/600x400/888/111?text=Website+3" alt="موقع 3"
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                <span
+                    class="absolute top-3 left-3 bg-primary text-white text-xs px-3 py-1 rounded-full font-bold shadow">موقع</span>
+            </div>
+            <div class="p-6 flex flex-col h-full">
+                <h3 class="text-xl font-extrabold text-primary mb-2 group-hover:text-secondary transition-colors">
+                    موقع إلكتروني 3</h3>
+                <p class="text-gray-600 text-sm mb-4">موقع شخصي لمحترف أعمال مع معرض أعمال ديناميكي.</p>
+                <a href="#" class="mt-auto text-sm font-semibold text-secondary hover:underline">مشاهدة
+                    المشروع</a>
+            </div>
+        </div>
+        <div class="project-card group bg-white rounded-2xl shadow-lg hover:shadow-2xl overflow-hidden transition-transform duration-300 hover:-translate-y-2 border border-gray-100 hidden"
+            data-category="app" data-visible="false">
+            <div class="relative">
+                <img src="https://via.placeholder.com/600x400/777/000?text=App+3" alt="تطبيق 3"
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                <span
+                    class="absolute top-3 left-3 bg-tertiary text-white text-xs px-3 py-1 rounded-full font-bold shadow">تطبيق</span>
+            </div>
+            <div class="p-6 flex flex-col h-full">
+                <h3 class="text-xl font-extrabold text-primary mb-2 group-hover:text-secondary transition-colors">
+                    تطبيق جوال 3</h3>
+                <p class="text-gray-600 text-sm mb-4">تطبيق تعليمي تفاعلي للأطفال مع ألعاب تعليمية.</p>
+                <a href="#" class="mt-auto text-sm font-semibold text-secondary hover:underline">مشاهدة
+                    المشروع</a>
+            </div>
+        </div>
+        <div class="project-card group bg-white rounded-2xl shadow-lg hover:shadow-2xl overflow-hidden transition-transform duration-300 hover:-translate-y-2 border border-gray-100 hidden"
+            data-category="store" data-visible="false">
+            <div class="relative">
+                <img src="https://via.placeholder.com/600x400/666/fff?text=Store+4" alt="متجر 4"
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                <span
+                    class="absolute top-3 left-3 bg-secondary text-white text-xs px-3 py-1 rounded-full font-bold shadow">متجر</span>
+            </div>
+            <div class="p-6 flex flex-col h-full">
+                <h3 class="text-xl font-extrabold text-primary mb-2 group-hover:text-secondary transition-colors">
+                    متجر إلكتروني 4</h3>
+                <p class="text-gray-600 text-sm mb-4">متجر أدوات منزلية مع نظام كوبونات وعروض.</p>
+                <a href="#" class="mt-auto text-sm font-semibold text-secondary hover:underline">مشاهدة
+                    المشروع</a>
+            </div>
+        </div>
+        <div class="project-card group bg-white rounded-2xl shadow-lg hover:shadow-2xl overflow-hidden transition-transform duration-300 hover:-translate-y-2 border border-gray-100 hidden"
+            data-category="website" data-visible="false">
+            <div class="relative">
+                <img src="https://via.placeholder.com/600x400/555/eee?text=Website+4" alt="موقع 4"
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                <span
+                    class="absolute top-3 left-3 bg-primary text-white text-xs px-3 py-1 rounded-full font-bold shadow">موقع</span>
+            </div>
+            <div class="p-6 flex flex-col h-full">
+                <h3 class="text-xl font-extrabold text-primary mb-2 group-hover:text-secondary transition-colors">
+                    موقع إلكتروني 4</h3>
+                <p class="text-gray-600 text-sm mb-4">موقع إخباري متجاوب مع لوحة تحكم متقدمة.</p>
+                <a href="#" class="mt-auto text-sm font-semibold text-secondary hover:underline">مشاهدة
+                    المشروع</a>
+            </div>
+        </div>
+        <div class="project-card group bg-white rounded-2xl shadow-lg hover:shadow-2xl overflow-hidden transition-transform duration-300 hover:-translate-y-2 border border-gray-100 hidden"
+            data-category="app" data-visible="false">
+            <div class="relative">
+                <img src="https://via.placeholder.com/600x400/444/ccc?text=App+4" alt="تطبيق 4"
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                <span
+                    class="absolute top-3 left-3 bg-tertiary text-white text-xs px-3 py-1 rounded-full font-bold shadow">تطبيق</span>
+            </div>
+            <div class="p-6 flex flex-col h-full">
+                <h3 class="text-xl font-extrabold text-primary mb-2 group-hover:text-secondary transition-colors">
+                    تطبيق جوال 4</h3>
+                <p class="text-gray-600 text-sm mb-4">تطبيق متابعة مهام للشركات مع تقارير فورية.</p>
+                <a href="#" class="mt-auto text-sm font-semibold text-secondary hover:underline">مشاهدة
+                    المشروع</a>
+            </div>
+        </div> --}}
+    </div>
+    <!-- زر تحميل المزيد -->
+    <div class="mt-14 text-center">
+        <button onclick="loadMoreProjects()" id="loadMoreBtn"
+            class="px-8 py-3 bg-secondary text-white text-base font-semibold rounded-full shadow-lg hover:bg-primary transition duration-200 focus:outline-none focus:ring-2 focus:ring-primary">
+            تحميل المزيد
+        </button>
+    </div>
 </section>
+
+
+<!-- Removed duplicate filterProjects function to prevent JavaScript errors -->
+<script>
+    function filterProjects(category) {
+        const allCards = document.querySelectorAll('.project-card');
+
+        allCards.forEach(card => {
+            const type = card.dataset.category;
+            const isVisible = !card.classList.contains('hidden');
+
+            if (category === 'all' || type === category) {
+                card.classList.remove('hidden');
+            } else {
+                card.classList.add('hidden');
+            }
+        });
+
+        // إعادة تفعيل زر تحميل المزيد فقط إذا كنا نظهر كل العناصر
+        if (category === 'all') {
+            document.getElementById('loadMoreBtn')?.classList.remove('hidden');
+        } else {
+            document.getElementById('loadMoreBtn')?.classList.add('hidden');
+        }
+    }
+
+    function loadMoreProjects() {
+        const hiddenCards = document.querySelectorAll('.project-card[data-visible="false"]');
+        for (let i = 0; i < 4 && i < hiddenCards.length; i++) {
+            hiddenCards[i].classList.remove('hidden');
+            hiddenCards[i].dataset.visible = 'true';
+        }
+
+        if (document.querySelectorAll('.project-card[data-visible="false"]').length === 0) {
+            document.getElementById('loadMoreBtn').classList.add('hidden');
+        }
+    }
+</script>

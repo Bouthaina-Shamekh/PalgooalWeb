@@ -34,6 +34,10 @@
             @case('works')
                 <livewire:dashboard.sections.works-section :section="$section" :key="$section->id" />
             @break
+            @case('home-works')
+                <livewire:dashboard.sections.home-works-section :section="$section" :key="$section->id" />
+            @break
+
             @default
                 <div class="p-4 bg-gray-100 rounded shadow">
                     سكشن غير مدعوم حالياً: {{ $section->key }}
@@ -52,6 +56,7 @@
                 'services' => 'الخدمات (Services)',
                 'templates' => 'القوالب (Templates)',
                 'works' => 'الأعمال (Works)',
+                'home-works' => 'أعمالنا في الهوم (Home Works)',
                 'testimonials' => 'آراء العملاء (Testimonials)',
                 'blog' => 'المدونة (Blog)',
                 'banner' => 'اللوحة (banner)',
@@ -136,7 +141,23 @@
                             <label class="block text-sm mb-1">الوصف</label>
                             <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
                                    class="w-full border p-2 rounded mb-2" placeholder="نوفر لك أفضل الخدمات...">
-                        @elseif ($sectionKey === 'panel')
+                        @elseif ($sectionKey === 'home-works')
+                            <label class="block text-sm mb-1">عنوان الخدمات</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.title"
+                                   class="w-full border p-2 rounded mb-2" placeholder="خدماتنا الرقمية">
+
+                            <label class="block text-sm mb-1">الوصف</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.subtitle"
+                                   class="w-full border p-2 rounded mb-2" placeholder="نوفر لك أفضل الخدمات...">
+
+                            <label class="block text-sm mb-1">نص الزر الاول</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_text-1"
+                                    class="w-full border p-2 rounded mb-2" placeholder="مثال: اكتشف الآن">
+
+                            <label class="block text-sm mb-1">رابط الزر الاول</label>
+                            <input type="text" wire:model.defer="translations.{{ $lang->code }}.button_url-1"
+                                    class="w-full border p-2 rounded" placeholder="/works">
+                        @elseif ($sectionKey === 'banner')
                             <label class="block text-sm mb-1">العنوان</label>
                             <input type="text" wire:model.defer="translations.{{ $lang->code }}.title"
                                    class="w-full border p-2 rounded mb-2" placeholder="خدماتنا الرقمية">

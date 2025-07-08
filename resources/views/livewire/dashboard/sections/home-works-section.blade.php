@@ -1,5 +1,5 @@
 <div class="bg-white dark:bg-gray-800 rounded p-6 shadow mb-8 border">
-    <h3 class="text-xl font-semibold mb-4">سكشن: الاعمال (works)</h3>
+    <h3 class="text-xl font-semibold mb-4">سكشن: الاعمال (works) (في صفحة الهوم)</h3>
 
     <button wire:click="deleteMySection" class="text-red-600 hover:underline mb-4">حذف</button>
 
@@ -20,6 +20,14 @@
 
         <input type="text" wire:model="translationsData.{{ $activeLang }}.subtitle"
             placeholder="الوصف المختصر" class="form-input w-full px-4 py-2 rounded border" />
+
+        <input type="text" wire:model="translationsData.{{ $activeLang }}.button_text-1"
+            placeholder="النص للزر"
+            class="form-input w-full px-4 py-2 rounded border" />
+
+        <input type="text" wire:model="translationsData.{{ $activeLang }}.button_url-1"
+            placeholder="الرابط للزر (/works)"
+            class="form-input w-full px-4 py-2 rounded border" />
     </div>
 
     <button wire:click="updateworksSection"

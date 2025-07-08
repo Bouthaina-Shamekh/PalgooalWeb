@@ -194,10 +194,11 @@ class Portfolios extends Component
                         $portfolioData['images'][] = $image->store('icons', 'public');
                     }
                 }
-                $portfolioData['images'] = json_encode($portfolioData['images']);
+                $portfolioData['images'] = $portfolioData['images'];
             }else{
                 $portfolioData['images'] = $portfolioData['imagesMultiple'];
             }
+            $portfolioData['images'] = json_encode($portfolioData['images']);
 
             $portfolio = Portfolio::create($portfolioData);
             $this->showAlert('Portfolio added successfully.', 'success');

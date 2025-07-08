@@ -7,7 +7,7 @@ use App\Models\Section;
 use App\Models\SectionTranslation;
 use Livewire\Component;
 
-class WorksSection extends Component
+class HomeWorksSection extends Component
 {
     public Section $section;
     public $translationsData = [];
@@ -26,6 +26,8 @@ class WorksSection extends Component
             $this->translationsData[$lang->code] = [
                 'title' => $translation?->title ?? '',
                 'subtitle' => $content['subtitle'] ?? '',
+                'button_text-1' => $content['button_text-1'] ?? '',
+                'button_url-1' => $content['button_url-1'] ?? '',
             ];
         }
     }
@@ -41,6 +43,8 @@ class WorksSection extends Component
             $translation->title = $data['title'] ?? '';
             $translation->content = [
                 'subtitle' => $data['subtitle'] ?? '',
+                'button_text-1' => $data['button_text-1'] ?? '',
+                'button_url-1' => $data['button_url-1'] ?? '',
             ];
             $translation->save();
         }
@@ -60,6 +64,6 @@ class WorksSection extends Component
 
     public function render()
     {
-        return view('livewire.dashboard.sections.works-section');
+        return view('livewire.dashboard.sections.home-works-section');
     }
 }

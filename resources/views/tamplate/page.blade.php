@@ -26,6 +26,7 @@
             'services' => 'services',
             'templates' => 'templates',
             'works' => 'works',
+            'home-works' => 'home-works',
             'testimonials' => 'testimonials',
             'blog' => 'blog',
             'banner' => 'banner',
@@ -61,6 +62,12 @@
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
                     'services' => Service::with('translations')->orderBy('order')->get(),
+                ],
+                'home-works' => [
+                    'title' => $title,
+                    'subtitle' => $content['subtitle'] ?? '',
+                    'button_text-1' => $content['button_text-1'] ?? '',
+                    'button_url-1' => $content['button_url-1'] ?? '',
                 ],
                 'templates', 'works', 'testimonials', 'blog' => [
                     'title' => $title,

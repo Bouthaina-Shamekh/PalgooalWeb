@@ -21,7 +21,7 @@ class Sections extends Component
     public $translationsData = [];
     protected $listeners = ['deleteSection'];
 
-    public $availableKeys = ['hero', 'features', 'services', 'templates', 'works', 'testimonials', 'blog', 'banner'];
+    public $availableKeys = ['hero', 'features', 'services', 'templates', 'works','home-works', 'testimonials', 'blog', 'banner'];
     public $activeLang;
 
 
@@ -81,7 +81,7 @@ class Sections extends Component
                     $locale = $lang->code;
                     $data = $this->translations[$locale] ?? [];
                     $content = [];
-                    
+
             switch ($this->sectionKey) {
             case 'features':
                 $featuresRaw = $data['features'] ?? '';
@@ -110,6 +110,17 @@ class Sections extends Component
                 break;
             case 'templates':
             case 'works':
+                $content = [
+                    'subtitle' => $data['subtitle'] ?? '',
+                ];
+                break;
+            case 'home-works':
+                $content = [
+                    'subtitle' => $data['subtitle'] ?? '',
+                    'button_text-1' => $data['button_text-1'] ?? '',
+                    'button_url-1' => $data['button_url-1'] ?? '',
+                ];
+                break;
             case 'testimonials':
             case 'blog':
                 $content = [];
