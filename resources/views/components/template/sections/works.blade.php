@@ -59,8 +59,18 @@
             <div class="p-6 flex flex-col h-full">
                 <h3 class="text-xl font-extrabold text-primary mb-2 group-hover:text-secondary transition-colors">
                     {{ $work->translations->firstWhere('locale', app()->getLocale())->title }}</h3>
-                <p class="text-gray-600 text-sm mb-4">{{ $work->translations->firstWhere('locale', app()->getLocale())->description }}</p>
-                <a href="/works/{{ $work->id }}" class="mt-auto text-sm font-semibold text-secondary hover:underline">مشاهدة
+                <p class="text-sm mb-4">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 text-secondary" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14c-4.418 0-8 1.79-8 4v2h16v-2c0-2.21-3.582-4-8-4z" />
+                        </svg>
+                        العميل:
+                        <span class="font-semibold text-primary dark:text-yellow-400">{{ $work->client }}</span>
+                    </div>
+                </p>
+                <a href="{{ route('portfolio.show', $work->slug ?? $work->id) }}" class="mt-auto text-sm font-semibold text-secondary hover:underline">مشاهدة
                     المشروع</a>
             </div>
         </div>

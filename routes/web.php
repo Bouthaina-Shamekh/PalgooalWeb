@@ -2,6 +2,7 @@
 
 use App\Models\Language;
 use App\Models\Page;
+use App\Models\Portfolio;
 use Illuminate\Support\Facades\Route;
 
 // Route::get('/', function () {
@@ -22,7 +23,7 @@ Route::middleware(['setLocale'])->group(function () {
         view()->share('currentPage', $page);
         return view('tamplate.page', ['page' => $page]);
     });
-    
+
     // صفحات أخرى عبر slug
     Route::get('/{slug}', function ($slug) {
         $page = Page::with(['translations', 'sections.translations'])
@@ -31,7 +32,16 @@ Route::middleware(['setLocale'])->group(function () {
             ->firstOrFail();
             view()->share('currentPage', $page);
             return view('tamplate.page', ['page' => $page]);
-    });
+    })->where('slug', '^(?!storage|images|files|uploads|admin|portfolio).*$');
+
+
+    Route::get('portfolio/{slug}', function ($slug) {
+        $portfolio = Portfolio::with(['translations'])
+            ->where('slug', $slug)
+            ->orWhere('id', $slug)
+            ->firstOrFail();
+        return view('tamplate.portfolio', ['portfolio' => $portfolio]);
+    })->name('portfolio.show');
 
     Route::get('change-locale/{locale}', function ($locale) {
         $language = Language::where('code', $locale)->where('is_active', true)->first();

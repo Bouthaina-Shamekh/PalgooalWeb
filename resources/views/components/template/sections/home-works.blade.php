@@ -18,7 +18,7 @@
             @endphp
             <div class="swiper-wrapper">
                 @foreach ($works as $work)
-                    <div
+                    <a href="{{ route('portfolio.show', $work->slug ?? $work->id) }}"
                         class="swiper-slide flex flex-col items-center text-center animate-fade-in-up hover:scale-105 transition-transform duration-300">
                         <div class="w-full max-w-xs overflow-hidden rounded-lg">
                             <img src="{{ asset('storage/' . $work->default_image) }}" role="img" alt="{{ $work->translations->firstWhere('locale', app()->getLocale())->title }}"
@@ -28,7 +28,7 @@
                         <h3
                             class="font-extrabold text-suptitle mt-4 animate-fade-in-up delay-150 text-center text-primary dark:text-white">
                             {{ $work->translations->firstWhere('locale', app()->getLocale())->title }}</h3>
-                    </div>
+                    </a>
                 @endforeach
             </div>
 

@@ -13,6 +13,9 @@ class Portfolio extends Model
         'images',
         'delivery_date',
         'order',
+        'implementation_period_days',
+        'slug',
+        'client',
     ];
 
     public function translations()

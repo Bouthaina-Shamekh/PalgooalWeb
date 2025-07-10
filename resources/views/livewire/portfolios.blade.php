@@ -50,6 +50,7 @@
                     <th class="p-2">#</th>
                     <th class="p-2">الصورة</th>
                     <th class="p-2">العنوان ({{ app()->getLocale() }})</th>
+                    <th class="p-2">الحالة</th>
                     <th class="p-2">النوع</th>
                     <th class="p-2">الترتيب</th>
                     <th class="p-2">الإجراءات</th>
@@ -60,11 +61,13 @@
                     <tr class="border-t">
                         <td class="p-2">{{ $loop->iteration }}</td>
                         <td class="p-2">
-                            <img src="{{ asset('storage/' . $portfolio->image) }}" class="w-10 h-10">
+                            <img src="{{ asset('storage/' . $portfolio->default_image) }}" class="w-10 h-10">
                         </td>
                         <td class="p-2">
                             {{ $portfolio->translations()->where('locale', app()->getLocale())->first()->title }}
                         </td>
+                        <td class="p-2">
+                            {{ $portfolio->translations()->where('locale', app()->getLocale())->first()->status }}</td>
                         <td class="p-2">
                             {{ $portfolio->translations()->where('locale', app()->getLocale())->first()->type }}</td>
                         <td class="p-2">{{ $portfolio->order }}</td>
@@ -116,11 +119,39 @@
                     <span class="text-red-600">{{ $message }}</span>
                 @enderror
             </div>
+
+            {{-- مدة التنفيذ بالأيام --}}
+            <div class="col-span-6">
+                <label class="block text-sm font-medium">مدة التنفيذ بالأيام</label>
+                <input type="number" wire:model="portfolio.implementation_period_days" class="form-control">
+                @error('portfolio.implementation_period_days')
+                    <span class="text-red-600">{{ $message }}</span>
+                @enderror
+            </div>
+
             {{-- الترتيب --}}
             <div class="col-span-6">
                 <label class="block text-sm font-medium">ترتيب الظهور</label>
                 <input type="number" wire:model="portfolio.order" class="form-control">
                 @error('portfolio.order')
+                    <span class="text-red-600">{{ $message }}</span>
+                @enderror
+            </div>
+
+            {{-- Client --}}
+            <div class="col-span-6">
+                <label class="block text-sm font-medium">العميل</label>
+                <input type="text" wire:model="portfolio.client" class="form-control">
+                @error('portfolio.client')
+                    <span class="text-red-600">{{ $message }}</span>
+                @enderror
+            </div>
+
+            {{-- slug --}}
+            <div class="col-span-6">
+                <label class="block text-sm font-medium">Slug</label>
+                <input type="text" wire:model="portfolio.slug" class="form-control" required>
+                @error('portfolio.slug')
                     <span class="text-red-600">{{ $message }}</span>
                 @enderror
             </div>
@@ -160,6 +191,14 @@
                             wire:model="portfolioTranslations.{{ $index }}.materials">
                         <input type="text" class="form-control mb-2" placeholder="الرابط"
                             wire:model="portfolioTranslations.{{ $index }}.link">
+
+                        <select class="form-control mb-2" wire:model="portfolioTranslations.{{ $index }}.status">
+                            <option value="">اختر الحالة</option>
+                            @foreach ($statusSuggestions[$lang->code] as $status)
+                                <option value="{{ $status }}">{{ $status }}</option>
+                            @endforeach
+                        </select>
+
 
                         <input type="hidden" wire:model="portfolioTranslations.{{ $index }}.locale">
                     </div>

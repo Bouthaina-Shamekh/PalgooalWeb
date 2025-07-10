@@ -32,11 +32,15 @@ class Portfolios extends Component
         'imagesMultiple' => [],
         'delivery_date' => '',
         'order' => '',
+        'implementation_period_days' => '',
+        'slug' => '',
+        'client' => '',
     ];
 
     public $portfolioTranslations = [];
     public $languages = [];
     public $typeSuggestions = [];
+    public $statusSuggestions = [];
 
 
     public function mount()
@@ -46,22 +50,26 @@ class Portfolios extends Component
 
         $this->typeSuggestions = $languages->mapWithKeys(function ($lang) {
             $rawTypes = PortfolioTranslation::where('locale', $lang->code)
-                            ->whereNotNull('type')
-                            ->pluck('type')
-                            ->toArray();
+                ->whereNotNull('type')
+                ->pluck('type')
+                ->toArray();
 
             $allTypes = collect($rawTypes)
                 ->flatMap(function ($typeString) {
                     // نفصل بالـ , أو الفاصلة العربية
                     return collect(preg_split('/[,،]/u', $typeString))
-                            ->map(fn($v) => trim($v))
-                            ->filter();
+                        ->map(fn($v) => trim($v))
+                        ->filter();
                 })
                 ->unique()
                 ->values();
 
             return [$lang->code => $allTypes];
         })->toArray();
+        $this->statusSuggestions = [
+            'ar' => ['مفعل', 'غير مفعل', 'مكتمل'],
+            'en' => ['Active', 'Inactive', 'Completed'],
+        ];
     }
 
     public function showAlert($message, $type = 'success')
@@ -96,6 +104,9 @@ class Portfolios extends Component
             'imagesMultiple' => json_decode($portfolio->images),
             'delivery_date' => $portfolio->delivery_date,
             'order' => $portfolio->order,
+            'implementation_period_days' => $portfolio->implementation_period_days,
+            'slug' => $portfolio->slug,
+            'client' => $portfolio->client,
         ];
 
         $this->portfolioTranslations = [];
@@ -107,6 +118,7 @@ class Portfolios extends Component
                 'type' => $trans?->type ?? '',
                 'materials' => $trans?->materials ?? '',
                 'link' => $trans?->link ?? '',
+                'status' => $trans?->status ?? '',
             ];
         }
 
@@ -128,6 +140,9 @@ class Portfolios extends Component
             'imagesMultiple' => [],
             'delivery_date' => '',
             'order' => '',
+            'implementation_period_days' => '',
+            'slug' => '',
+            'client' => '',
         ];
 
         $this->portfolioTranslations = [];
@@ -138,6 +153,7 @@ class Portfolios extends Component
                 'type' => '',
                 'materials' => '',
                 'link' => '',
+                'status' => '',
             ];
         }
     }
@@ -149,14 +165,17 @@ class Portfolios extends Component
             'portfolio.default_image' => 'nullable', // optional file
             'portfolio.images' => 'nullable', // optional file
             'portfolio.delivery_date' => 'required|date',
+            'portfolio.implementation_period_days' => 'required|integer',
+            'portfolio.slug' => 'required|string',
+            'portfolio.client' => 'nullable|string',
             'portfolioTranslations.*.title' => 'required|string',
             'portfolioTranslations.*.type' => 'required|string',
             'portfolioTranslations.*.materials' => 'required|string',
             'portfolioTranslations.*.link' => 'nullable|string',
+            'portfolioTranslations.*.status' => 'nullable|string',
         ]);
 
         $portfolioData = $this->portfolio;
-
         if ($this->portfolioId) {
             $portfolio = Portfolio::findOrFail($this->portfolioId);
 
@@ -169,16 +188,16 @@ class Portfolios extends Component
             } else {
                 $portfolioData['default_image'] = $portfolio->default_image;
             }
-
-            if($this->portfolio['imagesMultiple']){
-                foreach($this->portfolio['imagesMultiple'] as $image){
-                    if($image instanceof UploadedFile){
+            if ($this->portfolio['imagesMultiple']) {
+                foreach ($this->portfolio['imagesMultiple'] as $image) {
+                    if ($image instanceof UploadedFile) {
                         $portfolioData['images'][] = $image->store('icons', 'public');
                     }
                 }
-            }else{
+            } else {
                 $portfolioData['images'] = $portfolioData['imagesMultiple'];
             }
+
             $portfolioData['images'] = json_encode($portfolioData['images']);
 
             $portfolio->update($portfolioData);
@@ -188,14 +207,14 @@ class Portfolios extends Component
                 $portfolioData['default_image'] = $this->portfolio['default_image']->store('icons', 'public');
             }
 
-            if($this->portfolio['imagesMultiple']){
-                foreach($this->portfolio['imagesMultiple'] as $image){
-                    if($image instanceof UploadedFile){
+            if ($this->portfolio['imagesMultiple']) {
+                foreach ($this->portfolio['imagesMultiple'] as $image) {
+                    if ($image instanceof UploadedFile) {
                         $portfolioData['images'][] = $image->store('icons', 'public');
                     }
                 }
                 $portfolioData['images'] = $portfolioData['images'];
-            }else{
+            } else {
                 $portfolioData['images'] = $portfolioData['imagesMultiple'];
             }
             $portfolioData['images'] = json_encode($portfolioData['images']);
@@ -215,7 +234,8 @@ class Portfolios extends Component
                     'title' => $translation['title'],
                     'type' => $translation['type'],
                     'materials' => $translation['materials'],
-                    'link' => $translation['link']
+                    'link' => $translation['link'],
+                    'status' => $translation['status'],
                 ]
             );
         }
@@ -232,29 +252,29 @@ class Portfolios extends Component
     public function deletePortfolioConfirmed($id)
     {
         try {
-        $portfolio = Portfolio::findOrFail($id);
+            $portfolio = Portfolio::findOrFail($id);
 
-        if ($portfolio->default_image && Storage::disk('public')->exists($portfolio->default_image)) {
-            Storage::disk('public')->delete($portfolio->default_image);
-        }
+            if ($portfolio->default_image && Storage::disk('public')->exists($portfolio->default_image)) {
+                Storage::disk('public')->delete($portfolio->default_image);
+            }
 
-        if($portfolio->images){
-            $images = json_decode($portfolio->images);
-            foreach($images as $image){
-                if(Storage::disk('public')->exists($image)){
-                    Storage::disk('public')->delete($image);
+            if ($portfolio->images) {
+                $images = json_decode($portfolio->images);
+                foreach ($images as $image) {
+                    if (Storage::disk('public')->exists($image)) {
+                        Storage::disk('public')->delete($image);
+                    }
                 }
             }
-        }
 
-        $portfolio->delete();
+            $portfolio->delete();
 
-        $this->dispatch('portfolio-deleted-success');
-        $this->showAlert('✅ تم حذف الخدمة بنجاح', 'success');
+            $this->dispatch('portfolio-deleted-success');
+            $this->showAlert('✅ تم حذف الخدمة بنجاح', 'success');
         } catch (\Exception $e) {
-        logger()->error('خطأ أثناء الحذف: ' . $e->getMessage());
-        $this->dispatch('portfolio-delete-failed');
-        $this->showAlert('❌ حدث خطأ أثناء الحذف', 'danger');
+            logger()->error('خطأ أثناء الحذف: ' . $e->getMessage());
+            $this->dispatch('portfolio-delete-failed');
+            $this->showAlert('❌ حدث خطأ أثناء الحذف', 'danger');
         }
         $this->resetPage();
     }

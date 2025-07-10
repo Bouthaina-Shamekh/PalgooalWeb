@@ -15,6 +15,7 @@ class PortfolioTranslation extends Model
         'type',
         'materials',
         'link',
+        'status',
     ];
 
     public function portfolio()
