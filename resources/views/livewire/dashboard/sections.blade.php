@@ -13,8 +13,6 @@
         </div>
     @endif
 
-
-
     {{-- ✅ عرض السكشنات الحالية --}}
     @foreach ($sections as $section)
         @switch($section->key)
@@ -186,29 +184,5 @@
 
         @endif
     </div>
-    @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-    console.log("✅ سكربت SweetAlert جاهز");
 
-    window.addEventListener('confirm-delete-section', event => {
-        console.log("📢 تم استقبال حدث التأكيد", event.detail);
-
-        Swal.fire({
-            title: 'هل أنت متأكد؟',
-            text: 'لن تتمكن من التراجع بعد الحذف!',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'نعم، احذف',
-            cancelButtonText: 'إلغاء',
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                Livewire.emit('deleteSection', { sectionId: event.detail.sectionId }); // 👈 هنا
-            }
-        });
-    });
-</script>
-@endpush
 </div>

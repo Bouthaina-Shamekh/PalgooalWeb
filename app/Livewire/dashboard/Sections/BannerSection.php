@@ -60,9 +60,6 @@ class BannerSection extends Component
         }
         return $section;
     }
-
-
-
     public function updatePanelSection()
     {
         foreach ($this->translationsData as $locale => $data) {
