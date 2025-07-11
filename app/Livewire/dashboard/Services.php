@@ -108,7 +108,7 @@ class Services extends Component
     {
         $validated = $this->validate([
             'service.order' => 'required|integer',
-            'service.icon' => 'nullable|image|max:2048', // optional file
+            'service.icon' => 'nullable|file|mimes:svg,png,jpg,jpeg,gif,webp|max:2048',
             'service.url' => 'nullable', 
             'serviceTranslations.*.title' => 'required|string',
             'serviceTranslations.*.description' => 'required|string',

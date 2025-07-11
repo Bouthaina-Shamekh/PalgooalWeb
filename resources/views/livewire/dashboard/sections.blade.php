@@ -35,6 +35,15 @@
             @case('home-works')
                 <livewire:dashboard.sections.home-works-section :section="$section" :key="$section->id" />
             @break
+            @case('templates')
+                <livewire:dashboard.sections.templates-section :section="$section" :key="$section->id" />
+            @break
+            @case('testimonials')
+                <livewire:dashboard.sections.testimonials-section :section="$section" :key="$section->id" />
+            @break
+            @case('blog')
+                <livewire:dashboard.sections.blogs-section :section="$section" :key="$section->id" />
+            @break
 
             @default
                 <div class="p-4 bg-gray-100 rounded shadow">

@@ -2,12 +2,10 @@
 
 namespace App\Livewire\Dashboard\Sections;
 
-use App\Models\Language;
-use App\Models\Section;
 use App\Models\SectionTranslation;
 use Livewire\Component;
 
-class HomeWorksSection extends BaseSectionComponent
+class BlogsSection extends BaseSectionComponent
 {
     public function mount()
     {
@@ -22,15 +20,12 @@ class HomeWorksSection extends BaseSectionComponent
                 'subtitle' => $content['subtitle'] ?? '',
                 'button_text-1' => $content['button_text-1'] ?? '',
                 'button_url-1' => $content['button_url-1'] ?? '',
-                'homeWorks' => $content['homeWorks'] ?? [],
+                'blogs' => $content['blogs'] ?? [],
             ];
         }
     }
 
-
-
-
-    public function updatehomeWorksSection()
+    public function updateblogsSection()
     {
         foreach ($this->translationsData as $locale => $data) {
             $translation = SectionTranslation::firstOrNew([
@@ -43,7 +38,7 @@ class HomeWorksSection extends BaseSectionComponent
                 'subtitle' => $data['subtitle'] ?? '',
                 'button_text-1' => $data['button_text-1'] ?? '',
                 'button_url-1' => $data['button_url-1'] ?? '',
-                'homeWorks' => $data['homeWorks'] ?? [],
+                'blogs' => $data['blogs'] ?? [],
             ];
 
             $this->section->order = $this->order;
@@ -54,16 +49,18 @@ class HomeWorksSection extends BaseSectionComponent
         session()->flash('success', 'تم تحديث قسم الهيرو بنجاح.');
     }
 
-        public function removehomeWorks($locale, $index)
+        public function removeblogs($locale, $index)
     {
-        if (isset($this->translationsData[$locale]['homeWorks'][$index])) {
-            unset($this->translationsData[$locale]['homeWorks'][$index]);
-            $this->translationsData[$locale]['homeWorks'] = array_values($this->translationsData[$locale]['homeWorks']);
+        if (isset($this->translationsData[$locale]['blogs'][$index])) {
+            unset($this->translationsData[$locale]['blogs'][$index]);
+            $this->translationsData[$locale]['blogs'] = array_values($this->translationsData[$locale]['blogs']);
         }
     }
 
+
+
     public function render()
     {
-        return view('livewire.dashboard.sections.home-works-section');
+        return view('livewire.dashboard.sections.blogs-section');
     }
 }

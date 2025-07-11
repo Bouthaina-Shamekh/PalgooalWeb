@@ -11,9 +11,7 @@
 
     <div class="flex justify-between items-center">
         <h3 class="text-xl font-semibold text-gray-800 dark:text-white">{{ ucfirst($section->key) }}</h3>
-        {{-- <button wire:click="deleteMySection" onclick="return confirm('هل أنت متأكد من حذف هذا السكشن؟')" class="text-red-600 hover:underline text-sm">{{ t('section.Delete', 'Delete')}}</button> --}}
         <button onclick="confirmDeleteSection({{ $section->id }})" class="text-red-600 hover:underline text-sm">{{ t('section.Delete', 'Delete')}}</button> 
-
     </div>
     
     <!-- Section arrangement -->
@@ -35,10 +33,10 @@
         @endforeach
     </div>
 
-    <!-- Hero Section Fields -->
-    <div wire:key="hero-{{ $activeLang }}" class="grid grid-cols-12 gap-6">
+    <!-- blog Section Fields -->
+    <div wire:key="blog-{{ $activeLang }}" class="grid grid-cols-12 gap-6">
         <div class="col-span-12 md:col-span-6 mb-4">
-            <label class="form-label" for="inputZip">{{ t('section.Title', 'Title')}}</label>
+            <label class="form-label">{{ t('section.Title', 'Title')}}</label>
             <input type="text" wire:model="translationsData.{{ $activeLang }}.title" class="form-control" placeholder="{{ t('section.Title', 'Title')}}" />
         </div>
         <div class="col-span-12 md:col-span-6 mb-4">
@@ -46,26 +44,18 @@
             <input type="text" wire:model="translationsData.{{ $activeLang }}.subtitle" class="form-control" placeholder="{{ t('section.Brief_description', 'Brief description')}}" />
         </div>
         <div class="col-span-12 md:col-span-6 mb-4">
-            <label class="form-label">{{ t('section.First_button_text', 'First button text')}}</label>
-            <input type="text" wire:model="translationsData.{{ $activeLang }}.button_text-1" class="form-control" placeholder="{{ t('section.First_button_text', 'First button text')}}" />
+            <label class="form-label">{{ t('section.See_more_button', 'See more button')}}</label>
+            <input type="text" wire:model="translationsData.{{ $activeLang }}.button_text-1" class="form-control" placeholder="{{ t('section.See_more_button', 'See more button')}}" />
         </div>
         <div class="col-span-12 md:col-span-6 mb-4">
-            <label class="form-label">{{ t('section.First_button_Url', 'First Button Url')}}</label>
-            <input type="text" wire:model="translationsData.{{ $activeLang }}.button_url-1" class="form-control" placeholder="{{ t('section.First_button_Url', 'First button Url')}}" />
-        </div>
-        <div class="col-span-12 md:col-span-6 mb-4">
-            <label class="form-label">{{ t('section.Second_button_text', 'Second Button text')}}</label>
-            <input type="text" wire:model="translationsData.{{ $activeLang }}.button_text-2" class="form-control" placeholder="{{ t('section.Second_button_text', 'Second button text')}}" />
-        </div>
-        <div class="col-span-12 md:col-span-6 mb-4">
-            <label class="form-label">{{ t('section.Second_button_Url', 'Second Button Url')}}</label>
-            <input type="text" wire:model="translationsData.{{ $activeLang }}.button_url-2" class="form-control" placeholder="{{ t('section.Second_button_Url', 'Second Button Url')}}" />
+            <label class="form-label">{{ t('section.Link_see_more', 'Link see more')}}</label>
+            <input type="text" wire:model="translationsData.{{ $activeLang }}.button_url-1" class="form-control" placeholder="{{ t('section.Link_see_more', 'Link see more')}}" />
         </div>
     </div>
-
-    <!-- Hero Section Save -->
+    
+    <!-- home works Section Save -->
     <div class="text-end">
-        <button wire:click="updateHeroSection" class="btn btn-primary">
+        <button wire:click="updateblogsSection" class="btn btn-primary">
             {{ t('section.Save_changes', 'Save changes')}}
         </button>
     </div>

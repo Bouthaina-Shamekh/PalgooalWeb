@@ -69,13 +69,16 @@
                     'button_text-1' => $content['button_text-1'] ?? '',
                     'button_url-1' => $content['button_url-1'] ?? '',
                 ],
-                'templates', 'works', 'testimonials', 'blog' => [
+                'templates', 'works', 'testimonials', 'banner' => [
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
                 ],
-                'banner' => [
+
+                'blog' => [
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
+                    'button_text-1' => $content['button_text-1'] ?? '',
+                    'button_url-1' => $content['button_url-1'] ?? '',
                 ],
                 default => [],
             };

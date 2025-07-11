@@ -30,6 +30,7 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
+                                    
                                     <th>#</th>
                                     <th>{{ t('dashboard.Name', 'Name') }}</th>
                                     <th>{{ t('dashboard.Native_Name', 'Native Name') }}</th>
@@ -41,9 +42,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($languages as $lang)
+                                @foreach($langs as $lang)
                                 <tr>
-                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ ($langs ->currentPage() - 1) * $langs ->perPage() + $loop->iteration }}</td>
                                     <td>{{ $lang->name }}</td>
                                     <td>{{ $lang->native }}</td>
                                     <td>{{ strtoupper($lang->code) }}</td>
@@ -80,7 +81,7 @@
                     </div>
                 </div>
                 <div class="mt-4">
-                    {{ $languages->links() }}
+                    {{ $langs->links() }}
                 </div>
             </div>
         </div>

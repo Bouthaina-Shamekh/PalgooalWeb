@@ -45,7 +45,7 @@
         </div>
     </div>
 
-    <!-- Hero Section Save -->
+    <!-- services Section Save -->
     <div class="text-end">
         <button wire:click="updateservicesSection" class="btn btn-primary">
             {{ t('section.Save_changes', 'Save changes')}}

@@ -2,16 +2,14 @@
 
 namespace App\Livewire\Dashboard\Sections;
 
-use App\Models\Language;
-use App\Models\Section;
 use App\Models\SectionTranslation;
 use Livewire\Component;
 
-class HomeWorksSection extends BaseSectionComponent
+class TestimonialsSection extends BaseSectionComponent
 {
     public function mount()
     {
-        parent::mount(); // استدعاء mount من BaseSectionComponent
+        parent::mount(); // استدعاء mount من الكلاس الأساسي
 
         foreach ($this->languages as $lang) {
             $translation = $this->section->translations->firstWhere('locale', $lang->code);
@@ -20,17 +18,12 @@ class HomeWorksSection extends BaseSectionComponent
             $this->translationsData[$lang->code] = [
                 'title' => $translation?->title ?? '',
                 'subtitle' => $content['subtitle'] ?? '',
-                'button_text-1' => $content['button_text-1'] ?? '',
-                'button_url-1' => $content['button_url-1'] ?? '',
-                'homeWorks' => $content['homeWorks'] ?? [],
+                'testimonials' => $content['testimonials'] ?? [],
             ];
         }
     }
 
-
-
-
-    public function updatehomeWorksSection()
+        public function updatetestimonialsSection()
     {
         foreach ($this->translationsData as $locale => $data) {
             $translation = SectionTranslation::firstOrNew([
@@ -41,9 +34,7 @@ class HomeWorksSection extends BaseSectionComponent
             $translation->title = $data['title'] ?? '';
             $translation->content = [
                 'subtitle' => $data['subtitle'] ?? '',
-                'button_text-1' => $data['button_text-1'] ?? '',
-                'button_url-1' => $data['button_url-1'] ?? '',
-                'homeWorks' => $data['homeWorks'] ?? [],
+                'testimonials' => $data['testimonials'] ?? [],
             ];
 
             $this->section->order = $this->order;
@@ -51,19 +42,20 @@ class HomeWorksSection extends BaseSectionComponent
             $translation->save();
         }
 
-        session()->flash('success', 'تم تحديث قسم الهيرو بنجاح.');
+        session()->flash('success', 'تم تحديث قسم المميزات بنجاح.');
     }
 
-        public function removehomeWorks($locale, $index)
+    public function removetestimonials($locale, $index)
     {
-        if (isset($this->translationsData[$locale]['homeWorks'][$index])) {
-            unset($this->translationsData[$locale]['homeWorks'][$index]);
-            $this->translationsData[$locale]['homeWorks'] = array_values($this->translationsData[$locale]['homeWorks']);
+        if (isset($this->translationsData[$locale]['testimonials'][$index])) {
+            unset($this->translationsData[$locale]['testimonials'][$index]);
+            $this->translationsData[$locale]['testimonials'] = array_values($this->translationsData[$locale]['testimonials']);
         }
     }
 
+
     public function render()
     {
-        return view('livewire.dashboard.sections.home-works-section');
+        return view('livewire.dashboard.sections.testimonials-section');
     }
 }

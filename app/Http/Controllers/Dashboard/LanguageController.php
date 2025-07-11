@@ -13,8 +13,8 @@ class LanguageController extends Controller
      */
     public function index()
     {
-        $languages = Language::paginate(10);
-        return view('dashboard.lang.index', compact('languages'));
+        $langs  = Language::paginate(10);
+        return view('dashboard.lang.index', compact('langs'));
     }
 
     /**
