@@ -2,26 +2,14 @@
 
 namespace App\Livewire\Dashboard\Sections;
 
-use App\Models\Language;
 use App\Models\Section;
 use App\Models\SectionTranslation;
-use Livewire\Component;
 
-class HeroSection extends Component
+class HeroSection extends BaseSectionComponent
 {
-    public Section $section;
-    public $translationsData = [];
-    public $languages;
-    public $activeLang;
-    public $order;
-    protected $listeners = ['confirm-delete-section' => 'deleteMySection'];
-
-
     public function mount()
     {
-        $this->languages = Language::where('is_active', true)->get();
-        $this->activeLang = app()->getLocale();
-        $this->order = $this->section->order;
+        parent::mount(); // استدعاء mount من BaseSectionComponent
 
         foreach ($this->languages as $lang) {
             $translation = $this->section->translations->firstWhere('locale', $lang->code);
@@ -46,10 +34,8 @@ class HeroSection extends Component
             'key' => 'hero',
             'order' => $order,
         ]);
-        $languages = Language::where('is_active', true)->get();
-        foreach ($languages as $lang) {
-            $locale = $lang->code;
-            $data = $translations[$locale] ?? [];
+
+        foreach ($translations as $locale => $data) {
             $content = [
                 'subtitle' => $data['subtitle'] ?? '',
                 'button_text-1' => $data['button_text-1'] ?? '',
@@ -58,6 +44,7 @@ class HeroSection extends Component
                 'button_url-2' => $data['button_url-2'] ?? '',
                 'hero' => $data['hero'] ?? [],
             ];
+
             SectionTranslation::create([
                 'section_id' => $section->id,
                 'locale' => $locale,
@@ -65,10 +52,9 @@ class HeroSection extends Component
                 'content' => $content,
             ]);
         }
+
         return $section;
     }
-
-
 
     public function updateHeroSection()
     {
@@ -87,6 +73,7 @@ class HeroSection extends Component
                 'button_url-2' => $data['button_url-2'] ?? '',
                 'hero' => $data['hero'] ?? [],
             ];
+
             $this->section->order = $this->order;
             $this->section->save();
             $translation->save();
@@ -95,25 +82,12 @@ class HeroSection extends Component
         session()->flash('success', 'تم تحديث قسم الهيرو بنجاح.');
     }
 
-    public function setActiveLang($code)
-    {
-        $this->activeLang = $code;
-    }
-
     public function removehero($locale, $index)
     {
         if (isset($this->translationsData[$locale]['hero'][$index])) {
             unset($this->translationsData[$locale]['hero'][$index]);
-            // إعادة ترتيب الفهارس لتجنب المشاكل
             $this->translationsData[$locale]['hero'] = array_values($this->translationsData[$locale]['hero']);
         }
-    }
-
-    public function deleteMySection()
-    {
-        $this->section->delete();
-        session()->flash('success', 'تم حذف السكشن بنجاح.');
-        $this->redirect(request()->header('Referer'), navigate: true);
     }
 
     public function render()

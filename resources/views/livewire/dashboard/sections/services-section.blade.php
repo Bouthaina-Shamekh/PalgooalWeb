@@ -10,7 +10,8 @@
     @endif
     <div class="flex justify-between items-center">
         <h3 class="text-xl font-semibold text-gray-800 dark:text-white">{{ ucfirst($section->key) }}</h3>
-        <button wire:click="deleteMySection" class="text-red-600 hover:underline text-sm">{{ t('section.Delete', 'Delete')}}</button>
+        {{-- <button wire:click="deleteMySection" onclick="return confirm('هل أنت متأكد من حذف هذا السكشن؟')" class="text-red-600 hover:underline text-sm">{{ t('section.Delete', 'Delete')}}</button> --}}
+        <button onclick="confirmDeleteSection({{ $section->id }})" class="text-red-600 hover:underline text-sm">{{ t('section.Delete', 'Delete')}}</button> 
     </div>
 
     <!-- Section arrangement -->

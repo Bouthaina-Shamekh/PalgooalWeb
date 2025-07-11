@@ -7,17 +7,11 @@ use App\Models\SectionTranslation;
 use App\Models\Language;
 use Livewire\Component;
 
-class FeaturesSection extends Component
+class FeaturesSection extends BaseSectionComponent
 {
-    public Section $section;
-    public $translationsData = [];
-    public $languages;
-    public $activeLang;
-
     public function mount()
     {
-        $this->languages = Language::where('is_active', true)->get();
-        $this->activeLang = app()->getLocale();
+        parent::mount(); // استدعاء mount من الكلاس الأساسي
 
         foreach ($this->languages as $lang) {
             $translation = $this->section->translations->firstWhere('locale', $lang->code);
@@ -44,18 +38,15 @@ class FeaturesSection extends Component
                 'subtitle' => $data['subtitle'] ?? '',
                 'features' => $data['features'] ?? [],
             ];
+
+            $this->section->order = $this->order;
+            $this->section->save();
             $translation->save();
         }
 
         session()->flash('success', 'تم تحديث قسم المميزات بنجاح.');
     }
 
-    public function setActiveLang($code)
-    {
-        $this->activeLang = $code;
-    }
-
-    
     public function addFeature($locale)
     {
         $this->translationsData[$locale]['features'][] = [
@@ -69,15 +60,8 @@ class FeaturesSection extends Component
     {
         if (isset($this->translationsData[$locale]['features'][$index])) {
             unset($this->translationsData[$locale]['features'][$index]);
-            // إعادة ترتيب الفهارس لتجنب المشاكل
             $this->translationsData[$locale]['features'] = array_values($this->translationsData[$locale]['features']);
         }
-    }
-
-
-    public function deleteMySection()
-    {
-        $this->dispatch('deleteSection', $this->section->id);
     }
 
     public function render()
@@ -85,3 +69,4 @@ class FeaturesSection extends Component
         return view('livewire.dashboard.sections.features-section');
     }
 }
+ 
