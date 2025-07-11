@@ -25,7 +25,7 @@ class FeaturesSection extends BaseSectionComponent
         }
     }
 
-    public function updateFeatureSection()
+    public function updatefeaturesSection()
     {
         foreach ($this->translationsData as $locale => $data) {
             $translation = SectionTranslation::firstOrNew([

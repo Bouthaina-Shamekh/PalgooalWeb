@@ -8,18 +8,18 @@
             <span class="text-sm font-medium">{{ session('success') }}</span>
         </div>
     @endif
+
     <div class="flex justify-between items-center">
         <h3 class="text-xl font-semibold text-gray-800 dark:text-white">{{ ucfirst($section->key) }}</h3>
         <button onclick="confirmDeleteSection({{ $section->id }})" class="text-red-600 hover:underline text-sm">{{ t('section.Delete', 'Delete')}}</button> 
     </div>
-
     <!-- Section arrangement -->
     <div class="col-span-12 md:col-span-2 mb-4">
         <label class="form-label">{{ t('section.Section_Arrangement', 'Section Arrangement')}}</label>
         <input type="number" wire:model.defer="order" class="form-control" placeholder="{{ t('section.Example:', 'Example: 1, 2, 3')}}" />
     </div>
 
-    <!-- Language tabs -->
+     <!-- Language tabs -->
     <div class="flex flex-wrap gap-2 mt-4">
         @foreach($languages as $lang)
             <button wire:click="setActiveLang('{{ $lang->code }}')"
@@ -31,17 +31,21 @@
             </button>
         @endforeach
     </div>
+
+    <!-- features Section Fields -->
+    <div wire:key="features-{{ $activeLang }}" class="grid grid-cols-12 gap-6">
+        <div class="col-span-12 md:col-span-6 mb-4">
+            <label class="form-label">{{ t('section.Title', 'Title')}}</label>
+            <input type="text" wire:model="translationsData.{{ $activeLang }}.title" class="form-control" placeholder="{{ t('section.Title', 'Title')}}" />
+        </div>
+        <div class="col-span-12 md:col-span-6 mb-4">
+            <label class="form-label">{{ t('section.Brief_description', 'Brief description')}}</label>
+            <input type="text" wire:model="translationsData.{{ $activeLang }}.subtitle" class="form-control" placeholder="{{ t('section.Brief_description', 'Brief description')}}" />
+        </div>
+        <div class="col-span-12 md:col-span-12 mb-4">
+
  
-    {{-- عنوان ووصف --}}
-    <div wire:key="features-{{ $activeLang }}" class="space-y-4">
-        <input type="text" wire:model="translationsData.{{ $activeLang }}.title"
-            placeholder="عنوان القسم" class="form-input w-full px-4 py-2 rounded border" />
-
-        <input type="text" wire:model="translationsData.{{ $activeLang }}.subtitle"
-            placeholder="الوصف المختصر" class="form-input w-full px-4 py-2 rounded border" />
-
         {{-- المميزات --}}
-        <div class="space-y-4">
             @foreach ($translationsData[$activeLang]['features'] ?? [] as $index => $feature)
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start border p-4 rounded relative">
                     <input type="text" wire:model="translationsData.{{ $activeLang }}.features.{{ $index }}.icon"
@@ -61,18 +65,37 @@
                         &times;
                     </button>
                 </div>
+                {{-- <div class="col-span-12 md:col-span-6 mb-4">
+                    <label class="form-label">{{ t('section.icon', 'icon')}}</label>
+                    <input type="text" wire:model="translationsData.{{ $activeLang }}.features.{{ $index }}.icon" class="form-control" placeholder="كود SVG أو اسم الأيقونة" />
+                </div>
+                <div class="col-span-12 md:col-span-6 mb-4">
+                    <label class="form-label">{{ t('section.icon', 'icon')}}</label>
+                    <input type="text" wire:model="translationsData.{{ $activeLang }}.features.{{ $index }}.title" class="form-control"  placeholder="عنوان الميزة" />
+                </div>
+                <div class="col-span-12 md:col-span-6 mb-4">
+                    <label class="form-label">{{ t('section.icon', 'icon')}}</label>
+                    <input type="text" wire:model="translationsData.{{ $activeLang }}.features.{{ $index }}.description" class="form-control"  placeholder="وصف مختصر" />
+                </div>
+                <button wire:click="removeFeature('{{ $activeLang }}', {{ $index }})"
+                        class="absolute -top-2 -left-2 bg-red-500 text-white text-sm rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition">
+                        &times;
+                </button> --}}
             @endforeach
         </div>
 
-        {{-- زر إضافة ميزة جديدة --}}
-        <button wire:click="addFeature('{{ $activeLang }}')"
-            class="mt-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm">
-            + إضافة ميزة
-        </button>
+        <!-- Add New Feature Button -->
+        <div class="text-end">
+            <button wire:click="addFeature('{{ $activeLang }}')" class="btn btn-primary">
+                {{ t('section.Add_Feature', '+Add Feature')}}
+            </button>
+        </div>
     </div>
 
-    <button wire:click="updateFeatureSection"
-        class="mt-6 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow">
-        حفظ التعديلات
-    </button>
+    <!-- features Section Save -->
+    <div class="text-end">
+        <button wire:click="updatefeaturesSection" class="btn btn-primary">
+            {{ t('section.Save_changes', 'Save changes')}}
+        </button>
+    </div>
 </div>

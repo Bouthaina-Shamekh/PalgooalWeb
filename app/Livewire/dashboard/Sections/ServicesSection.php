@@ -59,8 +59,6 @@ class ServicesSection extends BaseSectionComponent
             $this->translationsData[$locale]['services'] = array_values($this->translationsData[$locale]['services']);
         }
     }
-
-
     
     public function render()
     {

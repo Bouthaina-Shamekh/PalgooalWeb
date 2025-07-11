@@ -32,7 +32,7 @@ Route::middleware(['setLocale'])->group(function () {
             ->firstOrFail();
             view()->share('currentPage', $page);
             return view('tamplate.page', ['page' => $page]);
-    })->where('slug', '^(?!storage|images|files|uploads|admin|portfolio).*$');
+    });
 
 
     Route::get('portfolio/{slug}', function ($slug) {

@@ -48,11 +48,11 @@ class AppServiceProvider extends ServiceProvider
             ]);
         });
         View::composer('*', function ($view) {
-    // إذا تم تمرير المتغير 'page' داخل أي view رئيسي
-    if ($view->getData()['page'] ?? false) {
-        $page = $view->getData()['page'];
-        $view->with('currentPage', $page);
-    }
-});
+            // إذا تم تمرير المتغير 'page' داخل أي view رئيسي
+            if ($view->getData()['page'] ?? false) {
+                $page = $view->getData()['page'];
+                $view->with('currentPage', $page);
+            }
+        });
     }
 }

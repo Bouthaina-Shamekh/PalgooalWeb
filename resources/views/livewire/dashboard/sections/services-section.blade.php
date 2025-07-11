@@ -33,8 +33,8 @@
         @endforeach
     </div>
 
-        <!-- Hero Section Fields -->
-    <div wire:key="hero-{{ $activeLang }}" class="grid grid-cols-12 gap-6">
+    <!-- services Section Fields -->
+    <div wire:key="services-{{ $activeLang }}" class="grid grid-cols-12 gap-6">
         <div class="col-span-12 md:col-span-6 mb-4">
             <label class="form-label">{{ t('section.Title', 'Title')}}</label>
             <input type="text" wire:model="translationsData.{{ $activeLang }}.title" class="form-control" placeholder="{{ t('section.Title', 'Title')}}" />
