@@ -8,17 +8,35 @@
             {{ $data['subtitle'] ?? 'وصف غير متوفر' }}
         </p>
     </div>
+    @php
+        $works = App\Models\Portfolio::get();
+        // استخراج كل الأنواع من الترجمات
+        $types = $works->pluck('translations')
+            ->flatten()
+            ->where('locale', app()->getLocale())
+            ->pluck('type')
+            ->flatMap(function ($type) {
+                return explode(',', $type); // إذا فيه أكثر من نوع مفصول بفاصلة
+            })
+            ->map(fn($type) => trim($type)) // تنظيف الفراغات
+            ->unique()
+            ->values(); // ترتيب الفهرسة من جديد
+    @endphp
+
     <!-- الفلاتر -->
     <div class="flex flex-wrap justify-center gap-3 mb-12">
         <button onclick="filterProjects('all')"
-            class="filter-btn bg-primary text-white px-6 py-2 rounded-full text-base font-semibold shadow transition-all duration-200 hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-secondary">الكل</button>
-        <button onclick="filterProjects('store')"
-            class="filter-btn bg-gray-100 text-gray-800 px-6 py-2 rounded-full text-base font-semibold transition-all duration-200 hover:bg-secondary hover:text-white focus:outline-none focus:ring-2 focus:ring-secondary">متاجر</button>
-        <button onclick="filterProjects('website')"
-            class="filter-btn bg-gray-100 text-gray-800 px-6 py-2 rounded-full text-base font-semibold transition-all duration-200 hover:bg-secondary hover:text-white focus:outline-none focus:ring-2 focus:ring-secondary">مواقع</button>
-        <button onclick="filterProjects('app')"
-            class="filter-btn bg-gray-100 text-gray-800 px-6 py-2 rounded-full text-base font-semibold transition-all duration-200 hover:bg-secondary hover:text-white focus:outline-none focus:ring-2 focus:ring-secondary">تطبيقات</button>
+            class="filter-btn bg-primary text-white px-6 py-2 rounded-full text-base font-semibold shadow transition-all duration-200 hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-secondary">
+            الكل
+        </button>
+        @foreach ($types as $type)
+            <button onclick="filterProjects('{{ Str::slug($type) }}')"
+                class="filter-btn bg-gray-100 text-gray-800 px-6 py-2 rounded-full text-base font-semibold transition-all duration-200 hover:bg-secondary hover:text-white focus:outline-none focus:ring-2 focus:ring-secondary">
+                {{ $type }}
+            </button>
+        @endforeach
     </div>
+
     <!-- الشبكة -->
     <div id="projects-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-10">
         <!-- قالب البطاقة (للاستخدام مع JS إذا أردت) -->
@@ -43,12 +61,13 @@
             </div>
         </template>
         <!-- بطاقات المشاريع -->
-        @php
-            $works = App\Models\Portfolio::get();
-        @endphp
         @foreach ($works as $work)
+        @php
+            $categories = collect(explode(',', $work->translations->firstWhere('locale', app()->getLocale())->type ?? ''))
+                ->map(fn($t) => Str::slug(trim($t)))->implode(' ');
+        @endphp
         <div class="project-card group bg-white rounded-2xl shadow-lg hover:shadow-2xl overflow-hidden transition-transform duration-300 hover:-translate-y-2 border border-gray-100"
-            data-category="store" data-visible="true">
+            data-category="{{ $categories }}" data-visible="true">
             <div class="relative">
                 <img src="{{ asset('storage/' . $work->default_image) }}" alt="متجر إلكتروني 1"
                     class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
@@ -175,37 +194,56 @@
 
 <!-- Removed duplicate filterProjects function to prevent JavaScript errors -->
 <script>
+    let currentCategory = 'all';
+    let visibleCount = 0;
+    const itemsPerPage = 6;
+
     function filterProjects(category) {
+        currentCategory = category;
+        visibleCount = 0;
+
         const allCards = document.querySelectorAll('.project-card');
-
         allCards.forEach(card => {
-            const type = card.dataset.category;
-            const isVisible = !card.classList.contains('hidden');
-
-            if (category === 'all' || type === category) {
-                card.classList.remove('hidden');
-            } else {
-                card.classList.add('hidden');
-            }
+            card.classList.add('hidden');
+            card.dataset.visible = 'false';
         });
 
-        // إعادة تفعيل زر تحميل المزيد فقط إذا كنا نظهر كل العناصر
-        if (category === 'all') {
-            document.getElementById('loadMoreBtn')?.classList.remove('hidden');
-        } else {
-            document.getElementById('loadMoreBtn')?.classList.add('hidden');
-        }
+        const matchingCards = [...allCards].filter(card => {
+            const types = card.dataset.category.split(' ');
+            return category === 'all' || types.includes(category);
+        });
+
+        matchingCards.slice(0, itemsPerPage).forEach(card => {
+            card.classList.remove('hidden');
+            card.dataset.visible = 'true';
+        });
+
+        visibleCount = itemsPerPage;
+
+        // إظهار أو إخفاء زر "تحميل المزيد"
+        document.getElementById('loadMoreBtn').classList.toggle('hidden', visibleCount >= matchingCards.length);
     }
 
     function loadMoreProjects() {
-        const hiddenCards = document.querySelectorAll('.project-card[data-visible="false"]');
-        for (let i = 0; i < 4 && i < hiddenCards.length; i++) {
-            hiddenCards[i].classList.remove('hidden');
-            hiddenCards[i].dataset.visible = 'true';
-        }
+        const allCards = document.querySelectorAll('.project-card');
+        const matchingCards = [...allCards].filter(card => {
+            const types = card.dataset.category.split(' ');
+            return currentCategory === 'all' || types.includes(currentCategory);
+        });
 
-        if (document.querySelectorAll('.project-card[data-visible="false"]').length === 0) {
+        const toShow = matchingCards.slice(visibleCount, visibleCount + itemsPerPage);
+        toShow.forEach(card => {
+            card.classList.remove('hidden');
+            card.dataset.visible = 'true';
+        });
+
+        visibleCount += toShow.length;
+
+        if (visibleCount >= matchingCards.length) {
             document.getElementById('loadMoreBtn').classList.add('hidden');
         }
     }
+
+    // تشغيل مبدأي للكل
+    window.addEventListener('DOMContentLoaded', () => filterProjects('all'));
 </script>
