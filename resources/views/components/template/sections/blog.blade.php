@@ -1,3 +1,13 @@
+@php
+    use Illuminate\Support\Facades\Cache;
+    use App\Services\BlogFeedService;
+
+    $blogs = Cache::remember('latest_blog_posts', now()->addMinutes(60), function () {
+        return (new BlogFeedService())->getLatest(5);
+    });
+    // $blogs = (new BlogFeedService())->getLatest(5);
+@endphp
+
 <!-- Blog Section with Dark Mode -->
 <section id="latest-blogs" class="py-20 px-4 sm:px-8 lg:px-24 bg-white dark:bg-gray-950 transition-colors duration-300" aria-labelledby="blog-heading">
   <div class="text-center mb-12">
@@ -11,9 +21,36 @@
 
   <div class="swiper blog-swiper">
     <div class="swiper-wrapper" data-aos="zoom-in" data-aos-delay="200">
+      @foreach ($blogs as $blog)
+    <div class="swiper-slide flex justify-center h-full">
+        <article class="blog-card group bg-white dark:bg-gray-900 dark:shadow-none dark:border-gray-700" itemscope itemtype="https://schema.org/BlogPosting">
+            <div class="relative">
+                <img src="{{ $blog['image'] }}" loading="lazy" alt="صورة غلاف مقال: {{ $blog['title'] }}" class="blog-img">
+                <span class="blog-tag bg-primary/90 dark:bg-primary">{{ $blog['categories'][0] ?? 'مدونة' }}</span>
+            </div>
+            <div class="blog-content">
+                <h3 class="blog-title text-primary dark:text-white" itemprop="headline">
+                    <a href="{{ $blog['url'] }}" target="_blank" itemprop="url" class="hover:text-secondary dark:hover:text-secondary/80 transition-colors">
+                        {{ $blog['title'] }}
+                    </a>
+                </h3>
+                <p class="text-suptitle text-tertiary dark:text-gray-300 font-light mb-4" itemprop="description">
+                    {{ Str::limit($blog['description'], 100) }}
+                </p>
+                <div class="blog-meta">
+                    <span class="text-xs text-primary dark:text-white font-bold" itemprop="name">{{ $blog['author'] }}</span>
+                    <time datetime="{{ $blog['date'] }}" class="text-xs text-tertiary dark:text-gray-400" itemprop="datePublished">
+                        | {{ \Carbon\Carbon::parse($blog['date'])->translatedFormat('d F Y') }}
+                    </time>
+                </div>
+            </div>
+        </article>
+    </div>
+@endforeach
+
 
       <!-- Blog Post 1 -->
-      <div class="swiper-slide flex justify-center h-full">
+      {{-- <div class="swiper-slide flex justify-center h-full">
         <article class="blog-card group bg-white dark:bg-gray-900 dark:shadow-none dark:border-gray-700" itemscope itemtype="https://schema.org/BlogPosting">
           <div class="relative">
             <img src="./assets/images/وردبرس.webp" loading="lazy"
@@ -146,7 +183,7 @@
             </div>
           </div>
         </article>
-      </div>
+      </div> --}}
     </div>
 
     <!-- Slider Pagination -->
