@@ -44,6 +44,9 @@
             @case('blog')
                 <livewire:dashboard.sections.blogs-section :section="$section" :key="$section->id" />
             @break
+            @case('Search-Domain')
+                <livewire:dashboard.sections.search-domain-section :section="$section" :key="$section->id" />
+            @break
 
             @default
                 <div class="p-4 bg-gray-100 rounded shadow">
@@ -67,6 +70,7 @@
                 'testimonials' => 'آراء العملاء (Testimonials)',
                 'blog' => 'المدونة (Blog)',
                 'banner' => 'اللوحة (banner)',
+                'Search-Domain' => 'اللوحة (SearchDomain)',
             ];
         @endphp
 

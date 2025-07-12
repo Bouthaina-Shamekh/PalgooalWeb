@@ -23,7 +23,7 @@ class Sections extends Component
     protected $listeners = ['deleteSection'];
 
 
-    public $availableKeys = ['hero', 'features', 'services', 'templates', 'works','home-works', 'testimonials', 'blog', 'banner'];
+    public $availableKeys = ['hero', 'features', 'services', 'templates', 'works','home-works', 'testimonials', 'blog', 'banner', 'Search-Domain'];
     public $activeLang;
 
 
@@ -72,18 +72,17 @@ class Sections extends Component
         switch ($this->sectionKey) {
             case 'hero':
                 HeroSection::create($this->pageId, $order, $this->translations);
-                break;
-                default:
-                $section = Section::create([
-                    'page_id' => $this->pageId,
-                    'key' => $this->sectionKey,
-                    'order' => $order,
-                ]);
-                foreach ($this->languages as $lang) {
-                    $locale = $lang->code;
-                    $data = $this->translations[$locale] ?? [];
-                    $content = [];
-
+            break;
+            default:
+            $section = Section::create([
+                'page_id' => $this->pageId,
+                'key' => $this->sectionKey,
+                'order' => $order,
+            ]);
+            foreach ($this->languages as $lang) {
+                $locale = $lang->code;
+                $data = $this->translations[$locale] ?? [];
+                $content = [];
             switch ($this->sectionKey) {
             case 'features':
                 $featuresRaw = $data['features'] ?? '';
@@ -92,8 +91,8 @@ class Sections extends Component
                     'features' => is_array($featuresRaw)
                         ? $featuresRaw
                         : array_filter(array_map('trim', explode("\n", $featuresRaw))),
-                ];
-                break;
+                    ];
+            break;
             case 'services':
                 $servicesRaw = $data['services'] ?? '';
                 $content = [
@@ -102,31 +101,30 @@ class Sections extends Component
                         ? $servicesRaw
                         : array_filter(array_map('trim', explode("\n", $servicesRaw))),
                     ];
-                    break;
+            break;
             case 'banner':
                 $content = [
                     'subtitle' => $data['subtitle'] ?? '',
-                    'button_text-1' => $data['button_text-1'] ?? '',
-                    'button_url-1' => $data['button_url-1'] ?? '',
                 ];
-                break;
+            break;
             case 'templates':
             case 'works':
                 $content = [
                     'subtitle' => $data['subtitle'] ?? '',
                 ];
-                break;
+            break;
             case 'home-works':
                 $content = [
                     'subtitle' => $data['subtitle'] ?? '',
                     'button_text-1' => $data['button_text-1'] ?? '',
                     'button_url-1' => $data['button_url-1'] ?? '',
                 ];
-                break;
+            break;
             case 'testimonials':
+            case 'Search-Domain':
             case 'blog':
                 $content = [];
-                break;
+            break;
             }
             SectionTranslation::create([
                 'section_id' => $section->id,

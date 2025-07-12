@@ -32,6 +32,7 @@
             'testimonials' => 'testimonials',
             'blog' => 'blog',
             'banner' => 'banner',
+            'Search-Domain' => 'Search-Domain',
         ];
     @endphp
 
@@ -81,6 +82,10 @@
                     'subtitle' => $content['subtitle'] ?? '',
                     'button_text-1' => $content['button_text-1'] ?? '',
                     'button_url-1' => $content['button_url-1'] ?? '',
+                ],
+                'Search-Domain' => [
+                    'title' => $title,
+                    'subtitle' => $content['subtitle'] ?? '',
                 ],
                 default => [],
             };
