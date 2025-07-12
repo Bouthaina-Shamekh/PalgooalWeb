@@ -196,7 +196,7 @@
 <script>
     let currentCategory = 'all';
     let visibleCount = 0;
-    const itemsPerPage = 6;
+    const itemsPerPage = 8;
 
     function filterProjects(category) {
         currentCategory = category;
