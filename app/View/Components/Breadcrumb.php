@@ -18,7 +18,7 @@ class Breadcrumb extends Component
         $page = view()->shared('currentPage');
 
         $this->items = $items ?? [
-            ['title' => 'الرئيسية', 'url' => '/'],
+            ['title' => t('dashboard.Home', 'Home'), 'url' => '/'],
             ['title' => $page?->translation()?->title ?? 'صفحة']
         ];
     }

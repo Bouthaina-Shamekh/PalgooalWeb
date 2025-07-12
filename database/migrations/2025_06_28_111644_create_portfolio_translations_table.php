@@ -16,9 +16,11 @@ return new class extends Migration
             $table->foreignId('portfolio_id')->constrained('portfolios')->cascadeOnDelete();
             $table->string('locale');
             $table->string('title');
+            $table->text('description')->nullable();
             $table->string('type');
             $table->string('materials')->nullable();
             $table->string('link')->nullable();
+            $table->string('status')->nullable();
             $table->timestamps();
         });
     }

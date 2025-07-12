@@ -2,13 +2,14 @@
     use App\Models\Service;
 @endphp
 <x-template.layouts.index-layouts
-    title="بال قول لتكنولوجيا المعلومات - مواقع الكترونية واستضافة عربية"
+    title="{{ $page->translation()?->title ?? 'عنوان غير متوفر' }}"
     description="شركة فلسطينية متخصصة في برمجة وتصميم المواقع الالكترونية..."
     keywords="خدمات حجز دومين , افضل شركة برمجيات , استضافة مواقع , ..."
     ogImage="{{ asset('assets/images/services.jpg') }}"
 >
 
     {{-- محتوى الصفحة --}}
+    @if ($page->sections->isEmpty())
     <div class="container mx-auto py-10">
         <h1 class="text-3xl font-bold mb-6">
             {{ $page->translation()?->title ?? 'عنوان غير متوفر' }}
@@ -18,6 +19,7 @@
             {!! $page->translation()?->content ?? '<p>لا يوجد محتوى.</p>' !!}
         </div>
     </div>
+    @endif
 
     @php
         $sectionComponents = [

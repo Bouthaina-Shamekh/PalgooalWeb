@@ -49,7 +49,7 @@ class BlogsSection extends BaseSectionComponent
         session()->flash('success', 'تم تحديث قسم الهيرو بنجاح.');
     }
 
-        public function removeblogs($locale, $index)
+    public function removeblogs($locale, $index)
     {
         if (isset($this->translationsData[$locale]['blogs'][$index])) {
             unset($this->translationsData[$locale]['blogs'][$index]);

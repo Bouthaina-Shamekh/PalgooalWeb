@@ -173,6 +173,10 @@
 
                         <input type="text" class="form-control mb-2" placeholder="العنوان"
                             wire:model="portfolioTranslations.{{ $index }}.title">
+                        
+                        <textarea class="form-control mb-2" placeholder="الوصف"
+    wire:model="portfolioTranslations.{{ $index }}.description" rows="3"></textarea>
+    
 
                         <input type="text" class="form-control mb-2" placeholder="النوع"
                             wire:model="portfolioTranslations.{{ $index }}.type"

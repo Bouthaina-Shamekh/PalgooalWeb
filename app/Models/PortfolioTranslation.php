@@ -12,6 +12,7 @@ class PortfolioTranslation extends Model
         'portfolio_id',
         'locale',
         'title',
+        'description',
         'type',
         'materials',
         'link',

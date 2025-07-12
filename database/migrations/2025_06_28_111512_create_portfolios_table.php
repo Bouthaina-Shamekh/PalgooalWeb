@@ -17,6 +17,9 @@ return new class extends Migration
             $table->json('images')->nullable();
             $table->date('delivery_date');
             $table->integer('order');
+            $table->integer('implementation_period_days')->nullable();
+            $table->string('slug')->unique()->nullable();
+            $table->string('client')->nullable();
             $table->timestamps();
         });
     }
