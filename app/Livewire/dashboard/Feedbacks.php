@@ -5,7 +5,9 @@ namespace App\Livewire\dashboard;
 use App\Models\Language;
 use App\Models\Feedback;
 use App\Models\FeedbackTranslation;
+use App\Models\Media;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -40,6 +42,44 @@ class Feedbacks extends Component
         'locale' => '',
     ];
     public $languages = [];
+
+    // for media upload
+    public $mediaUpload;
+    public $showMediaSection = false;
+
+    public function updatedMediaUpload()
+    {
+        $this->validate([
+            'mediaUpload' => 'required|image|max:2048',
+        ]);
+
+        $path = $this->mediaUpload->store('media/' . now()->format('Y/m'), 'public');
+
+        $media = Media::create([
+            'name' => $this->mediaUpload->getClientOriginalName(),
+            'file_path' => $path,
+            'mime_type' => $this->mediaUpload->getMimeType(),
+            'size' => $this->mediaUpload->getSize(),
+            'uploader_id' => Auth::user()->id,
+
+            // تعبئة الحقول الأخرى بقيم فارغة أو افتراضية
+            'alt' => '',
+            'title' => '',
+            'caption' => '',
+            'description' => '',
+        ]);
+
+        $this->feedback['image'] = $media->file_path;
+        $this->mediaUpload = null;
+        $this->showMediaSection = false;
+    }
+    public function selectImage($path)
+    {
+        $this->feedback['image'] = $path;
+        $this->showMediaSection = false;
+        session()->flash('message', 'تم اختيار الصورة بنجاح');
+    }
+
 
     public function mount()
     {
@@ -129,23 +169,9 @@ class Feedbacks extends Component
         if ($this->feedbackId) {
             $feedback = Feedback::findOrFail($this->feedbackId);
 
-            // تحقق إن كانت الأيقونة جديدة
-            if ($this->feedback['image'] instanceof UploadedFile) {
-                if ($feedback->image && Storage::disk('public')->exists($feedback->image)) {
-                    Storage::disk('public')->delete($feedback->image);
-                }
-                $feedbackData['image'] = $this->feedback['image']->store('feedbacks', 'public');
-            } else {
-                $feedbackData['image'] = $feedback->image;
-            }
-
             $feedback->update($feedbackData);
             $this->showAlert('Feedback updated successfully.', 'success');
         } else {
-            if ($this->feedback['image'] instanceof UploadedFile) {
-                $feedbackData['image'] = $this->feedback['image']->store('feedbacks', 'public');
-            }
-
             $feedback = Feedback::create($feedbackData);
             $this->showAlert('Feedback added successfully.', 'success');
         }
@@ -171,10 +197,6 @@ class Feedbacks extends Component
     {
         try {
             $feedback = Feedback::findOrFail($id);
-
-            if ($feedback->icon && Storage::disk('public')->exists($feedback->icon)) {
-                Storage::disk('public')->delete($feedback->icon);
-            }
 
             $feedback->delete();
 

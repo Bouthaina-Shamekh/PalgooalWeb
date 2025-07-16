@@ -112,13 +112,10 @@
             <h3 class="text-2xl font-bold text-primary dark:text-white mb-8 text-center">معرض صور المشروع</h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                 <!-- استخدم صور مختلفة -->
-                @php
-                    $images = json_decode($portfolio->images, true);
-                @endphp
-                @for ($i = 1; $i <= count($images); $i++)
+                @for ($i = 1; $i <= count($portfolio->images); $i++)
                     <a data-fancybox="gallery"
-                        href="{{ asset('storage/' . $images[$i - 1]) }}">
-                        <img src="{{ asset('storage/' . $images[$i - 1]) }}"
+                        href="{{ asset('storage/' . $portfolio->images[$i - 1]) }}">
+                        <img src="{{ asset('storage/' . $portfolio->images[$i - 1]) }}"
                             alt="صورة لموقع مؤسسة مروان رقم {{ $i }}" loading="lazy" decoding="async"
                             class="w-full aspect-[4/3] object-contain rounded-xl shadow-md border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-[#23232a] transition-transform duration-300 hover:scale-105" />
                     </a>

@@ -3,6 +3,7 @@
 namespace App\Livewire\dashboard;
 
 use App\Models\Language;
+use App\Models\Media;
 use App\Models\Service;
 use App\Models\ServiceTranslation;
 use Illuminate\Support\Facades\Storage;
@@ -10,6 +11,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Auth;
 
 class Services extends Component
 {
@@ -32,6 +34,43 @@ class Services extends Component
 
     public $serviceTranslations = [];
     public $languages = [];
+
+    // for media upload
+    public $mediaUpload;
+    public $showMediaSection = false;
+
+    public function updatedMediaUpload()
+    {
+        $this->validate([
+            'mediaUpload' => 'required|image|max:2048',
+        ]);
+
+        $path = $this->mediaUpload->store('media/' . now()->format('Y/m'), 'public');
+
+        $media = Media::create([
+            'name' => $this->mediaUpload->getClientOriginalName(),
+            'file_path' => $path,
+            'mime_type' => $this->mediaUpload->getMimeType(),
+            'size' => $this->mediaUpload->getSize(),
+            'uploader_id' => Auth::user()->id,
+
+            // تعبئة الحقول الأخرى بقيم فارغة أو افتراضية
+            'alt' => '',
+            'title' => '',
+            'caption' => '',
+            'description' => '',
+        ]);
+
+        $this->service['icon'] = $media->file_path;
+        $this->mediaUpload = null;
+        $this->showMediaSection = false;
+    }
+    public function selectImage($path)
+    {
+        $this->service['icon'] = $path;
+        $this->showMediaSection = false;
+        session()->flash('message', 'تم اختيار الصورة بنجاح');
+    }
 
     public function mount()
     {
@@ -108,8 +147,8 @@ class Services extends Component
     {
         $validated = $this->validate([
             'service.order' => 'required|integer',
-            'service.icon' => 'nullable|file|mimes:svg,png,jpg,jpeg,gif,webp|max:2048',
-            'service.url' => 'nullable', 
+            'service.icon' => 'nullable',
+            'service.url' => 'nullable',
             'serviceTranslations.*.title' => 'required|string',
             'serviceTranslations.*.description' => 'required|string',
         ]);
@@ -118,24 +157,9 @@ class Services extends Component
 
         if ($this->serviceId) {
             $service = Service::findOrFail($this->serviceId);
-
-            // تحقق إن كانت الأيقونة جديدة
-            if ($this->service['icon'] instanceof UploadedFile) {
-                if ($service->icon && Storage::disk('public')->exists($service->icon)) {
-                    Storage::disk('public')->delete($service->icon);
-                }
-                $serviceData['icon'] = $this->service['icon']->store('icons', 'public');
-            } else {
-                $serviceData['icon'] = $service->icon;
-            }
-
             $service->update($serviceData);
             $this->showAlert('Service updated successfully.', 'success');
         } else {
-            if ($this->service['icon'] instanceof UploadedFile) {
-                $serviceData['icon'] = $this->service['icon']->store('icons', 'public');
-            }
-
             $service = Service::create($serviceData);
             $this->showAlert('Service updated successfully.', 'success');
         }
@@ -162,10 +186,6 @@ class Services extends Component
         try {
         $service = Service::findOrFail($id);
 
-        if ($service->icon && Storage::disk('public')->exists($service->icon)) {
-            Storage::disk('public')->delete($service->icon);
-        }
-
         $service->delete();
 
         $this->dispatch('service-deleted-success');
@@ -177,7 +197,7 @@ class Services extends Component
         }
         $this->resetPage();
     }
-    
+
     public function render()
     {
         $services = Service::with('translations')->paginate($this->perPage);

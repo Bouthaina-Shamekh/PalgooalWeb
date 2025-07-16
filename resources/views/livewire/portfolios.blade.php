@@ -96,29 +96,45 @@
         <form wire:submit.prevent="save" class="grid grid-cols-12 gap-6">
             {{-- الصورة --}}
             <div class="col-span-6">
-                <label class="block text-sm font-medium">الصورة</label>
-                <input type="file" wire:model="portfolio.default_image" class="form-control">
-                @if (isset($portfolio['default_image']) && $portfolio['default_image'] != null && $portfolio['default_image'] != '')
+                <label class="block text-sm font-medium">الصورة الافتراضية</label>
+
+                <div class="flex items-center gap-2">
+                    <input type="file" wire:model="portfolio.default_image" class="form-control hidden">
+                    <button type="button" wire:click="openMediaModal('single')" class="bg-primary text-white px-2 py-1 rounded text-sm">
+                        اختر من الوسائط
+                    </button>
+                </div>
+
+                @if ($portfolio['default_image'])
                     <img src="{{ asset('storage/' . $portfolio['default_image']) }}" class="mt-2 w-12 h-12">
                 @endif
-                @error('portfolio.default_image')
-                    <span class="text-red-600">{{ $message }}</span>
-                @enderror
+
+                @error('portfolio.default_image') <span class="text-red-600">{{ $message }}</span> @enderror
             </div>
+
 
             {{-- الصور --}}
             <div class="col-span-6">
-                <label class="block text-sm font-medium">الصور</label>
-                <input type="file" wire:model="portfolio.imagesMultiple" class="form-control" multiple>
-                @if (isset($portfolio['imagesMultiple']) && $portfolio['imagesMultiple'] != null && $portfolio['imagesMultiple'] != '')
-                    @foreach ($portfolio['imagesMultiple'] as $image)
-                        <img src="{{ asset('storage/' . $image) }}" class="mt-2 w-12 h-12">
-                    @endforeach
+                <label class="block text-sm font-medium">الصور المتعددة</label>
+
+                <div class="flex items-center gap-2">
+                    <input type="file" wire:model="portfolio.images" class="form-control hidden" multiple>
+                    <button type="button" wire:click="openMediaModal('multiple')" class="bg-primary text-white px-2 py-1 rounded text-sm">
+                        اختر من الوسائط
+                    </button>
+                </div>
+
+                @if (!empty($portfolio['images']))
+                    <div class="flex flex-wrap gap-2 mt-2">
+                        @foreach ($portfolio['images'] as $image)
+                            <img src="{{ asset('storage/' . $image) }}" class="w-12 h-12 object-cover rounded">
+                        @endforeach
+                    </div>
                 @endif
-                @error('portfolio.imagesMultiple')
-                    <span class="text-red-600">{{ $message }}</span>
-                @enderror
+
+                @error('portfolio.images') <span class="text-red-600">{{ $message }}</span> @enderror
             </div>
+
 
             {{-- مدة التنفيذ بالأيام --}}
             <div class="col-span-6">
@@ -173,10 +189,10 @@
 
                         <input type="text" class="form-control mb-2" placeholder="العنوان"
                             wire:model="portfolioTranslations.{{ $index }}.title">
-                        
+
                         <textarea class="form-control mb-2" placeholder="الوصف"
     wire:model="portfolioTranslations.{{ $index }}.description" rows="3"></textarea>
-    
+
 
                         <input type="text" class="form-control mb-2" placeholder="النوع"
                             wire:model="portfolioTranslations.{{ $index }}.type"
@@ -214,6 +230,46 @@
                 <button type="submit" class="btn btn-primary">حفظ</button>
             </div>
         </form>
+        @if($showMediaSection)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div class="bg-white rounded-xl shadow-lg max-w-5xl w-full p-6 relative">
+
+                <!-- زر إغلاق -->
+                <button type="button" wire:click="$set('showMediaSection', false)"
+                        class="absolute top-2 left-2 text-gray-500 hover:text-red-600 text-xl font-bold">&times;</button>
+
+                <h2 class="text-lg font-semibold mb-4">
+                    {{ $mediaMode === 'multiple' ? 'اختر صور متعددة' : 'اختر صورة واحدة' }}
+                </h2>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-h-[350px] overflow-y-auto">
+                    @foreach(\App\Models\Media::where('mime_type', 'like', 'image/%')->latest()->take(50)->get() as $media)
+                        <div
+                            wire:click="{{ $mediaMode === 'multiple' ? "toggleImageSelection('$media->file_path')" : "selectSingleImage('$media->file_path')" }}"
+                            class="relative border rounded-xl overflow-hidden shadow-sm bg-white cursor-pointer transition transform hover:scale-[1.02] hover:shadow-md
+                                {{ $mediaMode === 'multiple' && in_array($media->file_path, $selectedImages) ? 'ring-2 ring-primary' : '' }}"
+                        >
+                            <img src="{{ asset('storage/' . $media->file_path) }}"
+                                class="w-full h-32 object-cover" loading="lazy">
+
+                            @if($mediaMode === 'multiple' && in_array($media->file_path, $selectedImages))
+                                <div class="absolute top-2 right-2 bg-primary text-white text-xs px-2 py-1 rounded-full shadow">محدد</div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+
+                <!-- زر تأكيد فقط لو متعدد -->
+                @if($mediaMode === 'multiple')
+                    <div class="mt-4 flex justify-end">
+                        <button type="button" wire:click="confirmMultipleSelection"
+                                class="bg-primary text-white px-4 py-2 rounded text-sm">تأكيد الاختيار</button>
+                    </div>
+                @endif
+            </div>
+        </div>
+        @endif
+
     @endif
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 

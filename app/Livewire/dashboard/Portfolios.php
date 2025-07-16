@@ -29,7 +29,6 @@ class Portfolios extends Component
     public $portfolio = [
         'default_image' => '',
         'images' => [],
-        'imagesMultiple' => [],
         'delivery_date' => '',
         'order' => '',
         'implementation_period_days' => '',
@@ -41,6 +40,45 @@ class Portfolios extends Component
     public $languages = [];
     public $typeSuggestions = [];
     public $statusSuggestions = [];
+
+    public $showMediaSection = false;
+    public $mediaMode = 'single';
+    public $selectedImages = [];
+    public $mediaUpload;
+
+    public function openMediaModal($mode = 'single')
+    {
+        $this->mediaMode = $mode;
+        $this->selectedImages = [];
+        $this->showMediaSection = true;
+    }
+
+    public function selectSingleImage($path)
+    {
+        $this->portfolio['default_image'] = $path;
+        $this->showMediaSection = false;
+    }
+
+    public function toggleImageSelection($path)
+    {
+        if (in_array($path, $this->selectedImages)) {
+            $this->selectedImages = array_filter($this->selectedImages, fn($img) => $img !== $path);
+        } else {
+            $this->selectedImages[] = $path;
+        }
+    }
+
+    public function confirmMultipleSelection()
+    {
+        foreach ($this->selectedImages as $path) {
+            if (!in_array($path, $this->portfolio['images'])) {
+                $this->portfolio['images'][] = $path;
+            }
+        }
+
+        $this->selectedImages = [];
+        $this->showMediaSection = false;
+    }
 
     public function mount()
     {
@@ -91,7 +129,7 @@ class Portfolios extends Component
         $this->portfolio = [
             'default_image' => $portfolio->default_image,
             'images' => [],
-            'imagesMultiple' => json_decode($portfolio->images),
+            'images' => $portfolio->images,
             'delivery_date' => $portfolio->delivery_date,
             'order' => $portfolio->order,
             'implementation_period_days' => $portfolio->implementation_period_days,
@@ -127,7 +165,7 @@ class Portfolios extends Component
         $this->portfolio = [
             'default_image' => '',
             'images' => [],
-            'imagesMultiple' => [],
+            'images' => [],
             'delivery_date' => '',
             'order' => '',
             'implementation_period_days' => '',
@@ -153,42 +191,19 @@ class Portfolios extends Component
     {
         $this->validate([
             'portfolio.order' => 'required|integer',
-            'portfolio.default_image' => 'nullable',
-            'portfolio.images' => 'nullable',
             'portfolio.delivery_date' => 'required|date',
             'portfolio.implementation_period_days' => 'required|integer',
             'portfolio.slug' => 'required|string|unique:portfolios,slug,' . $this->portfolioId,
             'portfolio.client' => 'nullable|string',
+            'portfolio.description' => 'nullable|string',
             'portfolioTranslations.*.title' => 'required|string',
             'portfolioTranslations.*.type' => 'required|string',
             'portfolioTranslations.*.materials' => 'required|string',
             'portfolioTranslations.*.link' => 'nullable|string',
             'portfolioTranslations.*.status' => 'nullable|string',
-            'portfolioTranslations.*.description' => 'nullable|string',
         ]);
 
         $portfolioData = $this->portfolio;
-
-        // حفظ default_image
-        if ($this->portfolio['default_image'] instanceof UploadedFile) {
-            $portfolioData['default_image'] = $this->portfolio['default_image']->store('portfolios', 'public');
-        } elseif ($this->portfolioId) {
-            $existing = Portfolio::findOrFail($this->portfolioId);
-            $portfolioData['default_image'] = $existing->default_image;
-        }
-
-        // رفع الصور الإضافية
-        $uploadedImages = [];
-        if (!empty($this->portfolio['imagesMultiple'])) {
-            foreach ($this->portfolio['imagesMultiple'] as $image) {
-                if ($image instanceof UploadedFile) {
-                    $uploadedImages[] = $image->store('portfolios', 'public');
-                } elseif (is_string($image)) {
-                    $uploadedImages[] = $image;
-                }
-            }
-        }
-        $portfolioData['images'] = json_encode($uploadedImages);
 
         // حفظ البيانات
         $portfolio = $this->portfolioId
@@ -205,7 +220,6 @@ class Portfolios extends Component
                     'materials' => $translation['materials'],
                     'link' => $translation['link'],
                     'status' => $translation['status'],
-                    'description' => $translation['description'],
                 ]
             );
         }
@@ -225,17 +239,6 @@ class Portfolios extends Component
     {
         try {
             $portfolio = Portfolio::findOrFail($id);
-
-            if ($portfolio->default_image && Storage::disk('public')->exists($portfolio->default_image)) {
-                Storage::disk('public')->delete($portfolio->default_image);
-            }
-
-            $images = json_decode($portfolio->images ?? '[]');
-            foreach ($images as $image) {
-                if (Storage::disk('public')->exists($image)) {
-                    Storage::disk('public')->delete($image);
-                }
-            }
 
             $portfolio->delete();
 

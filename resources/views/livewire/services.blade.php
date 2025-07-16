@@ -65,12 +65,19 @@
             {{-- أيقونة --}}
             <div class="col-span-6">
                 <label class="block text-sm font-medium">الأيقونة</label>
-                <input type="file" wire:model="service.icon" class="form-control">
-                @if (isset($service['icon']) && !is_object($service['icon']))
+
+                <div class="flex items-center gap-2">
+                    <input type="file" wire:model="service.icon" class="form-control hidden">
+                    <button type="button" wire:click="$set('showMediaSection', true)" class="bg-primary text-white px-2 py-1 rounded text-sm">
+                        اختر من الوسائط أو ارفع جديد
+                    </button>
+                </div>
+
+                @if ($service['icon'])
                     <img src="{{ asset('storage/' . $service['icon']) }}" class="mt-2 w-12 h-12">
                 @endif
-                @error('service.icon') <span class="text-red-600">{{ $message }}</span> @enderror
             </div>
+
 
             {{-- الترتيب --}}
             <div class="col-span-6">
@@ -108,7 +115,48 @@
                 <button type="submit" class="btn btn-primary">حفظ</button>
             </div>
         </form>
+
+        <!-- Modal -->
+        @if($showMediaSection)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div class="bg-white rounded-xl shadow-lg max-w-4xl w-full p-6 relative">
+
+                <!-- زر إغلاق -->
+                <button type="button" wire:click="$set('showMediaSection', false)"
+                    class="absolute top-2 left-2 text-gray-500 hover:text-red-600 text-xl font-bold">&times;</button>
+
+                <h2 class="text-lg font-semibold mb-4">اختر صورة أو ارفع جديد</h2>
+
+                <!-- رفع صورة جديدة -->
+                <div class="mb-4">
+                    <input type="file" wire:model="mediaUpload" class="form-input">
+                    @error('mediaUpload') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- شبكة الصور داخل modal -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-h-[350px] overflow-y-auto">
+                    @foreach(\App\Models\Media::where('mime_type', 'like', 'image/%')->latest()->take(50)->get() as $media)
+                        <div
+                            wire:click="selectImage('{{ $media->file_path }}')"
+                            class="relative border rounded-xl overflow-hidden shadow-sm bg-white cursor-pointer transition transform hover:scale-[1.02] hover:shadow-md"
+                        >
+                            <img src="{{ asset('storage/' . $media->file_path) }}" alt="{{ $media->name }}"
+                                class="w-full h-32 object-cover" loading="lazy">
+
+                            <div class="p-2 text-sm text-gray-700 truncate border-t">
+                                <p class="font-semibold truncate">{{ $media->name }}</p>
+                                <p class="text-xs text-gray-500">{{ \Carbon\Carbon::parse($media->created_at)->format('Y-m-d') }}</p>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+
+
+            </div>
+        </div>
+        @endif
     @endif
+
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
