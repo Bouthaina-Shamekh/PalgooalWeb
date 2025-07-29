@@ -32,7 +32,7 @@
             'testimonials' => 'testimonials',
             'blog' => 'blog',
             'banner' => 'banner',
-            'Search-Domain' => 'Search-Domain',
+            'Search-Domain' => 'search-domain',
         ];
     @endphp
 

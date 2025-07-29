@@ -50,7 +50,7 @@ class Feedbacks extends Component
     public function updatedMediaUpload()
     {
         $this->validate([
-            'mediaUpload' => 'required|image|max:2048',
+            'mediaUpload' => 'required|file|mimetypes:image/svg+xml,image/png,image/jpeg,image/webp|max:2048',
         ]);
 
         $path = $this->mediaUpload->store('media/' . now()->format('Y/m'), 'public');
