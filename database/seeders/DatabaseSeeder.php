@@ -26,11 +26,11 @@ class DatabaseSeeder extends Seeder
             'updated_at' => now(),
         ]);
 
-      
-        $this->call( GeneralSettingsSeeder::class);
+
+        $this->call(GeneralSettingsSeeder::class);
         $this->call(LanguageSeeder::class);
         $this->call(ServiceSeeder::class);
         $this->call(PageHomeSeeder::class);
-
+        $this->call(ClientSeeder::class);
     }
 }

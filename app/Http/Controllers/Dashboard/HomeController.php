@@ -25,4 +25,8 @@ class HomeController extends Controller
     {
         return view('dashboard.portfolios');
     }
+    public function clients()
+    {
+        return view('dashboard.clients');
+    }
 }

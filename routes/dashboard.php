@@ -57,6 +57,9 @@ Route::group([
     Route::get('portfolios', function () {
         return view('dashboard.portfolios');
     })->name('portfolios');
+    Route::get('clients', function () {
+        return view('dashboard.clients');
+    })->name('clients');
 
     Route::get('pages', function () {
         return view('dashboard.page');

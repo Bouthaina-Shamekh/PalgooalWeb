@@ -56,6 +56,7 @@ Route::middleware(['setLocale'])->group(function () {
 
     // باقي Routes
     require __DIR__.'/dashboard.php';
+    require __DIR__.'/client.php';
 });
 
 
