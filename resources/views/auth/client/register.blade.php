@@ -10,7 +10,7 @@
             <img src="{{ asset('assets/dashboard/images/authentication/img-auth-sideimg.jpg') }}" alt="images" class="img-fluid h-screen hidden lg:block" />
         </div>
         <div class="auth-form flex items-center justify-center grow flex-col min-h-screen bg-cover relative p-6 bg-theme-cardbg dark:bg-themedark-cardbg">
-            <div class="card sm:my-12 w-full max-w-[480px] border-none shadow-none">
+            <div class="card sm:my-12 w-full max-w-[680px] border-none shadow-none" style="max-width: 650px;">
                 <div class="card-body sm:!p-10">
                     <div class="text-center">
                         <img src="{{ asset('assets/dashboard/images/logo.png') }}" alt="img" class="mx-auto"
@@ -51,39 +51,44 @@
                         <div class="grid grid-cols-12 gap-x-6">
                             <div class="col-span-12 sm:col-span-6">
                                 <div class="mb-3">
-                                    <input type="text" name="first_name" class="form-control" placeholder="{{__('First Name')}}" />
+                                    <input type="text" name="first_name" value="{{old('first_name')}}" class="form-control" placeholder="{{__('First Name')}}" required />
                                 </div>
                             </div>
                             <div class="col-span-12 sm:col-span-6">
                                 <div class="mb-3">
-                                    <input type="text" name="last_name" class="form-control" placeholder="{{__('Last Name')}}" />
+                                    <input type="text" name="last_name" value="{{old('last_name')}}" class="form-control" placeholder="{{__('Last Name')}}" required />
                                 </div>
                             </div>
                         </div>
                         <div class="mb-3">
-                            <input type="email" name="email" class="form-control" placeholder="{{__('Email Address')}}" />
+                            <input type="email" name="email" value="{{old('email')}}" class="form-control" placeholder="{{__('Email Address')}}" required />
                         </div>
                         <div class="grid grid-cols-12 gap-x-6">
                             <div class="col-span-12 sm:col-span-6">
                                 <div class="mb-3">
-                                    <input type="password" name="password" class="form-control" placeholder="{{__('Password')}}" />
+                                    <input type="password" name="password" class="form-control" placeholder="{{__('Password')}}" required />
                                 </div>
                             </div>
                             <div class="col-span-12 sm:col-span-6">
                                 <div class="mb-4">
-                                    <input type="password" name="confirm_password" class="form-control" placeholder="{{__('Confirm Password')}}" />
+                                    <input type="password" name="confirm_password" class="form-control" placeholder="{{__('Confirm Password')}}" required />
                                 </div>
                             </div>
                         </div>
                         <div class="grid grid-cols-12 gap-x-6">
                             <div class="col-span-12 sm:col-span-6">
                                 <div class="mb-3">
-                                    <input type="text" name="company_name" class="form-control" placeholder="{{__('Company Name')}}" />
+                                    <input type="text" name="company_name" value="{{old('company_name')}}" class="form-control" placeholder="{{__('Company Name')}}" />
                                 </div>
                             </div>
-                            <div class="col-span-12 sm:col-span-6">
+                            <div class="col-span-12 sm:col-span-2">
                                 <div class="mb-4">
-                                    <input type="text" name="phone" class="form-control" placeholder="{{__('Phone')}}" />
+                                    <input type="number" min="0" name="zip_code"  value="{{old('zip_code')}}" class="form-control" placeholder="{{__('Zip Code 972')}}" />
+                                </div>
+                            </div>
+                            <div class="col-span-12 sm:col-span-4">
+                                <div class="mb-4">
+                                    <input type="text" name="phone" class="form-control" value="{{old('phone')}}" placeholder="{{__('Phone')}}" />
                                 </div>
                             </div>
                         </div>

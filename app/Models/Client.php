@@ -20,6 +20,7 @@ class Client extends User
         'password',
         'company_name',
         'phone',
+        'zip_code',
         'can_login',
         'avatar',
     ];

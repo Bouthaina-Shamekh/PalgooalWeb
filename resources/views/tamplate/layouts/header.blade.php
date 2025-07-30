@@ -20,20 +20,25 @@
             <!-- Language Switch -->
             <x-lang.language-switcher />
             <!-- User Menu -->
-            <div class="relative hidden md:block">
-                <button id="user-menu-toggle"
+            @auth('client')
+            <a href="{{route('client.home')}}" id="user-menu-toggle"
+                    class="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg border border-primary text-primary dark:text-white dark:border-white text-sm font-semibold hover:bg-primary/10 dark:hover:bg-white/20 transition-all duration-200"
+                    aria-label="القائمة الشخصية">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A11.963 11.963 0 0112 15c2.21 0 4.266.642 5.879 1.742M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>أهلا بك : {{Auth::guard('client')->user()->first_name}}</span>
+            </a>
+            @else
+            <a href="/client/login" id="user-menu-toggle"
                     class="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg border border-primary text-primary dark:text-white dark:border-white text-sm font-semibold hover:bg-primary/10 dark:hover:bg-white/20 transition-all duration-200"
                     aria-label="القائمة الشخصية">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5.121 17.804A11.963 11.963 0 0112 15c2.21 0 4.266.642 5.879 1.742M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     <span>تسجيل / دخول</span>
-                </button>
-                <div id="user-menu" class="absolute end-0 mt-2 w-48 bg-white dark:bg-[#1c1c1c] border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50 text-sm font-normal hidden">
-                    <a href="/login" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/20 text-primary dark:text-white">تسجيل الدخول</a>
-                    <a href="/register" class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-white/20 text-primary dark:text-white">إنشاء حساب</a>
-                </div>
-            </div>
+            </a>
+            @endauth
             <!-- Mobile Toggle -->
             <button id="sidebar-toggle" class="md:hidden p-2 rounded text-primary dark:text-white hover:bg-primary/10 dark:hover:bg-white/20"
                 aria-label="فتح القائمة">
