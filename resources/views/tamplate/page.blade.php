@@ -33,6 +33,7 @@
             'blog' => 'blog',
             'banner' => 'banner',
             'Search-Domain' => 'search-domain',
+            'templates-pages' => 'templates-pages',
         ];
     @endphp
 
@@ -86,6 +87,10 @@
                 'Search-Domain' => [
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
+                ],
+                'templates-pages' => [
+                    'template_sections' => $content['template_sections'] ?? '',
+                    'Sort_price' => $content['Sort_price'] ?? '',
                 ],
                 default => [],
             };

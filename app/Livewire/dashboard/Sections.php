@@ -23,7 +23,7 @@ class Sections extends Component
     protected $listeners = ['deleteSection'];
 
 
-    public $availableKeys = ['hero', 'features', 'services', 'templates', 'works','home-works', 'testimonials', 'blog', 'banner', 'Search-Domain'];
+    public $availableKeys = ['hero', 'features', 'services', 'templates', 'works','home-works', 'testimonials', 'blog', 'banner', 'Search-Domain', 'templates-pages'];
     public $activeLang;
 
 
@@ -118,6 +118,12 @@ class Sections extends Component
                     'subtitle' => $data['subtitle'] ?? '',
                     'button_text-1' => $data['button_text-1'] ?? '',
                     'button_url-1' => $data['button_url-1'] ?? '',
+                ];
+            break;
+            case 'templates-pages':
+                $content = [
+                    'subtitle' => $data['subtitle'] ?? '',
+                    'template-sections' => $data['template-sections'] ?? '',
                 ];
             break;
             case 'testimonials':
