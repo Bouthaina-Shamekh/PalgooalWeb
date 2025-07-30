@@ -57,6 +57,7 @@ Route::group([
     Route::get('portfolios', function () {
         return view('dashboard.portfolios');
     })->name('portfolios');
+
     Route::get('clients', function () {
         return view('dashboard.clients');
     })->name('clients');
@@ -74,6 +75,10 @@ Route::group([
     Route::get('media', function () {
         return view('dashboard.media');
     })->name('media');
+
+    Route::get('category', function () {
+        return view('dashboard.template.CategoryTemplats');
+    })->name('category');
 
 
 });
