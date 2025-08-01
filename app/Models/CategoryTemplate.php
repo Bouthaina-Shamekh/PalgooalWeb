@@ -24,4 +24,9 @@ class CategoryTemplate extends Model
     {
         return $this->translations->where('locale', $locale)->first();
     }
+
+    public function translation()
+    {
+        return $this->hasOne(CategoryTemplateTranslation::class)->where('locale', app()->getLocale());
+    }
 }

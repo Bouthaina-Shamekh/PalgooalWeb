@@ -104,97 +104,88 @@
                 </div>
             </div>
         </div>
-          <div class="col-span-12 lg:col-span-6">
+        <div class="col-span-12 lg:col-span-6">
             <div class="card">
-              <div class="card-header">
-                <h5>العناصر الحالية:</h5>
-              </div>
-              <div class="card-body">
-                <ul id="sortable-header-items" class="space-y-3 divide-y divide-gray-200">
-                    @foreach ($items as $index => $item)
-                        <li data-index="{{ $index }}" wire:key="item-{{ $item['id'] }}" class="cursor-grab bg-white dark:bg-gray-800 p-4 flex justify-between items-center">
-                        <div>
-                            <span class="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 text-xl mt-2 select-none">
-                                ☰  
-                            </span>
-                            <strong>{{ $item['translations'][app()->getLocale()] ?? '-' }}</strong>
-                            <span class="text-sm text-gray-500 ml-2">({{ $item['type'] }})</span>
-                            <div class="text-sm text-gray-600 dark:text-gray-300">{{ $item['url'] }}</div>
-                        </div>
-                        <div class="flex gap-2">
-                            <button wire:click="editItem({{ $item['id'] }})" class="px-3 py-1 bg-yellow-400 text-white text-sm rounded hover:bg-yellow-500 transition">
-                                تعديل
-                            </button>
-                            <button wire:click="editItem({{ $item['id'] }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
-                                <i class="ti ti-edit text-xl leading-none"></i>
-                            </button>
-                            <button wire:click="confirmDelete({{ $item['id'] }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
-                                <i class="ti ti-trash text-xl"></i>
-                            </button>
-                        </div>
-                    </li>
-                @endforeach
-            </ul>
-        </div>
-    </div>
-    </div>
-          <!-- [ form-element ] end -->
+                <div class="card-header">
+                    <h5>العناصر الحالية:</h5>
+                </div>
+                <div class="card-body">
+                    <ul id="sortable-header-items" class="space-y-3 divide-y divide-gray-200">
+                        @foreach ($items as $index => $item)
+                            <li data-index="{{ $index }}" wire:key="item-{{ $item['id'] }}" class="cursor-grab bg-white dark:bg-gray-800 p-4 flex justify-between items-center">
+                                <div>
+                                    <span class="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 text-xl mt-2 select-none">
+                                        ☰  
+                                    </span>
+                                    <strong>{{ $item['translations'][app()->getLocale()] ?? '-' }}</strong>
+                                    <span class="text-sm text-gray-500 ml-2">({{ $item['type'] }})</span>
+                                    <div class="text-sm text-gray-600 dark:text-gray-300">{{ $item['url'] }}</div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button wire:click="editItem({{ $item['id'] }})" class="px-3 py-1 bg-yellow-400 text-white text-sm rounded hover:bg-yellow-500 transition">
+                                        تعديل
+                                    </button>
+                                    <button wire:click="editItem({{ $item['id'] }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
+                                        <i class="ti ti-edit text-xl leading-none"></i>
+                                    </button>
+                                    <button wire:click="confirmDelete({{ $item['id'] }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
+                                        <i class="ti ti-trash text-xl"></i>
+                                    </button>
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+            <!-- [ form-element ] end -->
         </div>
         <!-- [ Main Content ] end -->
+    </div>
 </div>
-
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    function initSortableChildren() {
-        const el = document.getElementById('hs-basic-usage-example-sortable');
-        if (!el || el.dataset.sortableInitialized) return;
-
-        new Sortable(el, {
-            animation: 150,
-            onEnd: function () {
-                const order = Array.from(el.children).map(child => child.dataset.index);
-                // استدعاء مباشر على الكومبوننت
-                Livewire.find(el.closest('[wire\\:id]').getAttribute('wire:id'))
-                        .call('reorderChildren', order);
-            }
+    document.addEventListener('DOMContentLoaded', () => {
+        function initSortableChildren() {
+            const el = document.getElementById('hs-basic-usage-example-sortable');
+            if (!el || el.dataset.sortableInitialized) return;
+            new Sortable(el, {
+                animation: 150,
+                onEnd: function () {
+                    const order = Array.from(el.children).map(child => child.dataset.index);
+                    // استدعاء مباشر على الكومبوننت
+                    Livewire.find(el.closest('[wire\\:id]').getAttribute('wire:id'))
+                    .call('reorderChildren', order);
+                }
+            });
+            el.dataset.sortableInitialized = "true";
+        }
+        initSortableChildren();
+        document.addEventListener('livewire:load', () => {
+            Livewire.hook('message.processed', initSortableChildren);
         });
-
-        el.dataset.sortableInitialized = "true";
-    }
-
-    initSortableChildren();
-
-    document.addEventListener('livewire:load', () => {
-        Livewire.hook('message.processed', initSortableChildren);
     });
-});
 </script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    function initSortableItems() {
-        const el = document.getElementById('sortable-header-items');
-        if (!el || el.dataset.sortableInitialized) return;
-
-        new Sortable(el, {
-            animation: 150,
-            handle: '.cursor-grab',
-            onEnd: function () {
-                const order = Array.from(el.children).map(child => child.dataset.index);
-                const ids = Array.from(el.children).map(child => child.getAttribute('wire:key').replace('item-', ''));
-                Livewire.find(el.closest('[wire\\:id]').getAttribute('wire:id'))
-                        .call('reorderItems', ids);
-            }
+    document.addEventListener('DOMContentLoaded', () => {
+        function initSortableItems() {
+            const el = document.getElementById('sortable-header-items');
+            if (!el || el.dataset.sortableInitialized) return;
+            new Sortable(el, {
+                animation: 150,
+                handle: '.cursor-grab',
+                onEnd: function () {
+                    const order = Array.from(el.children).map(child => child.dataset.index);
+                    const ids = Array.from(el.children).map(child => child.getAttribute('wire:key').replace('item-', ''));
+                    Livewire.find(el.closest('[wire\\:id]').getAttribute('wire:id'))
+                    .call('reorderItems', ids);
+                }
+            });
+            el.dataset.sortableInitialized = "true";
+        }
+        initSortableItems();
+        document.addEventListener('livewire:load', () => {
+            Livewire.hook('message.processed', initSortableItems);
         });
-
-        el.dataset.sortableInitialized = "true";
-    }
-
-    initSortableItems();
-
-    document.addEventListener('livewire:load', () => {
-        Livewire.hook('message.processed', initSortableItems);
     });
-});
 </script>
 
 
