@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('template_translations', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('template_id')->constrained('templates')->onDelete('cascade');  // ربط القالب
-            $table->string('locale');  // اللغة (مثال: 'ar' أو 'en')
-            $table->string('name');  // اسم القالب
-            $table->string('slug');  // الـ slug لكل لغة
-            $table->text('description');  // وصف القالب
+            $table->foreignId('template_id')->constrained('templates')->onDelete('cascade');
+            $table->string('locale');
+            $table->string('name');
+            $table->string('slug');
+            $table->string('preview_url')->nullable();
+            $table->text('description');
             $table->timestamps();
             $table->unique(['template_id', 'locale', 'slug']);
         });

@@ -13,7 +13,13 @@ class TemplateTranslation extends Model
         'template_id',
         'locale',
         'name',
+        'slug',
+        'preview_url',
         'description',
+    ];
+
+    protected $hidden = [
+    'template_id',
     ];
 
     /**

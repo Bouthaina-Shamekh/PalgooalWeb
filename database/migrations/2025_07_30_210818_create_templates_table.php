@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('templates', function (Blueprint $table) {
             $table->id();
-            $table->string('slug')->unique();  // الـ slug فريد لكل قالب
-            $table->decimal('price', 10, 2);  // السعر
-            $table->string('image');  // صورة القالب
-            $table->float('rating')->default(0);  // التقييم
-            $table->foreignId('category_template_id')->constrained('category_templates')->onDelete('cascade');  // ربط القوالب بفئات القوالب
+            $table->foreignId('category_template_id')->constrained('category_templates')->onDelete('cascade');
+            $table->decimal('price', 10, 2);
+            $table->string('image');
+            $table->float('rating')->default(0);
+            $table->decimal('discount_price', 10, 2)->nullable();
+            $table->timestamp('discount_ends_at')->nullable();
             $table->timestamps();
         });
     }

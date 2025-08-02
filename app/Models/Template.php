@@ -11,11 +11,19 @@ class Template extends Model
     use HasFactory;
 
     protected $fillable = [
-        'slug',
         'price',
         'image',
         'rating',
         'category_template_id',
+        'discount_price',
+        'discount_ends_at',
+    ];
+
+    protected $casts = [
+        'price' => 'float',
+        'discount_price' => 'float', // <-- تحسين: أضف السعر المخفض أيضًا
+        'rating' => 'float',
+        'discount_ends_at' => 'datetime', // <-- تحسين مهم: تعامل معه كتاريخ
     ];
 
     /**
@@ -40,5 +48,10 @@ class Template extends Model
     public function getTranslation($locale = 'en')
     {
         return $this->translations->where('locale', $locale)->first();
+    }
+
+    public function translation()
+    {
+        return $this->hasOne(TemplateTranslation::class)->where('locale', app()->getLocale());
     }
 }

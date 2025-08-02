@@ -76,9 +76,13 @@ Route::group([
         return view('dashboard.media');
     })->name('media');
 
-    Route::get('category', function () {
+    Route::get('template/category', function () {
         return view('dashboard.template.CategoryTemplats');
     })->name('category');
+
+    Route::get('template', function () {
+        return view('dashboard.template.Templates');
+    })->name('template');
 
 
 });
