@@ -17,7 +17,7 @@ class TemplateService
 
         // فلترة حسب السعر
         if (!empty($filters['max_price'])) {
-            $query->where('price', '<=', $filters['max_price']);
+            // $query->where('price', '<=', $filters['max_price']);
         }
 
         // فلترة حسب التصنيف
@@ -39,20 +39,30 @@ class TemplateService
 
         // معالجة النتائج قبل الإرجاع
         return $query->paginate(9)->through(function ($template) use ($locale) {
-            $translation = $template->translations->firstWhere('locale', $locale);
-            $categoryTranslation = $template->categoryTemplate->translations->firstWhere('locale', $locale);
+    $translation = $template->translations->firstWhere('locale', $locale)
+                 ?? $template->translations->firstWhere('locale', 'ar')
+                 ?? $template->translations->first();
 
-            return (object) [
-                'id' => $template->id,
-                'image' => $template->image,
-                'price' => $template->price,
-                'discount_price' => $template->discount_price,
-                'name' => $translation?->name ?? '',
-                'slug' => $translation?->slug ?? '',
-                'description' => $translation?->description ?? '',
-                'details' => $translation?->details ?? [],
-                'category' => $categoryTranslation?->name ?? '',
-            ];
-        });
+    $categoryTranslation = $template->categoryTemplate->translations->firstWhere('locale', $locale)
+                          ?? $template->categoryTemplate->translations->firstWhere('locale', 'ar')
+                          ?? $template->categoryTemplate->translations->first();
+
+    $usedLocale = $translation?->locale;
+
+    return (object) [
+        'id' => $template->id,
+        'image' => $template->image,
+        'price' => $template->price,
+        'discount_price' => $template->discount_price,
+        'name' => $translation?->name ?? '',
+        'slug' => $translation?->slug ?? '',
+        'description' => $translation?->description ?? '',
+        'details' => $translation?->details ?? [],
+        'category' => $categoryTranslation?->name ?? '',
+        'fallbackNotice' => $usedLocale !== $locale, // لو الترجمة ليست من اللغة الحالية
+    ];
+});
+
+
     }
 }
