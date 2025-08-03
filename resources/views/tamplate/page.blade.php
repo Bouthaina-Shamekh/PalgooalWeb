@@ -89,8 +89,9 @@
                     'subtitle' => $content['subtitle'] ?? '',
                 ],
                 'templates-pages' => [
-                    'template_sections' => $content['template_sections'] ?? '',
-                    'Sort_price' => $content['Sort_price'] ?? '',
+                    'max_price' => $content['max_price'] ?? 500,
+                    'sort_by' => $content['sort_by'] ?? 'default',
+                    'show_filter_sidebar' => $content['show_filter_sidebar'] ?? true,
                 ],
                 default => [],
             };

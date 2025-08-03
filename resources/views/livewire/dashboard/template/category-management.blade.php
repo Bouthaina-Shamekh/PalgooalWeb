@@ -89,30 +89,30 @@
                 <div class="card-body">
                     <ul class="space-y-3">
                         @forelse ($categories as $category)
-                            <li wire:key="cat-{{ $category->id }}" class="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
-                                <div>
-                                    <strong class="text-gray-800">{{ $category->translation?->name ?? $category->getTranslation('en')?->name }}</strong>
-                                    <p class="text-sm text-gray-500">{{ $category->getTranslation(app()->getLocale())?->slug ?? $category->getTranslation('en')?->slug }}</p>
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <button wire:click="edit({{ $category->id }})" class="w-8 h-8 inline-flex items-center justify-center text-yellow-600 rounded-xl hover:bg-yellow-100">
-                                        <i class="ti ti-edit text-xl leading-none"></i>
-                                    </button>
-                                    <button
+                        <li wire:key="cat-{{ $category->id }}" class="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                            <div>
+                                <strong class="text-gray-800">{{ $category->translated_name }}</strong>
+                                <p class="text-sm text-gray-500">{{ $category->translated_slug }}</p>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <button wire:click="edit({{ $category->id }})" class="w-8 h-8 inline-flex items-center justify-center text-yellow-600 rounded-xl hover:bg-yellow-100">
+                                    <i class="ti ti-edit text-xl leading-none"></i>
+                                </button>
+                                <button
                                     onclick="confirm('هل أنت متأكد من رغبتك في الحذف؟') || event.stopImmediatePropagation()"
                                     wire:click="delete({{ $category->id }})"
                                     class="w-8 h-8 inline-flex items-center justify-center text-red-600 rounded-xl hover:bg-red-100">
-                                        <i class="ti ti-trash text-xl"></i>
-                                    </button>
-                                </div>
-                            </li>
-                            @empty
-                            <p class="text-center text-gray-500">{{ t('dashboard.No_categories_found', 'No categories found') }}</p>
-                        @endforelse
-                    </ul>
-                </div>
+                                    <i class="ti ti-trash text-xl"></i>
+                                </button>
+                            </div>
+                        </li>
+                        @empty
+                        <p class="text-center text-gray-500">{{ t('dashboard.No_categories_found', 'No categories found') }}</p>
+                    @endforelse
+                </ul>
             </div>
         </div>
-        <!-- [ list-element ] end -->
+    </div>
+    <!-- [ list-element ] end -->
     </div>
 </div>

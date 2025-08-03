@@ -5,41 +5,50 @@ namespace App\Livewire\Dashboard\Template;
 use Livewire\Component;
 use App\Models\CategoryTemplate;
 use App\Models\Language;
+use Illuminate\Validation\Rule;
 
 class CategoryManagement extends Component
 {
-    // لعرض القائمة
     public $categories = [];
 
-    // للغات والتبويبات
     public $languages;
     public $activeLang;
 
-    // لنموذج الإضافة/التعديل
     public $translations = [];
 
-
-    // للتحكم في الحالة (إضافة أو تعديل)
     public $mode = 'create';
     public $editingCategoryId;
 
-    // قواعد التحقق من الصحة
     protected function rules()
     {
         $rules = [];
-        foreach ($this->languages as $lang) {
-            $rules["translations.{$lang->code}.name"] = 'required|string|max:255';
-            $rules["translations.{$lang->code}.description"] = 'nullable|string';
 
-            $slugRule = ['required', 'string', 'alpha_dash'];
-            $translationId = $this->getTranslationId($lang->code);
-            $slugRule[] = \Illuminate\Validation\Rule::unique('category_template_translations', 'slug')->ignore($translationId);
-            $rules["translations.{$lang->code}.slug"] = $slugRule;
+        foreach ($this->languages as $lang) {
+            $langCode = $lang->code;
+
+            $rules["translations.{$langCode}.name"] = 'required|string|max:255';
+            $rules["translations.{$langCode}.description"] = 'nullable|string';
+
+            $slugRules = ['required', 'string', 'alpha_dash'];
+            $translationId = $this->getTranslationId($langCode);
+            $slugRules[] = Rule::unique('category_template_translations', 'slug')->ignore($translationId);
+
+            $rules["translations.{$langCode}.slug"] = $slugRules;
         }
+
         return $rules;
     }
 
-    // Helper function to get translation ID when editing
+    protected $messages = [
+        'translations.*.name.required' => 'الاسم مطلوب.',
+        'translations.*.name.max' => 'يجب ألا يتجاوز الاسم 255 حرفًا.',
+        'translations.*.slug.required' => 'الرابط (slug) مطلوب.',
+        'translations.*.slug.alpha_dash' => 'يجب أن يحتوي الرابط على أحرف وأرقام وشرطات فقط.',
+        'translations.*.slug.unique' => 'هذا الرابط مستخدم بالفعل.',
+        'translations.*.slug.max' => 'الرابط طويل جدًا.',
+        'translations.*.description.string' => 'الوصف غير صالح.',
+    ];
+
     protected function getTranslationId($langCode)
     {
         if ($this->mode === 'edit' && $this->editingCategoryId) {
@@ -59,36 +68,30 @@ class CategoryManagement extends Component
 
     public function loadCategories()
     {
-        $this->categories = CategoryTemplate::with('translations', 'translation')->latest()->get();
+        $this->categories = CategoryTemplate::with('translations')->latest()->get();
     }
 
     public function save()
     {
         $this->validate();
 
-        $category = null;
-
-        if ($this->mode === 'edit') {
-            // في وضع التعديل، ابحث عن الفئة
-            $category = CategoryTemplate::find($this->editingCategoryId);
-        } else {
-            // في وضع الإضافة، قم بإنشاء فئة جديدة
-            $category = CategoryTemplate::create(); // آمنة لأن الجدول لا يحتوي على أعمدة قابلة للتعبئة
-        }
+        $category = $this->mode === 'edit'
+            ? CategoryTemplate::find($this->editingCategoryId)
+            : CategoryTemplate::create();
 
         if (!$category) {
             session()->flash('error', 'حدث خطأ غير متوقع.');
             return;
         }
 
-        // حفظ الترجمات باستخدام علاقة Eloquent
         foreach ($this->languages as $lang) {
+            $langCode = $lang->code;
             $category->translations()->updateOrCreate(
-                ['locale' => $lang->code], // ابحث عن الترجمة بهذه اللغة
-                [ // قم بتحديثها أو إنشائها بهذه البيانات
-                    'name' => $this->translations[$lang->code]['name'],
-                    'slug' => $this->translations[$lang->code]['slug'],
-                    'description' => $this->translations[$lang->code]['description'] ?? null,
+                ['locale' => $langCode],
+                [
+                    'name' => $this->translations[$langCode]['name'],
+                    'slug' => $this->translations[$langCode]['slug'],
+                    'description' => $this->translations[$langCode]['description'] ?? null,
                 ]
             );
         }
@@ -98,10 +101,10 @@ class CategoryManagement extends Component
         $this->loadCategories();
     }
 
-
     public function edit($categoryId)
     {
         $category = CategoryTemplate::with('translations')->findOrFail($categoryId);
+
         $this->mode = 'edit';
         $this->editingCategoryId = $categoryId;
 
@@ -112,7 +115,6 @@ class CategoryManagement extends Component
                 'slug' => $translation?->slug ?? '',
                 'description' => $translation?->description ?? '',
             ];
-            
         }
     }
 
@@ -130,11 +132,15 @@ class CategoryManagement extends Component
 
     public function resetForm()
     {
-        $this->reset(['translations', 'editingCategoryId', 'mode']);
+        $this->reset(['translations', 'editingCategoryId']);
         $this->mode = 'create';
+
         foreach ($this->languages as $lang) {
-            $this->translations[$lang->code] = ['name' => '', 'slug' => '', 'description' => ''];
-            
+            $this->translations[$lang->code] = [
+                'name' => '',
+                'slug' => '',
+                'description' => '',
+            ];
         }
     }
 

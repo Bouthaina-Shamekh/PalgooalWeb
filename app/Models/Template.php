@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-
 class Template extends Model
 {
     use HasFactory;
@@ -21,37 +20,40 @@ class Template extends Model
 
     protected $casts = [
         'price' => 'float',
-        'discount_price' => 'float', // <-- تحسين: أضف السعر المخفض أيضًا
+        'discount_price' => 'float',
         'rating' => 'float',
-        'discount_ends_at' => 'datetime', // <-- تحسين مهم: تعامل معه كتاريخ
+        'discount_ends_at' => 'datetime',
     ];
 
-    /**
-     * العلاقة مع فئة القوالب
-     */
     public function categoryTemplate()
     {
-        return $this->belongsTo(CategoryTemplate::class, 'category_template_id');
+        return $this->belongsTo(CategoryTemplate::class, 'category_template_id')->withDefault();
     }
 
-    /**
-     * العلاقة مع الترجمات
-     */
     public function translations()
     {
         return $this->hasMany(TemplateTranslation::class);
     }
 
     /**
-     * للحصول على الترجمة بناءً على اللغة
+     * Accessor: الترجمة الحالية بناءً على اللغة
      */
-    public function getTranslation($locale = 'en')
+    public function getTranslatedAttribute()
     {
-        return $this->translations->where('locale', $locale)->first();
+        return $this->translations->where('locale', app()->getLocale())->first();
     }
 
-    public function translation()
+    /**
+     * دالة مساعدة للحصول على الترجمة، وليست علاقة
+     */
+    public function getTranslation($locale = null)
     {
-        return $this->hasOne(TemplateTranslation::class)->where('locale', app()->getLocale());
+        $locale = $locale ?? app()->getLocale();
+
+        if ($this->relationLoaded('translations')) {
+            return $this->translations->firstWhere('locale', $locale);
+        }
+
+        return $this->translations()->where('locale', $locale)->first();
     }
 }

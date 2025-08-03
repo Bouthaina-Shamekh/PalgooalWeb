@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('slug');
             $table->string('preview_url')->nullable();
             $table->text('description');
+            $table->json('details')->nullable();
             $table->timestamps();
             $table->unique(['template_id', 'locale', 'slug']);
         });
