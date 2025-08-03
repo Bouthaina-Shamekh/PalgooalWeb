@@ -10,7 +10,10 @@ class TemplateService
     {
         $locale = app()->getLocale();
 
-        $query = Template::with(['translations', 'categoryTemplate.translation']);
+        $query = Template::with([
+            'translations', 
+            'categoryTemplate.translations' // حمّل جميع الترجمات لتسهيل الاستخدام لاحقًا
+        ]);
 
         // فلترة حسب السعر
         if (!empty($filters['max_price'])) {
@@ -22,34 +25,33 @@ class TemplateService
             $query->where('category_template_id', $filters['category_id']);
         }
 
-        // الترتيب
-        if (!empty($filters['sort_by'])) {
-            switch ($filters['sort_by']) {
-                case 'high':
-                    $query->orderByDesc('price');
-                    break;
-                case 'low':
-                    $query->orderBy('price');
-                    break;
-                default:
-                    $query->latest();
-            }
-        } else {
-            $query->latest();
+        // ترتيب النتائج
+        switch ($filters['sort_by'] ?? 'default') {
+            case 'high':
+                $query->orderByDesc('price');
+                break;
+            case 'low':
+                $query->orderBy('price');
+                break;
+            default:
+                $query->latest();
         }
 
+        // معالجة النتائج قبل الإرجاع
         return $query->paginate(9)->through(function ($template) use ($locale) {
-            $translation = $template->translations->where('locale', $locale)->first();
-            return (object)[
+            $translation = $template->translations->firstWhere('locale', $locale);
+            $categoryTranslation = $template->categoryTemplate->translations->firstWhere('locale', $locale);
+
+            return (object) [
                 'id' => $template->id,
                 'image' => $template->image,
                 'price' => $template->price,
                 'discount_price' => $template->discount_price,
-                'name' => $translation?->name,
-                'slug' => $translation?->slug,
-                'description' => $translation?->description,
-                'details' => $translation?->details,
-                'category' => $template->categoryTemplate->translation?->name,
+                'name' => $translation?->name ?? '',
+                'slug' => $translation?->slug ?? '',
+                'description' => $translation?->description ?? '',
+                'details' => $translation?->details ?? [],
+                'category' => $categoryTranslation?->name ?? '',
             ];
         });
     }

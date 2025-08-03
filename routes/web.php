@@ -1,8 +1,10 @@
 <?php
 
+use App\Livewire\Dashboard\Template\TemplateShowPage;
 use App\Models\Language;
 use App\Models\Page;
 use App\Models\Portfolio;
+use App\Models\Template;
 use Illuminate\Support\Facades\Route;
 
 // Route::get('/', function () {
@@ -35,13 +37,27 @@ Route::middleware(['setLocale'])->group(function () {
     });
 
 
-    Route::get('portfolio/{slug}', function ($slug) {
+    Route::get('portfolio/{slug}', function ($slug)
+    {
         $portfolio = Portfolio::with(['translations'])
             ->where('slug', $slug)
             ->orWhere('id', $slug)
             ->firstOrFail();
-        return view('tamplate.portfolio', ['portfolio' => $portfolio]);
+            return view('tamplate.portfolio', ['portfolio' => $portfolio]);
     })->name('portfolio.show');
+
+    Route::get('template/{slug}', function ($slug) {
+        $locale = app()->getLocale();
+        $template = Template::with(['translations', 'categoryTemplate.translation'])
+            ->whereHas('translations', function ($q) use ($slug, $locale) {
+                $q->where('slug', $slug)->where('locale', $locale);
+        })
+            ->firstOrFail();
+            return view('tamplate.template-show', [
+                'template' => $template,
+                'translation' => $template->getTranslation(),
+        ]);
+    })->name('template.show');
 
     Route::get('change-locale/{locale}', function ($locale) {
         $language = Language::where('code', $locale)->where('is_active', true)->first();
