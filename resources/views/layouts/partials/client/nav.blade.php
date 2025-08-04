@@ -71,6 +71,16 @@
                         <span class="pc-mtext">{{ __('Clients') }}</span>
                     </a>
                 </li>
+                <li class="pc-item">
+                    <a href="{{ route('client.domain_name_search') }}" class="pc-link">
+                        <span class="pc-micon">
+                            <svg class="pc-icon">
+                                <use xlink:href="#custom-story"></use>
+                            </svg>
+                        </span>
+                        <span class="pc-mtext">{{ __('Domain Name Search') }}</span>
+                    </a>
+                </li>
 
             </ul>
         </div>

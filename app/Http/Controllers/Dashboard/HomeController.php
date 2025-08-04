@@ -29,4 +29,8 @@ class HomeController extends Controller
     {
         return view('dashboard.clients');
     }
+    public function domains()
+    {
+        return view('dashboard.domains');
+    }
 }

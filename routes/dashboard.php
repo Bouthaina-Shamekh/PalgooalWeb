@@ -57,6 +57,7 @@ Route::group([
     Route::get('portfolios', function () {
         return view('dashboard.portfolios');
     })->name('portfolios');
+
     Route::get('clients', function () {
         return view('dashboard.clients');
     })->name('clients');
@@ -65,9 +66,11 @@ Route::group([
         return view('dashboard.page');
     })->middleware(['auth'])->name('pages');
 
-        Route::get('menus', function () {
+    Route::get('menus', function () {
         return view('dashboard.header');
     })->middleware(['auth'])->name('headers');
+    Route::get('/domains', [HomeController::class, 'domains'])->name('domains');
+
 
 
     //media
@@ -75,5 +78,11 @@ Route::group([
         return view('dashboard.media');
     })->name('media');
 
+    Route::get('template/category', function () {
+        return view('dashboard.template.CategoryTemplats');
+    })->name('category');
 
+    Route::get('template', function () {
+        return view('dashboard.template.Templates');
+    })->name('template');
 });

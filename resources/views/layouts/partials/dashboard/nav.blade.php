@@ -118,6 +118,16 @@
                         <span class="pc-mtext">{{ t('dashboard.clients', 'clients') }}</span>
                     </a>
                 </li>
+                <li class="pc-item">
+                    <a href="{{route('dashboard.domains')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-globe"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.domains', 'domains') }}</span>
+                    </a>
+                </li>
                 <li class="pc-item pc-caption">
                     <label>{{ t('dashboard.Widget','Widget') }}</label>
                     <svg class="pc-icon">

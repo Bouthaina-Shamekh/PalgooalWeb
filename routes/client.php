@@ -18,4 +18,5 @@ Route::group([
 
     Route::get('/home', [HomeController::class, 'index'])->name('home');
     Route::get('/update_account_clinet', [HomeController::class, 'updateClient'])->name('update_account');
+    Route::get('/domain-name-search', [HomeController::class, 'domainNameSearch'])->name('domain_name_search');
 });
