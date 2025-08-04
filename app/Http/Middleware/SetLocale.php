@@ -17,23 +17,39 @@ class SetLocale
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
-    {
-        $generalSetting = GeneralSetting::first();
-        if($generalSetting && $generalSetting->default_language){
-            $default_language = Language::where('id', $generalSetting->default_language)->first()->code;
-        }else{
-            $default_language = config('app.locale');
-        }
-        $locale = Str::lower(session('locale', $default_language));
-
-        // اجلب قائمة اللغات المدعومة من الجدول
-        $supportedLocales = array_map('strtolower', Language::where('is_active', true)->pluck('code')->toArray());
-        if (in_array(strtolower($locale), $supportedLocales)) {
-            app()->setLocale($locale);
-        } else {
-            app()->setLocale($default_language);
-        }
-
-        return $next($request);
+{
+    $generalSetting = GeneralSetting::first();
+    if ($generalSetting && $generalSetting->default_language) {
+        $default_language = Language::where('id', $generalSetting->default_language)->first()?->code ?? config('app.locale');
+    } else {
+        $default_language = config('app.locale');
     }
+
+    // ✨ تغيير اللغة إذا وُجد باراميتر `change-locale`
+    if ($request->has('change-locale')) {
+        $newLocale = Str::lower($request->query('change-locale'));
+        $supportedLocales = array_map('strtolower', Language::where('is_active', true)->pluck('code')->toArray());
+
+        if (in_array($newLocale, $supportedLocales)) {
+            session(['locale' => $newLocale]);
+            app()->setLocale($newLocale);
+        }
+
+        // 🚀 إعادة التوجيه لنفس الرابط بدون باراميتر
+        return redirect()->to($request->url());
+    }
+
+    // لغة الجلسة (أو الافتراضية)
+    $locale = Str::lower(session('locale', $default_language));
+
+    $supportedLocales = array_map('strtolower', Language::where('is_active', true)->pluck('code')->toArray());
+
+    if (in_array($locale, $supportedLocales)) {
+        app()->setLocale($locale);
+    } else {
+        app()->setLocale($default_language);
+    }
+
+    return $next($request);
+}
 }

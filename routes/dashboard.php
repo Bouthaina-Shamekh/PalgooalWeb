@@ -82,7 +82,12 @@ Route::group([
         return view('dashboard.template.CategoryTemplats');
     })->name('category');
 
+
     Route::get('template', function () {
         return view('dashboard.template.Templates');
     })->name('template');
+
+
+
+    
 });
