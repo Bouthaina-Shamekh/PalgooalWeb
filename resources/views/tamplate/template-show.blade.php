@@ -14,21 +14,7 @@
             </p>
         </div>
         <!-- داخل الـ Hero Section -->
-        <div class="relative z-10 mt-6">
-            <nav class="text-sm text-white/80" aria-label="Breadcrumb">
-                <ol class="flex flex-wrap justify-center items-center gap-2 ">
-                    <li>
-                        <a href="/" class="hover:underline text-white font-semibold">الرئيسية</a>
-                        <span class="mx-2">/</span>
-                    </li>
-                    <li>
-                        <a href="/templates" class="hover:underline text-white font-semibold">قوالب المواقع</a>
-                        <span class="mx-2">/</span>
-                    </li>
-                    <li class="text-white/70" aria-current="page">قالب أريج الزهور</li>
-                </ol>
-            </nav>
-        </div>
+<x-breadcrumb />
     </section>
     <!-- Section 1: Main Product Display -->
     <section class="py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-slate-50 dark:bg-slate-900">

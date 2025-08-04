@@ -1,6 +1,9 @@
 @php
     use App\Models\Service;
+    use App\Services\TemplateService;
+    use App\Models\CategoryTemplate;
 @endphp
+
 <x-template.layouts.index-layouts
     title="{{ $page->translation()?->title ?? 'عنوان غير متوفر' }}"
     description="شركة فلسطينية متخصصة في برمجة وتصميم المواقع الالكترونية..."
@@ -10,15 +13,15 @@
 
     {{-- محتوى الصفحة --}}
     @if ($page->sections->isEmpty())
-    <div class="container mx-auto py-10">
-        <h1 class="text-3xl font-bold mb-6">
-            {{ $page->translation()?->title ?? 'عنوان غير متوفر' }}
-        </h1>
+        <div class="container mx-auto py-10">
+            <h1 class="text-3xl font-bold mb-6">
+                {{ $page->translation()?->title ?? 'عنوان غير متوفر' }}
+            </h1>
 
-        <div class="prose max-w-4xl">
-            {!! $page->translation()?->content ?? '<p>لا يوجد محتوى.</p>' !!}
+            <div class="prose max-w-4xl">
+                {!! $page->translation()?->content ?? '<p>لا يوجد محتوى.</p>' !!}
+            </div>
         </div>
-    </div>
     @endif
 
     @php
@@ -44,7 +47,6 @@
             $translation = $section->translation();
             $content = $translation?->content ?? [];
             $title = $translation?->title ?? '';
-
 
             $data = match ($key) {
                 'hero' => [
@@ -77,7 +79,6 @@
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
                 ],
-
                 'blog' => [
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
@@ -92,15 +93,39 @@
                     'max_price' => $content['max_price'] ?? 500,
                     'sort_by' => $content['sort_by'] ?? 'default',
                     'show_filter_sidebar' => $content['show_filter_sidebar'] ?? true,
+                    'selectedCategory' => $content['selectedCategory'] ?? 'all',
+                    'templates' => TemplateService::getFrontendTemplates([
+                        'max_price' => $content['max_price'] ?? 500,
+                        'sort_by' => $content['sort_by'] ?? 'default',
+                    ]),
+                    'categories' => CategoryTemplate::with(['translations' => function ($q) {
+                        $q->where('locale', app()->getLocale())->orWhere('locale', 'ar');
+                    }])->get()->map(function ($cat) {
+                        $translated = $cat->translations->firstWhere('locale', app()->getLocale())
+                            ?? $cat->translations->firstWhere('locale', 'ar');
+                        $cat->translated_name = $translated?->name ?? 'غير معرف';
+                        return $cat;
+                    }),
                 ],
                 default => [],
             };
         @endphp
 
         @if ($component && !empty($data))
-            <x-dynamic-component :component="'template.sections.' . $component" :data="$data" />
-
+            @if ($component === 'templates-pages')
+                <x-dynamic-component :component="'template.sections.' . $component"
+                    :templates="$data['templates']"
+                    :categories="$data['categories']"
+                    :max_price="$data['max_price']"
+                    :sort_by="$data['sort_by']"
+                    :show_filter_sidebar="$data['show_filter_sidebar']"
+                    :selectedCategory="$data['selectedCategory']"
+                />
+                @else
+                <x-dynamic-component :component="'template.sections.' . $component" :data="$data" />
+            @endif
         @endif
+
     @endforeach
 
 </x-template.layouts.index-layouts>

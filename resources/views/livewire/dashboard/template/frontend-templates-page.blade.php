@@ -1,4 +1,5 @@
 <section class="py-20 px-4 sm:px-8 lg:px-24 bg-white dark:bg-gray-950">
+
     <div class="max-w-7xl mx-auto">
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-10">
             <!-- الشريط الجانبي للتصنيفات والفلترة -->
@@ -23,7 +24,7 @@
                         <h3 class="text-xl font-bold text-primary mb-3 border-b pb-2">الفرز حسب السعر</h3>
                         <label for="priceRange" class="sr-only">أقصى سعر</label>
                         <div class="mb-4">
-                            <input id="priceRange" type="range" min="50" max="250" value="250" class="w-full accent-primary">
+                            <input id="priceRange" type="range" min="50" max="250" wire:model="maxPrice" class="w-full accent-primary">
                         </div>
                         <p class="text-sm text-gray-700">السعر الأقصى: <span id="priceValue">{{ $maxPrice }}</span>$</p>
                     </div>
@@ -47,21 +48,20 @@
                     </div>
                 @endif
                 <!-- الشبكة -->
-                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" >
-                    <!-- البطاقات ستُحقن هنا ديناميكيًا -->
+                <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6" id="templateGrid">
                     @forelse($templates as $template)
                         <a href="{{ route('template.show', $template->slug) }}" class="block group">
-                            <article style="will-change: transform" class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden relative group transition-transform duration-300 hover:-translate-y-2 hover:shadow-2xl animate-fade-in-up border border-primary/10" itemscope itemtype="https://schema.org/Product" lang="ar">
-                                <meta itemprop="name" content="${t.title}">
-                                <meta itemprop="description" content="وصف مختصر للقالب">
-                                <meta itemprop="sku" content="template-${t.id}">
+                            <article class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden relative group transition-transform duration-300 hover:-translate-y-2 hover:shadow-2xl animate-fade-in-up border border-primary/10" itemscope itemtype="https://schema.org/Product" lang="ar">
+                                <meta itemprop="name" content="{{ $template->name }}">
+                                <meta itemprop="description" content="{{ $template->description }}">
+                                <meta itemprop="sku" content="template-{{ $template->id }}">
                                 <meta itemprop="category" content="قوالب مواقع">
                                 <meta itemprop="brand" content="Palgoals">
                                 <meta itemprop="priceCurrency" content="USD" />
-                                <meta itemprop="price" content="${t.price}" />
+                                <meta itemprop="price" content="{{ $template->discount_price ?? $template->price }}" />
                                 <meta itemprop="availability" content="https://schema.org/InStock" />
                                 <div class="relative">
-                                    <img itemprop="image" src="./assets/images/2-1-1.webp" alt="${t.title}" class="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105 group-hover:brightness-95" loading="lazy" decoding="async">
+                                    <img itemprop="image" src="{{ asset('storage/'.$template->image) }}" alt="{{ $template->name }}" class="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105 group-hover:brightness-95" loading="lazy" decoding="async">
                                     <div class="bg-gradient-to-tr from-secondary to-primary text-white flex items-end justify-center w-24 h-10 absolute -top-2 rtl:-left-10 ltr:-right-10 ltr:rotate-[40deg] rtl:rotate-[320deg] animate-bounce shadow-lg font-bold text-base tracking-wide">جديد</div>
                                     <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition duration-300"></div>
                                     <div class="absolute top-2 right-2 rtl:right-auto rtl:left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -88,7 +88,7 @@
                                 </div>
                             </article>
                         </a>
-                        @empty
+                    @empty
                         <div id="noResults" class=" text-center text-gray-500 py-10 col-span-full ">
                             لا توجد قوالب مطابقة للفلترة الحالية.
                         </div>
@@ -98,11 +98,7 @@
                 <div class="mt-10 text-center">
                     {{ $templates->links('pagination::tailwind') }}
                 </div>
-                <!--<div class="mt-10 text-center">
-                    <button id="loadMoreBtn" class="px-6 py-2 bg-primary text-white rounded-full hover:bg-secondary transition">تحميل المزيد</button>
-                </div>-->
             </div>
         </div>
     </div>
 </section>
-{{-- <script src="{{ asset('assets/tamplate/js/template.js') }}" defer></script> --}}
