@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Dashboard\HomeController;
 use App\Http\Controllers\Dashboard\UserController;
 use App\Http\Controllers\Dashboard\LanguageController;
+use App\Http\Controllers\Dashboard\MediaController;
 use App\Http\Controllers\Dashboard\ServicesController;
 use App\Http\Controllers\Dashboard\TranslationValueController;
 use App\Http\Controllers\Dashboard\ServicesTranslationController;
@@ -77,6 +78,12 @@ Route::group([
     Route::get('media', function () {
         return view('dashboard.media');
     })->name('media');
+    Route::get('/media-index', [MediaController::class, 'index'])->name('media.index');
+    Route::post('/media', [MediaController::class, 'store'])->name('media.store');
+    Route::get('/media/{id}', [MediaController::class, 'show'])->name('media.show');
+    Route::get('/media/{id}/edit', [MediaController::class, 'edit'])->name('media.edit');
+    Route::put('/media/{id}', [MediaController::class, 'update'])->name('media.update');
+    Route::delete('/media/{id}', [MediaController::class, 'destroy'])->name('media.destroy');
 
     Route::get('template/category', function () {
         return view('dashboard.template.CategoryTemplats');
@@ -86,8 +93,4 @@ Route::group([
     Route::get('template', function () {
         return view('dashboard.template.Templates');
     })->name('template');
-
-
-
-    
 });
