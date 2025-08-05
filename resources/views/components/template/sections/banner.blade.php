@@ -1,11 +1,11 @@
 <!-- Banner Section -->
-<section class="bg-primary text-white py-28 px-4 sm:px-12 lg:px-36 flex flex-col items-center justify-center text-center overflow-hidden">
+<section class="relative bg-primary py-20 px-4 sm:px-8 lg:px-24 shadow-md text-white overflow-hidden">
     <!-- المحتوى -->
-    <div class="relative z-10 max-w-3xl mx-auto">
-        <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold font-almarai mb-6 drop-shadow-lg animate-fade-in">
+    <div class="relative z-10 max-w-4xl mx-auto text-center">
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-snug drop-shadow-lg mb-4">
             {{ $data['title'] ?? 'عنوان الترحيب' }}
         </h1>
-        <p class="text-lg md:text-2xl text-gray-100/90 font-cairo mb-8 leading-relaxed animate-fade-in">
+        <p class="text-lg sm:text-xl font-light text-white/90 max-w-3xl mx-auto">
             {{ $data['subtitle'] ?? 'نص ترحيبي مختصر' }}
         </p>
         <!-- Breadcrumb -->

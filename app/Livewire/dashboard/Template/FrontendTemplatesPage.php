@@ -11,20 +11,29 @@ class FrontendTemplatesPage extends Component
 {
     use WithPagination;
 
-    public $categories;
     public $selectedCategory = 'all';
-    public $maxPrice = 250;
+    public $maxPrice = 999;
     public $sortBy = 'default';
-    public $showSidebar = true;
 
-    protected $queryString = ['selectedCategory', 'maxPrice', 'sortBy'];
-
-    public function mount($maxPrice = 250, $sortBy = 'default', $showSidebar = true)
+    public function updating($field)
     {
-        $this->maxPrice = $maxPrice;
-        $this->sortBy = $sortBy;
-        $this->showSidebar = $showSidebar;
-        $this->categories = CategoryTemplate::with('translation')->get();
+        if (in_array($field, ['selectedCategory', 'maxPrice', 'sortBy'])) {
+            $this->resetPage(); // إعادة الصفحة للأولى عند تغيير الفلترة
+        }
+    }
+
+    public function getCategoriesProperty()
+    {
+        return cache()->remember("template_categories_" . app()->getLocale(), 60 * 60, function () {
+            return CategoryTemplate::with(['translations' => function ($q) {
+                $q->where('locale', app()->getLocale())->orWhere('locale', 'ar');
+            }])->get()->map(function ($cat) {
+                $translated = $cat->translations->firstWhere('locale', app()->getLocale())
+                ?? $cat->translations->firstWhere('locale', 'ar');
+                $cat->translated_name = $translated?->name ?? 'غير معرف';
+                return $cat;
+            });
+        });
     }
 
     public function render()
@@ -40,9 +49,9 @@ class FrontendTemplatesPage extends Component
         return view('livewire.dashboard.template.frontend-templates-page', [
             'templates' => $templates,
             'categories' => $this->categories,
-            'selectedCategory' => $this->selectedCategory,
+            'showSidebar' => true,
             'maxPrice' => $this->maxPrice,
-            'sortBy' => $this->sortBy,
         ]);
     }
 }
+

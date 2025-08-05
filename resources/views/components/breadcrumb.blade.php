@@ -1,26 +1,27 @@
 <!-- Breadcrumb -->
-    @if (!empty($items))
-        <nav class="text-sm text-gray-200 animate-fade-in" aria-label="breadcrumb">
-            <ol class="inline-flex items-center justify-center gap-2 rtl:space-x-reverse">
+@if (!empty($items))
+    <div class="relative z-10 mt-6">
+        <nav class="text-sm text-white/80" aria-label="Breadcrumb">
+            <ol class="flex flex-wrap justify-center items-center gap-2 ">
                 @foreach ($items as $index => $item)
                     <li>
                         @if (!isset($item['url']) || $loop->last)
                             <span class="text-white font-semibold">{{ $item['title'] }}</span>
                             @else
-                            <a href="{{ $item['url'] }}" class="hover:text-secondary transition-colors font-medium">
-                                {{ $item['title'] }}
-                            </a>
+                            <a href="{{ $item['url'] }}" class="hover:underline text-white font-semibold">{{ $item['title'] }}</a>
                         @endif
                     </li>
                     @if (!$loop->last)
-                        <li>
-                            <svg class="mx-1 w-4 h-4 text-gray-300 inline-block" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
-                        </li>
+                        <span class="mx-2">/</span>
                     @endif
                 @endforeach
             </ol>
         </nav>
-    @endif
+    </div>
+@endif
+
+
+            
+
+
 
