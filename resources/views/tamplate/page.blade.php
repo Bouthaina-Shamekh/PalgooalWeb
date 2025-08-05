@@ -90,23 +90,26 @@
                     'subtitle' => $content['subtitle'] ?? '',
                 ],
                 'templates-pages' => [
-                    'max_price' => $content['max_price'] ?? 500,
-                    'sort_by' => $content['sort_by'] ?? 'default',
-                    'show_filter_sidebar' => $content['show_filter_sidebar'] ?? true,
-                    'selectedCategory' => $content['selectedCategory'] ?? 'all',
-                    'templates' => TemplateService::getFrontendTemplates([
-                        'max_price' => $content['max_price'] ?? 500,
-                        'sort_by' => $content['sort_by'] ?? 'default',
-                    ]),
-                    'categories' => CategoryTemplate::with(['translations' => function ($q) {
-                        $q->where('locale', app()->getLocale())->orWhere('locale', 'ar');
-                    }])->get()->map(function ($cat) {
-                        $translated = $cat->translations->firstWhere('locale', app()->getLocale())
-                            ?? $cat->translations->firstWhere('locale', 'ar');
-                        $cat->translated_name = $translated?->name ?? 'غير معرف';
-                        return $cat;
-                    }),
-                ],
+    'max_price' => $content['max_price'] ?? 500,
+    'sort_by' => $content['sort_by'] ?? 'default',
+    'show_filter_sidebar' => $content['show_filter_sidebar'] ?? true,
+    'selectedCategory' => $content['selectedCategory'] ?? 'all',
+
+    'templates' => TemplateService::getFrontendTemplates([
+        'max_price' => $content['max_price'] ?? 500,
+        'sort_by' => $content['sort_by'] ?? 'default',
+        'category_id' => $content['selectedCategory'] ?? 'all',
+    ]),
+
+    'categories' => CategoryTemplate::with(['translations' => function ($q) {
+        $q->where('locale', app()->getLocale())->orWhere('locale', 'ar');
+    }])->get()->map(function ($cat) {
+        $translated = $cat->translations->firstWhere('locale', app()->getLocale())
+            ?? $cat->translations->firstWhere('locale', 'ar');
+        $cat->translated_name = $translated?->name ?? 'غير معرف';
+        return $cat;
+    }),
+],
                 default => [],
             };
         @endphp

@@ -276,7 +276,7 @@ class TemplateManagement extends Component
 
     public function render()
     {
-        $templates = \App\Services\TemplateService::getFrontendTemplates($filters);
+        $templates = Template::with(['translations'])->get();
         return view('livewire.dashboard.template.template-management', [
             'templates' => $templates,
             'categories' => $this->categories,

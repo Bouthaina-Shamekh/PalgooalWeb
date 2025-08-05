@@ -100,9 +100,6 @@
                         </div>
                     @endforelse
                 </div>
-                <div id="noResults" class="hidden text-center text-gray-500 py-10 col-span-full">
-                    لا توجد قوالب مطابقة للفلترة الحالية.
-                </div>
                 <div class="mt-10 text-center">
                     <button id="loadMoreBtn" class="px-6 py-2 bg-primary text-white rounded-full hover:bg-secondary transition">تحميل المزيد</button>
                 </div>
@@ -110,7 +107,7 @@
         </div>
     </div>
 </section>
-<script src="{{ asset('assets/tamplate/js/template.js') }}" defer></script>
+{{-- <script src="{{ asset('assets/tamplate/js/template.js') }}" defer></script> --}}
 
 
 
