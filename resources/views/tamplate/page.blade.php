@@ -75,9 +75,14 @@
                     'button_text-1' => $content['button_text-1'] ?? '',
                     'button_url-1' => $content['button_url-1'] ?? '',
                 ],
-                'templates', 'works', 'testimonials', 'banner' => [
+                'works', 'testimonials', 'banner' => [
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
+                ],
+                'templates' => [
+                    'title' => $title,
+                    'subtitle' => $content['subtitle'] ?? '',
+                    'templates' => \App\Models\Template::with('translations')->latest()->take(8)->get(),
                 ],
                 'blog' => [
                     'title' => $title,
@@ -125,7 +130,8 @@
                     :selectedCategory="$data['selectedCategory']"
                 />
                 @else
-                <x-dynamic-component :component="'template.sections.' . $component" :data="$data" />
+                <x-dynamic-component :component="'template.sections.' . $component" :data="$data" :templates="$data['templates'] ?? collect()" />
+
             @endif
         @endif
 

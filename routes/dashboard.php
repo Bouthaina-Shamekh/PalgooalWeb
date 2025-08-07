@@ -8,6 +8,7 @@ use App\Http\Controllers\Dashboard\MediaController;
 use App\Http\Controllers\Dashboard\ServicesController;
 use App\Http\Controllers\Dashboard\TranslationValueController;
 use App\Http\Controllers\Dashboard\ServicesTranslationController;
+use App\Http\Controllers\Dashboard\TemplateController;
 use App\Livewire\Services;
 
 Route::get('/admin', function () {
@@ -85,12 +86,13 @@ Route::group([
     Route::put('/media/{id}', [MediaController::class, 'update'])->name('media.update');
     Route::delete('/media/{id}', [MediaController::class, 'destroy'])->name('media.destroy');
 
-    Route::get('template/category', function () {
-        return view('dashboard.template.CategoryTemplats');
+    Route::get('templates/category', function () {
+        return view('dashboard.templates.CategoryTemplats');
     })->name('category');
 
 
-    Route::get('template', function () {
-        return view('dashboard.template.Templates');
-    })->name('template');
+    // Route::get('template', function () {
+    //     return view('dashboard.template.Templates');
+    // })->name('template');
+    Route::resource('templates', TemplateController::class);
 });

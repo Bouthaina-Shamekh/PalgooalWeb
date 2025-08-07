@@ -37,19 +37,21 @@ class TemplateManagement extends Component
         ];
 
         foreach ($this->languages as $lang) {
-            $rules["translations.{$lang->code}.name"] = 'required|string|max:255';
-            $rules["translations.{$lang->code}.slug"] = [
-                'required', 'string', 'alpha_dash',
-                Rule::unique('template_translations', 'slug')->ignore($this->getTranslationId($lang->code)),
-            ];
-            $rules["translations.{$lang->code}.preview_url"] = 'nullable|url';
-            $rules["translations.{$lang->code}.description"] = 'nullable|string';
+            $data = $this->translations[$lang->code] ?? [];
 
-            $rules["translations.{$lang->code}.details.features.*.icon"] = 'nullable|string|max:10';
-            $rules["translations.{$lang->code}.details.features.*.title"] = 'required|string|max:255';
-
-            $rules["translations.{$lang->code}.details.specifications.*.key"] = 'required|string|max:255';
-            $rules["translations.{$lang->code}.details.specifications.*.value"] = 'required|string|max:255';
+            if (!empty($data['name']) || !empty($data['slug'])) {
+                $rules["translations.{$lang->code}.name"] = 'required|string|max:255';
+                $rules["translations.{$lang->code}.slug"] = [
+                    'required', 'string', 'alpha_dash',
+                    Rule::unique('template_translations', 'slug')->ignore($this->getTranslationId($lang->code)),
+                ];
+                $rules["translations.{$lang->code}.preview_url"] = 'nullable|url';
+                $rules["translations.{$lang->code}.description"] = 'nullable|string';
+                $rules["translations.{$lang->code}.details.features.*.icon"] = 'nullable|string|max:10';
+                $rules["translations.{$lang->code}.details.features.*.title"] = 'required|string|max:255';
+                $rules["translations.{$lang->code}.details.specifications.*.key"] = 'required|string|max:255';
+                $rules["translations.{$lang->code}.details.specifications.*.value"] = 'required|string|max:255';
+            }
         }
 
         return $rules;
@@ -82,6 +84,15 @@ class TemplateManagement extends Component
 
     public function save()
     {
+        $validTranslationExists = collect($this->translations)
+            ->filter(fn($t) => !empty($t['name']) && !empty($t['slug']))
+            ->isNotEmpty();
+
+        if (!$validTranslationExists) {
+            $this->addError('translations', 'يجب إدخال اسم ورابط (slug) للغة واحدة على الأقل.');
+            return;
+        }
+
         foreach ($this->translations as $langCode => &$translation) {
             if (isset($translation['details']['features'])) {
                 $translation['details']['features'] = array_values(array_filter(
@@ -119,21 +130,24 @@ class TemplateManagement extends Component
         $template = Template::updateOrCreate(['id' => $this->editingTemplateId], $templateData);
 
         foreach ($this->languages as $lang) {
-            $template->translations()->updateOrCreate(
-                ['locale' => $lang->code],
-                [
-                    'name' => $this->translations[$lang->code]['name'],
-                    'slug' => $this->translations[$lang->code]['slug'],
-                    'preview_url' => $this->translations[$lang->code]['preview_url'] ?? null,
-                    'description' => $this->translations[$lang->code]['description'] ?? null,
-                    'details' => $this->translations[$lang->code]['details'] ?? [],
-                ]
-            );
+            $data = $this->translations[$lang->code];
+
+            if (!empty($data['name']) && !empty($data['slug'])) {
+                $template->translations()->updateOrCreate(
+                    ['locale' => $lang->code],
+                    [
+                        'name' => $data['name'],
+                        'slug' => $data['slug'],
+                        'preview_url' => $data['preview_url'] ?? null,
+                        'description' => $data['description'] ?? null,
+                        'details' => $data['details'] ?? [],
+                    ]
+                );
+            }
         }
 
         $this->flashSuccess('تم الحفظ بنجاح.');
         $this->resetForm();
-        
     }
 
     public function edit($templateId)

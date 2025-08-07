@@ -35,25 +35,9 @@ class Template extends Model
         return $this->hasMany(TemplateTranslation::class);
     }
 
-    /**
-     * Accessor: الترجمة الحالية بناءً على اللغة
-     */
-    public function getTranslatedAttribute()
-    {
-        return $this->translations->where('locale', app()->getLocale())->first();
-    }
-
-    /**
-     * دالة مساعدة للحصول على الترجمة، وليست علاقة
-     */
-    public function getTranslation($locale = null)
+    public function translation($locale = null)
     {
         $locale = $locale ?? app()->getLocale();
-
-        if ($this->relationLoaded('translations')) {
-            return $this->translations->firstWhere('locale', $locale);
-        }
-
-        return $this->translations()->where('locale', $locale)->first();
+        return $this->translations->where('locale', $locale)->first();
     }
 }
