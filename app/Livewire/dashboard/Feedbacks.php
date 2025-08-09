@@ -5,10 +5,6 @@ namespace App\Livewire\dashboard;
 use App\Models\Language;
 use App\Models\Feedback;
 use App\Models\FeedbackTranslation;
-use App\Models\Media;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
@@ -42,43 +38,6 @@ class Feedbacks extends Component
         'locale' => '',
     ];
     public $languages = [];
-
-    // for media upload
-    public $mediaUpload;
-    public $showMediaSection = false;
-
-    public function updatedMediaUpload()
-    {
-        $this->validate([
-            'mediaUpload' => 'required|file|mimetypes:image/svg+xml,image/png,image/jpeg,image/webp|max:2048',
-        ]);
-
-        $path = $this->mediaUpload->store('media/' . now()->format('Y/m'), 'public');
-
-        $media = Media::create([
-            'name' => $this->mediaUpload->getClientOriginalName(),
-            'file_path' => $path,
-            'mime_type' => $this->mediaUpload->getMimeType(),
-            'size' => $this->mediaUpload->getSize(),
-            'uploader_id' => Auth::user()->id,
-
-            // تعبئة الحقول الأخرى بقيم فارغة أو افتراضية
-            'alt' => '',
-            'title' => '',
-            'caption' => '',
-            'description' => '',
-        ]);
-
-        $this->feedback['image'] = $media->file_path;
-        $this->mediaUpload = null;
-        $this->showMediaSection = false;
-    }
-    public function selectImage($path)
-    {
-        $this->feedback['image'] = $path;
-        $this->showMediaSection = false;
-        session()->flash('message', 'تم اختيار الصورة بنجاح');
-    }
 
 
     public function mount()
