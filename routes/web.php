@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Dashboard\TemplateController;
 use App\Livewire\Dashboard\Template\TemplateShowPage;
 use App\Models\Language;
 use App\Models\Page;
@@ -46,37 +47,7 @@ Route::middleware(['setLocale'])->group(function () {
             return view('tamplate.portfolio', ['portfolio' => $portfolio]);
     })->name('portfolio.show');
 
-    Route::get('template/{slug}', function ($slug) {
-        $slug = urldecode($slug);
-        $locale = app()->getLocale();
-        // محاولة إيجاد التمبلت باللغة الحالية
-        $template = Template::with(['translations', 'categoryTemplate.translations'])
-            ->whereHas('translations', function ($q) use ($slug, $locale) {
-                $q->where('slug', $slug)->where('locale', $locale);
-            })->first();
-            // ✅ fallback للغة العربية فقط إذا لم تكن بالفعل بالعربية
-            if (!$template && $locale !== 'ar') {
-                $template = Template::with(['translations', 'categoryTemplate.translations'])
-                    ->whereHas('translations', function ($q) use ($slug) {
-                        $q->where('slug', $slug)->where('locale', 'ar');
-            })->first();
-            if ($template) {
-                $arabicSlug = $template->translations->firstWhere('locale', 'ar')?->slug;
-                // ✅ فقط أعد التوجيه إذا كان slug الحالي لا يطابق الـ slug العربي
-                if ($slug !== $arabicSlug) {
-                    return redirect()->route('template.show', ['slug' => $arabicSlug]);
-                }
-            }
-        }
-        // ❌ إذا لم نجد أي ترجمة
-        if (!$template) {
-            abort(404);
-        }
-        return view('tamplate.template-show', [
-            'template' => $template,
-            'translation' => $template->getTranslation(),
-        ]);
-    })->name('template.show');
+    Route::get('/templates/{slug}', [TemplateController::class, 'show'])->name('template.show');
 
 
 

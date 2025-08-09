@@ -158,6 +158,46 @@ class TemplateController extends Controller
         }
     }
 
+        public function show(string $slug)
+    {
+        $locale = app()->getLocale();
+
+        // جرّب أولاً ترجمة اللغة الحالية
+        $template = Template::with(['translations', 'categoryTemplate.translations'])
+            ->whereHas('translations', function ($q) use ($slug, $locale) {
+                $q->where('slug', $slug)->where('locale', $locale);
+            })
+            ->first();
+
+        // لو ما لقيت وبواجهة غير عربية → جرّب العربية
+        if (!$template && $locale !== 'ar') {
+            $template = Template::with(['translations', 'categoryTemplate.translations'])
+                ->whereHas('translations', function ($q) use ($slug) {
+                    $q->where('slug', $slug)->where('locale', 'ar');
+                })
+                ->first();
+
+            if ($template) {
+                $arabicSlug = optional(
+                    $template->translations->firstWhere('locale', 'ar')
+                )->slug;
+
+                if ($arabicSlug && $slug !== $arabicSlug) {
+                    // وحّد الرابط على السلاج العربي
+                    return redirect()->route('template.show', ['slug' => $arabicSlug]);
+                }
+            }
+        }
+
+        abort_if(!$template, 404);
+
+        // اختر ترجمة العرض (اللغة الحالية ثم العربية كبديل)
+        $translation = $template->translations->firstWhere('locale', $locale)
+            ?? $template->translations->firstWhere('locale', 'ar');
+
+        return view('tamplate.template-show', compact('template', 'translation'));
+    }
+
     public function destroy($id)
     {
         $template = Template::findOrFail($id);

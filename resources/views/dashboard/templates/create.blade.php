@@ -59,22 +59,19 @@
                         <h4 class="font-bold mb-2 text-primary">[{{ $language->name }}]</h4>
                         
                         <input type="hidden" name="translations[{{ $loop->index }}][locale]" value="{{ $locale }}">
-
-<div class="mb-2">
-    <label class="block font-semibold mb-1">الاسم:</label>
-    <input type="text" name="translations[{{ $loop->index }}][name]"
-           class="name-input w-full border p-2 rounded" required />
-</div>
-
-<div class="mb-2">
-    <label class="block font-semibold mb-1 flex justify-between items-center">
-        <span>الرابط (slug):</span>
-        <button type="button" class="generate-slug text-sm text-blue-600 hover:underline" title="توليد تلقائي">🔁 توليد تلقائي</button>
-    </label>
-    <input type="text" name="translations[{{ $loop->index }}][slug]"
-           class="slug-input w-full border p-2 rounded" required />
-</div>
-
+                        <div class="mb-2">
+                            <label class="block font-semibold mb-1">الاسم:</label>
+                            <input type="text" name="translations[{{ $loop->index }}][name]"
+                                class="name-input w-full border p-2 rounded" required />
+                        </div>
+                        <div class="mb-2">
+                            <label class="block font-semibold mb-1 flex justify-between items-center">
+                                <span>الرابط (slug):</span>
+                                <button type="button" class="generate-slug text-sm text-blue-600 hover:underline" title="توليد تلقائي">🔁 توليد تلقائي</button>
+                            </label>
+                            <input type="text" name="translations[{{ $loop->index }}][slug]"
+                                class="slug-input w-full border p-2 rounded" required />
+                        </div>
                         <div class="mb-2">
                             <label class="block font-semibold mb-1">رابط المعاينة (اختياري):</label>
                             <input type="url" name="translations[{{ $loop->index }}][preview_url]" class="w-full border p-2 rounded" />

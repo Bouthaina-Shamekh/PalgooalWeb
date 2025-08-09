@@ -1,3 +1,13 @@
+@php
+    $finalPrice   = $template->discount_price ?? $template->price;
+    $hasDiscount  = !is_null($template->discount_price) && $template->discount_price < $template->price;
+    $discountPerc = $hasDiscount ? round((($template->price - $template->discount_price) / $template->price) * 100) : 0;
+
+    $endsAt       = $template->discount_ends_at ? \Carbon\Carbon::parse($template->discount_ends_at) : null;
+
+    // ملخص قصير للهيدر بدل الوصف الكامل
+    $shortDesc    = \Illuminate\Support\Str::limit(strip_tags($translation?->description ?? ''), 160);
+@endphp
 <x-template.layouts.index-layouts title="بال قول لتكنولوجيا المعلومات - مواقع الكترونية واستضافة عربية"
     description="شركة فلسطينية متخصصة في برمجة وتصميم المواقع الالكترونية..."
     keywords="خدمات حجز دومين , افضل شركة برمجيات , استضافة مواقع , ..."
@@ -7,10 +17,10 @@
     <section class="relative bg-primary py-20 px-4 sm:px-8 lg:px-24 shadow-md text-white overflow-hidden" dir="auto">
         <div class="relative z-10 max-w-4xl mx-auto text-center">
             <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-snug drop-shadow-lg mb-4">
-               قالب أريج الزهور 🌸
+              {{ $translation?->name }}
             </h1>
             <p class="text-lg sm:text-xl font-light text-white/90 max-w-3xl mx-auto">
-                قالب احترافي مصمم لمتاجر الزهور يتيح لك الانطلاق بموقعك خلال دقائق، مع استضافة ودومين مجاني ودعم فني متكامل.
+                {{ $shortDesc }}
             </p>
         </div>
         <!-- داخل الـ Hero Section -->
@@ -25,7 +35,7 @@
         <!-- صندوق المعاينة -->
         <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 overflow-hidden">
           <div class="relative w-full aspect-[5/3] group">
-            <img loading="lazy" src="https://www.palgoals.com/wp-content/uploads/2024/07/1-3.webp" alt="معاينة قالب متجر أريج الزهور" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105">
+            <img loading="lazy" src="{{ asset('storage/' . $template->image) }}" alt="{{ $translation?->name }}" class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105">
             <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent"></div>
             <span class="absolute top-4 right-4 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">-52%</span>
           </div>
@@ -237,7 +247,7 @@
         <!-- صندوق المواصفات والأسعار -->
         <div x-data="{ open: false }" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 p-6 sm:p-8 flex flex-col gap-5">
           <div class="text-center">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">قالب أريج الزهور</h2>
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $translation?->name }}</h2>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1.5">أطلق متجرك الإلكتروني الاحترافي في دقائق</p>
           </div>
           <div class="flex items-center justify-center gap-3 text-sm text-gray-600 dark:text-gray-300 border-y border-gray-200 dark:border-gray-700 py-3">

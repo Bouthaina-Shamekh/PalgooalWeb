@@ -53,7 +53,9 @@ class CategoryTemplate extends Model
      * Accessor: الرابط (slug) المترجم حسب اللغة الحالية
      */
     public function getTranslatedSlugAttribute()
-    {
-        return $this->getTranslation()?->slug ?? '';
-    }
+{
+    $t = $this->translations->firstWhere('locale', app()->getLocale())
+        ?? $this->translations->firstWhere('locale', 'ar');
+    return $t?->slug;
+}
 }
