@@ -68,43 +68,84 @@
 
                     <div class="border rounded p-4" data-locale-section>
                         <h4 class="font-bold mb-2 text-primary">[{{ $language->name }}]</h4>
-
                         <input type="hidden" name="translations[{{ $loop->index }}][locale]" value="{{ $locale }}">
-
-<div class="mb-2">
-    <label class="block font-semibold mb-1">الاسم:</label>
-    <input type="text" name="translations[{{ $loop->index }}][name]" value="{{ old("translations.$loop->index.name", $translation?->name) }}"
-           class="name-input w-full border p-2 rounded" required />
-</div>
-
-<div class="mb-2">
-    <label class="block font-semibold mb-1 flex justify-between items-center">
-        <span>الرابط (slug):</span>
-        <button type="button" class="generate-slug text-sm text-blue-600 hover:underline" title="توليد تلقائي">🔁 توليد تلقائي</button>
-    </label>
-    <input type="text" name="translations[{{ $loop->index }}][slug]" value="{{ old("translations.$loop->index.slug", $translation?->slug) }}"
-           class="slug-input w-full border p-2 rounded" required />
-</div>
-
+                        <div class="mb-2">
+                            <label class="block font-semibold mb-1">الاسم:</label>
+                            <input type="text" name="translations[{{ $loop->index }}][name]" value="{{ old("translations.$loop->index.name", $translation?->name) }}"
+                                class="name-input w-full border p-2 rounded" required />
+                        </div>
+                        <div class="mb-2">
+                            <label class="block font-semibold mb-1 flex justify-between items-center">
+                                <span>الرابط (slug):</span>
+                                <button type="button" class="generate-slug text-sm text-blue-600 hover:underline" title="توليد تلقائي">🔁 توليد تلقائي</button>
+                            </label>
+                            <input type="text" name="translations[{{ $loop->index }}][slug]" value="{{ old("translations.$loop->index.slug", $translation?->slug) }}"
+                                class="slug-input w-full border p-2 rounded" required />
+                        </div>
                         <div class="mb-2">
                             <label class="block font-semibold mb-1">رابط المعاينة:</label>
                             <input type="url" name="translations[{{ $loop->index }}][preview_url]" value="{{ old("translations.$loop->index.preview_url", $translation?->preview_url) }}" class="w-full border p-2 rounded" />
                         </div>
-
                         <div class="mb-2">
                             <label class="block font-semibold mb-1">الوصف:</label>
                             <textarea name="translations[{{ $loop->index }}][description]" rows="4" class="w-full border p-2 rounded" required>{{ old("translations.$loop->index.description", $translation?->description) }}</textarea>
                         </div>
-
-                        <div class="mb-2">
-                            <label class="block font-semibold mb-1">تفاصيل إضافية (JSON):</label>
-                            <textarea name="translations[{{ $loop->index }}][details]" rows="3" class="w-full border p-2 rounded">{{ old("translations.$loop->index.details", $translation?->details) }}</textarea>
+                        <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white" data-features-wrapper>
+                            <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+                                <h4 class="text-base sm:text-lg font-bold text-gray-800">المميزات (Features)</h4>
+                                <div class="flex items-center gap-2">
+                                    <button type="button"
+                                        class="add-feature inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">
+                                        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"/></svg>
+                                        إضافة ميزة
+                                    </button>
+                                    <button type="button"
+                                        class="clear-features inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200">
+                                        مسح الكل
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="space-y-3" data-features-list>
+                                {{-- يتم ملؤها ديناميكياً --}}
+                            </div>
                         </div>
+                        {{-- المعرض (Gallery) --}}
+                        <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white" data-gallery-wrapper>
+                            <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+                                <h4 class="text-base sm:text-lg font-bold text-gray-800">صور من القالب (Gallery)</h4>
+                                <div class="flex items-center gap-2">
+                                    <button type="button"
+                                        class="add-image inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">
+                                        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"/></svg>
+                                        إضافة صورة
+                                    </button>
+                                    <button type="button"
+                                        class="clear-images inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200">
+                                        مسح الكل
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="space-y-3" data-images-list>
+                                {{-- يتم ملؤها ديناميكياً --}}
+                            </div>
+                        </div>
+
+
+                        {{-- الحقل الذي سيحمل JSON النهائي --}}
+                            <input type="hidden"
+                                name="translations[{{ $loop->index }}][details]"
+                                class="details-json"
+                                value="{{ old("translations.$loop->index.details",
+                                    is_array($translation?->details)
+                                    ? json_encode($translation->details, JSON_UNESCAPED_UNICODE)
+                                    : ($translation?->details ?? '')
+                                ) }}"
+                                data-existing='@json($translation?->details)'>
+                            <p class="mt-2 text-xs text-gray-500">يتم حفظ المميزات كـ JSON تلقائياً داخل الحقل المخفي.</p>
                     </div>
                 @endforeach
             </div>
         </div>
-
         <div>
             <button type="submit" class="bg-primary hover:bg-primary/80 text-white font-bold py-2 px-4 rounded">
                 💾 حفظ التعديلات
@@ -149,5 +190,113 @@
         }
     });
 </script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('[data-locale-section]').forEach(section => {
+    const listFeatures = section.querySelector('[data-features-list]');
+    const addFeature   = section.querySelector('.add-feature');
+    const clearFeatures= section.querySelector('.clear-features');
+
+    const listImages   = section.querySelector('[data-images-list]');
+    const addImage     = section.querySelector('.add-image');
+    const clearImages  = section.querySelector('.clear-images');
+
+    const detailsInp   = section.querySelector('.details-json');
+
+    // Helpers
+    function escapeHtml(str){ return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+    function isAbsUrl(s){ return /^((https?:)?\/\/)/i.test(s || ''); }
+
+    // Rows builders
+    function featureRow(item = { title: '', icon: '' }) {
+      const row = document.createElement('div');
+      row.className = 'feature-row grid grid-cols-1 sm:grid-cols-[1fr_160px_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
+      row.innerHTML = `
+        <input type="text" class="feat-title w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+               placeholder="عنوان الميزة (مثال: تصميم احترافي)" value="${escapeHtml(item.title)}">
+        <input type="text" class="feat-icon w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+               placeholder="🎨 أيقونة (اختياري)" value="${escapeHtml(item.icon || '')}">
+        <button type="button" class="remove-feature inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>
+      `;
+      row.querySelector('.remove-feature').addEventListener('click', () => { row.remove(); syncJson(); });
+      row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncJson));
+      return row;
+    }
+
+    function imageRow(item = { src: '', alt: '' }) {
+      const row = document.createElement('div');
+      row.className = 'image-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
+      row.innerHTML = `
+        <input type="text" class="img-src w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+               placeholder="رابط الصورة (http/https أو storage/...)" value="${escapeHtml(item.src)}">
+        <input type="text" class="img-alt w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+               placeholder="نص بديل (ALT)" value="${escapeHtml(item.alt || '')}">
+        <button type="button" class="remove-image inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>
+      `;
+      row.querySelector('.remove-image').addEventListener('click', () => { row.remove(); syncJson(); });
+      row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncJson));
+      return row;
+    }
+
+    // Sync details (merge)
+    function syncJson() {
+      const features = Array.from(listFeatures?.querySelectorAll('.feature-row') || []).map(r => ({
+        title: r.querySelector('.feat-title')?.value.trim() || '',
+        icon:  r.querySelector('.feat-icon')?.value.trim() || ''
+      })).filter(x => x.title.length);
+
+      const gallery = Array.from(listImages?.querySelectorAll('.image-row') || []).map(r => ({
+        src: r.querySelector('.img-src')?.value.trim() || '',
+        alt: r.querySelector('.img-alt')?.value.trim() || ''
+      })).filter(x => x.src.length);
+
+      // اقرأ القديم لو في مفاتيح أخرى غير features/gallery (للمستقبل)
+      let payload = {};
+      try {
+        if (detailsInp.value) payload = JSON.parse(detailsInp.value) || {};
+      } catch(e){ payload = {}; }
+
+      payload.features = features;
+      payload.gallery  = gallery;
+
+      detailsInp.value = JSON.stringify(payload);
+    }
+
+    // Init from existing
+    (function init() {
+      let existing = null;
+      try {
+        if (detailsInp.value) existing = JSON.parse(detailsInp.value);
+        if (!existing && detailsInp.dataset.existing) existing = JSON.parse(detailsInp.dataset.existing);
+      } catch (e) {}
+
+      const exFeatures = (existing && Array.isArray(existing.features)) ? existing.features : [];
+      const exGallery  = (existing && Array.isArray(existing.gallery))  ? existing.gallery  : [];
+
+      // fill features
+      if (listFeatures) {
+        if (exFeatures.length) exFeatures.forEach(f => listFeatures.appendChild(featureRow(f)));
+        if (!listFeatures.children.length) listFeatures.appendChild(featureRow());
+      }
+
+      // fill gallery
+      if (listImages) {
+        if (exGallery.length) exGallery.forEach(it => listImages.appendChild(imageRow(it)));
+        if (!listImages.children.length) listImages.appendChild(imageRow());
+      }
+
+      // buttons
+      addFeature?.addEventListener('click', () => { listFeatures.appendChild(featureRow()); syncJson(); });
+      clearFeatures?.addEventListener('click', () => { listFeatures.innerHTML = ''; syncJson(); });
+
+      addImage?.addEventListener('click', () => { listImages.appendChild(imageRow()); syncJson(); });
+      clearImages?.addEventListener('click', () => { listImages.innerHTML = ''; syncJson(); });
+
+      syncJson();
+    })();
+  });
+});
+</script>
+
 
 </x-dashboard-layout>

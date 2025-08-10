@@ -100,13 +100,13 @@
                     // 'sort_by' => $content['sort_by'] ?? 'default',
                     'show_filter_sidebar' => $content['show_filter_sidebar'] ?? true,
                     'selectedCategory' => $content['selectedCategory'] ?? 'all',
-                    'templates' => \App\Models\Template::with(['translations','categoryTemplate'])->latest()->take(60)->get(),
-                    'categories' => CategoryTemplate::with(['translations' => function ($q) {
-                        $q->where('locale', app()->getLocale())->orWhere('locale', 'ar');
+                    'templates' => \App\Models\Template::with(['translations','categoryTemplate.translations'])->latest()->take(60)->get(),
+                    'categories' => \App\Models\CategoryTemplate::with(['translations' => function ($q) {
+                        $q->where('locale', app()->getLocale())->orWhere('locale','ar');
                     }])->get()->map(function ($cat) {
-                        $translated = $cat->translations->firstWhere('locale', app()->getLocale())
-                        ?? $cat->translations->firstWhere('locale', 'ar');
-                        $cat->translated_name = $translated?->name ?? 'غير معرف';
+                        $t = $cat->translations->firstWhere('locale', app()->getLocale()) ?? $cat->translations->firstWhere('locale','ar');
+                        $cat->translated_name = $t?->name ?? 'غير معرف';
+                        $cat->translated_slug = $t?->slug ?? ($cat->slug ?? 'uncategorized');
                         return $cat;
                     }),
                 ],

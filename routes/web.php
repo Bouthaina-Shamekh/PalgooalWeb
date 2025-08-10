@@ -7,6 +7,7 @@ use App\Models\Page;
 use App\Models\Portfolio;
 use App\Models\Template;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Frontend\TemplateController as FrontTemplateController;
 
 // Route::get('/', function () {
 //     return view('tamplate.home');
@@ -47,7 +48,8 @@ Route::middleware(['setLocale'])->group(function () {
             return view('tamplate.portfolio', ['portfolio' => $portfolio]);
     })->name('portfolio.show');
 
-    Route::get('/templates/{slug}', [TemplateController::class, 'show'])->name('template.show');
+    Route::get('/templates/{slug}', [FrontTemplateController::class, 'show'])->name('template.show');
+    Route::get('/templates/{slug}/preview', [FrontTemplateController::class, 'preview'])->name('template.preview');
 
 
 

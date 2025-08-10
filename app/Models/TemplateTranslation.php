@@ -19,6 +19,8 @@ class TemplateTranslation extends Model
         'details',
     ];
 
+    protected $casts = ['details' => 'array'];
+
      public function template()
     {
         return $this->belongsTo(Template::class, 'template_id');
