@@ -36,49 +36,15 @@ class Portfolios extends Component
         'client' => '',
     ];
 
+    public function updatedPortfolioImages($value)
+    {
+        logger('Received images:', [$value]);
+        $this->portfolio['images'] = json_decode($value, true);
+    }
     public $portfolioTranslations = [];
     public $languages = [];
     public $typeSuggestions = [];
     public $statusSuggestions = [];
-
-    public $showMediaSection = false;
-    public $mediaMode = 'single';
-    public $selectedImages = [];
-    public $mediaUpload;
-
-    public function openMediaModal($mode = 'single')
-    {
-        $this->mediaMode = $mode;
-        $this->selectedImages = [];
-        $this->showMediaSection = true;
-    }
-
-    public function selectSingleImage($path)
-    {
-        $this->portfolio['default_image'] = $path;
-        $this->showMediaSection = false;
-    }
-
-    public function toggleImageSelection($path)
-    {
-        if (in_array($path, $this->selectedImages)) {
-            $this->selectedImages = array_filter($this->selectedImages, fn($img) => $img !== $path);
-        } else {
-            $this->selectedImages[] = $path;
-        }
-    }
-
-    public function confirmMultipleSelection()
-    {
-        foreach ($this->selectedImages as $path) {
-            if (!in_array($path, $this->portfolio['images'])) {
-                $this->portfolio['images'][] = $path;
-            }
-        }
-
-        $this->selectedImages = [];
-        $this->showMediaSection = false;
-    }
 
     public function mount()
     {
@@ -128,7 +94,6 @@ class Portfolios extends Component
 
         $this->portfolio = [
             'default_image' => $portfolio->default_image,
-            'images' => [],
             'images' => $portfolio->images,
             'delivery_date' => $portfolio->delivery_date,
             'order' => $portfolio->order,
@@ -164,7 +129,6 @@ class Portfolios extends Component
         $this->portfolioId = null;
         $this->portfolio = [
             'default_image' => '',
-            'images' => [],
             'images' => [],
             'delivery_date' => '',
             'order' => '',

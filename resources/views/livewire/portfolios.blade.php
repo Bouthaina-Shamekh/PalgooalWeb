@@ -23,6 +23,92 @@
             width: 200px;
         }
     </style>
+    <style>
+        .masonry {
+            column-count: 4;
+            column-gap: 1rem;
+        }
+
+        @media (max-width: 992px) {
+            .masonry {
+                column-count: 3;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .masonry {
+                column-count: 2;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .masonry {
+                column-count: 1;
+            }
+        }
+
+        .masonry-item {
+            position: relative;
+            transition: transform 0.2s ease;
+            border-radius: 10px;
+            box-shadow: 1px 6px 8px rgba(0, 0, 0, 0.3);
+            margin-bottom: 11px;
+        }
+
+        .masonry-item:hover {
+            transform: scale(1.03);
+            z-index: 2;
+        }
+
+        .media-actions {
+            position: absolute;
+            top: 0;
+            right: -60px;
+            display: flex;
+            gap: 0.25rem;
+            flex-direction: column;
+            align-items: center;
+            transition: 0.3s all;
+        }
+
+        .masonry-item:hover .media-actions {
+            display: flex !important;
+            right: 0;
+
+        }
+
+        .media-actions .btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .masonry-item img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .masonry-item .info {
+            padding: 0.75rem;
+            text-align: center;
+        }
+
+        .masonry-item .info small {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .masonry-item .actions {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+    </style>
     {{-- SweetAlert Trigger --}}
     @if ($alert)
         <script>
@@ -99,8 +185,9 @@
                 <label class="block text-sm font-medium">الصورة الافتراضية</label>
 
                 <div class="flex items-center gap-2">
-                    <input type="file" wire:model="portfolio.default_image" class="form-control hidden">
-                    <button type="button" wire:click="openMediaModal('single')" class="bg-primary text-white px-2 py-1 rounded text-sm">
+                    <input type="text" id="imageInput" wire:model="portfolio.default_image" class="form-control">
+                    <button type="button" data-mode="single"
+                        class="openMediaModal bg-primary text-white px-2 py-1 rounded text-sm">
                         اختر من الوسائط
                     </button>
                 </div>
@@ -109,7 +196,9 @@
                     <img src="{{ asset('storage/' . $portfolio['default_image']) }}" class="mt-2 w-12 h-12">
                 @endif
 
-                @error('portfolio.default_image') <span class="text-red-600">{{ $message }}</span> @enderror
+                @error('portfolio.default_image')
+                    <span class="text-red-600">{{ $message }}</span>
+                @enderror
             </div>
 
 
@@ -118,8 +207,9 @@
                 <label class="block text-sm font-medium">الصور المتعددة</label>
 
                 <div class="flex items-center gap-2">
-                    <input type="file" wire:model="portfolio.images" class="form-control hidden" multiple>
-                    <button type="button" wire:click="openMediaModal('multiple')" class="bg-primary text-white px-2 py-1 rounded text-sm">
+                    <input type="text" id="imagesInput" wire:model="portfolio.images" class="form-control">
+                    <button type="button" data-mode="multiple"
+                        class="openMediaModal bg-primary text-white px-2 py-1 rounded text-sm">
                         اختر من الوسائط
                     </button>
                 </div>
@@ -132,7 +222,9 @@
                     </div>
                 @endif
 
-                @error('portfolio.images') <span class="text-red-600">{{ $message }}</span> @enderror
+                @error('portfolio.images')
+                    <span class="text-red-600">{{ $message }}</span>
+                @enderror
             </div>
 
 
@@ -191,7 +283,7 @@
                             wire:model="portfolioTranslations.{{ $index }}.title">
 
                         <textarea class="form-control mb-2" placeholder="الوصف"
-    wire:model="portfolioTranslations.{{ $index }}.description" rows="3"></textarea>
+                            wire:model="portfolioTranslations.{{ $index }}.description" rows="3"></textarea>
 
 
                         <input type="text" class="form-control mb-2" placeholder="النوع"
@@ -212,7 +304,8 @@
                         <input type="text" class="form-control mb-2" placeholder="الرابط"
                             wire:model="portfolioTranslations.{{ $index }}.link">
 
-                        <select class="form-control mb-2" wire:model="portfolioTranslations.{{ $index }}.status">
+                        <select class="form-control mb-2"
+                            wire:model="portfolioTranslations.{{ $index }}.status">
                             <option value="">اختر الحالة</option>
                             @foreach ($statusSuggestions[$lang->code] as $status)
                                 <option value="{{ $status }}">{{ $status }}</option>
@@ -230,46 +323,56 @@
                 <button type="submit" class="btn btn-primary">حفظ</button>
             </div>
         </form>
-        @if($showMediaSection)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div class="bg-white rounded-xl shadow-lg max-w-5xl w-full p-6 relative">
 
-                <!-- زر إغلاق -->
-                <button type="button" wire:click="$set('showMediaSection', false)"
-                        class="absolute top-2 left-2 text-gray-500 hover:text-red-600 text-xl font-bold">&times;</button>
-
-                <h2 class="text-lg font-semibold mb-4">
-                    {{ $mediaMode === 'multiple' ? 'اختر صور متعددة' : 'اختر صورة واحدة' }}
-                </h2>
-
-                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 max-h-[350px] overflow-y-auto">
-                    @foreach(\App\Models\Media::where('mime_type', 'like', 'image/%')->latest()->take(50)->get() as $media)
-                        <div
-                            wire:click="{{ $mediaMode === 'multiple' ? "toggleImageSelection('$media->file_path')" : "selectSingleImage('$media->file_path')" }}"
-                            class="relative border rounded-xl overflow-hidden shadow-sm bg-white cursor-pointer transition transform hover:scale-[1.02] hover:shadow-md
-                                {{ $mediaMode === 'multiple' && in_array($media->file_path, $selectedImages) ? 'ring-2 ring-primary' : '' }}"
-                        >
-                            <img src="{{ asset('storage/' . $media->file_path) }}"
-                                class="w-full h-32 object-cover" loading="lazy">
-
-                            @if($mediaMode === 'multiple' && in_array($media->file_path, $selectedImages))
-                                <div class="absolute top-2 right-2 bg-primary text-white text-xs px-2 py-1 rounded-full shadow">محدد</div>
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
-
-                <!-- زر تأكيد فقط لو متعدد -->
-                @if($mediaMode === 'multiple')
-                    <div class="mt-4 flex justify-end">
-                        <button type="button" wire:click="confirmMultipleSelection"
-                                class="bg-primary text-white px-4 py-2 rounded text-sm">تأكيد الاختيار</button>
+        {{-- مودال الوسائط --}}
+        <div class="modal fade" id="mediaModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-2xl font-bold mb-6">📁 مكتبة الوسائط</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" id="closeMediaModal"
+                            data-pc-modal-dismiss="#mediaModal">
+                            <i class="fas fa-times"></i>
+                        </button>
                     </div>
-                @endif
+                    <div class="modal-body p-4">
+                        <form id="uploadForm" enctype="multipart/form-data" class="mb-3">
+                            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                            <input type="file" name="image" id="imageInput" class="form-control mb-2" required>
+                            <button type="submit" class="btn btn-primary">رفع صورة</button>
+                        </form>
+                        <div id="mediaGrid" class="masonry">
+                            {{-- الصور ستُملأ تلقائيًا عبر jQuery --}}
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" id="selectMediaBtn">اختيار</button>
+                    </div>
+                </div>
             </div>
         </div>
-        @endif
-
+        <div class="modal fade" id="confirmDeleteModal" tabindex="-1" role="dialog"
+            aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">تأكيد الحذف</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" id="closeDeleteModal"
+                            data-pc-modal-dismiss="#confirmDeleteModal">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        هل أنت متأكد من حذف هذه الصورة؟
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-pc-modal-dismiss="#confirmDeleteModal"
+                            id="closeDeleteModal">إلغاء</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">نعم، حذف</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     @endif
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -342,11 +445,11 @@
             }
 
             list.innerHTML = filtered.map(type => `
-        <li class="list-group-item list-group-item-action"
-            onclick="selectType('${locale}', '${type}')">
-            ${type}
-        </li>
-    `).join('');
+                <li class="list-group-item list-group-item-action"
+                    onclick="selectType('${locale}', '${type}')">
+                    ${type}
+                </li>
+            `).join('');
             list.style.display = 'block';
         }
 
@@ -392,3 +495,104 @@
 
 
 </div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    let mediaMode = 'single'; // default
+    let selectedImages = [];
+
+    $(document).ready(function() {
+        // عند فتح المودال
+        $(document).on('click', '.openMediaModal', function() {
+            mediaMode = $(this).data('mode');
+            selectedImages = [];
+            loadMedia();
+            $('.modal').removeClass('show animate');
+            $('#mediaModal').addClass('show animate');
+            if(mediaMode === 'multiple') {
+                $('#selectMediaBtn').show();
+            }else{
+                $('#selectMediaBtn').hide();
+            }
+        });
+
+        // إغلاق المودال
+        $(document).on('click', '#closeMediaModal', function() {
+            $('.modal').removeClass('show animate');
+        });
+
+        // جلب الصور
+        function loadMedia() {
+            $.get("{{ route('dashboard.media.index') }}", function(data) {
+                let html = '';
+                data.forEach(item => {
+                    html += `
+                        <div class="masonry-item position-relative overflow-hidden border border-light rounded mb-2" data-path="${item.file_path}">
+                            <img src="/storage/${item.file_path}" class="img-fluid media-image" style="cursor:pointer;">
+                            <div class="media-actions position-absolute top-0 end-0 p-2" style="display: none;">
+                                <button class="btn btn-sm btn-light border rounded-circle me-1 delete-btn" data-id="${item.id}" title="حذف">
+                                    <i class="fas fa-trash text-danger"></i>
+                                </button>
+                            </div>
+                            <div class="info text-center p-2">
+                                <small>${item.name}</small>
+                            </div>
+                        </div>`;
+                });
+                $('#mediaGrid').html(html);
+            });
+        }
+
+        // اختيار صورة
+        $(document).on('click', '.masonry-item', function() {
+            const path = $(this).data('path');
+
+            if (mediaMode === 'single') {
+                const input = document.getElementById('imageInput');
+                input.value = path;
+                input.dispatchEvent(new Event('input', {
+                    bubbles: true
+                }));
+                $('#closeMediaModal').click();
+
+            } else {
+                // multiple mode
+                if (!selectedImages.includes(path)) {
+                    selectedImages.push(path);
+                    $(this).addClass('border-primary border-2');
+                } else {
+                    selectedImages = selectedImages.filter(p => p !== path);
+                    $(this).removeClass('border-primary border-2');
+                }
+
+            }
+        });
+
+        $(document).on('click', '#closeMediaModal, #selectMediaBtn', function() {
+            if (mediaMode === 'multiple') {
+                const input = document.getElementById('imagesInput');
+                input.value = JSON.stringify(selectedImages);
+                input.dispatchEvent(new Event('input', {
+                    bubbles: true
+                }));
+                $('.modal').removeClass('show animate');
+            }
+        });
+
+        // رفع صورة جديدة
+        $('#uploadForm').submit(function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            $.ajax({
+                url: "{{ route('dashboard.media.store') }}",
+                method: 'POST',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function() {
+                    $('#imageInput').val('');
+                    loadMedia();
+                }
+            });
+        });
+    });
+</script>
