@@ -18,6 +18,14 @@
     $gallery  = collect($details['gallery'] ?? [])
         ->filter(fn ($it) => is_array($it) && !empty($it['src']))
         ->values();
+    $specs = collect($details['specs'] ?? [])
+        ->filter(fn($it) => is_array($it) && !empty($it['name']) && !empty($it['value']))
+        ->values();
+
+    $tags  = collect($details['tags'] ?? [])
+        ->filter(fn($t) => is_string($t) && strlen(trim($t)) > 0)
+        ->map(fn($t) => trim($t))
+        ->values();
 @endphp
 
 <x-template.layouts.index-layouts
@@ -268,10 +276,18 @@
       </div>
     </div>
   </div>
-  <!-- العمود الأيمن: المواصفات والأسعار -->
+  <!-- Right (Pricing) -->
   <div class="lg:col-span-4 flex flex-col gap-8">
     <!-- صندوق المواصفات والأسعار -->
-    <div x-data="{ open: false }" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 p-6 sm:p-8 flex flex-col gap-5">
+    <div
+      x-data="{ open: false, endsAt: {{ $endsAt?->valueOf() ?? 'null' }}, now: Date.now(), remain: null }"
+      x-init="
+               if (endsAt) {
+                 const tick = () => { now = Date.now(); remain = Math.max(0, endsAt - now); };
+                 tick(); setInterval(tick, 1000);
+               }
+             "
+      class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 p-6 sm:p-8 flex flex-col gap-5">
       <div class="text-center">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $translation?->name }}</h2>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1.5">أطلق متجرك الإلكتروني الاحترافي في دقائق</p>
@@ -325,24 +341,37 @@
     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 p-6 sm:p-8">
       <h3 class="flex items-center gap-3 text-xl font-bold text-gray-800 dark:text-white mb-6">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-        تفاصيل القالب
+        {{ t('Frontend.Template_details', 'Template details') }}
       </h3>
-      <div class="space-y-4 text-sm">
-        <div class="flex justify-between"><span class="font-semibold text-gray-700 dark:text-gray-300">لغة القالب</span><span class="text-gray-500 dark:text-gray-400 font-medium">عربي</span></div>
-        <div class="flex justify-between"><span class="font-semibold text-gray-700 dark:text-gray-300">آخر تحديث</span><span class="text-gray-500 dark:text-gray-400 font-medium">01 يوليو، 2025</span></div>
-        <div class="flex justify-between"><span class="font-semibold text-gray-700 dark:text-gray-300">تاريخ النشر</span><span class="text-gray-500 dark:text-gray-400 font-medium">15 مارس، 2024</span></div>
-        <div class="flex justify-between"><span class="font-semibold text-gray-700 dark:text-gray-300">متوافق مع</span><span class="text-gray-500 dark:text-gray-400 font-medium">ووكومرس 8.0+</span></div>
-        <div class="flex justify-between"><span class="font-semibold text-gray-700 dark:text-gray-300">التنسيق</span><span class="text-gray-500 dark:text-gray-400 font-medium">قالب ووردبريس</span></div>
-        <div class="pt-2">
-          <span class="font-semibold text-gray-700 dark:text-gray-300 mb-2 block">الوسوم</span>
-          <div class="flex flex-wrap gap-2">
-            <span class="bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-300 text-xs font-bold px-3 py-1 rounded-full">متجر</span>
-            <span class="bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-300 text-xs font-bold px-3 py-1 rounded-full">زهور</span>
-            <span class="bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-300 text-xs font-bold px-3 py-1 rounded-full">هدايا</span>
-          </div>
+      @if($specs->isNotEmpty())
+        <div class="space-y-4 text-sm">
+          @foreach ($specs as $row)
+            <div class="flex justify-between">
+              <span class="font-semibold text-gray-700 dark:text-gray-300">{{ $row['name'] }}</span>
+              <span class="text-gray-500 dark:text-gray-400 font-medium">{{ $row['value'] }}</span>
+            </div>
+          @endforeach
         </div>
+      @else
+        <div class="space-y-4 text-sm">
+          <p class="text-xs text-gray-500 dark:text-gray-400">لا يوجد تفاصيل للقالب</p>
+        </div>
+      @endif
+      <div class="pt-4">
+        <span class="font-semibold text-gray-700 dark:text-gray-300 mb-2 block">{{ t('Frontend.Tags','Tags') }}</span>
+        @if($tags->isNotEmpty())
+          <div class="flex flex-wrap gap-2">
+            @foreach ($tags as $tag)
+              <span class="bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-300 text-xs font-bold px-3 py-1 rounded-full">{{ $tag }}</span>
+            @endforeach
+          </div>
+        @else
+        <p class="text-xs text-gray-500 dark:text-gray-400">{{ t('Frontend.No_tags','No tags') }}</p>
+        @endif
       </div>
     </div>
+
+
     <!-- صندوق دعوة لاتخاذ إجراء نهائي (CTA V4) -->
     <div style="--color-primary: #240B36; --color-secondary: #AE1028;" class="relative bg-[var(--color-primary)] rounded-2xl shadow-2xl shadow-slate-300/40 dark:shadow-black/40 p-8 text-center overflow-hidden">
       <!-- عناصر زخرفية في الخلفية -->
@@ -379,5 +408,6 @@
   </div>
 </div>
 </section>
+<script src="//unpkg.com/alpinejs" defer></script>
 
 </x-template.layouts.index-layouts>
