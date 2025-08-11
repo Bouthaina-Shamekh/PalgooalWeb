@@ -9,24 +9,42 @@
     $endsAt    = $template->discount_ends_at ? Carbon::parse($template->discount_ends_at) : null;
     $shortDesc = Str::limit(strip_tags($translation?->description ?? ''), 160);
 
-    // details كـ array أولاً (بسبب الـ cast). ولو كانت string قديمة نفكّها.
-    $details = is_array($translation?->details)
+    // حمِّل details سواء جت Array من الـ casts أو JSON نصّي
+    $payload = is_array($translation?->details)
         ? $translation->details
-        : (is_string($translation?->details) ? (json_decode($translation->details, true) ?: []) : []);
+        : (json_decode($translation->details ?? '[]', true) ?: []);
 
-    $features = $details['features'] ?? [];
-    $gallery  = collect($details['gallery'] ?? [])
-        ->filter(fn ($it) => is_array($it) && !empty($it['src']))
-        ->values();
-    $specs = collect($details['specs'] ?? [])
-        ->filter(fn($it) => is_array($it) && !empty($it['name']) && !empty($it['value']))
+    $features = collect($payload['features'] ?? [])
+        ->filter(fn($f) => is_array($f) && !empty($f['title']))
         ->values();
 
-    $tags  = collect($details['tags'] ?? [])
-        ->filter(fn($t) => is_string($t) && strlen(trim($t)) > 0)
+    $gallery = collect($payload['gallery'] ?? [])
+        ->filter(fn($g) => is_array($g) && !empty($g['src']))
+        ->values();
+
+    // المواصفات (اللي سنعرضها في صندوق "تفاصيل القالب/المواصفات")
+    $specs = collect($payload['specs'] ?? [])
+        ->filter(fn($s) => is_array($s) && !empty($s['name']) && !empty($s['value']))
+        ->values();
+
+    // تفاصيل القالب (Details) – قائمة اسم/قيمة منفصلة عن specs
+    $detailsList = collect($payload['details'] ?? [])
+  ->filter(function ($d) {
+      if (!is_array($d)) return false;
+      $hasNameOrLabel = !empty($d['name']) || !empty($d['label']);
+      $val = isset($d['value']) ? trim((string)$d['value']) : '';
+      return $hasNameOrLabel && $val !== '';
+  })
+  ->values();
+
+    // الوسوم
+    $tags = collect($payload['tags'] ?? [])
+        ->filter(fn($t) => is_string($t) && trim($t) !== '')
         ->map(fn($t) => trim($t))
+        ->unique()
         ->values();
 @endphp
+
 
 <x-template.layouts.index-layouts
   title="{{ $translation?->name ??  t('Frontend.Template', 'Template') }} - {{ t('Frontend.Palgoals', 'Palgoals')}}"
@@ -280,61 +298,92 @@
   <div class="lg:col-span-4 flex flex-col gap-8">
     <!-- صندوق المواصفات والأسعار -->
     <div
-      x-data="{ open: false, endsAt: {{ $endsAt?->valueOf() ?? 'null' }}, now: Date.now(), remain: null }"
-      x-init="
-               if (endsAt) {
-                 const tick = () => { now = Date.now(); remain = Math.max(0, endsAt - now); };
-                 tick(); setInterval(tick, 1000);
-               }
-             "
+      x-data="priceBox({{ json_encode([
+        'hasDiscount'  => $hasDiscount,
+        'endsAt'       => $endsAt?->toIso8601String(),
+        'rating'       => (float)($template->rating ?? 0),
+      ]) }})"
       class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 p-6 sm:p-8 flex flex-col gap-5">
       <div class="text-center">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $translation?->name }}</h2>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1.5">أطلق متجرك الإلكتروني الاحترافي في دقائق</p>
       </div>
       <div class="flex items-center justify-center gap-3 text-sm text-gray-600 dark:text-gray-300 border-y border-gray-200 dark:border-gray-700 py-3">
-        <div class="flex text-yellow-400">
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-          <svg class="w-5 h-5 text-gray-300 dark:text-gray-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+        <div class="flex text-yellow-400" aria-label="تقييم {{ number_format($template->rating,1) }} من 5">
+          @for ($i = 1; $i <= 5; $i++)
+            <svg class="w-5 h-5"
+              :class="rating >= {{ $i }} ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'"
+              fill="currentColor" viewBox="0 0 20 20">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+            </svg>
+          @endfor
         </div>
-        <span class="font-semibold">4.1 (128 مراجعة )</span>
+        <span class="font-semibold" x-text="rating.toFixed(1)"></span>
       </div>
       <div class="flex justify-between items-center">
-        <p class="text-base font-medium text-gray-600 dark:text-gray-300">السعر:</p>
+        <p class="text-base font-medium text-gray-600 dark:text-gray-300">{{ t('Frontend.Price', 'Price') }}:</p>
         <div class="flex items-baseline gap-2">
-          <span class="text-4xl font-bold text-primary dark:text-primary-400">$120</span>
-          <span class="text-xl text-gray-400 dark:text-gray-500 line-through">$250</span>
+          <span class="text-4xl font-bold text-primary dark:text-primary-400">
+            ${{ number_format($finalPrice, 2) }}
+          </span>
+          @if($hasDiscount)
+            <span class="text-xl text-gray-400 dark:text-gray-500 line-through">
+              ${{ number_format($template->price, 2) }}
+            </span>
+          @endif
         </div>
       </div>
-      <div class="bg-red-100/50 dark:bg-red-900/20 text-sm p-3 rounded-lg text-red-700 dark:text-red-300 font-semibold text-center">
-        <p>🔥 العرض ينتهي خلال: <span class="font-mono tracking-wider">24:17:55</span></p>
+       @if($hasDiscount && $endsAt)
+        <div class="bg-red-100/50 dark:bg-red-900/20 text-sm p-3 rounded-lg text-red-700 dark:text-red-300 font-semibold text-center">
+          <p>🔥 {{ t('Frontend.Offer_ends_in', 'Offer ends in') }}:
+            <span class="font-mono tracking-wider" x-text="countdown"></span>
+          </p>
+        </div>
+      @endif
+      <div x-data="{ open: false }" class="space-y-3 text-center">
+        <div class="grid grid-cols-2 gap-x-6 gap-y-4 text-sm pt-2">
+          @php $short = $detailsList->take(3); @endphp
+          @forelse($short as $row)
+            @php
+              $name  = trim($row['name']  ?? $row['label'] ?? '');
+              $value = trim($row['value'] ?? '');
+            @endphp
+            <div class="font-semibold text-gray-800 dark:text-gray-200">{{ $name !== '' ? $name : '—' }}</div>
+            <div class="text-gray-600 dark:text-gray-400 text-end">{{ $value !== '' ? $value : '—' }}</div>
+          @empty
+            <div class="font-semibold text-gray-800 dark:text-gray-200">{{ t('Frontend.Hosting', 'Hosting') }}</div>
+            <div class="text-gray-600 dark:text-gray-400 text-end">5 جيجا بايت SSD</div>
+            <div class="font-semibold text-gray-800 dark:text-gray-200">{{ t('Frontend.Support', 'Support') }}</div>
+            <div class="text-gray-600 dark:text-gray-400 text-end">24/7</div>
+          @endforelse
+          @if($detailsList->count() > 3)
+            <template x-if="open">
+              <div class="contents">
+                @foreach($detailsList->slice(3) as $row)
+                  @php
+                    $name  = trim($row['name']  ?? $row['label'] ?? '');
+                    $value = trim($row['value'] ?? '');
+                  @endphp
+                  <div class="font-semibold text-gray-800 dark:text-gray-200">{{ $name !== '' ? $name : '—' }}</div>
+                  <div class="text-gray-600 dark:text-gray-400 text-end">{{ $value !== '' ? $value : '—' }}</div>
+                @endforeach         
+              </div>
+            </template>
+          @endif
+        </div>
+        @if($detailsList->count() > 3)
+          <button @click="open = !open" class="text-sm font-semibold text-primary dark:text-primary-400 hover:text-primary/80 transition-colors">
+            <span x-show="!open">{{ t('Frontend.Show_all_specs','Show all specs') }}</span>
+            <span x-show="open">{{ t('Frontend.Hide_specs','Hide specs') }}</span>
+          </button>
+        @endif
       </div>
-      <div class="grid grid-cols-2 gap-x-6 gap-y-4 text-sm pt-2">
-        <div class="font-semibold text-gray-800 dark:text-gray-200">الدومين</div><div class="text-gray-600 dark:text-gray-400 text-end">مجاني للسنة الأولى</div>
-        <div class="font-semibold text-gray-800 dark:text-gray-200">الاستضافة</div><div class="text-gray-600 dark:text-gray-400 text-end">5 جيجا بايت SSD</div>
-        <div class="font-semibold text-gray-800 dark:text-gray-200">الدعم الفني</div><div class="text-gray-600 dark:text-gray-400 text-end">متواصل 24/7</div>
-        <template x-if="open">
-          <div class="contents">
-            <div class="font-semibold text-gray-800 dark:text-gray-200">الباندويث</div><div class="text-gray-600 dark:text-gray-400 text-end">80 جيجا بايت</div>
-            <div class="font-semibold text-gray-800 dark:text-gray-200">لوحة التحكم</div><div class="text-gray-600 dark:text-gray-400 text-end">ووردبريس</div>
-            <div class="font-semibold text-gray-800 dark:text-gray-200">شهادة الأمان</div><div class="text-gray-600 dark:text-gray-400 text-end">SSL مجانية</div>
-            <div class="font-semibold text-gray-800 dark:text-gray-200">بريد إلكتروني</div><div class="text-gray-600 dark:text-gray-400 text-end">حسابات متعددة</div>
-          </div>
-        </template>
-      </div>
-      <button @click="open = !open" class="text-sm font-semibold text-primary dark:text-primary-400 hover:text-primary/80 transition-colors">
-        <span x-show="!open">عرض كل المواصفات</span>
-        <span x-show="open">إخفاء المواصفات</span>
-      </button>
       <a href="#" class="w-full text-center bg-primary hover:bg-primary/90 text-white py-3.5 rounded-xl font-bold text-base shadow-xl shadow-primary/30 hover:shadow-primary/40 transition-all duration-300 transform hover:-translate-y-1">
-        🛒 اشترك الآن
+        🛒 {{ t('Frontend.Subscribe_now', 'Subscribe now') }}
       </a>
       <div class="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
         <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        <span>ضمان استعادة الأموال لمدة 30 يومًا</span>
+        <span>{{ t('Frontend.Money_back_30_days', '30-day money-back guarantee') }}</span>
       </div>
     </div>
     <!-- صندوق تفاصيل القالب -->
@@ -409,5 +458,34 @@
 </div>
 </section>
 <script src="//unpkg.com/alpinejs" defer></script>
+<script>
+  document.addEventListener('alpine:init', () => {
+    Alpine.data('priceBox', (cfg) => ({
+      rating: Number(cfg.rating || 0),
+      countdown: '--:--:--',
+      endsAt: cfg.endsAt ? new Date(cfg.endsAt).getTime() : null,
+
+      init() {
+        if (!cfg.hasDiscount || !this.endsAt) return;
+        this.tick();
+        this._timer = setInterval(() => this.tick(), 1000);
+        this.$watch('endsAt', () => this.tick());
+      },
+      tick() {
+        const now = Date.now();
+        let diff = (this.endsAt - now);
+        if (diff <= 0) {
+          this.countdown = '00:00:00';
+          clearInterval(this._timer);
+          return;
+        }
+        const h = Math.floor(diff / 3_600_000); diff %= 3_600_000;
+        const m = Math.floor(diff / 60_000);    diff %= 60_000;
+        const s = Math.floor(diff / 1_000);
+        this.countdown = [h,m,s].map(v => String(v).padStart(2,'0')).join(':');
+      }
+    }))
+  })
+</script>
 
 </x-template.layouts.index-layouts>

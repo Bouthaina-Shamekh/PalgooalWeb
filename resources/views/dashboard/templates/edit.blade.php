@@ -129,6 +129,17 @@
                                 {{-- يتم ملؤها ديناميكياً --}}
                             </div>
                         </div>
+                        {{-- التفاصيل (Details) --}}
+                        <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white" data-details-wrapper>
+                            <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
+                                <h4 class="text-base sm:text-lg font-bold text-gray-800">تفاصيل القالب (Details)</h4>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" class="add-detail inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">إضافة سطر</button>
+                                    <button type="button" class="clear-details inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200">مسح الكل</button>
+                                </div>
+                            </div>
+                            <div class="space-y-3" data-details-list></div>
+                        </div>
                         {{-- المواصفات (Specs) --}}
                         <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white" data-specs-wrapper>
                             <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
@@ -155,28 +166,28 @@
                             <div class="flex items-center gap-2 mb-3">
                                 <input type="text" class="tag-input w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
                                     placeholder="اكتب الوسم ثم اضغط إضافة (مثال: متجر)">
-                                    <button type="button"
-                                        class="add-tag inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">
-                                        إضافة
-                                    </button>
-                                    <button type="button"
-                                        class="clear-tags inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200">
-                                        مسح الكل
-                                    </button>
-                                </div>
-                                <div class="flex flex-wrap gap-2" data-tags-list></div>
+                                <button type="button"
+                                    class="add-tag inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">
+                                    إضافة
+                                </button>
+                                <button type="button"
+                                    class="clear-tags inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200">
+                                    مسح الكل
+                                </button>
                             </div>
-                            {{-- الحقل الذي سيحمل JSON النهائي --}}
-                            <input type="hidden"
-                                name="translations[{{ $loop->index }}][details]"
-                                class="details-json"
-                                value="{{ old("translations.$loop->index.details",
-                                    is_array($translation?->details)
-                                    ? json_encode($translation->details, JSON_UNESCAPED_UNICODE)
-                                    : ($translation?->details ?? '')
-                                ) }}"
-                                data-existing='@json($translation?->details)'>
-                            <p class="mt-2 text-xs text-gray-500">يتم حفظ المميزات كـ JSON تلقائياً داخل الحقل المخفي.</p>
+                            <div class="flex flex-wrap gap-2" data-tags-list></div>
+                        </div>
+                        {{-- الحقل الذي سيحمل JSON النهائي --}}
+                        <input type="hidden"
+                            name="translations[{{ $loop->index }}][details]"
+                            class="details-json"
+                            value="{{ old("translations.$loop->index.details",
+                                is_array($translation?->details)
+                                ? json_encode($translation->details, JSON_UNESCAPED_UNICODE)
+                                : ($translation?->details ?? '')
+                            ) }}"
+                            data-existing='@json($translation?->details)'>
+                        <p class="mt-2 text-xs text-gray-500">يتم حفظ المميزات كـ JSON تلقائياً داخل الحقل المخفي.</p>
                     </div>
                 @endforeach
             </div>
@@ -228,86 +239,103 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('[data-locale-section]').forEach(section => {
-    // عناصر المميزات
+    // المميزات
     const listFeatures = section.querySelector('[data-features-list]');
     const addFeature   = section.querySelector('.add-feature');
     const clearFeatures= section.querySelector('.clear-features');
 
-    // عناصر المعرض
+    // المعرض
     const listImages   = section.querySelector('[data-images-list]');
     const addImage     = section.querySelector('.add-image');
     const clearImages  = section.querySelector('.clear-images');
 
-    // عناصر المواصفات
+    // المواصفات (Specs)
     const listSpecs    = section.querySelector('[data-specs-list]');
     const addSpec      = section.querySelector('.add-spec');
     const clearSpecs   = section.querySelector('.clear-specs');
 
-    // عناصر الوسوم
+    // التفاصيل (Details) ← مفقود سابقاً
+    const listDetails  = section.querySelector('[data-details-list]');
+    const addDetail    = section.querySelector('.add-detail');
+    const clearDetails = section.querySelector('.clear-details');
+
+    // الوسوم
     const tagsInput    = section.querySelector('.tag-input');
     const addTagBtn    = section.querySelector('.add-tag');
     const clearTagsBtn = section.querySelector('.clear-tags');
     const tagsList     = section.querySelector('[data-tags-list]');
 
-    // الحقل المخفي الوحيد
     const detailsInp   = section.querySelector('.details-json');
 
-    // Helpers
     function escapeHtml(str){ return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
-                                           .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
-                                           .replace(/'/g,'&#039;'); }
+                                               .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+                                               .replace(/'/g,'&#039;'); }
 
-    // Rows builders
+    // Row: Feature
     function featureRow(item = { title: '', icon: '' }) {
       const row = document.createElement('div');
       row.className = 'feature-row grid grid-cols-1 sm:grid-cols-[1fr_160px_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
       row.innerHTML = `
         <input type="text" class="feat-title w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-               placeholder="عنوان الميزة (مثال: تصميم احترافي)" value="${escapeHtml(item.title)}">
+               placeholder="عنوان الميزة" value="${escapeHtml(item.title)}">
         <input type="text" class="feat-icon w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
                placeholder="🎨 أيقونة (اختياري)" value="${escapeHtml(item.icon || '')}">
-        <button type="button" class="remove-feature inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>
-      `;
+        <button type="button" class="remove-feature inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>`;
       row.querySelector('.remove-feature').addEventListener('click', () => { row.remove(); syncJson(); });
       row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncJson));
       return row;
     }
 
+    // Row: Image
     function imageRow(item = { src: '', alt: '' }) {
       const row = document.createElement('div');
       row.className = 'image-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
       row.innerHTML = `
         <input type="text" class="img-src w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-               placeholder="رابط الصورة (http/https أو storage/...)" value="${escapeHtml(item.src)}">
+               placeholder="رابط الصورة" value="${escapeHtml(item.src)}">
         <input type="text" class="img-alt w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
                placeholder="نص بديل (ALT)" value="${escapeHtml(item.alt || '')}">
-        <button type="button" class="remove-image inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>
-      `;
+        <button type="button" class="remove-image inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>`;
       row.querySelector('.remove-image').addEventListener('click', () => { row.remove(); syncJson(); });
       row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncJson));
       return row;
     }
 
+    // Row: Spec
     function specRow(item = { name: '', value: '' }) {
       const row = document.createElement('div');
       row.className = 'spec-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
       row.innerHTML = `
         <input type="text" class="spec-name w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-               placeholder="الاسم (مثال: لغة القالب)" value="${escapeHtml(item.name)}">
+               placeholder="الاسم" value="${escapeHtml(item.name)}">
         <input type="text" class="spec-value w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-               placeholder="القيمة (مثال: عربي)" value="${escapeHtml(item.value)}">
-        <button type="button" class="remove-spec inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>
-      `;
+               placeholder="القيمة" value="${escapeHtml(item.value)}">
+        <button type="button" class="remove-spec inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>`;
       row.querySelector('.remove-spec').addEventListener('click', () => { row.remove(); syncJson(); });
       row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncJson));
       return row;
     }
 
+    // Row: Detail ← جديد
+    function detailRow(item = { name: '', value: '' }) {
+      const row = document.createElement('div');
+      row.className = 'detail-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
+      row.innerHTML = `
+        <input type="text" class="detail-name w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+               placeholder="العنصر (مثال: آخر تحديث)" value="${escapeHtml(item.name)}">
+        <input type="text" class="detail-value w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+               placeholder="القيمة (مثال: يوليو 2025)" value="${escapeHtml(item.value)}">
+        <button type="button" class="remove-detail inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>`;
+      row.querySelector('.remove-detail').addEventListener('click', () => { row.remove(); syncJson(); });
+      row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncJson));
+      return row;
+    }
+
+    // Tag chip
     function addTagChip(label){
       const text = (label || '').trim();
-      if (!text) return;
-      // منع التكرار
-      const exists = Array.from(tagsList?.querySelectorAll('[data-tag]') || [])
+      if (!text || !tagsList) return;
+      const exists = Array.from(tagsList.querySelectorAll('[data-tag]'))
         .some(el => (el.dataset.tag || '').toLowerCase() === text.toLowerCase());
       if (exists) return;
 
@@ -317,11 +345,11 @@ document.addEventListener('DOMContentLoaded', function () {
       chip.innerHTML = `${escapeHtml(text)}
         <button type="button" class="remove-tag ml-1 text-primary hover:text-primary/70">×</button>`;
       chip.querySelector('.remove-tag').addEventListener('click', () => { chip.remove(); syncJson(); });
-      tagsList?.appendChild(chip);
+      tagsList.appendChild(chip);
       syncJson();
     }
 
-    // Sync details (merge)
+    // Sync JSON
     function syncJson() {
       const features = Array.from(listFeatures?.querySelectorAll('.feature-row') || []).map(r => ({
         title: r.querySelector('.feat-title')?.value.trim() || '',
@@ -336,58 +364,80 @@ document.addEventListener('DOMContentLoaded', function () {
       const specs = Array.from(listSpecs?.querySelectorAll('.spec-row') || []).map(r => ({
         name:  r.querySelector('.spec-name')?.value.trim()  || '',
         value: r.querySelector('.spec-value')?.value.trim() || ''
-      })).filter(x => x.name.length && x.value.length);
+      })).filter(x => x.name && x.value);
+
+      // تفاصيل القالب (Details) ← نجمعها
+      const details = Array.from(listDetails?.querySelectorAll('.detail-row') || []).map(r => ({
+        name:  r.querySelector('.detail-name')?.value.trim()  || '',
+        value: r.querySelector('.detail-value')?.value.trim() || ''
+      })).filter(x => x.name && x.value);
 
       const tags = Array.from(tagsList?.querySelectorAll('[data-tag]') || [])
         .map(el => (el.dataset.tag || '').trim())
         .filter(Boolean);
 
-      // اقرأ القديم لو في مفاتيح أخرى غير هذه (للمستقبل)
       let payload = {};
-      try {
-        if (detailsInp.value) payload = JSON.parse(detailsInp.value) || {};
-      } catch(e){ payload = {}; }
+      try { if (detailsInp.value) payload = JSON.parse(detailsInp.value) || {}; } catch(e){ payload = {}; }
 
       payload.features = features;
       payload.gallery  = gallery;
       payload.specs    = specs;
+      payload.details  = details;  // ← مهم
       payload.tags     = tags;
 
       detailsInp.value = JSON.stringify(payload);
     }
 
-    // Init from existing
-    (function init() {
-      // حمّل القديم من value أو data-existing
-      let existing = null;
+    // Init
+    (function init(){
+      let existing = {};
       try {
-        if (detailsInp.value) existing = JSON.parse(detailsInp.value);
-        if (!existing && detailsInp.dataset.existing) existing = JSON.parse(detailsInp.dataset.existing);
-      } catch (e) { existing = null; }
+        if (detailsInp.value) existing = JSON.parse(detailsInp.value) || {};
+        else if (detailsInp.dataset.existing) existing = JSON.parse(detailsInp.dataset.existing) || {};
+      } catch(e){ existing = {}; }
 
-      const exFeatures = (existing && Array.isArray(existing.features)) ? existing.features : [];
-      const exGallery  = (existing && Array.isArray(existing.gallery))  ? existing.gallery  : [];
-      const exSpecs    = (existing && Array.isArray(existing.specs))    ? existing.specs    : [];
-      const exTags     = (existing && Array.isArray(existing.tags))     ? existing.tags     : [];
-
-      // املأ من القديم
+      // Features
       if (listFeatures) {
-        if (exFeatures.length) exFeatures.forEach(f => listFeatures.appendChild(featureRow(f)));
-        if (!listFeatures.children.length) listFeatures.appendChild(featureRow());
-      }
-      if (listImages) {
-        if (exGallery.length) exGallery.forEach(it => listImages.appendChild(imageRow(it)));
-        if (!listImages.children.length) listImages.appendChild(imageRow());
-      }
-      if (listSpecs) {
-        if (exSpecs.length) exSpecs.forEach(s => listSpecs.appendChild(specRow(s)));
-        if (!listSpecs.children.length) listSpecs.appendChild(specRow());
-      }
-      if (Array.isArray(exTags) && exTags.length && tagsList) {
-        exTags.forEach(t => addTagChip(t));
+        if (Array.isArray(existing.features) && existing.features.length) {
+          existing.features.forEach(f => listFeatures.appendChild(featureRow(f)));
+        } else {
+          listFeatures.appendChild(featureRow());
+        }
       }
 
-      // أزرار
+      // Gallery
+      if (listImages) {
+        if (Array.isArray(existing.gallery) && existing.gallery.length) {
+          existing.gallery.forEach(img => listImages.appendChild(imageRow(img)));
+        } else {
+          listImages.appendChild(imageRow());
+        }
+      }
+
+      // Specs
+      if (listSpecs) {
+        if (Array.isArray(existing.specs) && existing.specs.length) {
+          existing.specs.forEach(s => listSpecs.appendChild(specRow(s)));
+        } else {
+          listSpecs.appendChild(specRow());
+        }
+      }
+
+      // Details ← تعبئة من الموجود
+      if (listDetails) {
+        if (Array.isArray(existing.details) && existing.details.length) {
+          existing.details.forEach(d => listDetails.appendChild(detailRow(d)));
+        } else {
+          listDetails.appendChild(detailRow());
+        }
+      }
+
+      // Tags
+      if (tagsList && Array.isArray(existing.tags) && existing.tags.length) {
+        existing.tags.forEach(t => addTagChip(t));
+      }
+
+      // Events
       addFeature?.addEventListener('click', () => { listFeatures.appendChild(featureRow()); syncJson(); });
       clearFeatures?.addEventListener('click', () => { listFeatures.innerHTML = ''; syncJson(); });
 
@@ -397,17 +447,23 @@ document.addEventListener('DOMContentLoaded', function () {
       addSpec?.addEventListener('click', () => { listSpecs.appendChild(specRow()); syncJson(); });
       clearSpecs?.addEventListener('click', () => { listSpecs.innerHTML = ''; syncJson(); });
 
+      // Events: Details
+      addDetail?.addEventListener('click', () => { listDetails.appendChild(detailRow()); syncJson(); });
+      clearDetails?.addEventListener('click', () => { listDetails.innerHTML = ''; syncJson(); });
+
+      // Events: Tags
       addTagBtn?.addEventListener('click', () => { addTagChip(tagsInput.value); tagsInput.value=''; tagsInput.focus(); });
       tagsInput?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); addTagChip(tagsInput.value); tagsInput.value=''; }
       });
-      clearTagsBtn?.addEventListener('click', () => { tagsList.innerHTML = ''; syncJson(); });
+      clearTagsBtn?.addEventListener('click', () => { if (tagsList) tagsList.innerHTML = ''; syncJson(); });
 
       syncJson();
     })();
   });
 });
 </script>
+
 
 
 
