@@ -232,7 +232,7 @@
                         <form id="uploadForm" enctype="multipart/form-data" class="mb-3">
                             <input type="hidden" name="_token" value="{{ csrf_token() }}">
                             <input type="file" name="image" id="imageInput" class="form-control mb-2" required>
-                            <button type="submit" class="btn btn-primary">رفع صورة</button>
+                            <button type="button" id="uploadFormBtn" class="btn btn-primary">رفع صورة</button>
                         </form>
                         <div id="mediaGrid" class="masonry">
                             {{-- الصور ستُملأ تلقائيًا عبر jQuery --}}
@@ -334,22 +334,39 @@
             $('.modal').removeClass('show animate');
         });
 
-        // رفع صورة
-        $('#uploadForm').submit(function(e) {
+        $(document).on('click', '#uploadFormBtn', function(e) {
             e.preventDefault();
-            let formData = new FormData(this);
+
+            const $form = $(this).closest('form');
+            const formEl = $form[0];
+
+            const fileInput = $form.find('input[type="file"]')[0];
+
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                alert('من فضلك اختر صورة قبل الرفع.');
+                return;
+            }
+
+            const formData = new FormData(formEl);
+
             $.ajax({
                 url: "{{ route('dashboard.media.store') }}",
-                method: 'POST',
+                method: "POST",
                 data: formData,
-                contentType: false,
                 processData: false,
+                contentType: false,
                 success: function() {
-                    $('#imageInput').val('');
+                    $(fileInput).val('');
                     loadMedia();
+                },
+                error: function(xhr) {
+                    console.error(xhr.responseText || xhr.statusText);
+                    alert('تعذّر رفع الصورة.');
                 }
             });
         });
+
+
 
         // جلب الصور
         function loadMedia() {

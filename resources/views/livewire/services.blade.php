@@ -157,8 +157,7 @@
 
                 <div class="flex items-center gap-2">
                     <input type="text" id="iconInput" wire:model="service.icon" class="form-control hidden">
-                    <button type="button" data-pc-toggle="modal"
-                        data-pc-target="#mediaModal" id="openMediaModalBtn"
+                    <button type="button" data-pc-toggle="modal" data-pc-target="#mediaModal" id="openMediaModalBtn"
                         class="bg-primary text-white px-2 py-1 rounded text-sm">
                         اختر من الوسائط أو ارفع جديد
                     </button>
@@ -225,7 +224,7 @@
                         <form id="uploadForm" enctype="multipart/form-data" class="mb-3">
                             <input type="hidden" name="_token" value="{{ csrf_token() }}">
                             <input type="file" name="image" id="imageInput" class="form-control mb-2" required>
-                            <button type="submit" class="btn btn-primary">رفع صورة</button>
+                            <button type="button" id="uploadFormBtn" class="btn btn-primary">رفع صورة</button>
                         </form>
                         <div id="mediaGrid" class="masonry">
                             {{-- الصور ستُملأ تلقائيًا عبر jQuery --}}
@@ -328,18 +327,34 @@
         });
 
         // رفع صورة
-        $('#uploadForm').submit(function(e) {
+        $(document).on('click', '#uploadFormBtn', function(e) {
             e.preventDefault();
-            let formData = new FormData(this);
+
+            const $form = $(this).closest('form');
+            const formEl = $form[0];
+
+            const fileInput = $form.find('input[type="file"]')[0];
+
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                alert('من فضلك اختر صورة قبل الرفع.');
+                return;
+            }
+
+            const formData = new FormData(formEl);
+
             $.ajax({
                 url: "{{ route('dashboard.media.store') }}",
-                method: 'POST',
+                method: "POST",
                 data: formData,
-                contentType: false,
                 processData: false,
+                contentType: false,
                 success: function() {
-                    $('#imageInput').val('');
+                    $(fileInput).val('');
                     loadMedia();
+                },
+                error: function(xhr) {
+                    console.error(xhr.responseText || xhr.statusText);
+                    alert('تعذّر رفع الصورة.');
                 }
             });
         });
@@ -399,7 +414,9 @@
             $('#closeMediaModal').click();
             const input = document.getElementById('iconInput');
             input.value = path;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('input', {
+                bubbles: true
+            }));
         });
     });
 </script>

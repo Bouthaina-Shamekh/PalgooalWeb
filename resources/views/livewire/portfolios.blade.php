@@ -185,7 +185,7 @@
                 <label class="block text-sm font-medium">الصورة الافتراضية</label>
 
                 <div class="flex items-center gap-2">
-                    <input type="text" id="imageInput" wire:model="portfolio.default_image" class="form-control">
+                    <input type="text" id="imageInput" wire:model="portfolio.default_image" class="form-control hidden">
                     <button type="button" data-mode="single"
                         class="openMediaModal bg-primary text-white px-2 py-1 rounded text-sm">
                         اختر من الوسائط
@@ -207,7 +207,7 @@
                 <label class="block text-sm font-medium">الصور المتعددة</label>
 
                 <div class="flex items-center gap-2">
-                    <input type="text" id="imagesInput" wire:model="portfolio.images" class="form-control">
+                    <input type="text" id="imagesInput" wire:model="portfolio.images" class="form-control hidden">
                     <button type="button" data-mode="multiple"
                         class="openMediaModal bg-primary text-white px-2 py-1 rounded text-sm">
                         اختر من الوسائط
@@ -339,7 +339,7 @@
                         <form id="uploadForm" enctype="multipart/form-data" class="mb-3">
                             <input type="hidden" name="_token" value="{{ csrf_token() }}">
                             <input type="file" name="image" id="imageInput" class="form-control mb-2" required>
-                            <button type="submit" class="btn btn-primary">رفع صورة</button>
+                            <button type="button" id="uploadFormBtn" class="btn btn-primary">رفع صورة</button>
                         </form>
                         <div id="mediaGrid" class="masonry">
                             {{-- الصور ستُملأ تلقائيًا عبر jQuery --}}
@@ -508,9 +508,9 @@
             loadMedia();
             $('.modal').removeClass('show animate');
             $('#mediaModal').addClass('show animate');
-            if(mediaMode === 'multiple') {
+            if (mediaMode === 'multiple') {
                 $('#selectMediaBtn').show();
-            }else{
+            } else {
                 $('#selectMediaBtn').hide();
             }
         });
@@ -579,18 +579,34 @@
         });
 
         // رفع صورة جديدة
-        $('#uploadForm').submit(function(e) {
+        $(document).on('click', '#uploadFormBtn', function(e) {
             e.preventDefault();
-            const formData = new FormData(this);
+
+            const $form = $(this).closest('form');
+            const formEl = $form[0];
+
+            const fileInput = $form.find('input[type="file"]')[0];
+
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                alert('من فضلك اختر صورة قبل الرفع.');
+                return;
+            }
+
+            const formData = new FormData(formEl);
+
             $.ajax({
                 url: "{{ route('dashboard.media.store') }}",
-                method: 'POST',
+                method: "POST",
                 data: formData,
-                contentType: false,
                 processData: false,
+                contentType: false,
                 success: function() {
-                    $('#imageInput').val('');
+                    $(fileInput).val('');
                     loadMedia();
+                },
+                error: function(xhr) {
+                    console.error(xhr.responseText || xhr.statusText);
+                    alert('تعذّر رفع الصورة.');
                 }
             });
         });
