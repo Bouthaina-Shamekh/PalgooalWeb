@@ -233,63 +233,83 @@
         </div>
         <!-- نموذج إضافة مراجعة (يظهر عند الضغط ) -->
         <div x-show="addReview" x-collapse class="mb-8" x-data="{ rating: 0, hoverRating: 0 }">
-          <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-            <h4 class="font-bold text-lg text-gray-800 dark:text-white mb-4">شاركنا رأيك</h4>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              <input type="text" placeholder="اسمك الكامل" class="w-full bg-slate-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 rounded-md focus:ring-primary focus:border-primary transition">
-              <input type="email" placeholder="بريدك الإلكتروني (لن يتم نشره)" class="w-full bg-slate-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 rounded-md focus:ring-primary focus:border-primary transition">
-            </div>
-            <textarea placeholder="اكتب مراجعتك هنا..." rows="4" class="w-full bg-slate-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 rounded-md focus:ring-primary focus:border-primary transition mb-4"></textarea>
-            <div class="flex flex-wrap items-center justify-between gap-4">
-              <div class="flex items-center gap-2">
-                <span class="font-semibold text-sm text-gray-700 dark:text-gray-300">تقييمك:</span>
-                <div class="flex" @mouseleave="hoverRating = 0">
-                  <template x-for="star in 5" :key="star">
-                    <svg @click="rating = star" @mouseover="hoverRating = star" class="w-6 h-6 cursor-pointer" :class="(hoverRating >= star || rating >= star) ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                  </template>
-                </div>
+          <form method="POST" action="{{ route('frontend.templates.reviews.store', ['template' => $template->id]) }}">
+            @csrf
+            @if (session('success'))
+              <div class="text-green-600 text-sm mb-3">{{ session('success') }}</div>
+            @endif
+            
+            @if ($errors->any())
+              <div class="text-red-600 text-sm mb-3">
+                <ul class="list-disc ps-5">
+                  @foreach ($errors->all() as $e)
+                    <li>{{ $e }}</li>
+                  @endforeach
+                </ul>
               </div>
-              <button class="bg-primary hover:bg-primary/90 text-white font-bold py-2 px-6 rounded-lg transition-all duration-300 transform hover:-translate-y-0.5">إرسال المراجعة</button>
-            </div>
+            @endif
+            <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <h4 class="font-bold text-lg text-gray-800 dark:text-white mb-4">شاركنا رأيك</h4>
+              @guest('client')
+                @guest
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <input type="text" name="author_name" placeholder="اسمك الكامل" class="w-full bg-slate-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 rounded-md focus:ring-primary focus:border-primary transition" required>
+                    <input type="email" name="author_email" placeholder="بريدك الإلكتروني (لن يتم نشره)" class="w-full bg-slate-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 rounded-md focus:ring-primary focus:border-primary transition" required>
+                  </div>
+                @endguest
+              @endguest 
+              <textarea name="comment" placeholder="اكتب مراجعتك هنا..." rows="4" class="w-full bg-slate-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600 rounded-md focus:ring-primary focus:border-primary transition mb-4"></textarea>
+              <input type="hidden" name="rating" :value="rating">
+              <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                  <span class="font-semibold text-sm text-gray-700 dark:text-gray-300">تقييمك:</span>
+                  <div class="flex" @mouseleave="hoverRating = 0">
+                    <template x-for="star in 5" :key="star">
+                      <svg @click="rating = star"
+                        @mouseover="hoverRating = star"
+                        class="w-6 h-6 cursor-pointer"
+                        :class="(hoverRating >= star || rating >= star) ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'"
+                        fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                      </svg>
+                    </template>
+                  </div>
+                </div>
+                <button class="bg-primary hover:bg-primary/90 text-white font-bold py-2 px-6 rounded-lg transition-all duration-300 transform hover:-translate-y-0.5">إرسال المراجعة</button>
+              </div>
           </div>
-        </div>
-        <!-- قائمة المراجعات الحالية -->
-        <div class="space-y-6">
+        </form>
+      </div>
+      <!-- قائمة المراجعات الحالية -->
+      <div class="space-y-6">
+        @foreach ($template->reviews()->approved()->latest()->take(10)->get() as $review)
           <!-- المراجعة الأولى -->
           <div class="flex gap-4">
-            <img loading="lazy" src="https://randomuser.me/api/portraits/men/32.jpg" alt="صورة العميل" class="w-12 h-12 rounded-full object-cover border-2 border-primary/50">
+            <img loading="lazy" src="{{ $review->client?->avatar ? asset('storage/'.$review->client->avatar) : 'https://ui-avatars.com/api/?name='.urlencode($review->author_name ?? $review->client?->first_name) }}" alt="صورة العميل" class="w-12 h-12 rounded-full object-cover border-2 border-primary/50">
             <div class="flex-1">
               <div class="flex justify-between items-center mb-1">
-                <h4 class="font-bold text-gray-800 dark:text-white">أحمد خالد</h4>
+                <h4 class="font-bold text-gray-800 dark:text-white">
+                  {{ $review->client?->first_name.' '.$review->client?->last_name
+                      ?? $review->user?->name
+                      ?? $review->author_name
+                      ?? 'مستخدم' }}
+                </h4>
                 <div class="flex text-yellow-400">
                   <!-- نجوم التقييم -->
-                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+                  @for($i=1;$i<=5;$i++)
+                    <svg class="w-4 h-4 {{ $review->rating >= $i ? '' : 'text-gray-300 dark:text-gray-600' }}" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                  @endfor
                 </div>
               </div>
-              <p class="text-gray-600 dark:text-gray-300 text-sm">"قالب رائع وسهل الاستخدام! الدعم الفني كان سريع الاستجابة وساعدني في كل خطوة. أنصح به بشدة."</p>
+              <p class="text-gray-600 dark:text-gray-300 text-sm">{{ $review->comment }}</p>
             </div>
           </div>
+        @endforeach
           <!-- المراجعة الثانية -->
           <div class="flex gap-4">
-            <img loading="lazy" src="https://randomuser.me/api/portraits/women/44.jpg" alt="صورة العميلة" class="w-12 h-12 rounded-full object-cover border-2 border-primary/50">
-            <div class="flex-1">
-              <div class="flex justify-between items-center mb-1">
-                <h4 class="font-bold text-gray-800 dark:text-white">فاطمة علي</h4>
-              <div class="flex text-yellow-400">
-                <!-- نجوم التقييم -->
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                <svg class="w-4 h-4 text-gray-300 dark:text-gray-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-              </div>
-            </div>
-            <p class="text-gray-600 dark:text-gray-300 text-sm">"تصميم القالب جميل جداً وأنيق، ومناسب جداً لمتاجر الهدايا والزهور. سرعة الموقع ممتازة بعد تركيب القالب."</p>
-          </div>
+            
         </div>
       </div>
     </div>
@@ -309,16 +329,19 @@
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1.5">أطلق متجرك الإلكتروني الاحترافي في دقائق</p>
       </div>
       <div class="flex items-center justify-center gap-3 text-sm text-gray-600 dark:text-gray-300 border-y border-gray-200 dark:border-gray-700 py-3">
-        <div class="flex text-yellow-400" aria-label="تقييم {{ number_format($template->rating,1) }} من 5">
+        @php
+          $avg = round($template->avgRating(),1);
+        @endphp
+        <div class="flex text-yellow-400" aria-label="تقييم {{ number_format($avg,1) }} من 5">
           @for ($i = 1; $i <= 5; $i++)
-            <svg class="w-5 h-5"
+            <svg class="w-5 h-5 {{ $avg >= $i ? '' : 'text-gray-300 dark:text-gray-600' }}"
               :class="rating >= {{ $i }} ? 'text-yellow-400' : 'text-gray-300 dark:text-gray-600'"
               fill="currentColor" viewBox="0 0 20 20">
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
             </svg>
           @endfor
         </div>
-        <span class="font-semibold" x-text="rating.toFixed(1)"></span>
+        <span class="font-semibold" x-text="rating.toFixed(1)">{{ number_format($avg,1) }}</span>
       </div>
       <div class="flex justify-between items-center">
         <p class="text-base font-medium text-gray-600 dark:text-gray-300">{{ t('Frontend.Price', 'Price') }}:</p>

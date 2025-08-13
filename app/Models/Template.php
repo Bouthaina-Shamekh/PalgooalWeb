@@ -40,4 +40,20 @@ class Template extends Model
         $locale = $locale ?? app()->getLocale();
         return $this->translations->where('locale', $locale)->first();
     }
+
+    public function reviews()
+    {
+        return $this->hasMany(\App\Models\TemplateReview::class);
+    }
+
+    // متوسط التقييم المعتمد فقط
+    public function avgRating(): float
+    {
+        return (float) ($this->reviews()->approved()->avg('rating') ?? 0);
+    }
+
+    public function getRouteKeyName()
+    {
+        return 'slug';
+    }
 }

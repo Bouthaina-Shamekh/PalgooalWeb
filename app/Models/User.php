@@ -46,4 +46,9 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function templateReviews()
+    {
+        return $this->hasMany(\App\Models\TemplateReview::class);
+    }
 }

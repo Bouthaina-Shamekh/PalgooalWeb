@@ -8,6 +8,7 @@ use App\Models\Portfolio;
 use App\Models\Template;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Frontend\TemplateController as FrontTemplateController;
+use App\Http\Controllers\Frontend\TemplateReviewController;
 
 // Route::get('/', function () {
 //     return view('tamplate.home');
@@ -50,8 +51,9 @@ Route::middleware(['setLocale'])->group(function () {
 
     Route::get('/templates/{slug}', [FrontTemplateController::class, 'show'])->name('template.show');
     Route::get('/templates/{slug}/preview', [FrontTemplateController::class, 'preview'])->name('template.preview');
-
-
+    Route::post('templates/{template}/reviews', [TemplateReviewController::class, 'store'])
+        ->name('frontend.templates.reviews.store')
+        ->whereNumber('template');
 
     Route::get('change-locale/{locale}', function ($locale) {
         $language = Language::where('code', $locale)->where('is_active', true)->first();

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
 use App\Models\Template;
-use Illuminate\Http\Request;
 
 class TemplateController extends Controller
 {
@@ -12,10 +11,12 @@ class TemplateController extends Controller
     {
         $locale = app()->getLocale();
 
-        $template = Template::with(['translations','categoryTemplate.translations'])
-            ->whereHas('translations', fn($q)=> $q->where('slug',$slug)->where('locale',$locale))
-            ->first();
+        $query = Template::with(['translations','categoryTemplate.translations'])
+            ->whereHas('translations', fn($q) => $q->where('slug',$slug)->where('locale',$locale));
 
+        $template = $query->first();
+
+        // fallback للّغة العربية لو ما لقي باللّغة الحالية
         if (!$template && $locale !== 'ar') {
             $template = Template::with(['translations','categoryTemplate.translations'])
                 ->whereHas('translations', fn($q)=> $q->where('slug',$slug)->where('locale','ar'))
@@ -34,7 +35,19 @@ class TemplateController extends Controller
         $translation = $template->translations->firstWhere('locale',$locale)
             ?? $template->translations->firstWhere('locale','ar');
 
+        // جهّز المراجعات المعتمدة + علاقاتها
+        $template->load([
+            'reviews' => fn($q) => $q->approved()->latest()->take(10),
+            'reviews.client:id,first_name,last_name,avatar',
+            'reviews.user:id,name',
+        ]);
+
+        // (اختياري) لو عندك دالة avgRating() على الموديل، ما تحتاج التالي.
+        // أما لو ما عندكها وتحتاج المتوسط داخل الـ Blade، تقدر ترسله هيك:
+        // $avgRating = round((float) $template->reviews()->approved()->avg('rating'), 1);
+
         return view('tamplate.template-show', compact('template','translation'));
+        // أو: return view('tamplate.template-show', compact('template','translation','avgRating'));
     }
 
     public function preview(string $slug)
@@ -66,7 +79,6 @@ class TemplateController extends Controller
         $sameOrigin = $previewHost === $appHost;
         $isSubdomainOfYou = str_ends_with($previewHost, '.'.$baseDomain) || $previewHost === $baseDomain;
         $embedAllowed = $sameOrigin || $isSubdomainOfYou;
-
 
         return view('tamplate.view-templat', compact('template','translation','previewUrl','embedAllowed'));
     }

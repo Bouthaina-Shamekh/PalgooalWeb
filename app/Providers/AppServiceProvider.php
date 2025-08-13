@@ -28,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+        Gate::define('access-dashboard', fn($user) => (bool)$user->is_admin);
+        Gate::define('manage-reviews', fn($user) => (bool)$user->is_admin);
 
         //Authouration
         Gate::before(function ($user, $ability) {

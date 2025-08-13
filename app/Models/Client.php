@@ -39,4 +39,9 @@ class Client extends User
     {
         return $this->hasMany(Domain::class);
     }
+
+    public function templateReviews()
+    {
+        return $this->hasMany(TemplateReview::class);
+    }
 }

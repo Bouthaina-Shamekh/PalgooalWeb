@@ -10,6 +10,8 @@ use App\Http\Controllers\Dashboard\TranslationValueController;
 use App\Http\Controllers\Dashboard\ServicesTranslationController;
 use App\Http\Controllers\Dashboard\TemplateController;
 use App\Livewire\Services;
+use App\Http\Controllers\Dashboard\TemplateReviewController as AdminReview;
+use App\Http\Controllers\Dashboard\TemplateReviewController;
 
 Route::get('/admin', function () {
     return redirect()->route('dashboard.home');
@@ -95,4 +97,9 @@ Route::group([
     //     return view('dashboard.template.Templates');
     // })->name('template');
     Route::resource('templates', TemplateController::class);
+    Route::get('/reviews', [TemplateReviewController::class, 'index'])->name('reviews.index');
+Route::patch('/reviews/{review}/approve', [TemplateReviewController::class, 'approve'])->name('reviews.approve');
+Route::patch('/reviews/{review}/reject', [TemplateReviewController::class, 'reject'])->name('reviews.reject');
+Route::delete('/reviews/{review}', [TemplateReviewController::class, 'destroy'])->name('reviews.destroy');
+Route::post('/reviews/bulk', [TemplateReviewController::class, 'bulk'])->name('reviews.bulk');
 });
