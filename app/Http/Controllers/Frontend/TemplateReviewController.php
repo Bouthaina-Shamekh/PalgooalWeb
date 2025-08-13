@@ -7,6 +7,7 @@ use App\Models\Template;
 use App\Models\TemplateReview;
 use Illuminate\Http\Request;
 
+
 class TemplateReviewController extends Controller
 {
     public function store(Request $request, int $template)
