@@ -1,44 +1,64 @@
 @php
   use Illuminate\Support\Str;
   use Carbon\Carbon;
-  $finalPrice   = $template->discount_price ?? $template->price;
-  $hasDiscount  = !is_null($template->discount_price) && $template->discount_price < $template->price;
-  $discountPerc = $hasDiscount ? max(1, (int) round((($template->price - $template->discount_price) / $template->price) * 100)) : 0;
-  $endsAt    = $template->discount_ends_at ? Carbon::parse($template->discount_ends_at) : null;
+
+  $basePrice = (float) ($template->price ?? 0);
+  $discRaw   = $template->discount_price;                 // قد تكون null أو 0 أو "0.00"
+  $discPrice = is_null($discRaw) ? null : (float) $discRaw;
+
+  // يوجد خصم فقط إذا كان discount_price رقمًا > 0 وأقل من السعر الأصلي
+  $hasDiscount = !is_null($discPrice) && $discPrice > 0 && $discPrice < $basePrice;
+
+  // السعر النهائي
+  $finalPrice = $hasDiscount ? $discPrice : $basePrice;
+
+  // نسبة الخصم (بدون max(1,...))
+  $discountPerc = ($hasDiscount && $basePrice > 0)
+      ? (int) round((($basePrice - $discPrice) / $basePrice) * 100)
+      : 0;
+
+  // أظهر العدّاد فقط إذا فيه خصم فعلي وتاريخ انتهاء
+  $endsAt = ($hasDiscount && !empty($template->discount_ends_at))
+      ? Carbon::parse($template->discount_ends_at)
+      : null;
+
   $shortDesc = Str::limit(strip_tags($translation?->description ?? ''), 160);
 
-  // حمِّل details سواء جت Array من الـ casts أو JSON نصّي
+  // حمِّل details سواء Array من الـ casts أو JSON نصّي
   $payload = is_array($translation?->details)
-    ? $translation->details
-    : (json_decode($translation->details ?? '[]', true) ?: []);
+      ? $translation->details
+      : (json_decode($translation->details ?? '[]', true) ?: []);
+
   $features = collect($payload['features'] ?? [])
-    ->filter(fn($f) => is_array($f) && !empty($f['title']))
-    ->values();
+      ->filter(fn($f) => is_array($f) && !empty($f['title']))
+      ->values();
 
   $gallery = collect($payload['gallery'] ?? [])
-    ->filter(fn($g) => is_array($g) && !empty($g['src']))
-    ->values();
+      ->filter(fn($g) => is_array($g) && !empty($g['src']))
+      ->values();
 
-  // المواصفات (اللي سنعرضها في صندوق "تفاصيل القالب/المواصفات")
+  // المواصفات (للصندوق)
   $specs = collect($payload['specs'] ?? [])
-    ->filter(fn($s) => is_array($s) && !empty($s['name']) && !empty($s['value']))
-    ->values();
-  // تفاصيل القالب (Details) – قائمة اسم/قيمة منفصلة عن specs
+      ->filter(fn($s) => is_array($s) && !empty($s['name']) && !empty($s['value']))
+      ->values();
+
+  // Details (اسم/قيمة)
   $detailsList = collect($payload['details'] ?? [])
-    ->filter(function ($d) {
-      if (!is_array($d)) return false;
-      $hasNameOrLabel = !empty($d['name']) || !empty($d['label']);
-      $val = isset($d['value']) ? trim((string)$d['value']) : '';
-      return $hasNameOrLabel && $val !== '';
-    })->values();
+      ->filter(function ($d) {
+        if (!is_array($d)) return false;
+        $hasNameOrLabel = !empty($d['name']) || !empty($d['label']);
+        $val = isset($d['value']) ? trim((string)$d['value']) : '';
+        return $hasNameOrLabel && $val !== '';
+      })->values();
 
   // الوسوم
   $tags = collect($payload['tags'] ?? [])
-    ->filter(fn($t) => is_string($t) && trim($t) !== '')
-    ->map(fn($t) => trim($t))
-    ->unique()
-    ->values();
+      ->filter(fn($t) => is_string($t) && trim($t) !== '')
+      ->map(fn($t) => trim($t))
+      ->unique()
+      ->values();
 @endphp
+
 <x-template.layouts.index-layouts
   title="{{ $translation?->name ??  t('Frontend.Template', 'Template') }} - {{ t('Frontend.Palgoals', 'Palgoals')}}"
   description="{{ $shortDesc }}"
@@ -313,7 +333,141 @@
         <!-- Right (Pricing) -->
         <div class="lg:col-span-4 flex flex-col gap-8">
           <!-- صندوق المواصفات والأسعار -->
-          <div x-data="{ open: false }" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 p-6 sm:p-8 flex flex-col gap-5">
+          <div
+            x-data="{
+                  basePrice: {{ number_format($basePrice, 2, '.', '') }},
+    discPrice: {{ $hasDiscount ? number_format($discPrice, 2, '.', '') : 'null' }},
+    hasDiscount: {{ $hasDiscount ? 'true' : 'false' }},
+    endsAt: {{ $endsAt ? '\''.$endsAt->toIso8601String().'\'' : 'null' }},
+    leftMs: 0, timer: null,
+    init(){
+      if(this.endsAt){
+        this.tick();
+        this.timer = setInterval(() => this.tick(), 1000);
+      }
+    },
+    tick(){
+      this.leftMs = new Date(this.endsAt) - new Date();
+      if(this.leftMs <= 0){
+        this.leftMs = 0;
+        this.hasDiscount = false; // ← إلغاء الخصم فورًا عند الانتهاء
+        this.discPrice = null;
+        if(this.timer) clearInterval(this.timer);
+      }
+    },
+    finalPrice(){
+      return this.hasDiscount && this.discPrice ? this.discPrice : this.basePrice;
+    },
+    money(v){ return '$' + Number(v).toFixed(2); }
+  }"
+          class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 p-6 sm:p-8 flex flex-col gap-5"
+          >
+          <div class="text-center">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+              {{ $translation?->name }}
+            </h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1.5">
+              أطلق متجرك الإلكتروني الاحترافي في دقائق
+            </p>
+          </div>
+          @php
+            $avg = round($template->avgRating(),1);
+          @endphp
+          <div class="flex items-center justify-center gap-3 text-sm text-gray-600 dark:text-gray-300 border-y border-gray-200 dark:border-gray-700 py-3"
+            aria-label="تقييم المنتج">
+            <div class="flex text-yellow-400" role="img" aria-label="تقييم {{ number_format($avg,1) }} من 5 نجوم">
+              @for ($i = 1; $i <= 5; $i++)
+                <svg class="w-5 h-5 {{ $avg >= $i ? '' : 'text-gray-300 dark:text-gray-600' }}" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
+              @endfor
+            </div>
+            <span class="font-semibold" aria-hidden="true">{{ number_format($avg,1) }}</span>
+            <span class="sr-only">({{ number_format($avg,1) }} من 5)</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <p class="text-base font-medium text-gray-600 dark:text-gray-300">{{ t('Frontend.Price', 'Price') }}:</p>
+            <div class="flex items-baseline gap-2">
+              <span class="text-4xl font-bold text-primary dark:text-primary-400"
+                x-text="money(finalPrice())">
+                ${{ number_format($finalPrice, 2) }}
+              </span>
+              <span class="text-xl text-gray-400 dark:text-gray-500 line-through"
+                x-show="hasDiscount"
+                style="display:none;">
+                ${{ number_format($basePrice, 2) }}
+              </span>
+            </div>
+          </div>
+          @if($endsAt)
+            <div class="bg-red-100/50 dark:bg-red-900/20 text-sm p-3 rounded-lg text-red-700 dark:text-red-300 font-semibold text-center"
+              x-show="hasDiscount && leftMs > 0"
+              style="display:none;"
+              aria-live="polite">
+              🔥 {{ t('Frontend.Offer_ends_in','Offer ends in') }}:
+              <span class="font-mono tracking-wider"
+                x-text="(() => { const s = Math.floor(leftMs/1000); const h=String(Math.floor(s/3600)).padStart(2,'0'); const m=String(Math.floor((s%3600)/60)).padStart(2,'0'); const ss=String(s%60).padStart(2,'0'); return `${h}:${m}:${ss}`; })()">
+                00:00:00
+              </span>
+            </div>
+          @endif
+          {{-- دلالات أوضح للمواصفات --}}
+          @php $short = $detailsList->take(3); @endphp
+            <dl class="grid grid-cols-2 gap-x-6 gap-y-4 text-sm pt-2">
+              @forelse($short as $row)
+                @php
+                  $name  = trim($row['name'] ?? $row['label'] ?? '');
+                  $value = trim($row['value'] ?? '');
+                @endphp
+                <dt class="font-semibold text-gray-800 dark:text-gray-200">{{ $name !== '' ? $name : '—' }}</dt>
+                <dd class="text-gray-600 dark:text-gray-400 text-end">{{ $value !== '' ? $value : '—' }}</dd>
+              @empty
+                <dt class="font-semibold text-gray-800 dark:text-gray-200">{{ t('Frontend.No_specifications', 'No specifications') }}</dt>
+                <dd class="text-gray-600 dark:text-gray-400 text-end">—</dd>
+              @endforelse
+              @if($detailsList->count() > 3)
+                <template x-if="open">
+                  <div class="contents" id="more-specs">
+                    @foreach($detailsList->slice(3) as $row)
+                      @php
+                        $name  = trim($row['name'] ?? $row['label'] ?? '');
+                        $value = trim($row['value'] ?? '');
+                      @endphp
+                        <dt class="font-semibold text-gray-800 dark:text-gray-200">{{ $name !== '' ? $name : '—' }}</dt>
+                        <dd class="text-gray-600 dark:text-gray-400 text-end">{{ $value !== '' ? $value : '—' }}</dd>
+                    @endforeach
+                  </div>
+                </template>
+              @endif
+            </dl>
+            @if($detailsList->count() > 3)
+              <button
+                @click="open = !open"
+                class="inline-flex items-center gap-1 text-sm font-semibold text-primary dark:text-primary-400 hover:text-primary/80 transition-colors"
+                :aria-expanded="open.toString()"
+                aria-controls="more-specs"
+                type="button"
+                >
+                <svg x-show="!open" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 3a1 1 0 01.894.553l6 12A1 1 0 0116 17H4a1 1 0 01-.894-1.447l6-12A1 1 0 0110 3z"/></svg>
+                <svg x-show="open" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 17a1 1 0 01-.894-.553l-6-12A1 1 0 014 3h12a1 1 0 01.894 1.447l-6 12A1 1 0 0110 17z"/></svg>
+                <span x-show="!open">{{ t('Frontend.Show_all_specs','Show all specs') }}</span>
+                <span x-show="open">{{ t('Frontend.Hide_specs','Hide specs') }}</span>
+              </button>
+            @endif
+            <a href="#"
+              class="w-full text-center bg-primary hover:bg-primary/90 text-white py-3.5 rounded-xl font-bold text-base shadow-xl shadow-primary/30 hover:shadow-primary/40 transition-all duration-300 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              aria-label="اشترك الآن في {{ $translation?->name }} بسعر {{ number_format($finalPrice,2) }} دولار">
+              🛒 {{ t('Frontend.Subscribe_now', 'Subscribe now') }}
+            </a>
+            <div class="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <span>{{ t('Frontend.Money_back_30_days', '30-day money-back guarantee') }}</span>
+            </div>
+          </div>
+          
+          {{-- <div x-data="{ open: false }" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 p-6 sm:p-8 flex flex-col gap-5">
             <div class="text-center">
               <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $translation?->name }}</h2>
               <p class="text-sm text-gray-500 dark:text-gray-400 mt-1.5">أطلق متجرك الإلكتروني الاحترافي في دقائق</p>
@@ -383,7 +537,7 @@
               <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
               <span>{{ t('Frontend.Money_back_30_days', '30-day money-back guarantee') }}</span>
             </div>
-          </div>
+          </div> --}}
           <!-- صندوق تفاصيل القالب -->
           <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 p-6 sm:p-8">
             <h3 class="flex items-center gap-3 text-xl font-bold text-gray-800 dark:text-white mb-6">
