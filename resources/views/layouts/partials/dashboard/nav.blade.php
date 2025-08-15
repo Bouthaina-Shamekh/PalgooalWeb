@@ -58,6 +58,7 @@
                         <span class="pc-mtext">{{ t('dashboard.Home', 'Home') }}</span>
                     </a>
                 </li>
+
                 <li class="pc-item">
                     <a href="{{route('dashboard.pages')}}" class="pc-link">
                         <span class="pc-micon">
@@ -68,15 +69,21 @@
                         <span class="pc-mtext">{{ t('dashboard.Pages', 'Pages') }}</span>
                     </a>
                 </li>
-                                <li class="pc-item">
-                    <a href="{{route('dashboard.headers')}}" class="pc-link">
+                <li class="pc-item pc-hasmenu">
+                    <a href="#!" class="pc-link">
                         <span class="pc-micon">
-                            <span class="pc-micon">
-                                <i class="fas fa-home"></i>
-                            </span>
+                            <svg class="pc-icon">
+                                <use xlink:href="#custom-layer"></use>
+                            </svg>
                         </span>
-                        <span class="pc-mtext">{{ t('dashboard.Menus', 'Menus') }}</span>
+                        <span class="pc-mtext" data-i18n="Online Courses">{{ t('dashboard.Template_management', 'Template management') }}</span>
+                        <span class="pc-arrow"><i data-feather="chevron-left" class="rtl:rotate-180"></i></span>
                     </a>
+                    <ul class="pc-submenu">
+                        <li class="pc-item"><a class="pc-link" href="{{route('dashboard.templates.index')}}" data-i18n="Menus">{{ t('dashboard.All_templates', 'All templates') }}</a></li>
+                        <li class="pc-item"><a class="pc-link" href="{{route('dashboard.category')}}" data-i18n="Menus">{{ t('dashboard.Categories', 'Categories') }}</a></li>
+                        <li class="pc-item"><a class="pc-link" href="{{route('dashboard.reviews.index')}}" data-i18n="Menus">{{ t('dashboard.reviews', 'reviews') }}</a></li>
+                    </ul>
                 </li>
                 <li class="pc-item">
                     <a href="{{route('dashboard.services')}}" class="pc-link">
@@ -95,7 +102,7 @@
                                 <i class="fas fa-star"></i>
                             </span>
                         </span>
-                        <span class="pc-mtext">{{ t('dashboard.feedbacks', 'feedbacks') }}</span>
+                        <span class="pc-mtext">{{ t('dashboard.feedbacks', 'testimonial') }}</span>
                     </a>
                 </li>
                 <li class="pc-item">
@@ -107,6 +114,13 @@
                         </span>
                         <span class="pc-mtext">{{ t('dashboard.portfolios', 'portfolios') }}</span>
                     </a>
+                </li>
+
+                <li class="pc-item pc-caption">
+                    <label>{{ t('dashboard.clients','clients') }}</label>
+                    <svg class="pc-icon">
+                        <use xlink:href="#custom-presentation-chart"></use>
+                    </svg>
                 </li>
                 <li class="pc-item">
                     <a href="{{route('dashboard.clients')}}" class="pc-link">
@@ -128,11 +142,37 @@
                         <span class="pc-mtext">{{ t('dashboard.domains', 'domains') }}</span>
                     </a>
                 </li>
+
                 <li class="pc-item pc-caption">
-                    <label>{{ t('dashboard.Widget','Widget') }}</label>
+                    <label>{{ t('dashboard.Site_settings','Site settings') }}</label>
                     <svg class="pc-icon">
                         <use xlink:href="#custom-presentation-chart"></use>
                     </svg>
+                </li>
+                <li class="pc-item">
+                    <a href="{{route('dashboard.media')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-home"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.media', 'Media')}}</span>
+                    </a>
+                </li>
+                <li class="pc-item pc-hasmenu">
+                    <a href="#!" class="pc-link">
+                        <span class="pc-micon">
+                            <svg class="pc-icon">
+                                <use xlink:href="#custom-layer"></use>
+                            </svg>
+                        </span>
+                        <span class="pc-mtext" data-i18n="Online Courses">{{ t('dashboard.Appearance', 'Appearance')}}</span>
+                        <span class="pc-arrow"><i data-feather="chevron-right" class="rtl:rotate-180"></i></span>
+                    </a>
+                    <ul class="pc-submenu">
+                        <li class="pc-item"><a class="pc-link" href="{{route('dashboard.headers')}}" data-i18n="Menus">{{ t('dashboard.Menus', 'Menus') }}</a></li>
+                        <li class="pc-item"><a class="pc-link" href="{{ route('dashboard.languages.index')}}" data-i18n="Menus">{{ t('dashboard.languages', 'languages')}}</a></li>
+                    </ul>
                 </li>
                 <!-- @can('view', 'App\Models\User') -->
                 <li class="pc-item pc-hasmenu">
@@ -161,39 +201,6 @@
                             </a>
                         </li>
                     </ul>
-                </li>
-                <li class="pc-item">
-                    <a href="{{route('dashboard.languages.index')}}" class="pc-link">
-                        <span class="pc-micon">
-                            <span class="pc-micon">
-                                <i class="fas fa-home"></i>
-                            </span>
-                        </span>
-                        <span class="pc-mtext">{{ t('dashboard.languages', 'languages')}}</span>
-
-                    </a>
-                </li>
-                <li class="pc-item">
-                    <a href="{{route('dashboard.translation-values.index')}}" class="pc-link">
-                        <span class="pc-micon">
-                            <span class="pc-micon">
-                                <i class="fas fa-home"></i>
-                            </span>
-                        </span>
-                        <span class="pc-mtext">{{ t('dashboard.translation_values', 'translation_values')}}</span>
-
-
-                    </a>
-                </li>
-                <li class="pc-item">
-                    <a href="{{route('dashboard.media')}}" class="pc-link">
-                        <span class="pc-micon">
-                            <span class="pc-micon">
-                                <i class="fas fa-home"></i>
-                            </span>
-                        </span>
-                        <span class="pc-mtext">{{ t('dashboard.media', 'Media')}}</span>
-                    </a>
                 </li>
                 <li class="pc-item">
                     <a href="{{route('dashboard.general_settings')}}" class="pc-link">

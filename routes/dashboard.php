@@ -32,7 +32,7 @@ Route::group([
         'users' => UserController::class,
     ]);
     // Resource routes:
-    Route::resource('languages', LanguageController::class)->except(['show'])->names('languages');
+    Route::resource('Languages', LanguageController::class)->except(['show'])->names('languages');
 
     // Extra AJAX routes:
     Route::post('admin/languages/{language}/toggle-rtl', [LanguageController::class, 'toggleRtl'])->name('languages.toggle-rtl');
@@ -98,8 +98,8 @@ Route::group([
     // })->name('template');
     Route::resource('templates', TemplateController::class);
     Route::get('/reviews', [TemplateReviewController::class, 'index'])->name('reviews.index');
-Route::patch('/reviews/{review}/approve', [TemplateReviewController::class, 'approve'])->name('reviews.approve');
-Route::patch('/reviews/{review}/reject', [TemplateReviewController::class, 'reject'])->name('reviews.reject');
-Route::delete('/reviews/{review}', [TemplateReviewController::class, 'destroy'])->name('reviews.destroy');
-Route::post('/reviews/bulk', [TemplateReviewController::class, 'bulk'])->name('reviews.bulk');
+    Route::patch('/reviews/{review}/approve', [TemplateReviewController::class, 'approve'])->name('reviews.approve');
+    Route::patch('/reviews/{review}/reject', [TemplateReviewController::class, 'reject'])->name('reviews.reject');
+    Route::delete('/reviews/{review}', [TemplateReviewController::class, 'destroy'])->name('reviews.destroy');
+    Route::post('/reviews/bulk', [TemplateReviewController::class, 'bulk'])->name('reviews.bulk');
 });
