@@ -7,10 +7,10 @@
   $discPrice = is_null($discRaw) ? null : (float) $discRaw;
 
   // يوجد خصم فقط إذا كان discount_price رقمًا > 0 وأقل من السعر الأصلي
-  $hasDiscount = !is_null($discPrice) && $discPrice > 0 && $discPrice < $basePrice;
+          $hasDiscount = !is_null($discPrice) && $discPrice > 0 && $discPrice < $basePrice;
 
   // السعر النهائي
-  $finalPrice = $hasDiscount ? $discPrice : $basePrice;
+  $finalPrice =           $hasDiscount ? $discPrice : $basePrice;
 
   // نسبة الخصم (بدون max(1,...))
   $discountPerc = ($hasDiscount && $basePrice > 0)
