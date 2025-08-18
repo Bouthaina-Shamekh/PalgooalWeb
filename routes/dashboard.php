@@ -102,4 +102,9 @@ Route::group([
     Route::patch('/reviews/{review}/reject', [TemplateReviewController::class, 'reject'])->name('reviews.reject');
     Route::delete('/reviews/{review}', [TemplateReviewController::class, 'destroy'])->name('reviews.destroy');
     Route::post('/reviews/bulk', [TemplateReviewController::class, 'bulk'])->name('reviews.bulk');
+
+    Route::get('/subscriptions', [HomeController::class, 'subscriptions'])->name('subscriptions');
+    Route::get('/sites', [HomeController::class, 'sites'])->name('sites');
+    Route::get('/domains', [HomeController::class, 'domains'])->name('domains');
+    Route::get('/plans', [HomeController::class, 'plans'])->name('plans');
 });

@@ -49,6 +49,7 @@
                                 <th>Registered At</th>
                                 <th>Renewal Date</th>
                                 <th>STATUS</th>
+                                <th>Template</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -60,8 +61,9 @@
                                 <td>{{ $domain->domain_name }}</td>
                                 <td>{{ $domain->registrar }}</td>
                                 <td>{{ $domain->registration_date }}</td>
+                                <td>{{ $domain->renewal_date }}</td>
+                                <td>{{ $domain->template->name }}</td>
                                 <td>{{ $domain->status }}</td>
-
                                 <td>
                                     <a wire:click="view({{ $domain->id }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                         <i class="ti ti-eye text-xl leading-none"></i>

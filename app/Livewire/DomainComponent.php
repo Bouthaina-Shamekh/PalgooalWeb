@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Client;
 use App\Models\Domain;
+use App\Models\Template;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
@@ -43,11 +44,13 @@ class DomainComponent extends Component
         'renewal_date' => '',
         'status' => '',
     ];
+    public $templates = [];
 
     public function showAdd()
     {
         $this->mode = 'add';
         $this->clients = Client::get();
+        $this->templates = Template::get();
         $this->resetForm();
         $this->closeModal();
     }
@@ -56,7 +59,8 @@ class DomainComponent extends Component
     {
         $this->mode = 'edit';
         $this->domainId = $id;
-         $this->clients = Client::get();
+        $this->clients = Client::get();
+        $this->templates = Template::get();
         $domain = Domain::findOrFail($id);
         $this->domain = [
             'client_id' => $domain->client_id,

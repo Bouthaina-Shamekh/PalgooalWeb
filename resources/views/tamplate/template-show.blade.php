@@ -107,7 +107,7 @@
               <span class="absolute top-4 right-4 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
                 -{{ $discountPerc }}%
               </span>
-            @endif  
+            @endif
           </div>
           <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
             @if ($translation?->preview_url)
@@ -237,7 +237,7 @@
           </div>
           <!-- نموذج إضافة مراجعة (يظهر عند الضغط ) -->
           <div x-show="addReview" x-collapse class="mb-8" x-data="{ rating: 0, hoverRating: 0 }">
-            <form 
+            <form
               x-ref="form"
               method="POST"
               action="{{ route('frontend.templates.reviews.store', ['template' => $template->id]) }}"
@@ -454,7 +454,7 @@
                 <span x-show="open">{{ t('Frontend.Hide_specs','Hide specs') }}</span>
               </button>
             @endif
-            <a href="#"
+            <a href="{{route('checkout', ['template' => $template->id])}}"
               class="w-full text-center bg-primary hover:bg-primary/90 text-white py-3.5 rounded-xl font-bold text-base shadow-xl shadow-primary/30 hover:shadow-primary/40 transition-all duration-300 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
               aria-label="اشترك الآن في {{ $translation?->name }} بسعر {{ number_format($finalPrice,2) }} دولار">
               🛒 {{ t('Frontend.Subscribe_now', 'Subscribe now') }}
@@ -466,7 +466,7 @@
               <span>{{ t('Frontend.Money_back_30_days', '30-day money-back guarantee') }}</span>
             </div>
           </div>
-          
+
           {{-- <div x-data="{ open: false }" class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 p-6 sm:p-8 flex flex-col gap-5">
             <div class="text-center">
               <h2 class="text-2xl font-bold text-gray-900 dark:text-white">{{ $translation?->name }}</h2>
@@ -479,7 +479,7 @@
               <div class="flex text-yellow-400" aria-label="تقييم {{ number_format($avg,1) }} من 5">
                 @for ($i = 1; $i <= 5; $i++)
                   <svg class="w-5 h-5 {{ $avg >= $i ? '' : 'text-gray-300 dark:text-gray-600' }}" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-                @endfor                
+                @endfor
               </div>
               <span class="font-semibold">{{ number_format($avg,1) }}</span>
             </div>

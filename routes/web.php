@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Dashboard\TemplateController;
+use App\Http\Controllers\Frontend\CheckoutController;
 use App\Livewire\Dashboard\Template\TemplateShowPage;
 use App\Models\Language;
 use App\Models\Page;
@@ -48,6 +49,8 @@ Route::middleware(['setLocale'])->group(function () {
             ->firstOrFail();
             return view('tamplate.portfolio', ['portfolio' => $portfolio]);
     })->name('portfolio.show');
+
+    Route::get('/checkout/client/{template_id}', [CheckoutController::class, 'index'])->name('checkout');
 
     Route::get('/templates/{slug}', [FrontTemplateController::class, 'show'])->name('template.show');
     Route::get('/templates/{slug}/preview', [FrontTemplateController::class, 'preview'])->name('template.preview');

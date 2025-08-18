@@ -142,6 +142,36 @@
                         <span class="pc-mtext">{{ t('dashboard.domains', 'domains') }}</span>
                     </a>
                 </li>
+                <li class="pc-item">
+                    <a href="{{route('dashboard.plans')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-boxes"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.plans', 'plans') }}</span>
+                    </a>
+                </li>                
+                <li class="pc-item">
+                    <a href="{{route('dashboard.subscriptions')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-money-bill"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.subscriptions', 'subscriptions') }}</span>
+                    </a>
+                </li>
+                <li class="pc-item">
+                    <a href="{{route('dashboard.sites')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-server"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.sites', 'sites') }}</span>
+                    </a>
+                </li>
 
                 <li class="pc-item pc-caption">
                     <label>{{ t('dashboard.Site_settings','Site settings') }}</label>
@@ -153,7 +183,7 @@
                     <a href="{{route('dashboard.media')}}" class="pc-link">
                         <span class="pc-micon">
                             <span class="pc-micon">
-                                <i class="fas fa-home"></i>
+                                <i class="fas fa-images"></i>
                             </span>
                         </span>
                         <span class="pc-mtext">{{ t('dashboard.media', 'Media')}}</span>

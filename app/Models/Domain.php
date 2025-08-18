@@ -14,10 +14,17 @@ class Domain extends Model
         'registration_date',
         'renewal_date',
         'status',
+        'template_id',
+        'payment_method',
     ];
 
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(Template::class);
     }
 }

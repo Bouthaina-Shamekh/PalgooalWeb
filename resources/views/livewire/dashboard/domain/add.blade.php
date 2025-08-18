@@ -90,6 +90,18 @@
                             @error('status') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
                         </div>
                     </div>
+                    <div class="col-span-12 md:col-span-6">
+                        <div class="mb-3">
+                            <label for="domain.template_id" class="form-label">Template</label>
+                            <select id="domain.template_id" wire:model.defer="domain.template_id" class="form-select">
+                                <option value="">-- Select Template --</option>
+                                @foreach ($templates as $template)
+                                    <option value="{{ $template->id }}" @selected($domain['template_id'] == $template->id)>{{ $template->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('template_id') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+                        </div>
+                    </div>
                     <div class="col-span-12 text-right">
                         <button type="button" wire:click="showIndex" class="btn btn-secondary">Cancel</button>
                         <button type="button" wire:click="save" class="btn btn-primary">Submit</button>
