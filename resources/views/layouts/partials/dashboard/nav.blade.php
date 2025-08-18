@@ -143,7 +143,7 @@
                     </a>
                 </li>
                 <li class="pc-item">
-                    <a href="{{route('dashboard.plans')}}" class="pc-link">
+                    <a href="{{route('dashboard.plans.index')}}" class="pc-link">
                         <span class="pc-micon">
                             <span class="pc-micon">
                                 <i class="fas fa-boxes"></i>

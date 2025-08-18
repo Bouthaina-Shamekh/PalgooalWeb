@@ -9,11 +9,19 @@ class Plan extends Model
 {
     protected $fillable = [
         'name',
-        'price',
+        'slug',
+        'price_cents',
+        'billing_cycle',
         'features',
+        'is_active',
+        'created_by',
+        'updated_by'
     ];
-
-    public function subscriptions(): HasMany
+    protected $casts = [
+        'features' => 'array',
+        'is_active' => 'bool'
+    ];
+    public function subscriptions()
     {
         return $this->hasMany(Subscription::class);
     }

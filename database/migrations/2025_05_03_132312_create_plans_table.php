@@ -13,9 +13,15 @@ return new class extends Migration
     {
         Schema::create('plans', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();          // اسم الخطة
-            $table->decimal('price', 10, 2);           // السعر (مثلاً 99.99)
-            $table->json('features')->nullable();      // ميزات الخطة (JSON أو نص)
+            $table->string('name');          // اسم الخطة
+            $table->string('slug')->unique();           // basic / pro...
+            $table->unsignedInteger('price_cents');           // السعر (مثلاً 99.99)
+            $table->enum('billing_cycle', ['monthly','annually'])->default('annually');
+            $table->json('features')->nullable();       // مساحة/نقل/بريد.. (JSON)
+            $table->boolean('is_active')->default(true);
+            // تتبّع
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
         });
     }
