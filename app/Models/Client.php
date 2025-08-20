@@ -23,6 +23,10 @@ class Client extends User
         'zip_code',
         'can_login',
         'avatar',
+        'status',
+        'country',
+        'city',
+        'address'
     ];
 
     protected $hidden = [
@@ -30,6 +34,7 @@ class Client extends User
         'remember_token',
     ];
 
+    // Relations
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -40,8 +45,29 @@ class Client extends User
         return $this->hasMany(Domain::class);
     }
 
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
     public function templateReviews()
     {
         return $this->hasMany(TemplateReview::class);
+    }
+
+    public function contacts(): HasMany
+    {
+        return $this->hasMany(ClientContact::class);
+    }
+
+    public function notes(): HasMany
+    {
+        return $this->hasMany(ClientNote::class);
+    }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class, 'actor_id')
+                    ->where('actor_type', 'client');
     }
 }

@@ -13,5 +13,7 @@
         @include('livewire.dashboard.client.add')
     @elseif ($mode === 'edit')
         @include('livewire.dashboard.client.edit')
+    @elseif ($mode === 'show')
+        @include('livewire.dashboard.client.show')
     @endif
 </div>
