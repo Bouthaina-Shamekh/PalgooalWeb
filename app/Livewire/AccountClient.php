@@ -2,8 +2,10 @@
 
 namespace App\Livewire;
 
+use App\Models\ActivityLog;
 use Livewire\Component;
 use App\Models\Client;
+use App\Models\ClientContact;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\WithFileUploads;
@@ -29,6 +31,7 @@ class AccountClient extends Component
         $this->alert = false;
     }
 
+    // بيانات العميل الأساسية
     public $client = [
         'id' => null,
         'first_name' => '',
@@ -37,29 +40,54 @@ class AccountClient extends Component
         'password' => '',
         'confirm_password' => '',
         'company_name' => '',
-        'zip_code' => '',
         'phone' => '',
         'can_login' => true,
         'avatar' => null,
         'avatar_url' => null,
+        'status' => 'active',
+        'country' => '',
+        'city' => '',
+        'address' => '',
+        'zip_code' => '',
+    ];
+
+    // بيانات جهة الاتصال الجديدة
+    public $contact = [
+        'name' => '',
+        'email' => '',
+        'phone' => '',
+        'role' => 'general',
+        'can_login' => false,
+        'password_hash' => '',
+    ];
+
+    // بيانات الملاحظة الجديدة
+    public $note = [
+        'note' => '',
     ];
 
     public function mount()
     {
-        $client = Client::findOrFail(Auth::guard('client')->user()->id);
+        $client = Client::with('contacts', 'notes')->findOrFail(Auth::guard('client')->user()->id);
         $this->client = [
             'id' => $client->id,
             'first_name' => $client->first_name,
             'last_name' => $client->last_name,
             'email' => $client->email,
             'company_name' => $client->company_name,
-            'zip_code' => $client->zip_code,
             'phone' => $client->phone,
             'can_login' => $client->can_login,
             'password' => '',
             'confirm_password' => '',
             'avatar' => null,
             'avatar_url' => $client->avatar,
+            'status' => $client->status ?? 'active',
+            'country' => $client->country ?? '',
+            'city' => $client->city ?? '',
+            'address' => $client->address ?? '',
+            'zip_code' => $client->zip_code ?? '',
+            'contacts' => $client->contacts,
+            'notes' => $client->notes,
         ];
     }
 
@@ -94,10 +122,16 @@ class AccountClient extends Component
             'client.last_name' => 'required',
             'client.email' => 'required|email|unique:clients,email,' . $this->client['id'],
             'client.company_name' => 'nullable',
-            'client.password' => 'nullable|min:6',
+            'client.password' => $this->client['id'] ? 'nullable|min:6|same:client.confirm_password' : 'required|min:6|same:client.confirm_password',
+            'client.confirm_password' => $this->client['id'] ? 'nullable' : 'required',
             'client.phone' => 'required',
-            // 'client.can_login' => 'boolean',
+            'client.can_login' => 'boolean',
             'client.avatar' => 'nullable|image',
+            'client.status' => 'required|in:active,inactive',
+            'client.country' => 'nullable|string|max:2',
+            'client.city' => 'nullable|string',
+            'client.address' => 'nullable|string',
+            'client.zip_code' => 'nullable|string',
         ]);
 
         $clientValidated = $validated['client'];
@@ -127,9 +161,91 @@ class AccountClient extends Component
         }
 
         $client->update($clientValidated);
+
+        // تسجيل النشاط
+        ActivityLog::create([
+            'actor_type' => 'admin',
+            'actor_id' => Auth::id(),
+            'action' => 'client.updated',
+            'meta' => [
+                'client_id' => $client->id,
+                'client_name' => $client->first_name . ' ' . $client->last_name,
+                'changes' => array_keys($clientValidated)
+            ]
+        ]);
+
         $this->showAlert('Client updated successfully.', 'success');
 
     }
+
+    // إضافة جهة اتصال جديدة
+    public function addContact()
+    {
+        $validated = $this->validate([
+            'contact.name' => 'required|string',
+            'contact.email' => 'required|email|unique:client_contacts,email',
+            'contact.phone' => 'nullable|string',
+            'contact.role' => 'required|in:billing,tech,general',
+            'contact.can_login' => 'boolean',
+            'contact.password_hash' => $this->contact['can_login'] ? 'required|min:6' : 'nullable',
+        ]);
+
+        $contactData = $validated['contact'];
+        $contactData['client_id'] = $this->clientId;
+        $contactData['can_login'] = $contactData['can_login'] ? 1 : 0;
+
+        if (!empty($contactData['password_hash'])) {
+            $contactData['password_hash'] = bcrypt($contactData['password_hash']);
+        } else {
+            unset($contactData['password_hash']);
+        }
+
+        ClientContact::create($contactData);
+
+        // تسجيل النشاط
+        ActivityLog::create([
+            'actor_type' => 'admin',
+            'actor_id' => Auth::id(),
+            'action' => 'client.contact.created',
+            'meta' => [
+                'client_id' => $this->clientId,
+                'contact_name' => $contactData['name'],
+                'contact_role' => $contactData['role']
+            ]
+        ]);
+
+        $this->contact = [
+            'name' => '',
+            'email' => '',
+            'phone' => '',
+            'role' => 'general',
+            'can_login' => false,
+            'password_hash' => '',
+        ];
+
+        $this->showAlert('Contact added successfully.', 'success');
+    }
+
+     // حذف جهة اتصال
+     public function deleteContact($contactId)
+     {
+         $contact = ClientContact::findOrFail($contactId);
+
+         // تسجيل النشاط قبل الحذف
+         ActivityLog::create([
+             'actor_type' => 'admin',
+             'actor_id' => Auth::id(),
+             'action' => 'client.contact.deleted',
+             'meta' => [
+                 'client_id' => $contact->client_id,
+                 'contact_name' => $contact->name,
+                 'contact_role' => $contact->role
+             ]
+         ]);
+
+         $contact->delete();
+         $this->showAlert('Contact deleted successfully.', 'success');
+     }
 
 
     public function render()
