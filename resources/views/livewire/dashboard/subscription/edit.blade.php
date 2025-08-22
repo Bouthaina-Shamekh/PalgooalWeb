@@ -88,8 +88,8 @@
                         <div class="col-span-12 md:col-span-6">
                             <x-form.input
                                 label="Starts At"
-                                wire:model.defer="subscription.start_date"
-                                name="start_date"
+                                wire:model.defer="subscription.starts_at"
+                                name="starts_at"
                                 type="date"
                                 placeholder="e.g. example.com or client.palgoals.com"
                             />
@@ -100,8 +100,8 @@
                         <div class="col-span-12 md:col-span-6">
                             <x-form.input
                                 label="Ends At"
-                                wire:model.defer="subscription.end_date"
-                                name="end_date"
+                                wire:model.defer="subscription.ends_at"
+                                name="ends_at"
                                 type="date"
                                 placeholder="e.g. example.com or client.palgoals.com"
                             />

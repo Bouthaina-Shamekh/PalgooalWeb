@@ -6,6 +6,8 @@ use App\Http\Controllers\Dashboard\UserController;
 use App\Http\Controllers\Dashboard\LanguageController;
 use App\Http\Controllers\Dashboard\Management\Plan;
 use App\Http\Controllers\Dashboard\Management\PlanController;
+use App\Http\Controllers\Dashboard\Management\ServerController;
+use App\Http\Controllers\Dashboard\Management\SubscriptionController;
 use App\Http\Controllers\Dashboard\MediaController;
 use App\Http\Controllers\Dashboard\ServicesController;
 use App\Http\Controllers\Dashboard\TranslationValueController;
@@ -105,7 +107,12 @@ Route::group([
     Route::delete('/reviews/{review}', [TemplateReviewController::class, 'destroy'])->name('reviews.destroy');
     Route::post('/reviews/bulk', [TemplateReviewController::class, 'bulk'])->name('reviews.bulk');
 
-    Route::get('/subscriptions', [HomeController::class, 'subscriptions'])->name('subscriptions');
+    Route::resource('subscriptions', SubscriptionController::class, [
+        'names' => 'subscriptions'
+    ]);
+    Route::get('servers/{server}/test-connection', [ServerController::class, 'testConnection'])->name('servers.test-connection');
+    Route::get('servers/{server}/sso-whm', [ServerController::class, 'ssoWhm'])->name('servers.sso-whm');
+    Route::resource('servers', ServerController::class)->names('servers');
     Route::get('/sites', [HomeController::class, 'sites'])->name('sites');
     Route::get('/domains', [HomeController::class, 'domains'])->name('domains');
     Route::resource('plans', PlanController::class);

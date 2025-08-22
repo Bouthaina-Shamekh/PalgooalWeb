@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Livewire;
 
 use App\Models\Client;
@@ -41,15 +40,15 @@ class SubscriptionComponent extends Component
     public $plans  = [];
 
 
-    public $subscription = [
-      'client_id' => '',
-      'plan_id'   => '',
-      'status' => '',
-      'start_date' => '',
-      'end_date' => '',
-      'domain_option' => '',
-      'domain_name' => '',
-    ];
+        public $subscription = [
+            'client_id' => '',
+            'plan_id'   => '',
+            'status' => '',
+            'starts_at' => '',
+            'ends_at' => '',
+            'domain_option' => '',
+            'domain_name' => '',
+        ];
 
     public function showAdd()
     {
@@ -73,8 +72,9 @@ class SubscriptionComponent extends Component
             'client_id' => $subscription->client_id,
             'plan_id'   => $subscription->plan_id,
             'status' => $subscription->status,
-            'start_date' => $subscription->start_date,
-            'end_date' => $subscription->end_date,
+            'price_cents' => $subscription->price_cents,
+            'starts_at' => $subscription->starts_at,
+            'ends_at' => $subscription->ends_at,
             'domain_option' => $subscription->domain_option,
             'domain_name' => $subscription->domain_name,
         ];
@@ -93,8 +93,9 @@ class SubscriptionComponent extends Component
             'client_id' => '',
             'plan_id'   => '',
             'status' => '',
-            'start_date' => '',
-            'end_date' => '',
+            'price_cents' => '',
+            'starts_at' => '',
+            'ends_at' => '',
             'domain_option' => '',
             'domain_name' => '',
         ];
@@ -106,9 +107,10 @@ class SubscriptionComponent extends Component
         $validated = $this->validate([
             'subscription.client_id'     => 'required|exists:clients,id',
             'subscription.plan_id'       => 'required|exists:plans,id',
-            'subscription.status'        => 'required|in:active,canceled,pending',
-            'subscription.start_date'    => 'required|date',
-            'subscription.end_date'      => 'nullable|date|after_or_equal:subscription.start_date',
+            'subscription.status'        => 'required|in:active,cancelled,pending,suspended,expired',
+            'subscription.price_cents'   => 'required|integer|min:0',
+            'subscription.starts_at'    => 'required|date',
+            'subscription.ends_at'      => 'nullable|date|after_or_equal:subscription.starts_at',
             'subscription.domain_option' => 'required|in:new,subdomain,existing',
             'subscription.domain_name'   => 'required_if:subscription.domain_option,new,existing',
         ]);
@@ -148,6 +150,16 @@ class SubscriptionComponent extends Component
     public function updatePerPage()
     {
         $this->resetPage();
+    }
+
+        public function updated($propertyName)
+    {
+        if ($propertyName === 'subscription.plan_id' && $this->subscription['plan_id']) {
+            $plan = Plan::find($this->subscription['plan_id']);
+            if ($plan) {
+                $this->subscription['price_cents'] = $plan->price_cents;
+            }
+        }
     }
 
     public function render()

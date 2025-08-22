@@ -153,7 +153,7 @@
                     </a>
                 </li>                
                 <li class="pc-item">
-                    <a href="{{route('dashboard.subscriptions')}}" class="pc-link">
+                    <a href="{{route('dashboard.subscriptions.index')}}" class="pc-link">
                         <span class="pc-micon">
                             <span class="pc-micon">
                                 <i class="fas fa-money-bill"></i>

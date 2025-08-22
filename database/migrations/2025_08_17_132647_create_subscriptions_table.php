@@ -11,28 +11,32 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('subscriptions', function (Blueprint $table) {
-            $table->id();
-            // علاقة بالمستخدم (عميل)
-            $table->foreignId('client_id')
-                  ->constrained()
-                  ->cascadeOnDelete();
-            // علاقة بالخطة
-            $table->foreignId('plan_id')
-                  ->constrained()
-                  ->cascadeOnDelete();
-            $table->string('status');
-            $table->date('start_date'); // active, canceled, pending, …
-            $table->date('end_date')->nullable();
-            $table->enum('domain_option', ['new','subdomain','existing'])
-                  ->default('subdomain')
-                  ->comment('new=register new domain, subdomain=our subdomain, existing=use client’s domain');
-            // اسم الدومين/السب-دومين/الدومين الحالي
-            $table->string('domain_name')
-                  ->nullable()
-                  ->comment('مثلاً “example.com” أو “client.palgoals.com” أو دومين العميل');
-            $table->timestamps();
-        });
+      Schema::create('subscriptions', function (Blueprint $table) {
+        $table->id();
+        // علاقة بالمستخدم (عميل)
+        $table->foreignId('client_id')
+            ->constrained('clients')
+            ->cascadeOnDelete();
+        // علاقة بخطة الاستضافة
+        $table->foreignId('plan_id')
+            ->constrained('plans')
+            ->restrictOnDelete();
+        $table->enum('status', ['pending','active','suspended','cancelled'])->default('pending');
+        $table->enum('billing_cycle', ['monthly','annually'])->default('annually');
+        $table->decimal('price', 10, 2)->default(0); // السعر وقت الاشتراك
+        $table->string('username')->nullable(); // اسم مستخدم الخدمة
+        $table->unsignedBigInteger('server_id')->nullable(); // معرف السيرفر
+        $table->date('next_due_date')->nullable(); // تاريخ الاستحقاق القادم
+        $table->date('starts_at')->nullable();
+        $table->date('ends_at')->nullable();
+        $table->enum('domain_option', ['new','subdomain','existing'])
+            ->default('subdomain')
+            ->comment('new=register new domain, subdomain=our subdomain, existing=use client’s domain');
+        $table->string('domain_name')
+            ->nullable()
+            ->comment('مثلاً “example.com” أو “client.palgoals.com” أو دومين العميل');
+        $table->timestamps();
+      });
     }
 
     /**

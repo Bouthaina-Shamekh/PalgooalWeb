@@ -15,6 +15,9 @@
     <div class="grid grid-cols-12 gap-x-6">
         <div class="col-span-12">
             <div class="card table-card">
+                @if(session('connection_result'))
+                    <div class="alert alert-info mb-4">{{ session('connection_result') }}</div>
+                @endif
                 <div class="card-header">
                     <div class="sm:flex items-center justify-between">
                         <h5 class="mb-3 sm:mb-0">Plans List</h5>

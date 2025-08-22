@@ -13,8 +13,12 @@ class Subscription extends Model
         'client_id',
         'plan_id',
         'status',
-        'start_date',
-        'end_date',
+        'price',
+        'username',
+        'server_id',
+        'next_due_date',
+        'starts_at',
+        'ends_at',
         'domain_option',
         'domain_name'
     ];
