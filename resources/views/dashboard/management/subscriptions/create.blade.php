@@ -56,8 +56,13 @@
                             @error('username') <span class="text-red-600">{{ $message }}</span> @enderror
                         </div>
                         <div class="col-span-12 md:col-span-6">
-                            <label class="form-label">معرف السيرفر (Server ID)</label>
-                            <input type="number" name="server_id" class="form-control" value="{{ old('server_id') }}">
+                            <label class="form-label">السيرفر</label>
+                            <select name="server_id" class="form-select" required>
+                                <option value="">-- اختر سيرفر --</option>
+                                @foreach($servers as $server)
+                                    <option value="{{ $server->id }}" {{ old('server_id') == $server->id ? 'selected' : '' }}>{{ $server->name }} ({{ $server->ip ?? $server->hostname }})</option>
+                                @endforeach
+                            </select>
                             @error('server_id') <span class="text-red-600">{{ $message }}</span> @enderror
                         </div>
                         <div class="col-span-12 md:col-span-6">

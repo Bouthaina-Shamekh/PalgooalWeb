@@ -23,9 +23,15 @@ class Subscription extends Model
         'domain_name'
     ];
 
+
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function server(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Server::class);
     }
 
     public function plan(): BelongsTo

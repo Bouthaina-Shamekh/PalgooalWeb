@@ -23,6 +23,15 @@
             </select>
         </div>
         <div class="mb-3">
+            <label>السيرفر</label>
+            <select name="server_id" class="form-control" required>
+                <option value="">اختر سيرفر</option>
+                @foreach($servers as $server)
+                    <option value="{{ $server->id }}" {{ $subscription->server_id == $server->id ? 'selected' : '' }}>{{ $server->name }} ({{ $server->ip ?? $server->hostname }})</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="mb-3">
             <label>الخطة</label>
             <select name="plan_id" class="form-control" required>
                 <option value="">اختر خطة</option>
