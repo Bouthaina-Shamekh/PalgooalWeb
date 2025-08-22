@@ -7,6 +7,47 @@ use Illuminate\Http\Request;
 
 class ServerController extends Controller
 {
+    public function accounts(Server $server)
+    {
+        $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
+        $port = 2087;
+        $username = $server->username;
+        $apiToken = $server->api_token;
+        $accounts = [];
+        $error = null;
+        if ($host && $username && $apiToken) {
+            $apiUrl = "https://{$host}:{$port}/json-api/listaccts?api.version=1";
+            try {
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $apiUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+                $header = [
+                    'Authorization: whm ' . $username . ':' . $apiToken
+                ];
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+                $response = curl_exec($ch);
+                if (curl_errno($ch)) {
+                    $error = curl_error($ch);
+                } else {
+                    $data = json_decode($response, true);
+                    if (isset($data['acct']) && is_array($data['acct'])) {
+                        $accounts = $data['acct'];
+                    } else {
+                        $error = $data['metadata']['reason'] ?? $data['reason'] ?? 'لم يتم العثور على بيانات.';
+                    }
+                }
+                curl_close($ch);
+            } catch (\Exception $e) {
+                $error = $e->getMessage();
+            }
+        } else {
+            $error = 'يجب توفر hostname أو IP واسم المستخدم وAPI Token.';
+        }
+        return view('dashboard.management.servers.accounts', compact('server', 'accounts', 'error'));
+    }
     public function index()
     {
         $servers = Server::latest()->paginate(20);

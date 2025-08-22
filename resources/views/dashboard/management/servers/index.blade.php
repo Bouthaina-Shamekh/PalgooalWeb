@@ -94,6 +94,9 @@
                                             <a href="{{ route('dashboard.servers.test-connection', $server) }}" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary" title="فحص الاتصال">
                                                 <i class="ti ti-plug text-xl leading-none"></i>
                                             </a>
+                                            <a href="{{ route('dashboard.servers.accounts', $server) }}" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary" title="عرض المواقع">
+                                                <i class="ti ti-list-details text-xl leading-none"></i>
+                                            </a>
                                             @if($server->type == 'cpanel')
                                                 <a href="{{ route('dashboard.servers.sso-whm', $server) }}" target="_blank" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary" title="دخول السيرفر (SSO)">
                                                     <i class="ti ti-login text-xl leading-none"></i>

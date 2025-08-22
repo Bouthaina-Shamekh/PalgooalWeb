@@ -113,6 +113,7 @@ Route::group([
     Route::get('servers/{server}/test-connection', [ServerController::class, 'testConnection'])->name('servers.test-connection');
     Route::get('servers/{server}/sso-whm', [ServerController::class, 'ssoWhm'])->name('servers.sso-whm');
     Route::resource('servers', ServerController::class)->names('servers');
+    Route::get('servers/{server}/accounts', [ServerController::class, 'accounts'])->name('servers.accounts');
     Route::get('/sites', [HomeController::class, 'sites'])->name('sites');
     Route::get('/domains', [HomeController::class, 'domains'])->name('domains');
     Route::resource('plans', PlanController::class);
