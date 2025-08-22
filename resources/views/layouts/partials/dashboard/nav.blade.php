@@ -172,6 +172,16 @@
                         <span class="pc-mtext">{{ t('dashboard.sites', 'sites') }}</span>
                     </a>
                 </li>
+                <li class="pc-item">
+                    <a href="{{route('dashboard.servers.index')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-server"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.servers', 'servers') }}</span>
+                    </a>
+                </li>
 
                 <li class="pc-item pc-caption">
                     <label>{{ t('dashboard.Site_settings','Site settings') }}</label>
