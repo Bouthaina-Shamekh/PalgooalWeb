@@ -153,18 +153,54 @@
   </div>
 
   {{-- Minimal helpers --}}
+
 <script>
+  // السعر
   const priceUI = document.getElementById('price_ui');
   const priceCents = document.getElementById('price_cents');
   function syncCents(){
     const v = parseFloat(priceUI?.value || '0');
     priceCents.value = isNaN(v) ? '' : Math.round(v * 100);
   }
-  // احسب بمجرد تغيّر القيمة وقبل الإرسال
   priceUI?.addEventListener('input', syncCents);
   document.getElementById('planForm')?.addEventListener('submit', ()=> { syncCents(); });
-  // حساب أولي عند فتح الصفحة (مهم عند الرجوع مع old())
   document.addEventListener('DOMContentLoaded', syncCents);
+
+  // الميزات
+  const featureInput = document.getElementById('featureInput');
+  const addFeatureBtn = document.getElementById('addFeatureBtn');
+  const featuresChips = document.getElementById('featuresChips');
+
+  function addFeature(value) {
+    value = value.trim();
+    if (!value) return;
+    // تحقق من التكرار
+    if ([...featuresChips.querySelectorAll('input[name="features[]"]')].some(i => i.value === value)) return;
+    // عنصر الشيب
+    const span = document.createElement('span');
+    span.className = 'badge bg-success-500/10 text-success-700 rounded-full px-3 py-1 flex items-center gap-2';
+    span.innerHTML = `<span>${value}</span>
+      <button type="button" class="text-red-600 remove-chip" data-value="${value}">✕</button>
+      <input type="hidden" name="features[]" value="${value}">`;
+    featuresChips.appendChild(span);
+    featureInput.value = '';
+    featureInput.focus();
+  }
+
+  addFeatureBtn?.addEventListener('click', () => {
+    addFeature(featureInput.value);
+  });
+  featureInput?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addFeature(featureInput.value);
+    }
+  });
+  featuresChips?.addEventListener('click', e => {
+    if (e.target.classList.contains('remove-chip')) {
+      e.target.closest('span').remove();
+    }
+  });
 </script>
 
 </x-dashboard-layout>

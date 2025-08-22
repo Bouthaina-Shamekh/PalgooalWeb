@@ -108,5 +108,5 @@ Route::group([
     Route::get('/subscriptions', [HomeController::class, 'subscriptions'])->name('subscriptions');
     Route::get('/sites', [HomeController::class, 'sites'])->name('sites');
     Route::get('/domains', [HomeController::class, 'domains'])->name('domains');
-    Route::resource('/plans', PlanController::class);
+    Route::resource('plans', PlanController::class);
 });

@@ -57,7 +57,7 @@ class PlanController extends Controller
         Plan::create($data);
 
         return redirect()
-            ->route('dashboard.management.plans.index')
+            ->route('dashboard.plans.index')
             ->with('ok', 'تم إنشاء الخطة بنجاح');
     }
 
@@ -110,7 +110,7 @@ class PlanController extends Controller
         $plan->update($data);
 
         return redirect()
-            ->route('dashboard.management.plans.index')
+            ->route('dashboard.plans.index')
             ->with('ok', 'تم تحديث الخطة');
     }
 

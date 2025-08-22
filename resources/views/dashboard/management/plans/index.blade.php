@@ -19,9 +19,9 @@
                     <div class="sm:flex items-center justify-between">
                         <h5 class="mb-3 sm:mb-0">Plans List</h5>
                         <div class="flex items-center gap-2">
-                            <button type="button" wire:click="showAdd" class="btn btn-primary">
+                            <a href="{{ route('dashboard.plans.create') }}" class="btn btn-primary">
                                 Add Plan
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -117,24 +117,21 @@
                                         </td>
 
                                         <td class="whitespace-nowrap">
-                                            <button
-                                                type="button"
-                                                wire:click="showEdit({{ $plan->id }})"
+                                            <a
+                                                href="{{ route('dashboard.plans.edit', $plan->id) }}"
                                                 class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
                                                 title="Edit"
                                             >
                                                 <i class="ti ti-edit text-xl leading-none"></i>
-                                            </button>
+                                            </a>
 
-                                            <button
-                                                type="button"
-                                                wire:click="delete({{ $plan->id }})"
-                                                onclick="confirm('Are you sure?') || event.stopImmediatePropagation()"
-                                                class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
-                                                title="Delete"
-                                            >
-                                                <i class="ti ti-trash text-xl leading-none"></i>
-                                            </button>
+                                            <form action="{{ route('dashboard.plans.destroy', $plan->id) }}" method="POST" style="display:inline-block" onsubmit="return confirm('Are you sure you want to delete this plan?');">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary" title="Delete">
+                                                    <i class="ti ti-trash text-xl leading-none"></i>
+                                                </button>
+                                            </form>
                                         </td>
                                     </tr>
                                 @empty
