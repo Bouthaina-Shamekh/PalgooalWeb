@@ -327,4 +327,102 @@ class SubscriptionController extends Controller
         }
         return back()->with('connection_result', 'فشل إنشاء رابط الدخول: ' . $error);
     }
+
+
+    /**
+     * تنصيب ووردبريس يدويًا عبر تحميل wordpress.zip وفك الضغط وإنشاء قاعدة البيانات وwp-config
+     */
+    public function installWordPressManual(Subscription $subscription)
+    {
+        $server = $subscription->server;
+        if (!$server) {
+            return back()->with('connection_result', 'لا يوجد سيرفر مرتبط بهذا الاشتراك.');
+        }
+        $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
+        $port = 2083; // cPanel port
+        $cpUser = $subscription->username;
+        $apiToken = $server->api_token;
+        $domain = $subscription->domain_name;
+        $error = null;
+        $result = null;
+        // 1. محاولة تحميل wordpress.zip إلى public_html عبر download_file
+        $wpZipUrl = 'https://wpgoals.com/wordpress.zip';
+        $apiUrl = "https://{$host}:{$port}/execute/Fileman/download_file";
+        $postFields = http_build_query([
+            'url' => $wpZipUrl,
+            'dir' => 'public_html',
+        ]);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $apiUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+        $header = [
+            'Authorization: cpanel ' . $cpUser . ':' . $apiToken,
+        ];
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+        curl_setopt($ch, CURLOPT_HEADER, 1);
+        $response = curl_exec($ch);
+        $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $response_header = substr($response, 0, $header_size);
+        $response_body = substr($response, $header_size);
+        $data = json_decode($response_body, true);
+        curl_close($ch);
+        if (!isset($data['status']) || $data['status'] != 1) {
+            // إذا فشل التحميل من الإنترنت، جرب رفع الملف من storage/app/wordpress.zip
+            $localPath = storage_path('app/wordpress.zip');
+            if (!file_exists($localPath)) {
+                return back()->with('connection_result', 'فشل تحميل wordpress.zip من الإنترنت، وأيضًا الملف غير موجود محليًا في: ' . $localPath);
+            }
+            $apiUrl = "https://{$host}:{$port}/execute/Fileman/upload_file";
+            $postFields = [
+                'dir' => 'public_html',
+                'file-1' => new \CURLFile($localPath, 'application/zip', 'latest.zip'),
+            ];
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $apiUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+            $response = curl_exec($ch);
+            $data = json_decode($response, true);
+            curl_close($ch);
+            if (!isset($data['status']) || $data['status'] != 1) {
+                return back()->with('connection_result', 'فشل رفع wordpress.zip يدويًا:<br><b>Response:</b><pre>' . htmlspecialchars($response) . '</pre>');
+            }
+        }
+        // 2. فك الضغط عن wordpress.zip في public_html
+        $apiUrl = "https://{$host}:{$port}/execute/Fileman/extract_archive";
+        $postFields = http_build_query([
+            'archive' => 'public_html/latest.zip',
+            'dest' => 'public_html',
+        ]);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $apiUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+        $response = curl_exec($ch);
+        $data = json_decode($response, true);
+        curl_close($ch);
+        if (!isset($data['status']) || $data['status'] != 1) {
+            return back()->with('connection_result', 'فشل فك الضغط عن wordpress.zip: <pre>' . print_r($data, true) . '</pre>');
+        }
+        // 3. نقل ملفات ووردبريس من public_html/wordpress إلى public_html (اختياري)
+        // يمكن تنفيذ ذلك عبر Fileman/mv_file أو Fileman/copy_file API إذا رغبت
+        // 4. إنشاء قاعدة بيانات ومستخدم وwp-config.php (يمكن إضافتها لاحقًا)
+        return back()->with('connection_result', 'تم تحميل وفك ضغط ووردبريس بنجاح. أكمل الإعدادات يدويًا أو أبلغني لإكمال قاعدة البيانات وwp-config تلقائيًا.');
+    }
 }

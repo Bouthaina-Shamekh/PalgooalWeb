@@ -108,10 +108,12 @@ Route::group([
     Route::post('/reviews/bulk', [TemplateReviewController::class, 'bulk'])->name('reviews.bulk');
 
     Route::post('/subscriptions/{subscription}/sync', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'syncWithProvider'])->name('subscriptions.sync');
+    Route::post('/subscriptions/{subscription}/install-wordpress', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'installWordPress'])->name('subscriptions.install-wordpress');
     Route::post('/subscriptions/{subscription}/suspend', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'suspendToProvider'])->name('subscriptions.suspend');
     Route::post('/subscriptions/{subscription}/unsuspend', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'unsuspendToProvider'])->name('subscriptions.unsuspend');
     Route::post('/subscriptions/{subscription}/terminate', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'terminateToProvider'])->name('subscriptions.terminate');
     Route::get('/subscriptions/{subscription}/cpanel-login', [SubscriptionController::class, 'cpanelLogin'])->name('subscriptions.cpanel-login');
+    Route::post('/subscriptions/{subscription}/install-wordpress', [SubscriptionController::class, 'installWordPressManual'])->name('subscriptions.install-wordpress');
     Route::resource('/subscriptions', SubscriptionController::class)->names('subscriptions');
     Route::get('servers/{server}/test-connection', [ServerController::class, 'testConnection'])->name('servers.test-connection');
     Route::get('servers/{server}/sso-whm', [ServerController::class, 'ssoWhm'])->name('servers.sso-whm');

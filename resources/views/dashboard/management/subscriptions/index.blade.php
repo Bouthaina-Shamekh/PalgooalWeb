@@ -103,6 +103,12 @@
                                                 <a href="{{ route('dashboard.subscriptions.cpanel-login', $sub->id) }}" target="_blank" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary" title="دخول cPanel">
                                                     <i class="ti ti-login text-xl leading-none"></i>
                                                 </a>
+<form action="{{ route('dashboard.subscriptions.install-wordpress', $sub->id) }}" method="POST" style="display:inline-block">
+    @csrf
+    <button class="btn btn-xs btn-warning" title="تنصيب ووردبريس تلقائي" onclick="return confirm('سيتم تنصيب ووردبريس تلقائيًا. هل أنت متأكد؟')">
+        <i class="ti ti-brand-wordpress"></i>
+    </button>
+</form>
                                             @endif
                                         </div>
                                     </td>
