@@ -60,7 +60,6 @@
                                 <tr>
                                     <th class="text-right">#</th>
                                     <th class="text-right">Name</th>
-                                    <th class="text-right">Billing</th>
                                     <th class="text-right">Price</th>
                                     <th class="text-right">Features</th>
                                     <th class="text-right">Status</th>
@@ -72,7 +71,8 @@
                                 @forelse ($plans as $plan)
                                     @php
                                         // price formatting
-                                        $price = '$' . number_format(($plan->price_cents ?? 0) / 100, 2);
+                                        $monthly = $plan->monthly_price_cents ? '$' . number_format($plan->monthly_price_cents / 100, 2) : null;
+                                        $annual = $plan->annual_price_cents ? '$' . number_format($plan->annual_price_cents / 100, 2) : null;
 
                                         // features casted to array in the model; fallback to []
                                         $features = is_array($plan->features) ? $plan->features : [];
@@ -89,11 +89,18 @@
                                             <div class="text-xs text-gray-500">{{ $plan->slug }}</div>
                                         </td>
 
-                                        <td class="text-sm">
-                                            {{ $plan->billing_cycle === 'monthly' ? 'Monthly' : 'Annually' }}
+                                        <td>
+                                            @if($monthly && $annual)
+                                                <div><span class="font-semibold">Monthly:</span> <span>{{ $monthly }}</span></div>
+                                                <div><span class="font-semibold">Annual:</span> <span>{{ $annual }}</span></div>
+                                            @elseif($monthly)
+                                                <div><span class="font-semibold">Monthly:</span> <span>{{ $monthly }}</span></div>
+                                            @elseif($annual)
+                                                <div><span class="font-semibold">Annual:</span> <span>{{ $annual }}</span></div>
+                                            @else
+                                                <span class="text-gray-400">—</span>
+                                            @endif
                                         </td>
-
-                                        <td>{{ $price }}</td>
 
                                         <td class="max-w-[320px]">
                                             @forelse ($preview as $feature)

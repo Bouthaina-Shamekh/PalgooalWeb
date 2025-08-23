@@ -68,45 +68,36 @@
 							@error('slug') <div class="text-red-600 text-sm mt-1">{{ $message }}</div> @enderror
 						</div>
 
-						<!-- Billing Cycle -->
+						<!-- Monthly Price -->
 						<div class="col-span-12 md:col-span-6">
-							<label class="form-label">Billing Cycle *</label>
-							<div class="flex items-center gap-4 mt-2">
-								<label class="inline-flex items-center gap-2">
-									<input
-										type="radio"
-										name="billing_cycle"
-										value="monthly"
-										@checked(old('billing_cycle', $plan->billing_cycle)==='monthly')
-										required>
-									<span>Monthly</span>
-								</label>
-								<label class="inline-flex items-center gap-2">
-									<input
-										type="radio"
-										name="billing_cycle"
-										value="annually"
-										@checked(old('billing_cycle', $plan->billing_cycle)==='annually')>
-									<span>Annually</span>
-								</label>
-							</div>
-							@error('billing_cycle') <div class="text-red-600 text-sm mt-1">{{ $message }}</div> @enderror
-						</div>
-
-						<!-- Price (UI in dollars) -->
-						<div class="col-span-12 md:col-span-6">
-							<label class="form-label">Price (USD) *</label>
+							<label class="form-label">Monthly Price (USD)</label>
 							<div class="flex">
 								<span class="inline-flex items-center px-3 rounded-s-xl border border-e-0 bg-gray-50">$</span>
 								<input
 									type="number" step="0.01" min="0"
-									id="price_ui" name="price_ui"
+									name="monthly_price_cents"
 									class="form-control rounded-s-none"
-									value="{{ old('price_ui', number_format(($plan->price_cents ?? 0)/100, 2, '.', '')) }}" placeholder="0.00" required
+									value="{{ old('monthly_price_cents', isset($plan->monthly_price_cents) ? number_format($plan->monthly_price_cents/100, 2, '.', '') : '') }}"
+									placeholder="0.00"
 								>
 							</div>
-							<input type="hidden" name="price_cents" id="price_cents" value="{{ old('price_cents', $plan->price_cents) }}">
-							@error('price_cents') <div class="text-red-600 text-sm mt-1">{{ $message }}</div> @enderror
+							@error('monthly_price_cents') <div class="text-red-600 text-sm mt-1">{{ $message }}</div> @enderror
+						</div>
+
+						<!-- Annual Price -->
+						<div class="col-span-12 md:col-span-6">
+							<label class="form-label">Annual Price (USD)</label>
+							<div class="flex">
+								<span class="inline-flex items-center px-3 rounded-s-xl border border-e-0 bg-gray-50">$</span>
+								<input
+									type="number" step="0.01" min="0"
+									name="annual_price_cents"
+									class="form-control rounded-s-none"
+									value="{{ old('annual_price_cents', isset($plan->annual_price_cents) ? number_format($plan->annual_price_cents/100, 2, '.', '') : '') }}"
+									placeholder="0.00"
+								>
+							</div>
+							@error('annual_price_cents') <div class="text-red-600 text-sm mt-1">{{ $message }}</div> @enderror
 						</div>
 
 						<!-- Features -->
@@ -152,17 +143,43 @@
 		</div>
 	</div>
 
-	{{-- Minimal helpers --}}
+		{{-- Minimal helpers --}}
 <script>
-	const priceUI = document.getElementById('price_ui');
-	const priceCents = document.getElementById('price_cents');
-	function syncCents(){
-		const v = parseFloat(priceUI?.value || '0');
-		priceCents.value = isNaN(v) ? '' : Math.round(v * 100);
+	// الميزات
+	const featureInput = document.getElementById('featureInput');
+	const addFeatureBtn = document.getElementById('addFeatureBtn');
+	const featuresChips = document.getElementById('featuresChips');
+
+	function addFeature(value) {
+		value = value.trim();
+		if (!value) return;
+		// تحقق من التكرار
+		if ([...featuresChips.querySelectorAll('input[name="features[]"]')].some(i => i.value === value)) return;
+		// عنصر الشيب
+		const span = document.createElement('span');
+		span.className = 'badge bg-success-500/10 text-success-700 rounded-full px-3 py-1 flex items-center gap-2';
+		span.innerHTML = `<span>${value}</span>
+			<button type="button" class="text-red-600 remove-chip" data-value="${value}">✕</button>
+			<input type="hidden" name="features[]" value="${value}">`;
+		featuresChips.appendChild(span);
+		featureInput.value = '';
+		featureInput.focus();
 	}
-	priceUI?.addEventListener('input', syncCents);
-	document.getElementById('planForm')?.addEventListener('submit', ()=> { syncCents(); });
-	document.addEventListener('DOMContentLoaded', syncCents);
+
+	addFeatureBtn?.addEventListener('click', () => {
+		addFeature(featureInput.value);
+	});
+	featureInput?.addEventListener('keydown', e => {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			addFeature(featureInput.value);
+		}
+	});
+	featuresChips?.addEventListener('click', e => {
+		if (e.target.classList.contains('remove-chip')) {
+			e.target.closest('span').remove();
+		}
+	});
 </script>
 
 </x-dashboard-layout>

@@ -99,6 +99,11 @@
                                                 @csrf
                                                 <button class="btn btn-xs btn-danger" title="حذف نهائي" onclick="return confirm('سيتم حذف الموقع من السيرفر نهائيًا. هل أنت متأكد؟')"><i class="ti ti-trash-x"></i></button>
                                             </form>
+                                            @if($sub->domain_name)
+                                                <a href="{{ route('dashboard.subscriptions.cpanel-login', $sub->id) }}" target="_blank" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary" title="دخول cPanel">
+                                                    <i class="ti ti-login text-xl leading-none"></i>
+                                                </a>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

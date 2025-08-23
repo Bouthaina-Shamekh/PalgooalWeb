@@ -11,6 +11,8 @@ class Plan extends Model
         'name',
         'slug',
         'price_cents',
+        'monthly_price_cents',
+        'annual_price_cents',
         'billing_cycle',
         'features',
         'is_active',
