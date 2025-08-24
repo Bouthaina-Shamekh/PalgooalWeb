@@ -27,4 +27,11 @@ class Domain extends Model
     {
         return $this->belongsTo(Template::class);
     }
+
+    public function invoiceItems()
+    {
+        return $this->hasMany(InvoiceItem::class, 'reference_id')
+                    ->where('item_type', 'domain');
+    }
+
 }

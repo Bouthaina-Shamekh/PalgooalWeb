@@ -13,15 +13,25 @@ class Subscription extends Model
         'client_id',
         'plan_id',
         'status',
-        'start_date',
-        'end_date',
+        'price',
+        'username',
+        'server_id',
+        'next_due_date',
+        'starts_at',
+        'ends_at',
         'domain_option',
         'domain_name'
     ];
 
+
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function server(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Server::class);
     }
 
     public function plan(): BelongsTo
@@ -29,9 +39,10 @@ class Subscription extends Model
         return $this->belongsTo(Plan::class);
     }
 
-    public function invoices(): HasMany
+    public function invoiceItems()
     {
-        return $this->hasMany(Invoice::class);
+        return $this->hasMany(InvoiceItem::class, 'reference_id')
+                    ->where('item_type', 'subscription');
     }
 
     public function coupons(): BelongsToMany

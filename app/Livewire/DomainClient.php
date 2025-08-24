@@ -5,10 +5,12 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Models\Client;
 use App\Models\Domain;
+use App\Models\Invoice;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Livewire\WithFileUploads;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 
 
@@ -165,9 +167,39 @@ class DomainClient extends Component
         $domain = Domain::where('domain_name', $this->domainData['domain_name'])->first();
         if ($domain) {
             $domain->update($domainValidated);
+
+            // تحديث الفاتورة إن وجدت
+            $invoiceItem = $domain->invoiceItems()->first();
+
+            if ($invoiceItem && $invoiceItem->invoice) {
+                $invoiceItem->update([
+                    'description' => 'تحديث دومين: ' . $domain->domain_name,
+                ]);
+            }
             $this->showAlert('Domain updated successfully.', 'success');
         } else {
-            Domain::create($domainValidated);
+            $domain = Domain::create($domainValidated);
+
+            $price_cents = 0;
+
+            $invoice = Invoice::create([
+                'client_id' => $domain->client_id,
+                'number' => 'INV-' . strtoupper(Str::random(6)),
+                'status' => 'unpaid',
+                'subtotal_cents' => $price_cents,
+                'total_cents' => $price_cents,
+                'currency' => 'USD',
+                'due_date' => $domain->renewal_date ?? now()->addDays(7),
+            ]);
+
+            $invoice->items()->create([
+                'item_type' => 'domain',
+                'reference_id' => $domain->id,
+                'description' => 'تسجيل دومين ' . $domain->domain_name,
+                'qty' => 1,
+                'unit_price_cents' => $price_cents,
+                'total_cents' => $price_cents,
+            ]);
             $this->showAlert('Domain added successfully.', 'success');
         }
         $this->mode = 'index';

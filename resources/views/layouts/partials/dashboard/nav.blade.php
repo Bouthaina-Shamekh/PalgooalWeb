@@ -151,9 +151,9 @@
                         </span>
                         <span class="pc-mtext">{{ t('dashboard.plans', 'plans') }}</span>
                     </a>
-                </li>                
+                </li>
                 <li class="pc-item">
-                    <a href="{{route('dashboard.subscriptions')}}" class="pc-link">
+                    <a href="{{route('dashboard.subscriptions.index')}}" class="pc-link">
                         <span class="pc-micon">
                             <span class="pc-micon">
                                 <i class="fas fa-money-bill"></i>
@@ -163,13 +163,23 @@
                     </a>
                 </li>
                 <li class="pc-item">
-                    <a href="{{route('dashboard.sites')}}" class="pc-link">
+                    <a href="{{route('dashboard.invoices.index')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.invoices', 'invoices') }}</span>
+                    </a>
+                </li>
+                <li class="pc-item">
+                    <a href="{{route('dashboard.servers.index')}}" class="pc-link">
                         <span class="pc-micon">
                             <span class="pc-micon">
                                 <i class="fas fa-server"></i>
                             </span>
                         </span>
-                        <span class="pc-mtext">{{ t('dashboard.sites', 'sites') }}</span>
+                        <span class="pc-mtext">{{ t('dashboard.servers', 'servers') }}</span>
                     </a>
                 </li>
 

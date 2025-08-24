@@ -4,8 +4,11 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Dashboard\HomeController;
 use App\Http\Controllers\Dashboard\UserController;
 use App\Http\Controllers\Dashboard\LanguageController;
+use App\Http\Controllers\Dashboard\Management\InvoiceController;
 use App\Http\Controllers\Dashboard\Management\Plan;
 use App\Http\Controllers\Dashboard\Management\PlanController;
+use App\Http\Controllers\Dashboard\Management\ServerController;
+use App\Http\Controllers\Dashboard\Management\SubscriptionController;
 use App\Http\Controllers\Dashboard\MediaController;
 use App\Http\Controllers\Dashboard\ServicesController;
 use App\Http\Controllers\Dashboard\TranslationValueController;
@@ -105,8 +108,19 @@ Route::group([
     Route::delete('/reviews/{review}', [TemplateReviewController::class, 'destroy'])->name('reviews.destroy');
     Route::post('/reviews/bulk', [TemplateReviewController::class, 'bulk'])->name('reviews.bulk');
 
-    Route::get('/subscriptions', [HomeController::class, 'subscriptions'])->name('subscriptions');
+    Route::post('/subscriptions/{subscription}/sync', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'syncWithProvider'])->name('subscriptions.sync');
+    Route::post('/subscriptions/{subscription}/suspend', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'suspendToProvider'])->name('subscriptions.suspend');
+    Route::post('/subscriptions/{subscription}/unsuspend', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'unsuspendToProvider'])->name('subscriptions.unsuspend');
+    Route::post('/subscriptions/{subscription}/terminate', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'terminateToProvider'])->name('subscriptions.terminate');
+    Route::resource('/subscriptions', SubscriptionController::class)->names('subscriptions');
+    Route::get('servers/{server}/test-connection', [ServerController::class, 'testConnection'])->name('servers.test-connection');
+    Route::get('servers/{server}/sso-whm', [ServerController::class, 'ssoWhm'])->name('servers.sso-whm');
+    Route::resource('servers', ServerController::class)->names('servers');
+    Route::get('servers/{server}/accounts', [ServerController::class, 'accounts'])->name('servers.accounts');
     Route::get('/sites', [HomeController::class, 'sites'])->name('sites');
     Route::get('/domains', [HomeController::class, 'domains'])->name('domains');
-    Route::resource('/plans', PlanController::class);
+    Route::resource('plans', PlanController::class);
+
+    Route::resource('/invoices', InvoiceController::class)->names('invoices');
+
 });
