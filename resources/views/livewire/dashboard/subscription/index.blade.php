@@ -50,7 +50,7 @@
                                     <td>{{ $sub->id }}</td>
                                     <td>{{ $sub->client->company_name }}</td>
                                     <td>{{ $sub->plan->name }}</td>
-                                    <td>{{ $sub->start_date}}</td>
+                                    <td>{{ $sub->starts_at}}</td>
                                     <td>
                                     <a wire:click="showView({{ $sub->id }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                             <i class="ti ti-eye text-xl leading-none"></i>

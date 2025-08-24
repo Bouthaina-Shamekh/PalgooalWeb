@@ -109,9 +109,12 @@ Route::group([
     Route::post('/reviews/bulk', [TemplateReviewController::class, 'bulk'])->name('reviews.bulk');
 
     Route::post('/subscriptions/{subscription}/sync', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'syncWithProvider'])->name('subscriptions.sync');
+
     Route::post('/subscriptions/{subscription}/suspend', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'suspendToProvider'])->name('subscriptions.suspend');
     Route::post('/subscriptions/{subscription}/unsuspend', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'unsuspendToProvider'])->name('subscriptions.unsuspend');
     Route::post('/subscriptions/{subscription}/terminate', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'terminateToProvider'])->name('subscriptions.terminate');
+
+   
     Route::resource('/subscriptions', SubscriptionController::class)->names('subscriptions');
     Route::get('servers/{server}/test-connection', [ServerController::class, 'testConnection'])->name('servers.test-connection');
     Route::get('servers/{server}/sso-whm', [ServerController::class, 'ssoWhm'])->name('servers.sso-whm');
@@ -121,6 +124,9 @@ Route::group([
     Route::get('/domains', [HomeController::class, 'domains'])->name('domains');
     Route::resource('plans', PlanController::class);
 
+
     Route::resource('/invoices', InvoiceController::class)->names('invoices');
+
+
 
 });

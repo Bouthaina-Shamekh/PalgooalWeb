@@ -23,41 +23,45 @@ class PlanController extends Controller
 
     public function store(Request $r)
     {
-        // تحويل السعر من واجهة الدولار إلى السنت إن لزم
-        if ($r->missing('price_cents') && $r->filled('price_ui')) {
-            $ui = (float) $r->input('price_ui');
-            $r->merge(['price_cents' => (int) round($ui * 100)]);
-        }
-
         // توحيد الحقول
         $r->merge([
             'is_active' => $r->boolean('is_active'),
             'features'  => array_values(array_filter((array) $r->input('features', []), fn($v) => trim((string)$v) !== '')),
         ]);
 
-        // فاليديشن
-        $data = $r->validate([
-            'name'          => 'required|string|max:120',
-            'slug'          => 'nullable|string|max:140|unique:plans,slug',
-            'price_cents'   => 'required|integer|min:0',
-            'billing_cycle' => ['required', Rule::in(['monthly','annually'])],
-            'features'      => 'nullable|array',
-            'is_active'     => 'boolean',
-        ], [
-            'name.required'          => 'الاسم مطلوب',
-            'price_cents.required'   => 'السعر مطلوب',
-            'billing_cycle.required' => 'دورة الفوترة مطلوبة',
-            'billing_cycle.in'       => 'قيمة دورة الفوترة غير صحيحة',
-            'slug.unique'            => 'المُعرّف (Slug) مستخدم من قبل',
+        // تحويل السعر من الدولار إلى سنتات (int)
+        $monthly = $r->input('monthly_price_cents');
+        $annual = $r->input('annual_price_cents');
+        $r->merge([
+            'monthly_price_cents' => $monthly !== null && $monthly !== '' ? (int) round(floatval($monthly) * 100) : null,
+            'annual_price_cents' => $annual !== null && $annual !== '' ? (int) round(floatval($annual) * 100) : null,
         ]);
 
-        $data['slug']       = $data['slug'] ?: Str::slug($data['name']);
-        $data['created_by'] = auth()->id();
+        // فاليديشن: أحد السعرين مطلوب على الأقل
+        $data = $r->validate([
+            'name'                => 'required|string|max:120',
+            'slug'                => 'nullable|string|max:140|unique:plans,slug',
+            'monthly_price_cents' => 'nullable|integer|min:0',
+            'annual_price_cents'  => 'nullable|integer|min:0',
+            'features'            => 'nullable|array',
+            'is_active'           => 'boolean',
+        ], [
+            'name.required'                => 'الاسم مطلوب',
+            'slug.unique'                  => 'المُعرّف (Slug) مستخدم من قبل',
+            'monthly_price_cents.integer'  => 'السعر الشهري يجب أن يكون رقمًا عشريًا أو صحيحًا',
+            'annual_price_cents.integer'   => 'السعر السنوي يجب أن يكون رقمًا عشريًا أو صحيحًا',
+        ]);
+
+        if (empty($data['monthly_price_cents']) && empty($data['annual_price_cents'])) {
+            return back()->withErrors(['monthly_price_cents' => 'يجب إدخال سعر شهري أو سنوي على الأقل'])->withInput();
+        }
+
+        $data['slug'] = $data['slug'] ?: Str::slug($data['name']);
 
         Plan::create($data);
 
         return redirect()
-            ->route('dashboard.management.plans.index')
+            ->route('dashboard.plans.index')
             ->with('ok', 'تم إنشاء الخطة بنجاح');
     }
 
@@ -68,12 +72,6 @@ class PlanController extends Controller
 
     public function update(Request $r, Plan $plan)
     {
-        // تحويل السعر من واجهة الدولار إلى السنت إن لزم
-        if ($r->missing('price_cents') && $r->filled('price_ui')) {
-            $ui = (float) $r->input('price_ui');
-            $r->merge(['price_cents' => (int) round($ui * 100)]);
-        }
-
         // توحيد الحقول
         $features = $r->input('features');
         if (is_string($features)) {
@@ -88,29 +86,39 @@ class PlanController extends Controller
             'features'  => $features,
         ]);
 
-        // فاليديشن
-        $data = $r->validate([
-            'name'          => 'required|string|max:120',
-            'slug'          => ['nullable','string','max:140', Rule::unique('plans','slug')->ignore($plan->id)],
-            'price_cents'   => 'required|integer|min:0',
-            'billing_cycle' => ['required', Rule::in(['monthly','annually'])],
-            'features'      => 'nullable|array',
-            'is_active'     => 'boolean',
-        ], [
-            'name.required'          => 'الاسم مطلوب',
-            'price_cents.required'   => 'السعر مطلوب',
-            'billing_cycle.required' => 'دورة الفوترة مطلوبة',
-            'billing_cycle.in'       => 'قيمة دورة الفوترة غير صحيحة',
-            'slug.unique'            => 'المُعرّف (Slug) مستخدم من قبل',
+        // تحويل السعر من الدولار إلى سنتات (int)
+        $monthly = $r->input('monthly_price_cents');
+        $annual = $r->input('annual_price_cents');
+        $r->merge([
+            'monthly_price_cents' => $monthly !== null && $monthly !== '' ? (int) round(floatval($monthly) * 100) : null,
+            'annual_price_cents' => $annual !== null && $annual !== '' ? (int) round(floatval($annual) * 100) : null,
         ]);
 
-        $data['slug']       = $data['slug'] ?: Str::slug($data['name']);
-        $data['updated_by'] = auth()->id();
+        // فاليديشن: أحد السعرين مطلوب على الأقل
+        $data = $r->validate([
+            'name'                => 'required|string|max:120',
+            'slug'                => ['nullable','string','max:140', Rule::unique('plans','slug')->ignore($plan->id)],
+            'monthly_price_cents' => 'nullable|integer|min:0',
+            'annual_price_cents'  => 'nullable|integer|min:0',
+            'features'            => 'nullable|array',
+            'is_active'           => 'boolean',
+        ], [
+            'name.required'                => 'الاسم مطلوب',
+            'slug.unique'                  => 'المُعرّف (Slug) مستخدم من قبل',
+            'monthly_price_cents.integer'  => 'السعر الشهري يجب أن يكون رقمًا عشريًا أو صحيحًا',
+            'annual_price_cents.integer'   => 'السعر السنوي يجب أن يكون رقمًا عشريًا أو صحيحًا',
+        ]);
+
+        if (empty($data['monthly_price_cents']) && empty($data['annual_price_cents'])) {
+            return back()->withErrors(['monthly_price_cents' => 'يجب إدخال سعر شهري أو سنوي على الأقل'])->withInput();
+        }
+
+        $data['slug'] = $data['slug'] ?: Str::slug($data['name']);
 
         $plan->update($data);
 
         return redirect()
-            ->route('dashboard.management.plans.index')
+            ->route('dashboard.plans.index')
             ->with('ok', 'تم تحديث الخطة');
     }
 
