@@ -40,7 +40,7 @@ class SubscriptionController extends Controller
                 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
                 curl_setopt($ch, CURLOPT_TIMEOUT, 20);
                 $header = [
-                    'Authorization: whm ' . $username . ':' . $apiToken
+                    'Authorization: whm ' . $username . ':' . $apiToken,
                 ];
                 curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
                 $response = curl_exec($ch);
@@ -333,6 +333,29 @@ class SubscriptionController extends Controller
      * تنصيب ووردبريس يدويًا عبر تحميل wordpress.zip وفك الضغط وإنشاء قاعدة البيانات وwp-config
      */
     public function installWordPressManual(Subscription $subscription)
+    // --- مثال عملي: تنصيب ووردبريس عبر WP Toolkit ثم رفع وتفعيل قالب عبر wp-cli ---
+    // 1. استدعاء WP Toolkit API لتنصيب ووردبريس (تحتاج بيانات السيرفر واسم المستخدم والدومين)
+    // مثال (تخصيص حسب بيئتك):
+    // $apiUrl = "https://{$host}:2087/json-api/cpanel?cpanel_jsonapi_user={$cpUser}&cpanel_jsonapi_apiversion=2&cpanel_jsonapi_module=WpToolkit&cpanel_jsonapi_func=install_wp";
+    // $postFields = [
+    //     'domain' => $domain,
+    //     'path' => 'public_html',
+    //     'admin_user' => 'wpadmin',
+    //     'admin_pass' => 'StrongPass123',
+    //     'admin_email' => 'admin@' . $domain,
+    // ];
+    // ... تنفيذ الطلب عبر cURL بنفس طريقة باقي الدوال ...
+
+    // 2. بعد نجاح التنصيب، نفذ أوامر wp-cli لرفع وتفعيل القالب:
+    // مثال:
+    // $themeZip = '/path/to/theme.zip'; // ضع مسار القالب على السيرفر
+    // $wpPath = '/home/' . $cpUser . '/public_html';
+    // $cmd = "wp theme install $themeZip --activate --path=$wpPath";
+    // يمكنك تنفيذ الأمر عبر SSH أو من داخل السيرفر مباشرة:
+    // exec($cmd, $output, $status);
+    // إذا كنت تريد تنفيذ الأمر عبر SSH من Laravel:
+    // \Illuminate\Support\Facades\Process::run('ssh user@host "' . $cmd . '"');
+    // --- نهاية المثال ---
     {
         $server = $subscription->server;
         if (!$server) {
@@ -345,60 +368,48 @@ class SubscriptionController extends Controller
         $domain = $subscription->domain_name;
         $error = null;
         $result = null;
-        // 1. محاولة تحميل wordpress.zip إلى public_html عبر download_file
-        $wpZipUrl = 'https://wpgoals.com/wordpress.zip';
-        $apiUrl = "https://{$host}:{$port}/execute/Fileman/download_file";
-        $postFields = http_build_query([
-            'url' => $wpZipUrl,
-            'dir' => 'public_html',
-        ]);
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $apiUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
-        $header = [
-            'Authorization: cpanel ' . $cpUser . ':' . $apiToken,
+        // --- تنصيب ووردبريس وتفعيل قالب zip تلقائيًا عبر wp-cli ---
+        $user = $subscription->username;
+        $domain = $subscription->domain_name;
+        $wpPath = "/home/$user/public_html";
+        $themeZip = "/home/$user/public_html/theme.zip";
+        $adminUser = 'wpadmin';
+        $adminPass = 'StrongPass123!';
+        $adminEmail = 'admin@' . $domain;
+        $wpcli = '/usr/local/bin/wp';
+
+        // تشخيص: من ينفذ الأوامر وما هي بيئة wp-cli؟
+        $diagnose = [];
+        exec('whoami 2>&1', $diagnose['whoami']);
+        exec("cd $wpPath && $wpcli --info 2>&1", $diagnose['wpinfo']);
+        exec('ls -la ' . $wpPath . ' 2>&1', $diagnose['ls']);
+
+        // 1. تحميل وتنصيب ووردبريس مع ضبط HOME
+        $cmds = [
+            "cd $wpPath && HOME=$wpPath $wpcli core download --force",
+            "cd $wpPath && HOME=$wpPath $wpcli config create --dbname={$user}_wp --dbuser={$user}_wp --dbpass=StrongDBPass! --dbhost=localhost --skip-check --force",
+            "cd $wpPath && HOME=$wpPath $wpcli db create",
+            "cd $wpPath && HOME=$wpPath $wpcli core install --url=$domain --title=SiteTitle --admin_user=$adminUser --admin_password=$adminPass --admin_email=$adminEmail",
         ];
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-        curl_setopt($ch, CURLOPT_HEADER, 1);
-        $response = curl_exec($ch);
-        $header_size = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $response_header = substr($response, 0, $header_size);
-        $response_body = substr($response, $header_size);
-        $data = json_decode($response_body, true);
-        curl_close($ch);
-        if (!isset($data['status']) || $data['status'] != 1) {
-            // إذا فشل التحميل من الإنترنت، جرب رفع الملف من storage/app/wordpress.zip
-            $localPath = storage_path('app/wordpress.zip');
-            if (!file_exists($localPath)) {
-                return back()->with('connection_result', 'فشل تحميل wordpress.zip من الإنترنت، وأيضًا الملف غير موجود محليًا في: ' . $localPath);
-            }
-            $apiUrl = "https://{$host}:{$port}/execute/Fileman/upload_file";
-            $postFields = [
-                'dir' => 'public_html',
-                'file-1' => new \CURLFile($localPath, 'application/zip', 'latest.zip'),
+
+        // 2. رفع وتفعيل القالب (يجب أن يكون theme.zip موجود مسبقًا)
+        $cmds[] = "cd $wpPath && HOME=$wpPath $wpcli theme install $themeZip --activate";
+
+        $output = [];
+        $status = 0;
+        foreach ($cmds as $cmd) {
+            $out = [];
+            exec($cmd . ' 2>&1', $out, $status);
+            $output[] = [
+                'cmd' => $cmd,
+                'output' => $out,
+                'status' => $status
             ];
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $apiUrl);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-            $response = curl_exec($ch);
-            $data = json_decode($response, true);
-            curl_close($ch);
-            if (!isset($data['status']) || $data['status'] != 1) {
-                return back()->with('connection_result', 'فشل رفع wordpress.zip يدويًا:<br><b>Response:</b><pre>' . htmlspecialchars($response) . '</pre>');
+            if ($status !== 0) {
+                return back()->with('connection_result', 'فشل تنفيذ الأمر:<br><pre>' . print_r($diagnose, true) . print_r($output, true) . '</pre>');
             }
         }
+        return back()->with('connection_result', 'تم تنصيب ووردبريس وتفعيل القالب بنجاح.<br><pre>' . print_r($diagnose, true) . print_r($output, true) . '</pre>');
         // 2. فك الضغط عن wordpress.zip في public_html
         $apiUrl = "https://{$host}:{$port}/execute/Fileman/extract_archive";
         $postFields = http_build_query([
