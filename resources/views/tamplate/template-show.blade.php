@@ -454,7 +454,7 @@
                 <span x-show="open">{{ t('Frontend.Hide_specs','Hide specs') }}</span>
               </button>
             @endif
-            <a href="{{route('checkout', ['template' => $template->id])}}"
+            <a href="{{route('checkout', ['template_id' => $template->id])}}"
               class="w-full text-center bg-primary hover:bg-primary/90 text-white py-3.5 rounded-xl font-bold text-base shadow-xl shadow-primary/30 hover:shadow-primary/40 transition-all duration-300 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
               aria-label="اشترك الآن في {{ $translation?->name }} بسعر {{ number_format($finalPrice,2) }} دولار">
               🛒 {{ t('Frontend.Subscribe_now', 'Subscribe now') }}

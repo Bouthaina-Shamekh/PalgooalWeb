@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Http\Controllers\Dashboard\TemplateController;
@@ -36,27 +37,29 @@ Route::middleware(['setLocale'])->group(function () {
             ->where('slug', $slug)
             ->where('is_active', true)
             ->firstOrFail();
-            view()->share('currentPage', $page);
-            return view('tamplate.page', ['page' => $page]);
+        view()->share('currentPage', $page);
+        return view('tamplate.page', ['page' => $page]);
     });
 
 
-    Route::get('portfolio/{slug}', function ($slug)
-    {
+    Route::get('portfolio/{slug}', function ($slug) {
         $portfolio = Portfolio::with(['translations'])
             ->where('slug', $slug)
             ->orWhere('id', $slug)
             ->firstOrFail();
-            return view('tamplate.portfolio', ['portfolio' => $portfolio]);
+        return view('tamplate.portfolio', ['portfolio' => $portfolio]);
     })->name('portfolio.show');
 
     Route::get('/checkout/client/{template_id}', [CheckoutController::class, 'index'])->name('checkout');
+    Route::post('/checkout/client/{template_id}/process', [CheckoutController::class, 'process'])->name('checkout.process');
 
     Route::get('/templates/{slug}', [FrontTemplateController::class, 'show'])->name('template.show');
     Route::get('/templates/{slug}/preview', [FrontTemplateController::class, 'preview'])->name('template.preview');
     Route::post('templates/{template}/reviews', [TemplateReviewController::class, 'store'])
         ->name('frontend.templates.reviews.store')
         ->whereNumber('template');
+
+
 
     Route::get('change-locale/{locale}', function ($locale) {
         $language = Language::where('code', $locale)->where('is_active', true)->first();
@@ -70,9 +73,9 @@ Route::middleware(['setLocale'])->group(function () {
 
 
     // باقي Routes
-    require __DIR__.'/dashboard.php';
-    require __DIR__.'/client.php';
+    require __DIR__ . '/dashboard.php';
+    require __DIR__ . '/client.php';
 });
 
 
-require __DIR__.'/lang.php';
+require __DIR__ . '/lang.php';
