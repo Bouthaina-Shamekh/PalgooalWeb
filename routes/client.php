@@ -1,9 +1,6 @@
-
-
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Config;
 use App\Http\Controllers\Clinet\HomeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +20,9 @@ Route::group([
     Route::get('/home', [HomeController::class, 'index'])->name('home');
     Route::get('/update_account_clinet', [HomeController::class, 'updateClient'])->name('update_account');
     Route::get('/domain-name-search', [HomeController::class, 'domainNameSearch'])->name('domain_name_search');
+    Route::get('domain-table', [HomeController::class, 'domains'])->name('domain_table');
+    Route::get('subscriptions', [HomeController::class, 'subscriptions'])->name('subscriptions');
+    Route::get('invoices', [HomeController::class, 'invoices'])->name('invoices');
 });
 
 // دعم النماذج التي تستخدم اسم المسار login.store

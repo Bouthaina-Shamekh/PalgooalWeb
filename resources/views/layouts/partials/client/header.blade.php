@@ -144,7 +144,7 @@
                                 </a>
                                 <hr class="border-secondary-500/10 my-4" />
                                 <div class="grid mb-3">
-                                    <form action="{{ route('logout') }}" method="post">
+                                    <form action="{{ route('client.logout') }}" method="post">
                                         @csrf
                                         <button class="btn btn-primary flex items-center justify-center">
                                             <svg class="pc-icon me-2 w-[22px] h-[22px]">

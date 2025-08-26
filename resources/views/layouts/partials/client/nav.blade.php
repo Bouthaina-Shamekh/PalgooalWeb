@@ -43,7 +43,7 @@
                                 <i class="text-lg leading-none ti ti-lock"></i>
                                 <span>Lock Screen</span>
                             </a>
-                            <form action="{{ route('logout') }}" method="post">
+                            <form action="{{ route('client.logout') }}" method="post">
                                 @csrf
                                 <button type="submit" style="display: flex; align-items: center; gap: 5px;">
                                     <i class="text-lg leading-none ti ti-power"></i>
@@ -79,6 +79,36 @@
                             </svg>
                         </span>
                         <span class="pc-mtext">{{ __('Domain Name Search') }}</span>
+                    </a>
+                </li>
+                <li class="pc-item">
+                    <a href="{{ route('client.domain_table') }}" class="pc-link">
+                        <span class="pc-micon">
+                            <svg class="pc-icon">
+                                <use xlink:href="#custom-story"></use>
+                            </svg>
+                        </span>
+                        <span class="pc-mtext">{{ __('Domain Table') }}</span>
+                    </a>
+                </li>
+                <li class="pc-item">
+                    <a href="{{ route('client.subscriptions') }}" class="pc-link">
+                        <span class="pc-micon">
+                            <svg class="pc-icon">
+                                <use xlink:href="#custom-story"></use>
+                            </svg>
+                        </span>
+                        <span class="pc-mtext">{{ __('Subscriptions') }}</span>
+                    </a>
+                </li>
+                <li class="pc-item">
+                    <a href="{{ route('client.invoices') }}" class="pc-link">
+                        <span class="pc-micon">
+                            <svg class="pc-icon">
+                                <use xlink:href="#custom-story"></use>
+                            </svg>
+                        </span>
+                        <span class="pc-mtext">{{ __('Invoices') }}</span>
                     </a>
                 </li>
 

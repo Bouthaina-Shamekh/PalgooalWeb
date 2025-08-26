@@ -3,7 +3,11 @@
 namespace App\Http\Controllers\Clinet;
 
 use App\Http\Controllers\Controller;
+use App\Models\Client;
+use App\Models\Invoice;
+use App\Models\Subscription;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class HomeController extends Controller
 {
@@ -20,5 +24,23 @@ class HomeController extends Controller
     public function domainNameSearch()
     {
         return view('client.domain-name-search');
+    }
+
+    public function domains()
+    {
+        return view('client.domain-table-client');
+    }
+    public function subscriptions()
+    {
+        $client = Client::find(Auth::guard('client')->user()->id)->first();
+        $subscriptions = Subscription::with(['client', 'plan'])->where('client_id',$client->id)->latest()->paginate(20);
+        return view('client.subscriptions',compact('subscriptions'));
+    }
+
+    public function invoices()
+    {
+        $client = Client::find(Auth::guard('client')->user()->id)->first();
+        $invoices = Invoice::with(['client', 'items'])->where('client_id',$client->id)->latest()->paginate(20);
+        return view('client.invoices',compact('invoices'));
     }
 }
