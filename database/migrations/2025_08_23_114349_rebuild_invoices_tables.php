@@ -19,6 +19,7 @@ return new class extends Migration
         Schema::create('invoices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('client_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('order_id')->nullable()->constrained('orders')->nullOnDelete();
             $table->string('number')->unique(); // رقم الفاتورة
             $table->enum('status', ['draft', 'unpaid', 'paid', 'cancelled'])->default('draft');
             $table->integer('subtotal_cents')->default(0);
