@@ -31,6 +31,43 @@ class OrderController extends Controller
         ]);
         $order->status = $request->status;
         $order->save();
+
+
+        // عند تفعيل الطلب، فعّل الفواتير المرتبطة (اجعل status = unpaid)
+        if ($order->status === 'active') {
+            foreach ($order->invoices as $invoice) {
+                if ($invoice->status === 'draft') {
+                    $invoice->status = 'unpaid';
+                    $invoice->save();
+                }
+            }
+
+            // إنشاء اشتراك جديد للعميل بناءً على الطلب
+            // نفترض أن الطلب من نوع "subscription" ويحتوي على قالب (template_id)
+            $templateId = null;
+            if ($order->invoices && $order->invoices->count()) {
+                // جلب أول بند مرتبط بالقالب
+                $firstInvoice = $order->invoices->first();
+                $firstItem = $firstInvoice->items->first();
+                if ($firstItem && $firstItem->item_type === 'subscription') {
+                    $templateId = $firstItem->reference_id;
+                }
+            }
+            if ($templateId) {
+                $template = \App\Models\Template::find($templateId);
+                if ($template && $template->plan_id) {
+                    \App\Models\Subscription::create([
+                        'client_id' => $order->client_id,
+                        'plan_id' => $template->plan_id,
+                        'status' => 'active',
+                        'price' => $template->price,
+                        'starts_at' => now(),
+                        'domain_name' => $order->notes, // أو أي قيمة مناسبة
+                    ]);
+                }
+            }
+        }
+
         return redirect()->route('dashboard.orders.show', $order->id)->with('success', 'تم تحديث حالة الطلب بنجاح');
     }
 }

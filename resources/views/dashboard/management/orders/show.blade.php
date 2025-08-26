@@ -94,6 +94,48 @@
                                 <td class="px-4 py-2">
                                     {{ $invoice->due_date ? $invoice->due_date->format('Y-m-d') : '-' }}</td>
                             </tr>
+                            <tr>
+                                <td colspan="4" class="bg-gray-50 px-4 py-2">
+                                    <div class="mt-2 mb-2">
+                                        <h4 class="font-bold text-gray-700 mb-2">بنود الفاتورة:</h4>
+                                        @if ($invoice->items && $invoice->items->count())
+                                            <table class="min-w-full divide-y divide-gray-200 mb-2">
+                                                <thead class="bg-gray-50">
+                                                    <tr>
+                                                        <th
+                                                            class="px-2 py-1 text-right text-xs font-bold text-gray-600">
+                                                            الوصف</th>
+                                                        <th
+                                                            class="px-2 py-1 text-right text-xs font-bold text-gray-600">
+                                                            الكمية</th>
+                                                        <th
+                                                            class="px-2 py-1 text-right text-xs font-bold text-gray-600">
+                                                            سعر الوحدة</th>
+                                                        <th
+                                                            class="px-2 py-1 text-right text-xs font-bold text-gray-600">
+                                                            الإجمالي</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="bg-white divide-y divide-gray-100">
+                                                    @foreach ($invoice->items as $item)
+                                                        <tr>
+                                                            <td class="px-2 py-1">{{ $item->description }}</td>
+                                                            <td class="px-2 py-1">{{ $item->qty }}</td>
+                                                            <td class="px-2 py-1">
+                                                                ${{ number_format($item->unit_price_cents / 100, 2) }}
+                                                            </td>
+                                                            <td class="px-2 py-1">
+                                                                ${{ number_format($item->total_cents / 100, 2) }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        @else
+                                            <div class="text-gray-400">لا توجد بنود لهذه الفاتورة.</div>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
                         @endforeach
                     </tbody>
                 </table>

@@ -11,6 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // إضافة plan_id إلى جدول templates
+        Schema::table('templates', function (Blueprint $table) {
+            $table->foreignId('plan_id')->nullable()->constrained('plans')->nullOnDelete();
+        });
+
         // احذف الجداول القديمة إن وجدت
         Schema::dropIfExists('invoice_items');
         Schema::dropIfExists('invoices');
@@ -51,6 +56,11 @@ return new class extends Migration
      */
     public function down(): void
     {
+        // حذف عمود plan_id عند التراجع
+        Schema::table('templates', function (Blueprint $table) {
+            $table->dropForeign(['plan_id']);
+            $table->dropColumn('plan_id');
+        });
         Schema::dropIfExists('invoice_items');
         Schema::dropIfExists('invoices');
     }

@@ -69,7 +69,7 @@ class CheckoutController extends Controller
 
         // ثم إنشاء الفاتورة الإدارية (Invoice) وربطها بالطلب والعميل بعد تعريف كل المتغيرات المطلوبة
         if ($order) {
-            \App\Models\Invoice::create([
+            $invoice = \App\Models\Invoice::create([
                 'client_id' => $order->client_id,
                 'number' => 'INV-' . $order_no,
                 'status' => 'draft',
@@ -80,6 +80,16 @@ class CheckoutController extends Controller
                 'currency' => 'USD',
                 'due_date' => now()->addDays(3),
                 'order_id' => $order->id,
+            ]);
+            // إضافة بند الفاتورة (القالب/الاشتراك)
+            \App\Models\InvoiceItem::create([
+                'invoice_id' => $invoice->id,
+                'item_type' => 'subscription',
+                'reference_id' => $template_id,
+                'description' => $template_name,
+                'qty' => 1,
+                'unit_price_cents' => $showDiscount ? (int)($discPrice * 100) : (int)($basePrice * 100),
+                'total_cents' => $showDiscount ? (int)($discPrice * 100) : (int)($basePrice * 100),
             ]);
         }
         // إرسال الطلب مباشرة إلى لوحة الإدارة (الفواتير) بعد إنشائه
