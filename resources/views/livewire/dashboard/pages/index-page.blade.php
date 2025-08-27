@@ -26,9 +26,11 @@
                 <div class="card-header">
                     <div class="sm:flex items-center justify-between">
                         <h5 class="mb-3 mb-sm-0">{{ t('dashboard.All_Pages', 'All Pages') }}</h5>
+                        @can('create','App\\Models\\Page')
                         <div>
                             <button wire:click="goToAddPage" class="btn btn-primary">{{ t('dashboard.Add_Page', 'Add Page') }}</button>
                         </div>
+                        @endcan
                     </div>
                 </div>
                 <div class="card-body pt-3">
@@ -65,15 +67,21 @@
                                     </td>
                                     <td>{{ $p->created_at->translatedFormat('Y-m-d h:i A') }}</td>
                                     <td>
+                                        @can('view','App\\Models\\Page')
                                         <a href="{{ url($p->slug) }}" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary" target="_blank">
                                             <i class="ti ti-eye text-xl leading-none"></i>
                                         </a>
+                                        @endcan
+                                        @can('edit','App\\Models\\Page')
                                         <button wire:click="edit({{ $p->id }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                             <i class="ti ti-edit text-xl leading-none"></i>
                                         </button>
+                                        @endcan
+                                        @can('delete','App\\Models\\Page')
                                         <button onclick="confirmDeletePage({{ $p->id }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                             <i class="ti ti-trash text-xl"></i>
                                         </button>
+                                        @endcan
                                     </td>
                                 </tr>
                                 @endforeach
@@ -172,7 +180,7 @@
         });
     });
 </script>
-    
+
    <script>
     function confirmDeleteSection(sectionId) {
         Swal.fire({

@@ -88,124 +88,134 @@
 
     <div class="p-6 bg-white dark:bg-gray-900 min-h-screen">
         <h1 class="text-2xl font-bold mb-6">📁 مكتبة الوسائط</h1>
-        <form id="uploadForm" enctype="multipart/form-data" class="mb-3">
-            <input type="hidden" name="_token" value="{{ csrf_token() }}">
-            <input type="file" name="image" id="imageInput" class="form-control mb-2" required>
-            <button type="submit" class="btn btn-primary">رفع صورة</button>
-        </form>
+        @can('create', 'App\\Models\\Media')
+            <form id="uploadForm" enctype="multipart/form-data" class="mb-3">
+                <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                <input type="file" name="image" id="imageInput" class="form-control mb-2" required>
+                <button type="submit" class="btn btn-primary">رفع صورة</button>
+            </form>
+        @endcan
 
         <div id="mediaGrid" class="masonry">
             {{-- الصور ستُملأ تلقائيًا عبر jQuery --}}
         </div>
     </div>
 
-    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" role="dialog"
-        aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">تأكيد الحذف</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    هل أنت متأكد من حذف هذه الصورة؟
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"
-                        data-pc-modal-dismiss="#confirmDeleteModal" id="closeDeleteModal">إلغاء</button>
-                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">نعم، حذف</button>
+    @can('delete', 'App\\Models\\Media')
+        <div class="modal fade" id="confirmDeleteModal" tabindex="-1" role="dialog"
+            aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">تأكيد الحذف</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        هل أنت متأكد من حذف هذه الصورة؟
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-pc-modal-dismiss="#confirmDeleteModal"
+                            id="closeDeleteModal">إلغاء</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">نعم، حذف</button>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    @endcan
     <!-- مودال التعديل -->
-    <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <form id="editForm" class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">تعديل بيانات الوسيط</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-
-                <div class="modal-body p-4">
-                    <div class="grid grid-cols-12 gap-6">
-
-                        <!-- صورة المعاينة -->
-                        <div class="col-span-6">
-                            <img id="editPreview" src="" alt="preview" class="img-fluid rounded shadow border"
-                                style="max-height: 300px;">
-
-                            <h6 class="fw-bold mb-3" style="font-size: 1.1rem; color: #333;">تفاصيل الوسيط</h6>
-
-                            <div class="mb-4"
-                                style="font-size: 0.9rem; color: #555; background-color: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #dee2e6;">
-                                <div style="margin-bottom: 0.5rem;">
-                                    <strong style="min-width: 60px; display: inline-block;">الاسم:</strong>
-                                    <span id="infoName">---</span>
-                                </div>
-                                <div style="margin-bottom: 0.5rem;">
-                                    <strong style="min-width: 60px; display: inline-block;">النوع:</strong>
-                                    <span id="infoMime">---</span>
-                                </div>
-                                <div style="margin-bottom: 0.5rem;">
-                                    <strong style="min-width: 60px; display: inline-block;">الحجم:</strong>
-                                    <span id="infoSize">---</span> KB
-                                </div>
-                                <div style="margin-bottom: 0;">
-                                    <strong style="min-width: 60px; display: inline-block;">الرابط:</strong>
-                                    <input type="text" id="infoURL"
-                                        class="form-control form-control-sm d-inline-block mt-1"
-                                        style="width: 100%; font-size: 0.8rem; color: #6c757d; background-color: #e9ecef;"
-                                        readonly onclick="navigator.clipboard.writeText(this.value)">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- التفاصيل -->
-                        <div class="col-span-6">
-                            <input type="hidden" id="editId">
-
-                            <div class="mb-3">
-                                <label class="form-label">Alt Text</label>
-                                <input type="text" id="editAlt" class="form-control">
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Title</label>
-                                <input type="text" id="editTitle" class="form-control">
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Caption</label>
-                                <textarea id="editCaption" class="form-control" rows="2"></textarea>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Description</label>
-                                <textarea id="editDescription" class="form-control" rows="2"></textarea>
-                            </div>
-                        </div>
-
+    @can('edit', 'App\\Models\\Media')
+        <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <form id="editForm" class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">تعديل بيانات الوسيط</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                </div>
 
-                <div class="modal-footer px-4 py-3">
-                    <button type="button" class="btn btn-secondary"
-                        data-pc-modal-dismiss="#editModal" id="closeEditModal">إلغاء</button>
-                    <button type="submit" class="btn btn-success">💾 حفظ التعديلات</button>
-                </div>
-            </form>
+                    <div class="modal-body p-4">
+                        <div class="grid grid-cols-12 gap-6">
+
+                            <!-- صورة المعاينة -->
+                            <div class="col-span-6">
+                                <img id="editPreview" src="" alt="preview" class="img-fluid rounded shadow border"
+                                    style="max-height: 300px;">
+
+                                <h6 class="fw-bold mb-3" style="font-size: 1.1rem; color: #333;">تفاصيل الوسيط</h6>
+
+                                <div class="mb-4"
+                                    style="font-size: 0.9rem; color: #555; background-color: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #dee2e6;">
+                                    <div style="margin-bottom: 0.5rem;">
+                                        <strong style="min-width: 60px; display: inline-block;">الاسم:</strong>
+                                        <span id="infoName">---</span>
+                                    </div>
+                                    <div style="margin-bottom: 0.5rem;">
+                                        <strong style="min-width: 60px; display: inline-block;">النوع:</strong>
+                                        <span id="infoMime">---</span>
+                                    </div>
+                                    <div style="margin-bottom: 0.5rem;">
+                                        <strong style="min-width: 60px; display: inline-block;">الحجم:</strong>
+                                        <span id="infoSize">---</span> KB
+                                    </div>
+                                    <div style="margin-bottom: 0;">
+                                        <strong style="min-width: 60px; display: inline-block;">الرابط:</strong>
+                                        <input type="text" id="infoURL"
+                                            class="form-control form-control-sm d-inline-block mt-1"
+                                            style="width: 100%; font-size: 0.8rem; color: #6c757d; background-color: #e9ecef;"
+                                            readonly onclick="navigator.clipboard.writeText(this.value)">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- التفاصيل -->
+                            <div class="col-span-6">
+                                <input type="hidden" id="editId">
+
+                                <div class="mb-3">
+                                    <label class="form-label">Alt Text</label>
+                                    <input type="text" id="editAlt" class="form-control">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Title</label>
+                                    <input type="text" id="editTitle" class="form-control">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Caption</label>
+                                    <textarea id="editCaption" class="form-control" rows="2"></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Description</label>
+                                    <textarea id="editDescription" class="form-control" rows="2"></textarea>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="modal-footer px-4 py-3">
+                        <button type="button" class="btn btn-secondary" data-pc-modal-dismiss="#editModal"
+                            id="closeEditModal">إلغاء</button>
+                        <button type="submit" class="btn btn-success">💾 حفظ التعديلات</button>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
+    @endcan
 
 
     <!-- زر سري لفتح مودال التعديل -->
-    <button type="button" class="btn btn-primary d-none hidden" data-pc-toggle="modal" data-pc-target="#editModal"
-        id="openEditModalBtn"></button>
+    @can('edit', 'App\\Models\\Media')
+        <button type="button" class="btn btn-primary d-none hidden" data-pc-toggle="modal" data-pc-target="#editModal"
+            id="openEditModalBtn"></button>
+    @endcan
 
     <!-- زر سري لفتح مودال الحذف -->
-    <button type="button" class="btn btn-primary d-none hidden" data-pc-toggle="modal"
-        data-pc-target="#confirmDeleteModal" id="openDeleteModalBtn"></button>
+    @can('delete', 'App\\Models\\Media')
+        <button type="button" class="btn btn-primary d-none hidden" data-pc-toggle="modal"
+            data-pc-target="#confirmDeleteModal" id="openDeleteModalBtn"></button>
+    @endcan
 
     @push('scripts')
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -241,12 +251,16 @@
     <div class="masonry-item position-relative overflow-hidden">
         <img src="/storage/${item.file_path}" class="img-fluid media-image">
         <div class="media-actions position-absolute top-0 end-0 p-2" style="display: none;">
+            @can('edit', 'App\\Models\\Media')
             <button class="btn btn-sm btn-light border rounded-circle edit-btn" data-id="${item.id}" data-name="${item.name}" title="تعديل">
                 <i class="fas fa-pen text-secondary"></i>
             </button>
+            @endcan
+            @can('delete', 'App\\Models\\Media')
             <button class="btn btn-sm btn-light border rounded-circle me-1 delete-btn" data-id="${item.id}" title="حذف">
                 <i class="fas fa-trash text-danger"></i>
             </button>
+            @endcan
         </div>
         <div class="info text-center p-2">
             <small>${item.name}</small>

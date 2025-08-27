@@ -19,8 +19,9 @@
                     <div class="sm:flex items-center justify-between">
                         <h5 class="mb-3 sm:mb-0">Plans List</h5>
                         <div>
+                            @can('create','App\\Models\\Plan')
                            <a href="#" wire:click="showAdd" class="btn btn-primary">Add Plan</a>
-                           {{-- <a href="#" wire:click="resetForm" class="btn btn-primary">Add Plan</a> --}}
+                           @endcan
                         </div>
                     </div>
                 </div>
@@ -61,12 +62,16 @@
                                         @endif
                                     </td>
                                     <td>
+                                        @can('edit','App\\Models\\Plan')
                                         <a wire:click="showEdit({{ $plan->id }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                             <i class="ti ti-edit text-xl leading-none"></i>
                                         </a>
+                                        @endcan
+                                        @can('delete','App\\Models\\Plan')
                                         <a wire:click="delete({{ $plan->id }})" onclick="confirm('Are you sure?') || event.stopImmediatePropagation()" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                             <i class="ti ti-trash text-xl leading-none"></i>
                                         </a>
+                                        @endcan
                                     </td>
                                 </tr>
                                 @empty

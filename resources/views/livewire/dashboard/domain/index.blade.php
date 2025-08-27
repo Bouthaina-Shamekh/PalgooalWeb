@@ -19,9 +19,11 @@
             <div class="card-header">
                 <div class="sm:flex items-center justify-between">
                     <h5 class="mb-3 sm:mb-0">Domains List</h5>
+                    @can('create','App\\Models\\Domain')
                     <div>
                         <a href="#" wire:click="showAdd" class="btn btn-primary">Add Domains</a>
                     </div>
+                    @endcan
                 </div>
             </div>
             <div class="flex items-center justify-between mb-4 px-5 py-4">
@@ -68,12 +70,16 @@
                                     <a wire:click="view({{ $domain->id }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                         <i class="ti ti-eye text-xl leading-none"></i>
                                     </a>
+                                    @can('edit','App\\Models\\Domain')
                                     <a wire:click="showEdit({{ $domain->id }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                         <i class="ti ti-edit text-xl leading-none"></i>
                                     </a>
+                                    @endcan
+                                    @can('delete','App\\Models\\Domain')
                                     <a wire:click="delete({{ $domain->id }})" onclick="confirm('Are you sure?') || event.stopImmediatePropagation()" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                         <i class="ti ti-trash text-xl leading-none"></i>
                                     </a>
+                                    @endcan
                                 </td>
                             </tr>
                               @empty

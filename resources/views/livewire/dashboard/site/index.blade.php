@@ -17,7 +17,9 @@
                 <div class="sm:flex items-center justify-between">
                     <h5 class="mb-3 sm:mb-0">Sites List</h5>
                     <div>
+                        @can('create','App\\Models\\Site')
                         <a href="#" wire:click="showAdd" class="btn btn-primary">Add Site</a>
+                        @endcan
                     </div>
                 </div>
             </div>
@@ -53,15 +55,21 @@
                                 <td>{{ $site->provisioning_status }}</td>
                                 <td>{{ optional($site->provisioned_at)->format('Y-m-d H:i') ?: '-' }}</td>
                                 <td>
+                                    @can('view','App\\Models\\Site')
                                     <a wire:click="showView({{ $site->id }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                         <i class="ti ti-eye text-xl leading-none"></i>
                                     </a>
+                                    @endcan
+                                    @can('edit','App\\Models\\Site')
                                     <a wire:click="showEdit({{ $site->id }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                         <i class="ti ti-edit text-xl leading-none"></i>
                                     </a>
+                                    @endcan
+                                    @can('delete','App\\Models\\Site')
                                     <a wire:click="delete({{ $site->id }})" onclick="confirm('Are you sure?') || event.stopImmediatePropagation()" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                         <i class="ti ti-trash text-xl leading-none"></i>
                                     </a>
+                                    @endcan
                                 </td>
                             </tr>
                             @empty

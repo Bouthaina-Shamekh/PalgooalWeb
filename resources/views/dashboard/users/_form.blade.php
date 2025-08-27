@@ -17,14 +17,13 @@
     </div>
     <div class="form-group p-3 col-6">
         @if (isset($btn_label))
-        <x-form.input type="password" label="{{__('admin.Password')}}" name="password" placeholder="****"  />
+        <x-form.input type="password" label="{{__('admin.Password')}}" name="password" placeholder="****" />
         @else
         <x-form.input type="password" label="{{__('admin.Password')}}" :re="true" name="password" placeholder="****" required />
         @endif
     </div>
     <div class="form-group p-3 col-6">
-        @if (isset($btn_label))
-        @else
+        @if (!isset($btn_label))
         <x-form.input type="password" label="{{__('admin.Confirm Password')}}" :re="true"  name="confirm_password" placeholder="****" required/>
         @endif
     </div>

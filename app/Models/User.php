@@ -47,8 +47,13 @@ class User extends Authenticatable
         ];
     }
 
+    public function roles()
+    {
+        return $this->hasMany(RoleUser::class, 'user_id');
+    }
+
     public function templateReviews()
     {
-        return $this->hasMany(\App\Models\TemplateReview::class);
+        return $this->hasMany(TemplateReview::class);
     }
 }

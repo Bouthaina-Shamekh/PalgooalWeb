@@ -158,7 +158,9 @@
                         <!-- Buttons -->
                         <div class="col-span-12 text-right">
                             <button type="button" wire:click="showIndex" class="btn btn-secondary">Cancel</button>
+                            @can('edit','App\\Models\\GeneralSetting')
                             <button type="submit" class="btn btn-primary">Submit</button>
+                            @endcan
                         </div>
                     </form>
                 </div>

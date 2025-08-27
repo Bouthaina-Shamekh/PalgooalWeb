@@ -28,8 +28,8 @@ class FortifyServiceProvider extends ServiceProvider
         if ($request->is('dashboard/*')) {
             Config::set('fortify.guard', 'web');
             Config::set('fortify.password', 'users');
-            Config::set('fortify.prefix', 'dashboard');
-            Config::set('fortify.home', '/dashboard/home');
+            Config::set('fortify.prefix', 'admin');
+            Config::set('fortify.home', '/admin/home');
             Config::set('fortify.views', true);
         }
 
@@ -45,9 +45,9 @@ class FortifyServiceProvider extends ServiceProvider
             public function toResponse($request)
             {
                 if (Config::get('fortify.guard') == 'web') {
-                    return redirect()->intended('/dashboard/home');
+                    return redirect()->intended('/admin/home');
                 } elseif (Config::get('fortify.guard') == 'client') {
-                    return redirect()->route('client.home');
+                    return redirect()->intended('/client/home');
                 } else {
                     return redirect()->intended('/');
                 }

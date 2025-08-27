@@ -104,7 +104,9 @@
     @if ($mode === 'index')
         <div class="mb-6 flex justify-between items-center">
             <h2 class="text-2xl font-bold">إدارة الخدمات</h2>
-            <button wire:click="showAdd" class="btn btn-primary">+ إضافة خدمة</button>
+            @can('create','App\\Models\\Service')
+                <button wire:click="showAdd" class="btn btn-primary">+ إضافة خدمة</button>
+            @endcan
         </div>
 
         <table class="table-auto w-full text-right border">
@@ -129,10 +131,14 @@
                         </td>
                         <td class="p-2">{{ $service->order }}</td>
                         <td class="p-2 space-x-2">
-                            <button wire:click="showEdit({{ $service->id }})"
-                                class="btn btn-sm btn-warning">تعديل</button>
-                            <button onclick="confirmDeleteService({{ $service->id }})"
-                                class="btn btn-danger">حذف</button>
+                            @can('update','App\\Models\\Service')
+                                <button wire:click="showEdit({{ $service->id }})"
+                                    class="btn btn-sm btn-warning">تعديل</button>
+                            @endcan
+                            @can('delete','App\\Models\\Service')
+                                <button onclick="confirmDeleteService({{ $service->id }})"
+                                    class="btn btn-danger">حذف</button>
+                            @endcan
                         </td>
                     </tr>
                 @endforeach

@@ -15,7 +15,13 @@ class ModelPolicy
     }
     public function __call($name, $arguments){
         $class_name = str_replace('Policy', '', class_basename($this));
-        $class_name = Str::plural(Str::lower($class_name));
+        $customMap = [
+            'feedback' => 'feedbacks',
+            'media' => 'medias',
+        ];
+
+        $class_name = Str::lower($class_name);
+        $class_name = $customMap[$class_name] ?? Str::plural($class_name);
 
         if ($name == 'viewAny') {
             $name = 'view';

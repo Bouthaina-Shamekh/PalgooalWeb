@@ -103,14 +103,14 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required',
             'email' => 'required|email|unique:users,email,' . $user->id,
-            'password' => 'nullable|same:confirm_password',
-            'confirm_password' => 'nullable|same:password',
+            'password' => 'nullable|string',
         ]);
         DB::beginTransaction();
         try {
             if($request->super_admin == null){
                 $request['super_admin'] = $user->super_admin;
             }
+
             if ($request->password != null) {
                 $request['password'] = Hash::make($request->password);
                 $request['type'] = 'admin';

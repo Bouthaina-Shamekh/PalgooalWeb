@@ -19,8 +19,9 @@
                     <div class="sm:flex items-center justify-between">
                         <h5 class="mb-3 sm:mb-0">Clients List</h5>
                         <div>
+                           @can('create','App\\Models\Client')
                            <a href="#" wire:click="showAdd" class="btn btn-primary">Add Client</a>
-                           {{-- <a href="#" wire:click="resetForm" class="btn btn-primary">Add Client</a> --}}
+                           @endcan
                         </div>
                     </div>
                 </div>
@@ -131,24 +132,30 @@
                                     </td>
                                     <td>
                                         <div class="flex items-center gap-1">
+                                            @can('view','App\\Models\\Client')
                                             <button wire:click="showDetails({{ $client->id }})"
                                                     class="w-8 h-8 rounded-lg inline-flex items-center justify-center btn-link-secondary hover:bg-blue-50 hover:text-blue-600 transition-colors"
                                                     title="View Details">
                                                 <i class="ti ti-eye text-lg leading-none"></i>
                                             </button>
+                                            @endcan
 
+                                            @can('edit','App\\Models\\Client')
                                             <button wire:click="showEdit({{ $client->id }})"
                                                     class="w-8 h-8 rounded-lg inline-flex items-center justify-center btn-link-secondary hover:bg-yellow-50 hover:text-yellow-600 transition-colors"
                                                     title="Edit Client">
                                                 <i class="ti ti-edit text-lg leading-none"></i>
                                             </button>
+                                            @endcan
 
+                                            @can('delete','App\\Models\\Client')
                                             <button wire:click="delete({{ $client->id }})"
                                                     onclick="confirm('Are you sure you want to delete this client?') || event.stopImmediatePropagation()"
                                                     class="w-8 h-8 rounded-lg inline-flex items-center justify-center btn-link-secondary hover:bg-red-50 hover:text-red-600 transition-colors"
                                                     title="Delete Client">
                                                 <i class="ti ti-trash text-lg leading-none"></i>
                                             </button>
+                                            @endcan
                                         </div>
                                     </td>
                                 </tr>

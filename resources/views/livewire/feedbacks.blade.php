@@ -104,7 +104,9 @@
     @if ($mode === 'index')
         <div class="mb-6 flex justify-between items-center">
             <h2 class="text-2xl font-bold">التقييمات</h2>
+            @can('create','App\\Models\\Feedback')
             <button wire:click="showAdd" class="btn btn-primary">+ إضافة تقييم</button>
+            @endcan
         </div>
 
         <table class="table-auto w-full text-right border">
@@ -133,10 +135,14 @@
                             {{ $feedback->translation()?->feedback }}
                         </td>
                         <td class="p-2 space-x-2">
+                            @can('edit','App\\Models\\Feedback')
                             <button wire:click="showEdit({{ $feedback->id }})"
                                 class="btn btn-sm btn-warning">تعديل</button>
+                            @endcan
+                            @can('delete','App\\Models\\Feedback')
                             <button onclick="confirmDeleteFeedback({{ $feedback->id }})"
                                 class="btn btn-danger">حذف</button>
+                            @endcan
                         </td>
                     </tr>
                 @endforeach

@@ -127,7 +127,9 @@
     @if ($mode === 'index')
         <div class="mb-6 flex justify-between items-center">
             <h2 class="text-2xl font-bold">إدارة المعرض</h2>
-            <button wire:click="showAdd" class="btn btn-primary">+ إضافة معرض</button>
+            @can('create','App\\Models\\Portfolio')
+                <button wire:click="showAdd" class="btn btn-primary">+ إضافة معرض</button>
+            @endcan
         </div>
 
         <table class="table-auto w-full text-right border">
@@ -158,10 +160,14 @@
                             {{ $portfolio->translations()->where('locale', app()->getLocale())->first()->type }}</td>
                         <td class="p-2">{{ $portfolio->order }}</td>
                         <td class="p-2 space-x-2">
-                            <button wire:click="showEdit({{ $portfolio->id }})"
-                                class="btn btn-sm btn-warning">تعديل</button>
-                            <button onclick="confirmDeletePortfolio({{ $portfolio->id }})"
-                                class="btn btn-danger">حذف</button>
+                            @can('edit','App\\Models\\Portfolio')
+                                <button wire:click="showEdit({{ $portfolio->id }})"
+                                    class="btn btn-sm btn-warning">تعديل</button>
+                            @endcan
+                            @can('delete','App\\Models\\Portfolio')
+                                <button onclick="confirmDeletePortfolio({{ $portfolio->id }})"
+                                    class="btn btn-danger">حذف</button>
+                            @endcan
                         </td>
                     </tr>
                 @endforeach
