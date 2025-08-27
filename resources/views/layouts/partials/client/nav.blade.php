@@ -43,7 +43,7 @@
                                 <i class="text-lg leading-none ti ti-lock"></i>
                                 <span>Lock Screen</span>
                             </a>
-                            <form action="{{ route('client.logout') }}" method="post">
+                            <form method="POST" action="{{ route('client.logout') }}">
                                 @csrf
                                 <button type="submit" style="display: flex; align-items: center; gap: 5px;">
                                     <i class="text-lg leading-none ti ti-power"></i>

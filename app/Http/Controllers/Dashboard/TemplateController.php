@@ -24,7 +24,8 @@ class TemplateController extends Controller
     {
         $categories = CategoryTemplate::with('translation')->get();
         $languages = Language::all();
-        return view('dashboard.templates.create', compact('categories', 'languages'));
+        $plans = \App\Models\Plan::all();
+        return view('dashboard.templates.create', compact('categories', 'languages', 'plans'));
     }
 
     public function store(Request $request)
@@ -32,6 +33,7 @@ class TemplateController extends Controller
         $request->validate([
             'price' => 'required|numeric',
             'category_template_id' => 'required|exists:category_templates,id',
+            'plan_id' => 'required|exists:plans,id',
             'image' => 'required|image',
             'translations' => 'required|array',
             'translations.*.locale' => 'required|string',
@@ -53,6 +55,7 @@ class TemplateController extends Controller
                 'discount_ends_at' => $request->discount_ends_at,
                 'rating' => $request->rating ?? 0,
                 'category_template_id' => $request->category_template_id,
+                'plan_id' => $request->plan_id,
                 'image' => $imagePath,
             ]);
 
@@ -64,7 +67,7 @@ class TemplateController extends Controller
                 $slug = preg_replace('/[^\p{L}\p{N}\-]+/u', '', $slug);
                 $slug = preg_replace('/\-{2,}/u', '-', $slug);
                 $slug = trim($slug, '-');
-                
+
                 TemplateTranslation::create([
                     'template_id' => $template->id,
                     'locale' => $translation['locale'],
@@ -89,7 +92,8 @@ class TemplateController extends Controller
     {
         $template = Template::with('translations')->findOrFail($id);
         $categories = CategoryTemplate::with('translation')->get();
-        return view('dashboard.templates.edit', compact('template', 'categories'));
+        $plans = \App\Models\Plan::all();
+        return view('dashboard.templates.edit', compact('template', 'categories', 'plans'));
     }
 
     public function update(Request $request, $id)
@@ -99,6 +103,7 @@ class TemplateController extends Controller
         $request->validate([
             'price' => 'required|numeric',
             'category_template_id' => 'required|exists:category_templates,id',
+            'plan_id' => 'required|exists:plans,id',
             'image' => 'nullable|image',
             'translations' => 'required|array',
             'translations.*.locale' => 'required|string',
@@ -124,6 +129,7 @@ class TemplateController extends Controller
                 'discount_ends_at' => $request->discount_ends_at,
                 'rating' => $request->rating ?? 0,
                 'category_template_id' => $request->category_template_id,
+                'plan_id' => $request->plan_id,
             ]);
 
             // حذف الترجمات القديمة
@@ -137,7 +143,7 @@ class TemplateController extends Controller
                 $slug = preg_replace('/[^\p{L}\p{N}\-]+/u', '', $slug);
                 $slug = preg_replace('/\-{2,}/u', '-', $slug);
                 $slug = trim($slug, '-');
-                
+
                 TemplateTranslation::create([
                     'template_id' => $template->id,
                     'locale' => $translation['locale'],
@@ -158,7 +164,7 @@ class TemplateController extends Controller
         }
     }
 
-    
+
     public function destroy($id)
     {
         $template = Template::findOrFail($id);

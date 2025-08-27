@@ -16,7 +16,12 @@ class Template extends Model
         'category_template_id',
         'discount_price',
         'discount_ends_at',
+        'plan_id',
     ];
+    public function plan()
+    {
+        return $this->belongsTo(\App\Models\Plan::class);
+    }
 
     protected $casts = [
         'price' => 'float',

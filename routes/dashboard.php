@@ -1,10 +1,12 @@
 <?php
 
+
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Dashboard\HomeController;
 use App\Http\Controllers\Dashboard\UserController;
 use App\Http\Controllers\Dashboard\LanguageController;
 use App\Http\Controllers\Dashboard\Management\InvoiceController;
+use App\Http\Controllers\Dashboard\Management\OrderController as ManagementOrderController;
 use App\Http\Controllers\Dashboard\Management\Plan;
 use App\Http\Controllers\Dashboard\Management\PlanController;
 use App\Http\Controllers\Dashboard\Management\ServerController;
@@ -18,7 +20,7 @@ use App\Livewire\Services;
 use App\Http\Controllers\Dashboard\TemplateReviewController as AdminReview;
 use App\Http\Controllers\Dashboard\TemplateReviewController;
 
-Route::get('/admin', function () {
+Route::get('admin/', function () {
     return redirect()->route('dashboard.home');
 });
 Route::group([
@@ -27,23 +29,16 @@ Route::group([
     'middleware' => 'auth'
 ], function () {
     Route::get('/home', [HomeController::class, 'index'])->name('home');
-
     Route::get('/general_settings', [HomeController::class, 'general_settings'])->name('general_settings');
-
-
     Route::get('users/{user}/profile', [UserController::class, 'profile'])->name('users.profile');
-
     Route::resources([
         'users' => UserController::class,
     ]);
     // Resource routes:
     Route::resource('Languages', LanguageController::class)->except(['show'])->names('languages');
-
     // Extra AJAX routes:
     Route::post('admin/languages/{language}/toggle-rtl', [LanguageController::class, 'toggleRtl'])->name('languages.toggle-rtl');
-
     Route::post('admin/languages/{language}/toggle-status', [LanguageController::class, 'toggleStatus'])->name('languages.toggle-status');
-
     Route::delete('admin/languages/{language}/delete', [LanguageController::class, 'destroy'])->name('dashboardlanguages.destroy-ajax');
     Route::resource('translation-values', TranslationValueController::class)->except(['show', 'edit', 'update', 'destroy']);
     Route::get('translation-values/{key}/edit', [TranslationValueController::class, 'edit'])->name('translation-values.edit');
@@ -112,15 +107,9 @@ Route::group([
     Route::get('/subscriptions/{subscription}/cpanel-login', [SubscriptionController::class, 'cpanelLogin'])->name('subscriptions.cpanel-login');
     Route::post('/subscriptions/{subscription}/install-wordpress', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'installWordPress'])->name('subscriptions.install-wordpress');
     Route::post('/subscriptions/{subscription}/install-wordpress', [SubscriptionController::class, 'installWordPressManual'])->name('subscriptions.install-wordpress');
-
-
-
-
     Route::post('/subscriptions/{subscription}/suspend', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'suspendToProvider'])->name('subscriptions.suspend');
     Route::post('/subscriptions/{subscription}/unsuspend', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'unsuspendToProvider'])->name('subscriptions.unsuspend');
     Route::post('/subscriptions/{subscription}/terminate', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'terminateToProvider'])->name('subscriptions.terminate');
-
-   
     Route::resource('/subscriptions', SubscriptionController::class)->names('subscriptions');
     Route::get('servers/{server}/test-connection', [ServerController::class, 'testConnection'])->name('servers.test-connection');
     Route::get('servers/{server}/sso-whm', [ServerController::class, 'ssoWhm'])->name('servers.sso-whm');
@@ -129,10 +118,8 @@ Route::group([
     Route::get('/sites', [HomeController::class, 'sites'])->name('sites');
     Route::get('/domains', [HomeController::class, 'domains'])->name('domains');
     Route::resource('plans', PlanController::class);
-
-
     Route::resource('/invoices', InvoiceController::class)->names('invoices');
-
-
-
+    Route::get('/orders', [ManagementOrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [ManagementOrderController::class, 'show'])->name('orders.show');
+    Route::patch('/orders/{order}/status', [ManagementOrderController::class, 'updateStatus'])->name('orders.status');
 });

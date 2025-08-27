@@ -11,21 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('invoices', function (Blueprint $table) {
-            $table->id();
-            // ربط بالاشتراك
-            $table->foreignId('subscription_id')
-                  ->constrained()
-                  ->cascadeOnDelete();
-            // المبلغ المستحق
-            $table->decimal('amount', 10, 2);
-            // تاريخ الاستحقاق والدفع
-            $table->date('due_date');
-            $table->date('paid_date')->nullable();
-            // حالة الفاتورة (e.g. pending, paid, overdue)
-            $table->string('status');
-            $table->timestamps();
-        });
+        // تم نقل منطق الفواتير إلى ملف rebuild_invoices_tables.php
+        // لا حاجة لتعديل هنا حالياً
     }
 
     /**
