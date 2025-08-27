@@ -38,7 +38,7 @@ Route::middleware(['setLocale'])->group(function () {
             ->firstOrFail();
         view()->share('currentPage', $page);
         return view('tamplate.page', ['page' => $page]);
-    })->where('slug', '^(?!client|admin|dashboard|api|storage).*$');
+    })->where('slug', '^(?!client|admin|dashboard|api|storage|templates|change-locale).*$');
 
 
     Route::get('portfolio/{slug}', function ($slug) {
