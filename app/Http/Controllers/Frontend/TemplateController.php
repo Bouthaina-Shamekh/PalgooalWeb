@@ -15,7 +15,6 @@ class TemplateController extends Controller
             ->whereHas('translations', fn($q) => $q->where('slug',$slug)->where('locale',$locale));
 
         $template = $query->first();
-
         // fallback للّغة العربية لو ما لقي باللّغة الحالية
         if (!$template && $locale !== 'ar') {
             $template = Template::with(['translations','categoryTemplate.translations'])
