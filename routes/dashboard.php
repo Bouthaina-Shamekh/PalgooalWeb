@@ -110,6 +110,10 @@ Route::group([
     Route::post('/subscriptions/{subscription}/suspend', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'suspendToProvider'])->name('subscriptions.suspend');
     Route::post('/subscriptions/{subscription}/unsuspend', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'unsuspendToProvider'])->name('subscriptions.unsuspend');
     Route::post('/subscriptions/{subscription}/terminate', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'terminateToProvider'])->name('subscriptions.terminate');
+    // Bulk actions for subscriptions (select multiple and perform an action)
+    Route::post('/subscriptions/bulk', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'bulk'])->name('subscriptions.bulk');
+    // Sync logs page (shows last_sync_message and timestamps)
+    Route::get('/subscriptions/sync-logs', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'syncLogs'])->name('subscriptions.sync-logs');
     Route::resource('/subscriptions', SubscriptionController::class)->names('subscriptions');
     // AJAX: اقتراح وتحقق من تفرد username
     Route::post('/subscriptions/username-suggest', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'suggestUsername'])->name('subscriptions.username-suggest');

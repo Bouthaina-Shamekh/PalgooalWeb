@@ -7,46 +7,46 @@
             </a>
         </div>
         <div class="navbar-content h-[calc(100vh_-_74px)] py-2.5">
-            <div class="card pc-user-card mx-[15px] mb-[15px] bg-theme-sidebaruserbg dark:bg-themedark-sidebaruserbg">
-                <div class="card-body !p-5">
-                    <div class="flex items-center">
-                        <img class="shrink-0 w-[45px] h-[45px] rounded-full" src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}"
-                            alt="user-image" />
-                        <div class="ml-4 mr-2 grow">
-                            <h6 class="mb-0">{{ Auth::user()->name }}</h6>
-                            <small>{{ Auth::user()->email }}</small>
+                <div class="card pc-user-card mx-[15px] mb-[15px] bg-theme-sidebaruserbg dark:bg-themedark-sidebaruserbg border border-secondary-100/10">
+                    <div class="card-body !p-4">
+                        <div class="flex items-center gap-3">
+                            <img class="shrink-0 w-[48px] h-[48px] rounded-full border border-secondary-200" src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}"
+                                alt="user-image" />
+                            <div class="grow">
+                                <h6 class="mb-0 text-sm font-semibold">{{ Auth::user()->name }}</h6>
+                                <small class="text-xs text-muted">{{ Auth::user()->email }}</small>
+                            </div>
+                            <button class="shrink-0 btn btn-icon inline-flex btn-link-secondary" data-pc-toggle="collapse"
+                                aria-expanded="false" aria-controls="pc_sidebar_userlink">
+                                <svg class="pc-icon w-[20px] h-[20px]">
+                                    <use xlink:href="#custom-more-vertical"></use>
+                                </svg>
+                            </button>
                         </div>
-                        <a class="shrink-0 btn btn-icon inline-flex btn-link-secondary" data-pc-toggle="collapse"
-                            href="#pc_sidebar_userlink">
-                            <svg class="pc-icon w-[22px] h-[22px]">
-                                <use xlink:href="#custom-sort-outline"></use>
-                            </svg>
-                        </a>
-                    </div>
-                    <div class="hidden pc-user-links" id="pc_sidebar_userlink">
-                        <div class="pt-3 *:flex *:items-center *:py-2 *:gap-2.5 hover:*:text-primary-500">
-                            <a href="{{route('dashboard.users.profile', Auth::user()->id)}}">
-                                <i class="text-lg leading-none ti ti-user"></i>
-                                <span>{{ t('dashboard.My_Account', 'My Account' )}}</span>
-                            </a>
-                            <a href="#!">
-                                <i class="text-lg leading-none ti ti-settings"></i>
-                                <span>{{ t('dashboard.Settings', 'Settings') }}</span>
-                            </a>
-                            <form action="{{ route('logout') }}" method="post">
-                                @csrf
-                                <button type="submit" style="display: flex; align-items: center; gap: 5px;">
-                                    <i class="text-lg leading-none ti ti-power"></i>
-                                    <span>{{ t('dashboard.Logout', 'Logout')}}</span>
-                                </button>
-                            </form>
+                        <div class="hidden pc-user-links mt-3" id="pc_sidebar_userlink">
+                            <div class="space-y-2">
+                                <a href="{{route('dashboard.users.profile', Auth::user()->id)}}" class="flex items-center gap-2 px-2 py-2 rounded hover:bg-primary-50">
+                                    <i class="text-lg leading-none ti ti-user"></i>
+                                    <span class="text-sm">{{ t('dashboard.My_Account', 'My Account' )}}</span>
+                                </a>
+                                <a href="#!" class="flex items-center gap-2 px-2 py-2 rounded hover:bg-primary-50">
+                                    <i class="text-lg leading-none ti ti-settings"></i>
+                                    <span class="text-sm">{{ t('dashboard.Settings', 'Settings') }}</span>
+                                </a>
+                                <form action="{{ route('logout') }}" method="post" class="px-2">
+                                    @csrf
+                                    <button type="submit" class="w-full btn btn-outline-danger flex items-center justify-center gap-2">
+                                        <i class="text-lg leading-none ti ti-power"></i>
+                                        <span class="text-sm">{{ t('dashboard.Logout', 'Logout')}}</span>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
             <ul class="pc-navbar">
                 <li class="pc-item pc-caption">
-                    <label>{{ t('dashboard.Navigation', 'Navigation') }}</label>
+                    <label class="text-xs uppercase tracking-wider text-muted">{{ t('dashboard.Navigation', 'Navigation') }}</label>
                 </li>
                 <li class="pc-item">
                     <a href="{{route('dashboard.home')}}" class="pc-link">
@@ -126,10 +126,7 @@
                 </li>
                 @endcan
                 <li class="pc-item pc-caption">
-                    <label>{{ t('dashboard.clients','clients') }}</label>
-                    <svg class="pc-icon">
-                        <use xlink:href="#custom-presentation-chart"></use>
-                    </svg>
+                    <label class="text-xs uppercase tracking-wider text-muted">{{ t('dashboard.clients','clients') }}</label>
                 </li>
                 @can('view','App\\Models\\Client')
                 <li class="pc-item">

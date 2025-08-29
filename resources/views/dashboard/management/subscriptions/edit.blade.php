@@ -150,6 +150,11 @@
                             @enderror
                         </div>
                         <div class="col-span-12 md:col-span-6">
+                            <label class="form-label">آخر نتيجة مزامنة</label>
+                            <textarea class="form-control" rows="3" readonly>{{ old('last_sync_message', $subscription->last_sync_message) }}</textarea>
+                            <small class="text-muted">الرسالة الأخيرة من مزامنة الاشتراك مع المزود (إن وجدت)</small>
+                        </div>
+                        <div class="col-span-12 md:col-span-6">
                             <label class="form-label">تاريخ البداية</label>
                             <input type="date" name="starts_at" class="form-control" required
                                 value="{{ old('starts_at', $subscription->starts_at) }}">

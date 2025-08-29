@@ -65,8 +65,56 @@ class SubscriptionController extends Controller
     }
     public function index()
     {
-        $subscriptions = Subscription::with(['client', 'plan'])->latest()->paginate(20);
+        $query = Subscription::with(['client', 'plan']);
+
+        // domain filter
+        if ($domain = request('domain')) {
+            $query->where('domain_name', 'like', '%' . $domain . '%');
+        }
+
+        // generic q search (client name, domain)
+        if ($q = request('q')) {
+            $query->where(function ($qry) use ($q) {
+                $qry->whereHas('client', function ($c) use ($q) {
+                    $c->where('first_name', 'like', "%{$q}%")->orWhere('last_name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%");
+                })->orWhere('domain_name', 'like', "%{$q}%");
+            });
+        }
+
+        if ($status = request('status')) {
+            $query->where('status', $status);
+        }
+
+        // sorting
+        if ($sort = request('sort')) {
+            $direction = request('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+            // allow only safe columns
+            if (in_array($sort, ['id', 'domain_name', 'status', 'starts_at'])) {
+                $query->orderBy($sort, $direction);
+            }
+        } else {
+            $query->latest();
+        }
+
+        $subscriptions = $query->paginate(20)->withQueryString();
         return view('dashboard.management.subscriptions.index', compact('subscriptions'));
+    }
+
+    /**
+     * Show sync logs (last_sync_message) for subscriptions
+     */
+    public function syncLogs(Request $request)
+    {
+        $query = Subscription::with(['client', 'plan']);
+        if ($q = $request->get('q')) {
+            $query->where(function ($qr) use ($q) {
+                $qr->where('domain_name', 'like', "%{$q}%")->orWhereHas('client', function ($c) use ($q) {
+                    $c->where('first_name', 'like', "%{$q}%")->orWhere('last_name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%");
+                });
+            });
+        }
+        $subscriptions = $query->whereNotNull('last_sync_message')->orderBy('updated_at', 'desc')->paginate(30)->withQueryString();
+        return view('dashboard.management.subscriptions.sync_logs', compact('subscriptions'));
     }
 
     /**
@@ -189,6 +237,68 @@ class SubscriptionController extends Controller
     {
         $subscription->delete();
         return redirect()->route('dashboard.subscriptions.index')->with('ok', 'تم حذف الاشتراك');
+    }
+
+    /**
+     * Bulk actions handler for subscriptions.
+     * Accepts: ids[] (array), action (string): suspend|unsuspend|sync|terminate|delete
+     */
+    public function bulk(Request $request)
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array'],
+            'ids.*' => ['integer', 'exists:subscriptions,id'],
+            'action' => ['required', Rule::in(['suspend', 'unsuspend', 'sync', 'terminate', 'delete'])],
+        ]);
+
+        $ids = $data['ids'];
+        $action = $data['action'];
+
+        $subs = Subscription::whereIn('id', $ids)->get();
+
+        $dispatchedCount = 0;
+        foreach ($subs as $sub) {
+            try {
+                switch ($action) {
+                    case 'suspend':
+                        $sub->update(['status' => 'suspended']);
+                        // optionally dispatch suspend to provider
+                        break;
+                    case 'unsuspend':
+                        $sub->update(['status' => 'active']);
+                        break;
+                    case 'sync':
+                        // dispatch job to sync each subscription
+                        if (class_exists(\App\Jobs\SyncSubscriptionToProvider::class)) {
+                            \App\Jobs\SyncSubscriptionToProvider::dispatch($sub->id);
+                            $dispatchedCount++;
+                        }
+                        break;
+                    case 'terminate':
+                        // dispatch terminate job to perform provider-side removal and update status in background
+                        if (class_exists(\App\Jobs\TerminateSubscriptionOnProvider::class)) {
+                            \App\Jobs\TerminateSubscriptionOnProvider::dispatch($sub->id);
+                            $dispatchedCount++;
+                        } else {
+                            // fallback: update status locally
+                            $sub->update(['status' => 'cancelled']);
+                        }
+                        break;
+                    case 'delete':
+                        $sub->delete();
+                        break;
+                }
+            } catch (\Exception $e) {
+                // continue for others; log if needed
+                logger()->error('Bulk action failed for subscription ' . $sub->id . ': ' . $e->getMessage());
+            }
+        }
+
+        $message = 'تم تنفيذ العملية بنجاح على الاشتراكات المحددة';
+        if (!empty($dispatchedCount)) {
+            $message .= '. تم إرسال ' . $dispatchedCount . ' مهمة(ات) للمعالجة في الخلفية.';
+        }
+        return redirect()->route('dashboard.subscriptions.index')->with('ok', $message);
     }
     public function suspendToProvider(Subscription $subscription)
     {

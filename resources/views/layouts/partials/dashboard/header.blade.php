@@ -16,13 +16,13 @@
                 </li>
                 <li class="pc-h-item max-md:hidden md:inline-flex">
                     <form class="form-search relative">
-                        <i class="search-icon absolute top-[14px] left-[15px]">
+                        <i class="search-icon absolute top-2 left-3 text-muted">
                             <svg class="pc-icon w-4 h-4">
                                 <use xlink:href="#custom-search-normal-1"></use>
                             </svg>
                         </i>
-                        <input type="search" class="form-control px-2.5 pr-3 pl-10 w-[198px] leading-none"
-                            placeholder="Ctrl + K" />
+                        <input type="search" class="form-control px-3 pr-3 pl-10 w-[220px] leading-none rounded-md border border-secondary-200"
+                            placeholder="ابحث ... (Ctrl + K)" />
                     </form>
                 </li>
             </ul>
@@ -83,13 +83,12 @@
                     </div>
                 </li>
                 <li class="dropdown pc-h-item">
-                    <a class="pc-head-link dropdown-toggle me-0" data-pc-toggle="dropdown" href="#" role="button"
+                    <a class="pc-head-link dropdown-toggle me-0 relative" data-pc-toggle="dropdown" href="#" role="button"
                         aria-haspopup="false" aria-expanded="false">
                         <svg class="pc-icon">
                             <use xlink:href="#custom-notification"></use>
                         </svg>
-                        <span id="notifications_count" class="badge bg-success-500 text-white rounded-full z-10 absolute right-0 top-0">
-                        </span>
+                        <span id="notifications_count" class="badge bg-danger text-white rounded-full z-10 absolute -right-2 -top-1 text-[10px] px-1">0</span>
                     </a>
                     <div class="dropdown-menu dropdown-notification dropdown-menu-end pc-h-dropdown p-2">
                         <div class="dropdown-header flex items-center justify-between py-4 px-5">

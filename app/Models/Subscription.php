@@ -13,6 +13,7 @@ class Subscription extends Model
         'client_id',
         'plan_id',
         'status',
+        'last_sync_message',
         'price',
         'username',
         'server_id',
@@ -42,13 +43,12 @@ class Subscription extends Model
     public function invoiceItems()
     {
         return $this->hasMany(InvoiceItem::class, 'reference_id')
-                    ->where('item_type', 'subscription');
+            ->where('item_type', 'subscription');
     }
 
     public function coupons(): BelongsToMany
     {
         return $this->belongsToMany(Coupon::class)
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 }
-

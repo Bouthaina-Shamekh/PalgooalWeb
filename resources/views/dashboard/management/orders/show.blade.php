@@ -4,6 +4,13 @@
             <a href="{{ route('dashboard.orders.index') }}" class="text-blue-600 hover:underline">&larr; الرجوع لقائمة
                 الطلبات</a>
         </div>
+        @if (session('sync_result'))
+            <div class="mb-4">
+                <div class="rounded p-3 bg-blue-50 border border-blue-100 text-blue-800">
+                    {!! session('sync_result') !!}
+                </div>
+            </div>
+        @endif
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- كارت بيانات الطلب -->
             <div class="md:col-span-2 bg-white rounded-lg shadow p-6">

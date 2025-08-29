@@ -107,6 +107,22 @@ class InvoiceController extends Controller
             'total_cents'    => collect($data['items'])->sum(fn($i) => $i['unit_price_cents'] * $i['qty']),
         ]);
 
+        // إذا أصبحت الفاتورة مدفوعة، فعّل الطلب المرتبط وأنشئ/حدّث الاشتراك
+        if ($invoice->status === 'paid' && $invoice->order_id) {
+            try {
+                $order = \App\Models\Order::find($invoice->order_id);
+                if ($order && $order->status !== 'active') {
+                    $order->status = 'active';
+                    $order->save();
+                    // استدعاء عملية المعالجة في OrderController
+                    $orderController = new \App\Http\Controllers\Dashboard\Management\OrderController();
+                    $orderController->processActivation($order);
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to activate order from invoice ' . $invoice->id . ': ' . $e->getMessage());
+            }
+        }
+
         // تحديث البنود
         $invoice->items()->delete();
         foreach ($data['items'] as $item) {
