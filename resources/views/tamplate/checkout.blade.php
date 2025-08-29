@@ -72,7 +72,9 @@
                 </div>
 
                 <!-- Register -->
-                <form id="tab-register" class="space-y-4" role="tabpanel">
+                <form id="tab-register" class="space-y-4" role="tabpanel" method="POST"
+                    action="{{ route('checkout.process', $template_id) }}">
+                    @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example"
                             class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
@@ -100,7 +102,9 @@
                 </form>
 
                 <!-- Transfer -->
-                <form id="tab-transfer" class="space-y-4 hidden" role="tabpanel">
+                <form id="tab-transfer" class="space-y-4 hidden" role="tabpanel" method="POST"
+                    action="{{ route('checkout.process', $template_id) }}">
+                    @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example.com"
                             class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
@@ -114,7 +118,9 @@
                 </form>
 
                 <!-- Own Domain -->
-                <form id="tab-owndomain" class="space-y-4 hidden" role="tabpanel">
+                <form id="tab-owndomain" class="space-y-4 hidden" role="tabpanel" method="POST"
+                    action="{{ route('checkout.process', $template_id) }}">
+                    @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example.com"
                             class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
@@ -127,7 +133,9 @@
                 </form>
 
                 <!-- Subdomain (مجاني) -->
-                <form id="tab-subdomain" class="space-y-4 hidden" role="tabpanel">
+                <form id="tab-subdomain" class="space-y-4 hidden" role="tabpanel" method="POST"
+                    action="{{ route('checkout.process', $template_id) }}">
+                    @csrf
                     <div class="flex gap-2 items-stretch">
                         <input aria-label="اسم الساب-دومين" placeholder="myshop"
                             class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
@@ -430,7 +438,8 @@
                     </div>
                 </div>
 
-                <form method="POST" action="{{ route('checkout.process', ['template_id' => $template_id]) }}">
+                <form id="checkoutForm" method="POST"
+                    action="{{ route('checkout.process', ['template_id' => $template_id]) }}">
                     @csrf
                     <input type="hidden" name="domain" id="orderDomainInput" value="">
                     <input type="hidden" name="total" id="orderTotalInput" value="">
@@ -529,6 +538,112 @@
 
     <!-- ===== منطق التبويبات والتنقّل ===== -->
     <script>
+        // منطق جديد: أزرار المتابعة فقط تنقل للخطوة الثانية وتخزن بيانات الدومين مؤقتاً
+        document.addEventListener('DOMContentLoaded', function() {
+            // متغيرات لتخزين بيانات الدومين المختار مؤقتاً
+            let selectedDomainOption = '';
+            let selectedDomain = '';
+
+            function updateDomainFields() {
+                const finalForm = document.getElementById('checkoutForm');
+                if (!finalForm) return;
+                // domain_option
+                let inputOption = finalForm.querySelector('input[name="domain_option"]');
+                if (!inputOption) {
+                    inputOption = document.createElement('input');
+                    inputOption.type = 'hidden';
+                    inputOption.name = 'domain_option';
+                    finalForm.appendChild(inputOption);
+                }
+                inputOption.value = selectedDomainOption;
+                // domain
+                let inputDomain = finalForm.querySelector('input[name="domain"]');
+                if (!inputDomain) {
+                    inputDomain = document.createElement('input');
+                    inputDomain.type = 'hidden';
+                    inputDomain.name = 'domain';
+                    finalForm.appendChild(inputDomain);
+                }
+                inputDomain.value = selectedDomain;
+            }
+            // expose for external handlers (AJAX submit) to call before FormData creation
+            window.updateDomainFields = updateDomainFields;
+
+            // تسجيل جديد
+            const btnR = document.getElementById('goConfigR');
+            if (btnR) {
+                btnR.addEventListener('click', function(e) {
+                    const form = btnR.closest('form');
+                    let domain = form.querySelector('input[aria-label="اسم النطاق"]').value;
+                    let tld = form.querySelector('select').value;
+                    let fullDomain = domain + tld;
+                    selectedDomainOption = 'register';
+                    selectedDomain = fullDomain;
+                    updateDomainFields(); // تحديث الحقول المخفية
+                    // انتقل للخطوة الثانية فقط
+                    const p = priceMap[tld] ?? 1000;
+                    setReview(fullDomain, p);
+                    goto(1);
+                });
+            }
+            // نقل نطاق
+            const btnT = document.getElementById('goConfigT');
+            if (btnT) {
+                btnT.addEventListener('click', function(e) {
+                    const form = btnT.closest('form');
+                    let domain = form.querySelector('input[aria-label="اسم النطاق"]').value;
+                    selectedDomainOption = 'transfer';
+                    selectedDomain = domain;
+                    updateDomainFields();
+                    const tld = domain.includes('.') ? `.${domain.split('.').pop()}` : '.com';
+                    const p = priceMap[tld] ?? 1000;
+                    setReview(domain, p);
+                    goto(1);
+                });
+            }
+            // أمتلك نطاقاً
+            const btnO = document.getElementById('goConfigO');
+            if (btnO) {
+                btnO.addEventListener('click', function(e) {
+                    const form = btnO.closest('form');
+                    let domain = form.querySelector('input[aria-label="اسم النطاق"]').value;
+                    selectedDomainOption = 'own';
+                    selectedDomain = domain;
+                    updateDomainFields();
+                    setReview(domain, 0);
+                    goto(1);
+                });
+            }
+            // Subdomain مجاني
+            const btnS = document.getElementById('goConfigS');
+            if (btnS) {
+                btnS.addEventListener('click', function(e) {
+                    const form = btnS.closest('form');
+                    let sub = form.querySelector('input[aria-label="اسم الساب-دومين"]').value;
+                    let main = form.querySelector('select').value;
+                    let fullDomain = sub + '.' + main;
+                    selectedDomainOption = 'subdomain';
+                    selectedDomain = fullDomain;
+                    updateDomainFields();
+                    setReview(fullDomain, 0);
+                    goto(1);
+                });
+            }
+
+            // عند الضغط على زر إتمام الطلب: أضف القيم المخزنة إلى الفورم النهائي قبل الإرسال
+            const placeOrderReal = document.getElementById('placeOrderReal');
+            if (placeOrderReal) {
+                placeOrderReal.addEventListener('click', function(e) {
+                    try {
+                        updateDomainFields();
+                    } catch (err) {}
+                });
+
+                placeOrderReal.closest('form').addEventListener('submit', function(e) {
+                    updateDomainFields(); // تأكد دائماً من تحديث القيم قبل الإرسال
+                });
+            }
+        });
         // تحسين الطباعة: إظهار الشعار وإخفاء العناصر غير الضرورية
         const printBtn = document.getElementById('sx-print');
         if (printBtn) {
@@ -591,11 +706,14 @@
             body.innerHTML = html;
         }
         // إرسال الطلب عبر AJAX ليظهر شاشة النجاح مباشرة مع حماية إضافية
-        document.querySelector('form[action*="checkout.process"]')?.addEventListener('submit', function(e) {
+        document.getElementById('checkoutForm')?.addEventListener('submit', function(e) {
             e.preventDefault();
             const form = this;
+            // ensure hidden domain fields are up-to-date before building FormData
+            try {
+                if (window.updateDomainFields) window.updateDomainFields();
+            } catch (err) {}
             const data = new FormData(form);
-            console.log('Submitting order...');
             fetch(form.action, {
                     method: 'POST',
                     body: data,
@@ -604,11 +722,9 @@
                     }
                 })
                 .then(r => {
-                    console.log('Raw response:', r);
                     return r.json();
                 })
                 .then(response => {
-                    console.log('Response:', response);
                     if (response.success) {
                         // ضع hash في الرابط ليبقى المستخدم في شاشة النجاح حتى لو أعاد تحميل الصفحة
                         window.location.hash = '#view-success';
@@ -635,7 +751,6 @@
                     }
                 })
                 .catch((err) => {
-                    console.error('AJAX error:', err);
                     alert('حدث خطأ أثناء معالجة الطلب. حاول مرة أخرى.');
                 });
         });
@@ -824,38 +939,7 @@
             });
         }
 
-        document.getElementById('goConfigR')?.addEventListener('click', () => {
-            const sld = (regSld?.value || '').trim();
-            const tld = (regTld?.value || '.com').trim();
-            const fqdn = sld ? `${sld}${tld}` : 'example.com';
-            const price = priceMap[tld] ?? 1000;
-            setReview(fqdn, price);
-            goto(1);
-        });
-        document.getElementById('goConfigT')?.addEventListener('click', () => {
-            const fqdn = (document.querySelector('#tab-transfer input[aria-label="اسم النطاق"]').value ||
-                'example.com').trim();
-            const tld = fqdn.includes('.') ? `.${fqdn.split('.').pop()}` : '.com';
-            const price = priceMap[tld] ?? 1000;
-            setReview(fqdn, price);
-            goto(1);
-        });
-        document.getElementById('goConfigO')?.addEventListener('click', () => {
-            const fqdn = (document.querySelector('#tab-owndomain input[aria-label="اسم النطاق"]').value ||
-                'example.com').trim();
-            setReview(fqdn, 0);
-            goto(1);
-        });
-
-        document.getElementById('goConfigS')?.addEventListener('click', () => {
-            const sub = (document.querySelector('#tab-subdomain input[aria-label="اسم الساب-دومين"]').value ||
-                'mysite').trim();
-            const base = (document.querySelector('#tab-subdomain select[aria-label="الدومين الأساسي"]').value ||
-                'palgoals.com').trim();
-            const fqdn = `${sub}.${base}`;
-            setReview(fqdn, 0);
-            goto(1);
-        });
+        // Duplicate goConfig handlers removed — original handlers are inside DOMContentLoaded above
 
         // تبديل نماذج الدخول/التسجيل
         const btnLogin = document.getElementById('btn-login');

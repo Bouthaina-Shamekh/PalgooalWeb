@@ -111,6 +111,8 @@ Route::group([
     Route::post('/subscriptions/{subscription}/unsuspend', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'unsuspendToProvider'])->name('subscriptions.unsuspend');
     Route::post('/subscriptions/{subscription}/terminate', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'terminateToProvider'])->name('subscriptions.terminate');
     Route::resource('/subscriptions', SubscriptionController::class)->names('subscriptions');
+    // AJAX: اقتراح وتحقق من تفرد username
+    Route::post('/subscriptions/username-suggest', [\App\Http\Controllers\Dashboard\Management\SubscriptionController::class, 'suggestUsername'])->name('subscriptions.username-suggest');
     Route::get('servers/{server}/test-connection', [ServerController::class, 'testConnection'])->name('servers.test-connection');
     Route::get('servers/{server}/sso-whm', [ServerController::class, 'ssoWhm'])->name('servers.sso-whm');
     Route::resource('servers', ServerController::class)->names('servers');

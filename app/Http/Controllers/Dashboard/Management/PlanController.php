@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard\Management;
 
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
+use App\Models\Server;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
@@ -18,7 +19,8 @@ class PlanController extends Controller
 
     public function create()
     {
-        return view('dashboard.management.plans.create');
+        $servers = Server::all();
+        return view('dashboard.management.plans.create', compact('servers'));
     }
 
     public function store(Request $r)
@@ -43,6 +45,7 @@ class PlanController extends Controller
             'slug'                => 'nullable|string|max:140|unique:plans,slug',
             'monthly_price_cents' => 'nullable|integer|min:0',
             'annual_price_cents'  => 'nullable|integer|min:0',
+            'server_id'           => ['nullable', 'integer', 'exists:servers,id'],
             'features'            => 'nullable|array',
             'is_active'           => 'boolean',
         ], [
@@ -67,7 +70,8 @@ class PlanController extends Controller
 
     public function edit(Plan $plan)
     {
-        return view('dashboard.management.plans.edit', compact('plan'));
+        $servers = Server::all();
+        return view('dashboard.management.plans.edit', compact('plan', 'servers'));
     }
 
     public function update(Request $r, Plan $plan)
@@ -97,9 +101,10 @@ class PlanController extends Controller
         // فاليديشن: أحد السعرين مطلوب على الأقل
         $data = $r->validate([
             'name'                => 'required|string|max:120',
-            'slug'                => ['nullable','string','max:140', Rule::unique('plans','slug')->ignore($plan->id)],
+            'slug'                => ['nullable', 'string', 'max:140', Rule::unique('plans', 'slug')->ignore($plan->id)],
             'monthly_price_cents' => 'nullable|integer|min:0',
             'annual_price_cents'  => 'nullable|integer|min:0',
+            'server_id'           => ['nullable', 'integer', 'exists:servers,id'],
             'features'            => 'nullable|array',
             'is_active'           => 'boolean',
         ], [

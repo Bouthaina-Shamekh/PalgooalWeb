@@ -14,6 +14,8 @@ class Order extends Model
         'status',
         'type',
         'notes',
+        'domain_option',
+        'domain_name',
     ];
 
     public function client(): BelongsTo

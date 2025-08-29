@@ -69,6 +69,68 @@ class SubscriptionController extends Controller
         return view('dashboard.management.subscriptions.index', compact('subscriptions'));
     }
 
+    /**
+     * AJAX: suggest a unique username based on domain, client or preferred value
+     */
+    public function suggestUsername(Request $request)
+    {
+        $data = $request->validate([
+            'domain_name' => ['nullable', 'string'],
+            'client_id' => ['nullable', 'integer', 'exists:clients,id'],
+            'preferred_username' => ['nullable', 'string'],
+        ]);
+
+        $makeBase = function ($s) {
+            $s = (string) $s;
+            $s = strtolower($s);
+            // remove dots and non-alphanumeric
+            $s = str_replace('.', '', $s);
+            $s = preg_replace('/[^a-z0-9]/', '', $s);
+            $s = trim($s);
+            if ($s === '') {
+                return 'user';
+            }
+            return substr($s, 0, 12);
+        };
+
+        $base = null;
+        if (!empty($data['domain_name'])) {
+            $base = $makeBase($data['domain_name']);
+        }
+
+        if (!$base && !empty($data['preferred_username'])) {
+            $base = $makeBase($data['preferred_username']);
+        }
+
+        if (!$base && !empty($data['client_id'])) {
+            $client = Client::find($data['client_id']);
+            if ($client) {
+                if (!empty($client->email) && strpos($client->email, '@') !== false) {
+                    $base = $makeBase(explode('@', $client->email)[0]);
+                } else {
+                    $name = ($client->first_name ?? '') . ($client->last_name ?? '');
+                    $base = $makeBase($name);
+                }
+            }
+        }
+
+        if (!$base) {
+            $base = 'user';
+        }
+
+        $candidate = $base;
+        $suffix = 0;
+        // ensure uniqueness
+        while (Subscription::where('username', $candidate)->exists()) {
+            $suffix++;
+            $candidate = $base . $suffix;
+            // safety break
+            if ($suffix > 1000) break;
+        }
+
+        return response()->json(['username' => $candidate, 'unique' => true]);
+    }
+
     public function create()
     {
         $clients = Client::all();

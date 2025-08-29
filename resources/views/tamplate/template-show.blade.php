@@ -84,7 +84,7 @@
             <span class="mx-2">/</span>
           </li>
           <li>
-            <a href="{{ url('/templates') }}" class="hover:underline text-white font-semibold">{{ t('Frontend.Template', 'Template')}}</a>
+            <a href="{{ url('/template') }}" class="hover:underline text-white font-semibold">{{ t('Frontend.Template', 'Template')}}</a>
             <span class="mx-2">/</span>
           </li>
           <li class="text-white/70" aria-current="page">{{ $translation?->name }}</li>
