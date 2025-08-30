@@ -30,6 +30,7 @@
                                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">الاسم</th>
                                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">النوع</th>
                                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">الحالة</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">الرصيد</th>
                                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-500">خيارات</th>
                             </tr>
                         </thead>
@@ -44,6 +45,17 @@
                                         @else
                                             <span class="badge bg-red-100 text-red-700">معطل</span>
                                         @endif
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        @php
+                                            try {
+                                                $enomClient = new \App\Services\DomainProviders\EnomClient();
+                                                $result = $enomClient->getBalance($provider);
+                                                echo $result['ok'] ? $result['balance'] ?? '-' : '—';
+                                            } catch (Exception $e) {
+                                                echo '—';
+                                            }
+                                        @endphp
                                     </td>
                                     <td class="px-4 py-2">
                                         <a href="{{ route('dashboard.domain_providers.edit', $provider) }}"
