@@ -6,32 +6,62 @@ use Illuminate\Database\Eloquent\Model;
 
 class DomainProvider extends Model
 {
+    protected $table = 'domain_providers';
+
     protected $fillable = [
         'name',
-        'type', // enom, namecheap, ...
+        'type',
         'endpoint',
         'username',
         'password',
         'api_token',
         'is_active',
-        'mode', // live أو test
+        'mode',
     ];
 
-    // تشفير كلمة المرور
-    public function setPasswordAttribute($value)
+    protected $casts = [
+        'is_active' => 'boolean',
+        'password'  => 'encrypted',   // احذف لو إصدارك لا يدعم
+        'api_token' => 'encrypted',   // احذف لو إصدارك لا يدعم
+    ];
+
+    protected $hidden = ['password', 'api_token'];
+
+    // قيم افتراضيّة
+    protected $attributes = [
+        'is_active' => true,
+        'mode'      => 'test',
+    ];
+
+    // Constants
+    public const MODES = ['live', 'test'];
+    public const TYPES = ['enom', 'namecheap', 'cloudflare'];
+
+    // Scopes
+    public function scopeActive($q)
     {
-        $this->attributes['password'] = $value ? encrypt($value) : null;
+        return $q->where('is_active', true);
     }
-    public function getPasswordAttribute($value)
+    public function scopeOfType($q, $type)
     {
-        return $value ? decrypt($value) : null;
+        return $q->where('type', strtolower($type));
     }
-    public function setApiTokenAttribute($value)
+    public function scopeMode($q, $mode)
     {
-        $this->attributes['api_token'] = $value ? encrypt($value) : null;
+        return $q->where('mode', strtolower($mode));
     }
-    public function getApiTokenAttribute($value)
+
+    // Normalizers
+    public function setEndpointAttribute($v)
     {
-        return $value ? decrypt($value) : null;
+        $this->attributes['endpoint'] = $v ? trim($v) : null;
+    }
+    public function setTypeAttribute($v)
+    {
+        $this->attributes['type']     = $v ? strtolower(trim($v)) : null;
+    }
+    public function setModeAttribute($v)
+    {
+        $this->attributes['mode']     = $v ? strtolower(trim($v)) : null;
     }
 }

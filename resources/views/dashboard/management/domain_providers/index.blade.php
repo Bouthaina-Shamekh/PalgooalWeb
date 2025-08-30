@@ -78,9 +78,15 @@
             fetch(url)
                 .then(res => res.json())
                 .then(data => {
-                    let msg = data.message || (data.ok ? 'تم الاتصال بنجاح' : 'فشل الاتصال');
-                    if (data.response) {
-                        msg += "\n\nتفاصيل الاستجابة:\n" + data.response;
+                    let msg = '';
+                    if (data.ok) {
+                        msg = `✅ تم الاتصال بنجاح.`;
+                        if (data.balance !== undefined && data.balance !== null) {
+                            msg += `\nالرصيد: ${data.balance}`;
+                        }
+                    } else {
+                        msg = `❌ فشل الاتصال: ${data.message || 'خطأ غير معروف.'}`;
+                        msg += "\nاطّلع على السجلات للمزيد.";
                     }
                     alert(msg);
                 })
