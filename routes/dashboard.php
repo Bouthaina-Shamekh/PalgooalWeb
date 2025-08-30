@@ -19,6 +19,7 @@ use App\Http\Controllers\Dashboard\TemplateController;
 use App\Livewire\Services;
 use App\Http\Controllers\Dashboard\TemplateReviewController as AdminReview;
 use App\Http\Controllers\Dashboard\TemplateReviewController;
+use App\Http\Controllers\Dashboard\Management\DomainProviderController;
 
 Route::get('admin/', function () {
     return redirect()->route('dashboard.home');
@@ -132,4 +133,8 @@ Route::group([
     Route::post('/orders/bulk', [ManagementOrderController::class, 'bulk'])->name('orders.bulk');
     Route::get('/orders/{order}', [ManagementOrderController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{order}/status', [ManagementOrderController::class, 'updateStatus'])->name('orders.status');
+
+    // مزودي الدومينات
+    Route::resource('domain_providers', DomainProviderController::class)->names('domain_providers');
+    Route::get('domain_providers/{domainProvider}/test-connection', [DomainProviderController::class, 'testConnection'])->name('domain_providers.test-connection');
 });

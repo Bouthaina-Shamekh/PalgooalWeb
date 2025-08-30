@@ -133,7 +133,8 @@
                             </thead>
                             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
                                 @forelse ($subscriptions as $sub)
-                                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-900">
+                                    <tr data-subscription-row="{{ $sub->id }}"
+                                        class="hover:bg-gray-50 dark:hover:bg-gray-900">
                                         <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
                                             <input type="checkbox" class="row_checkbox" name="ids[]"
                                                 value="{{ $sub->id }}" />
@@ -168,19 +169,19 @@
                                         <td class="px-4 py-2">
                                             @if ($sub->status == 'active')
                                                 <span
-                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">نشط</span>
+                                                    class="sub-status-badge inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">نشط</span>
                                             @elseif($sub->status == 'pending')
                                                 <span
-                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">معلق</span>
+                                                    class="sub-status-badge inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">معلق</span>
                                             @elseif($sub->status == 'suspended')
                                                 <span
-                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">موقوف</span>
+                                                    class="sub-status-badge inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">موقوف</span>
                                             @elseif($sub->status == 'cancelled')
                                                 <span
-                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">ملغي</span>
+                                                    class="sub-status-badge inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">ملغي</span>
                                             @else
                                                 <span
-                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{{ __($sub->status) }}</span>
+                                                    class="sub-status-badge inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{{ __($sub->status) }}</span>
                                             @endif
                                         </td>
                                         <td
@@ -195,6 +196,75 @@
                       <a class="dropdown-item" href="#">Monthly</a>
                     </div>
                   </div> --}}
+                                            <div class="inline-flex items-center gap-2 mr-2">
+                                                {{-- cPanel login (opens new tab) --}}
+                                                <a href="{{ route('dashboard.subscriptions.cpanel-login', $sub) }}"
+                                                    target="_blank" rel="noopener" title="دخول cPanel"
+                                                    class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-white border border-gray-200 hover:bg-gray-50 text-gray-600">
+                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                                                        stroke="currentColor" stroke-width="2">
+                                                        <path
+                                                            d="M12 2v4M12 18v4M4 12h4M16 12h4M5 5l4 4M15 15l4 4M5 19l4-4M15 9l4-4">
+                                                        </path>
+                                                    </svg>
+                                                </a>
+                                                {{-- sync with provider --}}
+                                                <form action="{{ route('dashboard.subscriptions.sync', $sub) }}"
+                                                    method="POST" class="ajax-action">
+                                                    @csrf
+                                                    <button type="submit" title="مزامنة"
+                                                        class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-white border border-gray-200 hover:bg-gray-50 text-gray-600">
+                                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                                                            stroke="currentColor" stroke-width="2">
+                                                            <path d="M21 12a9 9 0 1 0-3.2 6.6L21 12z"></path>
+                                                            <path d="M21 3v6h-6"></path>
+                                                        </svg>
+                                                    </button>
+                                                </form>
+                                                {{-- suspend / unsuspend --}}
+                                                @if ($sub->status == 'active')
+                                                    <form
+                                                        action="{{ route('dashboard.subscriptions.suspend', $sub) }}"
+                                                        method="POST" class="ajax-action">
+                                                        @csrf
+                                                        <button type="submit" title="تعليق"
+                                                            class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-white border border-gray-200 hover:bg-gray-50 text-gray-600">
+                                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                                                                stroke="currentColor" stroke-width="2">
+                                                                <path d="M10 6h4v12h-4z"></path>
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                @elseif($sub->status == 'suspended')
+                                                    <form
+                                                        action="{{ route('dashboard.subscriptions.unsuspend', $sub) }}"
+                                                        method="POST" class="ajax-action">
+                                                        @csrf
+                                                        <button type="submit" title="إلغاء التعليق"
+                                                            class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-white border border-gray-200 hover:bg-gray-50 text-gray-600">
+                                                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                                                                stroke="currentColor" stroke-width="2">
+                                                                <path d="M6 4h4v16H6zM14 4h4v16h-4z"></path>
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                                {{-- terminate (destructive) --}}
+                                                <form action="{{ route('dashboard.subscriptions.terminate', $sub) }}"
+                                                    method="POST" class="ajax-action ajax-destructive"
+                                                    onsubmit="return confirm('سيتم حذف الموقع من السيرفر نهائيًا. هل أنت متأكد؟')">
+                                                    @csrf
+                                                    <button type="submit" title="حذف نهائي"
+                                                        class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-white border border-gray-200 hover:bg-gray-50 text-red-600">
+                                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                                                            stroke="currentColor" stroke-width="2">
+                                                            <path d="M3 6h18M8 6v12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6">
+                                                            </path>
+                                                            <path d="M10 11v6M14 11v6"></path>
+                                                        </svg>
+                                                    </button>
+                                                </form>
+                                            </div>
                                             <div class="relative inline-block">
                                                 <a class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary dropdown-toggle arrow-none"
                                                     href="#" data-pc-toggle="dropdown" aria-haspopup="true"
@@ -321,6 +391,92 @@
 <script>
     document.addEventListener('click', function(e) {
         // close other open dropdowns when clicking outside
+        // AJAX handler for subscription quick-action forms
+        (function() {
+            function showToast(msg, ok = true) {
+                var el = document.createElement('div');
+                el.textContent = msg;
+                el.style.position = 'fixed';
+                el.style.right = '20px';
+                el.style.bottom = '20px';
+                el.style.padding = '10px 14px';
+                el.style.background = ok ? '#16a34a' : '#dc2626';
+                el.style.color = 'white';
+                el.style.borderRadius = '6px';
+                el.style.zIndex = 9999;
+                document.body.appendChild(el);
+                setTimeout(function() {
+                    document.body.removeChild(el);
+                }, 3500);
+            }
+
+            document.addEventListener('submit', function(e) {
+                var form = e.target;
+                if (!form.classList || !form.classList.contains('ajax-action')) return;
+                e.preventDefault();
+                var url = form.action;
+                var method = (form.method || 'POST').toUpperCase();
+                var data = new FormData(form);
+                var headers = {
+                    'X-Requested-With': 'XMLHttpRequest'
+                };
+                var tokenMeta = document.querySelector('meta[name="csrf-token"]');
+                if (tokenMeta) headers['X-CSRF-TOKEN'] = tokenMeta.getAttribute('content');
+
+                fetch(url, {
+                        method: method,
+                        headers: headers,
+                        body: data,
+                        credentials: 'same-origin'
+                    })
+                    .then(function(res) {
+                        return res.json().catch(function() {
+                            return {
+                                ok: res.ok
+                            };
+                        });
+                    })
+                    .then(function(json) {
+                        if (json && json.error) {
+                            showToast(json.error, false);
+                            return;
+                        }
+                        if (json && json.message) showToast(json.message, true);
+
+                        // If action returned updated subscription status, update badge
+                        if (json && json.subscription && json.subscription.id) {
+                            var id = json.subscription.id;
+                            var row = document.querySelector('[data-subscription-row="' + id +
+                                '"]');
+                            if (row) {
+                                var badge = row.querySelector('.sub-status-badge');
+                                if (badge) {
+                                    badge.textContent = json.subscription.status || badge
+                                        .textContent;
+                                    // set simple color mapping
+                                    badge.className =
+                                        'sub-status-badge inline-flex items-center gap-2 px-2 py-1 rounded text-xs ' +
+                                        (json.subscription.status == 'active' ?
+                                            'bg-green-100 text-green-700' : (json.subscription
+                                                .status == 'suspended' ?
+                                                'bg-yellow-100 text-yellow-700' :
+                                                'bg-gray-100 text-gray-700'));
+                                }
+                            }
+                        }
+
+                        // If form was destructive terminate, remove row
+                        if (form.classList.contains('ajax-destructive')) {
+                            var tr = form.closest('tr');
+                            if (tr) tr.parentNode.removeChild(tr);
+                        }
+                    }).catch(function(err) {
+                        console.error(err);
+                        showToast('حدث خطأ، حاول مرة أخرى', false);
+                    });
+            });
+        })();
+
         document.querySelectorAll('[data-pc-dropdown]').forEach(function(el) {
             if (!el.contains(e.target) && !el.previousElementSibling?.contains(e.target)) {
                 el.classList.add('hidden');
