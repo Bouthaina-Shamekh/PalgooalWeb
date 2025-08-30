@@ -146,4 +146,54 @@ class InvoiceController extends Controller
         $invoice->delete();
         return redirect()->route('dashboard.invoices.index')->with('ok', 'تم حذف الفاتورة');
     }
+
+    // إجراء جماعي على الفواتير
+    public function bulk(Request $request)
+    {
+        $data = $request->validate([
+            'ids' => 'required|array|min:1',
+            'action' => 'required|string',
+        ]);
+        $ids = $data['ids'];
+        $action = $data['action'];
+        $affected = 0;
+        if ($action === 'delete') {
+            // delete invoices and their items
+            $invoices = Invoice::whereIn('id', $ids)->get();
+            foreach ($invoices as $inv) {
+                $inv->items()->delete();
+                $inv->delete();
+            }
+            $affected = count($invoices);
+        } elseif (in_array($action, ['draft','unpaid','paid','cancelled'])) {
+            $affected = Invoice::whereIn('id', $ids)->update(['status' => $action]);
+            if ($action === 'paid') {
+                $invoices = Invoice::whereIn('id', $ids)->get();
+                foreach ($invoices as $inv) {
+                    if ($inv->order_id) {
+                        try {
+                            $order = \App\Models\Order::find($inv->order_id);
+                            if ($order && $order->status !== 'active') {
+                                $order->status = 'active';
+                                $order->save();
+                                $orderController = new \App\Http\Controllers\Dashboard\Management\OrderController();
+                                $orderController->processActivation($order);
+                            }
+                        } catch (\Exception $e) {
+                            \Illuminate\Support\Facades\Log::error('Bulk invoice paid processing failed: ' . $e->getMessage());
+                        }
+                    }
+                }
+            }
+        }
+        if ($request->ajax()) return response()->json(['affected' => $affected]);
+        return redirect()->back()->with('ok', "تم تنفيذ الإجراء على {$affected} فاتورة(ات)");
+    }
+
+    // عرض فاتورة واحدة
+    public function show(Invoice $invoice)
+    {
+        $invoice->load('items', 'client');
+        return view('dashboard.management.invoices.show', compact('invoice'));
+    }
 }

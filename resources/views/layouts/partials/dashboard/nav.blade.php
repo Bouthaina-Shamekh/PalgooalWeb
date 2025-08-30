@@ -202,13 +202,25 @@
                 @endcan
                 @can('view','App\\Models\\Server')
                 <li class="pc-item">
-                    <a href="{{route('dashboard.orders.index')}}" class="pc-link">
+                    <a href="{{route('dashboard.servers.index')}}" class="pc-link">
                         <span class="pc-micon">
                             <span class="pc-micon">
                                 <i class="fas fa-server"></i>
                             </span>
                         </span>
-                        <span class="pc-mtext">{{ t('dashboard.orders', 'orders') }}</span>
+                        <span class="pc-mtext">{{ t('dashboard.servers', 'servers') }}</span>
+                    </a>
+                </li>
+                @endcan
+                @can('view','App\\Models\\Server')
+                <li class="pc-item">
+                    <a href="{{route('dashboard.subscriptions.sync-logs')}}" class="pc-link">
+                        <span class="pc-micon">
+                            <span class="pc-micon">
+                                <i class="fas fa-server"></i>
+                            </span>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.sync-logs', 'sync-logs') }}</span>
                     </a>
                 </li>
                 @endcan

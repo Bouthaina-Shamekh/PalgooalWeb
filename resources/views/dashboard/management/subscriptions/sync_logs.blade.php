@@ -20,7 +20,19 @@
                         <form method="GET" class="flex items-center gap-2">
                             <input type="search" name="q" value="{{ request('q') }}"
                                 placeholder="بحث بالعميل أو الدومين..."
-                                class="rounded-md border px-3 py-2 text-sm w-64" />
+                                class="rounded-md border px-3 py-2 text-sm w-48" />
+                            <select name="server_id" class="rounded-md border px-2 py-2 text-sm bg-white">
+                                <option value="">كل السيرفرات</option>
+                                @foreach ($servers as $s)
+                                    <option value="{{ $s->id }}"
+                                        {{ request('server_id') == $s->id ? 'selected' : '' }}>{{ $s->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <input type="date" name="from" value="{{ request('from') }}"
+                                class="rounded-md border px-2 py-2 text-sm" />
+                            <input type="date" name="to" value="{{ request('to') }}"
+                                class="rounded-md border px-2 py-2 text-sm" />
                             <button class="px-3 py-2 bg-blue-600 text-white rounded-md text-sm">بحث</button>
                         </form>
                     </div>
@@ -32,6 +44,8 @@
                                 <tr>
                                     <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">#</th>
                                     <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">العميل
+                                    </th>
+                                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">السيرفر
                                     </th>
                                     <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">الدومين
                                     </th>
@@ -47,6 +61,7 @@
                                         <td class="px-4 py-2 text-sm text-gray-700">{{ $sub->id }}</td>
                                         <td class="px-4 py-2 text-sm text-gray-700">{{ $sub->client->first_name ?? '' }}
                                             {{ $sub->client->last_name ?? '' }}</td>
+                                        <td class="px-4 py-2 text-sm text-gray-700">{{ $sub->server->name ?? '-' }}</td>
                                         <td class="px-4 py-2 text-sm text-gray-700">{{ $sub->domain_name ?? '-' }}</td>
                                         <td class="px-4 py-2 text-sm text-gray-700">{!! nl2br(e($sub->last_sync_message)) !!}</td>
                                         <td class="px-4 py-2 text-sm text-gray-700">

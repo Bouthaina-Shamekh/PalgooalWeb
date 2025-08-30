@@ -95,7 +95,7 @@
                                     <option value="delete">حذف</option>
                                 </select>
                                 <button type="button" id="bulk_apply"
-                                    class="inline-flex items-center gap-2 px-3 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700">
+                                    class="inline-flex items-center px-3 py-2 bg-blue-500 text-white rounded-md text-sm hover:bg-blue-700 ">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                         stroke-width="2">
                                         <path d="M5 12h14M12 5l7 7-7 7"></path>
@@ -185,19 +185,25 @@
                                         </td>
                                         <td
                                             class="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 whitespace-nowrap">
+                                            {{-- <div class="dropdown drp-show">
+                    <a class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary dropdown-toggle arrow-none" href="#" data-pc-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      <i class="ti ti-dots-vertical text-lg leading-none"></i>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end" data-popper-placement="bottom-end" style="position: absolute; inset: 0px 0px auto auto; margin: 0px; transform: translate3d(0px, 32px, 0px);">
+                      <a class="dropdown-item" href="#">Today</a>
+                      <a class="dropdown-item" href="#">Weekly</a>
+                      <a class="dropdown-item" href="#">Monthly</a>
+                    </div>
+                  </div> --}}
                                             <div class="relative inline-block">
-                                                <button
-                                                    class="inline-flex items-center justify-center w-9 h-9 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full text-gray-600 hover:bg-gray-50 focus:outline-none"
-                                                    data-pc-toggle="dropdown" aria-expanded="false"
-                                                    aria-haspopup="true">
+                                                <a class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary dropdown-toggle arrow-none"
+                                                    href="#" data-pc-toggle="dropdown" aria-haspopup="true"
+                                                    aria-expanded="false">
                                                     <span class="sr-only">خيارات</span>
-                                                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                                        <path d="M6 12h.01M12 12h.01M18 12h.01"></path>
-                                                    </svg>
-                                                </button>
-                                                <div class="hidden origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-900 ring-1 ring-black ring-opacity-5 p-2 z-50"
-                                                    data-pc-dropdown="" role="menu" aria-hidden="true">
+                                                    <i class="ti ti-dots-vertical text-lg leading-none"></i>
+                                                </a>
+                                                <div class="dropdown-menu dropdown-menu-end hidden origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white dark:bg-gray-900 ring-1 ring-black ring-opacity-5 p-2 z-50"
+                                                    data-pc-dropdown role="menu" aria-hidden="true">
                                                     <a href="{{ route('dashboard.subscriptions.edit', $sub) }}"
                                                         role="menuitem"
                                                         class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 text-sm text-gray-700">
@@ -215,7 +221,16 @@
                                                         @csrf
                                                         @method('DELETE')
                                                         <button type="submit" role="menuitem"
-                                                            class="w-full text-left px-3 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 text-sm text-red-600">حذف</button>
+                                                            class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 text-sm text-gray-700">
+                                                            <svg class="w-4 h-4 text-gray-500" viewBox="0 0 24 24"
+                                                                fill="none" stroke="currentColor"
+                                                                stroke-width="2">
+                                                                <path
+                                                                    d="M3 6h18M8 6v12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6M10 6V4a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2">
+                                                                </path>
+                                                            </svg>
+                                                            حذف
+                                                        </button>
                                                     </form>
                                                     @if ($sub->status == 'active')
                                                         <form
@@ -223,7 +238,14 @@
                                                             method="POST">
                                                             @csrf
                                                             <button type="submit" role="menuitem"
-                                                                class="w-full text-left px-3 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 text-sm">تعليق</button>
+                                                                class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 text-sm text-gray-700">
+                                                                <svg class="w-4 h-4 text-gray-500" viewBox="0 0 24 24"
+                                                                    fill="none" stroke="currentColor"
+                                                                    stroke-width="2">
+                                                                    <path d="M10 6h4v12h-4z"></path>
+                                                                </svg>
+                                                                تعليق
+                                                            </button>
                                                         </form>
                                                     @elseif($sub->status == 'suspended')
                                                         <form
@@ -231,15 +253,31 @@
                                                             method="POST">
                                                             @csrf
                                                             <button type="submit" role="menuitem"
-                                                                class="w-full text-left px-3 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 text-sm">إلغاء
-                                                                التعليق</button>
+                                                                class="w-full text-left px-3 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 text-sm">
+                                                                <svg class="w-4 h-4 text-gray-500 inline-block ml-2"
+                                                                    viewBox="0 0 24 24" fill="none"
+                                                                    stroke="currentColor" stroke-width="2">
+                                                                    <path
+                                                                        d="M21 12v.01M3 12v.01M6.2 6.2l.01.01M17.8 17.8l.01.01M6.2 17.8l.01.01M17.8 6.2l.01.01">
+                                                                    </path>
+                                                                </svg>
+                                                                إلغاء التعليق
+                                                            </button>
                                                         </form>
                                                     @endif
                                                     <form action="{{ route('dashboard.subscriptions.sync', $sub) }}"
                                                         method="POST">
                                                         @csrf
                                                         <button type="submit" role="menuitem"
-                                                            class="w-full text-left px-3 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 text-sm">مزامنة</button>
+                                                            class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 text-sm text-gray-700">
+                                                            <svg class="w-4 h-4 text-gray-500" viewBox="0 0 24 24"
+                                                                fill="none" stroke="currentColor"
+                                                                stroke-width="2">
+                                                                <path d="M21 12a9 9 0 1 0-3.2 6.6L21 12z"></path>
+                                                                <path d="M21 3v6h-6"></path>
+                                                            </svg>
+                                                            مزامنة
+                                                        </button>
                                                     </form>
                                                     <form
                                                         action="{{ route('dashboard.subscriptions.terminate', $sub) }}"
@@ -247,8 +285,17 @@
                                                         onsubmit="return confirm('سيتم حذف الموقع من السيرفر نهائيًا. هل أنت متأكد؟')">
                                                         @csrf
                                                         <button type="submit" role="menuitem"
-                                                            class="w-full text-left px-3 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 text-sm text-red-600">حذف
-                                                            نهائي</button>
+                                                            class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 text-sm text-red-600">
+                                                            <svg class="w-4 h-4 text-red-600" viewBox="0 0 24 24"
+                                                                fill="none" stroke="currentColor"
+                                                                stroke-width="2">
+                                                                <path
+                                                                    d="M3 6h18M8 6v12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6">
+                                                                </path>
+                                                                <path d="M10 11v6M14 11v6"></path>
+                                                            </svg>
+                                                            حذف نهائي
+                                                        </button>
                                                     </form>
                                                 </div>
                                             </div>
@@ -282,6 +329,7 @@
     });
     document.querySelectorAll('[data-pc-toggle="dropdown"]').forEach(function(btn) {
         btn.addEventListener('click', function(ev) {
+            ev.preventDefault();
             ev.stopPropagation();
             const menu = btn.parentElement.querySelector('[data-pc-dropdown]');
             if (menu) {

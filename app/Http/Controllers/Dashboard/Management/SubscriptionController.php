@@ -105,7 +105,8 @@ class SubscriptionController extends Controller
      */
     public function syncLogs(Request $request)
     {
-        $query = Subscription::with(['client', 'plan']);
+        $query = Subscription::with(['client', 'plan', 'server']);
+
         if ($q = $request->get('q')) {
             $query->where(function ($qr) use ($q) {
                 $qr->where('domain_name', 'like', "%{$q}%")->orWhereHas('client', function ($c) use ($q) {
@@ -113,8 +114,31 @@ class SubscriptionController extends Controller
                 });
             });
         }
+
+        // filter by server
+        if ($serverId = $request->get('server_id')) {
+            $query->where('server_id', $serverId);
+        }
+
+        // date range filters (on updated_at)
+        try {
+            if ($from = $request->get('from')) {
+                $fromDate = \Carbon\Carbon::parse($from)->startOfDay();
+                $query->where('updated_at', '>=', $fromDate);
+            }
+            if ($to = $request->get('to')) {
+                $toDate = \Carbon\Carbon::parse($to)->endOfDay();
+                $query->where('updated_at', '<=', $toDate);
+            }
+        } catch (\Exception $e) {
+            // ignore parse errors
+        }
+
         $subscriptions = $query->whereNotNull('last_sync_message')->orderBy('updated_at', 'desc')->paginate(30)->withQueryString();
-        return view('dashboard.management.subscriptions.sync_logs', compact('subscriptions'));
+
+        $servers = \App\Models\Server::orderBy('name')->get();
+
+        return view('dashboard.management.subscriptions.sync_logs', compact('subscriptions', 'servers'));
     }
 
     /**

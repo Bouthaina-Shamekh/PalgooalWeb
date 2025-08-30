@@ -125,7 +125,11 @@ Route::group([
     Route::get('/domains', [HomeController::class, 'domains'])->name('domains');
     Route::resource('plans', PlanController::class);
     Route::resource('/invoices', InvoiceController::class)->names('invoices');
+    // Bulk actions for invoices
+    Route::post('/invoices/bulk', [InvoiceController::class, 'bulk'])->name('invoices.bulk');
     Route::get('/orders', [ManagementOrderController::class, 'index'])->name('orders.index');
+    // Bulk actions for orders
+    Route::post('/orders/bulk', [ManagementOrderController::class, 'bulk'])->name('orders.bulk');
     Route::get('/orders/{order}', [ManagementOrderController::class, 'show'])->name('orders.show');
     Route::patch('/orders/{order}/status', [ManagementOrderController::class, 'updateStatus'])->name('orders.status');
 });

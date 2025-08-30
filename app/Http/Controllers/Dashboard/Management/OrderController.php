@@ -12,8 +12,61 @@ class OrderController extends Controller
     // عرض جميع الطلبات مع بيانات العميل
     public function index(Request $request)
     {
-        $orders = Order::with('client')->latest()->paginate(20);
+        $q = $request->get('q');
+        $status = $request->get('status');
+        $type = $request->get('type');
+        $sort = $request->get('sort', 'created_at');
+        $direction = $request->get('direction', 'desc');
+
+        $query = Order::with('client');
+        if ($q) {
+            $query->where(function ($qr) use ($q) {
+                $qr->where('order_number', 'like', "%$q%")
+                    ->orWhereHas('client', function ($qc) use ($q) {
+                        $qc->where('first_name', 'like', "%$q%")
+                            ->orWhere('last_name', 'like', "%$q%")
+                            ->orWhere('email', 'like', "%$q%");
+                    });
+            });
+        }
+        if ($status) $query->where('status', $status);
+        if ($type) $query->where('type', $type);
+        // safe sort whitelist
+        $allowed = ['created_at', 'order_number', 'status'];
+        if (!in_array($sort, $allowed)) $sort = 'created_at';
+        $direction = $direction === 'asc' ? 'asc' : 'desc';
+
+        $orders = $query->orderBy($sort, $direction)->paginate(20)->withQueryString();
         return view('dashboard.management.orders.index', compact('orders'));
+    }
+
+    // إجراء جماعي على الطلبات (تغيير الحالة أو حذف)
+    public function bulk(Request $request)
+    {
+        $data = $request->validate([
+            'ids' => 'required|array|min:1',
+            'action' => 'required|string',
+        ]);
+        $ids = $data['ids'];
+        $action = $data['action'];
+        $affected = 0;
+        if ($action === 'delete') {
+            $affected = Order::whereIn('id', $ids)->delete();
+        } elseif (in_array($action, ['pending', 'active', 'cancelled', 'fraud'])) {
+            $affected = Order::whereIn('id', $ids)->update(['status' => $action]);
+            // for activated orders, process activation per order
+            if ($action === 'active') {
+                $orders = Order::whereIn('id', $ids)->get();
+                foreach ($orders as $order) {
+                    try {
+                        $this->processActivation($order);
+                    } catch (\Exception $e) {
+                        Log::error('Bulk activation failed for order ' . $order->id . ': ' . $e->getMessage());
+                    }
+                }
+            }
+        }
+        return redirect()->back()->with('ok', "تم تنفيذ الإجراء على {$affected} طلب(ات)");
     }
 
     /**
