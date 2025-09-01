@@ -37,7 +37,7 @@ Route::group([
         'users' => UserController::class,
     ]);
     // Resource routes:
-    Route::resource('Languages', LanguageController::class)->except(['show'])->names('languages');
+    Route::resource('languages', LanguageController::class)->except(['show'])->names('languages');
     // Extra AJAX routes:
     Route::post('admin/languages/{language}/toggle-rtl', [LanguageController::class, 'toggleRtl'])->name('languages.toggle-rtl');
     Route::post('admin/languages/{language}/toggle-status', [LanguageController::class, 'toggleStatus'])->name('languages.toggle-status');

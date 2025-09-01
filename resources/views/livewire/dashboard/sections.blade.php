@@ -18,36 +18,45 @@
         @switch($section->key)
             @case('hero')
                 <livewire:dashboard.sections.hero-section :section="$section" :key="$section->id" />
-                @break
+            @break
+
             @case('features')
                 <livewire:dashboard.sections.features-section :section="$section" :key="$section->id" />
-                @break
+            @break
+
             @case('banner')
                 <livewire:dashboard.sections.banner-section :section="$section" :key="$section->id" />
-                @break
+            @break
 
             @case('services')
                 <livewire:dashboard.sections.services-section :section="$section" :key="$section->id" />
             @break
+
             @case('works')
                 <livewire:dashboard.sections.works-section :section="$section" :key="$section->id" />
             @break
+
             @case('home-works')
                 <livewire:dashboard.sections.home-works-section :section="$section" :key="$section->id" />
             @break
+
             @case('templates')
                 <livewire:dashboard.sections.templates-section :section="$section" :key="$section->id" />
             @break
+
             @case('testimonials')
                 <livewire:dashboard.sections.testimonials-section :section="$section" :key="$section->id" />
             @break
+
             @case('blog')
                 <livewire:dashboard.sections.blogs-section :section="$section" :key="$section->id" />
             @break
+
             @case('Search-Domain')
                 <livewire:dashboard.sections.search-domain-section :section="$section" :key="$section->id" />
             @break
-             @case('templates-pages')
+
+            @case('templates-pages')
                 <livewire:dashboard.sections.templates-pages-section :section="$section" :key="$section->id" />
             @break
 
@@ -91,10 +100,11 @@
 
             <div>
                 <label class="block mb-1 text-sm font-medium">الترتيب (اختياري)</label>
-                <input type="number" wire:model="sectionOrder" class="border p-2 rounded w-full" placeholder="مثال: 1، 2، 3...">
+                <input type="number" wire:model="sectionOrder" class="border p-2 rounded w-full"
+                    placeholder="مثال: 1، 2، 3...">
             </div>
         </div>
-
+        {{-- 
         @if ($sectionKey)
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 @foreach ($languages as $lang)
@@ -191,15 +201,14 @@
                         @endif
                     </div>
                 @endforeach
-            </div>
+            </div> --}}
 
-            <button wire:click="addSection"
-                    class="bg-primary text-white px-6 py-2 rounded hover:bg-primary/90 transition">
-                إضافة السكشن
-            </button>
+        <button wire:click="addSection" class="bg-primary text-white px-6 py-2 rounded hover:bg-primary/90 transition">
+            إضافة السكشن
+        </button>
 
 
-        @endif
+        {{-- @endif  --}}
     </div>
 
 </div>
