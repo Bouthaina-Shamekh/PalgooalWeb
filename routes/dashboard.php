@@ -20,6 +20,7 @@ use App\Livewire\Services;
 use App\Http\Controllers\Dashboard\TemplateReviewController as AdminReview;
 use App\Http\Controllers\Dashboard\TemplateReviewController;
 use App\Http\Controllers\Dashboard\Management\DomainProviderController;
+use App\Http\Controllers\Dashboard\PortfolioController;
 
 Route::get('admin/', function () {
     return redirect()->route('dashboard.home');
@@ -59,9 +60,7 @@ Route::group([
         return view('dashboard.feedbacks');
     })->name('feedbacks');
 
-    Route::get('portfolios', function () {
-        return view('dashboard.portfolios');
-    })->name('portfolios');
+    Route::resource('portfolios', PortfolioController::class);
 
     Route::get('clients', function () {
         return view('dashboard.clients');

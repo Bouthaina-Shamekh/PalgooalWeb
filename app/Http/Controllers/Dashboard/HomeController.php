@@ -21,10 +21,6 @@ class HomeController extends Controller
     {
         return view('dashboard.general-setting');
     }
-    public function portfolios()
-    {
-        return view('dashboard.portfolios');
-    }
     public function clients()
     {
         return view('dashboard.clients');

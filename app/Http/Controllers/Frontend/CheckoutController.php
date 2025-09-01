@@ -76,8 +76,8 @@ class CheckoutController extends Controller
                     'status' => 'pending',
                     'type' => 'subscription',
                     'notes' => 'طلب عبر صفحة checkout',
-                    'domain_option' => $normalizedOption,
-                    'domain_name' => $request->domain ?? null,
+                    // 'domain_option' => $normalizedOption,
+                    // 'domain_name' => $request->domain ?? null,
                 ]);
             }
 
