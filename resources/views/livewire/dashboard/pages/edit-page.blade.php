@@ -7,12 +7,25 @@
                 <li class="breadcrumb-item"><a href="{{ route('dashboard.languages.index') }}">{{ t('dashboard.All_Pages', 'ALL Pages') }}</a></li>
                 <li class="breadcrumb-item" aria-current="page">{{ $mode === 'edit' ? t('dashboard.Edit_Page', 'Edit Page') : t('dashboard.Add_Pages', 'Add Pages') }}</li>
             </ul>
-            <div class="page-header-title">
-                <h2 class="mb-0">{{ $mode === 'edit' ? t('dashboard.Edit_Page', 'Edit Page') : t('dashboard.Add_Pages', 'Add Pages') }}</h2>
+
+            {{-- العنوان + زر أضف سكشن --}}
+            <div class="page-header-title flex items-center justify-between gap-3">
+                <h2 class="mb-0">
+                    {{ $mode === 'edit' ? t('dashboard.Edit_Page', 'Edit Page') : t('dashboard.Add_Pages', 'Add Pages') }}
+                </h2>
+
+                @if ($editingPageId && $mode === 'edit')
+                    <button type="button"
+                            wire:click="$dispatch('open-sections-palette')"
+                            class="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90 transition">
+                        + أضف سكشن
+                    </button>
+                @endif
             </div>
         </div>
     </div>
     <!-- [ breadcrumb ] end -->
+
 
     <!-- القسم الأيسر (المحتوى) -->
     <div class="col-span-2">
