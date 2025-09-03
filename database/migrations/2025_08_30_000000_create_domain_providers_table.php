@@ -13,16 +13,19 @@ return new class extends Migration {
             $table->string('type', 50)->index(); // enom, namecheap, cloudflare ...
             $table->string('endpoint', 191)->nullable();
             $table->string('username', 191)->nullable();
-            $table->text('password')->nullable();   // لتخزين القيم المشفّرة
-            $table->text('api_token')->nullable();  // لتخزين القيم المشفّرة
+
+            // اعتماداً على المزود:
+            $table->text('password')->nullable();    // Enom / Others
+            $table->text('api_token')->nullable();   // Enom
+            $table->text('api_key')->nullable();     // Namecheap / Cloudflare
+            $table->string('client_ip', 45)->nullable(); // IPv4/IPv6 للـ Namecheap
+
             $table->boolean('is_active')->default(true)->index();
             $table->string('mode', 10)->default('live')->index(); // live/test
             $table->timestamps();
-
-            // لو حابب تستخدم enum بدل string (في MySQL/MariaDB)
-            // $table->enum('mode', ['live','test'])->default('live');
         });
     }
+
     public function down()
     {
         Schema::dropIfExists('domain_providers');

@@ -15,17 +15,26 @@ class DomainProvider extends Model
         'username',
         'password',
         'api_token',
+        'api_key',
+        'client_ip',
         'is_active',
         'mode',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'password'  => 'encrypted',   // احذف لو إصدارك لا يدعم
-        'api_token' => 'encrypted',   // احذف لو إصدارك لا يدعم
+
+        // إذا Laravel >= 9.2 يدعم encryption casts
+        'password'  => 'encrypted',
+        'api_token' => 'encrypted',
+        'api_key'   => 'encrypted',
     ];
 
-    protected $hidden = ['password', 'api_token'];
+    protected $hidden = [
+        'password',
+        'api_token',
+        'api_key',
+    ];
 
     // قيم افتراضيّة
     protected $attributes = [
@@ -42,10 +51,12 @@ class DomainProvider extends Model
     {
         return $q->where('is_active', true);
     }
+
     public function scopeOfType($q, $type)
     {
         return $q->where('type', strtolower($type));
     }
+
     public function scopeMode($q, $mode)
     {
         return $q->where('mode', strtolower($mode));
@@ -56,12 +67,19 @@ class DomainProvider extends Model
     {
         $this->attributes['endpoint'] = $v ? trim($v) : null;
     }
+
     public function setTypeAttribute($v)
     {
-        $this->attributes['type']     = $v ? strtolower(trim($v)) : null;
+        $this->attributes['type'] = $v ? strtolower(trim($v)) : null;
     }
+
     public function setModeAttribute($v)
     {
-        $this->attributes['mode']     = $v ? strtolower(trim($v)) : null;
+        $this->attributes['mode'] = $v ? strtolower(trim($v)) : null;
+    }
+
+    public function setClientIpAttribute($v)
+    {
+        $this->attributes['client_ip'] = $v ? trim($v) : null;
     }
 }

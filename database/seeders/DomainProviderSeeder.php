@@ -14,10 +14,12 @@ class DomainProviderSeeder extends Seeder
             ['type' => 'enom', 'mode' => 'test'],
             [
                 'name'      => 'Enom Test Provider',
-                'endpoint'  => null, // سيُختار الافتراضي من الخدمة
+                'endpoint'  => null, // الافتراضي يختار من الخدمة
                 'username'  => 'enom_test_user',
                 'password'  => 'enom_test_pass',
                 'api_token' => null,
+                'api_key'   => null,
+                'client_ip' => null,
                 'is_active' => true,
             ]
         );
@@ -28,9 +30,11 @@ class DomainProviderSeeder extends Seeder
             [
                 'name'      => 'Namecheap Sandbox',
                 'endpoint'  => 'https://api.sandbox.namecheap.com/xml.response',
-                'username'  => 'namecheap_test_user',
-                'password'  => 'namecheap_test_pass',
-                'api_token' => 'namecheap_test_api_key',
+                'username'  => 'sandbox_user',
+                'password'  => null,
+                'api_token' => null,
+                'api_key'   => 'sandbox_api_key',
+                'client_ip' => '127.0.0.1', // غيّرها للـ IP المبيّض في حسابك
                 'is_active' => true,
             ]
         );
@@ -41,9 +45,11 @@ class DomainProviderSeeder extends Seeder
             [
                 'name'      => 'Cloudflare Test Provider',
                 'endpoint'  => 'https://api.cloudflare.com/client/v4',
-                'username'  => null, // غالباً Cloudflare يعتمد فقط API Token
+                'username'  => null,
                 'password'  => null,
-                'api_token' => 'cloudflare_test_token',
+                'api_token' => 'cloudflare_test_token', // Cloudflare يعتمد Token
+                'api_key'   => null,
+                'client_ip' => null,
                 'is_active' => true,
             ]
         );
