@@ -32,14 +32,14 @@ class HomeController extends Controller
     }
     public function subscriptions()
     {
-        $client = Client::find(Auth::guard('client')->user()->id)->first();
+        $client = Client::find(Auth::guard('client')->user()->id);
         $subscriptions = Subscription::with(['client', 'plan'])->where('client_id',$client->id)->latest()->paginate(20);
         return view('client.subscriptions',compact('subscriptions'));
     }
 
     public function invoices()
     {
-        $client = Client::find(Auth::guard('client')->user()->id)->first();
+        $client = Client::find(Auth::guard('client')->user()->id);
         $invoices = Invoice::with(['client', 'items'])->where('client_id',$client->id)->latest()->paginate(20);
         return view('client.invoices',compact('invoices'));
     }
