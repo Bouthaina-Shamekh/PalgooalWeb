@@ -21,32 +21,35 @@ class DomainProvider extends Model
         'mode',
     ];
 
-    protected $casts = [
-        'is_active' => 'boolean',
-
-        // إذا Laravel >= 9.2 يدعم encryption casts
-        'password'  => 'encrypted',
-        'api_token' => 'encrypted',
-        'api_key'   => 'encrypted',
-    ];
-
     protected $hidden = [
         'password',
         'api_token',
         'api_key',
     ];
 
-    // قيم افتراضيّة
+    // ✅ تعريف واحد فقط للـ casts
+    protected $casts = [
+        'is_active' => 'boolean',
+
+        // يتطلب Laravel 9.2+ (يخزن مشفّر ويعيد مفكوك تلقائيًا في التطبيق)
+        'password'  => 'encrypted',
+        'api_token' => 'encrypted',
+        'api_key'   => 'encrypted',
+    ];
+
+    // قيم افتراضية
     protected $attributes = [
         'is_active' => true,
         'mode'      => 'test',
     ];
 
-    // Constants
+    // ثابتات
     public const MODES = ['live', 'test'];
     public const TYPES = ['enom', 'namecheap', 'cloudflare'];
 
-    // Scopes
+    /* =========================
+     *         Scopes
+     * ========================= */
     public function scopeActive($q)
     {
         return $q->where('is_active', true);
@@ -62,7 +65,9 @@ class DomainProvider extends Model
         return $q->where('mode', strtolower($mode));
     }
 
-    // Normalizers
+    /* =========================
+     *     Normalizers (Mutators)
+     * ========================= */
     public function setEndpointAttribute($v)
     {
         $this->attributes['endpoint'] = $v ? trim($v) : null;
@@ -80,6 +85,32 @@ class DomainProvider extends Model
 
     public function setClientIpAttribute($v)
     {
-        $this->attributes['client_ip'] = $v ? trim($v) : null;
+        $v = $v ? trim((string) $v) : null;
+        $this->attributes['client_ip'] = $v ?: null;
+    }
+
+    /* =========================
+     *   Helpers (اختياري مفيد)
+     * ========================= */
+
+    // Endpoint محسوب إن أحببت تستخدمه في أي مكان (لا يستبدل الحقل)
+    public function getResolvedEndpointAttribute(): ?string
+    {
+        if (!empty($this->endpoint)) {
+            return rtrim($this->endpoint, '/');
+        }
+        if ($this->mode === 'test') return 'https://api.sandbox.namecheap.com/xml.response';
+        if ($this->mode === 'live') return 'https://api.namecheap.com/xml.response';
+        return null;
+    }
+
+    public function isTest(): bool
+    {
+        return $this->mode === 'test' || str_contains((string) $this->endpoint, 'sandbox');
+    }
+
+    public function isLive(): bool
+    {
+        return $this->mode === 'live' || str_contains((string) $this->endpoint, 'api.namecheap.com');
     }
 }
