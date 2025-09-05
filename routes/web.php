@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Dashboard\Management\DomainSearchController;
 use App\Http\Controllers\Dashboard\TemplateController;
 use App\Http\Controllers\Frontend\CheckoutController;
 use App\Livewire\Dashboard\Template\TemplateShowPage;
@@ -57,6 +58,12 @@ Route::middleware(['setLocale'])->group(function () {
     Route::post('templates/{template}/reviews', [TemplateReviewController::class, 'store'])
         ->name('frontend.templates.reviews.store')
         ->whereNumber('template');
+
+    Route::get('/domains', [DomainSearchController::class, 'page'])->name('domains.page');
+    // API لفحص التوافر (AJAX)
+    Route::get('/api/domains/check', [DomainSearchController::class, 'check'])
+        ->middleware(['throttle:30,1']) // معدل بسيط
+        ->name('domains.check');  
 
 
 

@@ -4,12 +4,10 @@
     use App\Models\CategoryTemplate;
 @endphp
 
-<x-template.layouts.index-layouts
-    title="{{ $page->translation()?->title ?? 'عنوان غير متوفر' }}"
+<x-template.layouts.index-layouts title="{{ $page->translation()?->title ?? 'عنوان غير متوفر' }}"
     description="شركة فلسطينية متخصصة في برمجة وتصميم المواقع الالكترونية..."
     keywords="خدمات حجز دومين , افضل شركة برمجيات , استضافة مواقع , ..."
-    ogImage="{{ asset('assets/images/services.jpg') }}"
->
+    ogImage="{{ asset('assets/images/services.jpg') }}">
 
     {{-- محتوى الصفحة --}}
     @if ($page->sections->isEmpty())
@@ -35,7 +33,7 @@
             'testimonials' => 'testimonials',
             'blog' => 'blog',
             'banner' => 'banner',
-            'Search-Domain' => 'search-domain',
+            'search-domain' => 'search-domain',
             'templates-pages' => 'templates-pages',
         ];
     @endphp
@@ -90,7 +88,7 @@
                     'button_text-1' => $content['button_text-1'] ?? '',
                     'button_url-1' => $content['button_url-1'] ?? '',
                 ],
-                'Search-Domain' => [
+                'search-domain' => [
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
                 ],
@@ -100,29 +98,32 @@
                     // 'sort_by' => $content['sort_by'] ?? 'default',
                     'show_filter_sidebar' => $content['show_filter_sidebar'] ?? true,
                     'selectedCategory' => $content['selectedCategory'] ?? 'all',
-                    'templates' => \App\Models\Template::with(['translations','categoryTemplate.translations'])->latest()->take(60)->get(),
-                    'categories' => \App\Models\CategoryTemplate::with(['translations' => function ($q) {
-                        $q->where('locale', app()->getLocale())->orWhere('locale','ar');
-                    }])->get()->map(function ($cat) {
-                        $t = $cat->translations->firstWhere('locale', app()->getLocale()) ?? $cat->translations->firstWhere('locale','ar');
-                        $cat->translated_name = $t?->name ?? 'غير معرف';
-                        $cat->translated_slug = $t?->slug ?? ($cat->slug ?? 'uncategorized');
-                        return $cat;
-                    }),
+                    'templates' => \App\Models\Template::with(['translations', 'categoryTemplate.translations'])
+                        ->latest()
+                        ->take(60)
+                        ->get(),
+                    'categories' => \App\Models\CategoryTemplate::with([
+                        'translations' => function ($q) {
+                            $q->where('locale', app()->getLocale())->orWhere('locale', 'ar');
+                        },
+                    ])
+                        ->get()
+                        ->map(function ($cat) {
+                            $t =
+                                $cat->translations->firstWhere('locale', app()->getLocale()) ??
+                                $cat->translations->firstWhere('locale', 'ar');
+                            $cat->translated_name = $t?->name ?? 'غير معرف';
+                            $cat->translated_slug = $t?->slug ?? ($cat->slug ?? 'uncategorized');
+                            return $cat;
+                        }),
                 ],
                 default => [],
             };
         @endphp
 
         @if ($component === 'templates-pages')
-            <x-dynamic-component :component="'template.sections.' . $component"
-                :templates="$data['templates']"
-                :categories="$data['categories']"
-                :max_price="$data['max_price']"
-                :sort_by="$data['sort_by']"
-                :show_filter_sidebar="$data['show_filter_sidebar']"
-                :selectedCategory="$data['selectedCategory']"
-            />
+            <x-dynamic-component :component="'template.sections.' . $component" :templates="$data['templates']" :categories="$data['categories']" :max_price="$data['max_price']"
+                :sort_by="$data['sort_by']" :show_filter_sidebar="$data['show_filter_sidebar']" :selectedCategory="$data['selectedCategory']" />
         @else
             <x-dynamic-component :component="'template.sections.' . $component" :data="$data" :templates="$data['templates'] ?? collect()" />
         @endif
