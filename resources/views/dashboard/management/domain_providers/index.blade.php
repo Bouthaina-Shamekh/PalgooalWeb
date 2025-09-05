@@ -45,7 +45,8 @@
                                     <td class="px-4 py-2">
                                         <div class="flex flex-col">
                                             <span>{{ $provider->name }}</span>
-                                            <small class="text-gray-500 truncate max-w-[380px]" title="{{ $provider->endpoint }}">
+                                            <small class="text-gray-500 truncate max-w-[380px]"
+                                                title="{{ $provider->endpoint }}">
                                                 {{ $provider->endpoint }}
                                             </small>
                                         </div>
@@ -56,13 +57,17 @@
                                             $modeHint = null;
                                             if ($provider->endpoint) {
                                                 $ep = $provider->endpoint;
-                                                $modeHint = (str_contains($ep, 'sandbox') || str_contains($ep, 'resellertest')) ? 'test' : 'live';
+                                                $modeHint =
+                                                    str_contains($ep, 'sandbox') || str_contains($ep, 'resellertest')
+                                                        ? 'test'
+                                                        : 'live';
                                             } elseif (!empty($provider->mode)) {
                                                 $modeHint = $provider->mode;
                                             }
                                         @endphp
                                         @if ($modeHint)
-                                            <span class="badge bg-blue-100 text-blue-700 ms-2">{{ $modeHint }}</span>
+                                            <span
+                                                class="badge bg-blue-100 text-blue-700 ms-2">{{ $modeHint }}</span>
                                         @endif
                                     </td>
                                     <td class="px-4 py-2">
@@ -80,24 +85,24 @@
 
                                     <td class="px-4 py-2">
                                         <a href="{{ route('dashboard.domain_providers.edit', $provider) }}"
-                                           class="btn btn-sm btn-secondary">تعديل</a>
+                                            class="btn btn-sm btn-secondary">تعديل</a>
 
                                         <form action="{{ route('dashboard.domain_providers.destroy', $provider) }}"
-                                              method="POST" style="display:inline-block"
-                                              onsubmit="return confirm('هل أنت متأكد من الحذف؟');">
+                                            method="POST" style="display:inline-block"
+                                            onsubmit="return confirm('هل أنت متأكد من الحذف؟');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-danger">حذف</button>
                                         </form>
 
                                         <a href="{{ route('dashboard.domain_providers.test-connection', $provider) }}"
-                                           class="btn btn-sm btn-info"
-                                           onclick="event.preventDefault(); testConnection(this.href, {{ $provider->id }}, this);">
+                                            class="btn btn-sm btn-info"
+                                            onclick="event.preventDefault(); testConnection(this.href, {{ $provider->id }}, this);">
                                             اختبار الاتصال
                                         </a>
 
                                         <button type="button" class="btn btn-sm btn-outline-primary"
-                                                onclick="refreshBalance('{{ route('dashboard.domain_providers.test-connection', $provider) }}', {{ $provider->id }}, this);">
+                                            onclick="refreshBalance('{{ route('dashboard.domain_providers.test-connection', $provider) }}', {{ $provider->id }}, this);">
                                             تحديث الرصيد
                                         </button>
                                     </td>
@@ -115,70 +120,121 @@
         </div>
     </div>
 
-    <script>
-        function setBtnLoading(btn, loading) {
-            if (!btn) return;
-            if (loading) {
-                btn.dataset.origText = btn.innerText;
-                btn.innerText = '...';
-                btn.disabled = true;
-            } else {
-                btn.innerText = btn.dataset.origText || btn.innerText;
-                btn.disabled = false;
-            }
+<script>
+  // مساعد موحّد: يجلب JSON بأمان ويحتفظ بالـ status و body الأصلي عند الفشل
+  async function fetchJSON(url, options = {}) {
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/json' },
+      ...options
+    });
+    const text = await res.text();
+    let data = null;
+    try { data = JSON.parse(text); } catch (_) { /* non-JSON */ }
+    return { ok: res.ok, status: res.status, data, text };
+  }
+
+  function setBtnLoading(btn, loading) {
+    if (!btn) return;
+    if (loading) {
+      btn.dataset.origText = btn.innerText;
+      btn.innerText = '...';
+      btn.disabled = true;
+    } else {
+      btn.innerText = btn.dataset.origText || btn.innerText;
+      btn.disabled = false;
+    }
+  }
+
+  function formatNumber(n) {
+    if (typeof n !== 'number') return n;
+    try { return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n); }
+    catch { return n.toFixed(2); }
+  }
+
+  function applyBalance(providerId, payload) {
+    const cell = document.querySelector(`.balance[data-balance-for="${providerId}"]`);
+    if (!cell) return;
+
+    // payload المتوقع من السيرفر: { ok, message, balance, currency, reason? }
+    const ok = !!(payload && payload.ok);
+    const val = (payload && payload.balance !== undefined && payload.balance !== null && payload.balance !== '') 
+      ? payload.balance 
+      : null;
+    const cur = (payload && payload.currency) ? ` ${payload.currency}` : '';
+
+    if (ok && val !== null) {
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      cell.textContent = `${formatNumber(num)}${cur}`;
+      cell.title = payload.message || 'تم الاتصال بنجاح.';
+      cell.classList.add('text-green-700');
+      cell.classList.remove('text-red-600');
+    } else {
+      cell.textContent = '—';
+      cell.title = (payload && payload.message) ? payload.message : 'تعذّر جلب الرصيد.';
+      cell.classList.remove('text-green-700');
+      cell.classList.add('text-red-600');
+    }
+  }
+
+  async function testConnection(url, providerId, btn) {
+    setBtnLoading(btn, true);
+    try {
+      const { ok, status, data, text } = await fetchJSON(url);
+
+      // رد غير JSON (مثلاً صفحة تسجيل دخول)
+      if (!data) {
+        console.error('Non-JSON response:', text?.slice(0, 400));
+        alert('❌ فشل الاتصال: الاستجابة ليست JSON. تحقّق من صلاحية الجلسة/التوجيه.');
+        return;
+      }
+
+      applyBalance(providerId, data);
+
+      const msg = data.ok
+        ? `✅ تم الاتصال بنجاح.${(data.balance!=null)?`\nالرصيد: ${data.balance} ${data.currency||''}`:''}`
+        : `❌ فشل الاتصال (${status}): ${data.message || 'تعذّر الاتصال أو المزود غير مفعّل.'}${data.reason ? `\nالسبب: ${data.reason}` : ''}`;
+
+      alert(msg + '\nاطّلع على السجلات للمزيد.');
+    } catch (e) {
+      alert('❌ خطأ في الاتصال.');
+      console.error(e);
+    } finally {
+      setBtnLoading(btn, false);
+    }
+  }
+
+  async function refreshBalance(url, providerId, btn) {
+    setBtnLoading(btn, true);
+    try {
+      const { data } = await fetchJSON(url);
+      if (data) applyBalance(providerId, data);
+      else {
+        // رد غير JSON
+        applyBalance(providerId, { ok: false, message: 'الاستجابة ليست JSON.' });
+      }
+    } catch (_) {
+      applyBalance(providerId, { ok: false, message: 'تعذّر التحديث.' });
+    } finally {
+      setBtnLoading(btn, false);
+    }
+  }
+
+  // (اختياري) حدّث أرصدة المزودين المفعّلين تلقائياً عند تحميل الصفحة
+  document.addEventListener('DOMContentLoaded', () => {
+    document
+      .querySelectorAll('tr[data-provider-row]')
+      .forEach(row => {
+        const id = row.getAttribute('data-provider-row');
+        const testLink = row.querySelector('a.btn-info'); // نفس رابط اختبار الاتصال
+        if (testLink) {
+          // لا تنبّه المستخدم، فقط حدّث العمود
+          fetchJSON(testLink.href)
+            .then(({ data }) => data && applyBalance(id, data))
+            .catch(() => applyBalance(id, { ok: false, message: 'تعذّر الجلب.' }));
         }
+      });
+  });
+</script>
 
-        function applyBalance(providerId, data) {
-            const cell = document.querySelector(`.balance[data-balance-for="${providerId}"]`);
-            if (!cell) return;
 
-            if (data.ok) {
-                // Namecheap يعيد available/account حسب الكلاينت، Enom يعيد balance
-                const value = (typeof data.balance !== 'undefined' && data.balance !== null)
-                    ? data.balance
-                    : (typeof data.available !== 'undefined' ? data.available : '—');
-
-                cell.textContent = value !== null ? value : '—';
-                cell.classList.remove('text-red-600');
-                cell.classList.add('text-green-700');
-            } else {
-                cell.textContent = '—';
-                cell.classList.remove('text-green-700');
-                cell.classList.add('text-red-600');
-            }
-        }
-
-        function testConnection(url, providerId, btn) {
-            setBtnLoading(btn, true);
-            fetch(url)
-                .then(res => res.json())
-                .then(data => {
-                    applyBalance(providerId, data);
-
-                    let msg = '';
-                    if (data.ok) {
-                        msg = `✅ تم الاتصال بنجاح.`;
-                        if (typeof data.balance !== 'undefined' && data.balance !== null) {
-                            msg += `\nالرصيد: ${data.balance}`;
-                        } else if (typeof data.available !== 'undefined') {
-                            msg += `\nالرصيد: ${data.available}`;
-                        }
-                    } else {
-                        msg = `❌ فشل الاتصال: ${data.message || 'خطأ غير معروف.'}\nاطّلع على السجلات للمزيد.`;
-                    }
-                    alert(msg);
-                })
-                .catch(() => alert('خطأ في الاتصال'))
-                .finally(() => setBtnLoading(btn, false));
-        }
-
-        function refreshBalance(url, providerId, btn) {
-            setBtnLoading(btn, true);
-            fetch(url)
-                .then(res => res.json())
-                .then(data => applyBalance(providerId, data))
-                .catch(() => {})
-                .finally(() => setBtnLoading(btn, false));
-        }
-    </script>
 </x-dashboard-layout>

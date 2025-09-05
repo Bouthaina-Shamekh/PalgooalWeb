@@ -136,4 +136,14 @@ Route::group([
     // مزودي الدومينات
     Route::resource('domain_providers', DomainProviderController::class)->names('domain_providers');
     Route::get('domain_providers/{domainProvider}/test-connection', [DomainProviderController::class, 'testConnection'])->name('domain_providers.test-connection');
+    Route::get('/debug/egress', function () {
+        $ip = \Illuminate\Support\Facades\Http::timeout(10)
+            ->get('https://api.ipify.org?format=json')
+            ->json('ip');
+
+        return response()->json([
+            'egress_ip' => $ip,
+            'client_ip_env' => env('NAMEcheap_CLIENT_IP'), // لو مخزّن في env
+        ]);
+    })->middleware('auth'); // لا تتركه مفتوحاً للعامة
 });
