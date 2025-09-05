@@ -113,4 +113,9 @@ class DomainProvider extends Model
     {
         return $this->mode === 'live' || str_contains((string) $this->endpoint, 'api.namecheap.com');
     }
+
+    public function domainTlds()
+    {
+        return $this->hasMany(DomainTld::class, 'provider_id');
+    }
 }

@@ -20,6 +20,7 @@ use App\Livewire\Services;
 use App\Http\Controllers\Dashboard\TemplateReviewController as AdminReview;
 use App\Http\Controllers\Dashboard\TemplateReviewController;
 use App\Http\Controllers\Dashboard\Management\DomainProviderController;
+use App\Http\Controllers\Dashboard\Management\DomainTldController;
 use App\Http\Controllers\Dashboard\PortfolioController;
 
 Route::get('admin/', function () {
@@ -136,4 +137,11 @@ Route::group([
     // مزودي الدومينات
     Route::resource('domain_providers', DomainProviderController::class)->names('domain_providers');
     Route::get('domain_providers/{domainProvider}/test-connection', [DomainProviderController::class, 'testConnection'])->name('domain_providers.test-connection');
+    // إدارة أسعار TLD (لوحة الإدارة)
+    // ملاحظة: داخل هذا الجروب الاسم يُسبق تلقائياً بـ dashboard. لذا لا نكرر dashboard. في اسم الراوت.
+    Route::get('/domain-tlds', [DomainTldController::class, 'index'])->name('domain_tlds.index');
+    Route::post('/domain-tlds/sync', [DomainTldController::class, 'sync'])->name('domain_tlds.sync');
+    Route::post('/domain-tlds/update-sale', [DomainTldController::class, 'updateSale'])->name('domain_tlds.update-sale');
+    Route::post('/domain-tlds/save-catalog', [DomainTldController::class, 'saveCatalog'])->name('domain_tlds.save-catalog');
+    Route::post('/domain-tlds/save-all', [DomainTldController::class, 'saveAll'])->name('domain_tlds.save-all');
 });

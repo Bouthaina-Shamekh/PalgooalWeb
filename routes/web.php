@@ -11,6 +11,7 @@ use App\Models\Template;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Frontend\TemplateController as FrontTemplateController;
 use App\Http\Controllers\Frontend\TemplateReviewController;
+// use App\Http\Controllers\Dashboard\Management\DomainTldController; // نقل الراوت إلى dashboard.php
 
 // Route::get('/', function () {
 //     return view('tamplate.home');
@@ -63,7 +64,9 @@ Route::middleware(['setLocale'])->group(function () {
     // API لفحص التوافر (AJAX)
     Route::get('/api/domains/check', [DomainSearchController::class, 'check'])
         ->middleware(['throttle:30,1']) // معدل بسيط
-        ->name('domains.check');  
+        ->name('domains.check');
+
+
 
 
 
