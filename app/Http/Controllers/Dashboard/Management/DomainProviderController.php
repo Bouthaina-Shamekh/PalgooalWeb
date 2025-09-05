@@ -7,6 +7,7 @@ use App\Http\Requests\DomainProviderRequest;
 use App\Models\DomainProvider;
 use App\Services\DomainProviders\EnomClient;
 use App\Services\DomainProviders\NamecheapClient;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 
 class DomainProviderController extends Controller
@@ -53,6 +54,7 @@ class DomainProviderController extends Controller
             ->route('dashboard.domain_providers.index')
             ->with('ok', 'تم إضافة المزود بنجاح');
     }
+
     /**
      * عرض نموذج تعديل مزود
      */
@@ -108,7 +110,7 @@ class DomainProviderController extends Controller
     /**
      * اختبار الاتصال بالمزود
      */
-    public function testConnection(\App\Models\DomainProvider $domainProvider)
+    public function testConnection(DomainProvider $domainProvider)
     {
         try {
             if (!$domainProvider->is_active) {
@@ -118,16 +120,40 @@ class DomainProviderController extends Controller
                 ], 422);
             }
 
-            // تحقق مسبق من الحقول المطلوبة قبل المناداة
+            // ✅ تحقق مسبق من الحقول المطلوبة حسب النوع
             $missing = [];
-            foreach (['username', 'api_key', 'client_ip'] as $req) {
-                if (blank($domainProvider->{$req})) $missing[] = $req;
+
+            // username مطلوب للجميع
+            if (blank($domainProvider->username)) {
+                $missing[] = 'username';
             }
-            if ($domainProvider->type === 'enom') {
-                if (blank($domainProvider->password) && blank($domainProvider->api_token) && blank($domainProvider->api_key)) {
-                    $missing[] = 'password/api_token/api_key';
-                }
+
+            switch ($domainProvider->type) {
+                case 'namecheap':
+                    // Namecheap يحتاج api_key + client_ip
+                    foreach (['api_key', 'client_ip'] as $req) {
+                        if (blank($domainProvider->{$req})) $missing[] = $req;
+                    }
+                    break;
+
+                case 'enom':
+                    // Enom لا يحتاج client_ip — يجب واحد على الأقل من (password/api_token/api_key)
+                    if (
+                        blank($domainProvider->password)
+                        && blank($domainProvider->api_token)
+                        && blank($domainProvider->api_key)
+                    ) {
+                        $missing[] = 'password/api_token/api_key (واحد على الأقل)';
+                    }
+                    break;
+
+                default:
+                    return response()->json([
+                        'ok'      => false,
+                        'message' => 'نوع المزود غير مدعوم للاختبار الآلي حاليًا.',
+                    ], 422);
             }
+
             if (!empty($missing)) {
                 return response()->json([
                     'ok'      => false,
@@ -135,31 +161,33 @@ class DomainProviderController extends Controller
                 ], 422);
             }
 
+            // تنفيذ الاختبار حسب النوع
             switch ($domainProvider->type) {
                 case 'enom': {
-                        $client = app(\App\Services\DomainProviders\EnomClient::class);
-                        $r = $client->getBalance($domainProvider);
+                        /** @var EnomClient $client */
+                        $client   = app(EnomClient::class);
+                        $r        = $client->getBalance($domainProvider);
                         $ok       = (bool)($r['ok'] ?? false);
                         $balance  = $r['balance'] ?? null;
                         $currency = $r['currency'] ?? null;
 
-
-                        // 👇 نفس معالجة الرسالة
+                        // بناء رسالة مفهومة دوماً
                         $msg = $r['message'] ?? null;
                         if (blank($msg)) {
                             $fallbackErr = $r['error']
-                                ?? \Illuminate\Support\Arr::get($r, 'errors.0.text')
-                                ?? \Illuminate\Support\Arr::get($r, 'errors.0.message')
-                                ?? \Illuminate\Support\Arr::get($r, 'Errors.0')
-                                ?? null;
+                                ?? Arr::get($r, 'errors.0.text')
+                                ?? Arr::get($r, 'errors.0.message')
+                                ?? Arr::get($r, 'Errors.0');
                             $msg = $ok ? 'تم الاتصال بنجاح.' : ($fallbackErr ?: 'تعذّر الاتصال أو بيانات الاعتماد غير صحيحة.');
                         }
+
                         Log::info('Enom provider test summary', [
                             'provider_id' => $domainProvider->id,
                             'ok'          => $ok,
                             'currency'    => $currency,
                             'has_balance' => !is_null($balance),
                         ]);
+
                         return response()->json([
                             'ok'       => $ok,
                             'reason'   => $r['reason'] ?? ($ok ? 'ok' : 'provider_error'),
@@ -168,24 +196,24 @@ class DomainProviderController extends Controller
                             'balance'  => $balance,
                         ], $ok ? 200 : 422);
                     }
-                case 'namecheap': {
-                        $client = new \App\Services\DomainProviders\NamecheapClient($domainProvider);
-                        $r = $client->getBalance();
 
+                case 'namecheap': {
+                        $client   = new NamecheapClient($domainProvider);
+                        $r        = $client->getBalance();
                         $ok       = (bool)($r['ok'] ?? false);
-                        $balance  = $r['balance'] ?? null;   // ✅ بدلاً من available/account
+                        $balance  = $r['balance'] ?? null;
                         $currency = $r['currency'] ?? null;
+
                         $msg = $r['message'] ?? null;
                         if (blank($msg)) {
                             $fallbackErr = $r['error']
-                                ?? \Illuminate\Support\Arr::get($r, 'errors.0.text')
-                                ?? \Illuminate\Support\Arr::get($r, 'errors.0.message')
-                                ?? \Illuminate\Support\Arr::get($r, 'Errors.0')
-                                ?? null;
+                                ?? Arr::get($r, 'errors.0.text')
+                                ?? Arr::get($r, 'errors.0.message')
+                                ?? Arr::get($r, 'Errors.0');
                             $msg = $ok ? 'تم الاتصال بنجاح.' : ($fallbackErr ?: 'تعذّر الاتصال أو بيانات الاعتماد غير صحيحة.');
                         }
 
-                        \Log::info('Namecheap provider test summary', [
+                        Log::info('Namecheap provider test summary', [
                             'provider_id' => $domainProvider->id,
                             'ok'          => $ok,
                             'currency'    => $currency,
@@ -200,12 +228,13 @@ class DomainProviderController extends Controller
                             'balance'  => $balance,
                         ], $ok ? 200 : 422);
                     }
-                default:
-                    return response()->json([
-                        'ok'      => false,
-                        'message' => 'نوع المزود غير مدعوم للاختبار الآلي حاليًا.',
-                    ], 422);
             }
+
+            // احتياط
+            return response()->json([
+                'ok'      => false,
+                'message' => 'نوع المزود غير مدعوم للاختبار الآلي حاليًا.',
+            ], 422);
         } catch (\Throwable $e) {
             Log::error('Provider test failed', [
                 'provider_id' => $domainProvider->id ?? null,

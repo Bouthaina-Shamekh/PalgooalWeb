@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use App\Models\DomainProvider;
 
 class DomainProviderRequest extends FormRequest
@@ -18,29 +19,45 @@ class DomainProviderRequest extends FormRequest
 
         $rules = [
             'name'      => ['required', 'string', 'max:191'],
-            'type'      => ['required', 'string', 'in:' . implode(',', DomainProvider::TYPES), 'max:50'],
-            // endpoint الآن مطلوب لأنه يُختار صراحة من الـ Select
+            'type'      => ['required', 'string', Rule::in(DomainProvider::TYPES), 'max:50'],
+            // endpoint مطلوب (تختاره من الـ UI)
             'endpoint'  => ['required', 'url', 'max:191'],
             'is_active' => ['sometimes', 'boolean'],
-            // mode للعرض/الإحصاء فقط، خليه اختياري
-            'mode'      => ['nullable', 'in:' . implode(',', DomainProvider::MODES), 'max:10'],
+            // mode اختياري (للعرض/الإحصاء)
+            'mode'      => ['nullable', Rule::in(DomainProvider::MODES), 'max:10'],
         ];
 
         switch ($this->input('type')) {
             case 'enom':
-                // في الإنشاء: username مطلوب + (password أو api_token) أحدهما مطلوب
-                // في التحديث: username مطلوب،
-                //   و password/api_token "اختياريان" (لا نطلبهما إن تُركا فارغين)
+                // Enom: username مطلوب
+                // + واحد على الأقل من (password, api_token, api_key)
                 $rules = array_merge($rules, [
                     'username'  => ['required', 'string', 'max:191'],
-                    'password'  => [$isCreate ? 'nullable|required_without:api_token' : 'nullable', 'string', 'max:255'],
-                    'api_token' => [$isCreate ? 'nullable|required_without:password' : 'nullable', 'string', 'max:255'],
+
+                    'password'  => [
+                        'nullable',
+                        'string',
+                        'max:255',
+                        'required_without_all:api_token,api_key',
+                    ],
+                    'api_token' => [
+                        'nullable',
+                        'string',
+                        'max:255',
+                        'required_without_all:password,api_key',
+                    ],
+                    'api_key'   => [
+                        'nullable',
+                        'string',
+                        'max:255',
+                        'required_without_all:password,api_token',
+                    ],
                 ]);
                 break;
 
             case 'namecheap':
-                // Namecheap يحتاج api_key + client_ip
-                // في التحديث، اترك api_key اختيارياً (لو فارغ لا نحدّثه في الـ controller)
+                // Namecheap: username + api_key + client_ip
+                // في التحديث api_key اختياري (وإن كان فارغاً لا نحدّثه في الـ Controller)
                 $rules = array_merge($rules, [
                     'username'  => ['required', 'string', 'max:191'],
                     'api_key'   => [$isCreate ? 'required' : 'nullable', 'string', 'max:255'],
@@ -49,7 +66,7 @@ class DomainProviderRequest extends FormRequest
                 break;
 
             case 'cloudflare':
-                // Cloudflare يعتمد على api_token فقط (عادة لا يحتاج username/password)
+                // Cloudflare: غالبًا api_token فقط
                 $rules = array_merge($rules, [
                     'api_token' => [$isCreate ? 'required' : 'nullable', 'string', 'max:255'],
                 ]);
@@ -63,39 +80,42 @@ class DomainProviderRequest extends FormRequest
     {
         return [
             'name.required'      => 'اسم المزود مطلوب.',
+            'type.required'      => 'نوع المزود مطلوب.',
             'type.in'            => 'نوع المزود غير مدعوم.',
             'endpoint.required'  => 'يجب اختيار رابط الـ API (Endpoint).',
             'endpoint.url'       => 'رابط الـ API غير صالح.',
             'mode.in'            => 'الوضع يجب أن يكون live أو test.',
 
-            // Enom
-            'username.required'            => 'اسم المستخدم مطلوب.',
-            'password.required_without'    => 'كلمة المرور مطلوبة إذا لم يتم إدخال الـ API Token (Enom).',
-            'api_token.required_without'   => 'الـ API Token مطلوب إذا لم يتم إدخال كلمة المرور (Enom).',
+            // مشترك
+            'username.required'  => 'اسم المستخدم مطلوب.',
+
+            // Enom: واحد على الأقل من الثلاثة
+            'password.required_without_all'  => 'أدخل واحدًا على الأقل من (password, api_token, api_key) لمزوّد Enom.',
+            'api_token.required_without_all' => 'أدخل واحدًا على الأقل من (password, api_token, api_key) لمزوّد Enom.',
+            'api_key.required_without_all'   => 'أدخل واحدًا على الأقل من (password, api_token, api_key) لمزوّد Enom.',
 
             // Namecheap
-            'api_key.required'   => 'مفتاح API مطلوب (لمزود Namecheap).',
-            'client_ip.required' => 'عنوان IP مطلوب (لمزود Namecheap).',
+            'api_key.required'   => 'مفتاح API مطلوب (لمزوّد Namecheap).',
+            'client_ip.required' => 'عنوان IP مطلوب (لمزوّد Namecheap).',
             'client_ip.ip'       => 'صيغة عنوان الـ IP غير صحيحة.',
 
             // Cloudflare
-            'api_token.required' => 'الـ API Token مطلوب (لمزود Cloudflare).',
+            'api_token.required' => 'الـ API Token مطلوب (لمزوّد Cloudflare).',
         ];
     }
 
     public function prepareForValidation(): void
     {
+        // تطبيع سريع قبل التحقق
         $this->merge([
             'is_active' => filter_var($this->input('is_active', false), FILTER_VALIDATE_BOOL),
-            'endpoint'  => $this->input('endpoint') ? trim($this->input('endpoint')) : null,
-            'type'      => $this->input('type') ? strtolower(trim($this->input('type'))) : null,
-            // لا تفرض mode = null إذا مفقود
-            // 'mode'      => $this->input('mode') ? strtolower(trim($this->input('mode'))) : null,
+            'endpoint'  => $this->input('endpoint') ? trim((string) $this->input('endpoint')) : null,
+            'type'      => $this->input('type') ? strtolower(trim((string) $this->input('type'))) : null,
         ]);
 
         if ($this->filled('mode')) {
             $this->merge([
-                'mode' => strtolower(trim($this->input('mode')))
+                'mode' => strtolower(trim((string) $this->input('mode'))),
             ]);
         }
     }
