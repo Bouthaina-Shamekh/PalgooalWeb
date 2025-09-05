@@ -194,6 +194,7 @@ class DomainProviderController extends Controller
                             'message'  => $msg,
                             'currency' => $currency,
                             'balance'  => $balance,
+                            'duration_ms' => $r['duration_ms'] ?? null,   // ⏱️
                         ], $ok ? 200 : 422);
                     }
 
@@ -226,6 +227,7 @@ class DomainProviderController extends Controller
                             'message'  => $msg,
                             'currency' => $currency,
                             'balance'  => $balance,
+                            'duration_ms' => $r['duration_ms'] ?? null,   // ⏱️
                         ], $ok ? 200 : 422);
                     }
             }

@@ -120,121 +120,170 @@
         </div>
     </div>
 
-<script>
-  // مساعد موحّد: يجلب JSON بأمان ويحتفظ بالـ status و body الأصلي عند الفشل
-  async function fetchJSON(url, options = {}) {
-    const res = await fetch(url, {
-      headers: { 'Accept': 'application/json' },
-      ...options
-    });
-    const text = await res.text();
-    let data = null;
-    try { data = JSON.parse(text); } catch (_) { /* non-JSON */ }
-    return { ok: res.ok, status: res.status, data, text };
-  }
-
-  function setBtnLoading(btn, loading) {
-    if (!btn) return;
-    if (loading) {
-      btn.dataset.origText = btn.innerText;
-      btn.innerText = '...';
-      btn.disabled = true;
-    } else {
-      btn.innerText = btn.dataset.origText || btn.innerText;
-      btn.disabled = false;
-    }
-  }
-
-  function formatNumber(n) {
-    if (typeof n !== 'number') return n;
-    try { return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n); }
-    catch { return n.toFixed(2); }
-  }
-
-  function applyBalance(providerId, payload) {
-    const cell = document.querySelector(`.balance[data-balance-for="${providerId}"]`);
-    if (!cell) return;
-
-    // payload المتوقع من السيرفر: { ok, message, balance, currency, reason? }
-    const ok = !!(payload && payload.ok);
-    const val = (payload && payload.balance !== undefined && payload.balance !== null && payload.balance !== '') 
-      ? payload.balance 
-      : null;
-    const cur = (payload && payload.currency) ? ` ${payload.currency}` : '';
-
-    if (ok && val !== null) {
-      const num = typeof val === 'string' ? parseFloat(val) : val;
-      cell.textContent = `${formatNumber(num)}${cur}`;
-      cell.title = payload.message || 'تم الاتصال بنجاح.';
-      cell.classList.add('text-green-700');
-      cell.classList.remove('text-red-600');
-    } else {
-      cell.textContent = '—';
-      cell.title = (payload && payload.message) ? payload.message : 'تعذّر جلب الرصيد.';
-      cell.classList.remove('text-green-700');
-      cell.classList.add('text-red-600');
-    }
-  }
-
-  async function testConnection(url, providerId, btn) {
-    setBtnLoading(btn, true);
-    try {
-      const { ok, status, data, text } = await fetchJSON(url);
-
-      // رد غير JSON (مثلاً صفحة تسجيل دخول)
-      if (!data) {
-        console.error('Non-JSON response:', text?.slice(0, 400));
-        alert('❌ فشل الاتصال: الاستجابة ليست JSON. تحقّق من صلاحية الجلسة/التوجيه.');
-        return;
-      }
-
-      applyBalance(providerId, data);
-
-      const msg = data.ok
-        ? `✅ تم الاتصال بنجاح.${(data.balance!=null)?`\nالرصيد: ${data.balance} ${data.currency||''}`:''}`
-        : `❌ فشل الاتصال (${status}): ${data.message || 'تعذّر الاتصال أو المزود غير مفعّل.'}${data.reason ? `\nالسبب: ${data.reason}` : ''}`;
-
-      alert(msg + '\nاطّلع على السجلات للمزيد.');
-    } catch (e) {
-      alert('❌ خطأ في الاتصال.');
-      console.error(e);
-    } finally {
-      setBtnLoading(btn, false);
-    }
-  }
-
-  async function refreshBalance(url, providerId, btn) {
-    setBtnLoading(btn, true);
-    try {
-      const { data } = await fetchJSON(url);
-      if (data) applyBalance(providerId, data);
-      else {
-        // رد غير JSON
-        applyBalance(providerId, { ok: false, message: 'الاستجابة ليست JSON.' });
-      }
-    } catch (_) {
-      applyBalance(providerId, { ok: false, message: 'تعذّر التحديث.' });
-    } finally {
-      setBtnLoading(btn, false);
-    }
-  }
-
-  // (اختياري) حدّث أرصدة المزودين المفعّلين تلقائياً عند تحميل الصفحة
-  document.addEventListener('DOMContentLoaded', () => {
-    document
-      .querySelectorAll('tr[data-provider-row]')
-      .forEach(row => {
-        const id = row.getAttribute('data-provider-row');
-        const testLink = row.querySelector('a.btn-info'); // نفس رابط اختبار الاتصال
-        if (testLink) {
-          // لا تنبّه المستخدم، فقط حدّث العمود
-          fetchJSON(testLink.href)
-            .then(({ data }) => data && applyBalance(id, data))
-            .catch(() => applyBalance(id, { ok: false, message: 'تعذّر الجلب.' }));
+    <script>
+        // جلب JSON بأمان مع الاحتفاظ بالحالة والنص الخام
+        async function fetchJSON(url, options = {}) {
+            const res = await fetch(url, {
+                headers: {
+                    'Accept': 'application/json'
+                },
+                ...options
+            });
+            const text = await res.text();
+            let data = null;
+            try {
+                data = JSON.parse(text);
+            } catch (_) {}
+            return {
+                ok: res.ok,
+                status: res.status,
+                data,
+                text
+            };
         }
-      });
-  });
-</script>
+
+        function setBtnLoading(btn, loading) {
+            if (!btn) return;
+            if (loading) {
+                btn.dataset.origText = btn.innerText;
+                btn.innerText = '...';
+                btn.disabled = true;
+            } else {
+                btn.innerText = btn.dataset.origText || btn.innerText;
+                btn.disabled = false;
+            }
+        }
+
+        function formatNumber(n) {
+            if (typeof n !== 'number') return n;
+            try {
+                return new Intl.NumberFormat('en-US', {
+                    maximumFractionDigits: 2
+                }).format(n);
+            } catch {
+                return n.toFixed(2);
+            }
+        }
+
+        function applyBalance(providerId, payload) {
+            const cell = document.querySelector(`.balance[data-balance-for="${providerId}"]`);
+            if (!cell) return;
+
+            const ok = !!(payload && payload.ok);
+            const hasVal = payload && payload.balance !== undefined && payload.balance !== null && payload.balance !== '';
+            const val = hasVal ? (typeof payload.balance === 'string' ? parseFloat(payload.balance) : payload.balance) :
+                null;
+            const cur = (payload && payload.currency) ? ` ${payload.currency}` : '';
+            const dur = (payload && payload.duration_ms) ? ` • ${payload.duration_ms}ms` : '';
+            const reason = (payload && payload.reason && !ok) ? ` [${payload.reason}]` : '';
+
+            if (ok && val !== null) {
+                cell.textContent = `${formatNumber(val)}${cur}`;
+                cell.title = (payload.message || 'تم الاتصال بنجاح.') + dur;
+                cell.classList.add('text-green-700');
+                cell.classList.remove('text-red-600');
+            } else {
+                cell.textContent = '—';
+                cell.title = (payload && payload.message ? (payload.message + reason) : 'تعذّر جلب الرصيد.') + dur;
+                cell.classList.remove('text-green-700');
+                cell.classList.add('text-red-600');
+            }
+        }
+
+        async function testConnection(url, providerId, btn) {
+            setBtnLoading(btn, true);
+            try {
+                const {
+                    ok,
+                    status,
+                    data,
+                    text
+                } = await fetchJSON(url);
+
+                if (!data) {
+                    console.error('Non-JSON response:', text?.slice(0, 400));
+                    alert('❌ فشل الاتصال: الاستجابة ليست JSON. تحقّق من صلاحية الجلسة/التوجيه.');
+                    return;
+                }
+
+                applyBalance(providerId, data);
+
+                const msg = data.ok ?
+                    `✅ تم الاتصال بنجاح.${(data.balance!=null)?`\nالرصيد: ${data.balance} ${data.currency||''}`:''}` :
+                    `❌ فشل الاتصال (${status})${data.reason ? ` [${data.reason}]` : ''}: ${data.message || 'تعذّر الاتصال أو المزود غير مفعّل.'}`;
+
+                const dur = data.duration_ms ? `\nالمدة: ${data.duration_ms}ms` : '';
+                alert(msg + dur + '\nاطّلع على السجلات للمزيد.');
+            } catch (e) {
+                alert('❌ خطأ في الاتصال.');
+                console.error(e);
+            } finally {
+                setBtnLoading(btn, false);
+            }
+        }
+
+        async function refreshBalance(url, providerId, btn) {
+            setBtnLoading(btn, true);
+            try {
+                const {
+                    data
+                } = await fetchJSON(url);
+                if (data) applyBalance(providerId, data);
+                else applyBalance(providerId, {
+                    ok: false,
+                    message: 'الاستجابة ليست JSON.'
+                });
+            } catch (_) {
+                applyBalance(providerId, {
+                    ok: false,
+                    message: 'تعذّر التحديث.'
+                });
+            } finally {
+                setBtnLoading(btn, false);
+            }
+        }
+
+        // مُجدول بسيط لتحديد أقصى عدد اتصالات متزامنة
+        async function runWithConcurrency(tasks, limit = 3) {
+            const results = [];
+            let i = 0;
+            const workers = Array.from({
+                length: Math.max(1, limit)
+            }).map(async () => {
+                while (i < tasks.length) {
+                    const idx = i++;
+                    try {
+                        results[idx] = await tasks[idx]();
+                    } catch (e) {
+                        results[idx] = e;
+                    }
+                }
+            });
+            await Promise.all(workers);
+            return results;
+        }
+
+        // تحميل تلقائي لأرصدة المزوّدين بتوازي محدود
+        document.addEventListener('DOMContentLoaded', () => {
+            const rows = [...document.querySelectorAll('tr[data-provider-row]')];
+
+            const tasks = rows.map(row => {
+                const id = row.getAttribute('data-provider-row');
+                const link = row.querySelector('a.btn-info'); // رابط "اختبار الاتصال"
+                if (!link) return async () => {};
+                return async () => {
+                    const {
+                        data
+                    } = await fetchJSON(link.href);
+                    if (data) applyBalance(id, data);
+                };
+            });
+
+            // حدّ أقصى 3 طلبات آنياً (يمكنك تغييره)
+            runWithConcurrency(tasks, 3);
+        });
+    </script>
+
 
 
 </x-dashboard-layout>

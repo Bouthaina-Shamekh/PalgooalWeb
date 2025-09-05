@@ -41,72 +41,58 @@ class EnomClient
         $endpoint = $this->endpointFor($p);
         $query    = array_merge($this->baseParams($p), $params);
 
-        Log::info('Enom preflight', [
-            'endpoint'  => $endpoint,
-            'mode'      => $p->mode,
-            'username'  => $p->username,
-            'auth_used' => implode(',', array_keys($this->authParams($p))), // للتشخيص فقط
-        ]);
+        $start = microtime(true);
 
-        $resp = Http::withHeaders([
+        $resp = \Illuminate\Support\Facades\Http::withHeaders([
             'Accept'     => 'application/xml',
             'User-Agent' => 'PalgoalsBot/1.0',
         ])
             ->withOptions([
-                'curl' => [
-                    \CURLOPT_IPRESOLVE => \CURL_IPRESOLVE_V4, // تجنّب IPv6
-                ],
+                'curl' => [\CURLOPT_IPRESOLVE => \CURL_IPRESOLVE_V4],
             ])
-            ->timeout(20)
+            ->connectTimeout(5)     // ⏱️ وقت اتصال
+            ->timeout(12)           // ⏱️ حد أقصى للإجمالي
+            ->retry(1, 200)         // إعادة سريعة لمرة واحدة
             ->get($endpoint, $query);
+
+        $dur = (int) round((microtime(true) - $start) * 1000);
 
         $status = $resp->status();
         $ct     = $resp->header('Content-Type');
         $body   = (string) $resp->body();
 
         if (!$resp->ok()) {
-            Log::warning('Enom HTTP error', ['status' => $status, 'ct' => $ct, 'snippet' => mb_substr($body, 0, 400)]);
-            return ['ok' => false, 'reason' => 'http_error', 'http_code' => $status, 'message' => "HTTP $status"];
+            Log::warning('Enom HTTP error', ['status' => $status, 'ct' => $ct, 'ms' => $dur, 'snippet' => mb_substr($body, 0, 300)]);
+            return ['ok' => false, 'reason' => 'http_error', 'http_code' => $status, 'message' => "HTTP $status", 'duration_ms' => $dur];
         }
 
         if (!is_string($ct) || stripos($ct, 'xml') === false) {
-            Log::warning('Enom non-XML', ['status' => $status, 'ct' => $ct, 'snippet' => mb_substr($body, 0, 400)]);
-            return ['ok' => false, 'reason' => 'non_xml', 'message' => 'الاستجابة ليست XML.'];
+            Log::warning('Enom non-XML', ['ct' => $ct, 'ms' => $dur, 'snippet' => mb_substr($body, 0, 300)]);
+            return ['ok' => false, 'reason' => 'non_xml', 'message' => 'الاستجابة ليست XML.', 'duration_ms' => $dur];
         }
 
         $body = preg_replace('/^\xEF\xBB\xBF/', '', $body);
         $xml  = @simplexml_load_string($body, 'SimpleXMLElement', \LIBXML_NOCDATA | \LIBXML_NOWARNING | \LIBXML_NOERROR);
         if ($xml === false) {
-            Log::warning('Enom XML parse failed', ['snippet' => mb_substr($body, 0, 400)]);
-            return ['ok' => false, 'reason' => 'xml_parse_error', 'message' => 'تعذر تحليل XML.'];
+            Log::warning('Enom XML parse failed', ['ms' => $dur, 'snippet' => mb_substr($body, 0, 300)]);
+            return ['ok' => false, 'reason' => 'xml_parse_error', 'message' => 'تعذر تحليل XML.', 'duration_ms' => $dur];
         }
 
-        // أخطاء eNom الكلاسيكية
         $errCount = (int)($xml->ErrCount ?? 0);
         if ($errCount > 0) {
             $errors = [];
-
-            // بعض البيئات ترجع <errors><Err1>..</Err1><Err2>..</Err2>...</errors>
-            if (isset($xml->errors)) {
-                foreach ($xml->errors->children() as $err) {
-                    $errors[] = trim((string)$err);
-                }
+            if (isset($xml->errors)) foreach ($xml->errors->children() as $err) {
+                $errors[] = trim((string)$err);
             }
-
-            // وأحياناً ضمن responses/response/ResponseString
-            if (isset($xml->responses->response->ResponseString)) {
-                $errors[] = trim((string)$xml->responses->response->ResponseString);
-            }
-
+            if (isset($xml->responses->response->ResponseString)) $errors[] = trim((string)$xml->responses->response->ResponseString);
             $msg = $errors ? implode(' | ', $errors) : 'Unknown eNom API error';
-            return ['ok' => false, 'reason' => 'provider_error', 'message' => $msg, 'xml' => $xml];
+            return ['ok' => false, 'reason' => 'provider_error', 'message' => $msg, 'xml' => $xml, 'duration_ms' => $dur];
         }
 
-        // RRPCode/ RRPText للمعلومية
         $rrpCode = isset($xml->RRPCode) ? (int)$xml->RRPCode : null;
         $rrpText = isset($xml->RRPText) ? (string)$xml->RRPText : null;
 
-        return ['ok' => true, 'xml' => $xml, 'rrp_code' => $rrpCode, 'rrp_text' => $rrpText];
+        return ['ok' => true, 'xml' => $xml, 'rrp_code' => $rrpCode, 'rrp_text' => $rrpText, 'duration_ms' => $dur];
     }
 
     /** جلب الرصيد (يوحّد الإخراج: ok/message/balance/currency) */
@@ -115,75 +101,102 @@ class EnomClient
         try {
             $r = $this->request($p, ['command' => 'GetBalance']);
             if (!$r['ok']) {
-                return array_merge(['balance' => null, 'currency' => null], $r);
+                return array_merge($r, ['balance' => null, 'currency' => null]);
             }
 
+            /** @var \SimpleXMLElement $xml */
             $xml = $r['xml'];
 
-            // eNom له أكثر من شكل؛ نحاول مسارات متعددة
-            $available = null;
-            $hold = null;
+            $balance  = null;
+            $hold     = null;
             $currency = null;
 
-            // 1) الشكل الشائع: <GetBalance><AvailableBalance>..</AvailableBalance>...
+            // شكل 1: <GetBalance>...</GetBalance>
             if (isset($xml->GetBalance)) {
-                if (isset($xml->GetBalance->AvailableBalance)) $available = (float)$xml->GetBalance->AvailableBalance;
-                if (isset($xml->GetBalance->HoldBalance))      $hold      = (float)$xml->GetBalance->HoldBalance;
-                if (isset($xml->GetBalance->Currency))         $currency  = (string)$xml->GetBalance->Currency;
+                $gb = $xml->GetBalance;
+
+                // الترتيب: AvailableBalance ثم AccountBalance ثم Balance
+                foreach (['AvailableBalance', 'AccountBalance', 'Balance'] as $k) {
+                    if (isset($gb->{$k}) && strlen((string)$gb->{$k})) {
+                        $balance = (float)$gb->{$k};
+                        break;
+                    }
+                }
+
+                if (isset($gb->HoldBalance) && strlen((string)$gb->HoldBalance)) {
+                    $hold = (float)$gb->HoldBalance;
+                }
+
+                foreach (['Currency', 'currency'] as $k) {
+                    if (isset($gb->{$k}) && strlen((string)$gb->{$k})) {
+                        $currency = (string)$gb->{$k};
+                        break;
+                    }
+                }
             }
 
-            // 2) بعض الردود: <interface-response><attributes><balance>..</balance><holdbalance>..</holdbalance></attributes>
-            if ($available === null && isset($xml->attributes->balance)) {
-                $available = (float)$xml->attributes->balance;
+            // شكل 2: <interface-response><attributes>...</attributes></interface-response>
+            if ($balance === null && isset($xml->attributes)) {
+                $attrs = $xml->attributes;
+
+                foreach (['balance', 'availablebalance', 'accountbalance', 'Balance', 'AvailableBalance', 'AccountBalance'] as $k) {
+                    if (isset($attrs->{$k}) && strlen((string)$attrs->{$k})) {
+                        $balance = (float)$attrs->{$k};
+                        break;
+                    }
+                }
+
+                if ($hold === null) {
+                    foreach (['holdbalance', 'HoldBalance'] as $k) {
+                        if (isset($attrs->{$k}) && strlen((string)$attrs->{$k})) {
+                            $hold = (float)$attrs->{$k};
+                            break;
+                        }
+                    }
+                }
+
+                if ($currency === null) {
+                    foreach (['currency', 'Currency'] as $k) {
+                        if (isset($attrs->{$k}) && strlen((string)$attrs->{$k})) {
+                            $currency = (string)$attrs->{$k};
+                            break;
+                        }
+                    }
+                }
             }
-            if ($hold === null && isset($xml->attributes->holdbalance)) {
-                $hold = (float)$xml->attributes->holdbalance;
-            }
-            if ($currency === null && isset($xml->attributes->currency)) {
-                $currency = (string)$xml->attributes->currency;
+
+            // شكل 3 (ملاذ أخير): التقاط بالأregex من الـ XML كاملًا
+            if ($balance === null) {
+                $s = $xml->asXML() ?: '';
+                if (preg_match('/<(?:AvailableBalance|AccountBalance|balance)>([0-9]+(?:\.[0-9]+)?)<\/[^>]+>/', $s, $m)) {
+                    $balance = (float) $m[1];
+                }
+                if ($currency === null && preg_match('/<currency>([A-Z]{3})<\/currency>/i', $s, $m2)) {
+                    $currency = strtoupper($m2[1]);
+                }
             }
 
             return [
                 'ok'       => true,
                 'reason'   => 'ok',
                 'message'  => 'تم الاتصال بنجاح.',
-                'balance'  => $available,   // الكنترولر يقرأ هذا الحقل
+                'balance'  => $balance,   // ← الكنترولر والواجهة يعتمدون هذا
                 'currency' => $currency,
-                'meta'     => ['hold' => $hold, 'rrp_code' => $r['rrp_code'] ?? null, 'rrp_text' => $r['rrp_text'] ?? null],
+                'meta'     => [
+                    'hold'     => $hold,
+                    'rrp_code' => $r['rrp_code'] ?? null,
+                    'rrp_text' => $r['rrp_text'] ?? null,
+                ],
             ];
         } catch (\Throwable $e) {
             logger()->error('Enom GetBalance exception', ['error' => $e->getMessage()]);
-            return ['ok' => false, 'reason' => 'exception', 'message' => 'استثناء: ' . $e->getMessage(), 'balance' => null, 'currency' => null];
-        }
-    }
-
-    /** فحص توفر دومين (يوحّد الإخراج: ok/message/available) */
-    public function checkAvailability(DomainProvider $p, string $sld, string $tld): array
-    {
-        try {
-            $r = $this->request($p, [
-                'command' => 'check',
-                'SLD'     => $sld,
-                'TLD'     => strtoupper($tld),
-            ]);
-            if (!$r['ok']) return array_merge($r, ['available' => null]);
-
-            $xml = $r['xml'];
-            // 210 عادة = متاح، 211 = غير متاح، 200 = نجاح (عام)
-            $rrp = $r['rrp_code'] ?? null;
-            $available = ($rrp === 210);
-
-            // fallback: بعض الردود قد تحتوي domain أو خانات أخرى؛ لكن RRPCode يكفي غالباً
             return [
-                'ok'        => true,
-                'reason'    => 'ok',
-                'message'   => $r['rrp_text'] ?? 'تم التنفيذ.',
-                'available' => $available,
-                'meta'      => ['rrp_code' => $rrp, 'rrp_text' => $r['rrp_text'] ?? null],
+                'ok'       => false,
+                'reason'   => 'exception',
+                'message'  => 'استثناء: ' . $e->getMessage(),
+                'balance'  => null,
+                'currency' => null,
             ];
-        } catch (\Throwable $e) {
-            logger()->error('Enom checkAvailability exception', ['error' => $e->getMessage()]);
-            return ['ok' => false, 'reason' => 'exception', 'message' => 'استثناء: ' . $e->getMessage(), 'available' => null];
         }
     }
 }
