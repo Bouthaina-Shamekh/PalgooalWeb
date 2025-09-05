@@ -120,24 +120,19 @@ class DomainProviderController extends Controller
                 ], 422);
             }
 
-            // ✅ تحقق مسبق من الحقول المطلوبة حسب النوع
+            // ✅ فحص حقول مطلوبة حسب النوع
             $missing = [];
-
-            // username مطلوب للجميع
             if (blank($domainProvider->username)) {
                 $missing[] = 'username';
             }
-
             switch ($domainProvider->type) {
                 case 'namecheap':
-                    // Namecheap يحتاج api_key + client_ip
                     foreach (['api_key', 'client_ip'] as $req) {
                         if (blank($domainProvider->{$req})) $missing[] = $req;
                     }
                     break;
 
                 case 'enom':
-                    // Enom لا يحتاج client_ip — يجب واحد على الأقل من (password/api_token/api_key)
                     if (
                         blank($domainProvider->password)
                         && blank($domainProvider->api_token)
@@ -161,46 +156,78 @@ class DomainProviderController extends Controller
                 ], 422);
             }
 
-            // تنفيذ الاختبار حسب النوع
+            // ✅ كاش اختياري + دعم fresh=1
+            $forceFresh = request()->boolean('fresh') || request()->boolean('bypass_cache');
+            $cacheKey   = "dp:balance:{$domainProvider->id}";
+            $ttlSeconds = 60; // غيّرها حسب رغبتك
+
+            if (!$forceFresh) {
+                if ($cached = cache()->get($cacheKey)) {
+                    // cached payload يحتوي على cache => 'hit'
+                    return response()
+                        ->json($cached, (!empty($cached['ok'])) ? 200 : 422)
+                        ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                        ->header('Pragma', 'no-cache')
+                        ->header('Expires', '0');
+                }
+            }
+
+            $started = microtime(true);
+
             switch ($domainProvider->type) {
                 case 'enom': {
-                        /** @var EnomClient $client */
-                        $client   = app(EnomClient::class);
+                        /** @var \App\Services\DomainProviders\EnomClient $client */
+                        $client   = app(\App\Services\DomainProviders\EnomClient::class);
                         $r        = $client->getBalance($domainProvider);
+
                         $ok       = (bool)($r['ok'] ?? false);
-                        $balance  = $r['balance'] ?? null;
+                        $balance  = $r['balance'] ?? $r['available'] ?? null;
                         $currency = $r['currency'] ?? null;
 
-                        // بناء رسالة مفهومة دوماً
                         $msg = $r['message'] ?? null;
                         if (blank($msg)) {
                             $fallbackErr = $r['error']
-                                ?? Arr::get($r, 'errors.0.text')
-                                ?? Arr::get($r, 'errors.0.message')
-                                ?? Arr::get($r, 'Errors.0');
+                                ?? \Illuminate\Support\Arr::get($r, 'errors.0.text')
+                                ?? \Illuminate\Support\Arr::get($r, 'errors.0.message')
+                                ?? \Illuminate\Support\Arr::get($r, 'Errors.0');
                             $msg = $ok ? 'تم الاتصال بنجاح.' : ($fallbackErr ?: 'تعذّر الاتصال أو بيانات الاعتماد غير صحيحة.');
                         }
+
+                        $durationMs = $r['duration_ms'] ?? (int) round((microtime(true) - $started) * 1000);
+                        $payload = [
+                            'ok'         => $ok,
+                            'reason'     => $r['reason'] ?? ($ok ? 'ok' : 'provider_error'),
+                            'message'    => $msg,
+                            'currency'   => $currency,
+                            'balance'    => $balance,
+                            'duration_ms' => $durationMs,
+                            'fetched_at' => now()->toIso8601String(),
+                            'cache'      => 'miss',
+                        ];
+
+                        // خزّن نسخة للكاش (نعلّمها hit لاستخدامها لاحقًا كقراءة سريعة)
+                        cache()->put($cacheKey, array_merge($payload, ['cache' => 'hit']), $ttlSeconds);
 
                         Log::info('Enom provider test summary', [
                             'provider_id' => $domainProvider->id,
                             'ok'          => $ok,
                             'currency'    => $currency,
                             'has_balance' => !is_null($balance),
+                            'duration_ms' => $durationMs,
+                            'cache'       => 'miss',
                         ]);
 
-                        return response()->json([
-                            'ok'       => $ok,
-                            'reason'   => $r['reason'] ?? ($ok ? 'ok' : 'provider_error'),
-                            'message'  => $msg,
-                            'currency' => $currency,
-                            'balance'  => $balance,
-                            'duration_ms' => $r['duration_ms'] ?? null,   // ⏱️
-                        ], $ok ? 200 : 422);
+                        return response()
+                            ->json($payload, $ok ? 200 : 422)
+                            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                            ->header('Pragma', 'no-cache')
+                            ->header('Expires', '0');
                     }
 
                 case 'namecheap': {
-                        $client   = new NamecheapClient($domainProvider);
+                        $client   = new \App\Services\DomainProviders\NamecheapClient($domainProvider);
                         $r        = $client->getBalance();
+
                         $ok       = (bool)($r['ok'] ?? false);
                         $balance  = $r['balance'] ?? null;
                         $currency = $r['currency'] ?? null;
@@ -208,35 +235,42 @@ class DomainProviderController extends Controller
                         $msg = $r['message'] ?? null;
                         if (blank($msg)) {
                             $fallbackErr = $r['error']
-                                ?? Arr::get($r, 'errors.0.text')
-                                ?? Arr::get($r, 'errors.0.message')
-                                ?? Arr::get($r, 'Errors.0');
+                                ?? \Illuminate\Support\Arr::get($r, 'errors.0.text')
+                                ?? \Illuminate\Support\Arr::get($r, 'errors.0.message')
+                                ?? \Illuminate\Support\Arr::get($r, 'Errors.0');
                             $msg = $ok ? 'تم الاتصال بنجاح.' : ($fallbackErr ?: 'تعذّر الاتصال أو بيانات الاعتماد غير صحيحة.');
                         }
+
+                        $durationMs = $r['duration_ms'] ?? (int) round((microtime(true) - $started) * 1000);
+                        $payload = [
+                            'ok'         => $ok,
+                            'reason'     => $r['reason'] ?? ($ok ? 'ok' : 'provider_error'),
+                            'message'    => $msg,
+                            'currency'   => $currency,
+                            'balance'    => $balance,
+                            'duration_ms' => $durationMs,
+                            'fetched_at' => now()->toIso8601String(),
+                            'cache'      => 'miss',
+                        ];
+
+                        cache()->put($cacheKey, array_merge($payload, ['cache' => 'hit']), $ttlSeconds);
 
                         Log::info('Namecheap provider test summary', [
                             'provider_id' => $domainProvider->id,
                             'ok'          => $ok,
                             'currency'    => $currency,
                             'has_balance' => !is_null($balance),
+                            'duration_ms' => $durationMs,
+                            'cache'       => 'miss',
                         ]);
 
-                        return response()->json([
-                            'ok'       => $ok,
-                            'reason'   => $r['reason'] ?? ($ok ? 'ok' : 'provider_error'),
-                            'message'  => $msg,
-                            'currency' => $currency,
-                            'balance'  => $balance,
-                            'duration_ms' => $r['duration_ms'] ?? null,   // ⏱️
-                        ], $ok ? 200 : 422);
+                        return response()
+                            ->json($payload, $ok ? 200 : 422)
+                            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                            ->header('Pragma', 'no-cache')
+                            ->header('Expires', '0');
                     }
             }
-
-            // احتياط
-            return response()->json([
-                'ok'      => false,
-                'message' => 'نوع المزود غير مدعوم للاختبار الآلي حاليًا.',
-            ], 422);
         } catch (\Throwable $e) {
             Log::error('Provider test failed', [
                 'provider_id' => $domainProvider->id ?? null,

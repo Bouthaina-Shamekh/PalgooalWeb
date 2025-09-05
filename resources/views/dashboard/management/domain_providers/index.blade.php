@@ -121,7 +121,6 @@
     </div>
 
     <script>
-        // جلب JSON بأمان مع الاحتفاظ بالحالة والنص الخام
         async function fetchJSON(url, options = {}) {
             const res = await fetch(url, {
                 headers: {
@@ -133,7 +132,7 @@
             let data = null;
             try {
                 data = JSON.parse(text);
-            } catch (_) {}
+            } catch {}
             return {
                 ok: res.ok,
                 status: res.status,
@@ -165,26 +164,31 @@
             }
         }
 
+        function qs(url, extra) {
+            const sep = url.includes('?') ? '&' : '?';
+            return url + sep + extra;
+        }
+
         function applyBalance(providerId, payload) {
             const cell = document.querySelector(`.balance[data-balance-for="${providerId}"]`);
             if (!cell) return;
 
             const ok = !!(payload && payload.ok);
-            const hasVal = payload && payload.balance !== undefined && payload.balance !== null && payload.balance !== '';
-            const val = hasVal ? (typeof payload.balance === 'string' ? parseFloat(payload.balance) : payload.balance) :
-                null;
+            const val = (payload && payload.balance != null && payload.balance !== '') ? (typeof payload.balance ===
+                'string' ? parseFloat(payload.balance) : payload.balance) : null;
             const cur = (payload && payload.currency) ? ` ${payload.currency}` : '';
             const dur = (payload && payload.duration_ms) ? ` • ${payload.duration_ms}ms` : '';
-            const reason = (payload && payload.reason && !ok) ? ` [${payload.reason}]` : '';
+            const ts = (payload && payload.fetched_at) ? ` • ${new Date(payload.fetched_at).toLocaleString()}` : '';
+            const why = (!ok && payload && payload.reason) ? ` [${payload.reason}]` : '';
 
             if (ok && val !== null) {
                 cell.textContent = `${formatNumber(val)}${cur}`;
-                cell.title = (payload.message || 'تم الاتصال بنجاح.') + dur;
+                cell.title = (payload.message || 'تم الاتصال بنجاح.') + dur + ts;
                 cell.classList.add('text-green-700');
                 cell.classList.remove('text-red-600');
             } else {
                 cell.textContent = '—';
-                cell.title = (payload && payload.message ? (payload.message + reason) : 'تعذّر جلب الرصيد.') + dur;
+                cell.title = (payload && payload.message ? (payload.message + why) : 'تعذّر جلب الرصيد.') + dur + ts;
                 cell.classList.remove('text-green-700');
                 cell.classList.add('text-red-600');
             }
@@ -193,30 +197,24 @@
         async function testConnection(url, providerId, btn) {
             setBtnLoading(btn, true);
             try {
+                const freshUrl = qs(url, `fresh=1&t=${Date.now()}`); // 👈 إجبار جلب حديث
                 const {
-                    ok,
                     status,
                     data,
                     text
-                } = await fetchJSON(url);
-
+                } = await fetchJSON(freshUrl);
                 if (!data) {
                     console.error('Non-JSON response:', text?.slice(0, 400));
-                    alert('❌ فشل الاتصال: الاستجابة ليست JSON. تحقّق من صلاحية الجلسة/التوجيه.');
+                    alert('❌ الاستجابة ليست JSON.');
                     return;
                 }
-
                 applyBalance(providerId, data);
-
                 const msg = data.ok ?
                     `✅ تم الاتصال بنجاح.${(data.balance!=null)?`\nالرصيد: ${data.balance} ${data.currency||''}`:''}` :
-                    `❌ فشل الاتصال (${status})${data.reason ? ` [${data.reason}]` : ''}: ${data.message || 'تعذّر الاتصال أو المزود غير مفعّل.'}`;
-
-                const dur = data.duration_ms ? `\nالمدة: ${data.duration_ms}ms` : '';
-                alert(msg + dur + '\nاطّلع على السجلات للمزيد.');
-            } catch (e) {
-                alert('❌ خطأ في الاتصال.');
-                console.error(e);
+                    `❌ فشل الاتصال (${status})${data.reason?` [${data.reason}]`:''}: ${data.message || 'تعذّر الاتصال.'}`;
+                const extra = data.duration_ms ? `\nالمدة: ${data.duration_ms}ms` : '';
+                const when = data.fetched_at ? `\nالتحديث: ${new Date(data.fetched_at).toLocaleString()}` : '';
+                alert(msg + extra + when);
             } finally {
                 setBtnLoading(btn, false);
             }
@@ -225,25 +223,19 @@
         async function refreshBalance(url, providerId, btn) {
             setBtnLoading(btn, true);
             try {
+                const freshUrl = qs(url, `fresh=1&t=${Date.now()}`); // 👈 تحديث إجباري
                 const {
                     data
-                } = await fetchJSON(url);
-                if (data) applyBalance(providerId, data);
-                else applyBalance(providerId, {
+                } = await fetchJSON(freshUrl);
+                applyBalance(providerId, data || {
                     ok: false,
                     message: 'الاستجابة ليست JSON.'
-                });
-            } catch (_) {
-                applyBalance(providerId, {
-                    ok: false,
-                    message: 'تعذّر التحديث.'
                 });
             } finally {
                 setBtnLoading(btn, false);
             }
         }
 
-        // مُجدول بسيط لتحديد أقصى عدد اتصالات متزامنة
         async function runWithConcurrency(tasks, limit = 3) {
             const results = [];
             let i = 0;
@@ -263,27 +255,28 @@
             return results;
         }
 
-        // تحميل تلقائي لأرصدة المزوّدين بتوازي محدود
+        // SWR عند التحميل: قيمة سريعة ثم إعادة تحقق بالخلفية
         document.addEventListener('DOMContentLoaded', () => {
             const rows = [...document.querySelectorAll('tr[data-provider-row]')];
-
             const tasks = rows.map(row => {
                 const id = row.getAttribute('data-provider-row');
-                const link = row.querySelector('a.btn-info'); // رابط "اختبار الاتصال"
+                const link = row.querySelector('a.btn-info');
                 if (!link) return async () => {};
+
                 return async () => {
-                    const {
-                        data
-                    } = await fetchJSON(link.href);
-                    if (data) applyBalance(id, data);
+                    // 1) قراءة سريعة (بدون fresh) لعرض أي قيمة متاحة فورًا
+                    const fastUrl = qs(link.href, `t=${Date.now()}`);
+                    const fast = await fetchJSON(fastUrl);
+                    if (fast.data) applyBalance(id, fast.data);
+
+                    // 2) إعادة تحقق حديثة بالخلفية (fresh=1)
+                    const freshUrl = qs(link.href, `fresh=1&t=${Date.now()}`);
+                    const fresh = await fetchJSON(freshUrl);
+                    if (fresh.data) applyBalance(id, fresh.data);
                 };
             });
 
-            // حدّ أقصى 3 طلبات آنياً (يمكنك تغييره)
             runWithConcurrency(tasks, 3);
         });
     </script>
-
-
-
 </x-dashboard-layout>
