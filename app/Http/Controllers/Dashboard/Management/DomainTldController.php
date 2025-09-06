@@ -65,7 +65,7 @@ class DomainTldController extends Controller
         return back()->with('ok', 'تم حفظ أسعار البيع.');
     }
 
-    protected function syncFromNamecheap(DomainProvider $p, array $onlyTlds = []): array
+    protected function syncFromNamecheap(\App\Models\DomainProvider $p, array $onlyTlds = []): array
     {
         $headers = [
             'Accept'          => 'application/xml',
@@ -73,7 +73,7 @@ class DomainTldController extends Controller
             'User-Agent'      => 'PalgoalsBot/1.0',
         ];
         $options = [
-            'curl' => [\CURLOPT_IPRESOLVE => \CURL_IPRESOLVE_V4, \CURLOPT_ENCODING => ''],
+            'curl'        => [\CURLOPT_IPRESOLVE => \CURL_IPRESOLVE_V4, \CURLOPT_ENCODING => ''],
             'http_errors' => false,
         ];
         $endpoint = $p->endpoint ?: ($p->mode === 'test'
@@ -81,92 +81,140 @@ class DomainTldController extends Controller
             : 'https://api.namecheap.com/xml.response');
 
         $base = [
-            'ApiUser'  => trim((string)$p->username),
-            'ApiKey'   => trim((string)$p->api_key),
-            'UserName' => trim((string)$p->username),
-            'ClientIp' => trim((string)$p->client_ip),
+            'ApiUser'     => trim((string)$p->username),
+            'ApiKey'      => trim((string)$p->api_key),
+            'UserName'    => trim((string)$p->username),
+            'ClientIp'    => trim((string)$p->client_ip),
             'ProductType' => 'DOMAIN',
         ];
 
-        $actions = ['REGISTER', 'RENEW', 'TRANSFER'];
+        $actions     = ['REGISTER', 'RENEW', 'TRANSFER'];
         $added = 0;
         $updated = 0;
         $tldsTouched = 0;
         $message = '';
 
+        // مغلّف XPath آمن: يضمن تسجيل namespace 'nc' على نفس السياق قبل كل استعلام
+        $NS = 'http://api.namecheap.com/xml.response';
+        $xp = function (\SimpleXMLElement $ctx, string $expr) use ($NS): array {
+            $ctx->registerXPathNamespace('nc', $NS);
+            $res = @$ctx->xpath($expr);        // @ لمنع التحذيرات
+            return is_array($res) ? $res : [];
+        };
+
         $fetchXml = function (array $params, int $timeout = 45) use ($endpoint, $headers, $options) {
-            $resp = Http::withHeaders($headers)
+            $resp = \Illuminate\Support\Facades\Http::withHeaders($headers)
                 ->withOptions($options)->connectTimeout(10)->timeout($timeout)->retry(2, 400)
                 ->get($endpoint, $params);
+
             if (!$resp->ok() || stripos((string)$resp->header('Content-Type'), 'xml') === false) {
                 return [null, "HTTP {$resp->status()} أو غير XML"];
             }
-            $xml = @simplexml_load_string((string)$resp->body(), 'SimpleXMLElement', \LIBXML_NOCDATA | \LIBXML_NOWARNING | \LIBXML_NOERROR);
+            $xml = @simplexml_load_string((string)$resp->body(), 'SimpleXMLElement', \LIBXML_NOCDATA | \LIBXML_NOERROR | \LIBXML_NOWARNING);
             return $xml ? [$xml, null] : [null, 'XML parse error'];
         };
 
+        // لو ما مرّرت قائمة، استخدم ما هو معلّم in_catalog
         if (empty($onlyTlds)) {
-            $onlyTlds = DomainTld::where('provider_id', $p->id)
+            $onlyTlds = \App\Models\DomainTld::where('provider_id', $p->id)
                 ->where('in_catalog', true)->pluck('tld')->all();
         }
         if (empty($onlyTlds)) {
             return ['added' => 0, 'updated' => 0, 'tlds' => 0, 'message' => 'لا توجد TLDs مختارة (in_catalog).'];
         }
 
+        // أداة استخراج (years, price, currency) من أي عقدة تسعير
+        $extractPricing = function (\SimpleXMLElement $node): array {
+            $a = $node->attributes();
+
+            // Years
+            $durationRaw = (string)($a['Duration'] ?? $a['duration'] ?? $node->Duration ?? $node->duration ?? '');
+            if ($durationRaw === '') $durationRaw = (string)$node; // fallback
+            $years = (int)preg_replace('/\D+/', '', $durationRaw);
+            if ($years <= 0) $years = 1;
+
+            // Price: YourPrice > Price (Attribute أو Child)
+            $priceStr = (string)($a['YourPrice'] ?? $a['Price'] ?? '');
+            if ($priceStr === '') $priceStr = (string)($node->YourPrice ?? $node->Price ?? '');
+            $price = ($priceStr !== '' ? (float)$priceStr : null);
+
+            // Currency (اختياري)
+            $curr = (string)($a['Currency'] ?? $node->Currency ?? '');
+
+            return [$years, $price, $curr ?: null];
+        };
+
         foreach ($actions as $action) {
-            foreach ($onlyTlds as $tld) {
+            foreach ($onlyTlds as $tldWanted) {
                 [$xml, $err] = $fetchXml($base + [
                     'Command'     => 'namecheap.users.getPricing',
                     'ActionName'  => $action,
-                    'ProductName' => strtoupper(ltrim($tld, '.')),
+                    'ProductName' => strtoupper(ltrim($tldWanted, '.')), // COM, NET, ...
                 ], 30);
 
                 if (!$xml) {
-                    $message .= " [{$tld} {$action}: $err]";
+                    $message .= " [{$tldWanted} {$action}: $err]";
                     continue;
                 }
-                if (strcasecmp((string)($xml['Status'] ?? ''), 'OK') !== 0) {
-                    $message .= " [{$tld} {$action}: provider error]";
+                // جهّز الـnamespace على الجذر قبل أي XPath
+                $xp($xml, '.');
+                $statusOk = strcasecmp((string)($xml['Status'] ?? ''), 'OK') === 0;
+                if (!$statusOk) {
+                    $message .= " [{$tldWanted} {$action}: provider error]";
                     continue;
                 }
 
-                $xml->registerXPathNamespace('nc', 'http://api.namecheap.com/xml.response');
-                $products = $xml->xpath('//nc:Product') ?? [];
+                // منتجات = TLDs
+                $products = $xp($xml, '//nc:Product');
+                if (empty($products)) {
+                    // fallback لو رد بدون namespace (نادر)
+                    $products = $xp($xml, '//Product');
+                }
+                if (empty($products)) continue;
 
-                DB::transaction(function () use ($products, $action, $p, &$added, &$updated, &$tldsTouched) {
+                DB::transaction(function () use ($products, $action, $p, &$added, &$updated, &$tldsTouched, $xp, $extractPricing) {
                     foreach ($products as $prod) {
-                        $attrs = $prod->attributes();
-                        $name  = (string)($attrs['Name'] ?? $attrs['name'] ?? '');
-                        $tld   = ltrim(strtolower($name), '.');
+                        // سجل namespace على النود نفسها قبل أي xpath عليها
+                        $xp($prod, '.');
+
+                        $nameAttr = $prod['Name'] ?? $prod['name'] ?? null;
+                        $tld = ltrim(strtolower((string)$nameAttr), '.');
                         if ($tld === '') continue;
 
-                        $tldRow = DomainTld::firstOrCreate(
+                        $tldRow = \App\Models\DomainTld::firstOrCreate(
                             ['provider_id' => $p->id, 'tld' => $tld],
                             ['provider' => $p->type, 'currency' => 'USD', 'enabled' => true, 'supports_premium' => true, 'in_catalog' => true]
                         );
                         $tldsTouched++;
 
-                        foreach ($prod->DurationRange ?? [] as $rng) {
-                            $a = $rng->attributes();
-                            $years = (int) ($a['Duration'] ?? 1);
-                            if ($years < 1 || $years > 10) continue;
-
-                            $price = (string) ($a['Price'] ?? $a['price'] ?? '');
-                            $cost  = $price !== '' ? (float) $price : null;
-
-                            $pr = DomainTldPrice::firstOrNew([
-                                'domain_tld_id' => $tldRow->id,
-                                'action' => strtolower($action),
-                                'years'  => $years,
-                            ]);
-                            $ex = $pr->exists;
-                            $pr->cost = $cost;
-                            $pr->save();
-                            $ex ? $updated++ : $added++;
+                        // اجمع كل عقد التسعير المحتملة تحت المنتج
+                        $nodes = $xp($prod, './/nc:DurationRange|.//nc:Price');
+                        if (empty($nodes)) {
+                            // fallback بدون namespace
+                            $nodes = $xp($prod, './/DurationRange|.//Price');
                         }
 
+                        $tldCurrency = null;
+
+                        foreach ($nodes as $n) {
+                            [$years, $cost, $curr] = $extractPricing($n);
+                            if ($years < 1 || $years > 10 || $cost === null) continue;
+
+                            $pr = \App\Models\DomainTldPrice::firstOrNew([
+                                'domain_tld_id' => $tldRow->id,
+                                'action'        => strtolower($action),
+                                'years'         => $years,
+                            ]);
+                            $ex = $pr->exists;
+                            $pr->cost = $cost; // نحدّث التكلفة فقط
+                            $pr->save();
+                            $ex ? $updated++ : $added++;
+
+                            if (!$tldCurrency && $curr) $tldCurrency = $curr;
+                        }
+
+                        if ($tldCurrency) $tldRow->currency = $tldCurrency;
                         $tldRow->synced_at = now();
-                        $tldRow->currency  = 'USD';
                         $tldRow->save();
                     }
                 });
@@ -176,37 +224,66 @@ class DomainTldController extends Controller
         return ['added' => $added, 'updated' => $updated, 'tlds' => $tldsTouched, 'message' => $message];
     }
 
-    protected function syncFromEnom(DomainProvider $p): array
+    protected function syncFromEnom(\App\Models\DomainProvider $p): array
     {
-        $tlds = ['com', 'net', 'org', 'shop', 'xyz', 'live', 'news', 'rocks', 'ninja'];
+        // اختر الـTLDs من الكتالوج أو ثبّت قائمة صغيرة كبداية
+        $tlds = \App\Models\DomainTld::where('provider_id', $p->id)
+            ->where('in_catalog', true)
+            ->pluck('tld')->all();
 
+        if (empty($tlds)) {
+            $tlds = ['com', 'net', 'org', 'shop', 'xyz', 'live', 'news', 'rocks', 'ninja'];
+        }
+
+        $client  = app(\App\Services\DomainProviders\EnomClient::class);
         $added = 0;
         $updated = 0;
-        DB::transaction(function () use ($tlds, $p, &$added, &$updated) {
-            foreach ($tlds as $tld) {
-                $row = DomainTld::firstOrCreate(
-                    ['provider_id' => $p->id, 'tld' => $tld],
-                    ['provider' => $p->type, 'currency' => 'USD', 'enabled' => true, 'supports_premium' => false]
-                );
-                $row->synced_at = now();
-                $row->save();
+        $tldsTouched = 0;
+        $msgParts = [];
 
-                foreach (['register', 'renew', 'transfer'] as $act) {
-                    $pr = DomainTldPrice::firstOrNew([
+        foreach ($tlds as $tld) {
+            $tld = ltrim(strtolower($tld), '.');
+
+            $row = \App\Models\DomainTld::firstOrCreate(
+                ['provider_id' => $p->id, 'tld' => $tld],
+                ['provider' => $p->type, 'currency' => 'USD', 'enabled' => true, 'supports_premium' => true, 'in_catalog' => true]
+            );
+            $row->synced_at = now();
+            $row->save();
+            $tldsTouched++;
+
+            foreach (['register', 'renew', 'transfer'] as $act) {
+                $r = $client->getAnyPrice($p, $tld, $act, 1);
+
+                if ($r['ok'] && $r['price'] !== null) {
+                    $pr = \App\Models\DomainTldPrice::firstOrNew([
                         'domain_tld_id' => $row->id,
                         'action' => $act,
-                        'years' => 1
+                        'years' => 1,
                     ]);
                     $ex = $pr->exists;
-                    $pr->cost = $pr->cost ?? null;
+                    $pr->cost = (float)$r['price'];
                     $pr->save();
                     $ex ? $updated++ : $added++;
+
+                    if (!empty($r['currency'])) {
+                        $row->currency = $r['currency'];
+                        $row->save();
+                    }
+                } else {
+                    // خزّن سطر تشخيصي مفيد يظهر لك في الفلاش
+                    $reason = $r['reason'] ?? ($r['source'] ?? 'unknown');
+                    $m = $r['message'] ?? 'no price';
+                    $msgParts[] = "{$tld} {$act}: {$reason}" . ($m ? " ({$m})" : '');
+                    // نترك السعر كما هو (قد يكون موجودًا من مزامنة سابقة)
                 }
             }
-        });
+        }
 
-        return ['added' => $added, 'updated' => $updated, 'tlds' => count($tlds), 'message' => '(Enom fallback)'];
+        return ['added' => $added, 'updated' => $updated, 'tlds' => $tldsTouched, 'message' => implode(' | ', array_slice($msgParts, 0, 8))];
     }
+
+
 
     public function saveCatalog(Request $req)
     {
@@ -261,5 +338,103 @@ class DomainTldController extends Controller
         return redirect()
             ->route('dashboard.domain_tlds.index', array_filter(['provider_id' => $providerId ?: null]))
             ->with('ok', 'تم حفظ الكتالوج وأسعار البيع لهذه الصفحة.');
+    }
+
+    public function applyPricing(Request $req)
+    {
+        $v = $req->validate([
+            'scope'            => ['required', 'in:page,provider'],
+            'provider_id'      => ['nullable', 'integer', 'exists:domain_providers,id'],
+            'only_in_catalog'  => ['sometimes', 'boolean'],
+            'actions'          => ['required', 'array'],
+            'actions.*'        => ['required', 'in:register,renew,transfer'],
+            'mode'             => ['required', 'in:percent,fixed_margin,fixed_final'],
+            'value'            => ['required', 'numeric', 'min:0'],
+            'rounding'         => ['required', 'in:2dp,99'],
+            'overwrite'        => ['sometimes', 'boolean'],
+            'visible_ids'      => ['array'],
+            'years'            => ['nullable', 'integer', 'min:1', 'max:10'],
+        ], [], [
+            'value' => 'قيمة التسعير',
+        ]);
+
+        $scope          = $v['scope'];
+        $providerId     = (int)($v['provider_id'] ?? 0);
+        $onlyInCatalog  = (bool)($v['only_in_catalog'] ?? false);
+        $actions        = $v['actions'];
+        $mode           = $v['mode'];
+        $val            = (float)$v['value'];
+        $rounding       = $v['rounding'];
+        $overwrite      = (bool)($v['overwrite'] ?? false);
+        $years          = (int)($v['years'] ?? 1);
+        $visibleIds     = array_map('intval', (array)($v['visible_ids'] ?? []));
+
+        $q = DomainTldPrice::query()
+            ->where('years', $years)
+            ->whereIn('action', $actions)
+            ->whereHas('tld', function ($q) use ($scope, $providerId, $onlyInCatalog, $visibleIds) {
+                if ($scope === 'page') {
+                    if (!empty($visibleIds)) {
+                        $q->whereIn('id', $visibleIds);
+                    } else {
+                        $q->whereRaw('1=0');
+                    }
+                } else { // provider scope
+                    if ($providerId) $q->where('provider_id', $providerId);
+                    if ($onlyInCatalog) $q->where('in_catalog', true);
+                }
+            });
+
+        $updated = 0;
+        $skippedNoCost = 0;
+        $skippedProtected = 0;
+
+        $roundFn = function (float $n) use ($rounding): float {
+            if ($rounding === '99') {
+                if ($n < 1) return 0.99;
+                return floor($n) + 0.99;
+            }
+            return round($n, 2);
+        };
+
+        $calcFn = function (?float $cost) use ($mode, $val): ?float {
+            if ($cost === null) return null;
+            return match ($mode) {
+                'percent' => $cost * (1 + ($val / 100.0)),
+                'fixed_margin' => $cost + $val,
+                'fixed_final' => $val,
+                default => null,
+            };
+        };
+
+        $q->with(['tld'])->chunkById(500, function ($rows) use (&$updated, &$skippedNoCost, &$skippedProtected, $calcFn, $roundFn, $overwrite) {
+            DB::transaction(function () use ($rows, &$updated, &$skippedNoCost, &$skippedProtected, $calcFn, $roundFn, $overwrite) {
+                foreach ($rows as $pr) {
+                    $cost = $pr->cost;
+                    if ($cost === null) {
+                        $skippedNoCost++;
+                        continue;
+                    }
+                    if (!$overwrite && $pr->sale !== null) {
+                        $skippedProtected++;
+                        continue;
+                    }
+
+                    $sale = $calcFn((float)$cost);
+                    if ($sale === null) {
+                        $skippedNoCost++;
+                        continue;
+                    }
+                    $sale = max(0.0, $roundFn((float)$sale));
+
+                    $pr->sale = $sale;
+                    $pr->save();
+                    $updated++;
+                }
+            });
+        });
+
+        $note = "حدّثنا {$updated} | تخطّينا بدون تكلفة {$skippedNoCost}" . ($overwrite ? '' : " | محمية {$skippedProtected}");
+        return back()->with('ok', "تم تطبيق التسعير تلقائيًا. {$note}");
     }
 }

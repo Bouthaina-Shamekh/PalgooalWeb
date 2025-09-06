@@ -15,10 +15,9 @@ class EnomClient
             : 'https://reseller.enom.com/interface.asp';
     }
 
-    /** مصداقية الاعتماد: eNom يقبل أحد هذه الصيغ */
+    /** اعتماد: ApiToken -> ApiKey -> UID/PW */
     protected function authParams(DomainProvider $p): array
     {
-        // أولوية: ApiToken -> ApiKey -> PW
         if (!empty($p->api_token)) {
             return ['ApiUser' => $p->username, 'ApiToken' => $p->api_token];
         }
@@ -31,172 +30,195 @@ class EnomClient
     protected function baseParams(DomainProvider $p): array
     {
         return array_merge($this->authParams($p), [
-            'ResponseType' => 'XML', // XML أسهل للتحليل هنا
+            'ResponseType' => 'XML',
         ]);
     }
 
-    /** طلب موحّد يعيد ok/xml أو سبب الفشل */
+    /** طلب موحّد */
     protected function request(DomainProvider $p, array $params): array
     {
         $endpoint = $this->endpointFor($p);
         $query    = array_merge($this->baseParams($p), $params);
 
-        $start = microtime(true);
-
-        $resp = \Illuminate\Support\Facades\Http::withHeaders([
+        $t0   = microtime(true);
+        $resp = Http::withHeaders([
             'Accept'     => 'application/xml',
             'User-Agent' => 'PalgoalsBot/1.0',
         ])
             ->withOptions([
                 'curl' => [\CURLOPT_IPRESOLVE => \CURL_IPRESOLVE_V4],
             ])
-            ->connectTimeout(5)     // ⏱️ وقت اتصال
-            ->timeout(12)           // ⏱️ حد أقصى للإجمالي
-            ->retry(1, 200)         // إعادة سريعة لمرة واحدة
+            ->connectTimeout(6)->timeout(15)->retry(1, 200)
             ->get($endpoint, $query);
 
-        $dur = (int) round((microtime(true) - $start) * 1000);
-
-        $status = $resp->status();
-        $ct     = $resp->header('Content-Type');
-        $body   = (string) $resp->body();
+        $ms   = (int)round((microtime(true) - $t0) * 1000);
+        $ct   = (string)$resp->header('Content-Type');
+        $body = (string)$resp->body();
 
         if (!$resp->ok()) {
-            Log::warning('Enom HTTP error', ['status' => $status, 'ct' => $ct, 'ms' => $dur, 'snippet' => mb_substr($body, 0, 300)]);
-            return ['ok' => false, 'reason' => 'http_error', 'http_code' => $status, 'message' => "HTTP $status", 'duration_ms' => $dur];
+            Log::warning('Enom HTTP error', ['status' => $resp->status(), 'ms' => $ms, 'snippet' => mb_substr($body, 0, 300)]);
+            return ['ok' => false, 'reason' => 'http_error', 'http_code' => $resp->status(), 'message' => "HTTP {$resp->status()}"];
         }
-
-        if (!is_string($ct) || stripos($ct, 'xml') === false) {
-            Log::warning('Enom non-XML', ['ct' => $ct, 'ms' => $dur, 'snippet' => mb_substr($body, 0, 300)]);
-            return ['ok' => false, 'reason' => 'non_xml', 'message' => 'الاستجابة ليست XML.', 'duration_ms' => $dur];
+        if (stripos($ct, 'xml') === false) {
+            Log::warning('Enom non-XML', ['ms' => $ms, 'ct' => $ct, 'snippet' => mb_substr($body, 0, 300)]);
+            return ['ok' => false, 'reason' => 'non_xml', 'message' => 'الاستجابة ليست XML.'];
         }
 
         $body = preg_replace('/^\xEF\xBB\xBF/', '', $body);
-        $xml  = @simplexml_load_string($body, 'SimpleXMLElement', \LIBXML_NOCDATA | \LIBXML_NOWARNING | \LIBXML_NOERROR);
+        $xml  = @simplexml_load_string($body, 'SimpleXMLElement', \LIBXML_NOCDATA | \LIBXML_NOERROR | \LIBXML_NOWARNING);
         if ($xml === false) {
-            Log::warning('Enom XML parse failed', ['ms' => $dur, 'snippet' => mb_substr($body, 0, 300)]);
-            return ['ok' => false, 'reason' => 'xml_parse_error', 'message' => 'تعذر تحليل XML.', 'duration_ms' => $dur];
+            Log::warning('Enom XML parse failed', ['ms' => $ms, 'snippet' => mb_substr($body, 0, 300)]);
+            return ['ok' => false, 'reason' => 'xml_parse_error', 'message' => 'تعذر تحليل XML.'];
         }
 
-        $errCount = (int)($xml->ErrCount ?? 0);
-        if ($errCount > 0) {
+        if ((int)($xml->ErrCount ?? 0) > 0) {
             $errors = [];
-            if (isset($xml->errors)) foreach ($xml->errors->children() as $err) {
-                $errors[] = trim((string)$err);
-            }
+            if (isset($xml->errors)) foreach ($xml->errors->children() as $e) $errors[] = trim((string)$e);
             if (isset($xml->responses->response->ResponseString)) $errors[] = trim((string)$xml->responses->response->ResponseString);
             $msg = $errors ? implode(' | ', $errors) : 'Unknown eNom API error';
-            return ['ok' => false, 'reason' => 'provider_error', 'message' => $msg, 'xml' => $xml, 'duration_ms' => $dur];
+            return ['ok' => false, 'reason' => 'provider_error', 'message' => $msg, 'xml' => $xml];
         }
 
-        $rrpCode = isset($xml->RRPCode) ? (int)$xml->RRPCode : null;
-        $rrpText = isset($xml->RRPText) ? (string)$xml->RRPText : null;
-
-        return ['ok' => true, 'xml' => $xml, 'rrp_code' => $rrpCode, 'rrp_text' => $rrpText, 'duration_ms' => $dur];
+        return ['ok' => true, 'xml' => $xml];
     }
 
-    /** جلب الرصيد (يوحّد الإخراج: ok/message/balance/currency) */
+    /** رصيد */
     public function getBalance(DomainProvider $p): array
     {
         try {
             $r = $this->request($p, ['command' => 'GetBalance']);
-            if (!$r['ok']) {
-                return array_merge($r, ['balance' => null, 'currency' => null]);
-            }
+            if (!$r['ok']) return array_merge($r, ['balance' => null, 'currency' => null]);
 
-            /** @var \SimpleXMLElement $xml */
             $xml = $r['xml'];
-
-            $balance  = null;
-            $hold     = null;
+            $balance = null;
             $currency = null;
 
-            // شكل 1: <GetBalance>...</GetBalance>
             if (isset($xml->GetBalance)) {
                 $gb = $xml->GetBalance;
-
-                // الترتيب: AvailableBalance ثم AccountBalance ثم Balance
                 foreach (['AvailableBalance', 'AccountBalance', 'Balance'] as $k) {
-                    if (isset($gb->{$k}) && strlen((string)$gb->{$k})) {
+                    if (isset($gb->{$k}) && (string)$gb->{$k} !== '') {
                         $balance = (float)$gb->{$k};
                         break;
                     }
                 }
-
-                if (isset($gb->HoldBalance) && strlen((string)$gb->HoldBalance)) {
-                    $hold = (float)$gb->HoldBalance;
-                }
-
                 foreach (['Currency', 'currency'] as $k) {
-                    if (isset($gb->{$k}) && strlen((string)$gb->{$k})) {
+                    if (isset($gb->{$k}) && (string)$gb->{$k} !== '') {
                         $currency = (string)$gb->{$k};
                         break;
                     }
                 }
-            }
-
-            // شكل 2: <interface-response><attributes>...</attributes></interface-response>
-            if ($balance === null && isset($xml->attributes)) {
-                $attrs = $xml->attributes;
-
-                foreach (['balance', 'availablebalance', 'accountbalance', 'Balance', 'AvailableBalance', 'AccountBalance'] as $k) {
-                    if (isset($attrs->{$k}) && strlen((string)$attrs->{$k})) {
-                        $balance = (float)$attrs->{$k};
-                        break;
-                    }
-                }
-
-                if ($hold === null) {
-                    foreach (['holdbalance', 'HoldBalance'] as $k) {
-                        if (isset($attrs->{$k}) && strlen((string)$attrs->{$k})) {
-                            $hold = (float)$attrs->{$k};
-                            break;
-                        }
-                    }
-                }
-
-                if ($currency === null) {
-                    foreach (['currency', 'Currency'] as $k) {
-                        if (isset($attrs->{$k}) && strlen((string)$attrs->{$k})) {
-                            $currency = (string)$attrs->{$k};
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // شكل 3 (ملاذ أخير): التقاط بالأregex من الـ XML كاملًا
-            if ($balance === null) {
+            } else {
                 $s = $xml->asXML() ?: '';
-                if (preg_match('/<(?:AvailableBalance|AccountBalance|balance)>([0-9]+(?:\.[0-9]+)?)<\/[^>]+>/', $s, $m)) {
-                    $balance = (float) $m[1];
-                }
-                if ($currency === null && preg_match('/<currency>([A-Z]{3})<\/currency>/i', $s, $m2)) {
-                    $currency = strtoupper($m2[1]);
-                }
+                if (preg_match('/<(?:AvailableBalance|AccountBalance|balance)>([0-9]+(?:\.[0-9]+)?)</i', $s, $m)) $balance = (float)$m[1];
+                if (preg_match('/<currency>([A-Z]{3})</i', $s, $m2)) $currency = strtoupper($m2[1]);
             }
 
-            return [
-                'ok'       => true,
-                'reason'   => 'ok',
-                'message'  => 'تم الاتصال بنجاح.',
-                'balance'  => $balance,   // ← الكنترولر والواجهة يعتمدون هذا
-                'currency' => $currency,
-                'meta'     => [
-                    'hold'     => $hold,
-                    'rrp_code' => $r['rrp_code'] ?? null,
-                    'rrp_text' => $r['rrp_text'] ?? null,
-                ],
-            ];
+            return ['ok' => true, 'reason' => 'ok', 'message' => 'تم الاتصال بنجاح.', 'balance' => $balance, 'currency' => $currency];
         } catch (\Throwable $e) {
-            logger()->error('Enom GetBalance exception', ['error' => $e->getMessage()]);
-            return [
-                'ok'       => false,
-                'reason'   => 'exception',
-                'message'  => 'استثناء: ' . $e->getMessage(),
-                'balance'  => null,
-                'currency' => null,
-            ];
+            return ['ok' => false, 'reason' => 'exception', 'message' => $e->getMessage(), 'balance' => null, 'currency' => null];
         }
+    }
+
+    /** خرائط أنواع المنتج */
+    protected function productType(string $action): ?int
+    {
+        $map = ['register' => 10, 'renew' => 16, 'transfer' => 19];
+        $k = strtolower($action);
+        return $map[$k] ?? null;
+    }
+
+    /** Parser موحّد لـ <productprice> */
+    protected function parsePriceXml(\SimpleXMLElement $xml): array
+    {
+        $price = null;
+        $enabled = null;
+        $currency = null;
+
+        if (isset($xml->productprice)) {
+            if (isset($xml->productprice->price) && (string)$xml->productprice->price !== '') {
+                $price = (float)$xml->productprice->price;
+            }
+            if (isset($xml->productprice->productenabled)) {
+                $s = strtolower((string)$xml->productprice->productenabled);
+                $enabled = in_array($s, ['true', '1', 'yes'], true);
+            }
+            if (isset($xml->productprice->currency) && (string)$xml->productprice->currency !== '') {
+                $currency = (string)$xml->productprice->currency;
+            }
+        } else {
+            $s = $xml->asXML() ?: '';
+            if (preg_match('/<price>([0-9]+(?:\.[0-9]+)?)<\/price>/i', $s, $m)) $price = (float)$m[1];
+            if (preg_match('/<productenabled>([^<]+)<\/productenabled>/i', $s, $m2)) $enabled = in_array(strtolower(trim($m2[1])), ['true', '1', 'yes'], true);
+            if (preg_match('/<currency>([A-Za-z]{3})<\/currency>/i', $s, $m3)) $currency = strtoupper($m3[1]);
+        }
+
+        return [$price, $enabled, $currency];
+    }
+
+    /** PE_GetProductPrice */
+    public function getProductPrice(DomainProvider $p, string $tld, string $action, int $years = 1): array
+    {
+        $pt = $this->productType($action);
+        if (!$pt) return ['ok' => false, 'message' => 'Unsupported action', 'price' => null, 'enabled' => null];
+
+        $r = $this->request($p, [
+            'command'     => 'PE_GetProductPrice',
+            'ProductType' => $pt,
+            'tld'         => ltrim(strtolower($tld), '.'),
+            'Years'       => $years,
+        ]);
+        if (!$r['ok']) return array_merge($r, ['price' => null, 'enabled' => null, 'currency' => null, 'source' => 'product']);
+
+        [$price, $enabled, $currency] = $this->parsePriceXml($r['xml']);
+        return ['ok' => ($price !== null), 'price' => $price, 'enabled' => $enabled, 'currency' => $currency, 'source' => 'product', 'raw' => $r['xml']];
+    }
+
+    /** PE_GetRetailPrice (fallback 1) */
+    public function getRetailPrice(DomainProvider $p, string $tld, string $action, int $years = 1): array
+    {
+        $pt = $this->productType($action);
+        if (!$pt) return ['ok' => false, 'message' => 'Unsupported action', 'price' => null, 'enabled' => null];
+
+        $r = $this->request($p, [
+            'command'     => 'PE_GetRetailPrice',
+            'ProductType' => $pt,
+            'tld'         => ltrim(strtolower($tld), '.'),
+            'Years'       => $years,
+        ]);
+        if (!$r['ok']) return array_merge($r, ['price' => null, 'enabled' => null, 'currency' => null, 'source' => 'retail']);
+
+        [$price, $enabled, $currency] = $this->parsePriceXml($r['xml']);
+        return ['ok' => ($price !== null), 'price' => $price, 'enabled' => $enabled, 'currency' => $currency, 'source' => 'retail', 'raw' => $r['xml']];
+    }
+
+    /** PE_GetResellerPrice (fallback 2) */
+    public function getResellerPrice(DomainProvider $p, string $tld, string $action, int $years = 1): array
+    {
+        $pt = $this->productType($action);
+        if (!$pt) return ['ok' => false, 'message' => 'Unsupported action', 'price' => null, 'enabled' => null];
+
+        $r = $this->request($p, [
+            'command'     => 'PE_GetResellerPrice',
+            'ProductType' => $pt,
+            'tld'         => ltrim(strtolower($tld), '.'),
+            'Years'       => $years,
+        ]);
+        if (!$r['ok']) return array_merge($r, ['price' => null, 'enabled' => null, 'currency' => null, 'source' => 'reseller']);
+
+        [$price, $enabled, $currency] = $this->parsePriceXml($r['xml']);
+        return ['ok' => ($price !== null), 'price' => $price, 'enabled' => $enabled, 'currency' => $currency, 'source' => 'reseller', 'raw' => $r['xml']];
+    }
+
+    /** واجهة موحّدة بمحاولات متعددة */
+    public function getAnyPrice(DomainProvider $p, string $tld, string $action, int $years = 1): array
+    {
+        $first = $this->getProductPrice($p, $tld, $action, $years);
+        if ($first['ok'] && $first['price'] !== null) return $first;
+
+        $second = $this->getRetailPrice($p, $tld, $action, $years);
+        if ($second['ok'] && $second['price'] !== null) return $second;
+
+        $third = $this->getResellerPrice($p, $tld, $action, $years);
+        return $third; // قد تكون ok=false أو price=null؛ سنسجّل السبب في الكنترولر
     }
 }

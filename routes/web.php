@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Frontend\TemplateController as FrontTemplateController;
 use App\Http\Controllers\Frontend\TemplateReviewController;
 // use App\Http\Controllers\Dashboard\Management\DomainTldController; // نقل الراوت إلى dashboard.php
+use App\Http\Controllers\Dashboard\Management\DomainTldController; // needed for apply pricing route
 
 // Route::get('/', function () {
 //     return view('tamplate.home');
@@ -65,6 +66,11 @@ Route::middleware(['setLocale'])->group(function () {
     Route::get('/api/domains/check', [DomainSearchController::class, 'check'])
         ->middleware(['throttle:30,1']) // معدل بسيط
         ->name('domains.check');
+
+    // تسعير تلقائي لأسعار TLD داخل لوحة التحكم (يحافظ على نفس اسم النطاق المطلوب)
+    Route::post('/admin/domain-tlds/apply-pricing', [DomainTldController::class, 'applyPricing'])
+        ->middleware('auth')
+        ->name('dashboard.domain_tlds.apply-pricing');
 
 
 
