@@ -80,7 +80,8 @@
                         <option value="">— اختر —</option>
                         @foreach ($providers as $p)
                             <option value="{{ $p->id }}" @selected($providerId == $p->id)>{{ $p->name }}
-                                ({{ $p->type }})</option>
+                                ({{ $p->type }})
+                            </option>
                         @endforeach
                     </select>
                     <label class="inline-flex items-center gap-2 mt-2 text-xs">
@@ -142,8 +143,15 @@
             @endforeach
         </form>
 
+        {{-- حذف جماعي (اختياري) --}}
+        <form id="bulkDeleteForm" action="{{ route('dashboard.domain_tlds.bulk-destroy') }}" method="POST"
+            class="mb-3" onsubmit="return confirm('هل تريد حذف العناصر المحددة؟');">
+            @csrf
+            <button class="btn btn-outline-danger btn-sm" type="submit">حذف المحدد</button>
+        </form>
+
         {{-- حفظ الكتالوج + أسعار البيع (POST) للصفحة الحالية --}}
-        <form action="{{ route('dashboard.domain_tlds.save-all') }}" method="post" class="mt-4">
+        <form action="{{ route('dashboard.domain_tlds.save-all') }}" method="post" class="mt-2">
             @csrf
             {{-- نمرّر المزوّد الحالي كي نعود لنفس الفلتر --}}
             <input type="hidden" name="provider_id" value="{{ $providerId }}">
@@ -156,9 +164,15 @@
             </div>
 
             <div class="table-responsive">
-                <table class="table align-middle">
+                <table class="table align-middle" id="tldsTable">
                     <thead>
                         <tr>
+                            <th>
+                                <label class="inline-flex items-center gap-1 text-xs">
+                                    <input type="checkbox" id="selectAllRows">
+                                    تحديد
+                                </label>
+                            </th>
                             <th>كتالوج</th>
                             <th>TLD</th>
                             <th>عملة</th>
@@ -169,6 +183,7 @@
                             <th>Renew 1y (Sale)</th>
                             <th>Transfer 1y (Cost)</th>
                             <th>Transfer 1y (Sale)</th>
+                            <th>حذف</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -178,7 +193,10 @@
                                 $ren = $row->prices->firstWhere('action', 'renew');
                                 $tra = $row->prices->firstWhere('action', 'transfer');
                             @endphp
-                            <tr>
+                            <tr data-row-id="{{ $row->id }}">
+                                <td>
+                                    <input type="checkbox" class="row-check" value="{{ $row->id }}">
+                                </td>
                                 <td>
                                     <input type="checkbox" class="catalog-checkbox"
                                         name="catalog[{{ $row->id }}]" value="1"
@@ -230,6 +248,15 @@
                                         —
                                     @endif
                                 </td>
+                                <td>
+                                    <form action="{{ route('dashboard.domain_tlds.destroy', $row) }}" method="POST"
+                                        style="display:inline"
+                                        onsubmit="return confirm('حذف .{{ $row->tld }} وجميع أسعاره؟');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-danger">حذف</button>
+                                    </form>
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -254,11 +281,36 @@
 
     {{-- أدوات بسيطة للواجهة --}}
     <script>
+        // Catalog select all
         document.getElementById('checkAll')?.addEventListener('click', () => {
             document.querySelectorAll('.catalog-checkbox').forEach(cb => cb.checked = true);
         });
         document.getElementById('uncheckAll')?.addEventListener('click', () => {
             document.querySelectorAll('.catalog-checkbox').forEach(cb => cb.checked = false);
+        });
+
+        // Bulk row selection
+        const selectAllRows = document.getElementById('selectAllRows');
+        selectAllRows?.addEventListener('change', () => {
+            document.querySelectorAll('.row-check').forEach(cb => cb.checked = selectAllRows.checked);
+        });
+
+        // Inject selected IDs into bulk delete form before submit
+        const bulkForm = document.getElementById('bulkDeleteForm');
+        bulkForm?.addEventListener('submit', e => {
+            // remove previous hidden delete_ids
+            bulkForm.querySelectorAll('input[name="delete_ids[]"]').forEach(n => n.remove());
+            document.querySelectorAll('.row-check:checked').forEach(cb => {
+                const h = document.createElement('input');
+                h.type = 'hidden';
+                h.name = 'delete_ids[]';
+                h.value = cb.value;
+                bulkForm.appendChild(h);
+            });
+            if (!bulkForm.querySelectorAll('input[name="delete_ids[]"]').length) {
+                e.preventDefault();
+                alert('اختر صفوفًا للحذف أولاً.');
+            }
         });
     </script>
 </x-dashboard-layout>

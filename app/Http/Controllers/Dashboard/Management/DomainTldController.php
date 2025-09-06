@@ -437,4 +437,27 @@ class DomainTldController extends Controller
         $note = "حدّثنا {$updated} | تخطّينا بدون تكلفة {$skippedNoCost}" . ($overwrite ? '' : " | محمية {$skippedProtected}");
         return back()->with('ok', "تم تطبيق التسعير تلقائيًا. {$note}");
     }
+
+    public function destroy(DomainTld $domainTld)
+    {
+        DB::transaction(function () use ($domainTld) {
+            $domainTld->prices()->delete();
+            $domainTld->delete();
+        });
+        return back()->with('ok', 'تم حذف الـ TLD بنجاح.');
+    }
+
+    public function bulkDestroy(Request $req)
+    {
+        $data = $req->validate([
+            'delete_ids'   => ['required', 'array'],
+            'delete_ids.*' => ['integer', 'exists:domain_tlds,id'],
+        ]);
+        $ids = $data['delete_ids'];
+        DB::transaction(function () use ($ids) {
+            DomainTldPrice::whereIn('domain_tld_id', $ids)->delete();
+            DomainTld::whereIn('id', $ids)->delete();
+        });
+        return back()->with('ok', 'تم حذف العناصر المحددة.');
+    }
 }

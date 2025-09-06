@@ -144,4 +144,7 @@ Route::group([
     Route::post('/domain-tlds/update-sale', [DomainTldController::class, 'updateSale'])->name('domain_tlds.update-sale');
     Route::post('/domain-tlds/save-catalog', [DomainTldController::class, 'saveCatalog'])->name('domain_tlds.save-catalog');
     Route::post('/domain-tlds/save-all', [DomainTldController::class, 'saveAll'])->name('domain_tlds.save-all');
+    Route::post('/domain-tlds/apply-pricing', [DomainTldController::class, 'applyPricing'])->name('domain_tlds.apply-pricing');
+    Route::delete('/domain-tlds/{domainTld}', [DomainTldController::class, 'destroy'])->name('domain_tlds.destroy');
+    Route::post('/domain-tlds/bulk-destroy', [DomainTldController::class, 'bulkDestroy'])->name('domain_tlds.bulk-destroy');
 });
