@@ -42,7 +42,7 @@
                     </select>
                 </div>
                 <button
-                    class="inline-flex items-center justify-center rounded-md bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">تصفية</button>
+                    class="inline-flex items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">تصفية</button>
             </form>
 
             {{-- مزامنة من المزوّد (POST) --}}
@@ -68,7 +68,7 @@
                             في الكتالوج فقط.</p>
                     </div>
                     <button
-                        class="inline-flex items-center justify-center rounded-md bg-indigo-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">سحب
+                        class="inline-flex items-center justify-center rounded-md bg-indigo-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">سحب
                         الأسعار</button>
                 </div>
             </form>
@@ -166,7 +166,7 @@
                     </div>
                     <div class="col-span-12 sm:col-span-2 flex items-end">
                         <button
-                            class="w-full rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1">تطبيق
+                            class="w-full rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1">تطبيق
                             التسعير</button>
                     </div>
                 </div>
@@ -292,7 +292,7 @@
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit"
-                                                class="rounded-md bg-red-600 px-2.5 py-1 text-[11px] font-medium text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1">حذف</button>
+                                                class="rounded-md bg-red-500 px-2.5 py-1 text-[11px] font-medium text-white shadow-sm hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1">حذف</button>
                                         </form>
                                     </td>
                                 </tr>
