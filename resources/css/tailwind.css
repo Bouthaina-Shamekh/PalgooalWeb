@@ -1,0 +1,67 @@
+@import "tailwindcss";
+/* طبقاتك المخصصة (إن احتجت) */
+@layer components {
+    .container-xx {
+        @apply max-w-7xl mx-auto px-4;
+    }
+}
+
+
+@theme {
+    --font-Almarai: "Almarai";
+    --font-Cairo: "Cairo";
+    --color-primary: #240B36;
+    --color-secondary: #AE1028;
+    --color-tertiary: #5F4A72;
+    --color-background: #F9F6FB;
+    --color-hazem: #000000;
+    --text-title-h2: 1.875rem;
+    --text-title-h3: 1.5rem;
+    --text-suptitle: 1.125rem;
+
+}
+
+/* Tailwind component class */
+.testimonial-card {
+    @apply relative bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out p-8 flex flex-col items-center w-full max-w-md h-full min-h-[300px];
+}
+
+.blog-card {
+    @apply bg-white rounded-2xl shadow-md hover:shadow-lg overflow-hidden max-w-sm w-full flex flex-col h-full transition-transform duration-300 hover:-translate-y-2 border border-primary/10 min-h-[480px];
+}
+
+.blog-img {
+    @apply w-full h-48 object-cover group-hover:opacity-90 transition-transform duration-300;
+}
+
+.blog-content {
+    @apply p-5 flex-1 flex flex-col;
+}
+
+.blog-title {
+    @apply text-lg font-extrabold text-primary mb-2 group-hover:text-secondary transition-colors;
+}
+
+.blog-meta {
+    @apply flex items-center gap-2 mt-auto;
+}
+
+.blog-tag {
+    @apply absolute top-3 left-3 bg-primary/90 text-white text-xs px-3 py-1 rounded-full font-bold;
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+.btn-primary {
+    @apply relative inline-flex items-center justify-center px-10 py-3 overflow-hidden font-extrabold text-lg text-white rounded-lg shadow-lg bg-primary transition-all duration-300 hover:bg-primary/80 focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2;
+}
+
+.btn-outline {
+    @apply inline-flex items-center gap-2 px-6 py-2 rounded-lg border border-primary text-primary dark:text-yellow-400 dark:border-yellow-400 font-bold hover:bg-primary hover:text-white dark:hover:bg-yellow-400 dark:hover:text-black transition;
+}
+
+.badge {
+    @apply inline-block px-4 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary dark:bg-yellow-400/10 dark:text-yellow-400;
+}

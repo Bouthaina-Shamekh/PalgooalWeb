@@ -38,7 +38,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Cairo:wght@200..1000&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('assets/tamplate/css/app.css') }}">
+    <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     {!! view('tamplate.layouts.schema') !!}
 </head>
