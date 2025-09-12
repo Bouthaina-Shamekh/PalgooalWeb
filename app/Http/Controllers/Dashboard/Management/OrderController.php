@@ -18,7 +18,7 @@ class OrderController extends Controller
         $sort = $request->get('sort', 'created_at');
         $direction = $request->get('direction', 'desc');
 
-        $query = Order::with('client');
+        $query = Order::with('client'); // إن احتجت الدومين في الجدول، أضف 'items'
         if ($q) {
             $query->where(function ($qr) use ($q) {
                 $qr->where('order_number', 'like', "%$q%")
@@ -31,6 +31,7 @@ class OrderController extends Controller
         }
         if ($status) $query->where('status', $status);
         if ($type) $query->where('type', $type);
+
         // safe sort whitelist
         $allowed = ['created_at', 'order_number', 'status'];
         if (!in_array($sort, $allowed)) $sort = 'created_at';
@@ -44,19 +45,21 @@ class OrderController extends Controller
     public function bulk(Request $request)
     {
         $data = $request->validate([
-            'ids' => 'required|array|min:1',
+            'ids'    => 'required|array|min:1',
             'action' => 'required|string',
         ]);
+
         $ids = $data['ids'];
         $action = $data['action'];
         $affected = 0;
+
         if ($action === 'delete') {
-            $affected = Order::whereIn('id', $ids)->delete();
+            $affected = Order::whereIn('id', $ids)->delete(); // سيحذف البنود تباعًا بسبب FK cascade
         } elseif (in_array($action, ['pending', 'active', 'cancelled', 'fraud'])) {
             $affected = Order::whereIn('id', $ids)->update(['status' => $action]);
-            // for activated orders, process activation per order
+
             if ($action === 'active') {
-                $orders = Order::whereIn('id', $ids)->get();
+                $orders = Order::with(['invoices.items', 'items'])->whereIn('id', $ids)->get();
                 foreach ($orders as $order) {
                     try {
                         $this->processActivation($order);
@@ -66,7 +69,26 @@ class OrderController extends Controller
                 }
             }
         }
+
         return redirect()->back()->with('ok', "تم تنفيذ الإجراء على {$affected} طلب(ات)");
+    }
+
+    /**
+     * استخرج بيانات الدومين من بنود الطلب (أول بند يملك دومين)
+     */
+    protected function extractDomainData(Order $order): array
+    {
+        // إن لم تكن محمّلة، لا بأس سيتم جلبها كسولياً
+        $item = $order->items()
+            ->whereNotNull('domain')
+            ->where('domain', '<>', '')
+            ->orderBy('id')
+            ->first();
+
+        return [
+            'domain_name'   => $item->domain ?? null,
+            'domain_option' => $item->item_option ?? null,
+        ];
     }
 
     /**
@@ -82,7 +104,7 @@ class OrderController extends Controller
             }
         }
 
-        // إنشاء اشتراك جديد للعميل بناءً على الطلب
+        // حدد إن كان الطلب يخص اشتراكًا (من أول عنصر فاتورة من نوع subscription)
         $templateId = null;
         if ($order->invoices && $order->invoices->count()) {
             $firstInvoice = $order->invoices->first();
@@ -106,7 +128,7 @@ class OrderController extends Controller
         $startsAt = now();
         $endsAt = $duration === 'year' ? $startsAt->copy()->addYear() : $startsAt->copy()->addMonth();
 
-        // أحصل على server_id من الخطة إن وُجد، وإلا استخدم قيمة موجودة في الطلب إن كانت متوفرة
+        // server_id من الخطة أو من الطلب (إن وُجد في الطلب)
         $serverId = null;
         if (isset($template->plan) && isset($template->plan->server_id)) {
             $serverId = $template->plan->server_id;
@@ -114,26 +136,36 @@ class OrderController extends Controller
             $serverId = $order->server_id;
         }
 
-        // تحقق إن كان هناك اشتراك موجود لنفس العميل والخطة
+        // استخرج بيانات الدومين من البنود
+        $domain = $this->extractDomainData($order);
+        $domainName   = $domain['domain_name'];
+        $domainOption = $domain['domain_option'];
+
+        // تحقق من وجود اشتراك مسبق لنفس العميل والخطة وربما نفس الدومين
         $existingSubQuery = \App\Models\Subscription::where('client_id', $order->client_id)
             ->where('plan_id', $template->plan_id);
-        if (!empty($order->domain_name)) {
-            $existingSubQuery->where('domain_name', $order->domain_name);
+
+        if (!empty($domainName)) {
+            $existingSubQuery->where('domain_name', $domainName);
         }
+
         $existingSub = $existingSubQuery->first();
 
         // مولّد اسم مستخدم فريد
-        $generateUsername = function () use ($order) {
+        $generateUsername = function () use ($order, $domainName) {
             $username = null;
-            if (!empty($order->domain_name)) {
-                $base = str_replace('.', '', $order->domain_name);
+
+            if (!empty($domainName)) {
+                $base = str_replace('.', '', $domainName);
                 $base = strtolower(preg_replace('/[^a-z0-9]/i', '', $base));
                 $base = substr($base, 0, 12);
                 $username = $base;
             }
+
             if (empty($username) && isset($order->extra) && is_array($order->extra) && !empty($order->extra['username'] ?? null)) {
                 $username = preg_replace('/[^a-z0-9]/i', '', $order->extra['username']);
             }
+
             if (empty($username)) {
                 $client = \App\Models\Client::find($order->client_id);
                 $base = null;
@@ -148,6 +180,7 @@ class OrderController extends Controller
                 $base = substr($base, 0, 12);
                 $username = $base;
             }
+
             $candidate = $username;
             $suffix = 0;
             while (\App\Models\Subscription::where('username', $candidate)->exists()) {
@@ -160,11 +193,11 @@ class OrderController extends Controller
 
         if ($existingSub) {
             $updateData = [
-                'status' => 'active',
-                'starts_at' => $startsAt,
-                'ends_at' => $endsAt,
-                'domain_option' => $order->domain_option,
-                'domain_name' => $order->domain_name,
+                'status'        => 'active',
+                'starts_at'     => $startsAt,
+                'ends_at'       => $endsAt,
+                'domain_option' => $domainOption,
+                'domain_name'   => $domainName,
             ];
             if (empty($existingSub->server_id) && $serverId) {
                 $updateData['server_id'] = $serverId;
@@ -176,24 +209,22 @@ class OrderController extends Controller
             $subscriptionModel = $existingSub;
         } else {
             $subscriptionModel = \App\Models\Subscription::create([
-                'client_id' => $order->client_id,
-                'plan_id' => $template->plan_id,
-                'status' => 'active',
-                'price' => $template->price,
-                'starts_at' => $startsAt,
-                'ends_at' => $endsAt,
-                'server_id' => $serverId,
-                'username' => $generateUsername(),
-                'domain_option' => $order->domain_option,
-                'domain_name' => $order->domain_name,
+                'client_id'     => $order->client_id,
+                'plan_id'       => $template->plan_id,
+                'status'        => 'active',
+                'price'         => $template->price,
+                'starts_at'     => $startsAt,
+                'ends_at'       => $endsAt,
+                'server_id'     => $serverId,
+                'username'      => $generateUsername(),
+                'domain_option' => $domainOption,
+                'domain_name'   => $domainName,
             ]);
         }
 
-        // بعد إنشاء/تحديث الاشتراك، حاول مزامنته مع مزود السيرفر تلقائياً
-        $syncMessage = null;
+        // مزامنة الاشتراك مع مزوّد السيرفر
         try {
             if (!empty($subscriptionModel) && $subscriptionModel instanceof \App\Models\Subscription) {
-                // dispatch background job to sync subscription
                 \App\Jobs\SyncSubscriptionToProvider::dispatch($subscriptionModel->id);
             }
         } catch (\Exception $e) {
@@ -203,24 +234,24 @@ class OrderController extends Controller
 
     public function show($id)
     {
-        $order = \App\Models\Order::with('client')->findOrFail($id);
+        $order = \App\Models\Order::with(['client', 'items'])->findOrFail($id);
         return view('dashboard.management.orders.show', compact('order'));
     }
 
-
     // تغيير حالة الطلب
-    public function updateStatus($id, \Illuminate\Http\Request $request)
+    public function updateStatus($id, Request $request)
     {
         $order = \App\Models\Order::findOrFail($id);
         $request->validate([
             'status' => 'required|in:pending,active,cancelled,fraud',
         ]);
+
         $order->status = $request->status;
         $order->save();
 
-
-        // عند تفعيل الطلب، نفّذ منطق المعالجة المجمّع (موجود في processActivation)
         if ($order->status === 'active') {
+            // حمّل العلاقات اللازمة لتقليل الاستعلامات داخل processActivation
+            $order->loadMissing(['invoices.items', 'items']);
             $this->processActivation($order);
         }
 

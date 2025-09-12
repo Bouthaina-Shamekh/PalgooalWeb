@@ -6,25 +6,27 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('client_id')->constrained()->cascadeOnDelete();
+
+            // عميل اختياري، ولو انحذف العميل نخلي القيمة NULL للحفاظ على السجل المحاسبي
+            $table->foreignId('client_id')->nullable()->constrained()->nullOnDelete();
+
             $table->string('order_number')->unique();
             $table->enum('status', ['pending', 'active', 'cancelled', 'fraud'])->default('pending');
-            $table->string('type')->nullable(); // نوع الطلب: اشتراك، دومين، خدمة...
+            $table->string('type')->nullable();   // نوع الطلب: domain / hosting / template / ...
             $table->text('notes')->nullable();
+
             $table->timestamps();
+
+            // فهارس مفيدة
+            $table->index(['client_id', 'status']);
+            $table->index('type');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('orders');

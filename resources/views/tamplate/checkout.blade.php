@@ -1,11 +1,12 @@
 @php
     use Carbon\Carbon;
+    // safe access: template may be null when rendering cart-based checkout
     $shortDesc = Str::limit(strip_tags($translation?->description ?? ''), 160);
-    $basePrice = (float) ($template->price ?? 0);
-    $discRaw = $template->discount_price;
+    $basePrice = (float) ($template?->price ?? 0);
+    $discRaw = $template?->discount_price ?? null;
     $discPrice = is_null($discRaw) ? null : (float) $discRaw;
     $hasDiscount = !is_null($discPrice) && $discPrice > 0 && $discPrice < $basePrice;
-    $endsAt = $hasDiscount && !empty($template->discount_ends_at) ? Carbon::parse($template->discount_ends_at) : null;
+    $endsAt = $hasDiscount && !empty($template?->discount_ends_at) ? Carbon::parse($template->discount_ends_at) : null;
     $discountExpired = false;
     if ($hasDiscount && $endsAt) {
         $discountExpired = $endsAt->isPast();
@@ -73,7 +74,7 @@
 
                 <!-- Register -->
                 <form id="tab-register" class="space-y-4" role="tabpanel" method="POST"
-                    action="{{ route('checkout.process', $template_id) }}">
+                    action="{{ $template_id ? route('checkout.process', $template_id) : route('checkout.cart.process') }}">
                     @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example"
@@ -103,7 +104,7 @@
 
                 <!-- Transfer -->
                 <form id="tab-transfer" class="space-y-4 hidden" role="tabpanel" method="POST"
-                    action="{{ route('checkout.process', $template_id) }}">
+                    action="{{ $template_id ? route('checkout.process', $template_id) : route('checkout.cart.process') }}">
                     @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example.com"
@@ -119,7 +120,7 @@
 
                 <!-- Own Domain -->
                 <form id="tab-owndomain" class="space-y-4 hidden" role="tabpanel" method="POST"
-                    action="{{ route('checkout.process', $template_id) }}">
+                    action="{{ $template_id ? route('checkout.process', $template_id) : route('checkout.cart.process') }}">
                     @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example.com"
@@ -134,7 +135,7 @@
 
                 <!-- Subdomain (مجاني) -->
                 <form id="tab-subdomain" class="space-y-4 hidden" role="tabpanel" method="POST"
-                    action="{{ route('checkout.process', $template_id) }}">
+                    action="{{ $template_id ? route('checkout.process', $template_id) : route('checkout.domains.process') }}">
                     @csrf
                     <div class="flex gap-2 items-stretch">
                         <input aria-label="اسم الساب-دومين" placeholder="myshop"
@@ -439,10 +440,11 @@
                 </div>
 
                 <form id="checkoutForm" method="POST"
-                    action="{{ route('checkout.process', ['template_id' => $template_id]) }}">
+                    action="{{ $template_id ? route('checkout.process', ['template_id' => $template_id]) : route('checkout.cart.process') }}">
                     @csrf
                     <input type="hidden" name="domain" id="orderDomainInput" value="">
                     <input type="hidden" name="total" id="orderTotalInput" value="">
+                    <input type="hidden" name="total_cents" id="orderTotalCents" value="">
                     <!-- حقول التسجيل ستنسخ هنا عند اختيار إنشاء حساب جديد -->
                     <div id="registerFieldsBox"></div>
                     <div class="flex items-center justify-end gap-3 mt-6">
@@ -538,391 +540,238 @@
 
     <!-- ===== منطق التبويبات والتنقّل ===== -->
     <script>
-        // منطق جديد: أزرار المتابعة فقط تنقل للخطوة الثانية وتخزن بيانات الدومين مؤقتاً
-        document.addEventListener('DOMContentLoaded', function() {
-            // متغيرات لتخزين بيانات الدومين المختار مؤقتاً
-            let selectedDomainOption = '';
-            let selectedDomain = '';
+        /* ========================== سلة موحّدة + أدوات عامّة ========================== */
+        const UNIFIED_CART_KEY = 'palgoals_cart';
+        const LEGACY_CART_KEY = 'palgoals_cart_domains'; // استيراد مرّة واحدة عند أول قراءة
 
-            function updateDomainFields() {
-                const finalForm = document.getElementById('checkoutForm');
-                if (!finalForm) return;
-                // domain_option
-                let inputOption = finalForm.querySelector('input[name="domain_option"]');
-                if (!inputOption) {
-                    inputOption = document.createElement('input');
-                    inputOption.type = 'hidden';
-                    inputOption.name = 'domain_option';
-                    finalForm.appendChild(inputOption);
-                }
-                inputOption.value = selectedDomainOption;
-                // domain
-                let inputDomain = finalForm.querySelector('input[name="domain"]');
-                if (!inputDomain) {
-                    inputDomain = document.createElement('input');
-                    inputDomain.type = 'hidden';
-                    inputDomain.name = 'domain';
-                    finalForm.appendChild(inputDomain);
-                }
-                inputDomain.value = selectedDomain;
-            }
-            // expose for external handlers (AJAX submit) to call before FormData creation
-            window.updateDomainFields = updateDomainFields;
-
-            // تسجيل جديد
-            const btnR = document.getElementById('goConfigR');
-            if (btnR) {
-                btnR.addEventListener('click', function(e) {
-                    const form = btnR.closest('form');
-                    let domain = form.querySelector('input[aria-label="اسم النطاق"]').value;
-                    let tld = form.querySelector('select').value;
-                    let fullDomain = domain + tld;
-                    selectedDomainOption = 'register';
-                    selectedDomain = fullDomain;
-                    updateDomainFields(); // تحديث الحقول المخفية
-                    // انتقل للخطوة الثانية فقط
-                    const p = priceMap[tld] ?? 1000;
-                    setReview(fullDomain, p);
-                    goto(1);
-                });
-            }
-            // نقل نطاق
-            const btnT = document.getElementById('goConfigT');
-            if (btnT) {
-                btnT.addEventListener('click', function(e) {
-                    const form = btnT.closest('form');
-                    let domain = form.querySelector('input[aria-label="اسم النطاق"]').value;
-                    selectedDomainOption = 'transfer';
-                    selectedDomain = domain;
-                    updateDomainFields();
-                    const tld = domain.includes('.') ? `.${domain.split('.').pop()}` : '.com';
-                    const p = priceMap[tld] ?? 1000;
-                    setReview(domain, p);
-                    goto(1);
-                });
-            }
-            // أمتلك نطاقاً
-            const btnO = document.getElementById('goConfigO');
-            if (btnO) {
-                btnO.addEventListener('click', function(e) {
-                    const form = btnO.closest('form');
-                    let domain = form.querySelector('input[aria-label="اسم النطاق"]').value;
-                    selectedDomainOption = 'own';
-                    selectedDomain = domain;
-                    updateDomainFields();
-                    setReview(domain, 0);
-                    goto(1);
-                });
-            }
-            // Subdomain مجاني
-            const btnS = document.getElementById('goConfigS');
-            if (btnS) {
-                btnS.addEventListener('click', function(e) {
-                    const form = btnS.closest('form');
-                    let sub = form.querySelector('input[aria-label="اسم الساب-دومين"]').value;
-                    let main = form.querySelector('select').value;
-                    let fullDomain = sub + '.' + main;
-                    selectedDomainOption = 'subdomain';
-                    selectedDomain = fullDomain;
-                    updateDomainFields();
-                    setReview(fullDomain, 0);
-                    goto(1);
-                });
-            }
-
-            // عند الضغط على زر إتمام الطلب: أضف القيم المخزنة إلى الفورم النهائي قبل الإرسال
-            const placeOrderReal = document.getElementById('placeOrderReal');
-            if (placeOrderReal) {
-                placeOrderReal.addEventListener('click', function(e) {
-                    try {
-                        updateDomainFields();
-                    } catch (err) {}
-                });
-
-                placeOrderReal.closest('form').addEventListener('submit', function(e) {
-                    updateDomainFields(); // تأكد دائماً من تحديث القيم قبل الإرسال
-                });
-            }
-        });
-        // تحسين الطباعة: إظهار الشعار وإخفاء العناصر غير الضرورية
-        const printBtn = document.getElementById('sx-print');
-        if (printBtn) {
-            printBtn.addEventListener('click', function() {
-                // إظهار الشعار مؤقتاً للطباعة
-                const logo = document.querySelector('.print-logo');
-                if (logo) logo.style.display = 'block';
-                window.print();
-                setTimeout(() => {
-                    if (logo) logo.style.display = 'none';
-                }, 500);
-            });
-        }
-        // دالة تعبئة ملخص الفاتورة في شاشة النجاح
-        function fillSuccessInvoice(data) {
-            const body = document.getElementById('sx-invoice-body');
-            if (!body) return;
-            // عرض نفس بنود ملخص الطلب
-            let html = '';
-            if (data.order_no) {
-                html +=
-                    `<tr class='bg-gray-50 dark:bg-gray-800'><td class="py-3 px-4 flex items-center gap-2"><span class='inline-block w-5 text-green-600'>#</span>رقم الطلب</td><td class="py-3 px-4 font-bold">${data.order_no}</td></tr>`;
-            }
-            if (data.template_name) {
-                html +=
-                    `<tr><td class="py-3 px-4 flex items-center gap-2"><span class='inline-block w-5 text-blue-500'>🎨</span>القالب</td><td class="py-3 px-4">${data.template_name}</td></tr>`;
-            }
-            html +=
-                `<tr><td class="py-3 px-4 flex items-center gap-2"><span class='inline-block w-5 text-yellow-500'>⏳</span>مدة الاشتراك</td><td class="py-3 px-4">12 شهر</td></tr>`;
-            // إذا كان هناك template_price_html من الباكند استخدمه مباشرة
-            if (data.template_price_html) {
-                html +=
-                    `<tr><td class="py-3 px-4 flex items-center gap-2"><span class='inline-block w-5 text-purple-500'>💼</span>سعر القالب</td><td class="py-3 px-4">${data.template_price_html}</td></tr>`;
-            } else if (data.template_base_price && data.template_discount_price) {
-                html +=
-                    `<tr><td class="py-3 px-4 flex items-center gap-2"><span class='inline-block w-5 text-purple-500'>💼</span>سعر القالب</td><td class="py-3 px-4"><span class='line-through text-gray-400'>${data.template_base_price}</span> <span class='text-red-600 font-bold ms-2'>${data.template_discount_price}</span></td></tr>`;
-            } else if (data.template_price) {
-                html +=
-                    `<tr><td class="py-3 px-4 flex items-center gap-2"><span class='inline-block w-5 text-purple-500'>💼</span>سعر القالب</td><td class="py-3 px-4">${data.template_price}</td></tr>`;
-            } else if (data.template_base_price) {
-                html +=
-                    `<tr><td class="py-3 px-4 flex items-center gap-2"><span class='inline-block w-5 text-purple-500'>💼</span>سعر القالب</td><td class="py-3 px-4">${data.template_base_price}</td></tr>`;
-            } else if (data.template_discount_price) {
-                html +=
-                    `<tr><td class="py-3 px-4 flex items-center gap-2"><span class='inline-block w-5 text-purple-500'>💼</span>سعر القالب</td><td class="py-3 px-4">${data.template_discount_price}</td></tr>`;
-            } else {
-                html +=
-                    `<tr><td class="py-3 px-4 flex items-center gap-2"><span class='inline-block w-5 text-purple-500'>💼</span>سعر القالب</td><td class="py-3 px-4">—</td></tr>`;
-            }
-            if (data.domain) html +=
-                `<tr><td class="py-3 px-4 flex items-center gap-2"><span class='inline-block w-5 text-indigo-500'>🌐</span>الدومين</td><td class="py-3 px-4">${data.domain}</td></tr>`;
-            if (data.domain_price) html +=
-                `<tr><td class="py-3 px-4 flex items-center gap-2"><span class='inline-block w-5 text-pink-500'>💲</span>سعر الدومين</td><td class="py-3 px-4">${data.domain_price}</td></tr>`;
-            if (data.discount) html +=
-                `<tr><td class="py-3 px-4 flex items-center gap-2"><span class='inline-block w-5 text-green-700'>🏷️</span>الخصم</td><td class="py-3 px-4 text-green-700">-${data.discount}</td></tr>`;
-            if (data.tax) html +=
-                `<tr><td class="py-3 px-4 flex items-center gap-2"><span class='inline-block w-5 text-orange-500'>🧾</span>الضريبة</td><td class="py-3 px-4">${data.tax}</td></tr>`;
-            if (data.total) html +=
-                `<tr class='bg-green-50 dark:bg-green-900 font-extrabold text-lg'><td class="py-4 px-4 flex items-center gap-2"><span class='inline-block w-5 text-green-700'>✔️</span>الإجمالي المستحق</td><td class="py-4 px-4 text-green-700">${data.total}</td></tr>`;
-            body.innerHTML = html;
-        }
-        // إرسال الطلب عبر AJAX ليظهر شاشة النجاح مباشرة مع حماية إضافية
-        document.getElementById('checkoutForm')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const form = this;
-            // ensure hidden domain fields are up-to-date before building FormData
+        function safeParse(json, fb) {
             try {
-                if (window.updateDomainFields) window.updateDomainFields();
-            } catch (err) {}
-            const data = new FormData(form);
-            fetch(form.action, {
-                    method: 'POST',
-                    body: data,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(r => {
-                    return r.json();
-                })
-                .then(response => {
-                    if (response.success) {
-                        // ضع hash في الرابط ليبقى المستخدم في شاشة النجاح حتى لو أعاد تحميل الصفحة
-                        window.location.hash = '#view-success';
-                        showSuccess();
-                        // تعبئة ملخص الفاتورة الاحترافي
-                        fillSuccessInvoice({
-                            order_no: response.order_no || '—',
-                            domain: response.domain || '—',
-                            template_name: response.template_name || '',
-                            domain_price: response.domain_price || '',
-                            template_price_html: response.template_price_html || '',
-                            discount: response.discount || '',
-                            tax: response.tax || '',
-                            total: response.total || '—'
-                        });
-                        // إظهار اسم العميل في الرسالة
-                        if (response.client_name) {
-                            document.getElementById('sx-success-msg').textContent = 'تم إنشاء الطلب بنجاح يا ' +
-                                response.client_name;
-                        }
-                    } else if (response.errors) {
-                        alert('حدث خطأ: ' + (Array.isArray(response.errors) ? response.errors.join('\n') :
-                            response.errors));
-                    }
-                })
-                .catch((err) => {
-                    alert('حدث خطأ أثناء معالجة الطلب. حاول مرة أخرى.');
-                });
-        });
-
-        // عند تحميل الصفحة: إذا كان success=1 في الرابط أو hash=#view-success، أظهر شاشة النجاح تلقائياً
-        document.addEventListener('DOMContentLoaded', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('success') === '1' || window.location.hash === '#view-success') {
-                showSuccess();
-                // إذا كان هناك بيانات الطلب في الرابط، عبئها
-                const orderNo = urlParams.get('order_no');
-                const domain = urlParams.get('domain');
-                const total = urlParams.get('total');
-                const clientName = urlParams.get('client_name');
-                // تعبئة ملخص الفاتورة الاحترافي عند إعادة تحميل الصفحة
-                fillSuccessInvoice({
-                    order_no: orderNo || '—',
-                    domain: domain || '—',
-                    template_name: urlParams.get('template_name') || '',
-                    domain_price: urlParams.get('domain_price') || '',
-                    template_price: urlParams.get('template_price') || '',
-                    discount: urlParams.get('discount') || '',
-                    tax: urlParams.get('tax') || '',
-                    total: total ? decodeURIComponent(total) : '—'
-                });
-                if (clientName) document.getElementById('sx-success-msg').textContent = 'تم إنشاء الطلب بنجاح يا ' +
-                    decodeURIComponent(clientName);
+                const v = JSON.parse(json);
+                return Array.isArray(v) ? v : fb;
+            } catch {
+                return fb;
             }
-        });
-        // عند اختيار زر "إنشاء حساب جديد"، انسخ الحقول من نموذج التسجيل إلى فورم الطلب
-        document.getElementById('btn-register')?.addEventListener('click', function() {
-            const regForm = document.getElementById('register-form');
-            const box = document.getElementById('registerFieldsBox');
-            if (!regForm || !box) return;
-            box.innerHTML = '';
-            // انسخ الحقول مع القيم
-            regForm.querySelectorAll('input').forEach(function(input) {
-                const clone = input.cloneNode();
-                clone.value = input.value;
-                clone.type = input.type;
-                clone.name = input.name;
-                clone.required = input.required;
-                clone.placeholder = input.placeholder;
-                clone.className = 'hidden';
-                box.appendChild(clone);
-            });
-        });
+        }
 
-        // عند تغيير أي حقل في نموذج التسجيل، حدث الحقل المنسوخ في فورم الطلب
-        document.querySelectorAll('#register-form input').forEach(function(input) {
-            input.addEventListener('input', function() {
-                const box = document.getElementById('registerFieldsBox');
-                if (!box) return;
-                const hidden = box.querySelector(`[name="${input.name}"]`);
-                if (hidden) hidden.value = input.value;
+        function normalizeDomain(raw) {
+            if (!raw) return null;
+            try {
+                let host = (new URL(raw.includes('://') ? raw : ('http://' + raw))).hostname;
+                host = host.toLowerCase().replace(/^www\./, '').replace(/\.$/, '');
+                return host || null;
+            } catch {
+                return String(raw).toLowerCase().replace(/^www\./, '').replace(/\.$/, '') || null;
+            }
+        }
+
+        function readUnifiedCart() {
+            let items = safeParse(localStorage.getItem(UNIFIED_CART_KEY), []);
+            // استيراد القديم مرّة واحدة
+            if (!localStorage.getItem(UNIFIED_CART_KEY)) {
+                const legacy = safeParse(localStorage.getItem(LEGACY_CART_KEY), []);
+                if (legacy.length) {
+                    items = items.concat(legacy.map(it => ({
+                        kind: 'domain',
+                        domain: String(it.domain || '').toLowerCase().trim(),
+                        item_option: it.item_option ?? it.option ?? 'register',
+                        price_cents: Number(it.price_cents) || 0,
+                        meta: it.meta ?? null,
+                    })));
+                    localStorage.setItem(UNIFIED_CART_KEY, JSON.stringify(items));
+                }
+            }
+            return items;
+        }
+
+        function writeUnifiedCart(items) {
+            localStorage.setItem(UNIFIED_CART_KEY, JSON.stringify(items || []));
+        }
+
+        // مرشّحات/ديدوب
+        function domainOnly(items) {
+            return (items || []).filter(it => it && typeof it === 'object' && (
+                it.kind === 'domain' || (it.kind == null && typeof it.domain === 'string' && it.domain.trim() !==
+                    '')
+            ));
+        }
+
+        function dedupeDomains(domains) {
+            const seen = new Set(),
+                out = [];
+            for (const it of domains) {
+                const d = normalizeDomain(it.domain);
+                if (!d || seen.has(d)) continue;
+                seen.add(d);
+                out.push({
+                    kind: 'domain',
+                    domain: d,
+                    item_option: it.item_option ?? it.option ?? 'register',
+                    price_cents: Number(it.price_cents) || 0,
+                    meta: it.meta ?? null,
+                });
+            }
+            return out;
+        }
+
+        function upsertDomain(items, {
+            domain,
+            item_option,
+            price_cents,
+            meta
+        }) {
+            const d = normalizeDomain(domain);
+            if (!d) return items || [];
+            let exists = false;
+            const next = (items || []).map(it => {
+                if (it?.kind === 'domain' && normalizeDomain(it.domain) === d) {
+                    exists = true;
+                    return {
+                        ...it,
+                        item_option: item_option || it.item_option || 'register',
+                        price_cents: Number(price_cents ?? it.price_cents) || 0,
+                        meta: meta ?? it.meta ?? null
+                    };
+                }
+                return it;
             });
-        });
+            if (!exists) next.push({
+                kind: 'domain',
+                domain: d,
+                item_option: item_option || 'register',
+                price_cents: Number(price_cents) || 0,
+                meta: meta ?? null
+            });
+            return next;
+        }
+
+        // أسعار احتياطية محلّية + Formatter
         const USD = true;
-        const priceMap = {
+        const fallbackPriceMap = {
             '.com': 1000,
             '.net': 1200,
             '.org': 1100
         };
-        const fmt = c => (USD ? `$${(c / 100).toFixed(2)}` : `${(c / 100).toFixed(2)} ر.س`);
 
-        // تبويبات الدومين
-        const tabs = document.querySelectorAll('[data-tab]');
-        const panels = {
-            register: document.getElementById('tab-register'),
-            transfer: document.getElementById('tab-transfer'),
-            owndomain: document.getElementById('tab-owndomain'),
-            subdomain: document.getElementById('tab-subdomain')
-        };
+        function getFallbackCents(tld) {
+            try {
+                if (window.priceMap && (tld in window.priceMap)) return Number(window.priceMap[tld]) || 0;
+            } catch {}
+            return Number(fallbackPriceMap[tld] ?? 1000);
+        }
+        const fmt = c => (USD ? `$${(c/100).toFixed(2)}` : `${(c/100).toFixed(2)} ر.س`);
 
-        tabs.forEach(btn => {
-            // hover + cursor
-            btn.classList.add('cursor-pointer', 'hover:bg-gray-50', 'dark:hover:bg-gray-800',
-                'hover:border-[#240B36]/40', 'transition-colors');
+        // تحويل أي قيمة سعر إلى سنت
+        function toCents(x) {
+            if (x == null) return null;
+            const n = Number(String(x).replace(/[^0-9.]/g, ''));
+            if (!Number.isFinite(n)) return null;
+            if (n >= 100000) return Math.round(n); // يبدو أنها سنت أصلًا
+            if (n <= 1000) return Math.round(n * 100); // دولار -> سنت
+            return Math.round(n); // قيمة وسطية: اعتبرها سنت
+        }
 
-            btn.addEventListener('click', () => {
-                // reset all tabs styles
-                tabs.forEach(b => {
-                    b.classList.remove('border-[#240B36]', 'text-[#240B36]');
-                    b.classList.add('border-gray-300', 'dark:border-gray-700', 'text-gray-700',
-                        'dark:text-gray-200');
-                });
-                // activate clicked tab
-                btn.classList.add('border-[#240B36]', 'text-[#240B36]');
-                // switch panels safely
-                Object.values(panels).forEach(p => p && p.classList.add('hidden'));
-                const panel = panels[btn.dataset.tab];
-                if (panel) panel.classList.remove('hidden');
+        // استخراج السعر من ردّ الخادم حسب نوع العملية
+        function extractPriceCents(row, option) {
+            const r = row || {};
+            const prefer = option === 'transfer' ?
+                ['transfer_price_cents', 'transferPriceCents', 'transfer_price'] :
+                ['register_price_cents', 'registration_price_cents', 'price_cents', 'register_price'];
 
-                // عند تغيير التبويب: إذا كان نقل نطاق أو أمتلك نطاق أو ساب دومين، صفر سعر الدومين في الملخص
-                if (btn.dataset.tab === 'transfer' || btn.dataset.tab === 'owndomain' || btn.dataset.tab ===
-                    'subdomain') {
-                    setReview('—', 0);
-                } else if (btn.dataset.tab === 'register') {
-                    // أعد السعر الافتراضي
-                    const p = priceMap[regTld.value] ?? 1000;
-                    setReview('—', p);
+            for (const key of prefer) {
+                if (r[key] != null) {
+                    const v = toCents(r[key]);
+                    if (v != null) return v;
                 }
-            });
-        });
+            }
+            // حقول عامة/احتياطية
+            for (const key of ['sale_price_cents', 'promo_price_cents', 'price']) {
+                if (r[key] != null) {
+                    const v = toCents(r[key]);
+                    if (v != null) return v;
+                }
+            }
+            // ابحث في meta/details لو موجود
+            const m = r.meta || r.details || {};
+            for (const key of [...prefer, 'price_cents', 'price']) {
+                if (m && m[key] != null) {
+                    const v = toCents(m[key]);
+                    if (v != null) return v;
+                }
+            }
+            return null;
+        }
 
-        // عناصر وأسعار
-        const regSld = document.querySelector('#tab-register input[aria-label="اسم النطاق"]');
-        const regTld = document.querySelector('#tab-register select[aria-label="الامتداد"]');
-        const tldPrice = document.getElementById('tldPrice');
-        const btnCheck = document.getElementById('btnCheck');
-        const checkResult = document.getElementById('checkResult');
+        // جلب السعر الصحيح من الخادم (domains.check)
+        const routeCheckSingle = (domain) =>
+            `{{ route('domains.check') }}?domains=${encodeURIComponent(domain)}&t=${Date.now()}`;
+
+        async function fetchServerPriceCents(domain, option) {
+            const tld = '.' + (domain.split('.').pop() || 'com').toLowerCase();
+            try {
+                const res = await fetch(routeCheckSingle(domain), {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                const data = await res.json().catch(() => null);
+                const row = (data?.results || []).find(x => (x.domain || '').toLowerCase() === domain.toLowerCase());
+                const cents = extractPriceCents(row, option);
+                if (Number.isFinite(cents) && cents >= 0) return cents;
+            } catch {
+                /* ignore */ }
+            // احتياطي: سعر محلي
+            if (option === 'register' || option === 'transfer') return getFallbackCents(tld);
+            return 0;
+        }
+
+        // سعر القالب (بالسنت)
+        const TEMPLATE_FINAL_CENTS = {{ (int) (($finalPrice ?? 0) * 100) }};
+
+        // عناصر UI مشتركة
         const summaryDomain = document.getElementById('summaryDomain');
         const summaryTotal = document.getElementById('summaryTotal');
         const reviewDomain = document.getElementById('reviewDomain');
         const reviewDomainPrice = document.getElementById('reviewDomainPrice');
         const sumSub = document.getElementById('sumSub');
         const sumTax = document.getElementById('sumTax');
+        const sumDiscount = document.getElementById('sumDiscount');
         const sumTotal2 = document.getElementById('sumTotal2');
+        const orderTotalCentsInp = document.getElementById('orderTotalCents');
+        const orderTotalInp = document.getElementById('orderTotalInput');
 
-        // تحديث الإجمالي ليشمل دومين + القالب دائماً
+        // خصم (كوبون) — افتراضي 0
+        window.__couponDiscountCents = 0;
+
+        // حساب الإجماليات (دومين + القالب - الخصم + ضريبة)
         function updateTotals(domainCents) {
-            // استخدم سعر القالب بعد الخصم (finalPrice)
-            const templateFinalPrice = {{ (int) (($finalPrice ?? 0) * 100) }};
-            const subtotal = templateFinalPrice + (domainCents | 0);
+            const subtotal = TEMPLATE_FINAL_CENTS + Math.max(0, domainCents | 0);
             const tax = 0;
-            const total = subtotal + tax;
-            sumSub.textContent = fmt(subtotal);
-            sumTax.textContent = fmt(tax);
-            sumTotal2.textContent = fmt(total);
-            summaryTotal.textContent = fmt(total);
+            const discount = Math.min(window.__couponDiscountCents | 0, subtotal);
+            const total = Math.max(0, subtotal - discount + tax);
+
+            if (sumSub) sumSub.textContent = fmt(subtotal);
+            if (sumTax) sumTax.textContent = fmt(tax);
+            if (sumDiscount) sumDiscount.textContent = `-${fmt(discount)}`;
+            if (sumTotal2) sumTotal2.textContent = fmt(total);
+            if (summaryTotal) summaryTotal.textContent = fmt(total);
+            if (orderTotalCentsInp) orderTotalCentsInp.value = String(total);
+            if (orderTotalInp) orderTotalInp.value = fmt(total);
         }
 
         function setReview(domain, cents) {
-            summaryDomain.textContent = domain || '—';
-            reviewDomain.textContent = domain || '—';
-            reviewDomainPrice.textContent = fmt(cents);
-            updateTotals(cents);
+            if (summaryDomain) summaryDomain.textContent = domain || '—';
+            if (reviewDomain) reviewDomain.textContent = domain || '—';
+            if (reviewDomainPrice) reviewDomainPrice.textContent = fmt(cents || 0);
+            updateTotals(cents || 0);
         }
 
-        // تحديث السعر عند تغيير الامتداد
-        regTld?.addEventListener('change', () => {
-            const p = priceMap[regTld.value] ?? 1000;
-            tldPrice.textContent = `${fmt(p)}/سنة`;
-        });
-        // set initial price on load
-        if (tldPrice && regTld) {
-            const p0 = priceMap[regTld.value] ?? 1000;
-            tldPrice.textContent = `${fmt(p0)}/سنة`;
-            // عند أول تحميل: أضف دومين + القالب للإجمالي
-            updateTotals(p0);
-        }
-        btnCheck?.addEventListener('click', () => {
-            const sld = (regSld?.value || '').trim();
-            const tld = (regTld?.value || '.com').trim();
-            if (!sld) {
-                checkResult.textContent = 'رجاءً أدخل اسم النطاق أولاً';
-                return;
-            }
-            const fqdn = `${sld}${tld}`;
-            const price = priceMap[tld] ?? 1000;
-            checkResult.textContent = 'الدومين متاح 🎉';
-            tldPrice.textContent = `${fmt(price)}/سنة`;
-            setReview(fqdn, price);
-        });
-
-        // التنقّل بين الصفحات
+        // Stepper
         const views = ['view-domain', 'view-review'];
         const stepper = document.getElementById('globalStepper');
 
         function goto(stepIndex) {
-            views.forEach((id, i) => document.getElementById(id).classList.toggle('hidden', i !== stepIndex));
-            const circles = stepper.querySelectorAll('.step-circle');
+            views.forEach((id, i) => document.getElementById(id)?.classList.toggle('hidden', i !== stepIndex));
+            const circles = stepper?.querySelectorAll('.step-circle') || [];
             circles.forEach((c, i) => {
                 c.classList.remove('border-[#240B36]', 'text-[#240B36]', 'bg-[#240B36]', 'text-white');
                 if (i < stepIndex) {
@@ -939,186 +788,488 @@
             });
         }
 
-        // Duplicate goConfig handlers removed — original handlers are inside DOMContentLoaded above
-
-        // تبديل نماذج الدخول/التسجيل
-        const btnLogin = document.getElementById('btn-login');
-        const btnRegister = document.getElementById('btn-register');
-        const frmLogin = document.getElementById('login-form');
-        const frmRegister = document.getElementById('register-form');
-        btnLogin?.addEventListener('click', () => {
-            frmLogin.classList.remove('hidden');
-            frmRegister.classList.add('hidden');
-            btnLogin.classList.add('bg-primary', 'text-primary');
-            btnRegister.classList.remove('bg-primary', 'text-primary');
-            btnRegister.classList.add('bg-white', 'dark:bg-gray-900', 'text-primary');
-        });
-        btnRegister?.addEventListener('click', () => {
-            frmRegister.classList.remove('hidden');
-            frmLogin.classList.add('hidden');
-            btnRegister.classList.add('bg-primary', 'text-primary');
-            btnLogin.classList.remove('bg-primary', 'text-primary');
-            btnLogin.classList.add('bg-white', 'dark:bg-gray-900', 'text-primary');
-        });
-
-        // إذا كان هناك باراميتر review=1 في الرابط، انتقل تلقائياً للخطوة الثانية
-        if (window.location.search.includes('review=1')) {
-            goto(1);
-        } else {
-            btnRegister?.click();
-        }
-
-        document.getElementById('backToDomain2')?.addEventListener('click', () => goto(0));
-        // تفعيل زر الطلب الحقيقي عند تحقق الشروط
-        const placeOrderReal = document.getElementById('placeOrderReal');
-
-        function enableOrderIfValid() {
-            if (!placeOrderReal) return;
-            const agreeTos = document.getElementById('agreeTos');
-            const domain = (document.getElementById('reviewDomain')?.textContent || '').trim();
-            const total = (document.getElementById('sumTotal2')?.textContent || '').trim();
-            placeOrderReal.disabled = !(agreeTos && agreeTos.checked && domain && total);
-            placeOrderReal.classList.toggle('opacity-50', placeOrderReal.disabled);
-            placeOrderReal.classList.toggle('cursor-not-allowed', placeOrderReal.disabled);
-            // تعبئة القيم المخفية
-            document.getElementById('orderDomainInput').value = domain;
-            document.getElementById('orderTotalInput').value = total;
-        }
-        document.getElementById('agreeTos')?.addEventListener('input', enableOrderIfValid);
-        document.getElementById('reviewDomain')?.addEventListener('DOMSubtreeModified', enableOrderIfValid);
-        document.getElementById('sumTotal2')?.addEventListener('DOMSubtreeModified', enableOrderIfValid);
-        enableOrderIfValid();
-
-        // إظهار شاشة النجاح وجعل الخطوتين مكتملتين بصرياً
+        // شاشة النجاح
         function showSuccess() {
-            ['view-domain', 'view-review'].forEach(id => document.getElementById(id).classList.add('hidden'));
-            document.getElementById('view-success').classList.remove('hidden');
-
+            ['view-domain', 'view-review'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+            document.getElementById('view-success')?.classList.remove('hidden');
             const circles = document.querySelectorAll('#globalStepper .step-circle');
             circles.forEach(c => {
                 c.classList.remove('border-[#240B36]', 'text-[#240B36]');
                 c.classList.add('bg-[#240B36]', 'text-white', 'border-[#240B36]');
             });
-
             window.scrollTo({
                 top: 0,
                 behavior: 'smooth'
             });
         }
 
-        // طباعة وذهاب للوحة التحكم (معاينة)
-        document.getElementById('sx-print')?.addEventListener('click', () => window.print());
-        document.getElementById('sx-dashboard')?.addEventListener('click', () => {
-            window.location.href = '/client/home';
+        // تعبئة فاتورة النجاح
+        function fillSuccessInvoice(data) {
+            const body = document.getElementById('sx-invoice-body');
+            if (!body) return;
+            let html = '';
+            if (data.order_no) html +=
+                `<tr class='bg-gray-50 dark:bg-gray-800'><td class="py-3 px-4">رقم الطلب</td><td class="py-3 px-4 font-bold">${data.order_no}</td></tr>`;
+            if (data.template_name) html +=
+                `<tr><td class="py-3 px-4">القالب</td><td class="py-3 px-4">${data.template_name}</td></tr>`;
+            html += `<tr><td class="py-3 px-4">مدة الاشتراك</td><td class="py-3 px-4">12 شهر</td></tr>`;
+            if (data.template_price_html) html +=
+                `<tr><td class="py-3 px-4">سعر القالب</td><td class="py-3 px-4">${data.template_price_html}</td></tr>`;
+            else if (data.template_price) html +=
+                `<tr><td class="py-3 px-4">سعر القالب</td><td class="py-3 px-4">${data.template_price}</td></tr>`;
+            if (data.domain) html += `<tr><td class="py-3 px-4">الدومين</td><td class="py-3 px-4">${data.domain}</td></tr>`;
+            if (data.domain_price) html +=
+                `<tr><td class="py-3 px-4">سعر الدومين</td><td class="py-3 px-4">${data.domain_price}</td></tr>`;
+            if (data.discount) html +=
+                `<tr><td class="py-3 px-4">الخصم</td><td class="py-3 px-4 text-green-700">-${data.discount}</td></tr>`;
+            if (data.tax) html += `<tr><td class="py-3 px-4">الضريبة</td><td class="py-3 px-4">${data.tax}</td></tr>`;
+            if (data.total) html +=
+                `<tr class='bg-green-50 dark:bg-green-900 font-extrabold text-lg'><td class="py-4 px-4">الإجمالي المستحق</td><td class="py-4 px-4 text-green-700">${data.total}</td></tr>`;
+            body.innerHTML = html;
+        }
+
+        /* ========================== منطق الصفحة ========================== */
+        document.addEventListener('DOMContentLoaded', function() {
+            // عناصر تبويب "تسجيل جديد"
+            const regSld = document.querySelector('#tab-register input[aria-label="اسم النطاق"]');
+            const regTld = document.querySelector('#tab-register select[aria-label="الامتداد"]');
+            const tldPrice = document.getElementById('tldPrice');
+            const btnCheck = document.getElementById('btnCheck');
+
+            // تبويبات
+            const tabs = document.querySelectorAll('[data-tab]');
+            const panels = {
+                register: document.getElementById('tab-register'),
+                transfer: document.getElementById('tab-transfer'),
+                owndomain: document.getElementById('tab-owndomain'),
+                subdomain: document.getElementById('tab-subdomain')
+            };
+
+            // تحديث السعر الأولي (احتياطي)
+            if (tldPrice && regTld) {
+                const p0 = getFallbackCents(regTld.value);
+                tldPrice.textContent = `${fmt(p0)}/سنة`;
+                updateTotals(p0);
+            }
+
+            // تغيير الامتداد (سعر احتياطي فقط)
+            regTld?.addEventListener('change', () => {
+                const cents = getFallbackCents(regTld.value);
+                tldPrice.textContent = `${fmt(cents)}/سنة`;
+            });
+
+            // فحص توافر + جلب سعر صحيح
+            btnCheck?.addEventListener('click', async () => {
+                const sld = (regSld?.value || '').trim().toLowerCase();
+                const tld = (regTld?.value || '.com').trim().toLowerCase();
+                const checkResult = document.getElementById('checkResult');
+                if (!sld) {
+                    if (checkResult) checkResult.textContent = 'رجاءً أدخل اسم النطاق أولاً';
+                    return;
+                }
+                const fqdn = `${sld}${tld}`;
+                if (checkResult) checkResult.textContent = 'جارٍ الفحص…';
+                try {
+                    const cents = await fetchServerPriceCents(fqdn, 'register');
+                    if (tldPrice) tldPrice.textContent = `${fmt(cents)}/سنة`;
+                    // متاح/محجوز
+                    const res = await fetch(routeCheckSingle(fqdn), {
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const data = await res.json().catch(() => null);
+                    const r = (data?.results || []).find(x => (x.domain || '').toLowerCase() === fqdn
+                        .toLowerCase());
+                    if (r?.available) {
+                        if (checkResult) checkResult.innerHTML = `✅ متاح — <strong>${fqdn}</strong>`;
+                        setReview(fqdn, cents);
+                    } else {
+                        if (checkResult) checkResult.innerHTML = `❌ محجوز — جرّب امتدادًا آخر`;
+                        setReview(fqdn, 0);
+                    }
+                } catch {
+                    if (checkResult) checkResult.textContent = 'خطأ في الاتصال ❌';
+                }
+            });
+
+            // تخزين القيم في الفورم النهائي عند الانتقال
+            function updateDomainFieldsFromSelection(option, domain, cents) {
+                const finalForm = document.getElementById('checkoutForm');
+                if (!finalForm) return;
+                const ensure = (name, val) => {
+                    let inp = finalForm.querySelector(`input[name="${name}"]`);
+                    if (!inp) {
+                        inp = document.createElement('input');
+                        inp.type = 'hidden';
+                        inp.name = name;
+                        finalForm.appendChild(inp);
+                    }
+                    inp.value = val;
+                };
+                ensure('domain_option', option);
+                ensure('domain', domain);
+                ensure('domain_price_cents', String(cents));
+
+                // items[0] للباك إند
+                finalForm.querySelectorAll('input[name^="items["]').forEach(n => n.remove());
+                const itemFields = {
+                    domain,
+                    option: option,
+                    price_cents: String(cents)
+                };
+                Object.entries(itemFields).forEach(([k, v]) => {
+                    const inp = document.createElement('input');
+                    inp.type = 'hidden';
+                    inp.name = `items[0][${k}]`;
+                    inp.value = v;
+                    finalForm.appendChild(inp);
+                });
+            }
+
+            // أزرار المتابعة
+            const btnR = document.getElementById('goConfigR');
+            const btnT = document.getElementById('goConfigT');
+            const btnO = document.getElementById('goConfigO');
+            const btnS = document.getElementById('goConfigS');
+
+            // تسجيل جديد — السعر من الخادم
+            btnR?.addEventListener('click', async () => {
+                const sld = (regSld?.value || '').trim().toLowerCase();
+                const tld = (regTld?.value || '.com').trim().toLowerCase();
+                const checkResult = document.getElementById('checkResult');
+                if (!sld) {
+                    if (checkResult) checkResult.textContent = 'رجاءً أدخل اسم النطاق أولاً';
+                    return;
+                }
+                const fqdn = `${sld}${tld}`;
+
+                // تأكّد من التوافر واجلب السعر الصحيح
+                let cents = await fetchServerPriceCents(fqdn, 'register');
+                try {
+                    const res = await fetch(routeCheckSingle(fqdn), {
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const data = await res.json().catch(() => null);
+                    const r = (data?.results || []).find(x => (x.domain || '').toLowerCase() === fqdn
+                        .toLowerCase());
+                    if (r?.available !== true) {
+                        if (checkResult) checkResult.textContent = '❌ محجوز — اختر اسمًا/امتدادًا آخر';
+                        return;
+                    }
+                    // لو كان عنده سعر أدق داخل الرد استخدمه
+                    const fromRow = extractPriceCents(r, 'register');
+                    if (fromRow != null) cents = fromRow;
+                } catch {}
+
+                // أضف للسلة
+                writeUnifiedCart(upsertDomain(readUnifiedCart(), {
+                    domain: fqdn,
+                    item_option: 'register',
+                    price_cents: cents
+                }));
+
+                // UI
+                if (tldPrice) tldPrice.textContent = `${fmt(cents)}/سنة`;
+                updateDomainFieldsFromSelection('register', fqdn, cents);
+                setReview(fqdn, cents);
+                goto(1);
+            });
+
+            // نقل نطاق — يفضّل transfer_price_cents من الخادم
+            btnT?.addEventListener('click', async () => {
+                const form = btnT.closest('form');
+                const domain = (form?.querySelector('input[aria-label="اسم النطاق"]')?.value || '')
+                    .trim().toLowerCase();
+                if (!domain) {
+                    alert('رجاءً أدخل اسم النطاق');
+                    return;
+                }
+                const cents = await fetchServerPriceCents(domain, 'transfer');
+                writeUnifiedCart(upsertDomain(readUnifiedCart(), {
+                    domain,
+                    item_option: 'transfer',
+                    price_cents: cents
+                }));
+                updateDomainFieldsFromSelection('transfer', domain, cents);
+                setReview(domain, cents);
+                goto(1);
+            });
+
+            // أمتلك نطاقًا — 0$
+            btnO?.addEventListener('click', () => {
+                const form = btnO.closest('form');
+                const domain = (form?.querySelector('input[aria-label="اسم النطاق"]')?.value || '').trim()
+                    .toLowerCase();
+                if (!domain) {
+                    alert('رجاءً أدخل اسم النطاق');
+                    return;
+                }
+                writeUnifiedCart(upsertDomain(readUnifiedCart(), {
+                    domain,
+                    item_option: 'own',
+                    price_cents: 0
+                }));
+                updateDomainFieldsFromSelection('own', domain, 0);
+                setReview(domain, 0);
+                goto(1);
+            });
+
+            // Subdomain مجاني — 0$
+            btnS?.addEventListener('click', () => {
+                const form = btnS.closest('form');
+                const sub = (form?.querySelector('input[aria-label="اسم الساب-دومين"]')?.value || '').trim()
+                    .toLowerCase();
+                const main = (form?.querySelector('select[aria-label="الدومين الأساسي"]')?.value || '')
+                    .trim().toLowerCase();
+                if (!sub) {
+                    alert('رجاءً أدخل اسم الساب-دومين');
+                    return;
+                }
+                const fqdn = `${sub}.${main}`;
+                writeUnifiedCart(upsertDomain(readUnifiedCart(), {
+                    domain: fqdn,
+                    item_option: 'subdomain',
+                    price_cents: 0
+                }));
+                updateDomainFieldsFromSelection('subdomain', fqdn, 0);
+                setReview(fqdn, 0);
+                goto(1);
+            });
+
+            // تبديل التبويبات
+            tabs.forEach(btn => {
+                btn.classList.add('cursor-pointer', 'hover:bg-gray-50', 'dark:hover:bg-gray-800',
+                    'hover:border-[#240B36]/40', 'transition-colors');
+                btn.addEventListener('click', () => {
+                    tabs.forEach(b => {
+                        b.classList.remove('border-[#240B36]', 'text-[#240B36]');
+                        b.classList.add('border-gray-300', 'dark:border-gray-700',
+                            'text-gray-700', 'dark:text-gray-200');
+                    });
+                    btn.classList.add('border-[#240B36]', 'text-[#240B36]');
+                    Object.values(panels).forEach(p => p?.classList.add('hidden'));
+                    panels[btn.dataset.tab]?.classList.remove('hidden');
+
+                    // عرض أولي
+                    if (btn.dataset.tab === 'register') {
+                        const cents = getFallbackCents(regTld?.value || '.com');
+                        setReview('—', cents);
+                    } else {
+                        setReview('—', 0);
+                    }
+                });
+            });
+
+            // إذا review=1 اذهب للمراجعة، وإلا أظهر التسجيل
+            if (window.location.search.includes('review=1')) {
+                goto(1);
+            } else {
+                document.getElementById('btn-register')?.click();
+            }
+
+            // استيراد أي دومين محفوظ مسبقًا من السلة
+            try {
+                const list = dedupeDomains(domainOnly(readUnifiedCart()));
+                if (Array.isArray(list) && list.length > 0) {
+                    const first = list[0];
+                    setReview(first.domain || '—', Number(first.price_cents || 0));
+                    updateDomainFieldsFromSelection(first.item_option || 'register', first.domain || '', Number(
+                        first.price_cents || 0));
+                }
+            } catch {}
+
+            // زر رجوع
+            document.getElementById('backToDomain2')?.addEventListener('click', () => goto(0));
+
+            // تمكين زر إتمام الطلب عند تحقق الشروط
+            const placeOrderReal = document.getElementById('placeOrderReal');
+
+            function enableOrderIfValid() {
+                if (!placeOrderReal) return;
+                const agree = document.getElementById('agreeTos');
+                const domain = (document.getElementById('reviewDomain')?.textContent || '').trim();
+                const total = (document.getElementById('sumTotal2')?.textContent || '').trim();
+                placeOrderReal.disabled = !(agree && agree.checked && domain && total);
+                placeOrderReal.classList.toggle('opacity-50', placeOrderReal.disabled);
+                placeOrderReal.classList.toggle('cursor-not-allowed', placeOrderReal.disabled);
+                const orderDomainInput = document.getElementById('orderDomainInput');
+                if (orderDomainInput) orderDomainInput.value = domain;
+                if (orderTotalInp) orderTotalInp.value = total;
+            }
+            document.getElementById('agreeTos')?.addEventListener('input', enableOrderIfValid);
+            document.getElementById('reviewDomain')?.addEventListener('DOMSubtreeModified', enableOrderIfValid);
+            document.getElementById('sumTotal2')?.addEventListener('DOMSubtreeModified', enableOrderIfValid);
+            enableOrderIfValid();
+
+            // نسخ حقول التسجيل إلى فورم الطلب
+            document.getElementById('btn-register')?.addEventListener('click', function() {
+                const regForm = document.getElementById('register-form');
+                const box = document.getElementById('registerFieldsBox');
+                if (!regForm || !box) return;
+                box.innerHTML = '';
+                regForm.querySelectorAll('input').forEach(function(input) {
+                    const clone = input.cloneNode();
+                    clone.value = input.value;
+                    clone.type = input.type;
+                    clone.name = input.name;
+                    clone.required = input.required;
+                    clone.placeholder = input.placeholder;
+                    clone.className = 'hidden';
+                    box.appendChild(clone);
+                });
+            });
+            document.querySelectorAll('#register-form input').forEach(function(input) {
+                input.addEventListener('input', function() {
+                    const box = document.getElementById('registerFieldsBox');
+                    if (!box) return;
+                    const hidden = box.querySelector(`[name="${input.name}"]`);
+                    if (hidden) hidden.value = input.value;
+                });
+            });
+
+            // إرسال الطلب عبر AJAX
+            document.getElementById('checkoutForm')?.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const form = this;
+                try {
+                    updateDomainFieldsFromSelection(
+                        form.querySelector('input[name="domain_option"]')?.value || 'register',
+                        form.querySelector('input[name="domain"]')?.value || '',
+                        Number(form.querySelector('input[name="domain_price_cents"]')?.value || 0)
+                    );
+                } catch {}
+                const data = new FormData(form);
+                fetch(form.action, {
+                        method: 'POST',
+                        body: data,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(r => r.json())
+                    .then(response => {
+                        if (response.success) {
+                            // تنظيف سلة الدومينات فقط
+                            try {
+                                const unified = readUnifiedCart();
+                                const leftovers = unified.filter(it => !(it && (it.kind === 'domain' ||
+                                    (it.kind == null && it.domain))));
+                                writeUnifiedCart(leftovers);
+                                localStorage.removeItem('palgoals_cart_domains'); // القديم
+                            } catch {}
+                            if (response.redirect) {
+                                window.location.href = response.redirect;
+                                return;
+                            }
+                            window.location.hash = '#view-success';
+                            showSuccess();
+                            fillSuccessInvoice({
+                                order_no: response.order_no || '—',
+                                domain: response.domain || '—',
+                                template_name: response.template_name || '',
+                                domain_price: response.domain_price || '',
+                                template_price_html: response.template_price_html || '',
+                                discount: response.discount || '',
+                                tax: response.tax || '',
+                                total: response.total || '—'
+                            });
+                            if (response.client_name) {
+                                const m = document.getElementById('sx-success-msg');
+                                if (m) m.textContent = 'تم إنشاء الطلب بنجاح يا ' + response
+                                .client_name;
+                            }
+                        } else if (response.errors) {
+                            alert('حدث خطأ: ' + (Array.isArray(response.errors) ? response.errors.join(
+                                '\n') : response.errors));
+                        }
+                    })
+                    .catch(() => alert('حدث خطأ أثناء معالجة الطلب. حاول مرة أخرى.'));
+            });
+
+            // كوبونات (تجريبيًا)
+            (function() {
+                const applyBtn = document.getElementById('applyCoupon');
+                const couponInput = document.getElementById('couponInput');
+                const couponMsg = document.getElementById('couponMsg');
+
+                function computeDiscount(code, base) {
+                    const c = (code || '').trim().toUpperCase();
+                    if (!c) return 0;
+                    if (c === 'PROMO10') return Math.round(base * 0.10);
+                    if (c === 'WELCOME20') return 2000;
+                    if (c === 'FREE') return base;
+                    return 0;
+                }
+                applyBtn?.addEventListener('click', () => {
+                    const baseCents = Math.round(parseFloat((reviewDomainPrice?.textContent || '0')
+                        .replace(/[^0-9.]/g, '')) * 100) || 0;
+                    const d = computeDiscount(couponInput?.value, baseCents);
+                    window.__couponDiscountCents = Math.min(d, baseCents);
+                    if (couponMsg) couponMsg.textContent = d > 0 ? 'تم تطبيق الخصم بنجاح ✅' :
+                        'الكود غير صالح أو منتهي ❌';
+                    updateTotals(baseCents);
+                });
+            })();
+
+            // تبديل بوابة الدفع (عرض فقط)
+            (function() {
+                const gwRadios = document.querySelectorAll('input[name="gateway"]');
+                const cardForm = document.getElementById('cardForm');
+                const bankForm = document.getElementById('bankForm');
+                const agreeTos = document.getElementById('agreeTos');
+
+                function setGateway(v) {
+                    if (v === 'card') {
+                        cardForm?.classList.remove('hidden');
+                        bankForm?.classList.add('hidden');
+                    } else {
+                        bankForm?.classList.remove('hidden');
+                        cardForm?.classList.add('hidden');
+                    }
+                }
+                gwRadios.forEach(r => r.addEventListener('change', () => setGateway(document.querySelector(
+                    'input[name="gateway"]:checked')?.value)));
+                setGateway('card');
+                agreeTos?.addEventListener('input', () => {
+                    /* keep validation on */ });
+            })();
         });
 
-
-        // كوبون تجريبي
-        (function() {
-            window.__couponDiscountCents = 0;
-            const sumSub = document.getElementById('sumSub');
-            const sumTax = document.getElementById('sumTax');
-            const sumTotal2 = document.getElementById('sumTotal2');
-            const sumDiscount = document.getElementById('sumDiscount');
-            const summaryTotal = document.getElementById('summaryTotal');
-            const reviewDomainPrice = document.getElementById('reviewDomainPrice');
-            const fmt2 = fmt;
-            window.updateTotals = function(domainCents) {
-                // دومين + القالب دائماً
-                const templateFinalPrice = {{ (int) (($finalPrice ?? 0) * 100) }};
-                const subtotal = templateFinalPrice + Math.max(0, domainCents | 0);
-                const tax = 0;
-                const discount = Math.min(window.__couponDiscountCents | 0, subtotal);
-                const total = Math.max(0, subtotal - discount + tax);
-                sumSub.textContent = fmt2(subtotal);
-                sumTax.textContent = fmt2(tax);
-                sumTotal2.textContent = fmt2(total);
-                summaryTotal.textContent = fmt2(total);
-                sumDiscount.textContent = `-${fmt2(discount)}`;
-            }
-
-            function computeDiscount(code, base) {
-                const c = (code || '').trim().toUpperCase();
-                if (!c) return 0;
-                if (c === 'PROMO10') return Math.round(base * 0.10);
-                if (c === 'WELCOME20') return 2000;
-                if (c === 'FREE') return base;
-                return 0;
-            }
-            const applyBtn = document.getElementById('applyCoupon');
-            const couponInput = document.getElementById('couponInput');
-            const couponMsg = document.getElementById('couponMsg');
-            applyBtn?.addEventListener('click', () => {
-                const baseCents = Math.round(parseFloat((reviewDomainPrice.textContent || '0').replace(
-                    /[^0-9\.]/g, '')) * 100) || 0;
-                const d = computeDiscount(couponInput.value, baseCents);
-                window.__couponDiscountCents = Math.min(d, baseCents);
-                couponMsg.textContent = d > 0 ? 'تم تطبيق الخصم بنجاح ✅' : 'الكود غير صالح أو منتهي ❌';
-                window.updateTotals(baseCents);
-            });
-        })();
-        (function() {
-            const gwRadios = document.querySelectorAll('input[name="gateway"]');
-            const cardForm = document.getElementById('cardForm');
-            const bankForm = document.getElementById('bankForm');
-            const placeOrder = document.getElementById('placeOrder');
-            const agreeTos = document.getElementById('agreeTos');
-
-            function setGateway(v) {
-                if (v === 'card') {
-                    cardForm.classList.remove('hidden');
-                    bankForm.classList.add('hidden');
-                } else {
-                    bankForm.classList.remove('hidden');
-                    cardForm.classList.add('hidden');
+        // طباعة/نجاح على إعادة التحميل
+        document.getElementById('sx-print')?.addEventListener('click', () => {
+            const logo = document.querySelector('.print-logo');
+            if (logo) logo.style.display = 'block';
+            window.print();
+            setTimeout(() => {
+                if (logo) logo.style.display = 'none';
+            }, 500);
+        });
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('success') === '1' || window.location.hash === '#view-success') {
+                showSuccess();
+                fillSuccessInvoice({
+                    order_no: urlParams.get('order_no') || '—',
+                    domain: urlParams.get('domain') || '—',
+                    template_name: urlParams.get('template_name') || '',
+                    domain_price: urlParams.get('domain_price') || '',
+                    template_price: urlParams.get('template_price') || '',
+                    discount: urlParams.get('discount') || '',
+                    tax: urlParams.get('tax') || '',
+                    total: (urlParams.get('total') ? decodeURIComponent(urlParams.get('total')) : '—')
+                });
+                const clientName = urlParams.get('client_name');
+                if (clientName) {
+                    const m = document.getElementById('sx-success-msg');
+                    if (m) m.textContent = 'تم إنشاء الطلب بنجاح يا ' + decodeURIComponent(clientName);
                 }
-                if (typeof validate === 'function') validate();
             }
-            gwRadios.forEach(r => r.addEventListener('change', () => setGateway(document.querySelector(
-                'input[name="gateway"]:checked').value)));
-
-            // تحقق بسيط (عرض فقط)
-            const ccNumber = document.getElementById('ccNumber');
-            const ccName = document.getElementById('ccName');
-            const ccExp = document.getElementById('ccExp');
-            const ccCvv = document.getElementById('ccCvv');
-            const bankRef = document.getElementById('bankRef');
-
-            function validCard() {
-                if (cardForm.classList.contains('hidden')) return true;
-                const num = (ccNumber?.value || '').replace(/\s+/g, '');
-                const nameOk = (ccName?.value || '').trim().length > 2;
-                const exp = (ccExp?.value || '').trim();
-                const cvv = (ccCvv?.value || '').trim();
-                const numOk = /^[0-9]{13,19}$/.test(num);
-                const expOk = /^(0[1-9]|1[0-2])\/(\d{2})$/.test(exp);
-                const cvvOk = /^\d{3,4}$/.test(cvv);
-                return numOk && nameOk && expOk && cvvOk;
-            }
-
-            function validBank() {
-                if (bankForm.classList.contains('hidden')) return true;
-                return (bankRef?.value || '').trim().length >= 6;
-            }
-
-            function validate() {
-                if (!placeOrder) return; // أمان: لا تعمل إذا لم يوجد الزر
-                const ok = agreeTos.checked && validCard() && validBank();
-                placeOrder.disabled = !ok;
-                placeOrder.classList.toggle('opacity-50', !ok);
-                placeOrder.classList.toggle('cursor-not-allowed', !ok);
-            }
-
-            [ccNumber, ccName, ccExp, ccCvv, bankRef, agreeTos].forEach(el => el && el.addEventListener('input',
-                validate));
-            setGateway('card');
-
-            // رسالة المعاينة
-            document.getElementById('placeOrder')?.addEventListener('click', () => {
-                alert('🚀 تم إرسال الطلب (معاينة). سيتم توليد الفاتورة وإكمال الربط بعد المعالجة.');
-            });
-        })();
+        });
     </script>
+
     <style>
         @media print {
             body * {
@@ -1159,6 +1310,7 @@
             }
         }
     </style>
+
 
     {{-- <livewire:checkout-client :template_id="$template_id" /> --}}
 </x-template.layouts.index-layouts>

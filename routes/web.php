@@ -33,6 +33,10 @@ Route::middleware(['setLocale'])->group(function () {
         return view('tamplate.page', ['page' => $page]);
     });
 
+    // صفحات أخرى عبر slug (catch-all) — ضع المسارات الخاصة قبل هذا لتجنّب التقاطها
+    // صفحة سلة بسيطة للزوار: تعرض الدومينات المخزنة في localStorage عبر JS
+    Route::view('/cart', 'tamplate.cart')->name('cart');
+
     // صفحات أخرى عبر slug
     Route::get('/{slug}', function ($slug) {
         $page = Page::with(['translations', 'sections.translations'])
@@ -53,7 +57,20 @@ Route::middleware(['setLocale'])->group(function () {
     })->name('portfolio.show');
 
     Route::get('/checkout/client/{template_id}', [CheckoutController::class, 'index'])->name('checkout');
+    // Checkout entrypoint for domain-only cart (from /cart)
+    Route::get('/checkout/cart', [CheckoutController::class, 'cart'])->name('checkout.cart');
+    Route::post('/checkout/cart/process', [CheckoutController::class, 'processCart'])->name('checkout.cart.process');
     Route::post('/checkout/client/{template_id}/process', [CheckoutController::class, 'process'])->name('checkout.process');
+    // Store client-side cart into server session (AJAX)
+    Route::post('/cart/store', [\App\Http\Controllers\Frontend\CartController::class, 'store'])->name('cart.store');
+    // Domain-only checkout (no template binding)
+    Route::get('/checkout/domains', function () {
+        return view('tamplate.checkout-domains');
+    })->name('checkout.domains');
+    Route::post('/checkout/domains/process', [\App\Http\Controllers\Frontend\CartController::class, 'processDomains'])->name('checkout.domains.process');
+    Route::get('/checkout/domains/success', function () {
+        return view('tamplate.checkout-domains-success');
+    })->name('checkout.domains.success');
 
     Route::get('/templates/{slug}', [FrontTemplateController::class, 'show'])->name('template.show');
     Route::get('/templates/{slug}/preview', [FrontTemplateController::class, 'preview'])->name('template.preview');
