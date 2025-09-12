@@ -1839,6 +1839,12 @@
       border-color: color-mix(in oklab, var(--color-primary) 20%, transparent);
     }
   }
+  .border-primary\/30 {
+    border-color: color-mix(in srgb, #240B36 30%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-primary) 30%, transparent);
+    }
+  }
   .border-primary\/50 {
     border-color: color-mix(in srgb, #240B36 50%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -2718,6 +2724,12 @@
       color: color-mix(in oklab, var(--color-primary) 70%, transparent);
     }
   }
+  .text-primary\/80 {
+    color: color-mix(in srgb, #240B36 80%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-primary) 80%, transparent);
+    }
+  }
   .text-primary\/90 {
     color: color-mix(in srgb, #240B36 90%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -2729,6 +2741,9 @@
   }
   .text-purple-600 {
     color: var(--color-purple-600);
+  }
+  .text-red-50 {
+    color: var(--color-red-50);
   }
   .text-red-500 {
     color: var(--color-red-500);
@@ -3541,6 +3556,13 @@
       }
     }
   }
+  .hover\:bg-\[\#240B36\]\/50 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: color-mix(in oklab, #240B36 50%, transparent);
+      }
+    }
+  }
   .hover\:bg-black {
     &:hover {
       @media (hover: hover) {
@@ -4152,6 +4174,11 @@
       cursor: grabbing;
     }
   }
+  .active\:bg-amber-200 {
+    &:active {
+      background-color: var(--color-amber-200);
+    }
+  }
   .disabled\:cursor-not-allowed {
     &:disabled {
       cursor: not-allowed;
@@ -4160,6 +4187,24 @@
   .disabled\:opacity-50 {
     &:disabled {
       opacity: 50%;
+    }
+  }
+  .aria-selected\:border-\[\#240B36\]\/40 {
+    &[aria-selected="true"] {
+      border-color: color-mix(in oklab, #240B36 40%, transparent);
+    }
+  }
+  .aria-selected\:bg-primary\/80 {
+    &[aria-selected="true"] {
+      background-color: color-mix(in srgb, #240B36 80%, transparent);
+      @supports (color: color-mix(in lab, red, red)) {
+        background-color: color-mix(in oklab, var(--color-primary) 80%, transparent);
+      }
+    }
+  }
+  .aria-selected\:text-white {
+    &[aria-selected="true"] {
+      color: var(--color-white);
     }
   }
   .max-lg\:hidden {

@@ -54,20 +54,20 @@
 
                 <!-- Tabs -->
                 <div role="tablist" aria-label="طرق الدومين" class="flex gap-2 mb-6">
-                    <button data-tab="register" aria-selected="true"
-                        class="px-4 py-2 rounded-xl border border-[#240B36]/30 text-[#240B36] bg-white dark:bg-gray-900 hover:bg-gray-50 hover:border-[#240B36]/50 dark:hover:bg-gray-800 transition-colors">
+                    <button data-tab="register" role="tab" aria-controls="tab-register" aria-selected="true"
+                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40">
                         تسجيل جديد
                     </button>
-                    <button data-tab="transfer"
-                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors">
+                    <button data-tab="transfer" role="tab" aria-controls="tab-transfer" aria-selected="false"
+                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40">
                         نقل نطاق
                     </button>
-                    <button data-tab="owndomain"
-                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors">
+                    <button data-tab="owndomain" role="tab" aria-controls="tab-owndomain" aria-selected="false"
+                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40">
                         أمتلك نطاقاً
                     </button>
-                    <button data-tab="subdomain"
-                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors">
+                    <button data-tab="subdomain" role="tab" aria-controls="tab-subdomain" aria-selected="false"
+                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40">
                         Subdomain مجاني
                     </button>
                 </div>
@@ -1039,29 +1039,25 @@
                 goto(1);
             });
 
-            // تبديل التبويبات
+            // تبديل التبويبات (اعتمادًا على aria-selected + Tailwind aria-variant)
+            const activateTab = (name) => {
+                tabs.forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name ? 'true' : 'false'));
+                Object.values(panels).forEach(p => p?.classList.add('hidden'));
+                panels[name]?.classList.remove('hidden');
+                if (name === 'register') {
+                    const cents = getFallbackCents(regTld?.value || '.com');
+                    setReview('—', cents);
+                } else {
+                    setReview('—', 0);
+                }
+            };
             tabs.forEach(btn => {
-                btn.classList.add('cursor-pointer', 'hover:bg-gray-50', 'dark:hover:bg-gray-800',
-                    'hover:border-[#240B36]/40', 'transition-colors');
-                btn.addEventListener('click', () => {
-                    tabs.forEach(b => {
-                        b.classList.remove('border-[#240B36]', 'text-[#240B36]');
-                        b.classList.add('border-gray-300', 'dark:border-gray-700',
-                            'text-gray-700', 'dark:text-gray-200');
-                    });
-                    btn.classList.add('border-[#240B36]', 'text-[#240B36]');
-                    Object.values(panels).forEach(p => p?.classList.add('hidden'));
-                    panels[btn.dataset.tab]?.classList.remove('hidden');
-
-                    // عرض أولي
-                    if (btn.dataset.tab === 'register') {
-                        const cents = getFallbackCents(regTld?.value || '.com');
-                        setReview('—', cents);
-                    } else {
-                        setReview('—', 0);
-                    }
-                });
+                btn.classList.add('cursor-pointer', 'transition-colors');
+                btn.addEventListener('click', () => activateTab(btn.dataset.tab));
             });
+            // تفعيل الحالة الابتدائية حسب الزر المحدد
+            const initiallyActive = document.querySelector('[data-tab][aria-selected="true"]')?.dataset.tab || 'register';
+            activateTab(initiallyActive);
 
             // إذا review=1 اذهب للمراجعة، وإلا أظهر التسجيل
             if (window.location.search.includes('review=1')) {
