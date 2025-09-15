@@ -891,6 +891,9 @@
                 if (orderDomainInput) orderDomainInput.value = list[0]?.domain || '';
             }
 
+            // أظهر/أخفِ حالة السلة الفارغة
+            try { showEmptyNotice(list.length === 0); } catch {}
+
             // اربط أزرار الحذف لكل صف
             tbody.querySelectorAll('.rv-remove').forEach(btn => {
                 btn.addEventListener('click', async () => {
@@ -1477,9 +1480,38 @@
                     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
                     await fetch(`{{ url('/cart/clear') }}`, { method: 'POST', headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' } });
                 } catch {}
+                // امسح أي اختيار محفوظ للدومين الأساسي (في تدفّق القالب)
+                try { clearPrimarySelection(); } catch {}
+                // أفرغ عرض الدومينات تمامًا
                 setCartDomains([]);
-                // عُد إلى خطوة اختيار الدومين
-                goto(0);
+                // صفّر الحقول المخفية والملخص
+                try {
+                    const form = document.getElementById('checkoutForm');
+                    form?.querySelectorAll('input[name^="items["]').forEach(n => n.remove());
+                    const od = document.getElementById('orderDomainInput'); if (od) od.value = '';
+                    const op = form?.querySelector('input[name="domain_option"]'); if (op) op.value = '';
+                    const pc = form?.querySelector('input[name="domain_price_cents"]'); if (pc) pc.value = '';
+                    if (summaryDomain) summaryDomain.textContent = '—';
+                    if (reviewDomain) reviewDomain.textContent = '—';
+                    const priceCell = document.getElementById('reviewDomainPrice'); if (priceCell) priceCell.textContent = fmt(0);
+                    updateTotals(0);
+                    enableOrderIfValid();
+                } catch {}
+                // وجّه المستخدم بحسب السياق السابق
+                try {
+                    const ref = document.referrer || '';
+                    if (ref && /\/templates\//.test(ref)) {
+                        window.location.href = ref; // العودة لصفحة القالب السابقة إن وُجدت
+                        return;
+                    }
+                } catch {}
+                if (HAS_TEMPLATE) {
+                    // كان في تدفّق القالب: وجّه لقائمة القوالب
+                    window.location.href = '/templates';
+                } else {
+                    // تدفّق الدومينات فقط: وجّه للصفحة الرئيسية
+                    window.location.href = '{{ url('/') }}';
+                }
             });
 
             // زر حذف القالب: يخفي صف القالب ويجعل إجمالي القالب = 0 ويُحدّث الإجماليات، ويحوّل مسار الإرسال لدومينات فقط
