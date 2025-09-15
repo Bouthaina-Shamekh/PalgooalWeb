@@ -60,6 +60,16 @@
             </button>
         </div>
 
+        <!-- إجراءات جماعية: إضافة كل الدومينات المتاحة للدفع بدون قالب -->
+        <div id="bulkActions" class="mt-8 hidden">
+            <button id="btnProceedAllDomains"
+                class="px-5 py-2 rounded-xl text-sm font-semibold bg-white/10 text-white hover:bg-white/20 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled>
+                إضافة كل الدومينات المتاحة للدفع
+            </button>
+            <div class="mt-2 text-xs text-white/70" id="bulkHint"></div>
+        </div>
+
         {{-- الاقتراحات الذكية (مخفي افتراضيًا ويظهر بعد البحث) --}}
         <div id="suggestionsSection" class="mt-12 text-start hidden">
             <div class="flex items-center justify-between">
@@ -92,95 +102,6 @@
     </div>
 </section>
 
-{{-- resources/views/components/template/sections/search-domain.blade.php --}}
-@props([
-    'fallbackPrices' => [],
-    'defaultTlds' => ['com', 'net', 'org', 'info', 'shop', 'xyz', 'rocks', 'news', 'live', 'ninja', 'watches'],
-    'currency' => 'USD',
-    // optional: current template id when this component is used inside a template checkout page
-    'template_id' => null,
-])
-
-<section id="search-domain" class="bg-primary py-16 text-white scroll-mt-24">
-  <div class="container mx-auto max-w-5xl px-4 text-center">
-    <h1 class="text-2xl md:text-4xl font-extrabold mb-4">ابحث عن اسم دومين</h1>
-    <p class="text-sm md:text-base text-white/80 mb-8">
-      اكتب اسمك فقط مثل <span class="font-mono">palgoals</span> وسنعرض لك .com والبدائل والاقتراحات فورًا
-    </p>
-
-    <!-- أزرار ترويجية -->
-    <div class="flex flex-col sm:flex-row justify-center items-center gap-3 mb-8">
-      <a href="#search-domain"
-         class="inline-flex items-center gap-2 bg-secondary hover:bg-secondary/30 text-white font-semibold px-6 py-3 rounded-full shadow-md transition">
-        ✨ مولد أسماء الدومينات الذكي
-      </a>
-      <a href="#search-domain"
-         class="inline-flex items-center gap-2 bg-white text-[#4C1D95] hover:bg-gray-100 font-semibold px-6 py-3 rounded-full shadow-md transition">
-        البحث عن دومين
-      </a>
-    </div>
-
-    <!-- شريط البحث -->
-    <div class="relative max-w-xl mx-auto">
-      <label for="domainInput" class="sr-only">ابحث عن دومين</label>
-      <input id="domainInput" type="text" dir="ltr" placeholder="palgoals أو palgoals.com, palgoals.net"
-             class="w-full rounded-2xl bg-white/10 text-white placeholder-white/60 border border-white/15
-                    focus:border-white/30 focus:outline-none focus:ring-4 focus:ring-white/10
-                    ps-12 pe-4 py-3 transition text-start placeholder:text-start"
-             aria-describedby="status" />
-      <button id="searchButton"
-              class="absolute left-2 top-1/2 -translate-y-1/2 px-4 py-2 rounded-xl bg-secondary/90 hover:bg-secondary text-white font-medium transition">
-        بحث
-      </button>
-    </div>
-
-    <div class="mt-3 text-xs text-white/70">
-      تلميح: اكتب SLD فقط (بدون .com) وسنقترح الامتدادات الشائعة تلقائيًا.
-    </div>
-
-    <div id="status" class="mt-4 text-sm text-white/90" role="status" aria-live="polite"></div>
-
-    {{-- النتائج --}}
-    <div id="primaryResult" class="mt-6"></div>
-
-    <div id="altHeader" class="mt-8 text-start hidden">
-      <h3 class="text-lg font-semibold">بدائل TLD</h3>
-    </div>
-    <div id="altResults" class="mt-3"></div>
-    <div id="moreWrap" class="mt-6 hidden">
-      <button id="loadMoreBtn"
-              class="px-5 py-2 rounded-xl text-sm font-semibold bg-white/10 text-white hover:bg-white/20 transition">
-        تحميل المزيد
-      </button>
-    </div>
-
-    {{-- الاقتراحات الذكية (مخفي افتراضيًا ويظهر بعد البحث) --}}
-    <div id="suggestionsSection" class="mt-12 text-start hidden">
-      <div class="flex items-center justify-between">
-        <h3 class="text-lg font-semibold">اقتراحات أسماء</h3>
-        <div class="flex gap-3 text-xs">
-          <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optCommon" class="accent-white" checked> شائعة</label>
-          <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optTech" class="accent-white" checked> تقنية</label>
-          <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optBiz" class="accent-white" checked> أعمال</label>
-          <label class="inline-flex items-center gap-1 cursor-pointer"><input type="checkbox" id="optShort" class="accent-white" checked> تقصير</label>
-        </div>
-      </div>
-
-      <div class="mt-3 flex gap-2">
-        <button id="genSuggestBtn"
-                class="px-4 py-2 rounded-xl text-sm font-semibold bg-white/10 text-white hover:bg-white/20 transition">
-          توليد اقتراحات
-        </button>
-        <button id="checkSuggestBtn"
-                class="px-4 py-2 rounded-xl text-sm font-semibold bg-secondary text-white hover:bg-secondary/90 transition">
-          فحص الاقتراحات (.com)
-        </button>
-      </div>
-
-      <div id="suggestionsWrap" class="mt-4"></div>
-    </div>
-  </div>
-</section>
 
 <script>
 /* ===== بيانات من السيرفر ===== */
@@ -309,24 +230,22 @@ function priceLine(result, tld) {
 function card(domain, result = {}) {
   const tld = getTld(domain);
   const available = !!result.available;
+  const primaryBtn = CURRENT_TEMPLATE_ID
+    ? `<button class="w-full bg-[#240B36] text-white text-sm font-semibold py-2 rounded-lg hover:opacity-95 transition" onclick="useAsPrimary('${domain}','register')">استخدامه كدومين أساسي</button>`
+    : '';
+  const actions = `
+    <div class="flex gap-2">
+      <button class="flex-1 bg-indigo-900 text-white text-sm font-semibold py-2 rounded-lg hover:bg-indigo-700 transition" onclick="addToCart('${domain}')">أضف للسلة</button>
+      <button class="px-2 rounded-lg bg-white/10 hover:bg-white/20 text-white" onclick="copyDomain('${domain}')" title="نسخ">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+      </button>
+    </div>`;
   return `
     <div class="relative rounded-xl p-4 text-center border ${available ? 'border-green-500/70 bg-green-500/10' : 'border-red-400/70 bg-red-500/10'} shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition">
       ${tagNew(tld)}
       <div class="text-lg font-bold text-white mb-1">${domain}</div>
       <div class="text-sm text-white/70 mb-3">${priceLine(result, tld)}</div>
-      ${
-        available
-        ? `<div class="flex gap-2">
-             <button class="flex-1 bg-indigo-900 text-white text-sm font-semibold py-2 rounded-lg hover:bg-indigo-700 transition" onclick="addToCart('${domain}')">أضف للسلة</button>
-             <button class="px-2 rounded-lg bg-white/10 hover:bg-white/20 text-white" onclick="copyDomain('${domain}')" title="نسخ">
-               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 inline" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
-             </button>
-           </div>`
-        : `<div class="flex flex-col gap-2">
-             <span class="inline-flex items-center justify-center w-full bg-gray-500/40 text-white/80 text-sm font-semibold py-2 rounded-lg cursor-not-allowed">محجوز</span>
-             <button class="w-full bg-white/10 text-white text-xs py-1.5 rounded-lg hover:bg-white/20 transition" onclick="checkMoreTlds('${domain.split('.').slice(0,-1).join('.')}')">جرّب امتدادات أخرى</button>
-           </div>`
-      }
+      ${available ? (`<div class="flex flex-col gap-2">${primaryBtn}${actions}</div>`) : (`<div class="flex flex-col gap-2"><span class="inline-flex items-center justify-center w-full bg-gray-500/40 text-white/80 text-sm font-semibold py-2 rounded-lg cursor-not-allowed">محجوز</span><button class="w-full bg-white/10 text-white text-xs py-1.5 rounded-lg hover:bg-white/20 transition" onclick="checkMoreTlds('${domain.split('.').slice(0,-1).join('.')}')">جرّب امتدادات أخرى</button></div>`)}
     </div>
   `;
 }
@@ -500,6 +419,19 @@ async function doSearch() {
 
     elStatus.textContent = `تم • الزمن: ${data.duration_ms || '?'} ms • ${new Date(data.fetched_at).toLocaleString()}`;
     renderPrimaryAndAlts();
+
+    // فعّل زر الإضافة الجماعية إن وُجدت نتائج متاحة
+    try {
+      const availCount = norm.filter(x => x?.result?.available === true).length;
+      const bulkWrap = document.getElementById('bulkActions');
+      const btnAll   = document.getElementById('btnProceedAllDomains');
+      const hint     = document.getElementById('bulkHint');
+      if (bulkWrap && btnAll) {
+        bulkWrap.classList.toggle('hidden', availCount === 0);
+        btnAll.disabled = availCount === 0;
+        if (hint) hint.textContent = availCount > 0 ? `عناصر متاحة: ${availCount}` : '';
+      }
+    } catch {}
 
     // الاقتراحات
     const first = raw.split(',')[0].trim();
@@ -739,6 +671,36 @@ document.getElementById('checkSuggestBtn')?.addEventListener('click', () => auto
   if (q) { elInput.value = q; doSearch(); }
 })();
 
+// زر: إضافة كل المتاح للدفع (دومينات فقط) — تخزين في الجلسة ثم فتح checkout/cart
+document.getElementById('btnProceedAllDomains')?.addEventListener('click', async () => {
+  try {
+    const available = (_allResults || []).filter(x => x?.result?.available === true).map(x => x.domain);
+    if (!available.length) {
+      alert('لا توجد نتائج متاحة حاليا.');
+      return;
+    }
+
+    // عناصر: نبدأ register وسعر 0 (سيُحسب لاحقًا في التدفق)
+    const items = available.map(d => ({ domain: d, item_option: 'register', price_cents: 0 }));
+
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const res = await fetch("{{ route('cart.store') }}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
+      body: JSON.stringify({ items })
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok || !data) {
+      alert((data && data.message) || 'تعذر حفظ عناصر السلة.');
+      return;
+    }
+    window.location.href = "{{ route('checkout.cart') }}";
+  } catch (e) {
+    console.error(e);
+    alert('حدث خطأ أثناء الإرسال.');
+  }
+});
+
 /* ===== السلة + نسخ ===== */
 // ربط زر "أضف للسلة": يدعم حالتين: داخل صفحة checkout للقالب أو استخدام عام
 window.addToCart = function(domain){
@@ -786,12 +748,17 @@ window.addToCart = function(domain){
   try {
     // لو المكوّن مستخدم داخل صفحة قالب قبل الانتقال للـ checkout
     if (CURRENT_TEMPLATE_ID) {
-      const url = `/checkout/client/${encodeURIComponent(CURRENT_TEMPLATE_ID)}?domain=${encodeURIComponent(domain)}&review=1`;
-      window.location.href = url;
+      const base = "{{ route('checkout.cart') }}";
+      const url = new URL(base, window.location.origin);
+      url.searchParams.set('template_id', CURRENT_TEMPLATE_ID);
+      url.searchParams.set('domain', domain);
+      url.searchParams.set('domain_option', 'register');
+      url.searchParams.set('review', '1');
+      window.location.href = url.pathname + url.search;
       return;
     }
 
-    // استخدام عام: خزّن في السلة الموحّدة ثم اذهب لصفحة السلة
+    // استخدام عام: خزّن في السلة الموحّدة ثم اذهب لصفحة الدفع الموحد
     let cents = 0;
     try{
       const tld = '.' + domain.split('.').pop().toLowerCase();
@@ -806,14 +773,31 @@ window.addToCart = function(domain){
     const updated = upsertDomain(cart, { domain, item_option: 'register', price_cents: cents });
     writeUnifiedCart(updated);
 
-    // ثم الانتقال للسلة
-    window.location.href = '/cart';
+    // ثم الانتقال لصفحة الدفع الموحد
+    window.location.href = "{{ route('checkout.cart') }}";
   } catch (e){
     console.error(e);
     alert('تمت إضافة ' + domain + ' للسلة.');
-    window.location.href = '/cart';
+    window.location.href = "{{ route('checkout.cart') }}";
   }
 };
+
+// استخدام دومين كـ "أساسي" للقالب الحالي → يذهب إلى checkout/cart مع تمرير المعاملات
+window.useAsPrimary = function(domain, option = 'register'){
+  try {
+    if (!CURRENT_TEMPLATE_ID) return addToCart(domain);
+    const base = "{{ route('checkout.cart') }}";
+    const url = new URL(base, window.location.origin);
+    url.searchParams.set('template_id', CURRENT_TEMPLATE_ID);
+    url.searchParams.set('domain', domain);
+    url.searchParams.set('domain_option', option || 'register');
+    url.searchParams.set('review', '1');
+    window.location.href = url.pathname + url.search;
+  } catch (e) {
+    console.error(e);
+    addToCart(domain);
+  }
+}
 
 window.copyDomain = async (domain) => {
   try {
@@ -824,4 +808,3 @@ window.copyDomain = async (domain) => {
   }
 };
 </script>
-

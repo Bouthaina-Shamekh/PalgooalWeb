@@ -24,11 +24,15 @@ class CheckoutController extends Controller
     public function cart(Request $request)
     {
         $items = session('palgoals_cart_domains', []);
-        $template_id = null;
+        // دعم تمرير قالب عبر الاستعلام لعرضه داخل المراجعة الموحدة
+        $template_id = $request->query('template_id') ?? $request->query('tid');
         $template = null;
         $translation = null;
+        if (!empty($template_id)) {
+            $template = \App\Models\Template::find($template_id);
+            $translation = $template?->translations()->where('locale', app()->getLocale())->first();
+        }
 
-        // مرّر items إن حبيت تستخدمها كسقوط احتياطي في الـ Blade
         return view('tamplate.checkout', compact('template_id', 'template', 'translation', 'items'));
     }
 
@@ -95,6 +99,14 @@ class CheckoutController extends Controller
 
         // إجمالي سلة الدومينات (في حالة الدومين فقط)
         $domainsTotalCents = array_reduce($items, fn($c, $it) => $c + ((int) ($it['price_cents'] ?? 0)), 0);
+
+        // تحقق خاص بتدفّق القالب: يجب وجود دومين أساسي
+        if (!$isDomainOnly) {
+            $request->validate([
+                'domain'        => 'required|string|min:1',
+                'domain_option' => 'required|string|min:1',
+            ]);
+        }
 
         try {
             $result = DB::transaction(function () use (

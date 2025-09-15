@@ -17,7 +17,7 @@
             @php
                 $translation = $template->translation();
             @endphp
-            <a href="/templates/{{ $translation->slug }}" class="block h-full">
+            <a href="/templates/{{ $translation->slug }}@if(request('domain'))?domain={{ urlencode(request('domain')) }}@endif" class="block h-full">
                 <article
                     class="h-full flex flex-col bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden relative group transition-transform duration-300 hover:-translate-y-2 hover:shadow-2xl border border-primary/10">
                     <meta itemprop="name" content="{{ $translation->name }}">

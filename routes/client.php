@@ -30,11 +30,27 @@ Route::post('client/login', function (Request $request) {
     $credentials = $request->only('email', 'password');
     if (Auth::guard('client')->attempt($credentials, $request->filled('remember'))) {
         $request->session()->regenerate();
+        // ردّ JSON عند الطلب عبر AJAX
+        if ($request->ajax() || $request->wantsJson() || $request->expectsJson()) {
+            $u = Auth::guard('client')->user();
+            return response()->json([
+                'ok' => true,
+                'user' => [
+                    'first_name' => $u->first_name ?? '',
+                    'last_name'  => $u->last_name ?? '',
+                    'email'      => $u->email ?? '',
+                ],
+                'message' => 'تم تسجيل الدخول بنجاح.'
+            ]);
+        }
         $referer = $request->headers->get('referer');
         if ($referer && str_contains($referer, 'checkout')) {
             return redirect()->to($referer . (str_contains($referer, '?') ? '&' : '?') . 'review=1')->with('success', 'تم تسجيل الدخول بنجاح!');
         }
         return redirect()->back()->with('success', 'تم تسجيل الدخول بنجاح!');
+    }
+    if ($request->ajax() || $request->wantsJson() || $request->expectsJson()) {
+        return response()->json(['ok' => false, 'message' => 'بيانات الدخول غير صحيحة.'], 422);
     }
     return redirect()->back()->withErrors(['email' => 'بيانات الدخول غير صحيحة'])->withInput();
 })->name('login.store');

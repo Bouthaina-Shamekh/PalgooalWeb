@@ -35,7 +35,9 @@ Route::middleware(['setLocale'])->group(function () {
 
     // صفحات أخرى عبر slug (catch-all) — ضع المسارات الخاصة قبل هذا لتجنّب التقاطها
     // صفحة سلة بسيطة للزوار: تعرض الدومينات المخزنة في localStorage عبر JS
-    Route::view('/cart', 'tamplate.cart')->name('cart');
+    Route::get('/cart', function () {
+        return redirect()->route('checkout.cart');
+    })->name('cart');
 
     // صفحات أخرى عبر slug
     Route::get('/{slug}', function ($slug) {
@@ -63,6 +65,8 @@ Route::middleware(['setLocale'])->group(function () {
     Route::post('/checkout/client/{template_id}/process', [CheckoutController::class, 'process'])->name('checkout.process');
     // Store client-side cart into server session (AJAX)
     Route::post('/cart/store', [\App\Http\Controllers\Frontend\CartController::class, 'store'])->name('cart.store');
+    // Clear domain-only cart from session (AJAX)
+    Route::post('/cart/clear', [\App\Http\Controllers\Frontend\CartController::class, 'clear'])->name('cart.clear');
     // Domain-only checkout (no template binding)
     Route::get('/checkout/domains', function () {
         return view('tamplate.checkout-domains');

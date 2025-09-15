@@ -168,6 +168,16 @@ class CartController extends Controller
     }
 
     /**
+     * Clear domain-only items from server session cart.
+     */
+    public function clear(Request $request)
+    {
+        // Remove only domain cart key; keep other session data intact
+        $request->session()->forget('palgoals_cart_domains');
+        return response()->json(['ok' => true]);
+    }
+
+    /**
      * Process domain-only checkout using session-stored (or body-sent) cart
      */
     public function processDomains(Request $request)
@@ -247,10 +257,11 @@ class CartController extends Controller
             return response()->json(['ok' => false, 'message' => 'تعذر إنشاء الطلب. حاول لاحقًا.'], 500);
         }
 
-        // خزّن مرجعًا في الجلسة
+        // خزّن مرجعًا في الجلسة لاستهلاكه لاحقًا في /checkout/cart
         session([
             'palgoals_reserved'      => $uniqueItems,
             'palgoals_last_order_id' => $order->id,
+            'palgoals_cart_domains'  => $uniqueItems, // تستخدمها CheckoutController@cart لتمرير العناصر للعرض
         ]);
 
         return response()->json([

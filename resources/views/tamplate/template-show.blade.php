@@ -570,7 +570,7 @@
                         </button>
                     @endif
                     @php $finalPriceCents = (int) round($finalPrice * 100); @endphp
-                    <a id="subscribeNow" href="{{ route('checkout', ['template_id' => $template->id]) }}"
+                    <a id="subscribeNow" href="{{ route('checkout.cart', ['template_id' => $template->id, 'review' => 1, 'domain' => request('domain')]) }}"
                         data-template-id="{{ $template->id }}"
                         data-template-name="{{ $translation?->name ?? ($template->name ?? 'Template') }}"
                         data-price-cents="{{ $finalPriceCents }}"
@@ -676,6 +676,24 @@
             </div>
         </div>
     </section>
+
+    <script>
+        // إن وُجد domain في الاستعلام، وجّه الاشتراك إلى checkout/cart مع template_id لعرضه ضمن السلة الموحدة
+        (function() {
+            const qp = new URLSearchParams(window.location.search);
+            const d = (qp.get('domain') || '').trim();
+            const a = document.getElementById('subscribeNow');
+            const tplId = a?.getAttribute('data-template-id');
+            if (a && tplId) {
+                const base = "{{ route('checkout.cart') }}";
+                const url = new URL(base, window.location.origin);
+                url.searchParams.set('template_id', tplId);
+                url.searchParams.set('review', '1');
+                if (d) url.searchParams.set('domain', d);
+                a.href = url.pathname + url.search;
+            }
+        })();
+    </script>
 
 
 

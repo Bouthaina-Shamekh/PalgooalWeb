@@ -21,7 +21,7 @@
     ogImage="{{ asset('assets/dashboard/images/logo-white.svg') }}">
 
     <!-- ===== شريط الخطوات (خطوتان) ===== -->
-    <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 mt-6">
+    <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-4 mt-6">
         <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-4">
             <div id="globalStepper" class="flex items-center justify-between gap-2">
                 <!-- Step 1 -->
@@ -31,7 +31,9 @@
                         1</div>
                     <div class="text-sm">حجز الدومين</div>
                 </div>
-                <div class="h-0.5 flex-1 bg-gray-200 dark:bg-gray-700"></div>
+                <div class="relative h-0.5 flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div id="stepperProgress" class="absolute inset-y-0 right-0 bg-[#240B36] transition-all duration-300" style="width:0%"></div>
+                </div>
                 <!-- Step 2 -->
                 <div class="flex items-center gap-3 step" data-index="1">
                     <div
@@ -55,19 +57,19 @@
                 <!-- Tabs -->
                 <div role="tablist" aria-label="طرق الدومين" class="flex gap-2 mb-6">
                     <button data-tab="register" role="tab" aria-controls="tab-register" aria-selected="true"
-                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40">
+                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
                         تسجيل جديد
                     </button>
                     <button data-tab="transfer" role="tab" aria-controls="tab-transfer" aria-selected="false"
-                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40">
+                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
                         نقل نطاق
                     </button>
                     <button data-tab="owndomain" role="tab" aria-controls="tab-owndomain" aria-selected="false"
-                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40">
+                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
                         أمتلك نطاقاً
                     </button>
                     <button data-tab="subdomain" role="tab" aria-controls="tab-subdomain" aria-selected="false"
-                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40">
+                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
                         Subdomain مجاني
                     </button>
                 </div>
@@ -100,6 +102,7 @@
                             متابعة
                         </button>
                     </div>
+                    <p id="hintR" class="mt-2 text-xs text-amber-600 hidden">يرجى إدخال اسم النطاق أولاً قبل المتابعة.</p>
                 </form>
 
                 <!-- Transfer -->
@@ -116,6 +119,7 @@
                         <button type="button" id="goConfigT"
                             class="rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">متابعة</button>
                     </div>
+                    <p id="hintT" class="mt-2 text-xs text-amber-600 hidden">يرجى إدخال اسم النطاق المراد نقله قبل المتابعة.</p>
                 </form>
 
                 <!-- Own Domain -->
@@ -131,6 +135,7 @@
                         <button type="button" id="goConfigO"
                             class="rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">متابعة</button>
                     </div>
+                    <p id="hintO" class="mt-2 text-xs text-amber-600 hidden">يرجى إدخال اسم النطاق الذي تملكه قبل المتابعة.</p>
                 </form>
 
                 <!-- Subdomain (مجاني) -->
@@ -157,6 +162,7 @@
                         <button type="button" id="goConfigS"
                             class="rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">متابعة</button>
                     </div>
+                    <p id="hintS" class="mt-2 text-xs text-amber-600 hidden">يرجى إدخال اسم الساب-دومين قبل المتابعة.</p>
                 </form>
             </div>
 
@@ -165,12 +171,13 @@
                 class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-6 h-max">
                 <h3 class="font-bold mb-3">ملخص سريع</h3>
                 <ul class="space-y-2 text-sm">
-                    <li class="flex justify-between"><span>القالب</span><span
-                            class="font-semibold">{{ $translation && $translation->name ? $translation->name : ($template && $template->name ? $template->name : '—') }}</span>
-                    </li>
-                    <li class="flex justify-between"><span>مدة الاشتراك</span><span class="font-semibold">12
-                            شهر</span></li>
-                    <li class="flex justify-between"><span>سعر القالب</span><span class="font-semibold">
+                    @if ($template)
+                        <li class="flex justify-between rv-template-info"><span>القالب</span><span
+                                class="font-semibold">{{ $translation && $translation->name ? $translation->name : ($template && $template->name ? $template->name : '—') }}</span>
+                        </li>
+                        <li class="flex justify-between rv-template-info"><span>مدة الاشتراك</span><span class="font-semibold">12
+                                شهر</span></li>
+                        <li class="flex justify-between rv-template-info"><span>سعر القالب</span><span class="font-semibold">
                             @if ($showDiscount)
                                 <span class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
                                 <span class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
@@ -178,17 +185,22 @@
                                 ${{ number_format($basePrice, 2) }}
                             @endif
                         </span></li>
+                    @endif
                     <li class="flex justify-between"><span>الدومين</span><span id="summaryDomain"
                             class="font-semibold">—</span>
                     </li>
                 </ul>
                 <hr class="my-4 border-gray-200 dark:border-gray-800" />
                 <div class="flex justify-between font-bold"><span>الإجمالي التقديري</span><span id="summaryTotal">
-                        @if ($showDiscount)
-                            <span class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
-                            <span class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
+                        @if ($template)
+                            @if ($showDiscount)
+                                <span class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
+                                <span class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
+                            @else
+                                ${{ number_format($basePrice, 2) }}
+                            @endif
                         @else
-                            ${{ number_format($basePrice, 2) }}
+                            $0.00
                         @endif
                     </span></div>
             </aside>
@@ -206,50 +218,87 @@
                 </p>
 
                 <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 mb-6">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="text-sm text-gray-500">يمكنك إزالة عنصر أو إفراغ السلة قبل الدفع.</div>
+                        <button type="button" id="btnClearCart" class="px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800">إفراغ السلة</button>
+                    </div>
                     <table class="w-full text-sm">
                         <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                             <tr>
                                 <th class="text-right p-3">البند</th>
                                 <th class="text-right p-3">المدة</th>
                                 <th class="text-right p-3">السعر</th>
+                                <th class="text-right p-3">إجراءات</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr class="border-t border-gray-200 dark:border-gray-800">
-                                <td class="p-3">تسجيل نطاق <span id="reviewDomain">example.com</span></td>
+                        <tbody id="reviewDomainsBody">
+                            <!-- يُملأ ديناميكياً من العناصر المتعددة -->
+                            <tr class="border-t border-gray-200 dark:border-gray-800 hidden rv-domain-row" id="reviewDomainProto">
+                                <td class="p-3">تسجيل نطاق <span class="rv-domain">—</span></td>
                                 <td class="p-3">12 شهر</td>
-                                <td class="p-3" id="reviewDomainPrice">0</td>
-                            </tr>
-                            <tr class="border-t border-gray-200 dark:border-gray-800">
-                                <td class="p-3">القالب: <span
-                                        class="font-semibold">{{ $translation && $translation->name ? $translation->name : ($template && $template->name ? $template->name : '—') }}</span>
-                                </td>
-                                <td class="p-3">12 شهر</td>
+                                <td class="p-3 rv-price">0</td>
                                 <td class="p-3">
-                                    @if ($showDiscount)
-                                        <span
-                                            class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
-                                        <span
-                                            class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
-                                    @else
-                                        ${{ number_format($basePrice, 2) }}
-                                    @endif
+                                    <button type="button" class="rv-remove px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200" data-domain="">حذف</button>
                                 </td>
                             </tr>
+                            @if ($template)
+                                <tr class="border-t border-gray-200 dark:border-gray-800 rv-template-row">
+                                    <td class="p-3">القالب: <span
+                                            class="font-semibold">{{ $translation && $translation->name ? $translation->name : ($template && $template->name ? $template->name : '—') }}</span>
+                                    </td>
+                                    <td class="p-3">12 شهر</td>
+                                    <td class="p-3">
+                                        @if ($showDiscount)
+                                            <span
+                                                class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
+                                            <span
+                                                class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
+                                        @else
+                                            ${{ number_format($basePrice, 2) }}
+                                        @endif
+                                    </td>
+                                    <td class="p-3">
+                                        <button type="button" id="btnRemoveTemplate" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200">حذف القالب</button>
+                                    </td>
+                                </tr>
+                            @endif
                         </tbody>
                     </table>
                 </div>
 
+                @if (!$template)
+                    <div class="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4 mb-6">
+                        <div class="font-bold text-amber-800 dark:text-amber-200 mb-1">تحجز دومين فقط؟</div>
+                        <p class="text-sm text-amber-700 dark:text-amber-300">يمكنك إتمام الحجز الآن أو اختيار قالب لبدء موقعك بسرعة.</p>
+                        <div class="mt-3 flex gap-2">
+                            <a id="chooseTemplateLink" href="/templates" class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار قالب</a>
+                            <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">إكمال بدون قالب</button>
+                        </div>
+                    </div>
+                @endif
+
+                <!-- يظهر بعد حذف القالب أثناء الجلسة الحالية -->
+                <div id="chooseTemplateAfterRemove" class="hidden rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4 mb-6">
+                    <div class="font-bold text-amber-800 dark:text-amber-200 mb-1">تم حذف القالب.</div>
+                    <p class="text-sm text-amber-700 dark:text-amber-300">هل تريد اختيار قالب للموقع قبل الدفع؟</p>
+                    <div class="mt-3 flex gap-2">
+                        <a id="chooseTemplateLink2" href="/templates" class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار قالب</a>
+                        <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">إكمال بدون قالب</button>
+                    </div>
+                </div>
+
                 @if (!auth('client')->check())
-                    <!-- تبديل الدخول/التسجيل -->
-                    <div
+                    <!-- تبديل الدخول/التسجيل (Tabs) -->
+                    <div role="tablist" aria-label="حساب العميل"
                         class="inline-flex rounded-xl bg-gray-50 dark:bg-gray-900 p-1 mb-6 shadow border border-gray-200 dark:border-gray-700 gap-2">
-                        <button id="btn-login" type="button"
-                            class="px-5 py-1.5 rounded-xl text-sm font-bold bg-white dark:bg-gray-900 text-[#240B36] border border-transparent hover:bg-[#240B36] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#240B36]/30 shadow-sm">
+                        <button id="btn-login" type="button" role="tab" aria-controls="login-form" aria-selected="true"
+                            data-auth-tab="login"
+                            class="px-5 py-1.5 rounded-xl text-sm font-bold bg-white dark:bg-gray-900 text-[#240B36] border border-transparent hover:bg-[#240B36] hover:text-white focus:outline-none aria-selected:bg-[#240B36] aria-selected:text-white aria-selected:shadow-sm aria-selected:ring-2 aria-selected:ring-[#240B36]/30">
                             دخول العميل
                         </button>
-                        <button id="btn-register" type="button"
-                            class="px-5 py-1.5 rounded-xl text-sm font-bold bg-white dark:bg-gray-900 text-[#240B36] border border-transparent hover:bg-[#240B36] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#240B36]/30">
+                        <button id="btn-register" type="button" role="tab" aria-controls="register-form" aria-selected="false"
+                            data-auth-tab="register"
+                            class="px-5 py-1.5 rounded-xl text-sm font-bold bg-white dark:bg-gray-900 text-[#240B36] border border-transparent hover:bg-[#240B36] hover:text-white focus:outline-none aria-selected:bg-[#240B36] aria-selected:text-white aria-selected:shadow-sm aria-selected:ring-2 aria-selected:ring-[#240B36]/30">
                             إنشاء حساب جديد
                         </button>
                     </div>
@@ -279,7 +328,8 @@
                         <div class="font-bold mb-1">مرحباً، {{ auth('client')->user()->first_name }}
                             {{ auth('client')->user()->last_name }}</div>
                         <div class="text-sm mb-2">البريد: {{ auth('client')->user()->email }}</div>
-                        <form method="POST" action="{{ route('client.logout') }}" style="display:inline">
+                        <button type="button" id="toggleLogout" class="text-xs text-gray-700 underline hover:text-gray-900">تبديل الحساب</button>
+                        <form id="logoutInline" class="hidden" method="POST" action="{{ route('client.logout') }}" style="display:inline">
                             @csrf
                             <button type="submit"
                                 class="text-sm text-red-700 underline hover:text-red-900 font-bold bg-transparent border-0 p-0 cursor-pointer">تسجيل
@@ -289,7 +339,7 @@
                 @else
                     <!-- نموذج الدخول -->
 
-                    <form id="login-form" class=" mb-6" method="POST" action="{{ route('login.store') }}">
+                    <form id="login-form" class=" mb-2" role="tabpanel" method="POST" action="{{ route('login.store') }}">
                         @csrf
                         <div class="grid md:grid-cols-3 gap-4 items-end">
                             <div>
@@ -311,9 +361,15 @@
                                 </button>
                             </div>
                         </div>
+                        <p id="loginMsg" class="mt-2 text-xs text-amber-600"></p>
                     </form>
+                    <!-- يظهر بعد نجاح تسجيل الدخول عبر AJAX -->
+                    <div id="clientInfoAjax" class="hidden mb-6 p-4 rounded-xl bg-green-50 border border-green-200 text-green-900">
+                        <div class="font-bold mb-1">مرحباً، <span id="clientFirst"></span> <span id="clientLast"></span></div>
+                        <div class="text-sm mb-2">البريد: <span id="clientEmail"></span></div>
+                    </div>
                     <!-- نموذج التسجيل -->
-                    <form id="register-form" class="space-y-6 mb-6" onsubmit="return false;">
+                    <form id="register-form" class="space-y-6 mb-6 hidden" role="tabpanel" onsubmit="return false;">
                         <div class="grid md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">الاسم الأول *</label>
@@ -646,6 +702,8 @@
 
         // أسعار احتياطية محلّية + Formatter
         const USD = true;
+        // عناصر قادمة من الخادم عند /checkout/cart (جلسة السيرفر)
+        const SERVER_CART_ITEMS = @json($items ?? []);
         const fallbackPriceMap = {
             '.com': 1000,
             '.net': 1200,
@@ -725,7 +783,10 @@
         }
 
         // سعر القالب (بالسنت)
+        const HAS_TEMPLATE = {{ $template ? 'true' : 'false' }};
+        const USE_AJAX_LOGIN = false; // رجوع للسلوك السابق: تحديث الصفحة عند تسجيل الدخول
         const TEMPLATE_FINAL_CENTS = {{ (int) (($finalPrice ?? 0) * 100) }};
+        let TEMPLATE_CENTS = TEMPLATE_FINAL_CENTS; // متغير قابل للتغيير عند إزالة القالب
 
         // عناصر UI مشتركة
         const summaryDomain = document.getElementById('summaryDomain');
@@ -739,12 +800,22 @@
         const orderTotalCentsInp = document.getElementById('orderTotalCents');
         const orderTotalInp = document.getElementById('orderTotalInput');
 
+        // تخزين محلي لاختيار الدومين الأساسي (للعودة إلى الخطوة 2 بعد تسجيل الدخول)
+        const PRIMARY_KEY = 'palgoals_checkout_primary';
+        function savePrimarySelection(item) {
+            try { localStorage.setItem(PRIMARY_KEY, JSON.stringify(item || {})); } catch {}
+        }
+        function readPrimarySelection() {
+            try { const v = JSON.parse(localStorage.getItem(PRIMARY_KEY) || 'null'); return v && v.domain ? v : null; } catch { return null; }
+        }
+        function clearPrimarySelection() { try { localStorage.removeItem(PRIMARY_KEY); } catch {} }
+
         // خصم (كوبون) — افتراضي 0
         window.__couponDiscountCents = 0;
 
         // حساب الإجماليات (دومين + القالب - الخصم + ضريبة)
         function updateTotals(domainCents) {
-            const subtotal = TEMPLATE_FINAL_CENTS + Math.max(0, domainCents | 0);
+            const subtotal = TEMPLATE_CENTS + Math.max(0, domainCents | 0);
             const tax = 0;
             const discount = Math.min(window.__couponDiscountCents | 0, subtotal);
             const total = Math.max(0, subtotal - discount + tax);
@@ -760,9 +831,90 @@
 
         function setReview(domain, cents) {
             if (summaryDomain) summaryDomain.textContent = domain || '—';
-            if (reviewDomain) reviewDomain.textContent = domain || '—';
-            if (reviewDomainPrice) reviewDomainPrice.textContent = fmt(cents || 0);
+            // التوافق السابق: اجعل خانة السعر تعكس قيمة واحدة عند الحاجة
+            const priceCell = document.getElementById('reviewDomainPrice');
+            if (priceCell) priceCell.textContent = fmt(cents || 0);
             updateTotals(cents || 0);
+            try { updateChooseTemplateLink(); } catch {}
+        }
+
+        // عرض متعدد الدومينات + بناء الحقول المخفية
+        function setCartDomains(items) {
+            const list = Array.isArray(items) ? items.filter(x => x && x.domain) : [];
+            const tbody = document.getElementById('reviewDomainsBody');
+            const proto = document.getElementById('reviewDomainProto');
+            if (!tbody || !proto) return;
+            // امسح صفوف الدومينات فقط (اترك صف القالب إن وُجد)
+            Array.from(tbody.querySelectorAll('tr.rv-domain-row')).forEach(tr => tr.remove());
+
+            let totalCents = 0;
+            list.forEach((it) => {
+                const tr = proto.cloneNode(true);
+                tr.id = '';
+                tr.classList.remove('hidden');
+                tr.classList.add('rv-domain-row');
+                tr.querySelector('.rv-domain').textContent = it.domain;
+                const cents = Number(it.price_cents) || 0;
+                tr.querySelector('.rv-price').textContent = fmt(cents);
+                const btn = tr.querySelector('.rv-remove');
+                if (btn) btn.setAttribute('data-domain', it.domain);
+                totalCents += cents;
+                tbody.appendChild(tr);
+            });
+
+            // ملخص جانبي وخانة السعر الإجمالية
+            if (summaryDomain) {
+                if (list.length > 1) summaryDomain.textContent = `${list[0]?.domain || '—'} (+${list.length - 1})`;
+                else summaryDomain.textContent = list[0]?.domain || '—';
+            }
+            const priceCell = document.getElementById('reviewDomainPrice');
+            if (priceCell) priceCell.textContent = fmt(totalCents);
+            updateTotals(totalCents);
+
+            // إبراز الرابط لاختيار القالب بالدومين الأول
+            try { updateChooseTemplateLink(); } catch {}
+
+            // بناء الحقول المخفية للإرسال
+            const form = document.getElementById('checkoutForm');
+            if (form) {
+                form.querySelectorAll('input[name^="items["]').forEach(n => n.remove());
+                list.forEach((it, i) => {
+                    [['domain', it.domain], ['option', it.item_option || it.option || 'register'], ['price_cents', Number(it.price_cents) || 0]].forEach(([k,v]) => {
+                        const inp = document.createElement('input');
+                        inp.type = 'hidden';
+                        inp.name = `items[${i}][${k}]`;
+                        inp.value = v;
+                        form.appendChild(inp);
+                    });
+                });
+                const orderDomainInput = document.getElementById('orderDomainInput');
+                if (orderDomainInput) orderDomainInput.value = list[0]?.domain || '';
+            }
+
+            // اربط أزرار الحذف لكل صف
+            tbody.querySelectorAll('.rv-remove').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const d = btn.getAttribute('data-domain') || '';
+                    if (!d) return;
+                    const remaining = list.filter(x => (x.domain || '').toLowerCase() !== d.toLowerCase());
+                    // حدّث LocalStorage (إزالة هذا الدومين فقط)
+                    try {
+                        const unified = readUnifiedCart() || [];
+                        const leftovers = unified.filter(it => !(it && (it.kind === 'domain' || (it.kind == null && it.domain)) && String(it.domain).toLowerCase() === d.toLowerCase()));
+                        writeUnifiedCart(leftovers);
+                    } catch {}
+                    // حدّث جلسة السيرفر إن تبقى عناصر
+                    try {
+                        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                        if (remaining.length > 0) {
+                            await fetch(`{{ route('cart.store') }}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': token, 'Accept': 'application/json' }, body: JSON.stringify({ items: remaining }) });
+                        } else {
+                            await fetch(`{{ url('/cart/clear') }}`, { method: 'POST', headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' } });
+                        }
+                    } catch {}
+                    setCartDomains(remaining);
+                });
+            });
         }
 
         // Stepper
@@ -770,22 +922,30 @@
         const stepper = document.getElementById('globalStepper');
 
         function goto(stepIndex) {
+            // تبديل الشاشات
             views.forEach((id, i) => document.getElementById(id)?.classList.toggle('hidden', i !== stepIndex));
             const circles = stepper?.querySelectorAll('.step-circle') || [];
             circles.forEach((c, i) => {
-                c.classList.remove('border-[#240B36]', 'text-[#240B36]', 'bg-[#240B36]', 'text-white');
+                // نظّف جميع الحالات قبل التفعيل
+                c.classList.remove(
+                    'border-[#240B36]', 'text-[#240B36]', 'bg-[#240B36]', 'text-white',
+                    'border-gray-200', 'dark:border-gray-700', 'text-gray-500'
+                );
                 if (i < stepIndex) {
+                    // مكتملة
                     c.classList.add('bg-[#240B36]', 'text-white', 'border-[#240B36]');
                 } else if (i === stepIndex) {
+                    // الحالية
                     c.classList.add('border-[#240B36]', 'text-[#240B36]');
                 } else {
+                    // القادمة
                     c.classList.add('border-gray-200', 'dark:border-gray-700', 'text-gray-500');
                 }
             });
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
+            // تقدّم الخط بين الخطوتين (RTL: من اليمين لليسار)
+            const bar = document.getElementById('stepperProgress');
+            if (bar) bar.style.width = stepIndex === 0 ? '0%' : '100%';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // شاشة النجاح
@@ -797,6 +957,8 @@
                 c.classList.remove('border-[#240B36]', 'text-[#240B36]');
                 c.classList.add('bg-[#240B36]', 'text-white', 'border-[#240B36]');
             });
+            const bar = document.getElementById('stepperProgress');
+            if (bar) bar.style.width = '100%';
             window.scrollTo({
                 top: 0,
                 behavior: 'smooth'
@@ -830,6 +992,21 @@
 
         /* ========================== منطق الصفحة ========================== */
         document.addEventListener('DOMContentLoaded', function() {
+            // رابط اختيار القالب يحمل الدومين الحالي إن وُجد
+            function updateChooseTemplateLink() {
+                const anchors = ['chooseTemplateLink','chooseTemplateLink2']
+                    .map(id => document.getElementById(id))
+                    .filter(Boolean);
+                if (!anchors.length) return;
+                const d = (document.getElementById('orderDomainInput')?.value || '').trim();
+                const base = '/templates';
+                anchors.forEach(a => {
+                    if (!d || d === '—') a.href = base + '?origin=checkout';
+                    else a.href = base + '?origin=checkout&domain=' + encodeURIComponent(d);
+                });
+            }
+            updateChooseTemplateLink();
+
             // عناصر تبويب "تسجيل جديد"
             const regSld = document.querySelector('#tab-register input[aria-label="اسم النطاق"]');
             const regTld = document.querySelector('#tab-register select[aria-label="الامتداد"]');
@@ -892,6 +1069,55 @@
                     if (checkResult) checkResult.textContent = 'خطأ في الاتصال ❌';
                 }
             });
+
+            // منع الانتقال قبل اختيار دومين للقالب: تعطيل أزرار المتابعة حتى إدخال صالح
+            function setBtnDisabled(btn, disabled) {
+                if (!btn) return;
+                btn.disabled = !!disabled;
+                btn.classList.toggle('opacity-50', !!disabled);
+                btn.classList.toggle('cursor-not-allowed', !!disabled);
+            }
+
+            if (HAS_TEMPLATE) {
+                const btns = {
+                    register: document.getElementById('goConfigR'),
+                    transfer: document.getElementById('goConfigT'),
+                    own:      document.getElementById('goConfigO'),
+                    sub:      document.getElementById('goConfigS'),
+                };
+
+                // دوال تحقق سريعة لكل تبويب
+                const canRegister = () => !!(regSld?.value || '').trim();
+                const transferDomainInp = document.querySelector('#tab-transfer input[aria-label="اسم النطاق"]');
+                const canTransfer = () => !!(transferDomainInp?.value || '').trim();
+                const ownDomainInp = document.querySelector('#tab-owndomain input[aria-label="اسم النطاق"]');
+                const canOwn = () => !!(ownDomainInp?.value || '').trim();
+                const subNameInp = document.querySelector('#tab-subdomain input[aria-label="اسم الساب-دومين"]');
+                const canSub = () => !!(subNameInp?.value || '').trim();
+
+                // محدّث حالة التعطيل
+                const refreshGuards = () => {
+                    setBtnDisabled(btns.register, !canRegister());
+                    setBtnDisabled(btns.transfer, !canTransfer());
+                    setBtnDisabled(btns.own,      !canOwn());
+                    setBtnDisabled(btns.sub,      !canSub());
+                    // إظهار تلميح بسيط عند التعطيل
+                    const toggleHint = (id, show) => { const el = document.getElementById(id); if (el) el.classList.toggle('hidden', !show); };
+                    toggleHint('hintR', !canRegister());
+                    toggleHint('hintT', !canTransfer());
+                    toggleHint('hintO', !canOwn());
+                    toggleHint('hintS', !canSub());
+                };
+
+                // اربط الأحداث على إدخال المستخدم
+                regSld?.addEventListener('input', refreshGuards);
+                transferDomainInp?.addEventListener('input', refreshGuards);
+                ownDomainInp?.addEventListener('input', refreshGuards);
+                subNameInp?.addEventListener('input', refreshGuards);
+
+                // تفعيل أولي
+                refreshGuards();
+            }
 
             // تخزين القيم في الفورم النهائي عند الانتقال
             function updateDomainFieldsFromSelection(option, domain, cents) {
@@ -975,6 +1201,9 @@
                 if (tldPrice) tldPrice.textContent = `${fmt(cents)}/سنة`;
                 updateDomainFieldsFromSelection('register', fqdn, cents);
                 setReview(fqdn, cents);
+                const sel = { domain: fqdn, item_option: 'register', price_cents: cents };
+                try { setCartDomains([sel]); } catch {}
+                savePrimarySelection(sel);
                 goto(1);
             });
 
@@ -988,13 +1217,12 @@
                     return;
                 }
                 const cents = await fetchServerPriceCents(domain, 'transfer');
-                writeUnifiedCart(upsertDomain(readUnifiedCart(), {
-                    domain,
-                    item_option: 'transfer',
-                    price_cents: cents
-                }));
+                writeUnifiedCart(upsertDomain(readUnifiedCart(), { domain, item_option: 'transfer', price_cents: cents }));
                 updateDomainFieldsFromSelection('transfer', domain, cents);
                 setReview(domain, cents);
+                const sel = { domain, item_option: 'transfer', price_cents: cents };
+                try { setCartDomains([sel]); } catch {}
+                savePrimarySelection(sel);
                 goto(1);
             });
 
@@ -1007,13 +1235,12 @@
                     alert('رجاءً أدخل اسم النطاق');
                     return;
                 }
-                writeUnifiedCart(upsertDomain(readUnifiedCart(), {
-                    domain,
-                    item_option: 'own',
-                    price_cents: 0
-                }));
+                writeUnifiedCart(upsertDomain(readUnifiedCart(), { domain, item_option: 'own', price_cents: 0 }));
                 updateDomainFieldsFromSelection('own', domain, 0);
                 setReview(domain, 0);
+                const sel = { domain, item_option: 'own', price_cents: 0 };
+                try { setCartDomains([sel]); } catch {}
+                savePrimarySelection(sel);
                 goto(1);
             });
 
@@ -1029,19 +1256,22 @@
                     return;
                 }
                 const fqdn = `${sub}.${main}`;
-                writeUnifiedCart(upsertDomain(readUnifiedCart(), {
-                    domain: fqdn,
-                    item_option: 'subdomain',
-                    price_cents: 0
-                }));
+                writeUnifiedCart(upsertDomain(readUnifiedCart(), { domain: fqdn, item_option: 'subdomain', price_cents: 0 }));
                 updateDomainFieldsFromSelection('subdomain', fqdn, 0);
                 setReview(fqdn, 0);
+                const sel = { domain: fqdn, item_option: 'subdomain', price_cents: 0 };
+                try { setCartDomains([sel]); } catch {}
+                savePrimarySelection(sel);
                 goto(1);
             });
 
             // تبديل التبويبات (اعتمادًا على aria-selected + Tailwind aria-variant)
-            const activateTab = (name) => {
-                tabs.forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name ? 'true' : 'false'));
+            const activateTab = (name, opts = {}) => {
+                tabs.forEach(b => {
+                    const active = b.dataset.tab === name;
+                    b.setAttribute('aria-selected', active ? 'true' : 'false');
+                    b.tabIndex = active ? 0 : -1;
+                });
                 Object.values(panels).forEach(p => p?.classList.add('hidden'));
                 panels[name]?.classList.remove('hidden');
                 if (name === 'register') {
@@ -1050,59 +1280,50 @@
                 } else {
                     setReview('—', 0);
                 }
+                if (opts.focus) {
+                    const btn = Array.from(tabs).find(b => b.dataset.tab === name);
+                    btn?.focus();
+                }
             };
+            const mapOptionToTab = (opt) => {
+                const x = String(opt || '').toLowerCase();
+                if (x === 'register' || x === 'new') return 'register';
+                if (x === 'transfer') return 'transfer';
+                if (x === 'subdomain') return 'subdomain';
+                if (x === 'own' || x === 'existing') return 'owndomain';
+                return 'register';
+            }
             tabs.forEach(btn => {
                 btn.classList.add('cursor-pointer', 'transition-colors');
                 btn.addEventListener('click', () => activateTab(btn.dataset.tab));
+            });
+            // تنقّل لوحي/كيبورد داخل التبويبات
+            const tablist = document.querySelector('[role="tablist"]');
+            tablist?.addEventListener('keydown', (e) => {
+                const keys = ['ArrowLeft','ArrowRight','Home','End'];
+                if (!keys.includes(e.key)) return;
+                e.preventDefault();
+                const arr = Array.from(tabs);
+                let idx = arr.findIndex(b => b === document.activeElement);
+                if (idx === -1) idx = arr.findIndex(b => b.getAttribute('aria-selected') === 'true');
+                if (e.key === 'Home') return activateTab(arr[0].dataset.tab, {focus:true});
+                if (e.key === 'End') return activateTab(arr[arr.length-1].dataset.tab, {focus:true});
+                const dir = e.key === 'ArrowRight' ? 1 : -1;
+                const next = (idx + dir + arr.length) % arr.length;
+                activateTab(arr[next].dataset.tab, {focus:true});
             });
             // تفعيل الحالة الابتدائية حسب الزر المحدد
             const initiallyActive = document.querySelector('[data-tab][aria-selected="true"]')?.dataset.tab || 'register';
             activateTab(initiallyActive);
 
-            // إذا review=1 اذهب للمراجعة، وإلا أظهر التسجيل
-            if (window.location.search.includes('review=1')) {
-                goto(1);
-            } else {
-                document.getElementById('btn-register')?.click();
-            }
+            // ===== تبويبات الدخول/التسجيل =====
+            const authTabs = document.querySelectorAll('[data-auth-tab]');
+            const loginFormEl = document.getElementById('login-form');
+            const registerFormEl = document.getElementById('register-form');
+            const loginMsg = document.getElementById('loginMsg');
 
-            // استيراد أي دومين محفوظ مسبقًا من السلة
-            try {
-                const list = dedupeDomains(domainOnly(readUnifiedCart()));
-                if (Array.isArray(list) && list.length > 0) {
-                    const first = list[0];
-                    setReview(first.domain || '—', Number(first.price_cents || 0));
-                    updateDomainFieldsFromSelection(first.item_option || 'register', first.domain || '', Number(
-                        first.price_cents || 0));
-                }
-            } catch {}
-
-            // زر رجوع
-            document.getElementById('backToDomain2')?.addEventListener('click', () => goto(0));
-
-            // تمكين زر إتمام الطلب عند تحقق الشروط
-            const placeOrderReal = document.getElementById('placeOrderReal');
-
-            function enableOrderIfValid() {
-                if (!placeOrderReal) return;
-                const agree = document.getElementById('agreeTos');
-                const domain = (document.getElementById('reviewDomain')?.textContent || '').trim();
-                const total = (document.getElementById('sumTotal2')?.textContent || '').trim();
-                placeOrderReal.disabled = !(agree && agree.checked && domain && total);
-                placeOrderReal.classList.toggle('opacity-50', placeOrderReal.disabled);
-                placeOrderReal.classList.toggle('cursor-not-allowed', placeOrderReal.disabled);
-                const orderDomainInput = document.getElementById('orderDomainInput');
-                if (orderDomainInput) orderDomainInput.value = domain;
-                if (orderTotalInp) orderTotalInp.value = total;
-            }
-            document.getElementById('agreeTos')?.addEventListener('input', enableOrderIfValid);
-            document.getElementById('reviewDomain')?.addEventListener('DOMSubtreeModified', enableOrderIfValid);
-            document.getElementById('sumTotal2')?.addEventListener('DOMSubtreeModified', enableOrderIfValid);
-            enableOrderIfValid();
-
-            // نسخ حقول التسجيل إلى فورم الطلب
-            document.getElementById('btn-register')?.addEventListener('click', function() {
-                const regForm = document.getElementById('register-form');
+            function ensureRegisterFields() {
+                const regForm = registerFormEl;
                 const box = document.getElementById('registerFieldsBox');
                 if (!regForm || !box) return;
                 box.innerHTML = '';
@@ -1116,7 +1337,214 @@
                     clone.className = 'hidden';
                     box.appendChild(clone);
                 });
+            }
+
+            function activateAuthTab(name) {
+                authTabs.forEach(b => b.setAttribute('aria-selected', b.dataset.authTab === name ? 'true' : 'false'));
+                if (name === 'login') {
+                    loginFormEl?.classList.remove('hidden');
+                    registerFormEl?.classList.add('hidden');
+                } else {
+                    registerFormEl?.classList.remove('hidden');
+                    loginFormEl?.classList.add('hidden');
+                    ensureRegisterFields();
+                }
+            }
+            authTabs.forEach(b => b.addEventListener('click', () => activateAuthTab(b.dataset.authTab)));
+            activateAuthTab(document.querySelector('[data-auth-tab][aria-selected="true"]')?.dataset.authTab || 'login');
+
+            // إخفاء رابط "تسجيل بحساب آخر" بشكل افتراضي وإظهاره عند الطلب
+            document.getElementById('toggleLogout')?.addEventListener('click', () => {
+                const f = document.getElementById('logoutInline');
+                if (f) f.classList.toggle('hidden');
             });
+
+            // تسجيل الدخول عبر AJAX لتجنّب إعادة التحميل
+            if (loginFormEl && USE_AJAX_LOGIN) {
+                loginFormEl.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    if (loginMsg) loginMsg.textContent = '';
+                    const btn = loginFormEl.querySelector('button[type="submit"]');
+                    const inputs = loginFormEl.querySelectorAll('input');
+                    btn?.classList.add('opacity-50','cursor-not-allowed');
+                    btn.disabled = true;
+                    inputs.forEach(i => i.readOnly = true);
+                    try {
+                        const fd = new FormData(loginFormEl);
+                        const res = await fetch(loginFormEl.action, {
+                            method: 'POST',
+                            body: fd,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                            credentials: 'same-origin'
+                        });
+                        const data = await res.json().catch(() => null);
+                        if (!res.ok || !data || data.ok === false) {
+                            let msg = (data && data.message) ? data.message : 'تعذّر تسجيل الدخول. تأكد من البيانات.';
+                            if (loginMsg) loginMsg.textContent = msg;
+                            return;
+                        }
+                        // نجاح: أخفِ نموذج الدخول، وأظهر معلومات العميل، وابقَ في الخطوة الثانية
+                        if (loginMsg) {
+                            loginMsg.textContent = 'تم تسجيل الدخول بنجاح.';
+                            loginMsg.classList.remove('text-amber-600');
+                            loginMsg.classList.add('text-green-700');
+                        }
+                        const box = document.getElementById('clientInfoAjax');
+                        if (box) {
+                            const u = data.user || {};
+                            document.getElementById('clientFirst')?.append(document.createTextNode(u.first_name || '')); 
+                            document.getElementById('clientLast')?.append(document.createTextNode(u.last_name || ''));
+                            document.getElementById('clientEmail')?.append(document.createTextNode(u.email || ''));
+                            box.classList.remove('hidden');
+                        }
+                        loginFormEl.classList.add('hidden');
+                        // تأكد من عدم إظهار رابط/زر تبديل الحساب في وضع AJAX
+                        document.getElementById('toggleLogout')?.classList.add('hidden');
+                        document.getElementById('logoutInline')?.classList.add('hidden');
+                        enableOrderIfValid();
+                    } catch {
+                        if (loginMsg) loginMsg.textContent = 'خطأ في الاتصال بالخادم.';
+                    } finally {
+                        btn?.classList.remove('opacity-50','cursor-not-allowed');
+                        btn.disabled = false;
+                        inputs.forEach(i => i.readOnly = false);
+                    }
+                });
+            }
+
+            // اضبط الشريط على الخطوة الأولى افتراضيًا
+            goto(0);
+
+            // إذا تم تمرير domain عبر الاستعلام أو محفوظ محلياً (لتجربة تسجيل الدخول)، فعّل المراجعة مباشرة
+            (async () => {
+                const qp = new URLSearchParams(window.location.search);
+                const qDomain = (qp.get('domain') || '').trim().toLowerCase();
+                const qOpt = (qp.get('domain_option') || 'register').toLowerCase();
+                const saved = HAS_TEMPLATE ? readPrimarySelection() : null;
+                if (qDomain) {
+                    try {
+                        const cents = await fetchServerPriceCents(qDomain, qOpt);
+                        activateTab(mapOptionToTab(qOpt));
+                        setReview(qDomain, cents);
+                        updateDomainFieldsFromSelection(qOpt, qDomain, cents);
+                        try { setCartDomains([{ domain: qDomain, item_option: qOpt, price_cents: cents }]); } catch {}
+                        savePrimarySelection({ domain: qDomain, item_option: qOpt, price_cents: cents });
+                        goto(1);
+                    } catch {}
+                } else if (saved) {
+                    // استعادة الاختيار بعد تسجيل الدخول أو تحديث الصفحة
+                    setReview(saved.domain, Number(saved.price_cents || 0));
+                    updateDomainFieldsFromSelection(saved.item_option || 'register', saved.domain, Number(saved.price_cents || 0));
+                    try { setCartDomains([saved]); } catch {}
+                    goto(1);
+                } else if (!HAS_TEMPLATE && window.location.search.includes('review=1')) {
+                    goto(1);
+                }
+            })();
+
+            // استيراد أي دومين محفوظ مسبقًا من السلة (لـ تدفّق الدومينات فقط)
+            if (!HAS_TEMPLATE) try {
+                const srv = Array.isArray(SERVER_CART_ITEMS) ? SERVER_CART_ITEMS : [];
+                const srvMapped = srv.map(it => ({
+                    domain: String((it && (it.domain || '')) || '').toLowerCase(),
+                    item_option: it?.item_option ?? it?.option ?? 'register',
+                    price_cents: Number(it?.price_cents) || 0,
+                })).filter(it => it.domain);
+
+                const localList = dedupeDomains(domainOnly(readUnifiedCart()));
+                // دمج: نعطي أولوية للأحدث عبر اختيار آخر عنصر من المصفوفة المدموجة
+                const merged = [...srvMapped, ...(Array.isArray(localList) ? localList : [])];
+                if (merged.length) {
+                    // فعّل تبويب حسب أول عنصر، واعرض الجميع
+                    const first = merged[0];
+                    activateTab(mapOptionToTab(first.item_option));
+                    setCartDomains(merged);
+                    goto(1);
+                }
+            } catch {}
+
+            // زر إفراغ السلة
+            document.getElementById('btnClearCart')?.addEventListener('click', async () => {
+                if (!confirm('هل تريد إفراغ السلة؟')) return;
+                try {
+                    // نظّف التخزين المحلي لعناصر الدومين فقط
+                    try {
+                        const unified = readUnifiedCart() || [];
+                        const leftovers = unified.filter(it => !(it && (it.kind === 'domain' || (it.kind == null && it.domain))));
+                        writeUnifiedCart(leftovers);
+                    } catch {}
+                    // نظّف جلسة السيرفر
+                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                    await fetch(`{{ url('/cart/clear') }}`, { method: 'POST', headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' } });
+                } catch {}
+                setCartDomains([]);
+                // عُد إلى خطوة اختيار الدومين
+                goto(0);
+            });
+
+            // زر حذف القالب: يخفي صف القالب ويجعل إجمالي القالب = 0 ويُحدّث الإجماليات، ويحوّل مسار الإرسال لدومينات فقط
+            document.getElementById('btnRemoveTemplate')?.addEventListener('click', () => {
+                document.querySelectorAll('.rv-template-info').forEach(el => el.classList.add('hidden'));
+                document.querySelector('.rv-template-row')?.remove();
+                TEMPLATE_CENTS = 0;
+                // عدّل مسار الفورم إلى معالجة سلة الدومينات فقط
+                const form = document.getElementById('checkoutForm');
+                if (form) form.action = "{{ route('checkout.cart.process') }}";
+                // أعِد حساب الإجماليات وفق الدومينات المعروضة
+                try {
+                    const rows = Array.from(document.querySelectorAll('#reviewDomainsBody .rv-domain-row .rv-price'));
+                    const sum = rows.reduce((t, cell) => t + Math.round(Number((cell.textContent || '0').replace(/[^0-9.]/g,'') * 100)), 0);
+                    updateTotals(sum);
+                } catch { /* ignore */ }
+                // أظهر دعوة اختيار قالب بعد الحذف وحدث الرابط بالدومين الحالي
+                const box = document.getElementById('chooseTemplateAfterRemove');
+                if (box) box.classList.remove('hidden');
+                try { updateChooseTemplateLink(); } catch {}
+            });
+
+            // زر رجوع
+            document.getElementById('backToDomain2')?.addEventListener('click', () => goto(0));
+
+            // جعل الدوائر (الستبر) قابلة للنقر مع حماية تجربة المستخدم
+            stepper?.querySelectorAll('.step').forEach((s, i) => {
+                s.classList.add('cursor-pointer');
+                s.addEventListener('click', () => {
+                    if (i === 0) return goto(0);
+                    const domainPicked = (reviewDomain?.textContent || '').trim();
+                    if (domainPicked && domainPicked !== '—') {
+                        goto(1);
+                    } else {
+                        // بدون تنبيه مزعج؛ أبقِه على الخطوة الأولى
+                        goto(0);
+                    }
+                });
+            });
+
+            // تمكين زر إتمام الطلب عند تحقق الشروط
+            const placeOrderReal = document.getElementById('placeOrderReal');
+
+            function enableOrderIfValid() {
+                if (!placeOrderReal) return;
+                const agree = document.getElementById('agreeTos');
+                const domain = (document.getElementById('orderDomainInput')?.value || '').trim();
+                // في حالة وجود قالب: يجب اختيار دومين أساسي
+                const needPrimary = HAS_TEMPLATE;
+                const domainOk = !needPrimary || (domain && domain !== '—');
+                const total = (document.getElementById('sumTotal2')?.textContent || '').trim();
+                placeOrderReal.disabled = !(agree && agree.checked && domainOk && total);
+                placeOrderReal.classList.toggle('opacity-50', placeOrderReal.disabled);
+                placeOrderReal.classList.toggle('cursor-not-allowed', placeOrderReal.disabled);
+                const orderDomainInput = document.getElementById('orderDomainInput');
+                if (orderDomainInput) orderDomainInput.value = domain;
+                if (orderTotalInp) orderTotalInp.value = total;
+            }
+            document.getElementById('agreeTos')?.addEventListener('input', enableOrderIfValid);
+            document.getElementById('reviewDomain')?.addEventListener('DOMSubtreeModified', enableOrderIfValid);
+            document.getElementById('sumTotal2')?.addEventListener('DOMSubtreeModified', enableOrderIfValid);
+            enableOrderIfValid();
+
+            // عند الضغط على تبويب التسجيل، تأكد من استنساخ الحقول للفورم النهائي
+            document.getElementById('btn-register')?.addEventListener('click', function() { try { ensureRegisterFields(); } catch {} });
             document.querySelectorAll('#register-form input').forEach(function(input) {
                 input.addEventListener('input', function() {
                     const box = document.getElementById('registerFieldsBox');
@@ -1130,6 +1558,7 @@
             document.getElementById('checkoutForm')?.addEventListener('submit', function(e) {
                 e.preventDefault();
                 const form = this;
+                try { ensureRegisterFields(); } catch {}
                 try {
                     updateDomainFieldsFromSelection(
                         form.querySelector('input[name="domain_option"]')?.value || 'register',
@@ -1151,10 +1580,11 @@
                             // تنظيف سلة الدومينات فقط
                             try {
                                 const unified = readUnifiedCart();
-                                const leftovers = unified.filter(it => !(it && (it.kind === 'domain' ||
+                        const leftovers = unified.filter(it => !(it && (it.kind === 'domain' ||
                                     (it.kind == null && it.domain))));
                                 writeUnifiedCart(leftovers);
                                 localStorage.removeItem('palgoals_cart_domains'); // القديم
+                                clearPrimarySelection();
                             } catch {}
                             if (response.redirect) {
                                 window.location.href = response.redirect;
