@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Dashboard;
+namespace App\Http\Controllers\Dashboard\Management;
 
 use App\Http\Controllers\Controller;
 use App\Models\Client;
@@ -18,7 +18,7 @@ class DomainController extends Controller
     public function index()
     {
         $domains = Domain::latest()->paginate(10);
-        return view('dashboard.domains.index', compact('domains'));
+        return view('dashboard.management.domains.index', compact('domains'));
     }
 
     /**
@@ -29,7 +29,7 @@ class DomainController extends Controller
         $clients = Client::all();
         $templates = Template::all();
         $domain = new Domain();
-        return view('dashboard.domains.create', compact('clients', 'templates', 'domain'));
+        return view('dashboard.management.domains.create', compact('clients', 'templates', 'domain'));
     }
 
     /**
@@ -79,7 +79,7 @@ class DomainController extends Controller
     {
         $clients = Client::all();
         $templates = Template::all();
-        return view('dashboard.domains.edit', compact('domain', 'clients', 'templates'));
+        return view('dashboard.management.domains.edit', compact('domain', 'clients', 'templates'));
     }
 
     /**

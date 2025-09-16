@@ -12,12 +12,12 @@
             </div>
         @endif
 
-        <form action="{{ route('dashboard.domains.update', $domain->id) }}" method="POST"
-            enctype="multipart/form-data" class="grid grid-cols-12 gap-x-6">
+        <form action="{{ route('dashboard.domains.update', $domain->id) }}" method="POST" enctype="multipart/form-data"
+            class="grid grid-cols-12 gap-x-6">
             @csrf
             @method('PUT')
 
-            @include('dashboard.domains._form')
+            @include('dashboard.management.domains._form')
 
         </form>
     </div>

@@ -26,8 +26,8 @@
 </div>
 <div class="col-span-12 md:col-span-6">
     <div class="mb-3">
-        <x-form.input label="Registration Date" :value="$domain->registration_date" name="registration_date"
-            type="date" placeholder="Registration Date" />
+        <x-form.input label="Registration Date" :value="$domain->registration_date" name="registration_date" type="date"
+            placeholder="Registration Date" />
     </div>
 </div>
 <div class="col-span-12 md:col-span-6">

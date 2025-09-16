@@ -16,7 +16,7 @@
             class="grid grid-cols-12 gap-x-6">
             @csrf
 
-            @include('dashboard.domains._form')
+            @include('dashboard.management.domains._form')
 
         </form>
     </div>
