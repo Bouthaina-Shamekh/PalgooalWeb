@@ -47,17 +47,6 @@
         </select>
     </div>
 </div>
-<div class="col-span-12 md:col-span-6">
-    <div class="mb-3">
-        <label for="template_id" class="form-label">Template</label>
-        <select id="template_id" name="template_id" class="form-select">
-            <option value="">-- Select Template --</option>
-            @foreach ($templates as $template)
-                <option value="{{ $template->id }}" @selected($domain->template_id == $template->id)>{{ $template->name }}</option>
-            @endforeach
-        </select>
-    </div>
-</div>
 <div class="col-span-12 text-right">
     <a href="{{ route('dashboard.domains.index') }}" class="btn btn-secondary">Cancel</a>
     <button type="submit" class="btn btn-primary">Submit</button>

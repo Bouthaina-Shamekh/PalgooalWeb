@@ -6,9 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Domain;
 use App\Models\Invoice;
-use App\Models\Template;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class DomainController extends Controller
 {
@@ -27,9 +28,8 @@ class DomainController extends Controller
     public function create()
     {
         $clients = Client::all();
-        $templates = Template::all();
         $domain = new Domain();
-        return view('dashboard.management.domains.create', compact('clients', 'templates', 'domain'));
+        return view('dashboard.management.domains.create', compact('clients', 'domain'));
     }
 
     /**
@@ -39,37 +39,43 @@ class DomainController extends Controller
     {
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
-            'domain_name' => 'required|unique:domains,domain_name',
-            'registrar' => 'required',
-            'registration_date' => 'required',
-            'renewal_date' => 'required',
-            'status' => 'required',
+            'domain_name' => 'required|string|max:255|unique:domains,domain_name',
+            'registrar' => 'required|string|max:255',
+            'registration_date' => 'required|date',
+            'renewal_date' => 'required|date',
+            'status' => 'required|string|max:50',
         ]);
-
-        Domain::create($validated);
 
         $price_cents = 0;
 
-        $invoice = Invoice::create([
-            'client_id' => $validated['client_id'],
-            'number' => 'INV-' . strtoupper(Str::random(6)),
-            'status' => 'unpaid',
-            'subtotal_cents' => $price_cents,
-            'total_cents' => $price_cents,
-            'currency' => 'USD',
-            'due_date' => $validated['renewal_date'] ?? now()->addDays(7),
-        ]);
+        DB::transaction(function () use ($validated, $price_cents) {
+            $domain = Domain::create($validated);
 
-        $invoice->items()->create([
-            'item_type' => 'domain',
-            'reference_id' => $validated['id'],
-            'description' => 'تسجيل دومين ' . $validated['domain_name'],
-            'qty' => 1,
-            'unit_price_cents' => $price_cents,
-            'total_cents' => $price_cents,
-        ]);
+            $dueDate = isset($validated['renewal_date'])
+                ? Carbon::parse($validated['renewal_date'])
+                : now()->addDays(7);
 
-        return redirect()->route('dashboard.domains.index')->with('success', 'تمت إضافة النطاق بنجاح');
+            $invoice = Invoice::create([
+                'client_id' => $validated['client_id'],
+                'number' => 'INV-' . strtoupper(Str::random(6)),
+                'status' => 'unpaid',
+                'subtotal_cents' => $price_cents,
+                'total_cents' => $price_cents,
+                'currency' => 'USD',
+                'due_date' => $dueDate,
+            ]);
+
+            $invoice->items()->create([
+                'item_type' => 'domain',
+                'reference_id' => $domain->id,
+                'description' => 'رسوم الدومين: ' . $domain->domain_name,
+                'qty' => 1,
+                'unit_price_cents' => $price_cents,
+                'total_cents' => $price_cents,
+            ]);
+        });
+
+        return redirect()->route('dashboard.domains.index')->with('success', 'تم إنشاء الدومين بنجاح');
     }
 
     /**
@@ -78,8 +84,7 @@ class DomainController extends Controller
     public function edit(Domain $domain)
     {
         $clients = Client::all();
-        $templates = Template::all();
-        return view('dashboard.management.domains.edit', compact('domain', 'clients', 'templates'));
+        return view('dashboard.management.domains.edit', compact('domain', 'clients'));
     }
 
     /**
@@ -89,25 +94,27 @@ class DomainController extends Controller
     {
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
-            'domain_name' => 'required|unique:domains,domain_name,' . $domain->id,
-            'registrar' => 'required',
-            'registration_date' => 'required',
-            'renewal_date' => 'required',
-            'status' => 'required',
+            'domain_name' => 'required|string|max:255|unique:domains,domain_name,' . $domain->id,
+            'registrar' => 'required|string|max:255',
+            'registration_date' => 'required|date',
+            'renewal_date' => 'required|date',
+            'status' => 'required|string|max:50',
         ]);
 
-        $domain->update($validated);
+        DB::transaction(function () use ($domain, $validated) {
+            $domain->update($validated);
 
-        // تحديث الفاتورة إن وجدت
-        $invoiceItem = $domain->invoiceItems()->first();
+            // تحديث وصف بند الفاتورة إن وجد
+            $invoiceItem = $domain->invoiceItems()->first();
 
-        if ($invoiceItem && $invoiceItem->invoice) {
-            $invoiceItem->update([
-                'description' => 'تحديث دومين: ' . $domain->domain_name,
-            ]);
-        }
+            if ($invoiceItem && $invoiceItem->invoice) {
+                $invoiceItem->update([
+                    'description' => 'تحديث الدومين: ' . $domain->domain_name,
+                ]);
+            }
+        });
 
-        return redirect()->route('dashboard.domains.index')->with('success', 'تم تعديل النطاق بنجاح');
+        return redirect()->route('dashboard.domains.index')->with('success', 'تم تحديث الدومين بنجاح');
     }
 
     /**
@@ -116,6 +123,7 @@ class DomainController extends Controller
     public function destroy(Domain $domain)
     {
         $domain->delete();
-        return redirect()->route('dashboard.domains.index')->with('success', 'تم حذف النطاق بنجاح');
+        return redirect()->route('dashboard.domains.index')->with('success', 'تم حذف الدومين بنجاح');
     }
 }
+
