@@ -21,15 +21,6 @@ class HomeController extends Controller
         return view('client.updateclinet');
     }
 
-    public function domainNameSearch()
-    {
-        return view('client.domain-name-search');
-    }
-
-    public function domains()
-    {
-        return view('client.domain-table-client');
-    }
     public function subscriptions()
     {
         $client = Client::find(Auth::guard('client')->user()->id);

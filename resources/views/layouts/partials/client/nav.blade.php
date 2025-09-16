@@ -72,7 +72,7 @@
                     </a>
                 </li>
                 <li class="pc-item">
-                    <a href="{{ route('client.domain_name_search') }}" class="pc-link">
+                    <a href="{{ route('client.domains.search') }}" class="pc-link">
                         <span class="pc-micon">
                             <svg class="pc-icon">
                                 <use xlink:href="#custom-story"></use>
@@ -82,7 +82,7 @@
                     </a>
                 </li>
                 <li class="pc-item">
-                    <a href="{{ route('client.domain_table') }}" class="pc-link">
+                    <a href="{{ route('client.domains.index') }}" class="pc-link">
                         <span class="pc-micon">
                             <svg class="pc-icon">
                                 <use xlink:href="#custom-story"></use>

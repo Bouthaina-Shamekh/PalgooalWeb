@@ -151,7 +151,7 @@
                 @endcan
                 @can('view', 'App\\Models\\Domain')
                     <li class="pc-item">
-                        <a href="{{ route('dashboard.domains') }}" class="pc-link">
+                        <a href="{{ route('dashboard.domains.index') }}" class="pc-link">
                             <span class="pc-micon">
                                 <span class="pc-micon">
                                     <i class="fas fa-globe"></i>

@@ -1,6 +1,6 @@
 <?php
 
-
+use App\Http\Controllers\Dashboard\DomainController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Dashboard\HomeController;
 use App\Http\Controllers\Dashboard\UserController;
@@ -74,9 +74,9 @@ Route::group([
     Route::get('menus', function () {
         return view('dashboard.header');
     })->middleware(['auth'])->name('headers');
-    Route::get('/domains', [HomeController::class, 'domains'])->name('domains');
 
 
+    Route::resource('domains', DomainController::class)->names('domains');
 
     //media
     Route::get('media', function () {
@@ -123,7 +123,6 @@ Route::group([
     Route::resource('servers', ServerController::class)->names('servers');
     Route::get('servers/{server}/accounts', [ServerController::class, 'accounts'])->name('servers.accounts');
     Route::get('/sites', [HomeController::class, 'sites'])->name('sites');
-    Route::get('/domains', [HomeController::class, 'domains'])->name('domains');
     Route::resource('plans', PlanController::class);
     Route::resource('/invoices', InvoiceController::class)->names('invoices');
     // Bulk actions for invoices
