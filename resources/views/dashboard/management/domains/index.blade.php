@@ -32,12 +32,12 @@
                     @forelse ($domains as $domain)
                         <tr>
                             <td>{{ $loop->iteration }}</td>
-                            <td>{{ $domain->client->first_name }}</td>
+                            <td>{{ $domain->client?->first_name ?? '-' }}</td>
                             <td>{{ $domain->domain_name }}</td>
                             <td>{{ $domain->registrar }}</td>
                             <td>{{ $domain->registration_date }}</td>
                             <td>{{ $domain->renewal_date }}</td>
-                            <td>{{ $domain->template->name }}</td>
+                            <td>{{ $domain->template?->name ?? '-' }}</td>
                             <td>{{ $domain->status }}</td>
                             <td>
                                 @can('edit', 'App\\Models\\Domain')

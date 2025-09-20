@@ -31,20 +31,6 @@ class Domain extends Model
 
     public static function checkAvailability($domain)
     {
-        // $response = Http::withHeaders([
-        //     'x-rapidapi-host' => 'domainr.p.rapidapi.com',
-        //     'x-rapidapi-key' => env('RAPIDAPI_KEY'), // 👈 الأفضل تضعها في .env
-        // ])->get('https://domainr.p.rapidapi.com/v2/status', [
-        //     'domain' => $domain,
-        // ]);
-
-        // if ($response->successful()) {
-        //     $result = $response->json();
-        //     $status = $result['status'][0]['status'] ?? null;
-        //     return $status !== 'active';
-        // }
-
-        // return false;
 
         return true;
     }

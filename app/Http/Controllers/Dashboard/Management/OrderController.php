@@ -103,6 +103,34 @@ class OrderController extends Controller
                 $invoice->save();
             }
         }
+        // استخرج بيانات الدومين من البنود (نحتاجها لاحقًا أو قد نحتاجها مباشرة)
+        $domain = $this->extractDomainData($order);
+        $domainName   = $domain['domain_name'];
+        $domainOption = $domain['domain_option'];
+
+        // إذا كان الطلب يتعلق بدومين للـ "register" فقط، أنشئ أو حدّث سجل الدومين في جدول domains
+        if (!empty($domainName) && strtolower($domainOption) === 'register') {
+            try {
+                $existingDomain = \App\Models\Domain::where('domain_name', $domainName)->first();
+                if ($existingDomain) {
+                    // حدّث حالة وربط العميل إن لزم
+                    $existingDomain->update([
+                        'client_id' => $order->client_id ?? $existingDomain->client_id,
+                        'status' => 'active',
+                    ]);
+                } else {
+                    \App\Models\Domain::create([
+                        'client_id' => $order->client_id,
+                        'domain_name' => $domainName,
+                        'registrar' => 'order-' . $order->id,
+                        'registration_date' => now()->toDateString(),
+                        'status' => 'active',
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to create/update domain for order ' . $order->id . ': ' . $e->getMessage());
+            }
+        }
 
         // حدد إن كان الطلب يخص اشتراكًا (من أول عنصر فاتورة من نوع subscription)
         $templateId = null;
@@ -140,6 +168,30 @@ class OrderController extends Controller
         $domain = $this->extractDomainData($order);
         $domainName   = $domain['domain_name'];
         $domainOption = $domain['domain_option'];
+
+        // إذا كان الطلب يتعلق بدومين للـ "register" فقط، أنشئ أو حدّث سجل الدومين في جدول domains
+        if (!empty($domainName) && strtolower($domainOption) === 'register') {
+            try {
+                $existingDomain = \App\Models\Domain::where('domain_name', $domainName)->first();
+                if ($existingDomain) {
+                    // حدّث حالة وربط العميل إن لزم
+                    $existingDomain->update([
+                        'client_id' => $order->client_id ?? $existingDomain->client_id,
+                        'status' => 'active',
+                    ]);
+                } else {
+                    \App\Models\Domain::create([
+                        'client_id' => $order->client_id,
+                        'domain_name' => $domainName,
+                        'registrar' => 'order-' . $order->id,
+                        'registration_date' => now()->toDateString(),
+                        'status' => 'active',
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to create/update domain for order ' . $order->id . ': ' . $e->getMessage());
+            }
+        }
 
         // تحقق من وجود اشتراك مسبق لنفس العميل والخطة وربما نفس الدومين
         $existingSubQuery = \App\Models\Subscription::where('client_id', $order->client_id)

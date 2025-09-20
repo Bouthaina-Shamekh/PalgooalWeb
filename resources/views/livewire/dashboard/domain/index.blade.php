@@ -19,25 +19,21 @@
             <div class="card-header">
                 <div class="sm:flex items-center justify-between">
                     <h5 class="mb-3 sm:mb-0">Domains List</h5>
-                    @can('create','App\\Models\\Domain')
-                    <div>
-                        <a href="#" wire:click="showAdd" class="btn btn-primary">Add Domains</a>
-                    </div>
+                    @can('create', 'App\\Models\\Domain')
+                        <div>
+                            <a href="#" wire:click="showAdd" class="btn btn-primary">Add Domains</a>
+                        </div>
                     @endcan
                 </div>
             </div>
             <div class="flex items-center justify-between mb-4 px-5 py-4">
-                <x-form.input type="text" wire:model="search" wire:input="updateSearch" placeholder="Search clients..." />
-                <x-form.select
-                    wire:model="perPage"
-                    wire:change="updatePerPage"
-                    name="perPage"
-                    :options="[
-                        '5' => '5 per page',
-                        '10' => '10 per page',
-                        '25' => '25 per page',
-                        ]"
-                />
+                <x-form.input type="text" wire:model="search" wire:input="updateSearch"
+                    placeholder="Search clients..." />
+                <x-form.select wire:model="perPage" wire:change="updatePerPage" name="perPage" :options="[
+                    '5' => '5 per page',
+                    '10' => '10 per page',
+                    '25' => '25 per page',
+                ]" />
             </div>
             <div class="card-body pt-3">
                 <div class="table-responsive">
@@ -57,35 +53,39 @@
                         </thead>
                         <tbody>
                             @forelse ($domains as $domain)
-                            <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $domain->client->first_name}}</td>
-                                <td>{{ $domain->domain_name }}</td>
-                                <td>{{ $domain->registrar }}</td>
-                                <td>{{ $domain->registration_date }}</td>
-                                <td>{{ $domain->renewal_date }}</td>
-                                <td>{{ $domain->template->name }}</td>
-                                <td>{{ $domain->status }}</td>
-                                <td>
-                                    <a wire:click="view({{ $domain->id }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
-                                        <i class="ti ti-eye text-xl leading-none"></i>
-                                    </a>
-                                    @can('edit','App\\Models\\Domain')
-                                    <a wire:click="showEdit({{ $domain->id }})" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
-                                        <i class="ti ti-edit text-xl leading-none"></i>
-                                    </a>
-                                    @endcan
-                                    @can('delete','App\\Models\\Domain')
-                                    <a wire:click="delete({{ $domain->id }})" onclick="confirm('Are you sure?') || event.stopImmediatePropagation()" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
-                                        <i class="ti ti-trash text-xl leading-none"></i>
-                                    </a>
-                                    @endcan
-                                </td>
-                            </tr>
-                              @empty
-                            <tr>
-                                <td colspan="8" class="text-center text-gray-500">No Domains found.</td>
-                            </tr>
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $domain->client?->first_name ?? '-' }}</td>
+                                    <td>{{ $domain->domain_name }}</td>
+                                    <td>{{ $domain->registrar }}</td>
+                                    <td>{{ $domain->registration_date }}</td>
+                                    <td>{{ $domain->renewal_date }}</td>
+                                    <td>{{ $domain->template->name }}</td>
+                                    <td>{{ $domain->status }}</td>
+                                    <td>
+                                        <a wire:click="view({{ $domain->id }})"
+                                            class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
+                                            <i class="ti ti-eye text-xl leading-none"></i>
+                                        </a>
+                                        @can('edit', 'App\\Models\\Domain')
+                                            <a wire:click="showEdit({{ $domain->id }})"
+                                                class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
+                                                <i class="ti ti-edit text-xl leading-none"></i>
+                                            </a>
+                                        @endcan
+                                        @can('delete', 'App\\Models\\Domain')
+                                            <a wire:click="delete({{ $domain->id }})"
+                                                onclick="confirm('Are you sure?') || event.stopImmediatePropagation()"
+                                                class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
+                                                <i class="ti ti-trash text-xl leading-none"></i>
+                                            </a>
+                                        @endcan
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="8" class="text-center text-gray-500">No Domains found.</td>
+                                </tr>
                             @endforelse
                         </tbody>
                     </table>
