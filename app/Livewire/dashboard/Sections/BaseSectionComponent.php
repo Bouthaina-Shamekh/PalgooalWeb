@@ -43,6 +43,21 @@ class BaseSectionComponent extends Component
         $this->section->delete();
 
         session()->flash('success', 'تم حذف السكشن بنجاح.');
+
+        // إعادة التوجيه مع Livewire
         $this->redirect(request()->header('Referer'), navigate: true);
+    }
+
+    /**
+     * دوال مساعدة للسكشنات يمكن استدعاؤها من أي سكشن يرث BaseSectionComponent
+     */
+    public function flashSuccess($message)
+    {
+        session()->flash('success', $message);
+    }
+
+    public function flashError($message)
+    {
+        session()->flash('error', $message);
     }
 }

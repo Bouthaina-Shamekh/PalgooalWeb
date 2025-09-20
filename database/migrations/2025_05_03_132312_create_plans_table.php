@@ -6,31 +6,82 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('plans', function (Blueprint $table) {
             $table->id();
-            $table->string('name');          // اسم الخطة
-            $table->string('slug')->unique();           // basic / pro...
-            $table->unsignedInteger('price_cents');           // السعر (مثلاً 99.99)
-            $table->enum('billing_cycle', ['monthly','annually'])->default('annually');
-            $table->json('features')->nullable();       // مساحة/نقل/بريد.. (JSON)
+            $table->string('name');
+            $table->string('slug')->unique(); // basic / pro...
+            $table->unsignedInteger('monthly_price_cents')->nullable();
+            $table->unsignedInteger('annual_price_cents')->nullable();
             $table->boolean('is_active')->default(true);
-            // تتبّع
-            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->foreignId('updated_by')->nullable()->constrained('users')->nullOnDelete();
+
+            // الأعمدة بدون constrained() مباشرة
+            $table->unsignedBigInteger('plan_category_id')->nullable()->index();
+            $table->unsignedBigInteger('server_id')->nullable()->index();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
+
+            $table->timestamps();
+
+            $table->index('is_active');
+            $table->index(['monthly_price_cents', 'annual_price_cents']);
+        });
+
+        // إضافة قيود FK بأسماء صريحة لتجنب التعارض
+        Schema::table('plans', function (Blueprint $table) {
+            $table->foreign('plan_category_id', 'fk_plans_plan_category')
+                ->references('id')->on('plan_categories')
+                ->nullOnDelete();
+
+            $table->foreign('server_id', 'fk_plans_server')
+                ->references('id')->on('servers')
+                ->nullOnDelete();
+
+            $table->foreign('created_by', 'fk_plans_created_by')
+                ->references('id')->on('users')
+                ->nullOnDelete();
+
+            $table->foreign('updated_by', 'fk_plans_updated_by')
+                ->references('id')->on('users')
+                ->nullOnDelete();
+        });
+
+        // جدول الترجمات للخطط
+        Schema::create('plan_translations', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('plan_id')->constrained('plans')->onDelete('cascade');
+            $table->string('locale', 8);
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->json('features')->nullable();
+            $table->unique(['plan_id', 'locale']);
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
+        Schema::table('plans', function (Blueprint $table) {
+            try {
+                $table->dropForeign('fk_plans_plan_category');
+            } catch (\Throwable) {
+            }
+            try {
+                $table->dropForeign('fk_plans_server');
+            } catch (\Throwable) {
+            }
+            try {
+                $table->dropForeign('fk_plans_created_by');
+            } catch (\Throwable) {
+            }
+            try {
+                $table->dropForeign('fk_plans_updated_by');
+            } catch (\Throwable) {
+            }
+        });
+
+        Schema::dropIfExists('plan_translations');
         Schema::dropIfExists('plans');
     }
 };

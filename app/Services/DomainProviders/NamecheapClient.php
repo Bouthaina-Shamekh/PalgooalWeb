@@ -16,7 +16,7 @@ class NamecheapClient
         $this->p = $p;
     }
 
-    /** حدد الـ endpoint بدقة (يحترم قيمة endpoint من الـ DB وإلا يعتمد على mode صريح) */
+    /** اختيار endpoint (من DB أو وفق وضع التشغيل) */
     protected function endpoint(): string
     {
         if (!empty($this->p->endpoint)) {
@@ -27,26 +27,26 @@ class NamecheapClient
         if ($mode === 'test') return 'https://api.sandbox.namecheap.com/xml.response';
         if ($mode === 'live') return 'https://api.namecheap.com/xml.response';
 
-        throw new \RuntimeException('وضع المزود (mode) غير محدد. عيّنه إلى test أو live أو حدّد endpoint.');
+        throw new \RuntimeException('الوضع (mode) غير صالح. استخدم test أو live أو حدّد endpoint.');
     }
 
-    /** فك التشفير إن لزم (يدعم حالتي التخزين: نص صريح أو encrypted string) */
+    /** قراءة مفتاح API (قد يكون مُشفّرًا) */
     protected function readApiKey(): string
     {
         $raw = (string) $this->p->api_key;
         try {
             return Crypt::decryptString($raw);
         } catch (\Throwable $e) {
-            return $raw; // ليست مُشفّرة
+            return $raw; // fallback: غير مشفّر
         }
     }
 
-    /** تحضير البارامترات الأساسية مع فحص صارم للـ client_ip */
+    /** إعداد المعاملات الأساسية + التحقق من IP */
     protected function baseParams(): array
     {
         $ip = $this->p->client_ip;
         if (!filter_var($ip, FILTER_VALIDATE_IP)) {
-            throw new \RuntimeException('Client IP مفقود/غير صالح في سجل المزود.');
+            throw new \RuntimeException('Client IP غير صالح/غير مُهيّأ.');
         }
 
         return [
@@ -57,13 +57,13 @@ class NamecheapClient
         ];
     }
 
-    /** طلب داخلي موحّد: يعيد XML أو سبب الفشل مع reason/status/snippet للتشخيص */
+    /** طلب HTTP عام: يتحقق من XML ويعيد reason/status/snippet */
     protected function request(array $params): array
     {
         $endpoint = $this->endpoint();
         $query    = array_merge($this->baseParams(), $params);
 
-        // لوج تمهيدي آمن
+        // Logging قبل الطلب
         Log::info('Namecheap preflight', [
             'endpoint'  => $endpoint,
             'mode'      => $this->p->mode,
@@ -78,7 +78,7 @@ class NamecheapClient
         ])
             ->withOptions([
                 'curl' => [
-                    \CURLOPT_IPRESOLVE => \CURL_IPRESOLVE_V4, // إجبار IPv4
+                    \CURLOPT_IPRESOLVE => \CURL_IPRESOLVE_V4, // Force IPv4
                 ],
             ])
             ->timeout(20)
@@ -98,7 +98,7 @@ class NamecheapClient
                 'ok'        => false,
                 'reason'    => 'http_error',
                 'http_code' => $status,
-                'message'   => "فشل HTTP ($status). تحقق من Whitelist IP والـ endpoint.",
+                'message'   => "خطأ HTTP ($status). تحقق من Whitelist IP و/أو endpoint.",
             ];
         }
 
@@ -111,7 +111,7 @@ class NamecheapClient
             return [
                 'ok'      => false,
                 'reason'  => 'non_xml',
-                'message' => 'الاستجابة ليست XML (غالبًا HTML/Proxy أو IP غير مُصرّح).',
+                'message' => 'استجابة غير بصيغة XML (قد تكون HTML/Proxy).',
             ];
         }
 
@@ -126,18 +126,16 @@ class NamecheapClient
             return [
                 'ok'      => false,
                 'reason'  => 'xml_parse_error',
-                'message' => 'رد غير صالح (تعذر تحليل XML).',
+                'message' => 'فشل تحليل XML.',
             ];
         }
 
-        // namespace
+        // التحقق من Status="OK"
         $xml->registerXPathNamespace('nc', 'http://api.namecheap.com/xml.response');
-
-        // فحص Status="OK"
         $statusAttr = (string)($xml['Status'] ?? '');
         if (strcasecmp($statusAttr, 'OK') !== 0) {
             $errNode = $xml->xpath('//nc:Errors/nc:Error')[0] ?? null;
-            $errMsg  = $errNode ? (string)$errNode : 'تعذّر تنفيذ الطلب.';
+            $errMsg  = $errNode ? (string)$errNode : 'خطأ من مزوّد Namecheap.';
             return [
                 'ok'      => false,
                 'reason'  => 'provider_error',
@@ -149,7 +147,7 @@ class NamecheapClient
         return ['ok' => true, 'xml' => $xml];
     }
 
-    /** جلب الرصيد */
+    /** الرصيد */
     public function getBalance(): array
     {
         try {
@@ -163,7 +161,7 @@ class NamecheapClient
                 return [
                     'ok'       => false,
                     'reason'   => 'missing_result_node',
-                    'message'  => 'لم نجد UserGetBalancesResult في الرد.',
+                    'message'  => 'العنصر UserGetBalancesResult غير موجود في الاستجابة.',
                     'balance'  => null,
                     'currency' => null,
                 ];
@@ -173,7 +171,7 @@ class NamecheapClient
             return [
                 'ok'        => true,
                 'reason'    => 'ok',
-                'message'   => 'تم الاتصال بنجاح.',
+                'message'   => 'تم جلب الرصيد بنجاح.',
                 'balance'   => isset($attrs->AccountBalance) ? (float)$attrs->AccountBalance : null,
                 'available' => isset($attrs->AvailableBalance) ? (float)$attrs->AvailableBalance : null,
                 'currency'  => isset($attrs->Currency) ? (string)$attrs->Currency : null,
@@ -183,14 +181,14 @@ class NamecheapClient
             return [
                 'ok'      => false,
                 'reason'  => 'exception',
-                'message' => 'استثناء أثناء طلب الرصيد: ' . $e->getMessage(),
+                'message' => 'استثناء أثناء جلب الرصيد: ' . $e->getMessage(),
                 'balance' => null,
                 'currency' => null,
             ];
         }
     }
 
-    /** مثال لأمر عام (يمكنك استخدامه بدل الدالة call القديمة) */
+    /** استدعاء عام لأوامر Namecheap */
     public function callGeneric(string $command, array $extraParams = []): array
     {
         try {
@@ -203,3 +201,4 @@ class NamecheapClient
         }
     }
 }
+

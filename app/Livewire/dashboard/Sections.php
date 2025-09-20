@@ -11,7 +11,6 @@ use Illuminate\Support\Str;
 use Exception;
 use Livewire\Attributes\On;
 
-
 class Sections extends Component
 {
     public $pageId;
@@ -24,12 +23,10 @@ class Sections extends Component
     public $translationsData = [];
     protected $listeners = ['deleteSection'];
 
-    /** ===========================
-     *  لوحة ودجت جانبية (بدون مودال)
-     *  =========================== */
+    /** لوحة ودجت جانبية (بدون مودال) */
     public bool $showPalette = false;
     public ?string $paletteSearch = null;
-    public $paletteOrder = null; // ترتيب اختياري قبل الإضافة
+    public $paletteOrder = null;
 
     /** مفاتيح متاحة (lowercase موحّدة) */
     public array $availableKeys = [
@@ -42,11 +39,12 @@ class Sections extends Component
         'testimonials',
         'blog',
         'banner',
-        'search-domain',     // بديل عن Search-Domain القديمة
+        'search-domain',
         'templates-pages',
+        'hosting-plans',
     ];
 
-    /** وصف/إعدادات عرض لكل ودجت (استعمل صورك الحقيقية في thumb إن أردت) */
+    /** وصف/إعدادات عرض لكل ودجت */
     public array $keyMeta = [
         'hero'            => ['label' => 'الواجهة الرئيسية (Hero)',                    'unique' => true,  'desc' => 'بانر رئيسي مع عنوان/وصف وأزرار.', 'thumb' => null],
         'features'        => ['label' => 'مميزات (Features)',                          'unique' => true,  'desc' => 'قائمة مميزات مع أيقونات.',       'thumb' => null],
@@ -59,6 +57,7 @@ class Sections extends Component
         'banner'          => ['label' => 'اللوحة (Banner)',                             'unique' => false, 'desc' => 'بانر بسيط لنص + زر.',            'thumb' => null],
         'search-domain'   => ['label' => 'بحث الدومين (Search Domain)',                 'unique' => true,  'desc' => 'محرك بحث دومين.',               'thumb' => null],
         'templates-pages' => ['label' => 'عرض القوالب مع فلتر (Templates Pages)',       'unique' => true,  'desc' => 'شبكة قوالب بفلترة وترتيب.',     'thumb' => null],
+        'hosting-plans'   => ['label' => 'خطط الاستضافة (Hosting Plans)',               'unique' => true,  'desc' => 'عرض خطط الاستضافة المتاحة.',    'thumb' => null],
     ];
 
     public $activeLang;
@@ -77,6 +76,9 @@ class Sections extends Component
             ->where('page_id', $this->pageId)
             ->orderBy('order')
             ->get();
+
+        // reset translationsData to avoid stale entries
+        $this->translationsData = [];
 
         foreach ($this->sections as $section) {
             foreach ($this->languages as $lang) {
@@ -105,7 +107,7 @@ class Sections extends Component
         return $k;
     }
 
-    /** ====== تحكم باللوحة الجانبية (ودجت) ====== */
+    /** فتح اللوحة الجانبية */
     #[On('open-sections-palette')]
     public function openPalette(): void
     {
@@ -118,18 +120,16 @@ class Sections extends Component
         $this->showPalette = false;
     }
 
-    /** إضافة من الودجت: اختيار نوع سكشن ثم إعادة استخدام منطق addSection() */
+    /** إضافة من الودجت */
     public function addFromPalette(string $key): void
     {
         $key = $this->normalizeKey($key);
 
-        // مفاتيح معتمدة؟
         if (!in_array($key, $this->availableKeys, true)) {
             $this->addError('sectionKey', 'نوع السكشن غير معروف.');
             return;
         }
 
-        // لو فريد وموجود مسبقًا في نفس الصفحة → منع
         $meta = $this->keyMeta[$key] ?? null;
         if ($meta && !empty($meta['unique'])) {
             $exists = Section::where('page_id', $this->pageId)->where('key', $key)->exists();
@@ -139,16 +139,13 @@ class Sections extends Component
             }
         }
 
-        // حضّر المعطيات وادعُ منطق الإضافة الأصلي
         $this->sectionKey   = $key;
         $this->sectionOrder = (int)($this->paletteOrder ?? 0);
         $this->addSection();
 
-        // أغلق اللوحة بعد الإضافة (اختياري)
         $this->showPalette = false;
     }
 
-    /** قائمة الودجتس بعد الفلترة حسب البحث */
     public function getPaletteKeysProperty(): array
     {
         if (!$this->paletteSearch) return $this->availableKeys;
@@ -161,10 +158,7 @@ class Sections extends Component
         }));
     }
 
-    /** ===========================
-     *  منطق الإضافة/التحديث/الحذف
-     *  =========================== */
-
+    /** إضافة/حفظ سكشن */
     public function addSection()
     {
         $this->sectionKey = $this->normalizeKey($this->sectionKey);
@@ -180,7 +174,8 @@ class Sections extends Component
             return;
         }
 
-        $order = $this->sectionOrder ?: (Section::where('page_id', $this->pageId)->max('order') + 1);
+        // حساب order آمن: لو الجدول فارغ يرجع null فنجعل قيمة افتراضية 1
+        $order = $this->sectionOrder ?: (Section::where('page_id', $this->pageId)->max('order') ?? 0) + 1;
 
         switch ($this->sectionKey) {
             case 'hero':
@@ -245,6 +240,7 @@ class Sections extends Component
 
                         case 'testimonials':
                         case 'search-domain':
+                        case 'hosting-plans':
                         case 'blog':
                             $content = [];
                             break;
@@ -267,7 +263,7 @@ class Sections extends Component
     public function updateSection($sectionId, $locale = null)
     {
         $section = Section::with('translations')->findOrFail($sectionId);
-        $targetLocales = $locale ? [$locale] : array_column($this->languages->toArray(), 'code');
+        $targetLocales = $locale ? [$locale] : $this->languages->pluck('code')->toArray();
 
         foreach ($targetLocales as $code) {
             $data = $this->translationsData[$sectionId][$code] ?? [];
@@ -283,6 +279,7 @@ class Sections extends Component
 
             $translation->title   = $data['title'] ?? '';
             $translation->content = $content;
+            $translation->save();
 
             $section->order = $this->sectionOrder ?: $section->order;
             $section->save();
@@ -298,10 +295,12 @@ class Sections extends Component
             $section = Section::findOrFail($id);
             $section->delete();
             $this->loadSections();
-            $this->dispatch('section-deleted-success');
+
+            // أرسل حدث للواجهة (JS) بأن الحذف تم بنجاح
+            $this->dispatchBrowserEvent('section-deleted-success', ['sectionId' => $id]);
         } catch (Exception $e) {
             logger()->error('فشل حذف السكشن: ' . $e->getMessage());
-            $this->dispatch('section-delete-failed');
+            $this->dispatchBrowserEvent('section-delete-failed', ['sectionId' => $id, 'error' => $e->getMessage()]);
         }
     }
 
@@ -318,10 +317,8 @@ class Sections extends Component
             'availableKeys' => $this->availableKeys,
             'activeLang'    => $this->activeLang,
             'sectionKey'    => $this->sectionKey,
-
-            // بيانات السايدبار
             'showPalette'   => $this->showPalette,
-            'paletteKeys'   => $this->paletteKeys, // accessor
+            'paletteKeys'   => $this->paletteKeys,
             'keyMeta'       => $this->keyMeta,
         ]);
     }

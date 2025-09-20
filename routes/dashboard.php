@@ -21,6 +21,7 @@ use App\Http\Controllers\Dashboard\TemplateReviewController as AdminReview;
 use App\Http\Controllers\Dashboard\TemplateReviewController;
 use App\Http\Controllers\Dashboard\Management\DomainProviderController;
 use App\Http\Controllers\Dashboard\Management\DomainTldController;
+use App\Http\Controllers\Dashboard\Management\PlanCategoryController;
 use App\Http\Controllers\Dashboard\PortfolioController;
 
 Route::get('admin/', function () {
@@ -146,4 +147,10 @@ Route::group([
     Route::post('/domain-tlds/apply-pricing', [DomainTldController::class, 'applyPricing'])->name('domain_tlds.apply-pricing');
     Route::delete('/domain-tlds/{domainTld}', [DomainTldController::class, 'destroy'])->name('domain_tlds.destroy');
     Route::post('/domain-tlds/bulk-destroy', [DomainTldController::class, 'bulkDestroy'])->name('domain_tlds.bulk-destroy');
+    // تصنيفات الخطط مع دعم الترجمة
+    Route::resource('/plan-categories', PlanCategoryController::class)->names('plan_categories');
+    Route::post('/plan-categories/{plan_category}/toggle', [PlanCategoryController::class, 'toggle'])->name('plan_categories.toggle');
+    // عمليات إضافية للترجمات (إن وجدت)
+    Route::delete('/plan-categories/{plan_category}/translation/{lang}', [PlanCategoryController::class, 'destroyTranslation'])->name('plan_categories.translation.destroy');
+    Route::post('/plan-categories/{plan_category}/translation/{lang}', [PlanCategoryController::class, 'updateTranslation'])->name('plan_categories.translation.update');
 });

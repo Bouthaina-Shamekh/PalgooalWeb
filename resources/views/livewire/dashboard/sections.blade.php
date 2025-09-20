@@ -67,6 +67,11 @@
                     wire:key="search-domain-{{ $section->id }}" />
             @break
 
+            @case('hosting-plans')
+                <livewire:dashboard.sections.hosting-plan-section :section="$section"
+                    wire:key="hosting-plans-{{ $section->id }}" />
+            @break
+
             @case('templates-pages')
                 <livewire:dashboard.sections.templates-pages-section :section="$section"
                     wire:key="templates-pages-{{ $section->id }}" />

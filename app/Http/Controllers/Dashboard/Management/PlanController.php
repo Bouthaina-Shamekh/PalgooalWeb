@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Dashboard\Management;
 use App\Http\Controllers\Controller;
 use App\Models\Plan;
 use App\Models\Server;
+use App\Models\PlanCategory;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 
 class PlanController extends Controller
 {
@@ -20,111 +22,152 @@ class PlanController extends Controller
     public function create()
     {
         $servers = Server::all();
-        return view('dashboard.management.plans.create', compact('servers'));
+        // eager load translations to avoid N+1 when rendering labels
+        $categories = PlanCategory::with('translations')->get();
+        return view('dashboard.management.plans.create', compact('servers', 'categories'));
+    }
+
+    private function parsePrice(Request $r, string $field): ?int
+    {
+        // expects calls like $this->parsePrice($r, 'monthly_price') and fields monthly_price_cents / monthly_price_ui
+        $value = $r->input($field . '_cents');
+        if ($value === null || $value === '') {
+            $uiValue = $r->input($field . '_ui');
+            $value = ($uiValue !== null && $uiValue !== '') ? (int) round(floatval($uiValue) * 100) : null;
+        }
+        return $value;
+    }
+
+    private function validateTranslation(Request $r, string $locale): array
+    {
+        $input = [
+            'name' => $r->input("name.$locale"),
+            'description' => $r->input("description.$locale"),
+            'features' => $r->input("features.$locale"),
+        ];
+
+        $validator = Validator::make($input, [
+            'name' => 'required|string|max:120',
+            'description' => 'nullable|string',
+            'features' => 'nullable|array',
+        ], [
+            'name.required' => 'الاسم مطلوب',
+        ]);
+
+        $translation = $validator->validate();
+        $translation['features'] = array_values(array_filter((array) $translation['features'], fn($v) => trim((string)$v) !== ''));
+
+        return $translation;
     }
 
     public function store(Request $r)
     {
-        // توحيد الحقول
+        // normalize boolean
+        $r->merge(['is_active' => $r->boolean('is_active')]);
+
+        // parse prices (will read either *_cents or *_ui)
+        $monthly = $this->parsePrice($r, 'monthly_price');
+        $annual = $this->parsePrice($r, 'annual_price');
+
         $r->merge([
-            'is_active' => $r->boolean('is_active'),
-            'features'  => array_values(array_filter((array) $r->input('features', []), fn($v) => trim((string)$v) !== '')),
+            'monthly_price_cents' => $monthly,
+            'annual_price_cents' => $annual,
         ]);
 
-        // تحويل السعر من الدولار إلى سنتات (int)
-        $monthly = $r->input('monthly_price_cents');
-        $annual = $r->input('annual_price_cents');
-        $r->merge([
-            'monthly_price_cents' => $monthly !== null && $monthly !== '' ? (int) round(floatval($monthly) * 100) : null,
-            'annual_price_cents' => $annual !== null && $annual !== '' ? (int) round(floatval($annual) * 100) : null,
-        ]);
-
-        // فاليديشن: أحد السعرين مطلوب على الأقل
         $data = $r->validate([
-            'name'                => 'required|string|max:120',
-            'slug'                => 'nullable|string|max:140|unique:plans,slug',
+            'slug' => 'nullable|string|max:140|unique:plans,slug',
             'monthly_price_cents' => 'nullable|integer|min:0',
-            'annual_price_cents'  => 'nullable|integer|min:0',
-            'server_id'           => ['nullable', 'integer', 'exists:servers,id'],
-            'features'            => 'nullable|array',
-            'is_active'           => 'boolean',
-        ], [
-            'name.required'                => 'الاسم مطلوب',
-            'slug.unique'                  => 'المُعرّف (Slug) مستخدم من قبل',
-            'monthly_price_cents.integer'  => 'السعر الشهري يجب أن يكون رقمًا عشريًا أو صحيحًا',
-            'annual_price_cents.integer'   => 'السعر السنوي يجب أن يكون رقمًا عشريًا أو صحيحًا',
+            'annual_price_cents' => 'nullable|integer|min:0',
+            'server_id' => ['nullable', 'integer', 'exists:servers,id'],
+            'plan_category_id' => ['nullable', 'integer', 'exists:plan_categories,id'],
+            'is_active' => 'boolean',
         ]);
 
-        if (empty($data['monthly_price_cents']) && empty($data['annual_price_cents'])) {
+        if ($monthly === null && $annual === null) {
             return back()->withErrors(['monthly_price_cents' => 'يجب إدخال سعر شهري أو سنوي على الأقل'])->withInput();
         }
 
-        $data['slug'] = $data['slug'] ?: Str::slug($data['name']);
+        $locale = app()->getLocale();
+        $translation = $this->validateTranslation($r, $locale);
 
-        Plan::create($data);
+        // slug and top-level name
+        $data['slug'] = $data['slug'] ?: Str::slug($translation['name']);
+        $data['name'] = $translation['name'];
 
-        return redirect()
-            ->route('dashboard.plans.index')
-            ->with('ok', 'تم إنشاء الخطة بنجاح');
+        // Important: do NOT convert plan_category_id -> category_id.
+        // We expect the DB column to be plan_category_id and the Plan model to have it fillable.
+
+        $plan = Plan::create($data);
+
+        $plan->translations()->create([
+            'locale' => $locale,
+            'title' => $translation['name'],
+            'description' => $translation['description'] ?? '',
+            'features' => $translation['features'],
+        ]);
+
+        return redirect()->route('dashboard.plans.index')->with('ok', 'تم إنشاء الخطة بنجاح');
     }
 
     public function edit(Plan $plan)
     {
         $servers = Server::all();
-        return view('dashboard.management.plans.edit', compact('plan', 'servers'));
+        $categories = PlanCategory::with('translations')->get();
+        $translation = $plan->translations()->where('locale', app()->getLocale())->first();
+        return view('dashboard.management.plans.edit', compact('plan', 'servers', 'categories', 'translation'));
     }
 
     public function update(Request $r, Plan $plan)
     {
-        // توحيد الحقول
-        $features = $r->input('features');
-        if (is_string($features)) {
-            // لو جاي JSON كنص
-            $decoded = json_decode($features, true);
-            $features = is_array($decoded) ? $decoded : [];
-        }
-        $features = array_values(array_filter((array)$features, fn($v) => trim((string)$v) !== ''));
+        $r->merge(['is_active' => $r->boolean('is_active')]);
+
+        $monthly = $this->parsePrice($r, 'monthly_price');
+        $annual = $this->parsePrice($r, 'annual_price');
 
         $r->merge([
-            'is_active' => $r->boolean('is_active'),
-            'features'  => $features,
+            'monthly_price_cents' => $monthly,
+            'annual_price_cents' => $annual,
         ]);
 
-        // تحويل السعر من الدولار إلى سنتات (int)
-        $monthly = $r->input('monthly_price_cents');
-        $annual = $r->input('annual_price_cents');
-        $r->merge([
-            'monthly_price_cents' => $monthly !== null && $monthly !== '' ? (int) round(floatval($monthly) * 100) : null,
-            'annual_price_cents' => $annual !== null && $annual !== '' ? (int) round(floatval($annual) * 100) : null,
-        ]);
-
-        // فاليديشن: أحد السعرين مطلوب على الأقل
         $data = $r->validate([
-            'name'                => 'required|string|max:120',
-            'slug'                => ['nullable', 'string', 'max:140', Rule::unique('plans', 'slug')->ignore($plan->id)],
+            'slug' => ['nullable', 'string', 'max:140', Rule::unique('plans', 'slug')->ignore($plan->id)],
             'monthly_price_cents' => 'nullable|integer|min:0',
-            'annual_price_cents'  => 'nullable|integer|min:0',
-            'server_id'           => ['nullable', 'integer', 'exists:servers,id'],
-            'features'            => 'nullable|array',
-            'is_active'           => 'boolean',
-        ], [
-            'name.required'                => 'الاسم مطلوب',
-            'slug.unique'                  => 'المُعرّف (Slug) مستخدم من قبل',
-            'monthly_price_cents.integer'  => 'السعر الشهري يجب أن يكون رقمًا عشريًا أو صحيحًا',
-            'annual_price_cents.integer'   => 'السعر السنوي يجب أن يكون رقمًا عشريًا أو صحيحًا',
+            'annual_price_cents' => 'nullable|integer|min:0',
+            'server_id' => ['nullable', 'integer', 'exists:servers,id'],
+            'plan_category_id' => ['nullable', 'integer', 'exists:plan_categories,id'],
+            'is_active' => 'boolean',
         ]);
 
-        if (empty($data['monthly_price_cents']) && empty($data['annual_price_cents'])) {
+        if ($monthly === null && $annual === null) {
             return back()->withErrors(['monthly_price_cents' => 'يجب إدخال سعر شهري أو سنوي على الأقل'])->withInput();
         }
 
-        $data['slug'] = $data['slug'] ?: Str::slug($data['name']);
+        $locale = app()->getLocale();
+        $translation = $this->validateTranslation($r, $locale);
 
+        $data['slug'] = $data['slug'] ?: Str::slug($translation['name']);
+        $data['name'] = $translation['name'];
+
+        // Keep plan_category_id as-is (no renaming)
         $plan->update($data);
 
-        return redirect()
-            ->route('dashboard.plans.index')
-            ->with('ok', 'تم تحديث الخطة');
+        $planTranslation = $plan->translations()->where('locale', $locale)->first();
+        if ($planTranslation) {
+            $planTranslation->update([
+                'title' => $translation['name'],
+                'description' => $translation['description'] ?? '',
+                'features' => $translation['features'],
+            ]);
+        } else {
+            $plan->translations()->create([
+                'locale' => $locale,
+                'title' => $translation['name'],
+                'description' => $translation['description'] ?? '',
+                'features' => $translation['features'],
+            ]);
+        }
+
+        return redirect()->route('dashboard.plans.index')->with('ok', 'تم تحديث الخطة');
     }
 
     public function destroy(Plan $plan)
