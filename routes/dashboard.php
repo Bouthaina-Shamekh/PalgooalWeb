@@ -123,8 +123,12 @@ Route::group([
     Route::get('servers/{server}/sso-whm', [ServerController::class, 'ssoWhm'])->name('servers.sso-whm');
     Route::resource('servers', ServerController::class)->names('servers');
     Route::get('servers/{server}/accounts', [ServerController::class, 'accounts'])->name('servers.accounts');
+    Route::get('servers/{server}/packages', [ServerController::class, 'packages'])
+        ->name('dashboard.servers.packages');
     Route::get('/sites', [HomeController::class, 'sites'])->name('sites');
     Route::resource('plans', PlanController::class);
+    // Toggle plan active status
+    Route::post('plans/{plan}/toggle', [PlanController::class, 'toggle'])->name('plans.toggle');
     Route::resource('/invoices', InvoiceController::class)->names('invoices');
     // Bulk actions for invoices
     Route::post('/invoices/bulk', [InvoiceController::class, 'bulk'])->name('invoices.bulk');

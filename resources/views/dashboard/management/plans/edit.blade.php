@@ -21,7 +21,8 @@
                 </div>
                 <div class="card-body">
 
-                    <form id="planForm" action="{{ route('dashboard.plans.update', $plan->id) }}" method="POST" class="space-y-6">
+                    <form id="planForm" action="{{ route('dashboard.plans.update', $plan->id) }}" method="POST"
+                        class="space-y-6">
                         @csrf
                         @method('PUT')
 
@@ -60,7 +61,8 @@
 
                             <!-- Slug -->
                             <div class="col-span-12 md:col-span-6">
-                                <label class="block text-sm font-medium mb-1">Plan Slug <span class="text-gray-400">(optional)</span></label>
+                                <label class="block text-sm font-medium mb-1">Plan Slug <span
+                                        class="text-gray-400">(optional)</span></label>
                                 <input type="text" name="slug" class="w-full border rounded-lg px-3 py-2"
                                     value="{{ old('slug', $plan->slug) }}" placeholder="auto-generated if empty">
                                 @error('slug')
@@ -113,7 +115,7 @@
                             <!-- Server -->
                             <div class="col-span-12 md:col-span-6">
                                 <label class="block text-sm font-medium mb-1">Server</label>
-                                <select name="server_id"
+                                <select id="server_select" name="server_id"
                                     class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/30">
                                     <option value="">-- None --</option>
                                     @foreach ($servers as $server)
@@ -124,6 +126,18 @@
                                     @endforeach
                                 </select>
                                 @error('server_id')
+                                    <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <!-- Server Package -->
+                            <div class="col-span-12 md:col-span-6">
+                                <label class="block text-sm font-medium mb-1">Server Package</label>
+                                <select name="server_package" id="server_package_select"
+                                    class="w-full border rounded-lg px-3 py-2">
+                                    <option value="">-- (select server first) --</option>
+                                </select>
+                                @error('server_package')
                                     <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
@@ -149,12 +163,15 @@
                                     $transForLocale = $plan->translations->where('locale', $locale)->first();
                                     $featuresForLocale = old('features.' . $locale, $transForLocale?->features ?? []);
                                 @endphp
-                                <div id="pane-{{ $locale }}" class="lang-pane {{ $activeLocale == $locale ? 'block' : 'hidden' }}">
+                                <div id="pane-{{ $locale }}"
+                                    class="lang-pane {{ $activeLocale == $locale ? 'block' : 'hidden' }}">
                                     <div class="grid grid-cols-12 gap-6">
                                         <!-- Name -->
                                         <div class="col-span-12 md:col-span-6">
-                                            <label class="block text-sm font-medium mb-1">Plan Name ({{ $label }}) *</label>
-                                            <input type="text" name="name[{{ $locale }}]" class="w-full border rounded-lg px-3 py-2"
+                                            <label class="block text-sm font-medium mb-1">Plan Name
+                                                ({{ $label }}) *</label>
+                                            <input type="text" name="name[{{ $locale }}]"
+                                                class="w-full border rounded-lg px-3 py-2"
                                                 value="{{ old('name.' . $locale, $transForLocale?->title ?? ($locale == app()->getLocale() ? $plan->name : '')) }}"
                                                 @if ($activeLocale == $locale) required @endif>
                                             @error('name.' . $locale)
@@ -164,7 +181,8 @@
 
                                         <!-- Description -->
                                         <div class="col-span-12">
-                                            <label class="block text-sm font-medium mb-1">Description ({{ $label }})</label>
+                                            <label class="block text-sm font-medium mb-1">Description
+                                                ({{ $label }})</label>
                                             <textarea name="description[{{ $locale }}]" rows="3" class="w-full border rounded-lg px-3 py-2">{{ old('description.' . $locale, $transForLocale?->description) }}</textarea>
                                             @error('description.' . $locale)
                                                 <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
@@ -173,18 +191,26 @@
 
                                         <!-- Features -->
                                         <div class="col-span-12">
-                                            <label class="block text-sm font-medium mb-1">Features ({{ $label }})</label>
+                                            <label class="block text-sm font-medium mb-1">Features
+                                                ({{ $label }})</label>
                                             <div class="flex gap-2 mb-2">
-                                                <input type="text" name="features_input[{{ $locale }}]" id="featureInput-{{ $locale }}" class="flex-1 border rounded-lg px-3 py-2"
-                                                    placeholder="e.g. 10GB SSD" onkeydown="if(event.key==='Enter'){event.preventDefault();addFeature('{{ $locale }}');}">
-                                                <button type="button" onclick="addFeature('{{ $locale }}')" class="px-3 py-2 bg-primary text-white rounded-lg">Add</button>
+                                                <input type="text" name="features_input[{{ $locale }}]"
+                                                    id="featureInput-{{ $locale }}"
+                                                    class="flex-1 border rounded-lg px-3 py-2"
+                                                    placeholder="e.g. 10GB SSD"
+                                                    onkeydown="if(event.key==='Enter'){event.preventDefault();addFeature('{{ $locale }}');}">
+                                                <button type="button" onclick="addFeature('{{ $locale }}')"
+                                                    class="px-3 py-2 bg-primary text-white rounded-lg">Add</button>
                                             </div>
                                             <div id="featuresChips-{{ $locale }}" class="flex flex-wrap gap-2">
                                                 @foreach ($featuresForLocale as $f)
-                                                    <span class="bg-green-100 text-green-800 rounded-full px-3 py-1 flex items-center gap-1">
+                                                    <span
+                                                        class="bg-green-100 text-green-800 rounded-full px-3 py-1 flex items-center gap-1">
                                                         <span>{{ $f }}</span>
-                                                        <button type="button" class="text-red-600" onclick="this.parentElement.remove()">✕</button>
-                                                        <input type="hidden" name="features[{{ $locale }}][]" value="{{ $f }}">
+                                                        <button type="button" class="text-red-600"
+                                                            onclick="this.parentElement.remove()">✕</button>
+                                                        <input type="hidden" name="features[{{ $locale }}][]"
+                                                            value="{{ $f }}">
                                                     </span>
                                                 @endforeach
                                             </div>
@@ -196,8 +222,11 @@
 
                         <!-- Form Buttons -->
                         <div class="flex justify-end gap-3 mt-4">
-                            <a href="{{ route('dashboard.plans.index') }}" class="px-4 py-2 border rounded-lg bg-gray-200 hover:bg-gray-300">Cancel</a>
-                            <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark">Update Plan</button>
+                            <a href="{{ route('dashboard.plans.index') }}"
+                                class="px-4 py-2 border rounded-lg bg-gray-200 hover:bg-gray-300">Cancel</a>
+                            <button type="submit"
+                                class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark">Update
+                                Plan</button>
                         </div>
                     </form>
                 </div>
@@ -212,7 +241,8 @@
             document.querySelectorAll('.lang-pane').forEach(p => p.classList.add('hidden'));
             document.getElementById('pane-' + locale).classList.remove('hidden');
             document.getElementById('active_locale').value = locale;
-            document.querySelectorAll('[id^="tab-"]').forEach(btn => btn.classList.remove('bg-white', 'border', 'border-b-0', 'font-bold', 'text-gray-800'));
+            document.querySelectorAll('[id^="tab-"]').forEach(btn => btn.classList.remove('bg-white', 'border',
+                'border-b-0', 'font-bold', 'text-gray-800'));
             document.getElementById('tab-' + locale).classList.add('bg-white', 'border', 'border-b-0', 'font-bold');
         }
 
@@ -230,6 +260,75 @@
         annualUI?.addEventListener('input', syncCents);
         document.getElementById('planForm')?.addEventListener('submit', syncCents);
         document.addEventListener('DOMContentLoaded', syncCents);
+
+        // Fetch server packages and populate select
+        async function fetchPackagesForServer(serverId, selected = '') {
+            const select = document.getElementById('server_package_select');
+            select.innerHTML = '<option value="">Loading...</option>';
+            if (!serverId) {
+                select.innerHTML = '<option value="">-- (select server first) --</option>';
+                return;
+            }
+            try {
+                const res = await fetch(`{{ url('admin/servers') }}/${serverId}/packages`, {
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                if (!res.ok) {
+                    const text = await res.text();
+                    let msg = `HTTP ${res.status}`;
+                    try {
+                        const j = JSON.parse(text);
+                        if (j.message) msg = j.message;
+                        else if (j.error) msg = j.error;
+                        else if (j.debugSample) msg = j.debugSample.substring(0, 200);
+                    } catch (err) {
+                        if (text) msg = text.substring(0, 200);
+                    }
+                    select.innerHTML = `<option value="">-- Error loading packages: ${msg} --</option>`;
+                    console.error('Package fetch failed', res.status, text);
+                    return;
+                }
+                const data = await res.json();
+                select.innerHTML = '<option value="">-- None --</option>';
+                const packages = data?.packages || data?.pkg || data?.data || [];
+                if (Array.isArray(packages) && packages.length) {
+                    packages.forEach(pkg => {
+                        const opt = document.createElement('option');
+                        opt.value = typeof pkg === 'string' ? pkg : (pkg.name || pkg.package || pkg.pkg || JSON
+                            .stringify(pkg));
+                        opt.textContent = typeof pkg === 'string' ? pkg : (pkg.name || pkg.package || pkg.pkg ||
+                            JSON.stringify(pkg));
+                        if (opt.value === selected) opt.selected = true;
+                        select.appendChild(opt);
+                    });
+                } else if (packages && typeof packages === 'object') {
+                    Object.keys(packages).forEach(k => {
+                        const opt = document.createElement('option');
+                        opt.value = k;
+                        opt.textContent = k;
+                        if (k === selected) opt.selected = true;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                const msg = e?.message || e;
+                select.innerHTML = `<option value="">-- Error loading packages: ${msg} --</option>`;
+                console.error('Exception while fetching packages', e);
+            }
+        }
+
+        const serverSelectEl = document.querySelector('select[name="server_id"]');
+        serverSelectEl?.addEventListener('change', (e) => fetchPackagesForServer(e.target.value,
+            '{{ old('server_package', $plan->server_package) }}'));
+        // initial load for edit
+        document.addEventListener('DOMContentLoaded', () => {
+            if (serverSelectEl && serverSelectEl.value) {
+                fetchPackagesForServer(serverSelectEl.value, '{{ old('server_package', $plan->server_package) }}');
+            }
+        });
 
         // Features
         function addFeature(locale) {

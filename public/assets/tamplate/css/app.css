@@ -1300,9 +1300,6 @@
   .max-w-\[300px\] {
     max-width: 300px;
   }
-  .max-w-\[320px\] {
-    max-width: 320px;
-  }
   .max-w-\[335px\] {
     max-width: 335px;
   }
@@ -1429,9 +1426,6 @@
     --tw-scale-y: 110%;
     --tw-scale-z: 110%;
     scale: var(--tw-scale-x) var(--tw-scale-y);
-  }
-  .scale-\[1\.03\] {
-    scale: 1.03;
   }
   .rotate-2 {
     rotate: 2deg;
@@ -3163,16 +3157,6 @@
       display: none;
     }
   }
-  .group-not-has-\[\[name\=frequency\]\[value\=annually\]\:checked\]\/tiers\:hidden {
-    &:is(:where(.group\/tiers):not(*:has(*:is([name=frequency][value=annually]:checked))) *) {
-      display: none;
-    }
-  }
-  .group-not-has-\[\[name\=frequency\]\[value\=monthly\]\:checked\]\/tiers\:hidden {
-    &:is(:where(.group\/tiers):not(*:has(*:is([name=frequency][value=monthly]:checked))) *) {
-      display: none;
-    }
-  }
   .group-open\:line-clamp-none {
     &:is(:where(.group):is([open], :popover-open, :open) *) {
       overflow: visible;
@@ -3309,11 +3293,6 @@
   .peer-checked\:bg-primary {
     &:is(:where(.peer):checked ~ *) {
       background-color: var(--color-primary);
-    }
-  }
-  .peer-checked\:text-white {
-    &:is(:where(.peer):checked ~ *) {
-      color: var(--color-white);
     }
   }
   .peer-focus\:ring-4 {

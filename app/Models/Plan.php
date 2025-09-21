@@ -14,6 +14,7 @@ class Plan extends Model
         'monthly_price_cents',
         'annual_price_cents',
         'server_id',
+        'server_package',
         'plan_category_id',
         'is_active',
         'created_by',

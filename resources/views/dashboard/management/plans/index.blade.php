@@ -28,14 +28,13 @@
 
                 {{-- Filters --}}
                 <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mb-4 px-4">
-                    <input type="text" wire:model.live.debounce.300ms="search"
-                           placeholder="Search plans..."
-                           class="w-full sm:w-80 border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search plans..."
+                        class="w-full sm:w-80 border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30" />
 
                     <div class="flex items-center gap-2">
                         <label class="text-sm text-gray-500">Per page</label>
                         <select wire:model="perPage"
-                                class="border rounded-xl px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                            class="border rounded-xl px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/30">
                             <option value="5">5</option>
                             <option value="10">10</option>
                             <option value="25">25</option>
@@ -53,7 +52,6 @@
                                     <th class="text-right">Category</th>
                                     <th class="text-right">Server</th>
                                     <th class="text-right">Price</th>
-                                    <th class="text-right">Features</th>
                                     <th class="text-right">Status</th>
                                     <th class="text-right">Action</th>
                                 </tr>
@@ -62,10 +60,9 @@
                                 @forelse ($plans as $index => $plan)
                                     @php
                                         $rowIndex = ($plans->firstItem() ?? 1) + $index;
-                                        $translation = $plan->translations->where('locale', app()->getLocale())->first();
-                                        $features = is_array($translation?->features) ? $translation->features : [];
-                                        $preview = array_slice($features, 0, 3);
-                                        $rest = max(count($features) - 3, 0);
+                                        $translation = $plan->translations
+                                            ->where('locale', app()->getLocale())
+                                            ->first();
 
                                         $monthly = $plan->monthly_price_cents
                                             ? '$' . number_format($plan->monthly_price_cents / 100, 2)
@@ -84,46 +81,46 @@
                                         <td>{{ $plan->server?->name ?? '-' }}</td>
                                         <td>
                                             @if ($monthly || $annual)
-                                                @if($monthly)<div><strong>Monthly:</strong> {{ $monthly }}</div>@endif
-                                                @if($annual)<div><strong>Annual:</strong> {{ $annual }}</div>@endif
+                                                @if ($monthly)
+                                                    <div><strong>Monthly:</strong> {{ $monthly }}</div>
+                                                @endif
+                                                @if ($annual)
+                                                    <div><strong>Annual:</strong> {{ $annual }}</div>
+                                                @endif
                                             @else
                                                 <span class="text-gray-400">—</span>
                                             @endif
                                         </td>
-                                        <td class="max-w-[320px]">
-                                            @forelse ($preview as $feature)
-                                                <span class="badge bg-success-500/10 text-success-600 rounded-full text-xs px-2 py-0.5">
-                                                    {{ $feature }}
-                                                </span>
-                                            @empty
-                                                <span class="text-gray-400 text-sm">—</span>
-                                            @endforelse
-                                            @if ($rest > 0)
-                                                <span class="badge bg-success-500/10 text-success-600 rounded-full text-xs px-2 py-0.5">
-                                                    +{{ $rest }}
-                                                </span>
-                                            @endif
-                                        </td>
+                                        {{-- Features column removed --}}
                                         <td>
-                                            @if ($plan->is_active)
-                                                <span class="badge bg-emerald-500/10 text-emerald-600 rounded-full text-xs px-2 py-0.5">Active</span>
-                                            @else
-                                                <span class="badge bg-gray-500/10 text-gray-600 rounded-full text-xs px-2 py-0.5">Inactive</span>
-                                            @endif
+                                            <form action="{{ route('dashboard.plans.toggle', $plan->id) }}"
+                                                method="POST" style="display:inline">
+                                                @csrf
+                                                <button type="submit" class="w-full text-left">
+                                                    @if ($plan->is_active)
+                                                        <span
+                                                            class="badge bg-emerald-500/10 text-emerald-600 rounded-full text-xs px-2 py-0.5">Active</span>
+                                                    @else
+                                                        <span
+                                                            class="badge bg-gray-500/10 text-gray-600 rounded-full text-xs px-2 py-0.5">Inactive</span>
+                                                    @endif
+                                                </button>
+                                            </form>
                                         </td>
                                         <td class="whitespace-nowrap flex gap-1">
                                             <a href="{{ route('dashboard.plans.edit', $plan->id) }}"
-                                               class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
-                                               title="Edit">
+                                                class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
+                                                title="Edit">
                                                 <i class="ti ti-edit text-xl leading-none"></i>
                                             </a>
                                             <form action="{{ route('dashboard.plans.destroy', $plan->id) }}"
-                                                  method="POST" onsubmit="return confirm('Are you sure you want to delete this plan?');">
+                                                method="POST"
+                                                onsubmit="return confirm('Are you sure you want to delete this plan?');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit"
-                                                        class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
-                                                        title="Delete">
+                                                    class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
+                                                    title="Delete">
                                                     <i class="ti ti-trash text-xl leading-none"></i>
                                                 </button>
                                             </form>
@@ -131,7 +128,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center text-gray-500 py-8">No plans found.</td>
+                                        <td colspan="7" class="text-center text-gray-500 py-8">No plans found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

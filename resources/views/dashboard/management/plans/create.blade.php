@@ -111,7 +111,7 @@
                             <!-- Server -->
                             <div class="col-span-12 md:col-span-6">
                                 <label class="block text-sm font-medium mb-1">Server</label>
-                                <select name="server_id"
+                                <select id="server_select" name="server_id"
                                     class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/30">
                                     <option value="">-- None --</option>
                                     @foreach ($servers as $server)
@@ -122,6 +122,18 @@
                                     @endforeach
                                 </select>
                                 @error('server_id')
+                                    <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <!-- Server Package -->
+                            <div class="col-span-12 md:col-span-6">
+                                <label class="block text-sm font-medium mb-1">Server Package</label>
+                                <select name="server_package" id="server_package_select"
+                                    class="w-full border rounded-lg px-3 py-2">
+                                    <option value="">-- (select server first) --</option>
+                                </select>
+                                @error('server_package')
                                     <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
@@ -240,6 +252,79 @@
         annualUI?.addEventListener('input', syncCents);
         document.getElementById('planForm')?.addEventListener('submit', syncCents);
         document.addEventListener('DOMContentLoaded', syncCents);
+
+        // Fetch server packages and populate select
+        async function fetchPackagesForServer(serverId, selected = '') {
+            const select = document.getElementById('server_package_select');
+            select.innerHTML = '<option value="">Loading...</option>';
+            if (!serverId) {
+                select.innerHTML = '<option value="">-- (select server first) --</option>';
+                return;
+            }
+            try {
+                const res = await fetch(`{{ url('admin/servers') }}/${serverId}/packages`, {
+                    credentials: 'same-origin',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                if (!res.ok) {
+                    const text = await res.text();
+                    // try to parse json error
+                    let msg = `HTTP ${res.status}`;
+                    try {
+                        const j = JSON.parse(text);
+                        if (j.message) msg = j.message;
+                        else if (j.error) msg = j.error;
+                    } catch (err) {
+                        if (text) msg = text.substring(0, 200);
+                    }
+                    select.innerHTML = `<option value="">-- Error loading packages: ${msg} --</option>`;
+                    console.error('Package fetch failed', res.status, text);
+                    return;
+                }
+
+                const data = await res.json();
+                select.innerHTML = '<option value="">-- None --</option>';
+                const packages = data?.packages || data?.pkg || data?.data || [];
+                if (Array.isArray(packages) && packages.length) {
+                    packages.forEach(pkg => {
+                        const opt = document.createElement('option');
+                        opt.value = typeof pkg === 'string' ? pkg : (pkg.name || pkg.package || pkg.pkg || JSON
+                            .stringify(pkg));
+                        opt.textContent = typeof pkg === 'string' ? pkg : (pkg.name || pkg.package || pkg.pkg ||
+                            JSON.stringify(pkg));
+                        if (opt.value === selected) opt.selected = true;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    // if server returned object with keys
+                    if (packages && typeof packages === 'object' && !Array.isArray(packages)) {
+                        Object.keys(packages).forEach(k => {
+                            const opt = document.createElement('option');
+                            opt.value = k;
+                            opt.textContent = k;
+                            if (k === selected) opt.selected = true;
+                            select.appendChild(opt);
+                        });
+                    }
+                }
+            } catch (e) {
+                const msg = e?.message || e;
+                select.innerHTML = `<option value="">-- Error loading packages: ${msg} --</option>`;
+                console.error('Exception while fetching packages', e);
+            }
+        }
+
+        document.getElementById('server_select')?.addEventListener('change', (e) => fetchPackagesForServer(e.target.value,
+            '{{ old('server_package') }}'));
+        // initial load if server selected
+        document.addEventListener('DOMContentLoaded', () => {
+            const serverSelect = document.getElementById('server_select');
+            if (serverSelect && serverSelect.value) {
+                fetchPackagesForServer(serverSelect.value, '{{ old('server_package') }}');
+            }
+        });
 
         // Features
         function addFeature(locale) {

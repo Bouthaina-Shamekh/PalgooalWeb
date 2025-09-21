@@ -19,6 +19,7 @@ return new class extends Migration
             // الأعمدة بدون constrained() مباشرة
             $table->unsignedBigInteger('plan_category_id')->nullable()->index();
             $table->unsignedBigInteger('server_id')->nullable()->index();
+            $table->string('server_package')->nullable()->index();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
 

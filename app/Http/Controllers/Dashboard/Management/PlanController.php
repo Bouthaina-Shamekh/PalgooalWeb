@@ -79,6 +79,7 @@ class PlanController extends Controller
             'monthly_price_cents' => 'nullable|integer|min:0',
             'annual_price_cents' => 'nullable|integer|min:0',
             'server_id' => ['nullable', 'integer', 'exists:servers,id'],
+            'server_package' => ['nullable', 'string', 'max:255'],
             'plan_category_id' => ['nullable', 'integer', 'exists:plan_categories,id'],
             'is_active' => 'boolean',
         ]);
@@ -93,6 +94,11 @@ class PlanController extends Controller
         // slug and top-level name
         $data['slug'] = $data['slug'] ?: Str::slug($translation['name']);
         $data['name'] = $translation['name'];
+
+        // If server_package is not provided, default it to the plan name so provisioning can use it
+        if (empty($data['server_package'])) {
+            $data['server_package'] = $data['name'];
+        }
 
         // Important: do NOT convert plan_category_id -> category_id.
         // We expect the DB column to be plan_category_id and the Plan model to have it fillable.
@@ -134,6 +140,7 @@ class PlanController extends Controller
             'monthly_price_cents' => 'nullable|integer|min:0',
             'annual_price_cents' => 'nullable|integer|min:0',
             'server_id' => ['nullable', 'integer', 'exists:servers,id'],
+            'server_package' => ['nullable', 'string', 'max:255'],
             'plan_category_id' => ['nullable', 'integer', 'exists:plan_categories,id'],
             'is_active' => 'boolean',
         ]);
@@ -147,6 +154,11 @@ class PlanController extends Controller
 
         $data['slug'] = $data['slug'] ?: Str::slug($translation['name']);
         $data['name'] = $translation['name'];
+
+        // Ensure server_package defaults to the human-readable name when left empty
+        if (empty($data['server_package'])) {
+            $data['server_package'] = $data['name'];
+        }
 
         // Keep plan_category_id as-is (no renaming)
         $plan->update($data);
@@ -174,5 +186,16 @@ class PlanController extends Controller
     {
         $plan->delete();
         return back()->with('ok', 'تم حذف الخطة');
+    }
+
+    /**
+     * Toggle the is_active flag for the plan.
+     */
+    public function toggle(Plan $plan)
+    {
+        $plan->is_active = ! (bool) $plan->is_active;
+        $plan->save();
+
+        return back()->with('ok', $plan->is_active ? 'تم تفعيل الخطة' : 'تم إيقاف الخطة');
     }
 }

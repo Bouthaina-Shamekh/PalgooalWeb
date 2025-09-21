@@ -25,10 +25,19 @@ class SubscriptionSyncService
         $error = null;
         $result = null;
         if ($host && $username && $apiToken) {
+            // Prefer server_package (actual package name on the provisioning server)
+            $planPackage = null;
+            try {
+                $planPackage = $subscription->plan->server_package ?? null;
+            } catch (\Exception $e) {
+                $planPackage = null;
+            }
+
             $params = [
                 'username' => $subscription->username,
                 'domain' => $subscription->domain_name,
-                'plan' => $subscription->plan->slug ?? $subscription->plan->name,
+                // use server_package when available; fall back to slug or plan name
+                'plan' => $planPackage ? (string)$planPackage : ($subscription->plan->slug ?? $subscription->plan->name),
                 'contactemail' => $subscription->client->email ?? '',
                 'password' => $subscription->password ?? 'TempPass!123',
             ];
