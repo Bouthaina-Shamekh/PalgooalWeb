@@ -18,8 +18,10 @@ return new class extends Migration
             $table->string('ip')->nullable(); // عنوان السيرفر
             $table->string('hostname')->nullable();
             $table->string('username')->nullable();
-            $table->string('password')->nullable();
-            $table->string('api_token')->nullable();
+            // password may be long (store as text)
+            $table->text('password')->nullable();
+            // api_token can be long (store as text)
+            $table->text('api_token')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
         });

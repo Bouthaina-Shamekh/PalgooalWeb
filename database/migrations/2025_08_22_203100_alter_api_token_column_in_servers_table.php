@@ -11,9 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('servers', function (Blueprint $table) {
-            $table->text('api_token')->change();
-        });
+        // noop: change merged into create_servers_table migration
+        if (Schema::hasColumn('servers', 'api_token')) {
+            // already handled by create migration
+        }
     }
 
     /**
@@ -21,8 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('servers', function (Blueprint $table) {
-            $table->string('api_token', 255)->change(); // عدّل للطول السابق إذا كان معروفًا
-        });
+        // noop: change merged into create migration
     }
 };

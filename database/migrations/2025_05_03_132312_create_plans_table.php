@@ -30,21 +30,30 @@ return new class extends Migration
 
         // إضافة قيود FK بأسماء صريحة لتجنب التعارض
         Schema::table('plans', function (Blueprint $table) {
-            $table->foreign('plan_category_id', 'fk_plans_plan_category')
-                ->references('id')->on('plan_categories')
-                ->nullOnDelete();
+            // add FK to plan_categories if the table exists
+            if (Schema::hasTable('plan_categories')) {
+                $table->foreign('plan_category_id', 'fk_plans_plan_category')
+                    ->references('id')->on('plan_categories')
+                    ->nullOnDelete();
+            }
 
-            $table->foreign('server_id', 'fk_plans_server')
-                ->references('id')->on('servers')
-                ->nullOnDelete();
+            // add FK to servers if the table exists (some environments may create servers later)
+            if (Schema::hasTable('servers')) {
+                $table->foreign('server_id', 'fk_plans_server')
+                    ->references('id')->on('servers')
+                    ->nullOnDelete();
+            }
 
-            $table->foreign('created_by', 'fk_plans_created_by')
-                ->references('id')->on('users')
-                ->nullOnDelete();
+            // add FKs to users if the table exists
+            if (Schema::hasTable('users')) {
+                $table->foreign('created_by', 'fk_plans_created_by')
+                    ->references('id')->on('users')
+                    ->nullOnDelete();
 
-            $table->foreign('updated_by', 'fk_plans_updated_by')
-                ->references('id')->on('users')
-                ->nullOnDelete();
+                $table->foreign('updated_by', 'fk_plans_updated_by')
+                    ->references('id')->on('users')
+                    ->nullOnDelete();
+            }
         });
 
         // جدول الترجمات للخطط

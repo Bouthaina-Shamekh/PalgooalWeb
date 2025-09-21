@@ -11,9 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('servers', function (Blueprint $table) {
-            $table->text('password')->change();
-        });
+        // noop: change merged into create_servers_table migration
+        if (Schema::hasColumn('servers', 'password')) {
+            // already handled by create migration
+        }
     }
 
     /**
@@ -21,8 +22,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('servers', function (Blueprint $table) {
-            $table->string('password', 255)->change();
-        });
+        // noop: change merged into create migration
     }
 };
