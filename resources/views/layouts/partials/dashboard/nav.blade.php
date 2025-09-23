@@ -172,6 +172,16 @@
                             <span class="pc-mtext">{{ t('dashboard.plans', 'plans') }}</span>
                         </a>
                     </li>
+                    <li class="pc-item">
+                        <a href="{{ route('dashboard.plan_categories.index') }}" class="pc-link">
+                            <span class="pc-micon">
+                                <span class="pc-micon">
+                                    <i class="fas fa-boxes"></i>
+                                </span>
+                            </span>
+                            <span class="pc-mtext">{{ t('dashboard.plan-categories', 'plan categories') }}</span>
+                        </a>
+                    </li>
                 @endcan
                 @can('view', 'App\\Models\\Subscription')
                     <li class="pc-item">
