@@ -91,7 +91,8 @@
     </div>
 
     {{-- الشريط الجانبي (Widget Palette) --}}
-    <div class="fixed inset-y-0 z-50 w-[380px] max-w-[90vw] bg-white dark:bg-gray-900 shadow-2xl
+    <div wire:key="sections-palette"
+         class="fixed inset-y-0 z-50 w-[380px] max-w-[90vw] bg-white dark:bg-gray-900 shadow-2xl
                transition-transform duration-300
                {{ $isRtl ? 'left-0 border-r' : 'right-0 border-l' }}
            flex flex-col h-screen overflow-hidden"
@@ -125,7 +126,7 @@
                         $meta = $keyMeta[$k] ?? ['label' => $k, 'desc' => '', 'unique' => false, 'thumb' => null];
                     @endphp
 
-                    <div class="border rounded-xl hover:shadow-md transition overflow-hidden">
+                    <div class="border rounded-xl hover:shadow-md transition overflow-hidden" wire:key="palette-item-{{ $k }}">
                         @if (!empty($meta['thumb']))
                             <div class="aspect-[16/9] bg-gray-100">
                                 <img src="{{ $meta['thumb'] }}" alt="{{ $meta['label'] }}"
@@ -150,8 +151,8 @@
                             </div>
 
                             <div class="flex items-center justify-end">
-                                <button type="button" wire:click="addFromPalette('{{ $k }}')"
-                                    wire:loading.attr="disabled"
+                                <button type="button" wire:click.stop="addFromPalette('{{ $k }}')"
+                                    wire:loading.attr="disabled" wire:target="addFromPalette"
                                     class="px-3 py-1.5 rounded bg-primary text-white text-sm hover:bg-primary/90">
                                     إضافة
                                 </button>

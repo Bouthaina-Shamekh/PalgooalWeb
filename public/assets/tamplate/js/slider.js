@@ -1,5 +1,9 @@
 document.addEventListener('DOMContentLoaded', function () {
-  const swiper = new Swiper('#clients-swiper', {
+  const selector = '#clients-swiper';
+  const el = document.querySelector(selector);
+  if (!el) return;
+
+  const options = {
     slidesPerView: 1,
     spaceBetween: 24,
     loop: true,
@@ -21,13 +25,27 @@ document.addEventListener('DOMContentLoaded', function () {
       prevEl: '.swiper-button-prev',
     },
     rtl: document.documentElement.getAttribute('dir') === 'rtl',
-  });
+    watchOverflow: true,
+  };
+
+  const slidesCount = el.querySelectorAll('.swiper-slide').length;
+  const maxPerView = Math.max(
+    options.slidesPerView || 1,
+    ...Object.values(options.breakpoints || {}).map(b => (b && b.slidesPerView) ? b.slidesPerView : 1)
+  );
+  options.loop = slidesCount > maxPerView;
+
+  new Swiper(selector, options);
 });
 
 
 // Testimonials Swiper
     document.addEventListener('DOMContentLoaded', function () {
-        new Swiper('.testimonials-swiper', {
+        const selector = '.testimonials-swiper';
+        const el = document.querySelector(selector);
+        if (!el) return;
+
+        const options = {
             slidesPerView: 1,
             spaceBetween: 24,
             loop: true,
@@ -42,12 +60,26 @@ document.addEventListener('DOMContentLoaded', function () {
             breakpoints: {
                 768: { slidesPerView: 2 },
                 1024: { slidesPerView: 3 }
-            }
-        });
+            },
+            watchOverflow: true,
+        };
+
+        const slidesCount = el.querySelectorAll('.swiper-slide').length;
+        const maxPerView = Math.max(
+            options.slidesPerView || 1,
+            ...Object.values(options.breakpoints || {}).map(b => (b && b.slidesPerView) ? b.slidesPerView : 1)
+        );
+        options.loop = slidesCount > maxPerView;
+
+        new Swiper(selector, options);
     });
 // Blog Swiper
     document.addEventListener('DOMContentLoaded', function () {
-        new Swiper('.blog-swiper', {
+        const selector = '.blog-swiper';
+        const el = document.querySelector(selector);
+        if (!el) return;
+
+        const options = {
             slidesPerView: 1,
             spaceBetween: 24,
             loop: true,
@@ -63,13 +95,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 640: { slidesPerView: 2 },
                 1024: { slidesPerView: 3 },
                 1280: { slidesPerView: 4 }
-            }
-        });
+            },
+            watchOverflow: true,
+        };
+
+        const slidesCount = el.querySelectorAll('.swiper-slide').length;
+        const maxPerView = Math.max(
+            options.slidesPerView || 1,
+            ...Object.values(options.breakpoints || {}).map(b => (b && b.slidesPerView) ? b.slidesPerView : 1)
+        );
+        options.loop = slidesCount > maxPerView;
+
+        new Swiper(selector, options);
     });
 
     // خدمات رقمية متكاملة 
     document.addEventListener('DOMContentLoaded', function () {
-        new Swiper('.mySwiper', {
+        const selector = '.mySwiper';
+        const el = document.querySelector(selector);
+        if (!el) return;
+
+        const options = {
             slidesPerView: 1,
             spaceBetween: 24,
             loop: true,
@@ -89,7 +135,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 640: { slidesPerView: 2 },
                 1024: { slidesPerView: 3 },
                 1280: { slidesPerView: 4 }
-            }
-        });
+            },
+            watchOverflow: true,
+        };
+
+        const slidesCount = el.querySelectorAll('.swiper-slide').length;
+        const maxPerView = Math.max(
+            options.slidesPerView || 1,
+            ...Object.values(options.breakpoints || {}).map(b => (b && b.slidesPerView) ? b.slidesPerView : 1)
+        );
+        options.loop = slidesCount > maxPerView;
+
+        new Swiper(selector, options);
     });
 

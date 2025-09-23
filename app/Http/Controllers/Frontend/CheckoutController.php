@@ -232,7 +232,7 @@ class CheckoutController extends Controller
                         'total_cents'      => !$isNotTemplate ? $unitCents : $unitCentsPlan,
                     ]);
 
-                    if(!$isNotTemplate){
+                    if (!$isNotTemplate) {
                         // 4) إنشاء اشتراك Pending (اختياريًا؛ حسب منطقك)
                         $planTemplate = $template?->plan;
                         if ($planTemplate) {
@@ -257,7 +257,7 @@ class CheckoutController extends Controller
                             ]);
                         }
                     }
-                    if(!$isNotPlan){
+                    if (!$isNotPlan) {
                         // 4) إنشاء اشتراك Pending (اختياريًا؛ حسب منطقك)
                         if ($plan) {
                             // استخرج دومين إن وُجد بند به دومين
@@ -281,8 +281,6 @@ class CheckoutController extends Controller
                             ]);
                         }
                     }
-
-
                 }
 
                 return $order;
@@ -294,82 +292,85 @@ class CheckoutController extends Controller
                 'palgoals_last_order_id' => $result->id,
             ]);
 
-            // البيانات المرجعة للواجهة
-            $client_name   = auth('client')->user()->first_name ?? '';
-            $domainPicked  = $items[0]['domain'] ?? $request->input('domain');
-            $totalCents    = $isDomainOnly
-                ? $domainsTotalCents
-                : 0;
-            $totalCentsPlan    = $isDomainOnly
-                ? $domainsTotalCents
-                : 0;
-            if(!$isNotTemplate){
-                $totalCents    = $isDomainOnly
+            // البيانات المرجعة للواجهة (تأكد من تعريفها لجميع السيناريوهات)
+            $client_name  = auth('client')->user()->first_name ?? '';
+            $domainPicked = $items[0]['domain'] ?? $request->input('domain');
+            $totalCents   = $isDomainOnly ? $domainsTotalCents : 0;
+            $totalCentsPlan = $isDomainOnly ? $domainsTotalCents : 0;
+
+            // Default response (covers domain-only case)
+            $responseData = [
+                'success'     => true,
+                'order_no'    => $result->order_number,
+                'order_id'    => $result->id,
+                'domain'      => $domainPicked,
+                'total_cents' => $totalCents,
+                'client_name' => $client_name,
+                'redirect'    => route('checkout.domains.success'),
+            ];
+
+            // Template-specific override
+            if (!$isNotTemplate) {
+                $totalCents = $isDomainOnly
                     ? $domainsTotalCents
                     : ($showDiscount ? (int) ($discPrice * 100) : (int) ($basePrice * 100));
 
-                $responseData = [
-                    'success'      => true,
-                    'order_no'     => $result->order_number,
-                    'order_id'     => $result->id,
-                    'domain'       => $domainPicked,
-                    'total_cents'  => $totalCents,
-                    'client_name'  => $client_name,
+                $responseData = array_merge($responseData, [
+                    'total_cents'   => $totalCents,
                     'template_name' => $template_name,
-                    'redirect'     => route('checkout.domains.success'),
-                ];
-            }
-            if(!$isNotPlan){
-                $totalCentsPlan    = $isDomainOnly
-                    ? $domainsTotalCents
-                    : ($showDiscountPlan ? (int) ($discPricePlan * 100) : (int) ($basePricePlan * 100));
-                $responseData = [
-                    'success'      => true,
-                    'order_no'     => $result->order_number,
-                    'order_id'     => $result->id,
-                    'domain'       => $domainPicked,
-                    'total_cents'  => $totalCentsPlan,
-                    'client_name'  => $client_name,
-                    'plan_name' => $plan_name,
-                    'redirect'     => route('checkout.domains.success'),
-                ];
+                ]);
             }
 
+            // Plan-specific override
+            if (!$isNotPlan) {
+                $totalCentsPlan = $isDomainOnly
+                    ? $domainsTotalCents
+                    : ($showDiscountPlan ? (int) ($discPricePlan * 100) : (int) ($basePricePlan * 100));
+
+                $responseData = array_merge($responseData, [
+                    'total_cents' => $totalCentsPlan,
+                    'plan_name'   => $plan_name,
+                ]);
+            }
+
+            // If AJAX/json requested, return JSON payload
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json($responseData);
             }
-            if(!$isNotTemplate){
-                return redirect()->route('checkout', array_merge([
-                    'template_id'        => $template_id,
-                    'success'            => 1,
-                    'order_no'           => $result->order_number,
-                    'domain'             => $domainPicked,
-                    'total'              => $totalCents / 100,
-                    'client_name'        => $client_name,
-                    'template_name'      => $template_name,
-                ]));
+
+            // Non-AJAX: redirect to a suitable checkout page depending on scenario
+            if (!$isNotTemplate) {
+                return redirect()->route('checkout', [
+                    'template_id'   => $template_id,
+                    'success'       => 1,
+                    'order_no'      => $result->order_number,
+                    'domain'        => $domainPicked,
+                    'total'         => $totalCents / 100,
+                    'client_name'   => $client_name,
+                    'template_name' => $template_name,
+                ]);
             }
-            if(!$isNotPlan){
-                return redirect()->route('checkout', array_merge([
-                    'plan_id'        => $plan_id,
-                    'success'            => 1,
-                    'order_no'           => $result->order_number,
-                    'domain'             => $domainPicked,
-                    'total'              => $totalCentsPlan / 100,
-                    'client_name'        => $client_name,
-                    'plan_name'      => $plan_name,
-                ]));
+
+            if (!$isNotPlan) {
+                return redirect()->route('checkout', [
+                    'plan_id'      => $plan_id,
+                    'success'       => 1,
+                    'order_no'      => $result->order_number,
+                    'domain'        => $domainPicked,
+                    'total'         => $totalCentsPlan / 100,
+                    'client_name'   => $client_name,
+                    'plan_name'     => $plan_name,
+                ]);
             }
-            if(!$isDomainOnly){
-                return redirect()->route('checkout', array_merge([
-                    'success'            => 1,
-                    'order_no'           => $result->order_number,
-                    'domain'             => $domainPicked,
-                    'total'              => $totalCents / 100,
-                    'client_name'        => $client_name,
-                    'domain_name'        => $domainPicked,
-                ]));
-            }
+
+            // Domain-only fallback
+            return redirect()->route('checkout', [
+                'success'     => 1,
+                'order_no'    => $result->order_number,
+                'domain'      => $domainPicked,
+                'total'       => $totalCents / 100,
+                'client_name' => $client_name,
+            ]);
         } catch (\Throwable $e) {
             Log::error('CheckoutController::process failed', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'تعذر إتمام عملية الدفع الآن.'], 500);

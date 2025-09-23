@@ -268,6 +268,7 @@ class OrderController extends Controller
                 'starts_at'     => $startsAt,
                 'ends_at'       => $endsAt,
                 'server_id'     => $serverId,
+                'server_package' => $template->plan?->server_package ?? ($template->plan?->name ?? null),
                 'username'      => $generateUsername(),
                 'domain_option' => $domainOption,
                 'domain_name'   => $domainName,

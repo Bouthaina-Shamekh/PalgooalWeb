@@ -226,6 +226,14 @@ class SubscriptionController extends Controller
             'domain_option' => ['required', Rule::in(['new', 'subdomain', 'existing'])],
             'domain_name' => ['required_if:domain_option,new,existing'],
         ]);
+        // Always set subscription.server_package from the chosen plan (do not trust request)
+        $plan = isset($data['plan_id']) ? \App\Models\Plan::find($data['plan_id']) : null;
+        if ($plan) {
+            $data['server_package'] = $plan->server_package ?? $plan->name ?? null;
+        } else {
+            $data['server_package'] = null;
+        }
+
         Subscription::create($data);
         return redirect()->route('dashboard.subscriptions.index')->with('ok', 'تم إضافة الاشتراك بنجاح');
     }
@@ -253,6 +261,14 @@ class SubscriptionController extends Controller
             'domain_option' => ['required', Rule::in(['new', 'subdomain', 'existing'])],
             'domain_name' => ['required_if:domain_option,new,existing'],
         ]);
+        // Ensure server_package remains derived from the plan selection
+        $plan = isset($data['plan_id']) ? \App\Models\Plan::find($data['plan_id']) : null;
+        if ($plan) {
+            $data['server_package'] = $plan->server_package ?? $plan->name ?? null;
+        } else {
+            $data['server_package'] = null;
+        }
+
         $subscription->update($data);
         return redirect()->route('dashboard.subscriptions.index')->with('ok', 'تم تحديث الاشتراك بنجاح');
     }

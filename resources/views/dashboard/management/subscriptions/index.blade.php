@@ -107,6 +107,21 @@
                         <div></div>
                     </div>
                     <div class="overflow-x-auto">
+                        {{-- global flash area (also used by JS toast on page load) --}}
+                        <div id="global-flash" class="px-4 mb-3">
+                            @if (session('success'))
+                                <div class="alert alert-success mb-2">{{ session('success') }}</div>
+                            @endif
+                            @if (session('error'))
+                                <div class="alert alert-danger mb-2">{{ session('error') }}</div>
+                            @endif
+                            @if (session('warning'))
+                                <div class="alert alert-warning mb-2">{{ session('warning') }}</div>
+                            @endif
+                            @if (session('info'))
+                                <div class="alert alert-info mb-2">{{ session('info') }}</div>
+                            @endif
+                        </div>
                         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead class="bg-gray-50 dark:bg-gray-900">
                                 <tr>
@@ -122,6 +137,9 @@
                                         الخطة</th>
                                     <th scope="col"
                                         class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        حزمة السيرفر</th>
+                                    <th scope="col"
+                                        class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         الدومين</th>
                                     <th scope="col"
                                         class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -129,6 +147,9 @@
                                     <th scope="col"
                                         class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         خيارات</th>
+                                    <th scope="col"
+                                        class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        نتيجة المزامنة</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
@@ -145,6 +166,9 @@
                                         </td>
                                         <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
                                             {{ $sub->plan->name ?? '' }}</td>
+                                        <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
+                                            {{ $sub->server_package ?? ($sub->plan->server_package ?? ($sub->plan->name ?? '-')) }}
+                                        </td>
                                         <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
                                             @if ($sub->domain_name)
                                                 <div class="flex items-center gap-2">
@@ -370,10 +394,36 @@
                                                 </div>
                                             </div>
                                         </td>
+                                        <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
+                                            @php
+                                                $syncStatus = $sub->last_sync_status ?? null; // possible values: success, failed, pending
+                                                $syncAt = $sub->last_synced_at ?? null;
+                                            @endphp
+                                            @if ($syncStatus == 'success')
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">نجحت</span>
+                                            @elseif($syncStatus == 'failed')
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">فشل</span>
+                                            @elseif($syncStatus == 'pending')
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">قيد
+                                                    التنفيذ</span>
+                                            @else
+                                                <span
+                                                    class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">غير
+                                                    معروف</span>
+                                            @endif
+                                            @if ($syncAt)
+                                                <div class="text-xs text-gray-400 mt-1">
+                                                    {{ \Illuminate\Support\Facades\Carbon::parse($syncAt)->diffForHumans() }}
+                                                </div>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted py-6">لا توجد اشتراكات
+                                        <td colspan="7" class="text-center text-muted py-6">لا توجد اشتراكات
                                             لعرضها.</td>
                                     </tr>
                                 @endforelse
@@ -389,26 +439,45 @@
     </div>
 </x-dashboard-layout>
 <script>
+    // showToast is global so other scripts can call it
+    function showToast(msg, ok = true) {
+        var el = document.createElement('div');
+        el.textContent = msg;
+        el.style.position = 'fixed';
+        el.style.right = '20px';
+        el.style.bottom = '20px';
+        el.style.padding = '10px 14px';
+        el.style.background = ok ? '#16a34a' : '#dc2626';
+        el.style.color = 'white';
+        el.style.borderRadius = '6px';
+        el.style.zIndex = 9999;
+        document.body.appendChild(el);
+        setTimeout(function() {
+            document.body.removeChild(el);
+        }, 3500);
+    }
+
+    // Trigger toasts for server-side session flashes
+    (function triggerSessionToasts() {
+        @if (session('success'))
+            showToast(@json(session('success')), true);
+        @endif
+        @if (session('error'))
+            showToast(@json(session('error')), false);
+        @endif
+        @if (session('warning'))
+            showToast(@json(session('warning')), false);
+        @endif
+        @if (session('info'))
+            showToast(@json(session('info')), true);
+        @endif
+    })();
+
     document.addEventListener('click', function(e) {
         // close other open dropdowns when clicking outside
         // AJAX handler for subscription quick-action forms
         (function() {
-            function showToast(msg, ok = true) {
-                var el = document.createElement('div');
-                el.textContent = msg;
-                el.style.position = 'fixed';
-                el.style.right = '20px';
-                el.style.bottom = '20px';
-                el.style.padding = '10px 14px';
-                el.style.background = ok ? '#16a34a' : '#dc2626';
-                el.style.color = 'white';
-                el.style.borderRadius = '6px';
-                el.style.zIndex = 9999;
-                document.body.appendChild(el);
-                setTimeout(function() {
-                    document.body.removeChild(el);
-                }, 3500);
-            }
+            // reuse global showToast
 
             document.addEventListener('submit', function(e) {
                 var form = e.target;

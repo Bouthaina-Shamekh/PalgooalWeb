@@ -21,7 +21,6 @@ class Sections extends Component
     public $sectionOrder = 0;
     public $translations = [];
     public $translationsData = [];
-    protected $listeners = ['deleteSection'];
 
     /** لوحة ودجت جانبية (بدون مودال) */
     public bool $showPalette = false;
@@ -125,18 +124,15 @@ class Sections extends Component
     {
         $key = $this->normalizeKey($key);
 
-        if (!in_array($key, $this->availableKeys, true)) {
-            $this->addError('sectionKey', 'نوع السكشن غير معروف.');
-            return;
-        }
+        // تتبّع للمساعدة على التشخيص خصوصاً مع Hosting Plans
+        logger()->info('[Sections] addFromPalette clicked', [
+            'page_id' => $this->pageId,
+            'key' => $key,
+        ]);
 
-        $meta = $this->keyMeta[$key] ?? null;
-        if ($meta && !empty($meta['unique'])) {
-            $exists = Section::where('page_id', $this->pageId)->where('key', $key)->exists();
-            if ($exists) {
-                $this->addError('sectionKey', 'هذا السكشن مسموح مرة واحدة فقط.');
-                return;
-            }
+        if (!in_array($key, $this->availableKeys, true)) {
+            session()->flash('error', 'نوع السكشن غير معروف.');
+            return;
         }
 
         $this->sectionKey   = $key;
@@ -163,16 +159,20 @@ class Sections extends Component
     {
         $this->sectionKey = $this->normalizeKey($this->sectionKey);
 
+        // تتبّع محاولات الإضافة للمساعدة في التشخيص
+        if ($this->sectionKey === 'hosting-plans') {
+            logger()->info('[Sections] Trying to add hosting-plans', [
+                'page_id' => $this->pageId,
+            ]);
+        }
+
         $this->validate([
             'sectionKey' => 'required',
         ], [], [
             'sectionKey' => 'نوع السكشن',
         ]);
 
-        if (Section::where('page_id', $this->pageId)->where('key', $this->sectionKey)->exists()) {
-            session()->flash('error', 'هذا السكشن موجود مسبقًا.');
-            return;
-        }
+        // لا تحقق تفرد — السماح بإضافة أي سكشن أكثر من مرة
 
         // حساب order آمن: لو الجدول فارغ يرجع null فنجعل قيمة افتراضية 1
         $order = $this->sectionOrder ?: (Section::where('page_id', $this->pageId)->max('order') ?? 0) + 1;
@@ -180,6 +180,7 @@ class Sections extends Component
         switch ($this->sectionKey) {
             case 'hero':
                 HeroSection::create($this->pageId, $order, $this->translations);
+                logger()->info('[Sections] Section created', ['key' => $this->sectionKey, 'page_id' => $this->pageId]);
                 break;
 
             default:
@@ -188,6 +189,7 @@ class Sections extends Component
                     'key'     => $this->sectionKey,
                     'order'   => $order,
                 ]);
+                logger()->info('[Sections] Section created', ['id' => $section->id, 'key' => $this->sectionKey, 'page_id' => $this->pageId]);
 
                 foreach ($this->languages as $lang) {
                     $locale  = $lang->code;
@@ -237,10 +239,18 @@ class Sections extends Component
                                 'template-sections' => $data['template-sections'] ?? '',
                             ];
                             break;
+                        case 'hosting-plans':
+                            $content = [
+                                'subtitle'       => $data['subtitle'] ?? '',
+                                'hosting-plans'  => is_array($data['hosting-plans'] ?? null)
+                                    ? $data['hosting-plans']
+                                    : [],
+                            ];
+                            break;
 
                         case 'testimonials':
                         case 'search-domain':
-                        case 'hosting-plans':
+                        
                         case 'blog':
                             $content = [];
                             break;
@@ -289,18 +299,23 @@ class Sections extends Component
         session()->flash('success', 'تم تحديث السكشن بنجاح.');
     }
 
+    #[On('deleteSection')]
     public function deleteSection($id)
     {
         try {
-            $section = Section::findOrFail($id);
-            $section->delete();
+            $section = Section::find($id);
+            if ($section) {
+                $section->delete();
+            } else {
+                logger()->warning('[Sections] deleteSection called for non-existing id', ['id' => $id]);
+            }
             $this->loadSections();
 
-            // أرسل حدث للواجهة (JS) بأن الحذف تم بنجاح
-            $this->dispatchBrowserEvent('section-deleted-success', ['sectionId' => $id]);
+            // أرسل حدث للواجهة (JS) بأن الحذف تم بنجاح - Livewire v3
+            $this->dispatch('section-deleted-success', sectionId: $id);
         } catch (Exception $e) {
             logger()->error('فشل حذف السكشن: ' . $e->getMessage());
-            $this->dispatchBrowserEvent('section-delete-failed', ['sectionId' => $id, 'error' => $e->getMessage()]);
+            $this->dispatch('section-delete-failed', sectionId: $id, error: $e->getMessage());
         }
     }
 

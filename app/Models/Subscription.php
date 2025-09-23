@@ -17,6 +17,7 @@ class Subscription extends Model
         'price',
         'username',
         'server_id',
+        'server_package',
         'next_due_date',
         'starts_at',
         'ends_at',
