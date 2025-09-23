@@ -32,14 +32,21 @@ class CheckoutController extends Controller
             $template = \App\Models\Template::find($template_id);
             $translation = $template?->translations()->where('locale', app()->getLocale())->first();
         }
+        $plan_id = $request->query('plan_id');
+        $plan = null;
+        $plan_translation = null;
+        if (!empty($plan_id)) {
+            $plan = \App\Models\Plan::find($plan_id);
+            $plan_translation = $plan?->translations()->where('locale', app()->getLocale())->first();
+        }
 
-        return view('tamplate.checkout', compact('template_id', 'template', 'translation', 'items'));
+        return view('tamplate.checkout', compact('template_id', 'template', 'translation', 'items', 'plan_id', 'plan', 'plan_translation'));
     }
 
     /**
      * Checkout handler for both template checkout and domain-only checkout (when $template_id is null).
      */
-    public function process(Request $request, $template_id)
+    public function process(Request $request, $template_id = null, $plan_id = null)
     {
         // إنشاء حساب للعميل في حال عدم التسجيل
         if (!auth('client')->check()) {
@@ -63,7 +70,9 @@ class CheckoutController extends Controller
             auth('client')->login($client);
         }
 
-        $isDomainOnly = empty($template_id);
+        $isDomainOnly = empty($template_id) && empty($plan_id);
+        $isNotTemplate = empty($template_id);
+        $isNotPlan = empty($plan_id);
 
         // لو في عناصر قادمة من الطلب استخدمها؛ وإلا خذها من السيشن (لسيناريو الدومين فقط)
         $rawItems = $request->input('items', session('palgoals_cart_domains', []));
@@ -77,7 +86,7 @@ class CheckoutController extends Controller
         }, is_array($rawItems) ? $rawItems : []);
 
         // معلومات القالب (إن وجد)
-        $template    = $isDomainOnly ? null : \App\Models\Template::find($template_id);
+        $template    = $isNotTemplate ? null : \App\Models\Template::find($template_id);
         $translation = $template?->translations()->where('locale', app()->getLocale())->first();
         $template_name = $translation?->name ?? $template?->name ?? '';
 
@@ -86,6 +95,18 @@ class CheckoutController extends Controller
         $discPrice = is_null($discRaw) ? null : (float) $discRaw;
         $hasDiscount  = !is_null($discPrice) && $discPrice > 0 && $discPrice < $basePrice;
         $showDiscount = $hasDiscount && (!$template?->discount_ends_at || now()->lt($template->discount_ends_at));
+
+        // معلومات الخطة (إن وجد)
+        $plan    = $isNotPlan ? null : \App\Models\Plan::find($plan_id);
+        $translation = $plan?->translations()->where('locale', app()->getLocale())->first();
+        $plan_name = $translation?->name ?? $plan?->name ?? '';
+
+        $basePricePlan = (float) ($plan->monthly_price_cents ?? 0);
+        $annualPricePlan = (float) ($plan->annual_price_cents ?? 0);
+        $discRawPlan   = $plan->discount_price ?? 0;
+        $discPricePlan = $discRawPlan > 0 ? (float) $discRawPlan : null;
+        $hasDiscountPlan  = !is_null($discPricePlan) && $discPricePlan > 0 && $discPricePlan < $basePricePlan;
+        $showDiscountPlan = $hasDiscountPlan && (!$plan?->discount_ends_at || now()->lt($plan->discount_ends_at));
 
         // تطبيع اختيار الدومين القادم من الواجهة (للاشتراك)
         $rawOption = $request->input('domain_option'); // قد لا يكون موجودًا
@@ -111,13 +132,22 @@ class CheckoutController extends Controller
         try {
             $result = DB::transaction(function () use (
                 $isDomainOnly,
+                $isNotTemplate,
+                $isNotPlan,
                 $items,
                 $template,
                 $template_id,
                 $template_name,
+                $plan,
+                $plan_id,
+                $plan_name,
                 $basePrice,
                 $discPrice,
                 $showDiscount,
+                $basePricePlan,
+                $annualPricePlan,
+                $discPricePlan,
+                $showDiscountPlan,
                 $normalizedOption,
                 $request
             ) {
@@ -176,15 +206,17 @@ class CheckoutController extends Controller
                 } else {
                     $unitCents = $showDiscount ? (int) ($discPrice * 100) : (int) ($basePrice * 100);
                     $discountCents = $showDiscount ? (int) (($basePrice - $discPrice) * 100) : 0;
+                    $unitCentsPlan = $showDiscountPlan ? (int) ($discPricePlan * 100) : (int) ($basePricePlan * 100);
+                    $discountCentsPlan = $showDiscountPlan ? (int) (($basePricePlan - $discPricePlan) * 100) : 0;
 
                     $invoice = \App\Models\Invoice::create([
                         'client_id'      => $order->client_id,
                         'number'         => 'INV-' . $order->order_number,
                         'status'         => 'draft',
-                        'subtotal_cents' => (int) ($basePrice * 100),
-                        'discount_cents' => $discountCents,
+                        'subtotal_cents' => (int) ($isNotTemplate ? ($basePrice * 100) : ($basePricePlan * 100)),
+                        'discount_cents' => ($isNotTemplate ? $discountCents : $discountCentsPlan),
                         'tax_cents'      => 0,
-                        'total_cents'    => $unitCents,
+                        'total_cents'    => ($isNotTemplate ? $unitCents : $unitCentsPlan),
                         'currency'       => 'USD',
                         'due_date'       => now()->addDays(3),
                         'order_id'       => $order->id,
@@ -193,36 +225,64 @@ class CheckoutController extends Controller
                     \App\Models\InvoiceItem::create([
                         'invoice_id'       => $invoice->id,
                         'item_type'        => 'subscription',
-                        'reference_id'     => $template_id,
-                        'description'      => $template_name,
+                        'reference_id'     => !$isNotTemplate ? $template_id : ($isNotPlan ? $plan_id : null),
+                        'description'      => !$isNotTemplate ? $template_name : ($isNotPlan ? $plan_name : null),
                         'qty'              => 1,
-                        'unit_price_cents' => $unitCents,
-                        'total_cents'      => $unitCents,
+                        'unit_price_cents' => !$isNotTemplate ? $unitCents : $unitCentsPlan,
+                        'total_cents'      => !$isNotTemplate ? $unitCents : $unitCentsPlan,
                     ]);
 
-                    // 4) إنشاء اشتراك Pending (اختياريًا؛ حسب منطقك)
-                    $plan = $template?->plan;
-                    if ($plan) {
-                        // استخرج دومين إن وُجد بند به دومين
-                        $firstDomainItem = $order->items()
-                            ->whereNotNull('domain')
-                            ->where('domain', '<>', '')
-                            ->orderBy('id')
-                            ->first();
+                    if(!$isNotTemplate){
+                        // 4) إنشاء اشتراك Pending (اختياريًا؛ حسب منطقك)
+                        $planTemplate = $template?->plan;
+                        if ($planTemplate) {
+                            // استخرج دومين إن وُجد بند به دومين
+                            $firstDomainItem = $order->items()
+                                ->whereNotNull('domain')
+                                ->where('domain', '<>', '')
+                                ->orderBy('id')
+                                ->first();
 
-                        \App\Models\Subscription::create([
-                            'client_id'     => $order->client_id,
-                            'plan_id'       => $plan->id,
-                            'status'        => 'pending',
-                            'billing_cycle' => $plan->billing_cycle ?? 'annually',
-                            'price'         => $unitCents / 100,
-                            'server_id'     => $plan->server_id ?? null,
-                            'domain_option' => $normalizedOption ?? 'subdomain',
-                            'domain_name'   => $firstDomainItem->domain ?? $request->input('domain'),
-                            'starts_at'     => now(),
-                            'next_due_date' => now()->addMonth(),
-                        ]);
+                            \App\Models\Subscription::create([
+                                'client_id'     => $order->client_id,
+                                'plan_id'       => $planTemplate->id,
+                                'status'        => 'pending',
+                                'billing_cycle' => $planTemplate->billing_cycle ?? 'annually',
+                                'price'         => $unitCents / 100,
+                                'server_id'     => $planTemplate->server_id ?? null,
+                                'domain_option' => $normalizedOption ?? 'subdomain',
+                                'domain_name'   => $firstDomainItem->domain ?? $request->input('domain'),
+                                'starts_at'     => now(),
+                                'next_due_date' => now()->addMonth(),
+                            ]);
+                        }
                     }
+                    if(!$isNotPlan){
+                        // 4) إنشاء اشتراك Pending (اختياريًا؛ حسب منطقك)
+                        if ($plan) {
+                            // استخرج دومين إن وُجد بند به دومين
+                            $firstDomainItem = $order->items()
+                                ->whereNotNull('domain')
+                                ->where('domain', '<>', '')
+                                ->orderBy('id')
+                                ->first();
+
+                            \App\Models\Subscription::create([
+                                'client_id'     => $order->client_id,
+                                'plan_id'       => $plan->id,
+                                'status'        => 'pending',
+                                'billing_cycle' => $plan->billing_cycle ?? 'annually',
+                                'price'         => $unitCentsPlan / 100,
+                                'server_id'     => $plan->server_id ?? null,
+                                'domain_option' => $normalizedOption ?? 'subdomain',
+                                'domain_name'   => $firstDomainItem->domain ?? $request->input('domain'),
+                                'starts_at'     => now(),
+                                'next_due_date' => now()->addMonth(),
+                            ]);
+                        }
+                    }
+
+
                 }
 
                 return $order;
@@ -239,32 +299,77 @@ class CheckoutController extends Controller
             $domainPicked  = $items[0]['domain'] ?? $request->input('domain');
             $totalCents    = $isDomainOnly
                 ? $domainsTotalCents
-                : ($showDiscount ? (int) ($discPrice * 100) : (int) ($basePrice * 100));
+                : 0;
+            $totalCentsPlan    = $isDomainOnly
+                ? $domainsTotalCents
+                : 0;
+            if(!$isNotTemplate){
+                $totalCents    = $isDomainOnly
+                    ? $domainsTotalCents
+                    : ($showDiscount ? (int) ($discPrice * 100) : (int) ($basePrice * 100));
 
-            $responseData = [
-                'success'      => true,
-                'order_no'     => $result->order_number,
-                'order_id'     => $result->id,
-                'domain'       => $domainPicked,
-                'total_cents'  => $totalCents,
-                'client_name'  => $client_name,
-                'template_name' => $template_name,
-                'redirect'     => route('checkout.domains.success'),
-            ];
+                $responseData = [
+                    'success'      => true,
+                    'order_no'     => $result->order_number,
+                    'order_id'     => $result->id,
+                    'domain'       => $domainPicked,
+                    'total_cents'  => $totalCents,
+                    'client_name'  => $client_name,
+                    'template_name' => $template_name,
+                    'redirect'     => route('checkout.domains.success'),
+                ];
+            }
+            if(!$isNotPlan){
+                $totalCentsPlan    = $isDomainOnly
+                    ? $domainsTotalCents
+                    : ($showDiscountPlan ? (int) ($discPricePlan * 100) : (int) ($basePricePlan * 100));
+                $responseData = [
+                    'success'      => true,
+                    'order_no'     => $result->order_number,
+                    'order_id'     => $result->id,
+                    'domain'       => $domainPicked,
+                    'total_cents'  => $totalCentsPlan,
+                    'client_name'  => $client_name,
+                    'plan_name' => $plan_name,
+                    'redirect'     => route('checkout.domains.success'),
+                ];
+            }
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json($responseData);
             }
-
-            return redirect()->route('checkout', array_merge([
-                'template_id'        => $template_id,
-                'success'            => 1,
-                'order_no'           => $result->order_number,
-                'domain'             => $domainPicked,
-                'total'              => $totalCents / 100,
-                'client_name'        => $client_name,
-                'template_name'      => $template_name,
-            ]));
+            if(!$isNotTemplate){
+                return redirect()->route('checkout', array_merge([
+                    'template_id'        => $template_id,
+                    'success'            => 1,
+                    'order_no'           => $result->order_number,
+                    'domain'             => $domainPicked,
+                    'total'              => $totalCents / 100,
+                    'client_name'        => $client_name,
+                    'template_name'      => $template_name,
+                ]));
+            }
+            if(!$isNotPlan){
+                return redirect()->route('checkout', array_merge([
+                    'plan_id'        => $plan_id,
+                    'success'            => 1,
+                    'order_no'           => $result->order_number,
+                    'domain'             => $domainPicked,
+                    'total'              => $totalCentsPlan / 100,
+                    'client_name'        => $client_name,
+                    'plan_name'      => $plan_name,
+                ]));
+            }
+            if(!$isDomainOnly){
+                return redirect()->route('checkout', array_merge([
+                    'success'            => 1,
+                    'order_no'           => $result->order_number,
+                    'domain'             => $domainPicked,
+                    'total'              => $totalCents / 100,
+                    'client_name'        => $client_name,
+                    'domain_name'        => $domainPicked,
+                ]));
+            }
         } catch (\Throwable $e) {
             Log::error('CheckoutController::process failed', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'تعذر إتمام عملية الدفع الآن.'], 500);

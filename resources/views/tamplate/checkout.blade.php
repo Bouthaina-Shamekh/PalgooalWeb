@@ -262,17 +262,39 @@
                                     </td>
                                 </tr>
                             @endif
+                            @if ($plan)
+                                <tr class="border-t border-gray-200 dark:border-gray-800 rv-template-row">
+                                    <td class="p-3">الخطة: <span
+                                            class="font-semibold">{{ $plan_translation && $plan_translation->name ? $plan_translation->name : ($plan && $plan->name ? $plan->name : '—') }}</span>
+                                    </td>
+                                    <td class="p-3">12 شهر</td>
+                                    <td class="p-3">
+                                        @if ($showDiscount)
+                                            <span
+                                                class="line-through text-gray-400">${{ number_format($plan->price, 2) }}</span>
+                                            <span
+                                                class="text-red-600 font-bold ms-2">${{ number_format($plan->discount_price, 2) }}</span>
+                                        @else
+                                            ${{ number_format($plan->price, 2) }}
+                                        @endif
+                                    </td>
+                                    <td class="p-3">
+                                        <button type="button" id="btnRemovePlan" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200">حذف الخطة</button>
+                                    </td>
+                                </tr>
+                            @endif
                         </tbody>
                     </table>
                 </div>
 
-                @if (!$template)
+                @if (!$template && !$plan)
                     <div class="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4 mb-6">
                         <div class="font-bold text-amber-800 dark:text-amber-200 mb-1">تحجز دومين فقط؟</div>
-                        <p class="text-sm text-amber-700 dark:text-amber-300">يمكنك إتمام الحجز الآن أو اختيار قالب لبدء موقعك بسرعة.</p>
+                        <p class="text-sm text-amber-700 dark:text-amber-300">يمكنك إتمام الحجز الآن أو اختيار قالب لبدء موقعك بسرعة. او خطة</p>
                         <div class="mt-3 flex gap-2">
                             <a id="chooseTemplateLink" href="/templates" class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار قالب</a>
                             <button type="button" class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">إكمال بدون قالب</button>
+                            <button type="button" id="btnChoosePlan" class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">إكمال بدون خطة</button>
                         </div>
                     </div>
                 @endif
@@ -496,7 +518,15 @@
                 </div>
 
                 <form id="checkoutForm" method="POST"
-                    action="{{ $template_id ? route('checkout.process', ['template_id' => $template_id]) : route('checkout.cart.process') }}">
+                    action="{{
+                        !$template_id && !$plan_id
+                        ? route('checkout.cart.process')
+                        : route('checkout.process', [
+                            'template_id' => $template_id ?? null,
+                            'plan_id' => $plan_id ?? null
+                        ])
+                    }}">
+                    {{-- action="{{ $template_id ? route('checkout.process', ['template_id' => $template_id]) : route('checkout.cart.process') }}"> --}}
                     @csrf
                     <input type="hidden" name="domain" id="orderDomainInput" value="">
                     <input type="hidden" name="total" id="orderTotalInput" value="">
@@ -1395,7 +1425,7 @@
                         const box = document.getElementById('clientInfoAjax');
                         if (box) {
                             const u = data.user || {};
-                            document.getElementById('clientFirst')?.append(document.createTextNode(u.first_name || '')); 
+                            document.getElementById('clientFirst')?.append(document.createTextNode(u.first_name || ''));
                             document.getElementById('clientLast')?.append(document.createTextNode(u.last_name || ''));
                             document.getElementById('clientEmail')?.append(document.createTextNode(u.email || ''));
                             box.classList.remove('hidden');

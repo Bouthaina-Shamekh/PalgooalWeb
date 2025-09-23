@@ -153,6 +153,7 @@
 
     // optional: intercept submit to include frequency explicitly (already included by radio)
     form.addEventListener('submit', function (e) {
+      e.preventDefault();
       const btn = e.submitter;
       const planId = btn?.value;
       const planCard = btn?.closest('[data-plan-id]');
@@ -162,6 +163,7 @@
           e.preventDefault();
           alert('هذه الخطة غير متاحة حالياً.');
         }
+        window.location.href = '/checkout/cart?plan_id=' + planId;
       }
     });
   })();
