@@ -17,7 +17,7 @@
 
     // safe access: plan may be null when rendering cart-based checkout
     $basePricePlan =
-        (float) ($plan_sub_type === 'monthly' ? $plan?->monthly_price_cents ?? 0 : $plan?->annual_price_cents ?? 0);
+        (float) ($plan_sub_type == 'monthly' ? $plan?->monthly_price_cents ?? 0 : $plan?->annual_price_cents ?? 0) / 100;
 @endphp
 <x-template.layouts.index-layouts
     title="{{ t('Frontend.Checkout', 'Checkout') }} - {{ t('Frontend.Palgoals', 'Palgoals') }}"
@@ -203,8 +203,9 @@
                         <li class="flex justify-between rv-template-info"><span>الخطة</span><span
                                 class="font-semibold">{{ $plan && $plan->name ? $plan->name : '—' }}</span>
                         </li>
-                        <li class="flex justify-between rv-template-info"><span>مدة الاشتراك</span><span
-                                class="font-semibold">{{ $plan_sub_type === 'monthly' ? 'شهري' : 'سنوي' }}</span></li>
+                        <li class="flex justify-between rv-template-info">
+                            <span>مدة الاشتراك</span>
+                            <span class="font-semibold">{{ $plan_sub_type === 'monthly' ? 'شهري' : 'سنوي' }}</span></li>
                         <li class="flex justify-between rv-template-info"><span>سعر الخطة</span><span
                                 class="font-semibold">
                                 ${{ number_format($basePricePlan, 2) }}
@@ -223,10 +224,7 @@
                             @else
                                 ${{ number_format($basePrice, 2) }}
                             @endif
-                        @else
-                            $0.00
-                        @endif
-                        @if ($plan)
+                        @elseif ($plan)
                             ${{ number_format($basePricePlan, 2) }}
                         @else
                             $0.00
@@ -871,6 +869,10 @@
         const TEMPLATE_FINAL_CENTS = {{ (int) (($finalPrice ?? 0) * 100) }};
         let TEMPLATE_CENTS = TEMPLATE_FINAL_CENTS; // متغير قابل للتغيير عند إزالة القالب
 
+        // سعر الخطة (بالسنت)
+        const HAS_PLAN = {{ $plan ? 'true' : 'false' }};
+        const PLAN_CENTS = {{ (int) (($basePricePlan ?? 0) * 100) }};
+
         // عناصر UI مشتركة
         const summaryDomain = document.getElementById('summaryDomain');
         const summaryTotal = document.getElementById('summaryTotal');
@@ -912,7 +914,7 @@
 
         // حساب الإجماليات (دومين + القالب - الخصم + ضريبة)
         function updateTotals(domainCents) {
-            const subtotal = TEMPLATE_CENTS + Math.max(0, domainCents | 0);
+            const subtotal = (HAS_TEMPLATE ? TEMPLATE_CENTS : 0) + (HAS_PLAN ? PLAN_CENTS : 0) + Math.max(0, domainCents | 0);
             const tax = 0;
             const discount = Math.min(window.__couponDiscountCents | 0, subtotal);
             const total = Math.max(0, subtotal - discount + tax);
@@ -1720,6 +1722,9 @@
                 if (HAS_TEMPLATE) {
                     // كان في تدفّق القالب: وجّه لقائمة القوالب
                     window.location.href = '/templates';
+                } else if (HAS_PLAN) {
+                    // كان في تدفّق الخطة: وجّه للصفحة الرئيسية
+                    window.location.href = '{{ url('/') }}';
                 } else {
                     // تدفّق الدومينات فقط: وجّه للصفحة الرئيسية
                     window.location.href = '{{ url('/') }}';

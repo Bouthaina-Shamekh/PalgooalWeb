@@ -74,7 +74,7 @@
           $featured = $plan->is_featured ?? false;
         @endphp
 
-        <div class="group/tier rounded-3xl p-8 ring-1 ring-primary xl:p-10 bg-white relative {{ $featured ? 'scale-105 ring-2 shadow-xl' : '' }}" data-plan-sub-type="{{ $monthlyC !== null ? 'monthly' : 'annually' }}" data-plan-id="{{ $plan->id }}">
+        <div class="group/tier rounded-3xl p-8 ring-1 ring-primary xl:p-10 bg-white relative {{ $featured ? 'scale-105 ring-2 shadow-xl' : '' }}" data-plan-sub-type="{{ $monthlyC != null ? 'monthly' : 'annually' }}" data-plan-id="{{ $plan->id }}">
           @if ($featured)
             <div class="absolute -top-4 -start-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full shadow">الأكثر شهرة</div>
           @endif
@@ -157,7 +157,7 @@
       const btn = e.submitter;
       const planId = btn?.value;
       const planCard = btn?.closest('[data-plan-id]');
-      const planSubType = btn?.closest('[data-plan-sub-type]');
+      const planSubType = btn?.closest('[data-plan-sub-type]').dataset.planSubType;
       if (planCard) {
         const isActive = true; // if you store active flag per plan card, you can check it here
         if (!isActive) {
