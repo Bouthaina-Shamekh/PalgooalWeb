@@ -14,6 +14,10 @@
     $showDiscount = $hasDiscount && !$discountExpired;
     $finalPrice = $showDiscount ? $discPrice : $basePrice;
     $discountPerc = $showDiscount && $basePrice > 0 ? (int) round((($basePrice - $discPrice) / $basePrice) * 100) : 0;
+
+    // safe access: plan may be null when rendering cart-based checkout
+    $basePricePlan =
+        (float) ($plan_sub_type === 'monthly' ? $plan?->monthly_price_cents ?? 0 : $plan?->annual_price_cents ?? 0);
 @endphp
 <x-template.layouts.index-layouts
     title="{{ t('Frontend.Checkout', 'Checkout') }} - {{ t('Frontend.Palgoals', 'Palgoals') }}"
@@ -78,7 +82,7 @@
 
                 <!-- Register -->
                 <form id="tab-register" class="space-y-4" role="tabpanel" method="POST"
-                    action="{{ !empty($template_id) ? route('checkout.process', $template_id) : route('checkout.cart.process') }}">
+                    action="@if (empty($template_id) && empty($plan_id)) {{ route('checkout.cart.process') }}@elseif(!empty($template_id)){{ route('checkout.process', $template_id) }}@else{{ route('checkout.process',['template_id'=>null,'plan_id'=>$plan_id]) }} @endif">
                     @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example"
@@ -110,7 +114,7 @@
 
                 <!-- Transfer -->
                 <form id="tab-transfer" class="space-y-4 hidden" role="tabpanel" method="POST"
-                    action="{{ !empty($template_id) ? route('checkout.process', $template_id) : route('checkout.cart.process') }}">
+                    action="@if (empty($template_id) && empty($plan_id)) {{ route('checkout.cart.process') }}@elseif(!empty($template_id)){{ route('checkout.process', $template_id) }}@else{{ route('checkout.process',['template_id'=>null,'plan_id'=>$plan_id]) }} @endif">
                     @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example.com"
@@ -128,7 +132,7 @@
 
                 <!-- Own Domain -->
                 <form id="tab-owndomain" class="space-y-4 hidden" role="tabpanel" method="POST"
-                    action="{{ !empty($template_id) ? route('checkout.process', $template_id) : route('checkout.cart.process') }}">
+                    action="@if (empty($template_id) && empty($plan_id)) {{ route('checkout.cart.process') }}@elseif(!empty($template_id)){{ route('checkout.process', $template_id) }}@else{{ route('checkout.process',['template_id'=>null,'plan_id'=>$plan_id]) }} @endif">
                     @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example.com"
@@ -145,7 +149,7 @@
 
                 <!-- Subdomain (مجاني) -->
                 <form id="tab-subdomain" class="space-y-4 hidden" role="tabpanel" method="POST"
-                    action="{{ !empty($template_id) ? route('checkout.process', $template_id) : route('checkout.domains.process') }}">
+                    action="@if (empty($template_id) && empty($plan_id)) {{ route('checkout.cart.process') }}@elseif(!empty($template_id)){{ route('checkout.process', $template_id) }}@else{{ route('checkout.process',['template_id'=>null,'plan_id'=>$plan_id]) }} @endif">
                     @csrf
                     <div class="flex gap-2 items-stretch">
                         <input aria-label="اسم الساب-دومين" placeholder="myshop"
@@ -195,6 +199,17 @@
                                 @endif
                             </span></li>
                     @endif
+                    @if ($plan)
+                        <li class="flex justify-between rv-template-info"><span>الخطة</span><span
+                                class="font-semibold">{{ $plan && $plan->name ? $plan->name : '—' }}</span>
+                        </li>
+                        <li class="flex justify-between rv-template-info"><span>مدة الاشتراك</span><span
+                                class="font-semibold">{{ $plan_sub_type === 'monthly' ? 'شهري' : 'سنوي' }}</span></li>
+                        <li class="flex justify-between rv-template-info"><span>سعر الخطة</span><span
+                                class="font-semibold">
+                                ${{ number_format($basePricePlan, 2) }}
+                            </span></li>
+                    @endif
                     <li class="flex justify-between"><span>الدومين</span><span id="summaryDomain"
                             class="font-semibold">—</span>
                     </li>
@@ -211,6 +226,12 @@
                         @else
                             $0.00
                         @endif
+                        @if ($plan)
+                            ${{ number_format($basePricePlan, 2) }}
+                        @else
+                            $0.00
+                        @endif
+
                     </span></div>
             </aside>
         </div>
@@ -283,16 +304,11 @@
                                     <td class="p-3">الخطة: <span
                                             class="font-semibold">{{ $plan_translation && $plan_translation->name ? $plan_translation->name : ($plan && $plan->name ? $plan->name : '—') }}</span>
                                     </td>
-                                    <td class="p-3">12 شهر</td>
                                     <td class="p-3">
-                                        @if ($showDiscount)
-                                            <span
-                                                class="line-through text-gray-400">${{ number_format($plan->price, 2) }}</span>
-                                            <span
-                                                class="text-red-600 font-bold ms-2">${{ number_format($plan->discount_price, 2) }}</span>
-                                        @else
-                                            ${{ number_format($plan->price, 2) }}
-                                        @endif
+                                        {{ $plan_sub_type === 'monthly' ? 'شهري' : 'سنوي' }}
+                                    </td>
+                                    <td class="p-3">
+                                        ${{ number_format($basePricePlan, 2) }}
                                     </td>
                                     <td class="p-3">
                                         <button type="button" id="btnRemovePlan"
@@ -328,12 +344,15 @@
                 <!-- يظهر بعد حذف القالب أثناء الجلسة الحالية -->
                 <div id="chooseTemplateAfterRemove"
                     class="hidden rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4 mb-6">
-                    <div class="font-bold text-amber-800 dark:text-amber-200 mb-1">تم حذف القالب.</div>
-                    <p class="text-sm text-amber-700 dark:text-amber-300">هل تريد اختيار قالب للموقع قبل الدفع؟</p>
+                    <div class="font-bold text-amber-800 dark:text-amber-200 mb-1">تم حذف القالب والخطة.</div>
+                    <p class="text-sm text-amber-700 dark:text-amber-300">هل تريد اختيار قالب او خطة للموقع قبل الدفع؟</p>
                     <div class="mt-3 flex gap-2">
                         <a id="chooseTemplateLink2" href="/templates"
                             class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار
                             قالب</a>
+                        <a id="chooseTemplateLink2" href="/plans"
+                            class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار
+                            خطة</a>
                         <button type="button"
                             class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">إكمال
                             بدون قالب</button>
@@ -554,7 +573,7 @@
                 </div>
 
                 <form id="checkoutForm" method="POST"
-                    action="@if (empty($template_id) && empty($plan_id)) {{ route('checkout.cart.process') }}@elseif(!empty($template_id)){{ route('checkout.process', $template_id) }}@else{{ route('checkout.cart.process') }} @endif">
+                    action="@if (empty($template_id) && empty($plan_id)) {{ route('checkout.cart.process') }}@elseif(!empty($template_id)){{ route('checkout.process', $template_id) }}@else{{ route('checkout.process',['template_id'=>null,'plan_id'=>$plan_id]) }} @endif">
                     {{-- action="{{ $template_id ? route('checkout.process', ['template_id' => $template_id]) : route('checkout.cart.process') }}"> --}}
                     @csrf
                     <input type="hidden" name="domain" id="orderDomainInput" value="">
@@ -594,12 +613,16 @@
                 </div>
                 <hr class="my-4 border-gray-200 dark:border-gray-800" />
                 <div class="flex justify-between font-bold text-lg"><span>الإجمالي المستحق</span><span id="sumTotal2">
+                    @if($template)
                         @if ($showDiscount)
                             <span class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
                             <span class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
                         @else
                             ${{ number_format($basePrice, 2) }}
                         @endif
+                    @else
+                        ${{ number_format($basePricePlan, 2) }}
+                    @endif
                     </span></div>
             </aside>
         </div>
@@ -984,13 +1007,13 @@
                     const d = btn.getAttribute('data-domain') || '';
                     if (!d) return;
                     const remaining = list.filter(x => (x.domain || '').toLowerCase() !== d
-                    .toLowerCase());
+                        .toLowerCase());
                     // حدّث LocalStorage (إزالة هذا الدومين فقط)
                     try {
                         const unified = readUnifiedCart() || [];
                         const leftovers = unified.filter(it => !(it && (it.kind === 'domain' || (it
                                 .kind == null && it.domain)) && String(it.domain)
-                        .toLowerCase() === d.toLowerCase()));
+                            .toLowerCase() === d.toLowerCase()));
                         writeUnifiedCart(leftovers);
                     } catch {}
                     // حدّث جلسة السيرفر إن تبقى عناصر
@@ -1719,7 +1742,8 @@
                         .replace(/[^0-9.]/g, '') * 100)), 0);
                     updateTotals(sum);
                 } catch {
-                    /* ignore */ }
+                    /* ignore */
+                }
                 // أظهر دعوة اختيار قالب بعد الحذف وحدث الرابط بالدومين الحالي
                 const box = document.getElementById('chooseTemplateAfterRemove');
                 if (box) box.classList.remove('hidden');

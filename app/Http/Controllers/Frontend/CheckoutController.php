@@ -33,6 +33,7 @@ class CheckoutController extends Controller
             $translation = $template?->translations()->where('locale', app()->getLocale())->first();
         }
         $plan_id = $request->query('plan_id');
+        $plan_sub_type = $request->query('plan_sub_type');
         $plan = null;
         $plan_translation = null;
         if (!empty($plan_id)) {
@@ -40,7 +41,7 @@ class CheckoutController extends Controller
             $plan_translation = $plan?->translations()->where('locale', app()->getLocale())->first();
         }
 
-        return view('tamplate.checkout', compact('template_id', 'template', 'translation', 'items', 'plan_id', 'plan', 'plan_translation'));
+        return view('tamplate.checkout', compact('template_id', 'template', 'translation', 'items', 'plan_id', 'plan', 'plan_translation', 'plan_sub_type'));
     }
 
     /**
@@ -271,7 +272,7 @@ class CheckoutController extends Controller
                                 'client_id'     => $order->client_id,
                                 'plan_id'       => $plan->id,
                                 'status'        => 'pending',
-                                'billing_cycle' => $plan->billing_cycle ?? 'annually',
+                                // 'billing_cycle' => $plan->billing_cycle ?? 'annually',
                                 'price'         => $unitCentsPlan / 100,
                                 'server_id'     => $plan->server_id ?? null,
                                 'domain_option' => $normalizedOption ?? 'subdomain',
