@@ -24,6 +24,73 @@
     description="{{ $shortDesc }}" keywords="خدمات حجز دومين , افضل شركة برمجيات , استضافة مواقع , ..."
     ogImage="{{ asset('assets/dashboard/images/logo-white.svg') }}">
 
+    @php
+        $processActionUrl = (empty($template_id) && empty($plan_id))
+            ? route('checkout.cart.process')
+            : (!empty($template_id)
+                ? route('checkout.process', ['template_id' => $template_id])
+                : route('checkout.process', ['plan_id' => $plan_id]));
+    @endphp
+
+    <script>
+        (function () {
+            const KEY = 'palgoals:theme';
+            const root = document.documentElement;
+            const prefersDark = () => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            function apply(mode) {
+                const isDark = mode === 'dark' ? true : (mode === 'light' ? false : prefersDark());
+                root.classList.toggle('dark', isDark);
+                root.style.colorScheme = isDark ? 'dark' : 'light';
+            }
+            try {
+                const saved = localStorage.getItem(KEY);
+                apply(saved || 'system');
+                // Sync with system when user didn't choose explicitly
+                if (!saved && window.matchMedia) {
+                    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+                    mq.addEventListener && mq.addEventListener('change', () => apply('system'));
+                }
+                // Expose toggler
+                window.__setTheme = function (mode) {
+                    if (mode === 'system') localStorage.removeItem(KEY); else localStorage.setItem(KEY, mode);
+                    apply(mode);
+                }
+            } catch (_) {}
+        })();
+    </script>
+
+    <div class="fixed left-3 bottom-3 z-50">
+        <div class="inline-flex overflow-hidden rounded-xl border border-gray-200 bg-white/95 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95 shadow">
+            <button type="button" data-theme-btn="light" onclick="window.__setTheme('light')"
+                class="px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 dark:text-gray-300 dark:hover:bg-gray-800"
+                title="وضع فاتح" aria-label="وضع فاتح">☀️</button>
+            <button type="button" data-theme-btn="dark" onclick="window.__setTheme('dark')"
+                class="px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 dark:text-gray-300 dark:hover:bg-gray-800 border-x border-gray-200 dark:border-gray-800"
+                title="وضع داكن" aria-label="وضع داكن">🌙</button>
+            <button type="button" data-theme-btn="system" onclick="window.__setTheme('system')"
+                class="px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 dark:text-gray-300 dark:hover:bg-gray-800"
+                title="مطابق للنظام" aria-label="مطابق للنظام">🖥️</button>
+        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const KEY = 'palgoals:theme';
+                const saved = localStorage.getItem(KEY) || 'system';
+                const setActive = (mode) => {
+                    document.querySelectorAll('[data-theme-btn]').forEach(btn => {
+                        const active = btn.getAttribute('data-theme-btn') === mode;
+                        btn.classList.toggle('bg-gray-100', active);
+                        btn.classList.toggle('dark:bg-gray-800', active);
+                    });
+                };
+                setActive(saved);
+                window.__setTheme && ['light','dark','system'].forEach(mode => {
+                    const el = document.querySelector(`[data-theme-btn="${mode}"]`);
+                    el && el.addEventListener('click', () => setActive(mode));
+                });
+            });
+        </script>
+    </div>
+
     <!-- ===== شريط الخطوات (خطوتان) ===== -->
     <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-4 mt-6">
         <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-4">
@@ -56,7 +123,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- العمود الرئيسي -->
             <div
-                class="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-6">
+                class="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 dark:text-white rounded-xl shadow p-6">
                 <h1 class="text-2xl font-extrabold mb-1">احجز اسم النطاق</h1>
                 <p class="text-gray-600 dark:text-gray-300 mb-6">ابدأ باختيار طريقة ربط اسم النطاق بموقعك الجديد.</p>
 
@@ -82,7 +149,7 @@
 
                 <!-- Register -->
                 <form id="tab-register" class="space-y-4" role="tabpanel" method="POST"
-                    action="@if (empty($template_id) && empty($plan_id)) {{ route('checkout.cart.process') }}@elseif(!empty($template_id)){{ route('checkout.process', $template_id) }}@else{{ route('checkout.process',['template_id'=>null,'plan_id'=>$plan_id]) }} @endif">
+                    action="{{ $processActionUrl }}">
                     @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example"
@@ -114,7 +181,7 @@
 
                 <!-- Transfer -->
                 <form id="tab-transfer" class="space-y-4 hidden" role="tabpanel" method="POST"
-                    action="@if (empty($template_id) && empty($plan_id)) {{ route('checkout.cart.process') }}@elseif(!empty($template_id)){{ route('checkout.process', $template_id) }}@else{{ route('checkout.process',['template_id'=>null,'plan_id'=>$plan_id]) }} @endif">
+                    action="{{ $processActionUrl }}">
                     @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example.com"
@@ -132,7 +199,7 @@
 
                 <!-- Own Domain -->
                 <form id="tab-owndomain" class="space-y-4 hidden" role="tabpanel" method="POST"
-                    action="@if (empty($template_id) && empty($plan_id)) {{ route('checkout.cart.process') }}@elseif(!empty($template_id)){{ route('checkout.process', $template_id) }}@else{{ route('checkout.process',['template_id'=>null,'plan_id'=>$plan_id]) }} @endif">
+                    action="{{ $processActionUrl }}">
                     @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example.com"
@@ -149,7 +216,7 @@
 
                 <!-- Subdomain (مجاني) -->
                 <form id="tab-subdomain" class="space-y-4 hidden" role="tabpanel" method="POST"
-                    action="@if (empty($template_id) && empty($plan_id)) {{ route('checkout.cart.process') }}@elseif(!empty($template_id)){{ route('checkout.process', $template_id) }}@else{{ route('checkout.process',['template_id'=>null,'plan_id'=>$plan_id]) }} @endif">
+                    action="{{ $processActionUrl }}">
                     @csrf
                     <div class="flex gap-2 items-stretch">
                         <input aria-label="اسم الساب-دومين" placeholder="myshop"
@@ -178,7 +245,7 @@
 
             <!-- ملخص جانبي -->
             <aside
-                class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-6 h-max">
+                class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 dark:text-white rounded-xl shadow p-6 h-max">
                 <h3 class="font-bold mb-3">ملخص سريع</h3>
                 <ul class="space-y-2 text-sm">
                     @if ($template)
@@ -571,7 +638,7 @@
                 </div>
 
                 <form id="checkoutForm" method="POST"
-                    action="@if (empty($template_id) && empty($plan_id)) {{ route('checkout.cart.process') }}@elseif(!empty($template_id)){{ route('checkout.process', $template_id) }}@else{{ route('checkout.process',['template_id'=>null,'plan_id'=>$plan_id]) }} @endif">
+                    action="{{ $processActionUrl }}">
                     {{-- action="{{ $template_id ? route('checkout.process', ['template_id' => $template_id]) : route('checkout.cart.process') }}"> --}}
                     @csrf
                     <input type="hidden" name="domain" id="orderDomainInput" value="">

@@ -353,19 +353,20 @@ class CheckoutController extends Controller
             }
 
             if (!$isNotPlan) {
-                return redirect()->route('checkout', [
-                    'plan_id'      => $plan_id,
-                    'success'       => 1,
-                    'order_no'      => $result->order_number,
-                    'domain'        => $domainPicked,
-                    'total'         => $totalCentsPlan / 100,
-                    'client_name'   => $client_name,
-                    'plan_name'     => $plan_name,
+                // Redirect to cart-based checkout view with plan context
+                return redirect()->route('checkout.cart', [
+                    'plan_id'     => $plan_id,
+                    'plan_name'   => $plan_name,
+                    'success'     => 1,
+                    'order_no'    => $result->order_number,
+                    'domain'      => $domainPicked,
+                    'total'       => $totalCentsPlan / 100,
+                    'client_name' => $client_name,
                 ]);
             }
 
-            // Domain-only fallback
-            return redirect()->route('checkout', [
+            // Domain-only fallback → cart-based checkout
+            return redirect()->route('checkout.cart', [
                 'success'     => 1,
                 'order_no'    => $result->order_number,
                 'domain'      => $domainPicked,
