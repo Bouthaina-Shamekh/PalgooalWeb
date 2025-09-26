@@ -42,8 +42,8 @@ Route::middleware(['setLocale'])->group(function () {
     // صفحات أخرى عبر slug
     Route::get('/{slug}', function ($slug) {
         $page = Page::with(['translations', 'sections.translations'])
-            ->where('slug', $slug)
             ->where('is_active', true)
+            ->whereSlug($slug)
             ->firstOrFail();
         view()->share('currentPage', $page);
         return view('tamplate.page', ['page' => $page]);

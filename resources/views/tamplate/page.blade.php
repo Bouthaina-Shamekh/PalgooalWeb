@@ -1,31 +1,127 @@
-{{-- resources/views/tamplate/page.blade.php --}}
 @php
     use App\Models\Service;
     use App\Services\TemplateService;
     use App\Models\CategoryTemplate;
-
-    // ✅ أضف هذول السطرين لاستخدام جداول TLD
     use App\Models\DomainTld;
     use App\Models\DomainTldPrice;
+    use Illuminate\Support\Str;
+    use App\Support\SeoMeta;
 @endphp
+@php
+    $pageTranslation = $page->translation();
+    $fallbackTitle = t('frontend.page_default_title', 'Untitled Page');
+    $pageTitle = $pageTranslation?->meta_title ?: $pageTranslation?->title ?? $fallbackTitle;
+    $rawPageContent = is_string($pageTranslation?->content) ? $pageTranslation->content : '';
+    $pageDescription = $pageTranslation?->meta_description ?: Str::limit(strip_tags($rawPageContent), 160);
+    if ($pageDescription === '') {
+        $pageDescription = (string) config('seo.default_description', '');
+    }
+    $defaultKeywords = config('seo.default_keywords', []);
+    $fallbackKeywords = is_array($defaultKeywords)
+        ? $defaultKeywords
+        : array_filter(array_map('trim', explode(',', (string) $defaultKeywords)));
+    $keywordsFromTranslation = $pageTranslation?->meta_keywords;
+    if (is_string($keywordsFromTranslation)) {
+        $keywordsFromTranslation = array_filter(array_map('trim', explode(',', $keywordsFromTranslation)));
+    } elseif (!is_array($keywordsFromTranslation)) {
+        $keywordsFromTranslation = [];
+    }
+    $pageKeywords = !empty($keywordsFromTranslation) ? $keywordsFromTranslation : $fallbackKeywords;
+    $pageOgImage = $pageTranslation?->og_image ?: 'assets/images/services.jpg';
+    if ($pageOgImage && !Str::startsWith($pageOgImage, ['http://', 'https://'])) {
+        $pageOgImage = asset($pageOgImage);
+    }
+    $schemaType = $page->is_home ? 'WebSite' : 'WebPage';
+    $pageSchema = [
+        '@context' => 'https://schema.org',
+        '@type' => $schemaType,
+        'name' => $pageTitle,
+        'url' => url()->current(),
+        'description' => $pageDescription,
+        'inLanguage' => app()->getLocale(),
+    ];
 
-<x-template.layouts.index-layouts title="{{ $page->translation()?->title ?? 'عنوان غير متوفر' }}"
-    description="شركة فلسطينية متخصصة في برمجة وتصميم المواقع الالكترونية..."
-    keywords="خدمات حجز دومين , افضل شركة برمجيات , استضافة مواقع , ..."
-    ogImage="{{ asset('assets/images/services.jpg') }}">
+    $publishedAt = $page->created_at?->toIso8601String();
+    if ($publishedAt) {
+        $pageSchema['datePublished'] = $publishedAt;
+    }
+    $updatedAt = $page->updated_at?->toIso8601String();
+    if ($updatedAt) {
+        $pageSchema['dateModified'] = $updatedAt;
+    }
+    $seoOverrides = SeoMeta::make([
+        'title' => $pageTitle,
+        'description' => $pageDescription,
+        'keywords' => $pageKeywords,
+        'image' => $pageOgImage,
+        'canonical' => url()->current(),
+        'type' => $page->is_home ? 'website' : 'article',
+        'schema' => [$pageSchema],
+    ]);
+@endphp
+<x-template.layouts.index-layouts :title="$pageTitle" :description="$pageDescription" :keywords="$pageKeywords" :ogImage="$pageOgImage"
+    :seo="$seoOverrides">
     {{-- محتوى الصفحة --}}
     @if ($page->sections->isEmpty())
         <div class="container mx-auto py-10">
             <h1 class="text-3xl font-bold mb-6">
-                {{ $page->translation()?->title ?? 'عنوان غير متوفر' }}
             </h1>
-
             <div class="prose max-w-4xl">
                 {!! $page->translation()?->content ?? '<p>لا يوجد محتوى.</p>' !!}
             </div>
         </div>
     @endif
-
+    @php
+        $pageTranslation = $page->translation();
+        $fallbackTitle = t('frontend.page_default_title', 'Untitled Page');
+        $pageTitle = $pageTranslation?->meta_title ?: $pageTranslation?->title ?? $fallbackTitle;
+        $rawPageContent = is_string($pageTranslation?->content) ? $pageTranslation->content : '';
+        $pageDescription = $pageTranslation?->meta_description ?: Str::limit(strip_tags($rawPageContent), 160);
+        if ($pageDescription === '') {
+            $pageDescription = (string) config('seo.default_description', '');
+        }
+        $defaultKeywords = config('seo.default_keywords', []);
+        $fallbackKeywords = is_array($defaultKeywords)
+            ? $defaultKeywords
+            : array_filter(array_map('trim', explode(',', (string) $defaultKeywords)));
+        $keywordsFromTranslation = $pageTranslation?->meta_keywords;
+        if (is_string($keywordsFromTranslation)) {
+            $keywordsFromTranslation = array_filter(array_map('trim', explode(',', $keywordsFromTranslation)));
+        } elseif (!is_array($keywordsFromTranslation)) {
+            $keywordsFromTranslation = [];
+        }
+        $pageKeywords = !empty($keywordsFromTranslation) ? $keywordsFromTranslation : $fallbackKeywords;
+        $pageOgImage = $pageTranslation?->og_image ?: 'assets/images/services.jpg';
+        if ($pageOgImage && !Str::startsWith($pageOgImage, ['http://', 'https://'])) {
+            $pageOgImage = asset($pageOgImage);
+        }
+        $schemaType = $page->is_home ? 'WebSite' : 'WebPage';
+        $pageSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => $schemaType,
+            'name' => $pageTitle,
+            'url' => url()->current(),
+            'description' => $pageDescription,
+            'inLanguage' => app()->getLocale(),
+        ];
+        $publishedAt = $page->created_at?->toIso8601String();
+        if ($publishedAt) {
+            $pageSchema['datePublished'] = $publishedAt;
+        }
+        $updatedAt = $page->updated_at?->toIso8601String();
+        if ($updatedAt) {
+            $pageSchema['dateModified'] = $updatedAt;
+        }
+        $seoOverrides = SeoMeta::make([
+            'title' => $pageTitle,
+            'description' => $pageDescription,
+            'keywords' => $pageKeywords,
+            'image' => $pageOgImage,
+            'canonical' => url()->current(),
+            'type' => $page->is_home ? 'website' : 'article',
+            'schema' => [$pageSchema],
+        ]);
+    @endphp
     @php
         $sectionComponents = [
             'hero' => 'hero',
@@ -37,16 +133,18 @@
             'testimonials' => 'testimonials',
             'blog' => 'blog',
             'banner' => 'banner',
-            'search-domain' => 'search-domain', // ← مهم
+            'search-domain' => 'search-domain',
             'templates-pages' => 'templates-pages',
             'hosting-plans' => 'hosting-plans',
         ];
     @endphp
-
     @foreach ($page->sections as $section)
         @php
             $key = $section->key;
             $component = $sectionComponents[$key] ?? null;
+            if (!$component) {
+                continue;
+            }
             $translation = $section->translation();
             $content = $translation?->content ?? [];
             $title = $translation?->title ?? '';
@@ -181,7 +279,6 @@
                         'currency' => 'USD', // عدّلها حسب إعداداتك إن لزم
                     ];
                 })(),
-
                 'templates-pages' => [
                     'max_price' => $content['max_price'] ?? 500,
                     'sort_by' => request('sort', $content['sort_by'] ?? 'default'),
@@ -196,20 +293,26 @@
                             $q->where('locale', app()->getLocale())->orWhere('locale', 'ar');
                         },
                     ])
+
                         ->get()
+
                         ->map(function ($cat) {
                             $t =
                                 $cat->translations->firstWhere('locale', app()->getLocale()) ??
                                 $cat->translations->firstWhere('locale', 'ar');
+
                             $cat->translated_name = $t?->name ?? 'غير معرف';
+
                             $cat->translated_slug = $t?->slug ?? ($cat->slug ?? 'uncategorized');
+
                             return $cat;
                         }),
                 ],
+
                 default => [],
             };
-        @endphp
 
+        @endphp
         {{-- ✅ رندرة خاصة لكل سيكشن يحتاج props مخصصة --}}
         @if ($component === 'templates-pages')
             <x-dynamic-component :component="'template.sections.' . $component" :templates="$data['templates']" :categories="$data['categories']" :max_price="$data['max_price']"

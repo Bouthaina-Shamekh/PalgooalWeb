@@ -1107,6 +1107,9 @@
   .h-screen {
     height: 100vh;
   }
+  .max-h-32 {
+    max-height: calc(var(--spacing) * 32);
+  }
   .max-h-\[90vh\] {
     max-height: 90vh;
   }

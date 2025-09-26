@@ -1,6 +1,10 @@
 @php
+    use Illuminate\Support\Facades\View;
+
     $currentRoute = request()->route()->getName();
     $slug = request()->route('slug');
+    $currentLocale = app()->getLocale();
+    $sharedPage = View::shared('currentPage', null);
 @endphp
 
 <!-- Language Switch -->
@@ -22,7 +26,18 @@
             @php
                 $redirectUrl = '#';
 
-                if ($currentRoute === 'template.show' && $slug && $lang->code !== $currentLocale) {
+                if ($sharedPage && $lang->code !== $currentLocale) {
+                    $translatedPage = $sharedPage->translations->firstWhere('locale', $lang->code);
+                    $translatedSlug = $translatedPage?->slug;
+
+                    if ($sharedPage->is_home) {
+                        $redirectUrl = url('/') . '?change-locale=' . $lang->code;
+                    } elseif ($translatedSlug) {
+                        $redirectUrl = url($translatedSlug) . '?change-locale=' . $lang->code;
+                    } else {
+                        $redirectUrl = route('change_locale', ['locale' => $lang->code]);
+                    }
+                } elseif ($currentRoute === 'template.show' && $slug && $lang->code !== $currentLocale) {
                     $template = \App\Models\Template::with('translations')->whereHas('translations', function ($q) use ($slug) {
                         $q->where('slug', $slug);
                     })->first();

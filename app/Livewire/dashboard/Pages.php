@@ -1,145 +1,474 @@
 <?php
 
+
+
 namespace App\Livewire\Dashboard;
 
+
+
 use App\Models\Language;
+
 use App\Models\Page;
+
 use App\Models\PageTranslation;
+
+use Illuminate\Validation\Rule;
+
 use Livewire\Component;
 
+
+
 class Pages extends Component
+
 {
+
     protected $listeners = ['deleteConfirmed' => 'deleteConfirmed'];
 
+
+
     public $languages;
+
     public $pages;
+
     public $view = 'index-page';
+
     public $activeLang;
 
-    public $slug;
+
+
     public $is_active = true;
+
     public $is_home = false;
+
     public $published_at;
+
+
 
     public $translations = [];
 
+
+
     public $mode = 'create'; // create | edit
+
     public $editingPageId;
 
+
+
     public function mount()
+
     {
+
         $this->languages = Language::where('is_active', true)->get();
+
         $this->activeLang = app()->getLocale();
+
+        $this->initializeTranslations();
+
         $this->loadPages();
+
     }
+
+
+
+    protected function initializeTranslations(): void
+
+    {
+
+        $this->translations = [];
+
+        foreach ($this->languages as $lang) {
+
+            $this->translations[$lang->code] = [
+
+                'id' => null,
+
+                'slug' => '',
+
+                'title' => '',
+
+                'content' => '',
+
+                'meta_title' => '',
+
+                'meta_description' => '',
+
+                'meta_keywords' => '',
+
+                'og_image' => '',
+
+            ];
+
+        }
+
+    }
+
+
 
     public function loadPages()
+
     {
+
         $this->pages = Page::with('translations')->get();
+
     }
+
+
+
+    protected function rules()
+
+    {
+
+        $rules = [
+
+            'is_active' => 'boolean',
+
+            'is_home' => 'boolean',
+
+        ];
+
+
+
+        $defaultLocale = config('app.locale');
+
+
+
+        foreach ($this->languages as $lang) {
+
+            $isPrimary = $lang->code === $defaultLocale;
+
+
+
+            $titleRules = $isPrimary
+
+                ? ['required', 'string', 'max:190']
+
+                : ['nullable', 'string', 'max:190'];
+
+            $rules["translations.{$lang->code}.title"] = $titleRules;
+
+
+
+            $uniqueRule = Rule::unique('page_translations', 'slug')
+
+                ->where(fn($query) => $query->where('locale', $lang->code));
+
+
+
+            $existingId = $this->translations[$lang->code]['id'] ?? null;
+
+            if ($existingId) {
+
+                $uniqueRule->ignore($existingId);
+
+            }
+
+
+
+            $slugRules = ['nullable', 'string', 'max:190', $uniqueRule];
+
+            if ($isPrimary && !$this->is_home) {
+
+                $slugRules[] = 'required';
+
+            }
+
+
+
+            $rules["translations.{$lang->code}.slug"] = $slugRules;
+
+            $rules["translations.{$lang->code}.content"] = ['nullable'];
+
+            $rules["translations.{$lang->code}.meta_title"] = ['nullable', 'string', 'max:190'];
+
+            $rules["translations.{$lang->code}.meta_description"] = ['nullable', 'string', 'max:320'];
+
+            $rules["translations.{$lang->code}.meta_keywords"] = ['nullable', 'string', 'max:255'];
+
+            $rules["translations.{$lang->code}.og_image"] = ['nullable', 'string', 'max:255'];
+
+        }
+
+
+
+        return $rules;
+
+    }
+
+
 
     public function save()
+
     {
-        $this->validate([
-            'slug' => 'required|alpha_dash|unique:pages,slug,' . $this->editingPageId,
-        ]);
+
+        $this->validate($this->rules());
+
+
 
         if ($this->is_home) {
+
             Page::where('is_home', true)->update(['is_home' => false]);
+
         }
+
+
 
         $page = Page::updateOrCreate(
+
             ['id' => $this->editingPageId],
+
             [
-                'slug' => $this->slug,
-                'is_active' => $this->is_active,
-                'is_home' => $this->is_home,
+
+                'is_active' => (bool) $this->is_active,
+
+                'is_home' => (bool) $this->is_home,
+
             ]
+
         );
 
+
+
         foreach ($this->languages as $lang) {
+
+            $data = $this->translations[$lang->code] ?? [];
+
+
+
+            $title = trim($data['title'] ?? '');
+
+            $slug = isset($data['slug']) ? trim($data['slug']) : null;
+
+            $metaTitle = trim($data['meta_title'] ?? '');
+
+            $metaDescription = trim($data['meta_description'] ?? '');
+
+            $metaKeywordsInput = $data['meta_keywords'] ?? '';
+
+            $ogImage = trim($data['og_image'] ?? '');
+
+
+
+            $keywords = collect(preg_split('/[,\\x{060C}]/u', (string) $metaKeywordsInput) ?: [])
+
+                ->map(fn($keyword) => trim($keyword))
+
+                ->filter()
+
+                ->values()
+
+                ->all();
+
+
+
             PageTranslation::updateOrCreate(
+
                 ['page_id' => $page->id, 'locale' => $lang->code],
+
                 [
-                    'title' => $this->translations[$lang->code]['title'] ?? '',
-                    'content' => $this->translations[$lang->code]['content'] ?? '',
+
+                    'slug' => $this->is_home ? null : ($slug === null || $slug === '' ? null : $slug),
+
+                    'title' => $title,
+
+                    'content' => $data['content'] ?? '',
+
+                    'meta_title' => $metaTitle !== '' ? $metaTitle : $title,
+
+                    'meta_description' => $metaDescription !== '' ? $metaDescription : null,
+
+                    'meta_keywords' => !empty($keywords) ? $keywords : null,
+
+                    'og_image' => $ogImage !== '' ? $ogImage : null,
+
                 ]
+
             );
+
         }
 
+
+
         $this->resetForm();
+
         $this->loadPages();
-        session()->flash('success', 'تم الحفظ بنجاح.');
+
+        session()->flash('success', '?? ??? ?????? ?????.');
+
     }
+
+
+
     public function goToAddPage()
+
     {
+
         $this->resetForm();
+
         $this->view = 'add-page';
+
     }
+
+
 
     public function edit($id)
+
     {
+
         $page = Page::with('translations')->findOrFail($id);
 
+
+
         $this->editingPageId = $id;
-        $this->slug = $page->slug;
+
         $this->is_active = $page->is_active;
+
         $this->is_home = $page->is_home;
+
         $this->mode = 'edit';
+
         $this->activeLang = app()->getLocale();
 
+
+
         foreach ($this->languages as $lang) {
-            $trans = $page->translations->where('locale', $lang->code)->first();
+
+            $trans = $page->translations->firstWhere('locale', $lang->code);
+
+
+
+            $metaKeywords = '';
+
+            if ($trans) {
+
+                if (is_array($trans->meta_keywords)) {
+
+                    $metaKeywords = implode(', ', $trans->meta_keywords);
+
+                } elseif (is_string($trans->meta_keywords)) {
+
+                    $metaKeywords = $trans->meta_keywords;
+
+                }
+
+            }
+
+
+
             $this->translations[$lang->code] = [
-                'title' => $trans->title ?? '',
-                'content' => $trans->content ?? '',
+
+                'id' => $trans?->id,
+
+                'slug' => $trans?->slug ?? '',
+
+                'title' => $trans?->title ?? '',
+
+                'content' => $trans?->content ?? '',
+
+                'meta_title' => $trans?->meta_title ?? '',
+
+                'meta_description' => $trans?->meta_description ?? '',
+
+                'meta_keywords' => $metaKeywords,
+
+                'og_image' => $trans?->og_image ?? '',
+
             ];
+
         }
 
+
+
         $this->view = 'edit-page';
+
     }
+
 
 
     public function resetForm()
+
     {
-        $this->reset(['slug', 'is_active', 'is_home', 'translations', 'editingPageId', 'mode']);
-        $this->is_active = true;
+
+        $this->editingPageId = null;
+
         $this->mode = 'create';
-    }
-    public function setAsHome($id)
-    {
-        // إزالة الصفحة الرئيسية الحالية
-        Page::where('is_home', true)->update(['is_home' => false]);
-        // تعيين الصفحة الجديدة
-        Page::where('id', $id)->update(['is_home' => true]);
-        $this->loadPages(); // تحديث القائمة
-        session()->flash('success', t('dashboard.set_as_home_success', 'Page set as home successfully.'));
-    }
-    public function confirmDelete($id)
-    {
-        $this->dispatchBrowserEvent('show-delete-confirmation', ['id' => $id]);
+
+        $this->is_active = true;
+
+        $this->is_home = false;
+
+        $this->initializeTranslations();
+
     }
 
-    public function deleteConfirmed($id)
+
+
+    public function setAsHome($id)
+
     {
+
+        Page::where('is_home', true)->update(['is_home' => false]);
+
+        Page::where('id', $id)->update(['is_home' => true]);
+
+        $this->loadPages();
+
+        session()->flash('success', t('dashboard.set_as_home_success', 'Page set as home successfully.'));
+
+    }
+
+
+
+    public function confirmDelete($id)
+
+    {
+
+        $this->dispatchBrowserEvent('show-delete-confirmation', ['id' => $id]);
+
+    }
+
+
+
+    public function deleteConfirmed($id)
+
+    {
+
         try {
+
             $page = Page::findOrFail($id);
+
             $page->delete();
+
+
 
             $this->loadPages();
 
+
+
             $this->dispatch('page-deleted-success');
-            session()->flash('success', '✅ تم حذف الصفحة بنجاح');
+
+            session()->flash('success', '?? ??? ?????? ?????.');
+
         } catch (\Exception $e) {
-            logger()->error('فشل الحذف: ' . $e->getMessage());
+
+            logger()->error('??? ????? ??? ??????: ' . $e->getMessage());
+
             $this->dispatch('page-delete-failed');
-            session()->flash('error', '❌ حدث خطأ أثناء حذف الصفحة');
+
+            session()->flash('error', '??? ??? ????? ??? ??????');
+
         }
+
     }
+
 
 
     public function render()
+
     {
+
         return view("livewire.dashboard.pages.{$this->view}");
+
     }
+
 }
+

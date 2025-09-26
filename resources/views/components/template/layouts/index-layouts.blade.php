@@ -1,17 +1,34 @@
-
 @props([
-  'title' => 'بال قول - حلول رقمية متكاملة',
-  'description' => 'أنشئ موقعك بسهولة واحترف التواجد الرقمي مع خدمات بال قول.',
-  'keywords' => 'استضافة, دومين, تصميم مواقع, WordPress, بال قول',
+  'title' => '��?�?�? ��?�?�? - ��?�?�?�? ��?�?�?�?�? ��?�?�?�?�?�?�?',
+  'description' => '��?�?�? ��?�?�?�?�? ��?�?�?�?�?�? ��?�?�?�?�?�?�? ��?�?�?�?�?�? ��?�? ��?�?�?�?�? ��?�?�? ��?�?�?.',
+  'keywords' => '��?�?�?�?�?�?�?, ��?�?�?�?�?, ��?���?�?�? ��?�?�?�?�?, WordPress, ��?�?�? ��?�?�?',
   'ogImage' => asset('assets/images/default-og.jpg'),
+  'seo' => null,
 ])
 
-@include('tamplate.layouts.head', [
-  'title' => $title,
-  'description' => $description,
-  'keywords' => $keywords,
-  'ogImage' => $ogImage
-])
+@php
+    use App\Support\SeoMeta;
+
+    $baseSeo = SeoMeta::make([
+        'title' => $title,
+        'description' => $description,
+        'keywords' => $keywords,
+        'image' => $ogImage,
+    ]);
+
+    $seoPayload = isset($seo)
+        ? $baseSeo->with($seo instanceof SeoMeta ? $seo->toArray() : (array) $seo)
+        : $baseSeo;
+
+    $defaultSchema = trim(view('tamplate.layouts.schema')->render());
+    if ($defaultSchema !== '') {
+        $existingSchema = $seoPayload->toArray()['schema'] ?? [];
+        $existingSchema[] = $defaultSchema;
+        $seoPayload = $seoPayload->with(['schema' => $existingSchema]);
+    }
+@endphp
+
+@include('tamplate.layouts.head', ['seo' => $seoPayload])
 @include('tamplate.layouts.header')
 {{ $slot }}
 
