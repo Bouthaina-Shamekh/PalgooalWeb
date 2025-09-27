@@ -3,8 +3,11 @@
     <div class="page-header col-span-3">
         <div class="page-block">
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home') }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('dashboard.languages.index') }}">{{ t('dashboard.All_Pages', 'ALL Pages') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home') }}</a>
+                </li>
+                <li class="breadcrumb-item"><a
+                        href="{{ route('dashboard.languages.index') }}">{{ t('dashboard.All_Pages', 'ALL Pages') }}</a>
+                </li>
                 <li class="breadcrumb-item" aria-current="page">{{ t('dashboard.Add_Pages', 'Add Pages') }}</li>
             </ul>
             <div class="page-header-title">
@@ -16,7 +19,7 @@
 
     @php
         $activeLanguage = $languages->firstWhere('code', $activeLang);
-        $activeLanguageName = $activeLanguage?->native ?? $activeLanguage?->name ?? strtoupper($activeLang);
+        $activeLanguageName = $activeLanguage?->native ?? ($activeLanguage?->name ?? strtoupper($activeLang));
     @endphp
     <div class="col-span-3">
         <div class="bg-blue-100 text-blue-900 px-4 py-2 rounded">
@@ -30,10 +33,9 @@
 
             <div>
                 <ul class="flex border-b mb-4 space-x-2 rtl:space-x-reverse">
-                    @foreach($languages as $index => $lang)
+                    @foreach ($languages as $index => $lang)
                         <li>
-                            <button type="button"
-                                wire:click="$set('activeLang', '{{ $lang->code }}')"
+                            <button type="button" wire:click="$set('activeLang', '{{ $lang->code }}')"
                                 class="px-4 py-2 rounded-t {{ $activeLang === $lang->code ? 'bg-white border-t border-l border-r font-bold' : 'bg-gray-200' }}">
                                 {{ $lang->name }}
                             </button>
@@ -41,16 +43,17 @@
                     @endforeach
                 </ul>
 
-                @foreach($languages as $lang)
+                @foreach ($languages as $lang)
                     <div wire:key="page-add-lang-{{ $lang->code }}">
-                        @if($activeLang === $lang->code)
+                        @if ($activeLang === $lang->code)
                             @php
                                 $langCode = $lang->code;
                                 $ogImageValue = data_get($translations, $langCode . '.og_image');
                             @endphp
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block mb-1 font-semibold">{{ __('Page Title') }} ({{ $langCode }})</label>
+                                    <label class="block mb-1 font-semibold">{{ __('Page Title') }}
+                                        ({{ $langCode }})</label>
                                     <input type="text" wire:model.defer="translations.{{ $langCode }}.title"
                                         class="w-full border p-2 rounded mb-1" placeholder="{{ __('Page Title') }}">
                                     @error("translations.{$langCode}.title")
@@ -62,16 +65,18 @@
                                     <label class="block mb-1 font-semibold">Slug ({{ $langCode }})</label>
                                     <input type="text" wire:model.defer="translations.{{ $langCode }}.slug"
                                         class="w-full border p-2 rounded mb-1" placeholder="page-slug">
-                                    <p class="text-xs text-gray-500">{{ __('Use lowercase letters, numbers, and dashes only. Leave empty to auto-generate for the main language.') }}</p>
+                                    <p class="text-xs text-gray-500">
+                                        {{ __('Use lowercase letters, numbers, and dashes only. Leave empty to auto-generate for the main language.') }}
+                                    </p>
                                     @error("translations.{$langCode}.slug")
                                         <span class="text-red-500 text-sm">{{ $message }}</span>
                                     @enderror
                                 </div>
 
                                 <div>
-                                    <label class="block mb-1 font-semibold">{{ __('Page Content') }} ({{ $langCode }})</label>
-                                    <textarea wire:model.defer="translations.{{ $langCode }}.content"
-                                        class="w-full border p-2 rounded h-40"
+                                    <label class="block mb-1 font-semibold">{{ __('Page Content') }}
+                                        ({{ $langCode }})</label>
+                                    <textarea wire:model.defer="translations.{{ $langCode }}.content" class="w-full border p-2 rounded h-40"
                                         placeholder="{{ __('Page Content') }}"></textarea>
                                     @error("translations.{$langCode}.content")
                                         <span class="text-red-500 text-sm">{{ $message }}</span>
@@ -82,50 +87,76 @@
                                     <h3 class="text-sm font-semibold text-gray-600">{{ __('SEO Meta') }}</h3>
 
                                     <div>
-                                        <label class="block mb-1 font-semibold">{{ __('Meta Title') }} ({{ $langCode }})</label>
-                                        <input type="text" wire:model.defer="translations.{{ $langCode }}.meta_title"
-                                            class="w-full border p-2 rounded mb-1" placeholder="{{ __('Meta Title') }}">
+                                        <label class="block mb-1 font-semibold">{{ __('Meta Title') }}
+                                            ({{ $langCode }})</label>
+                                        <input type="text"
+                                            wire:model.defer="translations.{{ $langCode }}.meta_title"
+                                            class="w-full border p-2 rounded mb-1"
+                                            placeholder="{{ __('Meta Title') }}">
                                         @error("translations.{$langCode}.meta_title")
                                             <span class="text-red-500 text-sm">{{ $message }}</span>
                                         @enderror
                                     </div>
 
                                     <div>
-                                        <label class="block mb-1 font-semibold">{{ __('Meta Description') }} ({{ $langCode }})</label>
-                                        <textarea wire:model.defer="translations.{{ $langCode }}.meta_description"
-                                            class="w-full border p-2 rounded h-24"
+                                        <label class="block mb-1 font-semibold">{{ __('Meta Description') }}
+                                            ({{ $langCode }})</label>
+                                        <textarea wire:model.defer="translations.{{ $langCode }}.meta_description" class="w-full border p-2 rounded h-24"
                                             placeholder="{{ __('Short description for search engines') }}"></textarea>
-                                        <p class="text-xs text-gray-500">{{ __('Aim for 50-160 characters. Leave empty to reuse the title.') }}</p>
+                                        <p class="text-xs text-gray-500">
+                                            {{ __('Aim for 50-160 characters. Leave empty to reuse the title.') }}</p>
                                         @error("translations.{$langCode}.meta_description")
                                             <span class="text-red-500 text-sm">{{ $message }}</span>
                                         @enderror
                                     </div>
 
                                     <div>
-                                        <label class="block mb-1 font-semibold">{{ __('Meta Keywords') }} ({{ $langCode }})</label>
-                                        <input type="text" wire:model.defer="translations.{{ $langCode }}.meta_keywords"
+                                        <label class="block mb-1 font-semibold">{{ __('Meta Keywords') }}
+                                            ({{ $langCode }})</label>
+                                        <input type="text"
+                                            wire:model.defer="translations.{{ $langCode }}.meta_keywords"
                                             class="w-full border p-2 rounded mb-1" placeholder="keyword 1, keyword 2">
-                                        <p class="text-xs text-gray-500">{{ __('Separate keywords with a comma or Arabic comma (?).') }}</p>
+                                        <p class="text-xs text-gray-500">
+                                            {{ __('Separate keywords with a comma or Arabic comma (?).') }}</p>
                                         @error("translations.{$langCode}.meta_keywords")
                                             <span class="text-red-500 text-sm">{{ $message }}</span>
                                         @enderror
                                     </div>
 
                                     <div>
-                                        <label class="block mb-1 font-semibold">{{ __('Open Graph Image URL') }} ({{ $langCode }})</label>
-                                        <input type="text" wire:model.defer="translations.{{ $langCode }}.og_image"
-                                            class="w-full border p-2 rounded mb-1" placeholder="https://example.com/og-image.jpg">
-                                        <p class="text-xs text-gray-500">{{ __('Use a full URL or a Storage link generated via asset()/Storage::url(). Recommended size 1200x630px.') }}</p>
+                                        <label class="block mb-1 font-semibold">{{ __('Open Graph Image URL') }}
+                                            ({{ $langCode }})</label>
+                                        <div class="flex items-center gap-2">
+                                            <input type="text"
+                                                wire:model.defer="translations.{{ $langCode }}.og_image"
+                                                class="w-full border p-2 rounded mb-1"
+                                                placeholder="https://example.com/og-image.jpg"
+                                                data-media-input="{{ $langCode }}"
+                                                id="og_image_input_{{ $langCode }}">
+                                            <button type="button"
+                                                class="px-3 py-2 text-sm font-medium border border-primary text-primary rounded hover:bg-primary/5"
+                                                data-media-modal="pageMediaModal"
+                                                data-media-locale="{{ $langCode }}">
+                                                {{ __('Choose from media') }}
+                                            </button>
+                                        </div>
+                                        <p class="text-xs text-gray-500">
+                                            {{ __('Use a full URL or a Storage link generated via asset()/Storage::url(). Recommended size 1200x630px.') }}
+                                        </p>
                                         @error("translations.{$langCode}.og_image")
                                             <span class="text-red-500 text-sm">{{ $message }}</span>
                                         @enderror
 
-                                        @if($ogImageValue)
-                                            <div class="mt-2">
-                                                <p class="text-xs text-gray-500 mb-1">{{ __('Preview') }}</p>
-                                                <img src="{{ $ogImageValue }}" alt="OG image preview" class="max-h-32 rounded border">
-                                            </div>
-                                        @endif
+
+                                        @php $hasOgImage = !empty($ogImageValue); @endphp
+                                        <div class="mt-2 {{ $hasOgImage ? '' : 'hidden' }}"
+                                            data-media-preview-wrapper="{{ $langCode }}">
+                                            <p class="text-xs text-gray-500 mb-1">{{ __('Preview') }}</p>
+                                            <img src="{{ $ogImageValue ?: '' }}" alt="OG image preview"
+                                                class="max-h-32 rounded border {{ $hasOgImage ? '' : 'hidden' }}"
+                                                data-media-preview="{{ $langCode }}">
+                                        </div>
+
                                     </div>
                                 </div>
                             </div>
@@ -155,6 +186,9 @@
             <div>
                 <label class="block font-semibold">{{ __('Publish Date') }}</label>
                 <input type="datetime-local" wire:model="published_at" class="w-full border p-2 rounded">
+                @error('published_at')
+                    <span class="text-red-500 text-sm">{{ $message }}</span>
+                @enderror
             </div>
 
             <button type="button" wire:click="save"

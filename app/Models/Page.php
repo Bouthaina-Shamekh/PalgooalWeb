@@ -13,11 +13,13 @@ class Page extends Model
     protected $fillable = [
         'is_active',
         'is_home',
+        'published_at',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'is_home' => 'boolean',
+        'published_at' => 'datetime',
     ];
 
     public function translations()

@@ -1,4 +1,4 @@
-@php
+﻿@php
     use App\Models\Service;
     use App\Services\TemplateService;
     use App\Models\CategoryTemplate;
@@ -41,7 +41,7 @@
         'inLanguage' => app()->getLocale(),
     ];
 
-    $publishedAt = $page->created_at?->toIso8601String();
+    $publishedAt = $page->published_at?->toIso8601String() ?? $page->created_at?->toIso8601String();
     if ($publishedAt) {
         $pageSchema['datePublished'] = $publishedAt;
     }
@@ -61,13 +61,13 @@
 @endphp
 <x-template.layouts.index-layouts :title="$pageTitle" :description="$pageDescription" :keywords="$pageKeywords" :ogImage="$pageOgImage"
     :seo="$seoOverrides">
-    {{-- محتوى الصفحة --}}
+    {{-- ظ…ط­طھظˆظ‰ ط§ظ„طµظپط­ط© --}}
     @if ($page->sections->isEmpty())
         <div class="container mx-auto py-10">
             <h1 class="text-3xl font-bold mb-6">
             </h1>
             <div class="prose max-w-4xl">
-                {!! $page->translation()?->content ?? '<p>لا يوجد محتوى.</p>' !!}
+                {!! $page->translation()?->content ?? '<p>ظ„ط§ ظٹظˆط¬ط¯ ظ…ط­طھظˆظ‰.</p>' !!}
             </div>
         </div>
     @endif
@@ -104,7 +104,7 @@
             'description' => $pageDescription,
             'inLanguage' => app()->getLocale(),
         ];
-        $publishedAt = $page->created_at?->toIso8601String();
+        $publishedAt = $page->published_at?->toIso8601String() ?? $page->created_at?->toIso8601String();
         if ($publishedAt) {
             $pageSchema['datePublished'] = $publishedAt;
         }
@@ -149,7 +149,7 @@
             $content = $translation?->content ?? [];
             $title = $translation?->title ?? '';
 
-            // ✅ جهّز بيانات كل سيكشن
+            // âœ… ط¬ظ‡ظ‘ط² ط¨ظٹط§ظ†ط§طھ ظƒظ„ ط³ظٹظƒط´ظ†
             $data = match ($key) {
                 'hero' => [
                     'title' => $title,
@@ -189,25 +189,25 @@
                         ->with(['translations', 'category.translations'])
                         ->orderBy('id', 'asc');
 
-                    // فلترة حسب plan_category_id إن وُجد
+                    // ظپظ„طھط±ط© ط­ط³ط¨ plan_category_id ط¥ظ† ظˆظڈط¬ط¯
                     if (!empty($content['plan_category_id'])) {
                         $query->where('plan_category_id', (int) $content['plan_category_id']);
 
-                        // حاول جلب التصنيف لتمريره للواجهة (إن وجد)
+                        // ط­ط§ظˆظ„ ط¬ظ„ط¨ ط§ظ„طھطµظ†ظٹظپ ظ„طھظ…ط±ظٹط±ظ‡ ظ„ظ„ظˆط§ط¬ظ‡ط© (ط¥ظ† ظˆط¬ط¯)
                         $cat = \App\Models\PlanCategory::with('translations')->find((int) $content['plan_category_id']);
                     }
-                    // أو فلترة حسب slug ضمن ترجمة الـ locale الحالية
+                    // ط£ظˆ ظپظ„طھط±ط© ط­ط³ط¨ slug ط¶ظ…ظ† طھط±ط¬ظ…ط© ط§ظ„ظ€ locale ط§ظ„ط­ط§ظ„ظٹط©
                     elseif (!empty($content['plan_category_slug'])) {
                         $slug = (string) $content['plan_category_slug'];
 
-                        // البحث ضمن الترجمات للـ locale الحالي
+                        // ط§ظ„ط¨ط­ط« ط¶ظ…ظ† ط§ظ„طھط±ط¬ظ…ط§طھ ظ„ظ„ظ€ locale ط§ظ„ط­ط§ظ„ظٹ
                         $cat = \App\Models\PlanCategory::whereHas('translations', function ($q) use ($slug) {
                             $q->where('slug', $slug)->where('locale', app()->getLocale());
                         })
                             ->with('translations')
                             ->first();
 
-                        // إذا لم نجد ترجمة بالـ locale الحالي، جرب البحث عبر جميع الترجمات
+                        // ط¥ط°ط§ ظ„ظ… ظ†ط¬ط¯ طھط±ط¬ظ…ط© ط¨ط§ظ„ظ€ locale ط§ظ„ط­ط§ظ„ظٹطŒ ط¬ط±ط¨ ط§ظ„ط¨ط­ط« ط¹ط¨ط± ط¬ظ…ظٹط¹ ط§ظ„طھط±ط¬ظ…ط§طھ
                         if (!$cat) {
                             $cat = \App\Models\PlanCategory::whereHas('translations', function ($q) use ($slug) {
                                 $q->where('slug', $slug);
@@ -219,7 +219,7 @@
                         if ($cat) {
                             $query->where('plan_category_id', $cat->id);
                         } else {
-                            // خيار: ارجع لا شيء بدل جميع الخطط
+                            // ط®ظٹط§ط±: ط§ط±ط¬ط¹ ظ„ط§ ط´ظٹط، ط¨ط¯ظ„ ط¬ظ…ظٹط¹ ط§ظ„ط®ط·ط·
                             $query->whereRaw('0 = 1');
                         }
                     }
@@ -245,9 +245,9 @@
                     'button_text-1' => $content['button_text-1'] ?? '',
                     'button_url-1' => $content['button_url-1'] ?? '',
                 ],
-                // ✅ هنا نمرّر بيانات search-domain (الكتالوج + أسعار fallback)
+                // âœ… ظ‡ظ†ط§ ظ†ظ…ط±ظ‘ط± ط¨ظٹط§ظ†ط§طھ search-domain (ط§ظ„ظƒطھط§ظ„ظˆط¬ + ط£ط³ط¹ط§ط± fallback)
                 'search-domain' => (function () {
-                    // TLDs المعروضة في الكتالوج
+                    // TLDs ط§ظ„ظ…ط¹ط±ظˆط¶ط© ظپظٹ ط§ظ„ظƒطھط§ظ„ظˆط¬
                     $defaultTlds = DomainTld::where('in_catalog', true)
                         ->orderBy('tld')
                         ->pluck('tld')
@@ -255,7 +255,7 @@
                         ->values()
                         ->all();
 
-                    // أسعار fallback: نستخدم sale إن وجدت، وإلا cost لـ Register سنة واحدة
+                    // ط£ط³ط¹ط§ط± fallback: ظ†ط³طھط®ط¯ظ… sale ط¥ظ† ظˆط¬ط¯طھطŒ ظˆط¥ظ„ط§ cost ظ„ظ€ Register ط³ظ†ط© ظˆط§ط­ط¯ط©
                     $fallbackPrices = DomainTldPrice::with('tld')
                         ->whereIn('domain_tld_id', DomainTld::where('in_catalog', true)->pluck('id'))
                         ->where('action', 'register')
@@ -273,10 +273,10 @@
 
                     return [
                         'title' => $GLOBALS['title'] ?? '',
-                        'subtitle' => '', // ممكن تستخدم من ترجمة السيكشن لو لزم
+                        'subtitle' => '', // ظ…ظ…ظƒظ† طھط³طھط®ط¯ظ… ظ…ظ† طھط±ط¬ظ…ط© ط§ظ„ط³ظٹظƒط´ظ† ظ„ظˆ ظ„ط²ظ…
                         'default_tlds' => $defaultTlds,
                         'fallback_prices' => $fallbackPrices,
-                        'currency' => 'USD', // عدّلها حسب إعداداتك إن لزم
+                        'currency' => 'USD', // ط¹ط¯ظ‘ظ„ظ‡ط§ ط­ط³ط¨ ط¥ط¹ط¯ط§ط¯ط§طھظƒ ط¥ظ† ظ„ط²ظ…
                     ];
                 })(),
                 'templates-pages' => [
@@ -301,7 +301,7 @@
                                 $cat->translations->firstWhere('locale', app()->getLocale()) ??
                                 $cat->translations->firstWhere('locale', 'ar');
 
-                            $cat->translated_name = $t?->name ?? 'غير معرف';
+                            $cat->translated_name = $t?->name ?? 'ط؛ظٹط± ظ…ط¹ط±ظپ';
 
                             $cat->translated_slug = $t?->slug ?? ($cat->slug ?? 'uncategorized');
 
@@ -313,18 +313,18 @@
             };
 
         @endphp
-        {{-- ✅ رندرة خاصة لكل سيكشن يحتاج props مخصصة --}}
+        {{-- âœ… ط±ظ†ط¯ط±ط© ط®ط§طµط© ظ„ظƒظ„ ط³ظٹظƒط´ظ† ظٹط­طھط§ط¬ props ظ…ط®طµطµط© --}}
         @if ($component === 'templates-pages')
             <x-dynamic-component :component="'template.sections.' . $component" :templates="$data['templates']" :categories="$data['categories']" :max_price="$data['max_price']"
                 :sort_by="$data['sort_by']" :show_filter_sidebar="$data['show_filter_sidebar']" :selectedCategory="$data['selectedCategory']" />
         @elseif ($component === 'search-domain')
-            {{-- هنا نمرّر الـ props المتوقعة في search-domain.blade --}}
+            {{-- ظ‡ظ†ط§ ظ†ظ…ط±ظ‘ط± ط§ظ„ظ€ props ط§ظ„ظ…طھظˆظ‚ط¹ط© ظپظٹ search-domain.blade --}}
             <x-dynamic-component :component="'template.sections.' . $component" :default-tlds="$data['default_tlds'] ?? []" :fallback-prices="$data['fallback_prices'] ?? []" :currency="$data['currency'] ?? 'USD'" />
         @elseif ($component === 'hosting-plans')
             <x-dynamic-component :component="'template.sections.' . $component" :plans="$data['plans'] ?? collect()" :title="$data['title'] ?? ''" :subtitle="$data['subtitle'] ?? ''"
                 :category="$data['category'] ?? null" />
         @else
-            {{-- باقي السيكشنات تستقبل $data بالشكل القديم --}}
+            {{-- ط¨ط§ظ‚ظٹ ط§ظ„ط³ظٹظƒط´ظ†ط§طھ طھط³طھظ‚ط¨ظ„ $data ط¨ط§ظ„ط´ظƒظ„ ط§ظ„ظ‚ط¯ظٹظ… --}}
             <x-dynamic-component :component="'template.sections.' . $component" :data="$data" :templates="$data['templates'] ?? collect()" />
         @endif
     @endforeach

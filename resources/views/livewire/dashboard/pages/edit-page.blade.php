@@ -124,19 +124,30 @@
 
                                     <div>
                                         <label class="block mb-1 font-semibold">{{ __('Open Graph Image URL') }} ({{ $langCode }})</label>
-                                        <input type="text" wire:model.defer="translations.{{ $langCode }}.og_image"
-                                            class="w-full border p-2 rounded mb-1" placeholder="https://example.com/og-image.jpg">
+                                        <div class="flex items-center gap-2">
+                                            <input type="text" wire:model.defer="translations.{{ $langCode }}.og_image"
+                                                class="w-full border p-2 rounded mb-1" placeholder="https://example.com/og-image.jpg"
+                                                data-media-input="{{ $langCode }}" id="og_image_input_edit_{{ $langCode }}">
+                                            <button type="button"
+                                                class="px-3 py-2 text-sm font-medium border border-primary text-primary rounded hover:bg-primary/5"
+                                                data-media-modal="pageMediaModal" data-media-locale="{{ $langCode }}">
+                                                {{ __('Choose from media') }}
+                                            </button>
+                                        </div>
                                         <p class="text-xs text-gray-500">{{ __('Use a full URL or a Storage link generated via asset()/Storage::url(). Recommended size 1200x630px.') }}</p>
                                         @error("translations.{$langCode}.og_image")
                                             <span class="text-red-500 text-sm">{{ $message }}</span>
                                         @enderror
 
-                                        @if($ogImageValue)
-                                            <div class="mt-2">
-                                                <p class="text-xs text-gray-500 mb-1">{{ __('Preview') }}</p>
-                                                <img src="{{ $ogImageValue }}" alt="OG image preview" class="max-h-32 rounded border">
-                                            </div>
-                                        @endif
+                                        
+                                        @php $hasOgImage = !empty($ogImageValue); @endphp
+                                        <div class="mt-2 {{ $hasOgImage ? '' : 'hidden' }}" data-media-preview-wrapper="{{ $langCode }}">
+                                            <p class="text-xs text-gray-500 mb-1">{{ __('Preview') }}</p>
+                                            <img src="{{ $ogImageValue ?: '' }}" alt="OG image preview"
+                                                class="max-h-32 rounded border {{ $hasOgImage ? '' : 'hidden' }}"
+                                                data-media-preview="{{ $langCode }}">
+                                        </div>
+                                        
                                     </div>
                                 </div>
                             </div>
@@ -166,6 +177,9 @@
             <div>
                 <label class="block font-semibold">{{ __('Publish Date') }}</label>
                 <input type="datetime-local" wire:model="published_at" class="w-full border p-2 rounded">
+                @error("published_at")
+                    <span class="text-red-500 text-sm">{{ $message }}</span>
+                @enderror
             </div>
 
             <button type="button" wire:click="save"
@@ -200,3 +214,4 @@
         </div>
     @endif
 </div>
+

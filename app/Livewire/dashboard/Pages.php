@@ -12,6 +12,7 @@ use App\Models\Page;
 
 use App\Models\PageTranslation;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 use Livewire\Component;
@@ -124,6 +125,7 @@ class Pages extends Component
 
             'is_home' => 'boolean',
 
+            'published_at' => 'nullable|date',
         ];
 
 
@@ -212,6 +214,15 @@ class Pages extends Component
 
 
 
+
+        $publishedAt = null;
+
+        if (!empty($this->published_at)) {
+            $publishedAt = Carbon::parse($this->published_at);
+        } elseif ($this->is_active) {
+            $publishedAt = Carbon::now();
+        }
+
         $page = Page::updateOrCreate(
 
             ['id' => $this->editingPageId],
@@ -221,6 +232,8 @@ class Pages extends Component
                 'is_active' => (bool) $this->is_active,
 
                 'is_home' => (bool) $this->is_home,
+
+                'published_at' => $publishedAt,
 
             ]
 
@@ -291,8 +304,7 @@ class Pages extends Component
         $this->resetForm();
 
         $this->loadPages();
-
-        session()->flash('success', '?? ??? ?????? ?????.');
+        session()->flash('success', "\u{062A}\u{0645} \u{062D}\u{0641}\u{0638} \u{0627}\u{0644}\u{0635}\u{0641}\u{062D}\u{0629} \u{0628}\u{0646}\u{062C}\u{0627}\u{062D}.");
 
     }
 
@@ -324,6 +336,7 @@ class Pages extends Component
 
         $this->is_home = $page->is_home;
 
+        $this->published_at = $page->published_at?->format('Y-m-d\TH:i');
         $this->mode = 'edit';
 
         $this->activeLang = app()->getLocale();
@@ -396,6 +409,7 @@ class Pages extends Component
 
         $this->is_home = false;
 
+        $this->published_at = null;
         $this->initializeTranslations();
 
     }
@@ -446,15 +460,15 @@ class Pages extends Component
 
             $this->dispatch('page-deleted-success');
 
-            session()->flash('success', '?? ??? ?????? ?????.');
+            session()->flash('success', "\u{062A}\u{0645} \u{062D}\u{0630}\u{0641} \u{0627}\u{0644}\u{0635}\u{0641}\u{062D}\u{0629} \u{0628}\u{0646}\u{062C}\u{0627}\u{062D}.");
 
         } catch (\Exception $e) {
 
-            logger()->error('??? ????? ??? ??????: ' . $e->getMessage());
+            logger()->error("\u{0641}\u{0634}\u{0644} \u{062D}\u{0630}\u{0641} \u{0627}\u{0644}\u{0635}\u{0641}\u{062D}\u{0629}: " . $e->getMessage());
 
             $this->dispatch('page-delete-failed');
 
-            session()->flash('error', '??? ??? ????? ??? ??????');
+            session()->flash('error', "\u{062A}\u{0639}\u{0630}\u{0631} \u{062D}\u{0630}\u{0641} \u{0627}\u{0644}\u{0635}\u{0641}\u{062D}\u{0629}.");
 
         }
 
