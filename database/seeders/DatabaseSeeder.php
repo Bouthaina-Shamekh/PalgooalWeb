@@ -32,8 +32,8 @@ class DatabaseSeeder extends Seeder
         $this->call(ServiceSeeder::class);
         $this->call(PageHomeSeeder::class);
         $this->call(ClientSeeder::class);
-        $this->call(CategoryTemplateSeeder::class);
-        $this->call(TemplateSeeder::class);
+        // $this->call(CategoryTemplateSeeder::class);
+        // $this->call(TemplateSeeder::class);
         $this->call(DomainProviderSeeder::class);
     }
 }

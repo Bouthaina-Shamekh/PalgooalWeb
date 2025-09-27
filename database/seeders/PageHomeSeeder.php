@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace Database\Seeders;
 
@@ -21,7 +21,7 @@ class PageHomeSeeder extends Seeder
         PageTranslation::create([
             'page_id' => $page->id,
             'locale' => 'ar',
-            'slug' => null,
+            'slug' => 'الرئيسية',
             'title' => 'الصفحة الرئيسية',
             'content' => '',
             'meta_title' => 'الصفحة الرئيسية',
@@ -33,7 +33,7 @@ class PageHomeSeeder extends Seeder
         PageTranslation::create([
             'page_id' => $page->id,
             'locale' => 'en',
-            'slug' => null,
+            'slug' => 'home',
             'title' => 'Home Page',
             'content' => '',
             'meta_title' => 'Home',
