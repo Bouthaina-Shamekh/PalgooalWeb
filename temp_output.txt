@@ -35,8 +35,8 @@
                 <ul class="flex border-b mb-4 space-x-2 rtl:space-x-reverse" role="tablist">
                     @foreach ($languages as $index => $lang)
                         <li>
-                            <button type="button" wire:click="$set('activeLang', '{{ $lang->code }}')" id="lang-tab-{{ $lang->code }}" role="tab" aria-controls="lang-panel-{{ $lang->code }}" aria-selected="{{ $activeLang === $lang->code ? 'true' : 'false' }}"
-                                @class(['px-4 py-2 rounded-t transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400', 'bg-white text-slate-900 shadow-sm border border-slate-200 border-b-white font-semibold' => $activeLang === $lang->code, 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-transparent' => $activeLang !== $lang->code])>
+                            <button type="button" wire:click="$set('activeLang', '{{ $lang->code }}')" id="lang-tab-{{ $lang->code }}" role="tab" aria-controls="lang-panel-{{ $lang->code }}" aria-selected="{{ $activeLang === $lang->code ? "true" : "false" }}"
+                                class="px-4 py-2 rounded-t {{ $activeLang === $lang->code ? 'bg-white border-t border-l border-r font-bold' : 'bg-gray-200' }}">
                                 {{ $lang->name }}
                             </button>
                         </li>
@@ -191,16 +191,9 @@
                 @enderror
             </div>
 
-                        <button type="button" wire:click="save" wire:loading.attr="disabled" wire:loading.class="opacity-70 cursor-not-allowed" wire:target="save"
-                class="w-full inline-flex items-center justify-center gap-2 rounded bg-primary py-2 text-sm font-semibold text-white transition hover:bg-primary/80 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 disabled:opacity-70 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:focus:ring-offset-slate-900">
-                <span wire:loading.remove wire:target="save">{{ t('dashboard.Publish', 'Publish') }}</span>
-                <span wire:loading wire:target="save" class="flex items-center gap-2 text-white">
-                    <svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                    </svg>
-                    {{ t('dashboard.Saving', 'Saving...') }}
-                </span>
+            <button type="button" wire:click="save"
+                class="w-full bg-primary text-white py-2 rounded hover:bg-primary/80 transition">
+                {{ t('dashboard.Publish', 'Publish') }}
             </button>
         </div>
 
@@ -217,3 +210,4 @@
         @endif
     </div>
 </div>
+

@@ -1,103 +1,44 @@
 <x-dashboard-layout>
-    <style>
-        .masonry {
-            column-count: 4;
-            column-gap: 1rem;
-        }
+    <div class="min-h-screen bg-slate-50 dark:bg-slate-900">
+        <div class="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div class="space-y-1">
+                    <h1 class="text-3xl font-semibold text-slate-900 dark:text-white">{{ __('Media Library') }}</h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">
+                        {{ __('Upload, organise, and reuse the files that power your content.') }}</p>
+                </div>
 
-        @media (max-width: 992px) {
-            .masonry {
-                column-count: 3;
-            }
-        }
+                @can('create', 'App\\Models\\Media')
+                    <form id="uploadForm" enctype="multipart/form-data"
+                        class="flex w-full flex-col gap-3 rounded-2xl border border-dashed border-slate-300 bg-white/80 p-4 shadow-sm backdrop-blur sm:max-w-md sm:flex-row sm:items-center sm:gap-4 dark:border-slate-700 dark:bg-slate-800/60">
+                        @csrf
+                        <label for="imageInput"
+                            class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ __('Upload a new file') }}</label>
+                        <input type="file" name="image" id="imageInput" required
+                            class="block w-full cursor-pointer rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200">
+                        <button type="submit"
+                            class="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:focus:ring-offset-slate-900">
+                            {{ __('Upload') }}
+                        </button>
+                    </form>
+                @endcan
+            </div>
 
-        @media (max-width: 768px) {
-            .masonry {
-                column-count: 2;
-            }
-        }
+            <div id="mediaWrapper" class="space-y-6">
+                <div id="mediaGrid" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-live="polite">
+                </div>
 
-        @media (max-width: 576px) {
-            .masonry {
-                column-count: 1;
-            }
-        }
-
-        .masonry-item {
-            position: relative;
-            transition: transform 0.2s ease;
-            border-radius: 10px;
-            box-shadow: 1px 6px 8px rgba(0, 0, 0, 0.3);
-            margin-bottom: 11px;
-        }
-
-        .masonry-item:hover {
-            transform: scale(1.03);
-            z-index: 2;
-        }
-
-        .media-actions {
-            position: absolute;
-            top: 0;
-            right: -60px;
-            display: flex;
-            gap: 0.25rem;
-            flex-direction: column;
-            align-items: center;
-            transition: 0.3s all;
-        }
-
-        .masonry-item:hover .media-actions {
-            display: flex !important;
-            right: 0;
-
-        }
-
-        .media-actions .btn {
-            width: 32px;
-            height: 32px;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .masonry-item img {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-
-        .masonry-item .info {
-            padding: 0.75rem;
-            text-align: center;
-        }
-
-        .masonry-item .info small {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: #333;
-        }
-
-        .masonry-item .actions {
-            display: flex;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-    </style>
-
-    <div class="p-6 bg-white dark:bg-gray-900 min-h-screen">
-        <h1 class="text-2xl font-bold mb-6">📁 مكتبة الوسائط</h1>
-        @can('create', 'App\\Models\\Media')
-            <form id="uploadForm" enctype="multipart/form-data" class="mb-3">
-                <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                <input type="file" name="image" id="imageInput" class="form-control mb-2" required>
-                <button type="submit" class="btn btn-primary">رفع صورة</button>
-            </form>
-        @endcan
-
-        <div id="mediaGrid" class="masonry">
-            {{-- الصور ستُملأ تلقائيًا عبر jQuery --}}
+                <div id="mediaEmptyState"
+                    class="hidden rounded-3xl border border-dashed border-slate-300 bg-white/80 p-10 text-center text-sm text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+                    <div
+                        class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-500 dark:bg-indigo-500/10">
+                        <i class="fas fa-images text-lg"></i>
+                    </div>
+                    <h2 class="mt-4 text-lg font-semibold text-slate-800 dark:text-white">{{ __('No media yet') }}</h2>
+                    <p class="mt-2 leading-relaxed">
+                        {{ __('Upload your first file to start building a reusable media library.') }}</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -105,130 +46,170 @@
         <div class="modal fade" id="confirmDeleteModal" tabindex="-1" role="dialog"
             aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">تأكيد الحذف</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-content rounded-3xl border-0 bg-white shadow-2xl dark:bg-slate-900">
+                    <div
+                        class="modal-header flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+                        <h5 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Delete media item') }}</h5>
+                        <button type="button" class="text-slate-400 transition hover:text-slate-600"
+                            data-bs-dismiss="modal" aria-label="{{ __('Close') }}">
+                            &times;
+                        </button>
                     </div>
-                    <div class="modal-body">
-                        هل أنت متأكد من حذف هذه الصورة؟
+                    <div class="modal-body px-6 py-5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                        {{ __('Are you sure you want to delete this file? This action cannot be undone.') }}
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-pc-modal-dismiss="#confirmDeleteModal"
-                            id="closeDeleteModal">إلغاء</button>
-                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">نعم، حذف</button>
+                    <div
+                        class="modal-footer flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
+                        <button type="button"
+                            class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                            data-pc-modal-dismiss="#confirmDeleteModal" id="closeDeleteModal">
+                            {{ __('Cancel') }}
+                        </button>
+                        <button type="button"
+                            class="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-2 dark:bg-rose-500 dark:hover:bg-rose-400 dark:focus:ring-offset-slate-900"
+                            id="confirmDeleteBtn">
+                            {{ __('Delete') }}
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     @endcan
-    <!-- مودال التعديل -->
+
     @can('edit', 'App\\Models\\Media')
         <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered">
-                <form id="editForm" class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">تعديل بيانات الوسيط</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <form id="editForm" class="modal-content rounded-3xl border-0 bg-white shadow-2xl dark:bg-slate-900">
+                    <div
+                        class="modal-header flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-slate-800">
+                        <h5 class="text-lg font-semibold text-slate-900 dark:text-white">{{ __('Edit media details') }}
+                        </h5>
+                        <button type="button" class="text-slate-400 transition hover:text-slate-600"
+                            data-bs-dismiss="modal" aria-label="{{ __('Close') }}">
+                            &times;
+                        </button>
                     </div>
 
-                    <div class="modal-body p-4">
-                        <div class="grid grid-cols-12 gap-6">
+                    <div class="modal-body px-6 py-6">
+                        <div class="grid gap-6 md:grid-cols-2">
+                            <div class="space-y-6">
+                                <img id="editPreview" src="" alt="preview"
+                                    class="max-h-72 w-full rounded-2xl border border-slate-200 object-cover shadow-sm dark:border-slate-700">
 
-                            <!-- صورة المعاينة -->
-                            <div class="col-span-6">
-                                <img id="editPreview" src="" alt="preview" class="img-fluid rounded shadow border"
-                                    style="max-height: 300px;">
-
-                                <h6 class="fw-bold mb-3" style="font-size: 1.1rem; color: #333;">تفاصيل الوسيط</h6>
-
-                                <div class="mb-4"
-                                    style="font-size: 0.9rem; color: #555; background-color: #f8f9fa; padding: 1rem; border-radius: 8px; border: 1px solid #dee2e6;">
-                                    <div style="margin-bottom: 0.5rem;">
-                                        <strong style="min-width: 60px; display: inline-block;">الاسم:</strong>
-                                        <span id="infoName">---</span>
-                                    </div>
-                                    <div style="margin-bottom: 0.5rem;">
-                                        <strong style="min-width: 60px; display: inline-block;">النوع:</strong>
-                                        <span id="infoMime">---</span>
-                                    </div>
-                                    <div style="margin-bottom: 0.5rem;">
-                                        <strong style="min-width: 60px; display: inline-block;">الحجم:</strong>
-                                        <span id="infoSize">---</span> KB
-                                    </div>
-                                    <div style="margin-bottom: 0;">
-                                        <strong style="min-width: 60px; display: inline-block;">الرابط:</strong>
-                                        <input type="text" id="infoURL"
-                                            class="form-control form-control-sm d-inline-block mt-1"
-                                            style="width: 100%; font-size: 0.8rem; color: #6c757d; background-color: #e9ecef;"
-                                            readonly onclick="navigator.clipboard.writeText(this.value)">
+                                <div
+                                    class="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+                                    <h6
+                                        class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                        {{ __('File information') }}</h6>
+                                    <dl class="space-y-2">
+                                        <div class="flex items-center justify-between">
+                                            <dt class="font-medium text-slate-500 dark:text-slate-400">{{ __('Name') }}
+                                            </dt>
+                                            <dd id="infoName" class="text-right text-slate-700 dark:text-slate-200">---
+                                            </dd>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <dt class="font-medium text-slate-500 dark:text-slate-400">{{ __('Type') }}
+                                            </dt>
+                                            <dd id="infoMime" class="text-right text-slate-700 dark:text-slate-200">---
+                                            </dd>
+                                        </div>
+                                        <div class="flex items-center justify-between">
+                                            <dt class="font-medium text-slate-500 dark:text-slate-400">{{ __('Size') }}
+                                            </dt>
+                                            <dd class="text-right text-slate-700 dark:text-slate-200"><span
+                                                    id="infoSize">---</span> KB</dd>
+                                        </div>
+                                    </dl>
+                                    <div class="space-y-2">
+                                        <label for="infoURL"
+                                            class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{ __('Direct URL') }}</label>
+                                        <input type="text" id="infoURL" readonly
+                                            class="w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 shadow-sm transition hover:border-indigo-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-300"
+                                            onclick="navigator.clipboard.writeText(this.value)">
+                                        <p class="text-xs text-slate-400 dark:text-slate-500">
+                                            {{ __('Click to copy the URL to your clipboard.') }}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- التفاصيل -->
-                            <div class="col-span-6">
+                            <div class="space-y-4">
                                 <input type="hidden" id="editId">
 
-                                <div class="mb-3">
-                                    <label class="form-label">Alt Text</label>
-                                    <input type="text" id="editAlt" class="form-control">
-                                </div>
+                                <div
+                                    class="space-y-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/70">
+                                    <div class="space-y-2">
+                                        <label for="editAlt"
+                                            class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ __('Alt text') }}</label>
+                                        <input type="text" id="editAlt"
+                                            class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200">
+                                    </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Title</label>
-                                    <input type="text" id="editTitle" class="form-control">
-                                </div>
+                                    <div class="space-y-2">
+                                        <label for="editTitle"
+                                            class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ __('Title') }}</label>
+                                        <input type="text" id="editTitle"
+                                            class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200">
+                                    </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Caption</label>
-                                    <textarea id="editCaption" class="form-control" rows="2"></textarea>
-                                </div>
+                                    <div class="space-y-2">
+                                        <label for="editCaption"
+                                            class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ __('Caption') }}</label>
+                                        <textarea id="editCaption" rows="2"
+                                            class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"></textarea>
+                                    </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Description</label>
-                                    <textarea id="editDescription" class="form-control" rows="2"></textarea>
+                                    <div class="space-y-2">
+                                        <label for="editDescription"
+                                            class="text-sm font-medium text-slate-700 dark:text-slate-200">{{ __('Description') }}</label>
+                                        <textarea id="editDescription" rows="3"
+                                            class="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200"></textarea>
+                                    </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
 
-                    <div class="modal-footer px-4 py-3">
-                        <button type="button" class="btn btn-secondary" data-pc-modal-dismiss="#editModal"
-                            id="closeEditModal">إلغاء</button>
-                        <button type="submit" class="btn btn-success">💾 حفظ التعديلات</button>
+                    <div
+                        class="modal-footer flex items-center justify-end gap-3 border-t border-slate-100 px-6 py-4 dark:border-slate-800">
+                        <button type="button"
+                            class="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                            data-pc-modal-dismiss="#editModal" id="closeEditModal">
+                            {{ __('Cancel') }}
+                        </button>
+                        <button type="submit"
+                            class="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 dark:bg-emerald-500 dark:hover:bg-emerald-400 dark:focus:ring-offset-slate-900">
+                            {{ __('Save changes') }}
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
     @endcan
 
-
-    <!-- زر سري لفتح مودال التعديل -->
     @can('edit', 'App\\Models\\Media')
-        <button type="button" class="btn btn-primary d-none hidden" data-pc-toggle="modal" data-pc-target="#editModal"
+        <button type="button" class="hidden" data-pc-toggle="modal" data-pc-target="#editModal"
             id="openEditModalBtn"></button>
     @endcan
 
-    <!-- زر سري لفتح مودال الحذف -->
     @can('delete', 'App\\Models\\Media')
-        <button type="button" class="btn btn-primary d-none hidden" data-pc-toggle="modal"
-            data-pc-target="#confirmDeleteModal" id="openDeleteModalBtn"></button>
+        <button type="button" class="hidden" data-pc-toggle="modal" data-pc-target="#confirmDeleteModal"
+            id="openDeleteModalBtn"></button>
     @endcan
 
     @push('scripts')
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script>
             $(document).ready(function() {
+                const grid = $('#mediaGrid');
+                const emptyState = $('#mediaEmptyState');
+
                 loadMedia();
 
-                console.log($().modal); // لازم تطلع function
-
-                // رفع صورة
-                $('#uploadForm').submit(function(e) {
+                $('#uploadForm').on('submit', function(e) {
                     e.preventDefault();
-                    let formData = new FormData(this);
+                    const formData = new FormData(this);
+
                     $.ajax({
                         url: "{{ route('dashboard.media.store') }}",
                         method: 'POST',
@@ -242,72 +223,86 @@
                     });
                 });
 
-                // جلب الصور
                 function loadMedia() {
                     $.get("{{ route('dashboard.media.index') }}", function(data) {
+                        const files = Array.isArray(data) ? data : [];
+
+                        if (!files.length) {
+                            grid.addClass('hidden').empty();
+                            emptyState.removeClass('hidden');
+                            return;
+                        }
+
+                        emptyState.addClass('hidden');
+                        grid.removeClass('hidden');
+
                         let html = '';
-                        data.forEach(item => {
+                        files.forEach(item => {
+                            const fallbackName = `{{ __('Untitled file') }}`;
+                            const itemName = item.name && item.name.length ? item.name : fallbackName;
+                            const altText = item.alt ?? '';
+
                             html += `
-    <div class="masonry-item position-relative overflow-hidden">
-        <img src="/storage/${item.file_path}" class="img-fluid media-image">
-        <div class="media-actions position-absolute top-0 end-0 p-2" style="display: none;">
+    <div class="group relative overflow-hidden rounded-2xl bg-white shadow-lg ring-1 ring-slate-200 transition-all hover:-translate-y-1 hover:shadow-2xl dark:bg-slate-800 dark:ring-slate-700">
+        <img src="/storage/${item.file_path}" alt="${altText}"
+            class="h-56 w-full object-cover object-center transition duration-300 group-hover:scale-105">
+        <div class="absolute inset-x-3 top-3 flex items-center justify-end gap-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
             @can('edit', 'App\\Models\\Media')
-            <button class="btn btn-sm btn-light border rounded-circle edit-btn" data-id="${item.id}" data-name="${item.name}" title="تعديل">
-                <i class="fas fa-pen text-secondary"></i>
+            <button class="edit-btn inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-slate-600 shadow ring-1 ring-slate-200 transition hover:bg-indigo-50 hover:text-indigo-600 dark:bg-slate-900/80 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-800"
+                data-id="${item.id}" data-name="${item.name ?? ''}" title="{{ __('Edit media') }}">
+                <i class="fas fa-pen text-xs"></i>
             </button>
             @endcan
             @can('delete', 'App\\Models\\Media')
-            <button class="btn btn-sm btn-light border rounded-circle me-1 delete-btn" data-id="${item.id}" title="حذف">
-                <i class="fas fa-trash text-danger"></i>
+            <button class="delete-btn inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-rose-500 shadow ring-1 ring-slate-200 transition hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-900/80 dark:text-rose-300 dark:ring-slate-700 dark:hover:bg-slate-800"
+                data-id="${item.id}" title="{{ __('Delete media') }}">
+                <i class="fas fa-trash text-xs"></i>
             </button>
             @endcan
         </div>
-        <div class="info text-center p-2">
-            <small>${item.name}</small>
+        <div class="border-t border-slate-100 bg-slate-50 px-4 py-3 text-center dark:border-slate-700 dark:bg-slate-900/70">
+            <p class="truncate text-sm font-medium text-slate-700 dark:text-slate-100">${itemName}</p>
         </div>
     </div>
 `;
-
                         });
-                        $('#mediaGrid').html(html);
+
+                        grid.html(html);
                     });
                 }
-
 
                 let deleteId = null;
 
                 $(document).on('click', '.delete-btn', function() {
                     deleteId = $(this).data('id');
-
-                    // افتح المودال بضغط الزر
-                    $('#openDeleteModalBtn').click();
+                    $('#openDeleteModalBtn').trigger('click');
                 });
 
-                $('#confirmDeleteBtn').click(function() {
-                    if (deleteId) {
-                        $.ajax({
-                            url: `{{ route('dashboard.media.destroy', ':id') }}`.replace(':id',
-                                deleteId),
-                            method: 'DELETE',
-                            data: {
-                                _token: '{{ csrf_token() }}'
-                            },
-                            success: function() {
-                                $('#closeDeleteModal').click();
-                                loadMedia();
-                            }
-                        });
+                $('#confirmDeleteBtn').on('click', function() {
+                    if (!deleteId) {
+                        return;
                     }
+
+                    $.ajax({
+                        url: `{{ route('dashboard.media.destroy', ':id') }}`.replace(':id', deleteId),
+                        method: 'DELETE',
+                        data: {
+                            _token: '{{ csrf_token() }}'
+                        },
+                        success: function() {
+                            $('#closeDeleteModal').trigger('click');
+                            loadMedia();
+                        }
+                    });
                 });
 
-                // فتح مودال تعديل
                 $(document).on('click', '.edit-btn', function() {
                     const id = $(this).data('id');
 
                     $.get(`{{ route('dashboard.media.edit', ':id') }}`.replace(':id', id), function(data) {
                         $('#editId').val(data.id);
-                        $('#infoName').text(data.name);
-                        $('#infoMime').text(data.mime_type);
+                        $('#infoName').text(data.name ?? '---');
+                        $('#infoMime').text(data.mime_type ?? '---');
                         $('#infoSize').text((data.size / 1024).toFixed(2));
                         $('#infoURL').val('/storage/' + data.file_path);
 
@@ -317,16 +312,15 @@
                         $('#editTitle').val(data.title || '');
                         $('#editCaption').val(data.caption || '');
                         $('#editDescription').val(data.description || '');
-                        // فتح المودال باستخدام الزر السري
-                        document.getElementById('openEditModalBtn').click();
+
+                        $('#openEditModalBtn').trigger('click');
                     });
                 });
 
-
-                // تنفيذ التعديل
-                $('#editForm').submit(function(e) {
+                $('#editForm').on('submit', function(e) {
                     e.preventDefault();
                     const id = $('#editId').val();
+
                     $.ajax({
                         url: `{{ route('dashboard.media.update', ':id') }}`.replace(':id', id),
                         method: 'PUT',
@@ -338,8 +332,7 @@
                             description: $('#editDescription').val()
                         },
                         success: function() {
-                            // $('#editModal').modal('hide');
-                            $('#closeEditModal').click();
+                            $('#closeEditModal').trigger('click');
                             loadMedia();
                         }
                     });

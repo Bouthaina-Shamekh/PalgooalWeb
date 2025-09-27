@@ -3,12 +3,13 @@
 ])
 
 @php
-    use App\Support\SeoMeta;
-    use Illuminate\Support\Str;
 
-    $metaInstance = $meta instanceof SeoMeta
-        ? $meta
-        : (is_null($meta) ? SeoMeta::defaults() : SeoMeta::fromArray((array) $meta));
+    $metaInstance =
+        $meta instanceof \App\Support\SeoMeta
+            ? $meta
+            : (is_null($meta)
+                ? \App\Support\SeoMeta::defaults()
+                : \App\Support\SeoMeta::fromArray((array) $meta));
 
     $data = $metaInstance->toArray();
     $title = $data['title'] ?? config('app.name');
@@ -33,7 +34,7 @@
 
     $image = $data['image'] ?? null;
     if ($image) {
-        $image = Str::startsWith($image, ['http://', 'https://']) ? $image : asset($image);
+        $image = \Illuminate\Support\Str::startsWith($image, ['http://', 'https://']) ? $image : asset($image);
     }
 
     $ogLocale = null;
@@ -128,14 +129,17 @@
     @php($href = $entry['href'] ?? null)
     @php($typeAttr = $entry['type'] ?? null)
     @if ($rel && $href)
-        <link rel="{{ $rel }}" href="{{ $href }}" @if ($typeAttr) type="{{ $typeAttr }}" @endif />
+        <link rel="{{ $rel }}" href="{{ $href }}"
+            @if ($typeAttr) type="{{ $typeAttr }}" @endif />
     @endif
 @endforeach
 
 {{-- Structured data --}}
 @foreach ($schemaEntries as $schema)
     @php
-        $json = is_string($schema) ? $schema : json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
+        $json = is_string($schema)
+            ? $schema
+            : json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
     @endphp
     @if ($json)
         <script type="application/ld+json">{!! $json !!}</script>
