@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('sections', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('page_id')->constrained()->onDelete('cascade'); // ربط الصفحة
+        // ربط الصفحة
             $table->string('key');    // نوع السكشن مثل: hero, features, blog
             $table->integer('order')->default(0); // لترتيب الظهور
             $table->timestamps();

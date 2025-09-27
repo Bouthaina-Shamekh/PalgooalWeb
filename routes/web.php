@@ -63,7 +63,7 @@ Route::middleware(['setLocale'])->group(function () {
     Route::get('/checkout/cart', [CheckoutController::class, 'cart'])->name('checkout.cart');
     Route::post('/checkout/cart/process', [CheckoutController::class, 'processCart'])->name('checkout.cart.process');
     // Allow processing without a template by making template_id optional
-    Route::post('/checkout/client/{template_id?}/process', [CheckoutController::class, 'process'])->name('checkout.process');
+    Route::post('/checkout/client/{template_id?}/process/{plan_id?}', [CheckoutController::class, 'process'])->name('checkout.process');
     // Store client-side cart into server session (AJAX)
     Route::post('/cart/store', [\App\Http\Controllers\Frontend\CartController::class, 'store'])->name('cart.store');
     // Clear domain-only cart from session (AJAX)

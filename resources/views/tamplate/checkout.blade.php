@@ -17,7 +17,8 @@
 
     // safe access: plan may be null when rendering cart-based checkout
     $basePricePlan =
-        (float) ($plan_sub_type == 'monthly' ? $plan?->monthly_price_cents ?? 0 : $plan?->annual_price_cents ?? 0) / 100;
+        (float) ($plan_sub_type == 'monthly' ? $plan?->monthly_price_cents ?? 0 : $plan?->annual_price_cents ?? 0) /
+        100;
 @endphp
 <x-template.layouts.index-layouts
     title="{{ t('Frontend.Checkout', 'Checkout') }} - {{ t('Frontend.Palgoals', 'Palgoals') }}"
@@ -25,18 +26,22 @@
     ogImage="{{ asset('assets/dashboard/images/logo-white.svg') }}">
 
     @php
-        $processActionUrl = (empty($template_id) && empty($plan_id))
-            ? route('checkout.cart.process')
-            : (!empty($template_id)
-                ? route('checkout.process', ['template_id' => $template_id])
-                : route('checkout.process', ['plan_id' => $plan_id]));
+        if (empty($template_id) && empty($plan_id)) {
+            $processActionUrl = route('checkout.cart.process');
+        } elseif (!empty($template_id)) {
+            $processActionUrl = route('checkout.process', ['template_id' => $template_id]);
+        } elseif (!empty($plan_id)) {
+            // نحط 0 مكان template_id
+            $processActionUrl = route('checkout.process', ['template_id' => 0, 'plan_id' => $plan_id, 'plan_sub_type' => $plan_sub_type]);
+        }
     @endphp
 
     <script>
-        (function () {
+        (function() {
             const KEY = 'palgoals:theme';
             const root = document.documentElement;
             const prefersDark = () => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
             function apply(mode) {
                 const isDark = mode === 'dark' ? true : (mode === 'light' ? false : prefersDark());
                 root.classList.toggle('dark', isDark);
@@ -51,8 +56,9 @@
                     mq.addEventListener && mq.addEventListener('change', () => apply('system'));
                 }
                 // Expose toggler
-                window.__setTheme = function (mode) {
-                    if (mode === 'system') localStorage.removeItem(KEY); else localStorage.setItem(KEY, mode);
+                window.__setTheme = function(mode) {
+                    if (mode === 'system') localStorage.removeItem(KEY);
+                    else localStorage.setItem(KEY, mode);
                     apply(mode);
                 }
             } catch (_) {}
@@ -60,7 +66,8 @@
     </script>
 
     <div class="fixed left-3 bottom-3 z-50">
-        <div class="inline-flex overflow-hidden rounded-xl border border-gray-200 bg-white/95 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95 shadow">
+        <div
+            class="inline-flex overflow-hidden rounded-xl border border-gray-200 bg-white/95 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95 shadow">
             <button type="button" data-theme-btn="light" onclick="window.__setTheme('light')"
                 class="px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 dark:text-gray-300 dark:hover:bg-gray-800"
                 title="وضع فاتح" aria-label="وضع فاتح">☀️</button>
@@ -72,7 +79,7 @@
                 title="مطابق للنظام" aria-label="مطابق للنظام">🖥️</button>
         </div>
         <script>
-            document.addEventListener('DOMContentLoaded', function () {
+            document.addEventListener('DOMContentLoaded', function() {
                 const KEY = 'palgoals:theme';
                 const saved = localStorage.getItem(KEY) || 'system';
                 const setActive = (mode) => {
@@ -83,7 +90,7 @@
                     });
                 };
                 setActive(saved);
-                window.__setTheme && ['light','dark','system'].forEach(mode => {
+                window.__setTheme && ['light', 'dark', 'system'].forEach(mode => {
                     const el = document.querySelector(`[data-theme-btn="${mode}"]`);
                     el && el.addEventListener('click', () => setActive(mode));
                 });
@@ -272,7 +279,8 @@
                         </li>
                         <li class="flex justify-between rv-template-info">
                             <span>مدة الاشتراك</span>
-                            <span class="font-semibold">{{ $plan_sub_type === 'monthly' ? 'شهري' : 'سنوي' }}</span></li>
+                            <span class="font-semibold">{{ $plan_sub_type === 'monthly' ? 'شهري' : 'سنوي' }}</span>
+                        </li>
                         <li class="flex justify-between rv-template-info"><span>سعر الخطة</span><span
                                 class="font-semibold">
                                 ${{ number_format($basePricePlan, 2) }}
@@ -410,7 +418,8 @@
                 <div id="chooseTemplateAfterRemove"
                     class="hidden rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4 mb-6">
                     <div class="font-bold text-amber-800 dark:text-amber-200 mb-1">تم حذف القالب والخطة.</div>
-                    <p class="text-sm text-amber-700 dark:text-amber-300">هل تريد اختيار قالب او خطة للموقع قبل الدفع؟</p>
+                    <p class="text-sm text-amber-700 dark:text-amber-300">هل تريد اختيار قالب او خطة للموقع قبل الدفع؟
+                    </p>
                     <div class="mt-3 flex gap-2">
                         <a id="chooseTemplateLink2" href="/templates"
                             class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار
@@ -637,8 +646,7 @@
                     </div>
                 </div>
 
-                <form id="checkoutForm" method="POST"
-                    action="{{ $processActionUrl }}">
+                <form id="checkoutForm" method="POST" action="{{ $processActionUrl }}">
                     {{-- action="{{ $template_id ? route('checkout.process', ['template_id' => $template_id]) : route('checkout.cart.process') }}"> --}}
                     @csrf
                     <input type="hidden" name="domain" id="orderDomainInput" value="">
@@ -678,16 +686,16 @@
                 </div>
                 <hr class="my-4 border-gray-200 dark:border-gray-800" />
                 <div class="flex justify-between font-bold text-lg"><span>الإجمالي المستحق</span><span id="sumTotal2">
-                    @if($template)
-                        @if ($showDiscount)
-                            <span class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
-                            <span class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
+                        @if ($template)
+                            @if ($showDiscount)
+                                <span class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
+                                <span class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
+                            @else
+                                ${{ number_format($basePrice, 2) }}
+                            @endif
                         @else
-                            ${{ number_format($basePrice, 2) }}
+                            ${{ number_format($basePricePlan, 2) }}
                         @endif
-                    @else
-                        ${{ number_format($basePricePlan, 2) }}
-                    @endif
                     </span></div>
             </aside>
         </div>
@@ -981,7 +989,8 @@
 
         // حساب الإجماليات (دومين + القالب - الخصم + ضريبة)
         function updateTotals(domainCents) {
-            const subtotal = (HAS_TEMPLATE ? TEMPLATE_CENTS : 0) + (HAS_PLAN ? PLAN_CENTS : 0) + Math.max(0, domainCents | 0);
+            const subtotal = (HAS_TEMPLATE ? TEMPLATE_CENTS : 0) + (HAS_PLAN ? PLAN_CENTS : 0) + Math.max(0, domainCents |
+                0);
             const tax = 0;
             const discount = Math.min(window.__couponDiscountCents | 0, subtotal);
             const total = Math.max(0, subtotal - discount + tax);

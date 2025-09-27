@@ -102,8 +102,10 @@ class CheckoutController extends Controller
         $translation = $plan?->translations()->where('locale', app()->getLocale())->first();
         $plan_name = $translation?->name ?? $plan?->name ?? '';
 
-        $basePricePlan = (float) ($plan->monthly_price_cents ?? 0);
-        $annualPricePlan = (float) ($plan->annual_price_cents ?? 0);
+        $monthlyPricePlan = (float) ($plan->monthly_price_cents / 100 ?? 0);
+        $annualPricePlan = (float) ($plan->annual_price_cents / 100 ?? 0);
+        $plan_sub_type = $request->query('plan_sub_type');
+        $basePricePlan = $plan_sub_type == 'monthly' ? $monthlyPricePlan : $annualPricePlan;
         $discRawPlan   = $plan->discount_price ?? 0;
         $discPricePlan = $discRawPlan > 0 ? (float) $discRawPlan : null;
         $hasDiscountPlan  = !is_null($discPricePlan) && $discPricePlan > 0 && $discPricePlan < $basePricePlan;
@@ -146,7 +148,6 @@ class CheckoutController extends Controller
                 $discPrice,
                 $showDiscount,
                 $basePricePlan,
-                $annualPricePlan,
                 $discPricePlan,
                 $showDiscountPlan,
                 $normalizedOption,
@@ -227,7 +228,7 @@ class CheckoutController extends Controller
                         'invoice_id'       => $invoice->id,
                         'item_type'        => 'subscription',
                         'reference_id'     => !$isNotTemplate ? $template_id : ($isNotPlan ? $plan_id : null),
-                        'description'      => !$isNotTemplate ? $template_name : ($isNotPlan ? $plan_name : null),
+                        'description'      => !$isNotTemplate ? $template_name : ($isNotPlan ? $plan->name : ''),
                         'qty'              => 1,
                         'unit_price_cents' => !$isNotTemplate ? $unitCents : $unitCentsPlan,
                         'total_cents'      => !$isNotTemplate ? $unitCents : $unitCentsPlan,
@@ -375,7 +376,7 @@ class CheckoutController extends Controller
             ]);
         } catch (\Throwable $e) {
             Log::error('CheckoutController::process failed', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'message' => 'تعذر إتمام عملية الدفع الآن.'], 500);
+            return response()->json(['success' => false, 'message' => 'تعذر إتمام عملية الدفع الآن.', 'error' => $e->getMessage()], 500);
         }
     }
 
