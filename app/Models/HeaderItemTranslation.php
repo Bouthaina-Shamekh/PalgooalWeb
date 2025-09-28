@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class HeaderItemTranslation extends Model
 {
-    protected $fillable = ['header_item_id', 'locale', 'label'];
+    protected $fillable = ['header_item_id', 'locale', 'label', 'url'];
 
     public function headerItem(): BelongsTo
     {

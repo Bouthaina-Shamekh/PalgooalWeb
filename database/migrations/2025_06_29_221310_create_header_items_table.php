@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('header_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('header_id')->constrained()->onDelete('cascade');
-            $table->string('type')->default('link'); // 'link' أو 'dropdown'
-            $table->string('url')->nullable();
+            $table->string('type')->default('link'); // 'link', 'page', أو 'dropdown'
+            $table->foreignId('page_id')->nullable()->constrained('pages')->onDelete('set null');
             $table->json('children')->nullable(); // روابط dropdown إن وجدت
             $table->integer('order')->default(0);
             $table->timestamps();

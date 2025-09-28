@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('header_item_id')->constrained()->onDelete('cascade');
             $table->string('locale'); // 'ar' أو 'en'
             $table->string('label');
+            $table->string('url')->nullable(); // رابط خاص بكل ترجمة
             $table->timestamps();
         });
     }
