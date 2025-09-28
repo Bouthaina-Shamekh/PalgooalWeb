@@ -159,7 +159,8 @@
                                             <div class="space-y-4">
                                                 <div>
                                                     <label class="block mb-1 font-semibold">اسم القائمة
-                                                        ({{ $lang->native }})</label>
+                                                        ({{ $lang->native }})
+                                                    </label>
                                                     <input wire:model="newItem.translations.{{ $lang->code }}.label"
                                                         type="text" class="w-full border p-2 rounded mb-1"
                                                         placeholder="أدخل اسم القائمة المنسدلة" />
@@ -330,14 +331,14 @@
                     <span class="badge bg-primary">{{ count($items) }} عنصر</span>
                 </div>
                 <div class="card-body">
-                    @if(count($items) > 0)
+                    @if (count($items) > 0)
                         <div class="mb-3 p-3 bg-light rounded">
                             <small class="text-muted d-flex align-items-center gap-2">
                                 <i class="ti ti-info-circle"></i>
                                 يمكنك إعادة ترتيب العناصر بالسحب والإفلات
                             </small>
                         </div>
-                        
+
                         <div id="sortable-header-items" class="space-y-3">
                             @foreach ($items as $index => $item)
                                 <div data-index="{{ $index }}" wire:key="item-{{ $item['id'] }}"
@@ -347,28 +348,31 @@
                                             <!-- محتوى العنصر -->
                                             <div class="d-flex align-items-start gap-3 flex-grow-1">
                                                 <!-- أيقونة السحب -->
-                                                <div class="cursor-grab text-muted hover:text-primary transition-colors pt-1" 
-                                                     title="اسحب لإعادة الترتيب">
+                                                <div class="cursor-grab text-muted hover:text-primary transition-colors pt-1"
+                                                    title="اسحب لإعادة الترتيب">
                                                     <i class="ti ti-grip-vertical fs-5"></i>
                                                 </div>
-                                                
+
                                                 <!-- أيقونة النوع -->
                                                 <div class="pt-1">
                                                     @if ($item['type'] === 'link')
-                                                        <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg d-flex align-items-center justify-content-center">
+                                                        <div
+                                                            class="w-8 h-8 bg-blue-100 text-blue-600 rounded-lg d-flex align-items-center justify-content-center">
                                                             <i class="ti ti-link text-sm"></i>
                                                         </div>
                                                     @elseif ($item['type'] === 'page')
-                                                        <div class="w-8 h-8 bg-green-100 text-green-600 rounded-lg d-flex align-items-center justify-content-center">
+                                                        <div
+                                                            class="w-8 h-8 bg-green-100 text-green-600 rounded-lg d-flex align-items-center justify-content-center">
                                                             <i class="ti ti-file-text text-sm"></i>
                                                         </div>
                                                     @elseif ($item['type'] === 'dropdown')
-                                                        <div class="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg d-flex align-items-center justify-content-center">
+                                                        <div
+                                                            class="w-8 h-8 bg-purple-100 text-purple-600 rounded-lg d-flex align-items-center justify-content-center">
                                                             <i class="ti ti-chevron-down text-sm"></i>
                                                         </div>
                                                     @endif
                                                 </div>
-                                                
+
                                                 <!-- معلومات العنصر -->
                                                 <div class="flex-grow-1">
                                                     <h6 class="mb-1 fw-semibold">
@@ -378,7 +382,7 @@
                                                             {{ $item['translations'][app()->getLocale()]['label'] ?? 'بدون عنوان' }}
                                                         @endif
                                                     </h6>
-                                                    
+
                                                     <!-- نوع العنصر -->
                                                     <div class="mb-2">
                                                         @if ($item['type'] === 'link')
@@ -392,13 +396,14 @@
                                                         @elseif ($item['type'] === 'dropdown')
                                                             <span class="badge bg-purple-subtle text-purple-emphasis">
                                                                 <i class="ti ti-chevron-down me-1"></i>قائمة منسدلة
-                                                                @if(!empty($item['children']))
-                                                                    <small>({{ count($item['children']) }} عنصر فرعي)</small>
+                                                                @if (!empty($item['children']))
+                                                                    <small>({{ count($item['children']) }} عنصر
+                                                                        فرعي)</small>
                                                                 @endif
                                                             </span>
                                                         @endif
                                                     </div>
-                                                    
+
                                                     <!-- الرابط -->
                                                     <small class="text-muted d-block">
                                                         @if ($item['type'] === 'page' && $item['page_title'])
@@ -414,7 +419,7 @@
                                                     </small>
                                                 </div>
                                             </div>
-                                            
+
                                             <!-- أزرار الإجراءات -->
                                             <div class="d-flex gap-1">
                                                 <button wire:click="editItem({{ $item['id'] }})"
@@ -507,45 +512,87 @@
     </script>
 
     <style>
-        .w-8 { width: 2rem; }
-        .h-8 { height: 2rem; }
-        .space-y-3 > * + * { margin-top: 0.75rem; }
-        
+        .w-8 {
+            width: 2rem;
+        }
+
+        .h-8 {
+            height: 2rem;
+        }
+
+        .space-y-3>*+* {
+            margin-top: 0.75rem;
+        }
+
         .cursor-grab:hover {
             cursor: grab;
         }
-        
+
         .cursor-grab:active {
             cursor: grabbing;
         }
-        
+
         .sortable-ghost {
             opacity: 0.5;
             background: #f8f9fa;
             border: 2px dashed #dee2e6;
         }
-        
+
         #sortable-header-items .card:hover {
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             transform: translateY(-2px);
             transition: all 0.2s ease;
         }
-        
+
         .badge {
             font-size: 0.75rem;
         }
-        
-        .bg-blue-subtle { background-color: #e7f3ff; }
-        .text-blue-emphasis { color: #0056b3; }
-        .bg-green-subtle { background-color: #d1e7dd; }
-        .text-green-emphasis { color: #0a3622; }
-        .bg-purple-subtle { background-color: #e2d9f3; }
-        .text-purple-emphasis { color: #432874; }
-        
-        .bg-blue-100 { background-color: #dbeafe; }
-        .text-blue-600 { color: #2563eb; }
-        .bg-green-100 { background-color: #dcfce7; }
-        .text-green-600 { color: #16a34a; }
-        .bg-purple-100 { background-color: #f3e8ff; }
-        .text-purple-600 { color: #9333ea; }
+
+        .bg-blue-subtle {
+            background-color: #e7f3ff;
+        }
+
+        .text-blue-emphasis {
+            color: #0056b3;
+        }
+
+        .bg-green-subtle {
+            background-color: #d1e7dd;
+        }
+
+        .text-green-emphasis {
+            color: #0a3622;
+        }
+
+        .bg-purple-subtle {
+            background-color: #e2d9f3;
+        }
+
+        .text-purple-emphasis {
+            color: #432874;
+        }
+
+        .bg-blue-100 {
+            background-color: #dbeafe;
+        }
+
+        .text-blue-600 {
+            color: #2563eb;
+        }
+
+        .bg-green-100 {
+            background-color: #dcfce7;
+        }
+
+        .text-green-600 {
+            color: #16a34a;
+        }
+
+        .bg-purple-100 {
+            background-color: #f3e8ff;
+        }
+
+        .text-purple-600 {
+            color: #9333ea;
+        }
     </style>
