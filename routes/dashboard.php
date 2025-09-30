@@ -13,6 +13,7 @@ use App\Http\Controllers\Dashboard\Management\ServerController;
 use App\Http\Controllers\Dashboard\Management\SubscriptionController;
 use App\Http\Controllers\Dashboard\MediaController;
 use App\Http\Controllers\Dashboard\ServicesController;
+use App\Http\Controllers\Dashboard\FeedbacksController;
 use App\Http\Controllers\Dashboard\TranslationValueController;
 use App\Http\Controllers\Dashboard\ServicesTranslationController;
 use App\Http\Controllers\Dashboard\TemplateController;
@@ -54,14 +55,8 @@ Route::group([
     // Import Translations
     Route::post('translation-values/import', [TranslationValueController::class, 'import'])->name('translation-values.import');
 
-    Route::get('services', function () {
-        return view('dashboard.services');
-    })->name('services');
-
-    Route::get('feedbacks', function () {
-        return view('dashboard.feedbacks');
-    })->name('feedbacks');
-
+    Route::resource('services', ServicesController::class);
+    Route::resource('feedbacks', FeedbacksController::class);
     Route::resource('portfolios', PortfolioController::class);
 
     Route::get('clients', function () {

@@ -99,7 +99,7 @@
                 @endcan
                 @can('view', 'App\\Models\\Service')
                     <li class="pc-item">
-                        <a href="{{ route('dashboard.services') }}" class="pc-link">
+                        <a href="{{ route('dashboard.services.index') }}" class="pc-link">
                             <span class="pc-micon">
                                 <span class="pc-micon">
                                     <i class="fas fa-briefcase"></i>
@@ -111,7 +111,7 @@
                 @endcan
                 @can('view', 'App\\Models\Feedback')
                     <li class="pc-item">
-                        <a href="{{ route('dashboard.feedbacks') }}" class="pc-link">
+                        <a href="{{ route('dashboard.feedbacks.index') }}" class="pc-link">
                             <span class="pc-micon">
                                 <span class="pc-micon">
                                     <i class="fas fa-star"></i>
