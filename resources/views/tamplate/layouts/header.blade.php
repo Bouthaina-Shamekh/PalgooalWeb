@@ -5,7 +5,7 @@
     <div class="flex items-center justify-between py-3 px-4 md:px-8 lg:px-24 h-20">
         <!-- Logo -->
         <a href="/" class="flex items-center gap-2 group">
-            <img src="{{ asset('assets/tamplate/images/logo.svg') }}" alt="Palgoals Logo" loading="eager"
+            <img src="{{$settings?->logo ? asset('storage/' . $settings->logo) : asset('assets/tamplate/images/logo.svg') }}" alt="Palgoals Logo" loading="eager"
                 fetchpriority="high"
                 class="h-10 w-auto transition-transform group-hover:scale-105 will-change-transform" />
         </a>

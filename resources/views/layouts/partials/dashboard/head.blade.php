@@ -16,7 +16,7 @@
     <meta name="author" content="Phoenixcoded" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <!-- [Favicon] icon -->
-    <link rel="icon" href="{{ asset('assets/dashboard/images/favicon.svg') }}" type="image/x-icon" />
+    <link rel="icon" href="{{$settings?->favicon ? asset('storage/' . $settings->favicon) : asset('assets/images/favicon.ico') }}" type="image/x-icon">
     <!-- [Font] Family -->
     <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/inter/inter.css') }}" id="main-font-link" />
     <!-- [phosphor Icons] https://phosphoricons.com/ -->

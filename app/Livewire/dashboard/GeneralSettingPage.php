@@ -53,6 +53,18 @@ class GeneralSettingPage extends Component
         'favicon' => '',
         'favicon_url' => '',
         'default_language' => '',
+        'contact_info' => [
+            'phone' => '',
+            'email' => '',
+            'address' => '',
+        ],
+        'social_links' => [
+            'facebook' => '',
+            'twitter' => '',
+            'linkedin' => '',
+            'instagram' => '',
+            'whatsapp' => '',
+        ],
     ];
 
     public $languages = [];
@@ -77,6 +89,19 @@ class GeneralSettingPage extends Component
             'favicon' => '',
             'favicon_url' => $generalSetting->favicon,
             'default_language' => $generalSetting->default_language,
+            'contact_info' => $generalSetting->contact_info ?? [
+                'phone' => '',
+                'email' => '',
+                'address' => '',
+            ],
+
+            'social_links' => $generalSetting->social_links ?? [
+                'facebook' => '',
+                'twitter' => '',
+                'linkedin' => '',
+                'instagram' => '',
+                'whatsapp' => '',
+            ],
         ];
         $this->languages = Language::all();
     }
@@ -100,6 +125,18 @@ class GeneralSettingPage extends Component
             'favicon' => '',
             'favicon_url' => '',
             'default_language' => '',
+            'contact_info' => [
+                'phone' => '',
+                'email' => '',
+                'address' => '',
+            ],
+            'social_links' => [
+                'facebook' => '',
+                'twitter' => '',
+                'linkedin' => '',
+                'instagram' => '',
+                'whatsapp' => '',
+            ],
         ];
     }
 
@@ -116,6 +153,15 @@ class GeneralSettingPage extends Component
             'generalSetting.admin_dark_logo' => 'nullable|image',
             'generalSetting.favicon' => 'nullable|image',
             'generalSetting.default_language' => 'required',
+            'generalSetting.contact_info.phone' => 'nullable|string',
+            'generalSetting.contact_info.email' => 'nullable|email',
+            'generalSetting.contact_info.address' => 'nullable|string',
+
+            'generalSetting.social_links.facebook' => 'nullable|url',
+            'generalSetting.social_links.twitter' => 'nullable|url',
+            'generalSetting.social_links.linkedin' => 'nullable|url',
+            'generalSetting.social_links.instagram' => 'nullable|url',
+            'generalSetting.social_links.whatsapp' => 'nullable|url',
         ]);
 
         $generalSettingValidated = $validated['generalSetting'];

@@ -1,5 +1,6 @@
 <div>
-    <div class="alert alert-{{ $alertType }}  justify-between items-center {{ $alert === false ? 'hidden' : 'flex' }}">
+    <div
+        class="alert alert-{{ $alertType }}  justify-between items-center {{ $alert === false ? 'hidden' : 'flex' }}">
         {{ $alertMessage }}
         <button type="button" class="btn-close" wire:click="closeModal">
             <span class="pc-micon">
@@ -11,8 +12,10 @@
     <div class="page-header">
         <div class="page-block">
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home')}}</a></li>
-                <li class="breadcrumb-item"><a href="javascript: void(0)">{{ t('dashboard.General_Setting', 'General Setting')}}</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home') }}</a>
+                </li>
+                <li class="breadcrumb-item"><a
+                        href="javascript: void(0)">{{ t('dashboard.General_Setting', 'General Setting') }}</a></li>
             </ul>
             <div class="page-header-title">
                 <h2 class="mb-0">General Setting</h2>
@@ -28,138 +31,223 @@
                     <h5 class="mb-0">General Setting</h5>
                 </div>
                 <div class="card-body">
-                    {{--Success messages--}}
+                    {{-- Success messages --}}
                     @if (session()->has('success'))
-                    <div class="alert alert-success" role="alert">
-                        {{ session('success') }}
-                    </div>
+                        <div class="alert alert-success" role="alert">
+                            {{ session('success') }}
+                        </div>
                     @endif
                     <form wire:submit.prevent="save" class="grid grid-cols-12 gap-x-6">
                         <!-- Site Title -->
                         <div class="col-span-12 md:col-span-6">
-                            <x-form.input
-                                name="site_title"
-                                wire:model="generalSetting.site_title"
-                                label="Site Title" />
-                            @error('generalSetting.site_title') <span class="text-red-600">{{ $message }}</span> @enderror
+                            <x-form.input name="site_title" wire:model="generalSetting.site_title" label="Site Title" />
+                            @error('generalSetting.site_title')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <!-- Site Discretion -->
                         <div class="col-span-12 md:col-span-6">
-                            <x-form.input
-                                name="site_discretion"
-                                wire:model="generalSetting.site_discretion"
+                            <x-form.input name="site_discretion" wire:model="generalSetting.site_discretion"
                                 label="Site Discretion" />
-                            @error('generalSetting.site_discretion') <span class="text-red-600">{{ $message }}</span> @enderror
+                            @error('generalSetting.site_discretion')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <!-- Logo -->
                         <div class="col-span-12 md:col-span-6">
                             <label class="form-label">Logo</label>
-                            <input type="file"
-                                wire:model="generalSetting.logo"
-                                accept="image/*"
+                            <input type="file" wire:model="generalSetting.logo" accept="image/*"
                                 class="form-control" />
                             @if ($generalSetting['logo_url'])
-                                <img src="{{ asset('storage/' . $generalSetting['logo_url']) }}" width="50" alt="Logo" class="mt-2">
+                                <img src="{{ asset('storage/' . $generalSetting['logo_url']) }}" width="50"
+                                    alt="Logo" class="mt-2">
                             @endif
-                            @error('generalSetting.logo') <span class="text-red-600">{{ $message }}</span> @enderror
+                            @error('generalSetting.logo')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <!-- Dark Logo -->
                         <div class="col-span-12 md:col-span-6">
                             <label class="form-label">Dark Logo</label>
-                            <input type="file"
-                                wire:model="generalSetting.dark_logo"
-                                accept="image/*"
+                            <input type="file" wire:model="generalSetting.dark_logo" accept="image/*"
                                 class="form-control" />
                             @if ($generalSetting['dark_logo_url'])
-                                <img src="{{ asset('storage/' . $generalSetting['dark_logo_url']) }}" width="50" alt="Dark Logo" class="mt-2">
+                                <img src="{{ asset('storage/' . $generalSetting['dark_logo_url']) }}" width="50"
+                                    alt="Dark Logo" class="mt-2">
                             @endif
-                            @error('generalSetting.dark_logo') <span class="text-red-600">{{ $message }}</span> @enderror
+                            @error('generalSetting.dark_logo')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <!-- Sticky Logo -->
                         <div class="col-span-12 md:col-span-6">
                             <label class="form-label">Sticky Logo</label>
-                            <input type="file"
-                                wire:model="generalSetting.sticky_logo"
-                                accept="image/*"
+                            <input type="file" wire:model="generalSetting.sticky_logo" accept="image/*"
                                 class="form-control" />
                             @if ($generalSetting['sticky_logo_url'])
-                                <img src="{{ asset('storage/' . $generalSetting['sticky_logo_url']) }}" width="50" alt="Sticky Logo" class="mt-2">
+                                <img src="{{ asset('storage/' . $generalSetting['sticky_logo_url']) }}" width="50"
+                                    alt="Sticky Logo" class="mt-2">
                             @endif
-                            @error('generalSetting.sticky_logo') <span class="text-red-600">{{ $message }}</span> @enderror
+                            @error('generalSetting.sticky_logo')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <!-- Dark Sticky Logo -->
                         <div class="col-span-12 md:col-span-6">
                             <label class="form-label">Dark Sticky Logo</label>
-                            <input type="file"
-                                wire:model="generalSetting.dark_sticky_logo"
-                                accept="image/*"
+                            <input type="file" wire:model="generalSetting.dark_sticky_logo" accept="image/*"
                                 class="form-control" />
                             @if ($generalSetting['dark_sticky_logo_url'])
-                                <img src="{{ asset('storage/' . $generalSetting['dark_sticky_logo_url']) }}" width="50" alt="Dark Sticky Logo" class="mt-2">
+                                <img src="{{ asset('storage/' . $generalSetting['dark_sticky_logo_url']) }}"
+                                    width="50" alt="Dark Sticky Logo" class="mt-2">
                             @endif
-                            @error('generalSetting.dark_sticky_logo') <span class="text-red-600">{{ $message }}</span> @enderror
+                            @error('generalSetting.dark_sticky_logo')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <!-- Admin Logo -->
                         <div class="col-span-12 md:col-span-6">
                             <label class="form-label">Admin Logo</label>
-                            <input type="file"
-                                wire:model="generalSetting.admin_logo"
-                                accept="image/*"
+                            <input type="file" wire:model="generalSetting.admin_logo" accept="image/*"
                                 class="form-control" />
                             @if ($generalSetting['admin_logo_url'])
-                                <img src="{{ asset('storage/' . $generalSetting['admin_logo_url']) }}" width="50" alt="Admin Logo" class="mt-2">
+                                <img src="{{ asset('storage/' . $generalSetting['admin_logo_url']) }}" width="50"
+                                    alt="Admin Logo" class="mt-2">
                             @endif
-                            @error('generalSetting.admin_logo') <span class="text-red-600">{{ $message }}</span> @enderror
+                            @error('generalSetting.admin_logo')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <!-- Admin Dark Logo -->
                         <div class="col-span-12 md:col-span-6">
                             <label class="form-label">Admin Dark Logo</label>
-                            <input type="file"
-                                wire:model="generalSetting.admin_dark_logo"
-                                accept="image/*"
+                            <input type="file" wire:model="generalSetting.admin_dark_logo" accept="image/*"
                                 class="form-control" />
                             @if ($generalSetting['admin_dark_logo_url'])
-                                <img src="{{ asset('storage/' . $generalSetting['admin_dark_logo_url']) }}" width="50" alt="Admin Dark Logo" class="mt-2">
+                                <img src="{{ asset('storage/' . $generalSetting['admin_dark_logo_url']) }}"
+                                    width="50" alt="Admin Dark Logo" class="mt-2">
                             @endif
-                            @error('generalSetting.admin_dark_logo') <span class="text-red-600">{{ $message }}</span> @enderror
+                            @error('generalSetting.admin_dark_logo')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <!-- Favicon -->
                         <div class="col-span-12 md:col-span-6">
                             <label class="form-label">Favicon</label>
-                            <input type="file"
-                                wire:model="generalSetting.favicon"
-                                accept="image/*"
+                            <input type="file" wire:model="generalSetting.favicon" accept="image/*"
                                 class="form-control" />
                             @if ($generalSetting['favicon_url'])
-                                <img src="{{ asset('storage/' . $generalSetting['favicon_url']) }}" width="50" alt="Favicon" class="mt-2">
+                                <img src="{{ asset('storage/' . $generalSetting['favicon_url']) }}" width="50"
+                                    alt="Favicon" class="mt-2">
                             @endif
-                            @error('generalSetting.favicon') <span class="text-red-600">{{ $message }}</span> @enderror
+                            @error('generalSetting.favicon')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <!-- Default Language -->
                         <div class="col-span-12 md:col-span-6">
+                            <label class="form-label">Default Language</label>
                             <select wire:model="generalSetting.default_language" class="form-control">
                                 <option value="">Select Language</option>
                                 @foreach ($languages as $language)
-                                    <option value="{{ $language['id'] }}" @selected($language['id'] == $generalSetting['default_language'])>{{ $language['name'] . ' - ' . $language['native'] }}</option>
+                                    <option value="{{ $language['id'] }}" @selected($language['id'] == $generalSetting['default_language'])>
+                                        {{ $language['name'] . ' - ' . $language['native'] }}</option>
                                 @endforeach
                             </select>
-                            @error('generalSetting.default_language') <span class="text-red-600">{{ $message }}</span> @enderror
+                            @error('generalSetting.default_language')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <!-- Contact Info -->
+                        <div class="col-span-12">
+                            <h3 class="font-bold text-lg mb-3">بيانات التواصل</h3>
+                        </div>
+
+                        <div class="col-span-12 md:col-span-6">
+                            <x-form.input name="contact_info.phone" wire:model="generalSetting.contact_info.phone"
+                                label="رقم الهاتف" />
+                            @error('generalSetting.contact_info.phone')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="col-span-12 md:col-span-6">
+                            <x-form.input name="contact_info.email" wire:model="generalSetting.contact_info.email"
+                                label="البريد الإلكتروني" />
+                            @error('generalSetting.contact_info.email')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="col-span-12 md:col-span-6">
+                            <x-form.input name="contact_info.address" wire:model="generalSetting.contact_info.address"
+                                label="العنوان" />
+                            @error('generalSetting.contact_info.address')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+
+
+                        <!-- Social Links -->
+                        <div class="col-span-12">
+                            <h3 class="font-bold text-lg mb-3">مواقع التواصل</h3>
+                        </div>
+
+                        <div class="col-span-12 md:col-span-6">
+                            <x-form.input name="social_links.facebook"
+                                wire:model="generalSetting.social_links.facebook" type="url" label="Facebook" />
+                            @error('generalSetting.social_links.facebook')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="col-span-12 md:col-span-6">
+                            <x-form.input name="social_links.twitter" wire:model="generalSetting.social_links.twitter"
+                                type="url" label="Twitter/X" />
+                            @error('generalSetting.social_links.twitter')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="col-span-12 md:col-span-6">
+                            <x-form.input name="social_links.linkedin"
+                                wire:model="generalSetting.social_links.linkedin" type="url" label="LinkedIn" />
+                            @error('generalSetting.social_links.linkedin')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
+                        </div>
+
+                        <div class="col-span-12 md:col-span-6">
+                            <x-form.input name="social_links.instagram"
+                                wire:model="generalSetting.social_links.instagram" type="url" label="Instagram" />
+                            @error('generalSetting.social_links.instagram')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
+                        </div>
+                        <div class="col-span-12 md:col-span-6">
+                            <x-form.input name="social_links.whatsapp"
+                                wire:model="generalSetting.social_links.whatsapp" type="url" label="رقم واتساب" />
+                            @error('generalSetting.social_links.whatsapp')
+                                <span class="text-red-600">{{ $message }}</span>
+                            @enderror
                         </div>
 
                         <!-- Buttons -->
                         <div class="col-span-12 text-right">
                             <button type="button" wire:click="showIndex" class="btn btn-secondary">Cancel</button>
-                            @can('edit','App\\Models\\GeneralSetting')
-                            <button type="submit" class="btn btn-primary">Submit</button>
+                            @can('edit', 'App\\Models\\GeneralSetting')
+                                <button type="submit" class="btn btn-primary">Submit</button>
                             @endcan
                         </div>
                     </form>

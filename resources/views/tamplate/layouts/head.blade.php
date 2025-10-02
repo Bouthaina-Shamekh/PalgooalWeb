@@ -9,8 +9,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- Favicons -->
-    <link rel="icon" href="{{ asset('assets/images/favicon.ico') }}" type="image/x-icon">
+    <link rel="icon" href="{{$settings?->favicon ? asset('storage/' . $settings->favicon) : asset('assets/images/favicon.ico') }}" type="image/x-icon">
 
+    <title>{{$settings?->site_title ?? 'Palgooal'}}</title>
     <!-- Fonts and Styles -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

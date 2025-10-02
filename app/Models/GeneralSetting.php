@@ -18,6 +18,14 @@ class GeneralSetting extends Model
         'admin_dark_logo',
         'favicon',
         'default_language',
+        'contact_info',    // جديد
+        'social_links',    // جديد
+    ];
+
+
+    protected $casts = [
+        'contact_info' => 'array',
+        'social_links' => 'array',
     ];
 
     public function language()

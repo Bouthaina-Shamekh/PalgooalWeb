@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\GeneralSetting;
 use App\Models\Language;
 use App\Models\Page;
 use App\Models\User;
@@ -43,10 +44,12 @@ class AppServiceProvider extends ServiceProvider
             $currentLocale = app()->getLocale();
             $currentLanguage = Language::where('code', $currentLocale)->first();
             $languages = Language::where('is_active', true)->get();
+            $settings  = GeneralSetting::first();
             $view->with([
                 'currentLocale' => $currentLocale,
                 'currentLanguage' => $currentLanguage,
                 'languages' => $languages,
+                'settings' => $settings,
             ]);
         });
         View::composer('*', function ($view) {
