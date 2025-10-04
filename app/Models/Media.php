@@ -6,6 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 
 class Media extends Model
 {
+    // Ensure the computed 'url' accessor is included when serialized to JSON
+    protected $appends = ['url'];
+
     protected $fillable = [
         'name',
         'file_path',
@@ -20,7 +23,8 @@ class Media extends Model
 
     public function getUrlAttribute()
     {
-        return asset('storage/' . $this->file_path);
+        // Return a relative path to avoid APP_URL mismatches in development
+        return '/storage/' . ltrim($this->file_path, '/');
     }
 
     public function uploader()

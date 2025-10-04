@@ -1,5 +1,20 @@
 <x-dashboard-layout>
-
+    <!-- [ breadcrumb ] start -->
+    <div class="page-header">
+        <div class="page-block">
+            <ul class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home') }}</a>
+                </li>
+                <li class="breadcrumb-item"><a
+                        href="{{ route('dashboard.services.index') }}">{{ t('dashboard.services', 'Services') }}</a>
+                </li>
+            </ul>
+            <div class="page-header-title">
+                <h2 class="mb-0">{{ t('dashboard.All_Services', 'ALL Services') }}</h2>
+            </div>
+        </div>
+    </div>
+    <!-- [ breadcrumb ] end -->
 
     <div class="container mx-auto py-6">
         <h1 class="text-2xl font-bold mb-4">إدارة الخدمات</h1>

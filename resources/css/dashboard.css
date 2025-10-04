@@ -1,0 +1,263 @@
+@import "tailwindcss";
+
+/* Import Cairo font from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap');
+@theme {
+    --font-Cairo: "Cairo";
+    --color-primary: #240B36;
+    --color-secondary: #AE1028;
+    --color-tertiary: #5F4A72;
+    --color-background: #F9F6FB;
+    --color-hazem: #000000;
+    --text-title-h2: 1.875rem;
+    --text-title-h3: 1.5rem;
+    --text-suptitle: 1.125rem;
+
+}
+
+/* Dashboard specific styles */
+@layer base {
+    /* Apply Cairo font to dashboard */
+    body {
+        font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    /* Ensure Cairo font is used in all text elements */
+    h1, h2, h3, h4, h5, h6,
+    p, span, div, a, button,
+    input, textarea, select,
+    label, .text, .title {
+        font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+}
+
+@layer components {
+    /* Header styles */
+    .pc-header {
+        background-color: white;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        border-bottom-width: 1px;
+        border-color: rgb(229 231 235);
+    }
+
+    .dark .pc-header {
+        background-color: rgb(17 24 39);
+        border-color: rgb(55 65 81);
+    }
+
+    .pc-head-link {
+        color: rgb(75 85 99);
+        transition-property: color;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 150ms;
+    }
+
+    .pc-head-link:hover {
+        color: rgb(17 24 39);
+    }
+
+    .dark .pc-head-link {
+        color: rgb(209 213 219);
+    }
+
+    .dark .pc-head-link:hover {
+        color: white;
+    }
+
+    /* Dashboard cards */
+    .dashboard-card {
+        background-color: white;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        border-width: 1px;
+        border-color: rgb(229 231 235);
+    }
+
+    .dark .dashboard-card {
+        background-color: rgb(31 41 55);
+        border-color: rgb(55 65 81);
+    }
+
+    /* Dashboard buttons */
+    .btn-dashboard {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition-property: all;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 200ms;
+    }
+
+    .btn-dashboard:focus {
+        outline: 2px solid transparent;
+        outline-offset: 2px;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+    }
+
+    .btn-primary {
+        background-color: rgb(37 99 235);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: rgb(29 78 216);
+    }
+
+    .btn-secondary {
+        background-color: rgb(229 231 235);
+        color: rgb(55 65 81);
+    }
+
+    .btn-secondary:hover {
+        background-color: rgb(209 213 219);
+    }
+
+    .dark .btn-secondary {
+        background-color: rgb(55 65 81);
+        color: rgb(229 231 235);
+    }
+
+    .dark .btn-secondary:hover {
+        background-color: rgb(75 85 99);
+    }
+
+    /* Form styles */
+    .form-control {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border-width: 1px;
+        border-color: rgb(209 213 219);
+        border-radius: 0.5rem;
+        background-color: white;
+        color: rgb(17 24 39);
+    }
+
+    .form-control:focus {
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+        border-color: rgb(59 130 246);
+    }
+
+    .dark .form-control {
+        border-color: rgb(75 85 99);
+        background-color: rgb(31 41 55);
+        color: rgb(243 244 246);
+    }
+}
+
+/* Custom utilities for dashboard */
+@layer utilities {
+    .min-h-header-height {
+        min-height: 60px;
+    }
+    
+    .text-muted {
+        color: rgb(107 114 128);
+    }
+
+    .dark .text-muted {
+        color: rgb(156 163 175);
+    }
+
+    /* Cairo font weight utilities */
+    .font-cairo {
+        font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .font-cairo-light {
+        font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 300;
+    }
+
+    .font-cairo-regular {
+        font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 400;
+    }
+
+    .font-cairo-medium {
+        font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 500;
+    }
+
+    .font-cairo-semibold {
+        font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 600;
+    }
+
+    .font-cairo-bold {
+        font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 700;
+    }
+
+    .font-cairo-extrabold {
+        font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 800;
+    }
+
+    .font-cairo-black {
+        font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-weight: 900;
+    }
+
+    /* Custom color utilities using CSS variables */
+    .bg-custom-primary {
+        background-color: var(--color-primary);
+    }
+    
+    .bg-custom-secondary {
+        background-color: var(--color-secondary);
+    }
+    
+    .bg-custom-tertiary {
+        background-color: var(--color-tertiary);
+    }
+    
+    .bg-custom-background {
+        background-color: var(--color-background);
+    }
+    
+    .text-custom-primary {
+        color: var(--color-primary);
+    }
+    
+    .text-custom-secondary {
+        color: var(--color-secondary);
+    }
+    
+    .text-custom-tertiary {
+        color: var(--color-tertiary);
+    }
+    
+    .text-custom-hazem {
+        color: var(--color-hazem);
+    }
+    
+    /* Custom text size utilities */
+    .text-title-h2 {
+        font-size: var(--text-title-h2);
+    }
+    
+    .text-title-h3 {
+        font-size: var(--text-title-h3);
+    }
+    
+    .text-suptitle {
+        font-size: var(--text-suptitle);
+    }
+    
+    /* Hover variants */
+    .hover\:bg-custom-primary:hover {
+        background-color: var(--color-primary);
+    }
+    
+    .hover\:bg-custom-secondary:hover {
+        background-color: var(--color-secondary);
+    }
+    
+    .hover\:text-custom-primary:hover {
+        color: var(--color-primary);
+    }
+    
+    .hover\:text-custom-secondary:hover {
+        color: var(--color-secondary);
+    }
+}

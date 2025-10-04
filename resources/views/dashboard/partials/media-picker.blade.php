@@ -95,36 +95,44 @@
             <div class="flex items-start justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
                 <div>
                     <h2 class="text-lg font-semibold">{{ __('Media Library') }}</h2>
-                    <p class="text-sm text-slate-500 dark:text-slate-300">{{ __('Choose an image or upload a new one.') }}</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-300">
+                        {{ __('Choose an image or upload a new one.') }}</p>
                 </div>
                 <button type="button" class="text-slate-500 hover:text-slate-800 dark:text-slate-200" data-media-close>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="1.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
 
             <div class="px-6 py-4 overflow-y-auto space-y-5">
-                <form data-media-upload class="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                <form data-media-upload
+                    class="flex flex-col sm:flex-row items-start sm:items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
                     <div>
-                        <label class="block text-xs font-medium text-slate-500 dark:text-slate-300">{{ __('Upload image') }}</label>
-                        <input type="file" accept="image/*" class="mt-1 block w-full text-sm" required>
+                        <label
+                            class="block text-xs font-medium text-slate-500 dark:text-slate-300">{{ __('Upload image') }}</label>
+                        <input type="file" accept="image/*,.svg" class="mt-1 block w-full text-sm" required>
                     </div>
-                    <button type="submit" class="inline-flex items-center justify-center px-4 py-2 bg-primary text-white text-sm rounded-md hover:bg-primary/90">
+                    <button type="submit"
+                        class="inline-flex items-center justify-center px-4 py-2 bg-primary text-white text-sm rounded-md hover:bg-primary/90">
                         {{ __('Upload') }}
                     </button>
                     <span data-media-upload-status class="text-xs text-slate-500"></span>
                 </form>
 
                 <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-                    <input type="search" data-media-search placeholder="{{ __('Search media...') }}" class="w-full sm:w-72 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900">
-                    <a href="{{ route('dashboard.media.index') }}" target="_blank" class="text-sm text-primary hover:underline">
+                    <input type="search" data-media-search placeholder="{{ __('Search media...') }}"
+                        class="w-full sm:w-72 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-900">
+                    <a href="{{ route('dashboard.media.index') }}" target="_blank"
+                        class="text-sm text-primary hover:underline">
                         {{ __('Open full media manager') }}
                     </a>
                 </div>
 
                 <div class="media-picker-grid" data-media-grid>
-                    <div class="col-span-full text-center text-sm text-slate-500 py-8" data-media-empty>{{ __('No media yet. Upload a file to get started.') }}</div>
+                    <div class="col-span-full text-center text-sm text-slate-500 py-8" data-media-empty>
+                        {{ __('No media yet. Upload a file to get started.') }}</div>
                 </div>
             </div>
         </div>
@@ -214,11 +222,14 @@
                     return;
                 }
                 if (grid) {
-                    grid.innerHTML = `<div class="col-span-full text-center text-sm text-slate-500 py-6">${@json(__('Loading...'))}</div>`;
+                    grid.innerHTML =
+                        `<div class="col-span-full text-center text-sm text-slate-500 py-6">${@json(__('Loading...'))}</div>`;
                 }
                 fetch(listUrl, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                })
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
                     .then(response => response.ok ? response.json() : Promise.reject())
                     .then(data => {
                         mediaCache = Array.isArray(data) ? data : [];
@@ -226,7 +237,8 @@
                     })
                     .catch(() => {
                         if (grid) {
-                            grid.innerHTML = `<div class="col-span-full text-center text-red-500 py-6">${@json(__('Unable to load media.'))}</div>`;
+                            grid.innerHTML =
+                                `<div class="col-span-full text-center text-red-500 py-6">${@json(__('Unable to load media.'))}</div>`;
                         }
                     });
             };
@@ -252,13 +264,19 @@
                 if (item && currentLocale) {
                     const path = item.getAttribute('data-media-path');
                     const input = document.querySelector(`[data-media-input="${currentLocale}"]`);
-                    const previewWrapper = document.querySelector(`[data-media-preview-wrapper="${currentLocale}"]`);
+                    const previewWrapper = document.querySelector(
+                        `[data-media-preview-wrapper="${currentLocale}"]`);
                     const preview = document.querySelector(`[data-media-preview="${currentLocale}"]`);
                     if (path && input) {
-                        const fullUrl = `${window.location.origin.replace(/\/$/, '')}/storage/${path.replace(/^\//, '')}`;
+                        const fullUrl =
+                            `${window.location.origin.replace(/\/$/, '')}/storage/${path.replace(/^\//, '')}`;
                         input.value = fullUrl;
-                        input.dispatchEvent(new Event('input', { bubbles: true }));
-                        input.dispatchEvent(new Event('change', { bubbles: true }));
+                        input.dispatchEvent(new Event('input', {
+                            bubbles: true
+                        }));
+                        input.dispatchEvent(new Event('change', {
+                            bubbles: true
+                        }));
                         if (previewWrapper) {
                             previewWrapper.classList.remove('hidden');
                         }
@@ -283,7 +301,8 @@
                 }
                 searchInput.addEventListener('input', () => {
                     const term = searchInput.value.toLowerCase();
-                    const filtered = mediaCache.filter(item => (item.name || '').toLowerCase().includes(term));
+                    const filtered = mediaCache.filter(item => (item.name || '').toLowerCase().includes(
+                        term));
                     renderMedia(filtered);
                 });
             };
@@ -309,10 +328,12 @@
                         uploadStatus.classList.remove('text-red-500');
                     }
                     fetch(uploadUrl, {
-                        method: 'POST',
-                        headers: csrfToken ? { 'X-CSRF-TOKEN': csrfToken } : {},
-                        body: formData,
-                    })
+                            method: 'POST',
+                            headers: csrfToken ? {
+                                'X-CSRF-TOKEN': csrfToken
+                            } : {},
+                            body: formData,
+                        })
                         .then(response => response.ok ? response.json() : Promise.reject())
                         .then(item => {
                             if (item) {

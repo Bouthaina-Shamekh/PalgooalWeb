@@ -4,171 +4,233 @@
     $site_discretion = $generalSettings->site_discretion;
 @endphp
 <!-- Contact Section -->
-<section class="py-20 px-4 sm:px-8 lg:px-24 bg-background -mb-25 -z-30 relative" aria-labelledby="support-heading"
-         itemscope itemtype="https://schema.org/ContactPoint" itemprop="contactType" content="customer support">
-  <div class="max-w-3xl mx-auto text-center">
-    <h2 id="support-heading" class="text-title-h2 font-extrabold text-primary mb-4">
-      نحن هنا لمساعدتك 24/7
-    </h2>
-    <p class="text-tertiary text-suptitle font-light mb-8">
-      تواصل معنا بسهولة على مدار الساعة. فريق <strong itemprop="name">Palgoals</strong> للدعم الفني متواجد دائمًا للإجابة على استفساراتك وتقديم المساعدة عبر الهاتف أو البريد الإلكتروني أو نموذج الاتصال.
-    </p>
-    <div class="flex flex-col sm:flex-row justify-center gap-x-6 gap-y-4">
-      <a href="tel:+970599123456" itemprop="telephone"
-         class="px-8 py-3 rounded-lg font-bold flex items-center justify-center gap-2 bg-primary text-white transition-colors duration-200 hover:bg-secondary sm:shadow">
-        <svg class="w-5 h-5" aria-hidden="true" ...></svg>
-        اتصل بنا
-      </a>
-      <a href="mailto:info@palgoals.com" itemprop="email"
-         class="px-8 py-3 rounded-lg font-bold flex items-center justify-center gap-2 bg-secondary text-white transition-colors duration-200 hover:bg-primary sm:shadow">
-        <svg class="w-5 h-5" aria-hidden="true" ...></svg>
-        راسلنا عبر البريد
-      </a>
-      <a href="#contact" aria-label="نموذج الاتصال بنا"
-         class="px-8 py-3 rounded-lg font-bold flex items-center justify-center gap-2 bg-white text-primary border border-primary/20 transition-colors duration-200 hover:bg-primary hover:text-white sm:shadow">
-        <svg class="w-5 h-5" aria-hidden="true" ...></svg>
-        تواصل معنا
-      </a>
+<section
+    class="py-20 px-4 sm:px-8 lg:px-24 bg-background dark:bg-gray-900 -mb-25 -z-30 relative transition-colors duration-300"
+    aria-labelledby="support-heading" itemscope itemtype="https://schema.org/ContactPoint" itemprop="contactType"
+    content="customer support">
+    <div class="max-w-3xl mx-auto text-center">
+        <h2 id="support-heading"
+            class="text-title-h2 font-extrabold text-primary dark:text-white mb-4 transition-colors duration-300">
+            نحن هنا لمساعدتك 24/7
+        </h2>
+        <p class="text-tertiary dark:text-gray-300 text-suptitle font-light mb-8 transition-colors duration-300">
+            تواصل معنا بسهولة على مدار الساعة. فريق <strong itemprop="name"
+                class="text-primary dark:text-white">Palgoals</strong> للدعم الفني متواجد دائمًا
+            للإجابة على استفساراتك وتقديم المساعدة عبر الهاتف أو البريد الإلكتروني أو نموذج الاتصال.
+        </p>
+        <div class="flex flex-col sm:flex-row justify-center gap-x-6 gap-y-4">
+            <a href="tel:+970599123456" itemprop="telephone"
+                class="group px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-3 bg-gradient-to-r from-primary to-primary/90 text-white transition-all duration-300 hover:from-secondary hover:to-secondary/90 hover:scale-105 hover:shadow-lg transform">
+                <svg class="w-6 h-6 transition-transform duration-300 group-hover:scale-110" fill="currentColor"
+                    viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                        d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z" />
+                </svg>
+                <span class="font-extrabold">اتصل بنا</span>
+            </a>
+            <a href="mailto:info@palgoals.com" itemprop="email"
+                class="group px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-3 bg-gradient-to-r from-secondary to-secondary/90 text-white transition-all duration-300 hover:from-primary hover:to-primary/90 hover:scale-105 hover:shadow-lg transform">
+                <svg class="w-6 h-6 transition-transform duration-300 group-hover:scale-110" fill="currentColor"
+                    viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                        d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
+                </svg>
+                <span class="font-extrabold">راسلنا عبر البريد</span>
+            </a>
+            <a href="#contact" aria-label="نموذج الاتصال بنا"
+                class="group px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-3 bg-white dark:bg-gray-800 text-primary dark:text-white border-2 border-primary/30 dark:border-gray-600 transition-all duration-300 hover:bg-primary dark:hover:bg-gray-700 hover:text-white hover:border-primary dark:hover:border-gray-500 hover:scale-105 hover:shadow-lg transform">
+                <svg class="w-6 h-6 transition-transform duration-300 group-hover:scale-110" fill="currentColor"
+                    viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                </svg>
+                <span class="font-extrabold">تواصل معنا</span>
+            </a>
+        </div>
     </div>
-  </div>
 </section>
 <!-- Footer Section -->
-<footer class="bg-gradient-to-tr from-primary/90 to-primary/95 text-white pt-12 pb-6 px-4 sm:px-8 lg:px-24 mt-16 rounded-t-3xl shadow-2xl"
+<footer
+    class="bg-gradient-to-tr from-primary/90 to-primary/95 dark:from-gray-900 dark:to-gray-800 text-white pt-12 pb-6 px-4 sm:px-8 lg:px-24 mt-16 rounded-t-3xl shadow-2xl dark:shadow-gray-900/50 transition-all duration-300"
     itemscope itemtype="https://schema.org/Organization">
     <meta itemprop="name" content="Palgoals" />
     <meta itemprop="url" content="https://palgoals.com" />
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between gap-10">
         <!-- Logo & About -->
-        <div class="flex-1 mb-8 md:mb-0 text-center md:text-right">
+        <div class="flex-1 mb-8 md:mb-0 text-center md:text-center">
             <a href="/" class="flex flex-col items-center justify-center md:justify-start gap-3 mb-4 group">
-                <img src="{{$settings?->logo ? asset(path: 'storage/' . $settings->logo) : asset('assets/tamplate/images/logo.svg') }}" alt="Palgoals Logo" class="h-12 w-auto transition-transform group-hover:scale-105" itemprop="logo" loading="lazy" />
-                <span class="font-extrabold text-xl tracking-tight group-hover:text-[#AE1028] transition hidden sm:inline">
-                    {{$settings?->site_title ?? t('General.'.$site_title, 'palgoals') }}
-                </span>
+                <img src="{{ $settings?->logo ? asset(path: 'storage/' . $settings->logo) : asset('assets/tamplate/images/logo.svg') }}"
+                    alt="Palgoals Logo" class="h-12 w-auto transition-transform group-hover:scale-105" itemprop="logo"
+                    loading="lazy" />
+                {{-- <span
+                    class="font-extrabold text-xl tracking-tight group-hover:text-[#AE1028] transition hidden sm:inline">
+                    {{ $settings?->site_title ?? t('General.' . $site_title, 'palgoals') }}
+                </span> --}}
             </a>
-            <p class="text-white/80 text-sm max-w-xs mx-auto md:mx-0 leading-relaxed">
-                {{$settings?->site_discretion ?? t('General.'.$site_discretion, 'discretion') }}
+            <p
+                class="text-white/80 dark:text-gray-300 text-sm max-w-xs mx-auto md:mx-0 leading-relaxed transition-colors duration-300">
+                {{ $settings?->site_discretion ?? t('General.' . $site_discretion, 'discretion') }}
             </p>
-            <div class="flex gap-3 mt-5" aria-label="روابط التواصل الاجتماعي">
-                @if(!empty($settings->social_links['facebook']))
-                <!-- Facebook -->
-                <a href="{{ $settings->social_links['facebook'] }}" target="_blank" rel="noopener" aria-label="Facebook" class="hover:text-[#AE1028] transition">
-                    <svg class="w-8 h-8 bg-white rounded-full hover:bg-secondary/30" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 92 92" fill="none">
-                        <rect x="0.138672" width="91.5618" height="91.5618" rx="15" fill="#EDF4FF"/>
-                        <path d="M56.4927 48.6403L57.7973 40.3588H49.7611V34.9759C49.7611 32.7114 50.883 30.4987 54.4706 30.4987H58.1756V23.4465C56.018 23.1028 53.8378 22.9168 51.6527 22.8901C45.0385 22.8901 40.7204 26.8626 40.7204 34.0442V40.3588H33.3887V48.6403H40.7204V68.671H49.7611V48.6403H56.4927Z" fill="#337FFF"/>
-                    </svg>
-                </a>
+            <div class="flex flex-wrap justify-center md:justify-start gap-3 mt-5" aria-label="روابط التواصل الاجتماعي">
+                @if (!empty($settings->social_links['facebook']))
+                    <!-- Facebook -->
+                    <a href="{{ $settings->social_links['facebook'] }}" target="_blank" rel="noopener"
+                        aria-label="Facebook"
+                        class="w-10 h-10 bg-white/20 dark:bg-white/10 rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-white/20 transition-colors duration-200">
+                        <svg class="w-5 h-5 text-white dark:text-gray-200" fill="currentColor" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <path
+                                d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                        </svg>
+                    </a>
                 @endif
-                @if(!empty($settings->social_links['twitter']))
-                <!-- Twitter X -->
-                <a href="{{ $settings->social_links['twitter'] }}" target="_blank" rel="noopener" aria-label="Twitter X" class="hover:text-[#AE1028] transition">
-                    <svg class="w-8 h-8 bg-white rounded-full hover:bg-secondary/30"  xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 93 92" fill="none">
-                        <rect x="0.138672" width="91.5618" height="91.5618" rx="15" fill="#F7F7F7"/>
-                        <path d="M50.7568 42.1716L69.3704 21H64.9596L48.7974 39.383L35.8887 21H21L40.5205 48.7983L21 71H25.4111L42.4788 51.5869L56.1113 71H71L50.7557 42.1716H50.7568ZM44.7152 49.0433L42.7374 46.2752L27.0005 24.2492H33.7756L46.4755 42.0249L48.4533 44.7929L64.9617 67.8986H58.1865L44.7152 49.0443V49.0433Z" fill="black"/>
-                    </svg>
-                </a>
+                @if (!empty($settings->social_links['twitter']))
+                    <!-- Twitter X -->
+                    <a href="{{ $settings->social_links['twitter'] }}" target="_blank" rel="noopener"
+                        aria-label="Twitter X"
+                        class="w-10 h-10 bg-white/20 dark:bg-white/10 rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-white/20 transition-colors duration-200">
+                        <svg class="w-4 h-4 text-white dark:text-gray-200" fill="currentColor" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <path
+                                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                        </svg>
+                    </a>
                 @endif
-                @if(!empty($settings->social_links['linkedin']))
-                <!-- LinkedIn -->
-                <a href="{{ $settings->social_links['linkedin'] }}" target="_blank" rel="noopener" aria-label="LinkedIn" class="hover:text-[#AE1028] transition">
-                    <svg class="w-8 h-8 bg-white rounded-full hover:bg-secondary/30" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 92 93" fill="none">
-                        <rect x="0.138672" width="91.5618" height="91.5618" rx="15" fill="#EEFAFF"/>
-                        <path fill-rule="evenodd" clip-rule="evenodd" d="M24.6975 21.5618C22.6561 21.5618 21 23.1674 21 25.1456V68.0091C21 69.9875 22.6563 71.5918 24.6975 71.5918H67.3325C69.3747 71.5918 71.03 69.9873 71.03 68.0086V25.1456C71.03 23.1674 69.3747 21.5618 67.3325 21.5618H24.6975ZM36.2032 40.9068V63.4304H28.7167V40.9068H36.2032ZM36.6967 33.9411C36.6967 36.1025 35.0717 37.8321 32.4615 37.8321L32.4609 37.8319H32.4124C29.8998 37.8319 28.2754 36.1023 28.2754 33.9409C28.2754 31.7304 29.9489 30.0491 32.5111 30.0491C35.0717 30.0491 36.6478 31.7304 36.6967 33.9411ZM47.833 63.4304H40.3471L40.3469 63.4312C40.3469 63.4312 40.4452 43.0205 40.3475 40.9075H47.8336V44.0957C48.8288 42.5613 50.6098 40.3787 54.5808 40.3787C59.5062 40.3787 63.1991 43.598 63.1991 50.516V63.4304H55.7133V51.3822C55.7133 48.354 54.6293 46.2887 51.921 46.2887C49.8524 46.2887 48.6206 47.6815 48.0796 49.0271C47.8819 49.5072 47.833 50.1813 47.833 50.8535V63.4304Z" fill="#006699"/>
-                    </svg>
-                </a>
+                @if (!empty($settings->social_links['linkedin']))
+                    <!-- LinkedIn -->
+                    <a href="{{ $settings->social_links['linkedin'] }}" target="_blank" rel="noopener"
+                        aria-label="LinkedIn"
+                        class="w-10 h-10 bg-white/20 dark:bg-white/10 rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-white/20 transition-colors duration-200">
+                        <svg class="w-5 h-5 text-white dark:text-gray-200" fill="currentColor" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <path
+                                d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+                        </svg>
+                    </a>
                 @endif
-                @if(!empty($settings->social_links['instagram']))
-                <!-- Instagram -->
-                <a href="{{ $settings->social_links['instagram'] }}" target="_blank" rel="noopener" aria-label="Instagram" class="hover:text-[#AE1028] transition">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 bg-white rounded-full hover:bg-secondary/30" width="28" height="28" viewBox="0 0 51 51" fill="none">
-                        <path d="M17.4456 25.7808C17.4456 21.1786 21.1776 17.4468 25.7826 17.4468C30.3875 17.4468 34.1216 21.1786 34.1216 25.7808C34.1216 30.383 30.3875 34.1148 25.7826 34.1148C21.1776 34.1148 17.4456 30.383 17.4456 25.7808ZM12.9377 25.7808C12.9377 32.8708 18.6883 38.618 25.7826 38.618C32.8768 38.618 38.6275 32.8708 38.6275 25.7808C38.6275 18.6908 32.8768 12.9436 25.7826 12.9436C18.6883 12.9436 12.9377 18.6908 12.9377 25.7808ZM36.1342 12.4346C36.1339 13.0279 36.3098 13.608 36.6394 14.1015C36.9691 14.595 37.4377 14.9797 37.9861 15.2069C38.5346 15.4342 39.1381 15.4939 39.7204 15.3784C40.3028 15.2628 40.8378 14.9773 41.2577 14.5579C41.6777 14.1385 41.9638 13.6041 42.0799 13.0222C42.1959 12.4403 42.1367 11.8371 41.9097 11.2888C41.6828 10.7406 41.2982 10.2719 40.8047 9.94202C40.3112 9.61218 39.7309 9.436 39.1372 9.43576H39.136C38.3402 9.43613 37.5771 9.75216 37.0142 10.3144C36.4514 10.8767 36.1349 11.6392 36.1342 12.4346ZM15.6765 46.1302C13.2377 46.0192 11.9121 45.6132 11.0311 45.2702C9.86323 44.8158 9.02993 44.2746 8.15381 43.4002C7.27768 42.5258 6.73536 41.6938 6.28269 40.5266C5.93928 39.6466 5.53304 38.3214 5.42217 35.884C5.3009 33.2488 5.27668 32.4572 5.27668 25.781C5.27668 19.1048 5.3029 18.3154 5.42217 15.678C5.53324 13.2406 5.94248 11.918 6.28269 11.0354C6.73736 9.86816 7.27888 9.03536 8.15381 8.15976C9.02873 7.28416 9.86123 6.74216 11.0311 6.28976C11.9117 5.94656 13.2377 5.54056 15.6765 5.42976C18.3133 5.30856 19.1054 5.28436 25.7826 5.28436C32.4598 5.28436 33.2527 5.31056 35.8916 5.42976C38.3305 5.54076 39.6539 5.94976 40.537 6.28976C41.7049 6.74216 42.5382 7.28536 43.4144 8.15976C44.2905 9.03416 44.8308 9.86816 45.2855 11.0354C45.6289 11.9154 46.0351 13.2406 46.146 15.678C46.2673 18.3154 46.2915 19.1048 46.2915 25.781C46.2915 32.4572 46.2673 33.2466 46.146 35.884C46.0349 38.3214 45.6267 39.6462 45.2855 40.5266C44.8308 41.6938 44.2893 42.5266 43.4144 43.4002C42.5394 44.2738 41.7049 44.8158 40.537 45.2702C39.6565 45.6134 38.3305 46.0194 35.8916 46.1302C33.2549 46.2514 32.4628 46.2756 25.7826 46.2756C19.1024 46.2756 18.3125 46.2514 15.6765 46.1302ZM15.4694 0.932162C12.8064 1.05336 10.9867 1.47536 9.39755 2.09336C7.75177 2.73156 6.35853 3.58776 4.9663 4.97696C3.57406 6.36616 2.71955 7.76076 2.08097 9.40556C1.46259 10.9948 1.04034 12.8124 0.919069 15.4738C0.795795 18.1394 0.767578 18.9916 0.767578 25.7808C0.767578 32.57 0.795795 33.4222 0.919069 36.0878C1.04034 38.7494 1.46259 40.5668 2.08097 42.156C2.71955 43.7998 3.57426 45.196 4.9663 46.5846C6.35833 47.9732 7.75177 48.8282 9.39755 49.4682C10.9897 50.0862 12.8064 50.5082 15.4694 50.6294C18.138 50.7506 18.9893 50.7808 25.7826 50.7808C32.5759 50.7808 33.4286 50.7526 36.0958 50.6294C38.759 50.5082 40.5774 50.0862 42.1676 49.4682C43.8124 48.8282 45.2066 47.9738 46.5989 46.5846C47.9911 45.1954 48.8438 43.7998 49.4842 42.156C50.1026 40.5668 50.5268 38.7492 50.6461 36.0878C50.7674 33.4202 50.7956 32.57 50.7956 25.7808C50.7956 18.9916 50.7674 18.1394 50.6461 15.4738C50.5248 12.8122 50.1026 10.9938 49.4842 9.40556C48.8438 7.76176 47.9889 6.36836 46.5989 4.97696C45.2088 3.58556 43.8124 2.73156 42.1696 2.09336C40.5775 1.47536 38.7588 1.05136 36.0978 0.932162C33.4306 0.810962 32.5779 0.780762 25.7846 0.780762C18.9913 0.780762 18.138 0.808962 15.4694 0.932162Z" fill="url(#paint0_radial_7092_54379)"/>
-                        <path d="M17.4456 25.7808C17.4456 21.1786 21.1776 17.4468 25.7826 17.4468C30.3875 17.4468 34.1216 21.1786 34.1216 25.7808C34.1216 30.383 30.3875 34.1148 25.7826 34.1148C21.1776 34.1148 17.4456 30.383 17.4456 25.7808ZM12.9377 25.7808C12.9377 32.8708 18.6883 38.618 25.7826 38.618C32.8768 38.618 38.6275 32.8708 38.6275 25.7808C38.6275 18.6908 32.8768 12.9436 25.7826 12.9436C18.6883 12.9436 12.9377 18.6908 12.9377 25.7808ZM36.1342 12.4346C36.1339 13.0279 36.3098 13.608 36.6394 14.1015C36.9691 14.595 37.4377 14.9797 37.9861 15.2069C38.5346 15.4342 39.1381 15.4939 39.7204 15.3784C40.3028 15.2628 40.8378 14.9773 41.2577 14.5579C41.6777 14.1385 41.9638 13.6041 42.0799 13.0222C42.1959 12.4403 42.1367 11.8371 41.9097 11.2888C41.6828 10.7406 41.2982 10.2719 40.8047 9.94202C40.3112 9.61218 39.7309 9.436 39.1372 9.43576H39.136C38.3402 9.43613 37.5771 9.75216 37.0142 10.3144C36.4514 10.8767 36.1349 11.6392 36.1342 12.4346ZM15.6765 46.1302C13.2377 46.0192 11.9121 45.6132 11.0311 45.2702C9.86323 44.8158 9.02993 44.2746 8.15381 43.4002C7.27768 42.5258 6.73536 41.6938 6.28269 40.5266C5.93928 39.6466 5.53304 38.3214 5.42217 35.884C5.3009 33.2488 5.27668 32.4572 5.27668 25.781C5.27668 19.1048 5.3029 18.3154 5.42217 15.678C5.53324 13.2406 5.94248 11.918 6.28269 11.0354C6.73736 9.86816 7.27888 9.03536 8.15381 8.15976C9.02873 7.28416 9.86123 6.74216 11.0311 6.28976C11.9117 5.94656 13.2377 5.54056 15.6765 5.42976C18.3133 5.30856 19.1054 5.28436 25.7826 5.28436C32.4598 5.28436 33.2527 5.31056 35.8916 5.42976C38.3305 5.54076 39.6539 5.94976 40.537 6.28976C41.7049 6.74216 42.5382 7.28536 43.4144 8.15976C44.2905 9.03416 44.8308 9.86816 45.2855 11.0354C45.6289 11.9154 46.0351 13.2406 46.146 15.678C46.2673 18.3154 46.2915 19.1048 46.2915 25.781C46.2915 32.4572 46.2673 33.2466 46.146 35.884C46.0349 38.3214 45.6267 39.6462 45.2855 40.5266C44.8308 41.6938 44.2893 42.5266 43.4144 43.4002C42.5394 44.2738 41.7049 44.8158 40.537 45.2702C39.6565 45.6134 38.3305 46.0194 35.8916 46.1302C33.2549 46.2514 32.4628 46.2756 25.7826 46.2756C19.1024 46.2756 18.3125 46.2514 15.6765 46.1302ZM15.4694 0.932162C12.8064 1.05336 10.9867 1.47536 9.39755 2.09336C7.75177 2.73156 6.35853 3.58776 4.9663 4.97696C3.57406 6.36616 2.71955 7.76076 2.08097 9.40556C1.46259 10.9948 1.04034 12.8124 0.919069 15.4738C0.795795 18.1394 0.767578 18.9916 0.767578 25.7808C0.767578 32.57 0.795795 33.4222 0.919069 36.0878C1.04034 38.7494 1.46259 40.5668 2.08097 42.156C2.71955 43.7998 3.57426 45.196 4.9663 46.5846C6.35833 47.9732 7.75177 48.8282 9.39755 49.4682C10.9897 50.0862 12.8064 50.5082 15.4694 50.6294C18.138 50.7506 18.9893 50.7808 25.7826 50.7808C32.5759 50.7808 33.4286 50.7526 36.0958 50.6294C38.759 50.5082 40.5774 50.0862 42.1676 49.4682C43.8124 48.8282 45.2066 47.9738 46.5989 46.5846C47.9911 45.1954 48.8438 43.7998 49.4842 42.156C50.1026 40.5668 50.5268 38.7492 50.6461 36.0878C50.7674 33.4202 50.7956 32.57 50.7956 25.7808C50.7956 18.9916 50.7674 18.1394 50.6461 15.4738C50.5248 12.8122 50.1026 10.9938 49.4842 9.40556C48.8438 7.76176 47.9889 6.36836 46.5989 4.97696C45.2088 3.58556 43.8124 2.73156 42.1696 2.09336C40.5775 1.47536 38.7588 1.05136 36.0978 0.932162C33.4306 0.810962 32.5779 0.780762 25.7846 0.780762C18.9913 0.780762 18.138 0.808962 15.4694 0.932162Z" fill="url(#paint1_radial_7092_54379)"/>
-                        <defs>
-                            <radialGradient id="paint0_radial_7092_54379" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(7.41436 51.017) scale(65.31 65.2708)">
-                                <stop offset="0.09" stop-color="#FA8F21"/>
-                                <stop offset="0.78" stop-color="#D82D7E"/>
-                            </radialGradient>
-                            <radialGradient id="paint1_radial_7092_54379" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(31.1086 53.257) scale(51.4733 51.4424)">
-                                <stop offset="0.64" stop-color="#8C3AAA" stop-opacity="0"/>
-                                <stop offset="1" stop-color="#8C3AAA"/>
-                            </radialGradient>
-                        </defs>
-                    </svg>
-                </a>
+                @if (!empty($settings->social_links['instagram']))
+                    <!-- Instagram -->
+                    <a href="{{ $settings->social_links['instagram'] }}" target="_blank" rel="noopener"
+                        aria-label="Instagram"
+                        class="w-10 h-10 bg-white/20 dark:bg-white/10 rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-white/20 transition-colors duration-200">
+                        <svg class="w-5 h-5 text-white dark:text-gray-200" fill="currentColor" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <path
+                                d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.40s-.644-1.44-1.439-1.44z" />
+                        </svg>
+                    </a>
                 @endif
-                @if(!empty($settings->social_links['whatsapp']))
-                <!-- whatsapp -->
-                <a href="{{ $settings->social_links['whatsapp'] }}" target="_blank" rel="noopener" aria-label="whatsapp" class="hover:text-[#AE1028] transition">
-                    <svg class="w-8 h-8 bg-white rounded-full hover:bg-secondary/30" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 93 92" fill="none">
-                        <rect x="1.13867" width="91.5618" height="91.5618" rx="15" fill="#ECFFF5"/>
-                        <path d="M23.5762 66.8405L26.8608 54.6381C24.2118 49.8847 23.3702 44.3378 24.4904 39.0154C25.6106 33.693 28.6176 28.952 32.9594 25.6624C37.3012 22.3729 42.6867 20.7554 48.1276 21.1068C53.5685 21.4582 58.6999 23.755 62.5802 27.5756C66.4604 31.3962 68.8292 36.4844 69.2519 41.9065C69.6746 47.3286 68.1228 52.7208 64.8813 57.0938C61.6399 61.4668 56.9261 64.5271 51.605 65.7133C46.284 66.8994 40.7125 66.1318 35.9131 63.5513L23.5762 66.8405ZM36.508 58.985L37.2709 59.4365C40.7473 61.4918 44.8076 62.3423 48.8191 61.8555C52.8306 61.3687 56.5681 59.5719 59.4489 56.7452C62.3298 53.9185 64.1923 50.2206 64.7463 46.2279C65.3002 42.2351 64.5143 38.1717 62.5113 34.6709C60.5082 31.1701 57.4003 28.4285 53.6721 26.8734C49.9438 25.3184 45.8045 25.0372 41.8993 26.0736C37.994 27.11 34.5422 29.4059 32.0817 32.6035C29.6212 35.801 28.2903 39.7206 28.2963 43.7514C28.293 47.0937 29.2197 50.3712 30.9732 53.2192L31.4516 54.0061L29.6153 60.8167L36.508 58.985Z" fill="#00D95F"/>
-                </a>
+                @if (!empty($settings->social_links['whatsapp']))
+                    <!-- WhatsApp -->
+                    <a href="{{ $settings->social_links['whatsapp'] }}" target="_blank" rel="noopener"
+                        aria-label="WhatsApp"
+                        class="w-10 h-10 bg-white/20 dark:bg-white/10 rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-white/20 transition-colors duration-200">
+                        <svg class="w-5 h-5 text-white dark:text-gray-200" fill="currentColor" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <path
+                                d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893A11.821 11.821 0 0020.465 3.488" />
+                        </svg>
+                    </a>
                 @endif
             </div>
         </div>
         <!-- Links -->
-        <div class="flex-1 grid grid-cols-2 gap-8 text-center md:text-right">
+        <div class="flex-1 grid grid-cols-2 gap-8 text-center md:text-right ltr:md:text-left">
             <div>
-                <h4 class="font-extrabold text-lg mb-4 text-white">روابط سريعة</h4>
-                <ul class="space-y-2 text-white/90 text-sm">
-                    <li><a href="#" class="hover:text-[#AE1028] transition">الرئيسية</a></li>
-                    <li><a href="#" class="hover:text-[#AE1028] transition">استضافة</a></li>
-                    <li><a href="#" class="hover:text-[#AE1028] transition">دومين</a></li>
-                    <li><a href="#" class="hover:text-[#AE1028] transition">قوالب</a></li>
-                    <li><a href="#" class="hover:text-[#AE1028] transition">أعمالنا</a></li>
-                    <li><a href="#" class="hover:text-[#AE1028] transition">مدونة</a></li>
-                    <li><a href="#" class="hover:text-[#AE1028] transition">تواصل</a></li>
+                <h4 class="font-extrabold text-lg mb-4 text-white dark:text-gray-100 transition-colors duration-300">
+                    {{ t('frontend.Quick_Links', 'Quick Links') }}</h4>
+                <ul class="space-y-2 text-white/90 dark:text-gray-300 text-sm">
+                    <li><a href="#"
+                            class="hover:text-[#AE1028] dark:hover:text-white transition-colors duration-200">{{ t('frontend.Home', 'Home') }}</a>
+                    </li>
+                    <li><a href="#"
+                            class="hover:text-[#AE1028] dark:hover:text-white transition-colors duration-200">{{ t('frontend.Hosting', 'Hosting') }}</a>
+                    </li>
+                    <li><a href="#"
+                            class="hover:text-[#AE1028] dark:hover:text-white transition-colors duration-200">{{ t('frontend.Domain', 'Domain') }}</a>
+                    </li>
+                    <li><a href="#"
+                            class="hover:text-[#AE1028] dark:hover:text-white transition-colors duration-200">{{ t('frontend.Templates', 'Templates') }}</a>
+                    </li>
+                    <li><a href="#"
+                            class="hover:text-[#AE1028] dark:hover:text-white transition-colors duration-200">{{ t('frontend.Our_Work', 'Our Work') }}</a>
+                    </li>
+                    <li><a href="#"
+                            class="hover:text-[#AE1028] dark:hover:text-white transition-colors duration-200">{{ t('frontend.Blog', 'Blog') }}</a>
+                    </li>
+                    <li><a href="#"
+                            class="hover:text-[#AE1028] dark:hover:text-white transition-colors duration-200">{{ t('frontend.Contact_Us', 'Contact Us') }}</a>
+                    </li>
                 </ul>
             </div>
             <div>
-                <h4 class="font-extrabold text-lg mb-4 text-white">خدماتنا</h4>
-                <ul class="space-y-2 text-white/90 text-sm">
-                    <li><a href="#" class="hover:text-[#AE1028] transition">تصميم مواقع</a></li>
-                    <li><a href="#" class="hover:text-[#AE1028] transition">استضافة وردبريس</a></li>
-                    <li><a href="#" class="hover:text-[#AE1028] transition">استضافة مشتركة</a></li>
-                    <li><a href="#" class="hover:text-[#AE1028] transition">تحسين محركات البحث</a></li>
+                <h4 class="font-extrabold text-lg mb-4 text-white dark:text-gray-100 transition-colors duration-300">
+                    {{ t('frontend.Services', 'Services') }}</h4>
+                <ul class="space-y-2 text-white/90 dark:text-gray-300 text-sm">
+                    <li><a href="#"
+                            class="hover:text-[#AE1028] dark:hover:text-white transition-colors duration-200">{{ t('frontend.Web_Design', 'Web Design') }}</a>
+                    </li>
+                    <li><a href="#"
+                            class="hover:text-[#AE1028] dark:hover:text-white transition-colors duration-200">{{ t('frontend.WordPress_Hosting', 'WordPress Hosting') }}</a>
+                    </li>
+                    <li><a href="#"
+                            class="hover:text-[#AE1028] dark:hover:text-white transition-colors duration-200">{{ t('frontend.Shared_Hosting', 'Shared Hosting') }}</a>
+                    </li>
+                    <li><a href="#"
+                            class="hover:text-[#AE1028] dark:hover:text-white transition-colors duration-200">{{ t('frontend.SEO_Optimization', 'SEO Optimization') }}</a>
+                    </li>
                 </ul>
             </div>
         </div>
         <!-- Contact Info -->
-        <div class="flex-1 text-center md:text-right">
-            <h4 class="font-extrabold text-lg mb-4 text-white">تواصل معنا</h4>
-            <ul class="space-y-3 text-white/90 text-sm">
-                @if(!empty($settings->contact_info['phone']))
+        <div class="flex-1 text-center md:text-right ltr:md:text-left">
+            <h4
+                class="font-extrabold text-lg mb-4 text-white dark:text-gray-100 capitalize transition-colors duration-300">
+                {{ t('frontend.Contact_us', 'Contact Us') }}
+            </h4>
+            <ul class="space-y-3 text-white/90 dark:text-gray-300 text-sm">
+                @if (!empty($settings->contact_info['phone']))
                     <li class="flex items-center justify-center md:justify-start gap-2">
                         <!-- Phone Icon -->
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h1.2a1 1 0 01.9.6l1.2 2.4a1 1 0 01-.2 1.1L7.5 9a16 16 0 006.5 6.5l1.5-1.5a1 1 0 011.1-.2l2.4 1.2a1 1 0 01.6.9V19a2 2 0 01-2 2h-1C9.4 21 3 14.6 3 7V6a2 2 0 012-1z" />
+                        <svg class="w-5 h-5 text-white dark:text-gray-200" fill="none" stroke="currentColor"
+                            stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3 5a2 2 0 012-2h1.2a1 1 0 01.9.6l1.2 2.4a1 1 0 01-.2 1.1L7.5 9a16 16 0 006.5 6.5l1.5-1.5a1 1 0 011.1-.2l2.4 1.2a1 1 0 01.6.9V19a2 2 0 01-2 2h-1C9.4 21 3 14.6 3 7V6a2 2 0 012-1z" />
                         </svg>
                         <a href="tel:{{ $settings->contact_info['phone'] }}"
-                           class="hover:text-[#AE1028] transition font-semibold"
-                           itemprop="telephone">
-                           {{ $settings->contact_info['phone'] }}
+                            class="hover:text-[#AE1028] dark:hover:text-white transition-colors duration-200 font-semibold"
+                            itemprop="telephone">
+                            {{ $settings->contact_info['phone'] }}
                         </a>
                     </li>
                 @endif
 
-                @if(!empty($settings->contact_info['email']))
+                @if (!empty($settings->contact_info['email']))
                     <li class="flex items-center justify-center md:justify-start gap-2">
                         <!-- Mail Icon -->
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4h16c1.1 0 2 .9 2 2v12a2 2 0 01-2 2H4c-1.1 0-2-.9-2-2V6a2 2 0 012-2z" />
+                        <svg class="w-5 h-5 text-white dark:text-gray-200" fill="none" stroke="currentColor"
+                            stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M4 4h16c1.1 0 2 .9 2v12a2 2 0 01-2 2H4c-1.1 0-2-.9-2-2V6a2 2 0 012-2z" />
                             <path stroke-linecap="round" stroke-linejoin="round" d="M22 6l-10 7L2 6" />
                         </svg>
                         <a href="mailto:{{ $settings->contact_info['email'] }}"
-                           class="hover:text-[#AE1028] transition font-semibold"
-                           itemprop="email">
-                           {{ $settings->contact_info['email'] }}
+                            class="hover:text-[#AE1028] dark:hover:text-white transition-colors duration-200 font-semibold"
+                            itemprop="email">
+                            {{ $settings->contact_info['email'] }}
                         </a>
                     </li>
                 @endif
 
-                @if(!empty($settings->contact_info['address']))
+                @if (!empty($settings->contact_info['address']))
                     <li class="flex items-center justify-center md:justify-start gap-2">
                         <!-- Map Pin Icon -->
-                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 11a4 4 0 100-8 4 4 0 000 8z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14c-4.4 0-8 1.8-8 4v2h16v-2c0-2.2-3.6-4-8-4z" />
+                        <svg class="w-5 h-5 text-white dark:text-gray-200" fill="none" stroke="currentColor"
+                            stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 11a4 4 0 100-8 4 4 0 000 8z" />
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 14c-4.4 0-8 1.8-8 4v2h16v-2c0-2.2-3.6-4-8-4z" />
                         </svg>
                         <span itemprop="address">{{ $settings->contact_info['address'] }}</span>
                     </li>
@@ -177,14 +239,21 @@
         </div>
     </div>
     <!-- وسائل الدفع -->
-    <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 border-t border-white/10 pt-6" itemprop="paymentAccepted">
-        <span class="text-white/80 text-sm font-semibold">نقبل وسائل الدفع:</span>
+    <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 border-t border-white/10 dark:border-gray-700 pt-6 transition-colors duration-300"
+        itemprop="paymentAccepted">
+        <span
+            class="text-white/80 dark:text-gray-300 text-sm font-semibold">{{ t('frontend.Accepted_Payment_Methods', 'Accepted Payment Methods:') }}</span>
         <div class="flex items-center gap-4">
-            <img src="{{ asset('assets/tamplate/images/visa.svg') }}" alt="بطاقة Visa" class="h-6 w-auto sm:h-8 opacity-90 hover:opacity-100 transition-opacity duration-200" loading="lazy" itemprop="image">
-            <img src="{{ asset('assets/tamplate/images/mastercard.svg') }}" alt="بطاقة MasterCard" class="h-6 w-auto sm:h-8 opacity-90 hover:opacity-100 transition-opacity duration-200" loading="lazy" itemprop="image">
+            <img src="{{ asset('assets/tamplate/images/visa.svg') }}" alt="بطاقة Visa"
+                class="h-6 w-auto sm:h-8 opacity-90 hover:opacity-100 transition-opacity duration-200" loading="lazy"
+                itemprop="image">
+            <img src="{{ asset('assets/tamplate/images/mastercard.svg') }}" alt="بطاقة MasterCard"
+                class="h-6 w-auto sm:h-8 opacity-90 hover:opacity-100 transition-opacity duration-200" loading="lazy"
+                itemprop="image">
         </div>
     </div>
-    <div class="border-t border-white/20 mt-10 pt-6 text-center text-xs text-white/70">
+    <div
+        class="border-t border-white/20 dark:border-gray-700 mt-10 pt-6 text-center text-xs text-white/70 dark:text-gray-400 transition-colors duration-300">
         جميع الحقوق محفوظة &copy; <span id="footer-year"></span> بال قول | Palgoals
     </div>
 </footer>
