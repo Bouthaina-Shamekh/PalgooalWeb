@@ -101,11 +101,12 @@ class ServicesController extends Controller
         DB::beginTransaction();
 
         try {
-            $request->merge(['slug' => Str::slug($request->translations[0]['title'])]);
-            $service->update($request->all());
+            // Update basic fields only
+            $service->update($request->only(['order', 'icon', 'url']));
 
-            // إعادة إدخال الترجمات
-            foreach ($request->translations as $translation) {
+            // إعادة إدخال الترجمات باستخدام serviceTranslations (كما في الـ form)
+            $translations = $request->input('serviceTranslations', []);
+            foreach ($translations as $translation) {
                 ServiceTranslation::updateOrCreate(
                     ['service_id' => $service->id, 'locale' => $translation['locale']],
                     [
