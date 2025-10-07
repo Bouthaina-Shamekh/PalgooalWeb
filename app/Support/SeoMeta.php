@@ -7,7 +7,7 @@ class SeoMeta
     public function __construct(
         public string $title,
         public ?string $description = null,
-        public array $keywords = [],
+        public array|string $keywords = [],
         public ?string $canonical = null,
         public ?string $robots = null,
         public ?string $image = null,
@@ -21,6 +21,7 @@ class SeoMeta
         public array $extraLinks = [],
         public array $schema = [],
     ) {
+        // Ensure keywords normalized to array even if passed as CSV string
         $this->keywords = self::normalizeKeywords($keywords);
         $this->alternates = self::normalizeAlternates($alternates);
         $this->extraMeta = self::normalizeMetaEntries($extraMeta);
@@ -128,7 +129,7 @@ class SeoMeta
             }
 
             return null;
-        }, $items), static fn ($value) => !empty($value)));
+        }, $items), static fn($value) => !empty($value)));
     }
 
     protected static function normalizeAlternates(array $alternates): array
@@ -177,7 +178,7 @@ class SeoMeta
                     'name' => $name,
                     'property' => $property,
                     'content' => $content,
-                ], static fn ($value) => $value !== null && $value !== '');
+                ], static fn($value) => $value !== null && $value !== '');
             }
 
             return null;

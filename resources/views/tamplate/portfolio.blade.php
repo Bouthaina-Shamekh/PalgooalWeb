@@ -7,14 +7,16 @@
     ogImage="{{ asset('assets/images/services.jpg') }}">
 
     <!-- Banner Section -->
-    <section class="bg-primary text-white py-28 px-4 sm:px-12 lg:px-36 flex flex-col items-center justify-center text-center overflow-hidden">
+    <section
+        class="bg-primary text-white py-28 px-4 sm:px-12 lg:px-36 flex flex-col items-center justify-center text-center overflow-hidden">
         <!-- المحتوى -->
         <div class="relative z-10 max-w-3xl mx-auto">
             <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold font-almarai mb-6 drop-shadow-lg animate-fade-in">
                 أعمالنا الرقمية المميزة
             </h1>
             <p class="text-lg md:text-2xl text-gray-100/90 font-cairo mb-8 leading-relaxed animate-fade-in">
-                استكشف مجموعة من المشاريع الرقمية التي نفذناها باحترافية عالية وجودة تصميم متقدمة لعملائنا في مختلف القطاعات.
+                استكشف مجموعة من المشاريع الرقمية التي نفذناها باحترافية عالية وجودة تصميم متقدمة لعملائنا في مختلف
+                القطاعات.
             </p>
             <!-- Breadcrumb -->
             <nav class="text-sm text-gray-200 animate-fade-in" aria-label="breadcrumb">
@@ -55,7 +57,9 @@
                             <circle cx="12" cy="12" r="10" />
                         </svg>
                         مدة التنفيذ:
-                        <span class="font-semibold text-primary dark:text-yellow-400">{{ $portfolio->implementation_period_days }} يوم</span>
+                        <span
+                            class="font-semibold text-primary dark:text-yellow-400">{{ $portfolio->implementation_period_days }}
+                            يوم</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <svg class="w-4 h-4 text-secondary" fill="none" stroke="currentColor" stroke-width="2"
@@ -82,7 +86,13 @@
                 </p>
                 <div class="flex flex-wrap gap-3 mb-6">
                     @php
-                        $types = explode(',', $portfolio->translations()->where('locale', app()->getLocale())->first()?->type ?? '');
+                        $types = explode(
+                            ',',
+                            $portfolio
+                                ->translations()
+                                ->where('locale', app()->getLocale())
+                                ->first()?->type ?? '',
+                        );
                     @endphp
 
                     @foreach ($types as $type)
@@ -90,7 +100,8 @@
                     @endforeach
                 </div>
                 <div class="flex flex-wrap gap-4">
-                    <a href="{{ $portfolio->translations()->where('locale', app()->getLocale())->first()->link }}" target="_blank" rel="noopener" class="btn-primary">
+                    <a href="{{ $portfolio->translations()->where('locale', app()->getLocale())->first()->link }}"
+                        target="_blank" rel="noopener" class="btn-primary">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M14 3v4a1 1 0 001 1h4" />
                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -110,17 +121,38 @@
         <!-- المعرض -->
         <div class="mt-20">
             <h3 class="text-2xl font-bold text-primary dark:text-white mb-8 text-center">معرض صور المشروع</h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                <!-- استخدم صور مختلفة -->
-                @for ($i = 1; $i <= count($portfolio->images); $i++)
-                    <a data-fancybox="gallery"
-                        href="{{ asset('storage/' . $portfolio->images[$i - 1]) }}">
-                        <img src="{{ asset('storage/' . $portfolio->images[$i - 1]) }}"
-                            alt="صورة لموقع مؤسسة مروان رقم {{ $i }}" loading="lazy" decoding="async"
-                            class="w-full aspect-[4/3] object-contain rounded-xl shadow-md border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-[#23232a] transition-transform duration-300 hover:scale-105" />
-                    </a>
-                @endfor
-            </div>
+            @php
+                // تطبيع حقل الصور لقبول JSON أو CSV أو مصفوفة
+                $images = [];
+                $rawImages = $portfolio->images ?? null;
+                if (is_string($rawImages)) {
+                    $decoded = json_decode($rawImages, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        $images = $decoded;
+                    } else {
+                        $csv = array_filter(array_map('trim', explode(',', $rawImages)));
+                        $images = $csv ?: (strlen($rawImages) ? [$rawImages] : []);
+                    }
+                } elseif (is_array($rawImages)) {
+                    $images = $rawImages;
+                } elseif ($rawImages instanceof \Illuminate\Support\Collection) {
+                    $images = $rawImages->toArray();
+                }
+                // إزالة القيم الفارغة
+                $images = array_values(array_filter($images, fn($v) => !empty($v)));
+            @endphp
+
+            @if (count($images))
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    @foreach ($images as $i => $img)
+                        <a data-fancybox="gallery" href="{{ asset('storage/' . $img) }}">
+                            <img src="{{ asset('storage/' . $img) }}" alt="صورة للمشروع رقم {{ $i + 1 }}"
+                                loading="lazy" decoding="async"
+                                class="w-full aspect-[4/3] object-contain rounded-xl shadow-md border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-[#23232a] transition-transform duration-300 hover:scale-105" />
+                        </a>
+                    @endforeach
+                </div>
+            @endif
         </div>
     </section>
 </x-template.layouts.index-layouts>

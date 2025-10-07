@@ -498,18 +498,27 @@
 
                 $(document).on('click', '.delete-btn', function() {
                     deleteId = $(this).data('id');
-                    try { if (document.activeElement && typeof document.activeElement.blur === 'function') { document.activeElement.blur(); } } catch(e){}
+                    try {
+                        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                            document.activeElement.blur();
+                        }
+                    } catch (e) {}
                     if (isOpeningDelete) return;
                     // Ensure edit modal is closed before opening delete
                     if ($('#editModal:visible').length) {
                         if (!isClosingEdit) {
                             isClosingEdit = true;
                             forceHideModal('#editModal');
-                            setTimeout(() => { isClosingEdit = false; }, 250);
+                            setTimeout(() => {
+                                isClosingEdit = false;
+                            }, 250);
                         }
                     }
                     isOpeningDelete = true;
-                    setTimeout(() => { forceShowModal('#confirmDeleteModal'); isOpeningDelete = false; }, 80);
+                    setTimeout(() => {
+                        forceShowModal('#confirmDeleteModal');
+                        isOpeningDelete = false;
+                    }, 80);
                 });
 
                 $('#confirmDeleteBtn').on('click', function() {
@@ -527,7 +536,9 @@
                             if (!isClosingDelete) {
                                 isClosingDelete = true;
                                 forceHideModal('#confirmDeleteModal');
-                                setTimeout(() => { isClosingDelete = false; }, 300);
+                                setTimeout(() => {
+                                    isClosingDelete = false;
+                                }, 300);
                             }
                             showToast("{{ __('Media deleted successfully.') }}", 'success');
                             loadMedia();
@@ -546,7 +557,9 @@
                         if (!isClosingDelete) {
                             isClosingDelete = true;
                             forceHideModal('#confirmDeleteModal');
-                            setTimeout(() => { isClosingDelete = false; }, 250);
+                            setTimeout(() => {
+                                isClosingDelete = false;
+                            }, 250);
                         }
                     }
 
@@ -564,10 +577,18 @@
                         $('#editCaption').val(data.caption || '');
                         $('#editDescription').val(data.description || '');
 
-                        try { if (document.activeElement && typeof document.activeElement.blur === 'function') { document.activeElement.blur(); } } catch(e){}
+                        try {
+                            if (document.activeElement && typeof document.activeElement.blur ===
+                                'function') {
+                                document.activeElement.blur();
+                            }
+                        } catch (e) {}
                         if (!isOpeningEdit) {
                             isOpeningEdit = true;
-                            setTimeout(() => { forceShowModal('#editModal'); isOpeningEdit = false; }, 80);
+                            setTimeout(() => {
+                                forceShowModal('#editModal');
+                                isOpeningEdit = false;
+                            }, 80);
                         }
                     });
                 });
@@ -590,7 +611,9 @@
                             if (!isClosingEdit) {
                                 isClosingEdit = true;
                                 forceHideModal('#editModal');
-                                setTimeout(() => { isClosingEdit = false; }, 300);
+                                setTimeout(() => {
+                                    isClosingEdit = false;
+                                }, 300);
                             }
                             showToast("{{ __('Changes saved.') }}", 'success');
                             loadMedia();
@@ -618,24 +641,44 @@
                 }
 
                 // Safe modal close to avoid aria-hidden focus issue
-                function forceHideModal(modalSelector){
-                    try { if (document.activeElement && typeof document.activeElement.blur === 'function') { document.activeElement.blur(); } } catch(e){}
+                function forceHideModal(modalSelector) {
+                    try {
+                        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                            document.activeElement.blur();
+                        }
+                    } catch (e) {}
                     const $m = $(modalSelector);
-                    $m.removeClass('show').addClass('hidden').attr('aria-hidden','true');
+                    $m.removeClass('show').addClass('hidden').attr('aria-hidden', 'true');
                     // If any inline style display is set by library, clear it
                     const el = $m.get(0);
-                    if (el && el.style) { el.style.display = 'none'; }
+                    if (el && el.style) {
+                        el.style.display = 'none';
+                    }
                     // Attempt to remove any backdrop if managed in DOM (defensive)
                     $(".modal-backdrop, [data-pc-modal-backdrop]").remove();
-                    setTimeout(() => { try { if (document.body && typeof document.body.focus === 'function') { document.body.focus({preventScroll:true}); } } catch(e){} }, 20);
+                    setTimeout(() => {
+                        try {
+                            if (document.body && typeof document.body.focus === 'function') {
+                                document.body.focus({
+                                    preventScroll: true
+                                });
+                            }
+                        } catch (e) {}
+                    }, 20);
                 }
 
-                function forceShowModal(modalSelector){
-                    try { if (document.activeElement && typeof document.activeElement.blur === 'function') { document.activeElement.blur(); } } catch(e){}
+                function forceShowModal(modalSelector) {
+                    try {
+                        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+                            document.activeElement.blur();
+                        }
+                    } catch (e) {}
                     const $m = $(modalSelector);
-                    $m.removeClass('hidden').addClass('show').attr('aria-hidden','false');
+                    $m.removeClass('hidden').addClass('show').attr('aria-hidden', 'false');
                     const el = $m.get(0);
-                    if (el && el.style) { el.style.display = 'block'; }
+                    if (el && el.style) {
+                        el.style.display = 'block';
+                    }
                     if (!$('.modal-backdrop').length && !$('[data-pc-modal-backdrop]').length) {
                         const $bd = $('<div class="modal-backdrop fade show" data-pc-modal-backdrop></div>');
                         $('body').append($bd);

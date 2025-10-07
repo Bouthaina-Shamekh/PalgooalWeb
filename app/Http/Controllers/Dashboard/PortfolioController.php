@@ -12,8 +12,37 @@ use App\Models\Language;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+
 class PortfolioController extends Controller
 {
+    /**
+     * Build per-translation validation rules based on active languages.
+     */
+    protected function buildTranslationRules(Request $request): array
+    {
+        $activeCodes = Language::where('is_active', 1)->pluck('code')->all();
+        $allCodes = $this->languages->pluck('code')->all();
+
+        $rules = [
+            'translations' => 'required|array',
+        ];
+
+        foreach ($request->input('translations', []) as $i => $t) {
+            $locale = $t['locale'] ?? null;
+            $isActive = in_array($locale, $activeCodes, true);
+            $reqOrNull = $isActive ? 'required' : 'nullable';
+
+            $rules["translations.$i.locale"] = 'required|string|in:' . implode(',', $allCodes);
+            $rules["translations.$i.title"] = "$reqOrNull|string";
+            $rules["translations.$i.type"] = "$reqOrNull|string";
+            $rules["translations.$i.materials"] = "$reqOrNull|string";
+            $rules["translations.$i.link"] = 'nullable|string';
+            $rules["translations.$i.status"] = 'nullable|string';
+            $rules["translations.$i.description"] = 'nullable|string';
+        }
+
+        return $rules;
+    }
     public function generateUniqueSlug($string, $id = null)
     {
         // نحول النص إلى slug
@@ -26,8 +55,8 @@ class PortfolioController extends Controller
         // نتحقق إذا موجود مسبقاً
         while (
             Portfolio::where('slug', $slug)
-                ->when($id, fn($q) => $q->where('id', '!=', $id)) // استثناء السجل نفسه وقت التعديل
-                ->exists()
+            ->when($id, fn($q) => $q->where('id', '!=', $id)) // استثناء السجل نفسه وقت التعديل
+            ->exists()
         ) {
             $slug = $originalSlug . '-' . $counter++;
         }
@@ -57,6 +86,14 @@ class PortfolioController extends Controller
             'ar' => ['مفعل', 'غير مفعل', 'مكتمل'],
             'en' => ['Active', 'Inactive', 'Completed'],
         ];
+
+        // Ensure we have status suggestions for all available languages to avoid undefined index errors
+        foreach ($this->languages as $lang) {
+            if (!isset($this->statusSuggestions[$lang->code])) {
+                // Fallback to English suggestions if specific locale suggestions are not defined
+                $this->statusSuggestions[$lang->code] = $this->statusSuggestions['en'] ?? [];
+            }
+        }
     }
     public function index()
     {
@@ -76,23 +113,28 @@ class PortfolioController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $baseRules = [
             'order' => 'required|integer',
             'delivery_date' => 'required|date',
             'implementation_period_days' => 'required|integer',
             'client' => 'nullable|string',
-            'description' => 'nullable|string',
-            'translations.*.title' => 'required|string',
-            'translations.*.type' => 'required|string',
-            'translations.*.materials' => 'required|string',
-            'translations.*.link' => 'nullable|string',
-            'translations.*.status' => 'nullable|string',
-        ]);
+        ];
+
+        $translationRules = $this->buildTranslationRules($request);
+        $request->validate($baseRules + $translationRules);
 
         DB::beginTransaction();
 
         try {
-            $slug = $this->generateUniqueSlug($request->translations[0]['title']);
+            $translations = $request->input('translations', []);
+            $activeCodes = Language::where('is_active', 1)->pluck('code')->all();
+            $titleForSlug = collect($translations)
+                ->first(function ($t) use ($activeCodes) {
+                    return in_array($t['locale'] ?? '', $activeCodes, true) && !empty($t['title'] ?? null);
+                })['title']
+                ?? (collect($translations)->firstWhere('title')['title'] ?? 'portfolio');
+
+            $slug = $this->generateUniqueSlug($titleForSlug);
             $request->merge(['slug' => $slug]);
             // حفظ البيانات
             $portfolio = Portfolio::create($request->all());
@@ -147,23 +189,27 @@ class PortfolioController extends Controller
     public function update(Request $request, $id)
     {
         $portfolio = Portfolio::findOrFail($id);
-        $request->validate([
+        $baseRules = [
             'order' => 'required|integer',
             'delivery_date' => 'required|date',
             'implementation_period_days' => 'required|integer',
             'client' => 'nullable|string',
-            'description' => 'nullable|string',
-            'translations.*.title' => 'required|string',
-            'translations.*.type' => 'required|string',
-            'translations.*.materials' => 'required|string',
-            'translations.*.link' => 'nullable|string',
-            'translations.*.status' => 'nullable|string',
-        ]);
+        ];
+        $translationRules = $this->buildTranslationRules($request);
+        $request->validate($baseRules + $translationRules);
 
         DB::beginTransaction();
 
         try {
-            $request->merge(['slug' => Str::slug($request->translations[0]['title'])]);
+            $translations = $request->input('translations', []);
+            $activeCodes = Language::where('is_active', 1)->pluck('code')->all();
+            $titleForSlug = collect($translations)
+                ->first(function ($t) use ($activeCodes) {
+                    return in_array($t['locale'] ?? '', $activeCodes, true) && !empty($t['title'] ?? null);
+                })['title']
+                ?? (collect($translations)->firstWhere('title')['title'] ?? 'portfolio');
+
+            $request->merge(['slug' => $this->generateUniqueSlug($titleForSlug, $id)]);
             $portfolio->update($request->all());
 
             // إعادة إدخال الترجمات

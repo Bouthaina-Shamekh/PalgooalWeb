@@ -198,57 +198,122 @@
     @enderror
 </div>
 
-{{-- الترجمات --}}
-<div class="col-span-12 grid grid-cols-{{ count($languages) }} gap-4">
-    @foreach ($languages as $index => $lang)
-        @php
-            $translation = $portfolioTranslations[$lang->code] ?? null;
-        @endphp
-        <div class="border p-4 rounded shadow-sm position-relative">
-            <h4 class="text-lg font-bold mb-2">{{ $lang->native }}</h4>
+{{-- الترجمات (واجهة تبويبات مثل الخدمات) --}}
+<div class="col-span-12 mt-8">
+    <div
+        class="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 p-6 rounded-xl border border-indigo-200 dark:border-gray-600 mb-6">
+        <h3 class="flex items-center text-xl font-cairo-bold text-gray-800 dark:text-gray-200 mb-2">
+            <svg class="w-6 h-6 ml-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129">
+                </path>
+            </svg>
+            ترجمات المعرض
+        </h3>
+        <p class="text-gray-600 dark:text-gray-300 font-cairo-regular">أدخل العنوان والحقول الأخرى لكل لغة</p>
+    </div>
 
-            <input type="text" class="form-control mb-2" placeholder="العنوان"
-                name="translations[{{ $index }}][title]"
-                value="{{ old('translations.' . $index . '.title', $translation['title'] ?? '') }}">
-
-            <textarea class="form-control mb-2" placeholder="الوصف" rows="3"
-                name="translations[{{ $index }}][description]">{{ old('translations.' . $index . '.description', $translation['description'] ?? '') }}</textarea>
-
-            <input type="text" class="form-control mb-2" placeholder="النوع"
-                name="translations[{{ $index }}][type]"
-                value="{{ old('translations.' . $index . '.type', $translation['type'] ?? '') }}"
-                id="type_input_{{ $lang->code }}" oninput="showSuggestions('{{ $lang->code }}')"
-                onfocus="showSuggestions('{{ $lang->code }}')"
-                onkeydown="handleTypeKeydown(event, '{{ $lang->code }}')" autocomplete="off">
-
-            <ul class="list-group shadow rounded border position-absolute" id="type_suggestions_{{ $lang->code }}"
-                style="top: calc(100% + 4px); z-index: 1050; display: none;
-                       background: #fff; width: 200px; max-height: 200px;
-                       overflow-y: auto; box-shadow: 0 6px 12px rgba(0,0,0,0.15); border: 1px solid #ddd;">
-            </ul>
-
-            <input type="text" class="form-control mb-2" placeholder="المواد"
-                name="translations[{{ $index }}][materials]"
-                value="{{ old('translations.' . $index . '.materials', $translation['materials'] ?? '') }}">
-
-            <input type="text" class="form-control mb-2" placeholder="الرابط"
-                name="translations[{{ $index }}][link]"
-                value="{{ old('translations.' . $index . '.link', $translation['link'] ?? '') }}">
-
-            <select class="form-control mb-2" name="translations[{{ $index }}][status]">
-                <option value="">اختر الحالة</option>
-                @foreach ($statusSuggestions[$lang->code] as $status)
-                    <option value="{{ $status }}"
-                        {{ old('translations.' . $index . '.status', $translation['status'] ?? '') == $status ? 'selected' : '' }}>
-                        {{ $status }}
-                    </option>
-                @endforeach
-            </select>
-
-            <input type="hidden" name="translations[{{ $index }}][locale]"
-                value="{{ old('translations.' . $index . '.locale', $lang->code) }}">
+    <div
+        class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+        <!-- تبويبات اللغات -->
+        <div class="flex border-b border-gray-200 dark:border-gray-700 mb-0 space-x-2 rtl:space-x-reverse px-6 pt-6 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600"
+            role="tablist" id="portfolioLanguageTabs">
+            @foreach ($languages as $index => $lang)
+                <button type="button" onclick="portfolioSwitchLanguageTab('{{ $lang->code }}')"
+                    onkeydown="portfolioHandleTabKeydown(event, '{{ $lang->code }}')"
+                    id="lang-tab-{{ $lang->code }}" role="tab" aria-controls="lang-panel-{{ $lang->code }}"
+                    aria-selected="{{ $loop->first ? 'true' : 'false' }}" tabindex="{{ $loop->first ? '0' : '-1' }}"
+                    class="lang-tab-btn px-4 py-3 rounded-t-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500 whitespace-nowrap hover:bg-gray-50 dark:hover:bg-gray-700 {{ $loop->first ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500 dark:border-indigo-400 font-cairo-semibold' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent font-cairo-regular' }}">
+                    <div class="flex items-center space-x-2 rtl:space-x-reverse">
+                        <div
+                            class="w-6 h-6 bg-indigo-100 dark:bg-indigo-800 text-indigo-600 dark:text-indigo-300 rounded-full flex items-center justify-center text-xs font-cairo-bold">
+                            {{ strtoupper(substr($lang->code, 0, 2)) }}
+                        </div>
+                        <span>{{ $lang->native }}</span>
+                        @if ($loop->first)
+                            <svg class="w-4 h-4 text-indigo-500 dark:text-indigo-400 opacity-75" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        @endif
+                    </div>
+                </button>
+            @endforeach
         </div>
-    @endforeach
+
+        <!-- Panels -->
+        <div class="p-6 bg-gray-50 dark:bg-gray-900">
+            @foreach ($languages as $index => $lang)
+                @php $translation = $portfolioTranslations[$lang->code] ?? null; @endphp
+                <div id="lang-panel-{{ $lang->code }}" role="tabpanel"
+                    aria-labelledby="lang-tab-{{ $lang->code }}"
+                    class="lang-panel {{ $loop->first ? 'block' : 'hidden' }} opacity-100 transform transition-all duration-300 ease-out">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">العنوان</label>
+                            <input type="text" class="form-control" placeholder="العنوان"
+                                name="translations[{{ $index }}][title]"
+                                value="{{ old('translations.' . $index . '.title', $translation['title'] ?? '') }}"
+                                @if ($lang->is_active) required @endif>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">الوصف</label>
+                            <textarea class="form-control" placeholder="الوصف" rows="3"
+                                name="translations[{{ $index }}][description]">{{ old('translations.' . $index . '.description', $translation['description'] ?? '') }}</textarea>
+                        </div>
+
+                        <div class="relative">
+                            <label class="block text-sm font-medium mb-1">النوع</label>
+                            <input type="text" class="form-control" placeholder="النوع"
+                                name="translations[{{ $index }}][type]"
+                                value="{{ old('translations.' . $index . '.type', $translation['type'] ?? '') }}"
+                                id="type_input_{{ $lang->code }}" oninput="showSuggestions('{{ $lang->code }}')"
+                                onfocus="showSuggestions('{{ $lang->code }}')"
+                                onkeydown="handleTypeKeydown(event, '{{ $lang->code }}')" autocomplete="off"
+                                @if ($lang->is_active) required @endif>
+                            <ul class="list-group shadow rounded border position-absolute"
+                                id="type_suggestions_{{ $lang->code }}"
+                                style="top: calc(100% + 4px); z-index: 1050; display: none; background: #fff; width: 200px; max-height: 200px; overflow-y: auto; box-shadow: 0 6px 12px rgba(0,0,0,0.15); border: 1px solid #ddd;">
+                            </ul>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">المواد</label>
+                            <input type="text" class="form-control" placeholder="المواد"
+                                name="translations[{{ $index }}][materials]"
+                                value="{{ old('translations.' . $index . '.materials', $translation['materials'] ?? '') }}"
+                                @if ($lang->is_active) required @endif>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">الرابط</label>
+                            <input type="text" class="form-control" placeholder="الرابط"
+                                name="translations[{{ $index }}][link]"
+                                value="{{ old('translations.' . $index . '.link', $translation['link'] ?? '') }}">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-1">الحالة</label>
+                            <select class="form-control" name="translations[{{ $index }}][status]">
+                                <option value="">اختر الحالة</option>
+                                @foreach ($statusSuggestions[$lang->code] ?? ($statusSuggestions['en'] ?? []) as $status)
+                                    <option value="{{ $status }}"
+                                        {{ old('translations.' . $index . '.status', $translation['status'] ?? '') == $status ? 'selected' : '' }}>
+                                        {{ $status }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <input type="hidden" name="translations[{{ $index }}][locale]"
+                            value="{{ old('translations.' . $index . '.locale', $lang->code) }}">
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
 </div>
 
 <div class="col-span-12 text-right mt-6">
@@ -415,6 +480,98 @@
                     }
                 });
             });
+        });
+    </script>
+@endpush
+
+@push('scripts')
+    <script>
+        // تبويبات لغات ترجمة المعرض (معزولة عن خدمات)
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabIds = @json($languages->pluck('code'));
+
+            function setTabActive(tabEl, isActive) {
+                if (!tabEl) return;
+                if (isActive) {
+                    tabEl.classList.remove('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300',
+                        'border-transparent', 'font-cairo-regular');
+                    tabEl.classList.add('bg-white', 'dark:bg-gray-800', 'text-indigo-600', 'dark:text-indigo-400',
+                        'border-b-2', 'border-indigo-500', 'dark:border-indigo-400', 'font-cairo-semibold');
+                    tabEl.setAttribute('aria-selected', 'true');
+                    tabEl.setAttribute('tabindex', '0');
+                } else {
+                    tabEl.classList.add('bg-gray-100', 'dark:bg-gray-700', 'text-gray-600', 'dark:text-gray-300',
+                        'border-transparent', 'font-cairo-regular');
+                    tabEl.classList.remove('bg-white', 'dark:bg-gray-800', 'text-indigo-600',
+                        'dark:text-indigo-400', 'border-b-2', 'border-indigo-500', 'dark:border-indigo-400',
+                        'font-cairo-semibold');
+                    tabEl.setAttribute('aria-selected', 'false');
+                    tabEl.setAttribute('tabindex', '-1');
+                    const check = tabEl.querySelector('.lang-checkmark');
+                    if (check) check.remove();
+                }
+            }
+
+            window.portfolioSwitchLanguageTab = function(langCode) {
+                // deactivate all
+                document.querySelectorAll('#portfolioLanguageTabs .lang-tab-btn').forEach(tab => setTabActive(
+                    tab, false));
+                document.querySelectorAll('.lang-panel').forEach(p => {
+                    p.classList.add('hidden');
+                    p.classList.remove('block');
+                });
+
+                // activate
+                const activeTab = document.getElementById('lang-tab-' + langCode);
+                setTabActive(activeTab, true);
+                const iconContainer = activeTab?.querySelector('.flex');
+                iconContainer && iconContainer.insertAdjacentHTML('beforeend', `
+                <svg class="lang-checkmark w-4 h-4 text-indigo-500 dark:text-indigo-400 opacity-75" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>`);
+
+                const panel = document.getElementById('lang-panel-' + langCode);
+                if (panel) {
+                    panel.classList.remove('hidden');
+                    panel.classList.add('block');
+                    setTimeout(() => {
+                        panel.querySelector('input[type="text"]')?.focus();
+                    }, 60);
+                }
+                localStorage.setItem('portfolioActiveLangTab', langCode);
+            }
+
+            window.portfolioHandleTabKeydown = function(event, langCode) {
+                const tabs = document.querySelectorAll('#portfolioLanguageTabs .lang-tab-btn');
+                const idx = Array.from(tabs).findIndex(t => t.id === 'lang-tab-' + langCode);
+                if (idx < 0) return;
+                let next = null;
+                if (event.key === 'ArrowLeft') {
+                    event.preventDefault();
+                    next = (idx - 1 + tabs.length) % tabs.length;
+                }
+                if (event.key === 'ArrowRight') {
+                    event.preventDefault();
+                    next = (idx + 1) % tabs.length;
+                }
+                if (event.key === 'Home') {
+                    event.preventDefault();
+                    next = 0;
+                }
+                if (event.key === 'End') {
+                    event.preventDefault();
+                    next = tabs.length - 1;
+                }
+                if (next != null) {
+                    const code = tabs[next].id.replace('lang-tab-', '');
+                    window.portfolioSwitchLanguageTab(code);
+                    tabs[next].focus();
+                }
+            }
+
+            const saved = localStorage.getItem('portfolioActiveLangTab');
+            const first = saved && tabIds.includes(saved) ? saved : tabIds[0];
+            if (first) window.portfolioSwitchLanguageTab(first);
         });
     </script>
 @endpush
