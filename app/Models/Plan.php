@@ -17,12 +17,15 @@ class Plan extends Model
         'server_package',
         'plan_category_id',
         'is_active',
+        'is_featured',
+        'featured_label',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
         'is_active' => 'bool',
+        'is_featured' => 'bool',
         'monthly_price_cents' => 'integer',
         'annual_price_cents' => 'integer',
     ];
@@ -138,5 +141,19 @@ class Plan extends Model
     {
         // if you add position later, switch to orderBy('position')
         return $query->orderBy('id', 'desc');
+    }
+
+    public function scopeFeatured($query)
+    {
+        return $query->where('is_featured', true);
+    }
+
+    public function getFeaturedLabelAttribute(): ?string
+    {
+        $label = $this->attributes['featured_label'] ?? null;
+        if ($this->is_featured && !$label) {
+            return __('Most Popular');
+        }
+        return $label;
     }
 }

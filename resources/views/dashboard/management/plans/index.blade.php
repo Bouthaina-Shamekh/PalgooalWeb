@@ -1,4 +1,4 @@
-<x-dashboard-layout>
+﻿<x-dashboard-layout>
     <div class="page-header">
         <div class="page-block">
             <ul class="breadcrumb">
@@ -52,6 +52,7 @@
                                     <th class="text-right">Category</th>
                                     <th class="text-right">Server</th>
                                     <th class="text-right">Price</th>
+                                    <th class="text-right">Featured</th>
                                     <th class="text-right">Status</th>
                                     <th class="text-right">Action</th>
                                 </tr>
@@ -63,6 +64,9 @@
                                         $translation = $plan->translations
                                             ->where('locale', app()->getLocale())
                                             ->first();
+                                        $categoryTranslation =
+                                            $plan->category?->translations->firstWhere('locale', app()->getLocale()) ??
+                                            $plan->category?->translations->first();
 
                                         $monthly = $plan->monthly_price_cents
                                             ? '$' . number_format($plan->monthly_price_cents / 100, 2)
@@ -76,8 +80,15 @@
                                         <td class="font-semibold">
                                             {{ $translation?->title ?? $plan->slug }}
                                             <div class="text-xs text-gray-500">{{ $plan->slug }}</div>
+                                            @if ($plan->is_featured)
+                                                <span
+                                                    class="mt-1 inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-[11px] px-2 py-0.5">
+                                                    <i class="ti ti-star-filled text-xs"></i>
+                                                    {{ $plan->featured_label ?? __('Most Popular') }}
+                                                </span>
+                                            @endif
                                         </td>
-                                        <td>{{ $plan->category?->translations->first()?->title ?? '-' }}</td>
+                                        <td>{{ $categoryTranslation?->title ?? '-' }}</td>
                                         <td>{{ $plan->server?->name ?? '-' }}</td>
                                         <td>
                                             @if ($monthly || $annual)
@@ -88,10 +99,19 @@
                                                     <div><strong>Annual:</strong> {{ $annual }}</div>
                                                 @endif
                                             @else
-                                                <span class="text-gray-400">—</span>
+                                                <span class="text-gray-400">&mdash;</span>
                                             @endif
                                         </td>
-                                        {{-- Features column removed --}}
+                                        <td>
+                                            @if ($plan->is_featured)
+                                                <span
+                                                    class="badge bg-primary/10 text-primary rounded-full text-xs px-2 py-0.5">
+                                                    {{ $plan->featured_label ?? __('Most Popular') }}
+                                                </span>
+                                            @else
+                                                <span class="text-gray-400">&mdash;</span>
+                                            @endif
+                                        </td>
                                         <td>
                                             <form action="{{ route('dashboard.plans.toggle', $plan->id) }}"
                                                 method="POST" style="display:inline">
@@ -128,7 +148,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center text-gray-500 py-8">No plans found.</td>
+                                        <td colspan="8" class="text-center text-gray-500 py-8">No plans found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

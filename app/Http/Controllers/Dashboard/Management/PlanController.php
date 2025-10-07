@@ -50,20 +50,51 @@ class PlanController extends Controller
             'name' => 'required|string|max:120',
             'description' => 'nullable|string',
             'features' => 'nullable|array',
+            'features.*.text' => 'nullable|string|max:255',
+            'features.*.available' => 'nullable',
         ], [
             'name.required' => 'الاسم مطلوب',
         ]);
 
         $translation = $validator->validate();
-        $translation['features'] = array_values(array_filter((array) $translation['features'], fn($v) => trim((string)$v) !== ''));
+
+        $normalizedFeatures = [];
+        foreach ((array) ($translation['features'] ?? []) as $item) {
+            if (is_array($item)) {
+                $text = isset($item['text']) ? trim((string) $item['text']) : '';
+                if ($text === '') {
+                    continue;
+                }
+                $availableRaw = $item['available'] ?? true;
+                $available = filter_var($availableRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                $normalizedFeatures[] = [
+                    'text' => $text,
+                    'available' => $available === null ? (bool) $availableRaw : (bool) $available,
+                ];
+            } else {
+                $text = trim((string) $item);
+                if ($text === '') {
+                    continue;
+                }
+                $normalizedFeatures[] = [
+                    'text' => $text,
+                    'available' => true,
+                ];
+            }
+        }
+
+        $translation['features'] = $normalizedFeatures;
 
         return $translation;
     }
 
     public function store(Request $r)
     {
-        // normalize boolean
-        $r->merge(['is_active' => $r->boolean('is_active')]);
+        // normalize booleans
+        $r->merge([
+            'is_active' => $r->boolean('is_active'),
+            'is_featured' => $r->boolean('is_featured'),
+        ]);
 
         // parse prices (will read either *_cents or *_ui)
         $monthly = $this->parsePrice($r, 'monthly_price');
@@ -82,6 +113,8 @@ class PlanController extends Controller
             'server_package' => ['nullable', 'string', 'max:255'],
             'plan_category_id' => ['nullable', 'integer', 'exists:plan_categories,id'],
             'is_active' => 'boolean',
+            'is_featured' => 'boolean',
+            'featured_label' => 'nullable|string|max:120',
         ]);
 
         if ($monthly === null && $annual === null) {
@@ -99,6 +132,12 @@ class PlanController extends Controller
         if (empty($data['server_package'])) {
             $data['server_package'] = $data['name'];
         }
+
+        $data['is_featured'] = (bool) ($data['is_featured'] ?? false);
+        $featuredLabelInput = $r->input('featured_label');
+        $data['featured_label'] = $data['is_featured']
+            ? (trim((string) $featuredLabelInput) ?: null)
+            : null;
 
         // Important: do NOT convert plan_category_id -> category_id.
         // We expect the DB column to be plan_category_id and the Plan model to have it fillable.
@@ -125,7 +164,10 @@ class PlanController extends Controller
 
     public function update(Request $r, Plan $plan)
     {
-        $r->merge(['is_active' => $r->boolean('is_active')]);
+        $r->merge([
+            'is_active' => $r->boolean('is_active'),
+            'is_featured' => $r->boolean('is_featured'),
+        ]);
 
         $monthly = $this->parsePrice($r, 'monthly_price');
         $annual = $this->parsePrice($r, 'annual_price');
@@ -143,6 +185,8 @@ class PlanController extends Controller
             'server_package' => ['nullable', 'string', 'max:255'],
             'plan_category_id' => ['nullable', 'integer', 'exists:plan_categories,id'],
             'is_active' => 'boolean',
+            'is_featured' => 'boolean',
+            'featured_label' => 'nullable|string|max:120',
         ]);
 
         if ($monthly === null && $annual === null) {
@@ -159,6 +203,12 @@ class PlanController extends Controller
         if (empty($data['server_package'])) {
             $data['server_package'] = $data['name'];
         }
+
+        $data['is_featured'] = (bool) ($data['is_featured'] ?? false);
+        $featuredLabelInput = $r->input('featured_label');
+        $data['featured_label'] = $data['is_featured']
+            ? (trim((string) $featuredLabelInput) ?: null)
+            : null;
 
         // Keep plan_category_id as-is (no renaming)
         $plan->update($data);

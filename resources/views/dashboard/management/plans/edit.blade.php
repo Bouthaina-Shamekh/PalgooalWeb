@@ -27,9 +27,11 @@
                         @method('PUT')
 
                         @php
-                            $locales =
-                                $languages->pluck('name', 'code')->toArray() ??
-                                config('app.locales', ['ar' => 'العربية', 'en' => 'English']);
+                            $localesCollection = $languages?->pluck('name', 'code');
+                            $locales = $localesCollection ? $localesCollection->filter()->toArray() : [];
+                            if (empty($locales)) {
+                                $locales = config('app.locales', ['ar' => 'العربية', 'en' => 'English']);
+                            }
                             $activeLocale = old('active_locale', app()->getLocale());
                             // translation passed from controller (may be null)
                         @endphp
@@ -104,10 +106,37 @@
 
                             <!-- Status -->
                             <div class="col-span-12 md:col-span-6 flex items-center gap-2">
-                                <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $plan->is_active))
-                                    class="w-4 h-4">
+                                <input type="checkbox" name="is_active" value="1"
+                                    @checked(old('is_active', $plan->is_active)) class="w-4 h-4">
                                 <span class="text-sm">Active (available to sell)</span>
                                 @error('is_active')
+                                    <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <!-- Featured toggle -->
+                            <div class="col-span-12 md:col-span-6">
+                                <label class="block text-sm font-medium mb-1">Featured Plan</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" name="is_featured" value="1"
+                                        @checked(old('is_featured', $plan->is_featured)) class="w-4 h-4">
+                                    <span class="text-sm">Highlight this plan with a special badge</span>
+                                </div>
+                                @error('is_featured')
+                                    <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <!-- Featured label -->
+                            <div class="col-span-12 md:col-span-6">
+                                <label class="block text-sm font-medium mb-1">Featured Badge Label</label>
+                                <input type="text" name="featured_label"
+                                    class="w-full border rounded-lg px-3 py-2"
+                                    value="{{ old('featured_label', $plan->getOriginal('featured_label')) }}"
+                                    placeholder="Most Popular">
+                                <p class="text-xs text-gray-500 mt-1">Shown when the plan is marked as featured.
+                                    Leave empty to use the default text.</p>
+                                @error('featured_label')
                                     <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
@@ -161,7 +190,28 @@
                                 @php
                                     // translation might be for current locale only; fall back to plan->translation for other locales if needed
                                     $transForLocale = $plan->translations->where('locale', $locale)->first();
-                                    $featuresForLocale = old('features.' . $locale, $transForLocale?->features ?? []);
+                                    $rawFeatures = old('features.' . $locale);
+                                    if ($rawFeatures === null) {
+                                        $rawFeatures = $transForLocale?->features ?? [];
+                                    }
+                                    $featureItems = collect($rawFeatures)
+                                        ->map(function ($item) {
+                                            if (is_array($item)) {
+                                                $text = isset($item['text']) ? trim((string) $item['text']) : '';
+                                                $available = array_key_exists('available', $item)
+                                                    ? filter_var($item['available'], FILTER_VALIDATE_BOOLEAN)
+                                                    : true;
+                                            } else {
+                                                $text = trim((string) $item);
+                                                $available = true;
+                                            }
+                                            return [
+                                                'text' => $text,
+                                                'available' => (bool) $available,
+                                            ];
+                                        })
+                                        ->filter(fn($feature) => $feature['text'] !== '')
+                                        ->values();
                                 @endphp
                                 <div id="pane-{{ $locale }}"
                                     class="lang-pane {{ $activeLocale == $locale ? 'block' : 'hidden' }}">
@@ -193,27 +243,55 @@
                                         <div class="col-span-12">
                                             <label class="block text-sm font-medium mb-1">Features
                                                 ({{ $label }})</label>
-                                            <div class="flex gap-2 mb-2">
-                                                <input type="text" name="features_input[{{ $locale }}]"
-                                                    id="featureInput-{{ $locale }}"
-                                                    class="flex-1 border rounded-lg px-3 py-2"
-                                                    placeholder="e.g. 10GB SSD"
-                                                    onkeydown="if(event.key==='Enter'){event.preventDefault();addFeature('{{ $locale }}');}">
-                                                <button type="button" onclick="addFeature('{{ $locale }}')"
-                                                    class="px-3 py-2 bg-primary text-white rounded-lg">Add</button>
-                                            </div>
-                                            <div id="featuresChips-{{ $locale }}" class="flex flex-wrap gap-2">
-                                                @foreach ($featuresForLocale as $f)
-                                                    <span
-                                                        class="bg-green-100 text-green-800 rounded-full px-3 py-1 flex items-center gap-1">
-                                                        <span>{{ $f }}</span>
-                                                        <button type="button" class="text-red-600"
-                                                            onclick="this.parentElement.remove()">✕</button>
-                                                        <input type="hidden" name="features[{{ $locale }}][]"
-                                                            value="{{ $f }}">
-                                                    </span>
+                                            <div class="space-y-2" data-feature-wrapper data-locale="{{ $locale }}"
+                                                data-next-index="{{ $featureItems->count() }}"
+                                                data-available-label="{{ __('Available') }}"
+                                                data-remove-label="{{ __('Remove feature') }}">
+                                                @foreach ($featureItems as $index => $feature)
+                                                    <div class="flex flex-col sm:flex-row sm:items-center gap-3"
+                                                        data-feature-row>
+                                                        <div class="flex-1 w-full">
+                                                            <input type="text"
+                                                                name="features[{{ $locale }}][{{ $index }}][text]"
+                                                                class="w-full border rounded-lg px-3 py-2"
+                                                                value="{{ $feature['text'] }}"
+                                                                placeholder="e.g. Domain">
+                                                        </div>
+                                                        <label class="inline-flex items-center gap-2 text-sm">
+                                                            <input type="hidden"
+                                                                name="features[{{ $locale }}][{{ $index }}][available]"
+                                                                value="0">
+                                                            <input type="checkbox"
+                                                                name="features[{{ $locale }}][{{ $index }}][available]"
+                                                                value="1"
+                                                                class="h-4 w-4 text-primary border-gray-300 rounded"
+                                                                @checked($feature['available'])>
+                                                            <span>{{ __('Available') }}</span>
+                                                        </label>
+                                                        <button type="button"
+                                                            class="text-red-600 hover:text-red-800"
+                                                            data-remove-feature>
+                                                            &times;
+                                                            <span class="sr-only">{{ __('Remove feature') }}</span>
+                                                        </button>
+                                                    </div>
                                                 @endforeach
                                             </div>
+                                            <div class="mt-2 flex items-center gap-2">
+                                                <button type="button"
+                                                    class="px-3 py-2 bg-primary text-white rounded-lg"
+                                                    data-add-feature="{{ $locale }}">Add Feature</button>
+                                                <span class="text-xs text-gray-500">Use the availability toggle to
+                                                    highlight whether the feature is included.</span>
+                                            </div>
+                                            @if ($errors->has("features.$locale"))
+                                                <p class="text-red-600 text-sm mt-1">
+                                                    {{ $errors->first("features.$locale") }}</p>
+                                            @endif
+                                            @if ($errors->has("features.$locale.*.text"))
+                                                <p class="text-red-600 text-sm mt-1">
+                                                    {{ $errors->first("features.$locale.*.text") }}</p>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
@@ -253,17 +331,20 @@
         const annualCents = document.getElementById('annual_price_cents');
 
         function syncCents() {
-            monthlyCents.value = monthlyUI && monthlyUI.value ? Math.round(parseFloat(monthlyUI.value) * 100) : '';
-            annualCents.value = annualUI && annualUI.value ? Math.round(parseFloat(annualUI.value) * 100) : '';
+            monthlyCents.value = monthlyUI?.value ? Math.round(parseFloat(monthlyUI.value) * 100) : '';
+            annualCents.value = annualUI?.value ? Math.round(parseFloat(annualUI.value) * 100) : '';
         }
+
         monthlyUI?.addEventListener('input', syncCents);
         annualUI?.addEventListener('input', syncCents);
         document.getElementById('planForm')?.addEventListener('submit', syncCents);
-        document.addEventListener('DOMContentLoaded', syncCents);
 
         // Fetch server packages and populate select
         async function fetchPackagesForServer(serverId, selected = '') {
             const select = document.getElementById('server_package_select');
+            if (!select) {
+                return;
+            }
             select.innerHTML = '<option value="">Loading...</option>';
             if (!serverId) {
                 select.innerHTML = '<option value="">-- (select server first) --</option>';
@@ -283,7 +364,6 @@
                         const j = JSON.parse(text);
                         if (j.message) msg = j.message;
                         else if (j.error) msg = j.error;
-                        else if (j.debugSample) msg = j.debugSample.substring(0, 200);
                     } catch (err) {
                         if (text) msg = text.substring(0, 200);
                     }
@@ -291,20 +371,19 @@
                     console.error('Package fetch failed', res.status, text);
                     return;
                 }
+
                 const data = await res.json();
                 select.innerHTML = '<option value="">-- None --</option>';
                 const packages = data?.packages || data?.pkg || data?.data || [];
                 if (Array.isArray(packages) && packages.length) {
                     packages.forEach(pkg => {
                         const opt = document.createElement('option');
-                        opt.value = typeof pkg === 'string' ? pkg : (pkg.name || pkg.package || pkg.pkg || JSON
-                            .stringify(pkg));
-                        opt.textContent = typeof pkg === 'string' ? pkg : (pkg.name || pkg.package || pkg.pkg ||
-                            JSON.stringify(pkg));
+                        opt.value = typeof pkg === 'string' ? pkg : (pkg.name || pkg.package || pkg.pkg || JSON.stringify(pkg));
+                        opt.textContent = typeof pkg === 'string' ? pkg : (pkg.name || pkg.package || pkg.pkg || JSON.stringify(pkg));
                         if (opt.value === selected) opt.selected = true;
                         select.appendChild(opt);
                     });
-                } else if (packages && typeof packages === 'object') {
+                } else if (packages && typeof packages === 'object' && !Array.isArray(packages)) {
                     Object.keys(packages).forEach(k => {
                         const opt = document.createElement('option');
                         opt.value = k;
@@ -320,34 +399,77 @@
             }
         }
 
-        const serverSelectEl = document.querySelector('select[name="server_id"]');
-        serverSelectEl?.addEventListener('change', (e) => fetchPackagesForServer(e.target.value,
-            '{{ old('server_package', $plan->server_package) }}'));
-        // initial load for edit
-        document.addEventListener('DOMContentLoaded', () => {
-            if (serverSelectEl && serverSelectEl.value) {
-                fetchPackagesForServer(serverSelectEl.value, '{{ old('server_package', $plan->server_package) }}');
-            }
-        });
-
-        // Features
-        function addFeature(locale) {
-            const input = document.querySelector(`#featureInput-${locale}`);
-            const chips = document.getElementById('featuresChips-' + locale);
-            let value = input.value.trim();
-            if (!value) return;
-            if ([...chips.querySelectorAll(`input[name="features[${locale}][]"]`)].some(i => i.value === value)) {
-                input.value = '';
-                input.focus();
-                return;
-            }
-            const span = document.createElement('span');
-            span.className = 'bg-green-100 text-green-800 rounded-full px-3 py-1 flex items-center gap-1';
-            span.innerHTML =
-                `<span>${value}</span><button type="button" class="text-red-600" onclick="this.parentElement.remove()">✕</button><input type="hidden" name="features[${locale}][]" value="${value}">`;
-            chips.appendChild(span);
-            input.value = '';
-            input.focus();
+        function escapeFeatureValue(value) {
+            return String(value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
         }
+
+        function appendFeatureRow(wrapper, locale, textValue = '', available = true) {
+            const nextIndex = parseInt(wrapper.dataset.nextIndex || '0', 10);
+            const namePrefix = 'features[' + locale + '][' + nextIndex + ']';
+            const row = document.createElement('div');
+            row.className = 'flex flex-col sm:flex-row sm:items-center gap-3';
+            row.setAttribute('data-feature-row', '');
+
+            const availableLabel = wrapper.dataset.availableLabel || 'Available';
+            const removeLabel = wrapper.dataset.removeLabel || 'Remove feature';
+            const escapedValue = escapeFeatureValue(textValue);
+            const checkedAttr = available ? ' checked' : '';
+
+            row.innerHTML =
+                "<div class=\"flex-1 w-full\">" +
+                "<input type=\"text\" name=\"" + namePrefix + "[text]\" class=\"w-full border rounded-lg px-3 py-2\" placeholder=\"e.g. Domain\" value=\"" + escapedValue + "\">" +
+                "</div>" +
+                "<label class=\"inline-flex items-center gap-2 text-sm\">" +
+                "<input type=\"hidden\" name=\"" + namePrefix + "[available]\" value=\"0\">" +
+                "<input type=\"checkbox\" name=\"" + namePrefix + "[available]\" value=\"1\" class=\"h-4 w-4 text-primary border-gray-300 rounded\"" + checkedAttr + ">" +
+                "<span>" + availableLabel + "</span>" +
+                "</label>" +
+                "<button type=\"button\" class=\"text-red-600 hover:text-red-800\" data-remove-feature>&times;<span class=\"sr-only\">" + removeLabel + "</span></button>";
+
+            wrapper.appendChild(row);
+            wrapper.dataset.nextIndex = nextIndex + 1;
+            const textInput = row.querySelector('input[type=\"text\"]');
+            textInput?.focus();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            syncCents();
+
+            const serverSelectEl = document.querySelector('select[name=\"server_id\"]');
+            const serverPackageOld = @json(old('server_package', $plan->server_package));
+            if (serverSelectEl && serverSelectEl.value) {
+                fetchPackagesForServer(serverSelectEl.value, serverPackageOld ?? '');
+            }
+            serverSelectEl?.addEventListener('change', (e) => fetchPackagesForServer(e.target.value, ''));
+
+            document.querySelectorAll('[data-feature-wrapper]').forEach(wrapper => {
+                if (!wrapper.dataset.nextIndex) {
+                    const preset = wrapper.querySelectorAll('[data-feature-row]').length;
+                    wrapper.dataset.nextIndex = preset;
+                }
+                wrapper.addEventListener('click', (event) => {
+                    const removeBtn = event.target.closest('[data-remove-feature]');
+                    if (removeBtn) {
+                        const row = removeBtn.closest('[data-feature-row]');
+                        row?.remove();
+                    }
+                });
+            });
+
+            document.querySelectorAll('[data-add-feature]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const locale = button.dataset.addFeature;
+                    const wrapper = document.querySelector('[data-feature-wrapper][data-locale=\"' + locale + '\"]');
+                    if (!wrapper) {
+                        return;
+                    }
+                    appendFeatureRow(wrapper, locale, '', true);
+                });
+            });
+        });
     </script>
 </x-dashboard-layout>

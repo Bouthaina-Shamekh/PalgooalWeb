@@ -1,4 +1,9 @@
-@props(['plans' => collect(), 'title' => '', 'subtitle' => '', 'category' => null])
+@props([
+    'plans' => collect(),
+    'title' => '',
+    'subtitle' => '',
+    'category' => null,
+])
 
 <form id="plansForm" class="group/tiers bg-background py-24 sm:py-32" dir="rtl" action="/subscribe" method="POST">
   @csrf
@@ -7,8 +12,8 @@
 
     {{-- Header: show category title/description if provided, otherwise section title/subtitle --}}
     @php
-      $headerTitle = $title ?: 'خططنا';
-      $headerSubtitle = $subtitle ?: 'التسعير الذي ينمو معك';
+      $headerTitle = $title ?: __('Hosting Plans');
+      $headerSubtitle = $subtitle ?: __('Choose the plan that fits your needs');
       if ($category) {
           $catLabel = $category->translation()?->title
                     ?? $category->translations->first()?->title
@@ -67,16 +72,38 @@
           $t = $plan->translation(); // translation for current locale or fallback
           $planTitle = $t?->title ?? $plan->slug;
           $planDesc = $t?->description ?? ($plan->name ?? '');
-          $features = is_array($t?->features) ? $t->features : [];
+          $rawFeatures = is_array($t?->features) ? $t->features : [];
+          $features = collect($rawFeatures)
+              ->map(function ($item) {
+                  if (is_array($item)) {
+                      $text = isset($item['text']) ? trim((string) $item['text']) : '';
+                      $available = array_key_exists('available', $item)
+                          ? filter_var($item['available'], FILTER_VALIDATE_BOOLEAN)
+                          : true;
+                  } else {
+                      $text = trim((string) $item);
+                      $available = true;
+                  }
+
+                  return [
+                      'text' => $text,
+                      'available' => (bool) $available,
+                  ];
+              })
+              ->filter(fn ($feature) => trim((string) ($feature['text'] ?? '')) !== '')
+              ->values();
           $monthlyC = $plan->monthly_price_cents;
           $annualC = $plan->annual_price_cents;
-          // featured flag (customize per your model)
-          $featured = $plan->is_featured ?? false;
+          $featured = (bool) ($plan->is_featured ?? false);
+          $featuredLabel = $plan->featured_label ?? __('Most Popular');
         @endphp
 
         <div class="group/tier rounded-3xl p-8 ring-1 ring-primary xl:p-10 bg-white relative {{ $featured ? 'scale-105 ring-2 shadow-xl' : '' }}" data-plan-sub-type="{{ $monthlyC != null ? 'monthly' : 'annually' }}" data-plan-id="{{ $plan->id }}">
           @if ($featured)
-            <div class="absolute -top-4 -start-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full shadow">الأكثر شهرة</div>
+            <div class="absolute -top-4 -start-4 flex items-center gap-1 rounded-full bg-primary text-white text-xs font-bold px-3 py-1 shadow">
+              <i class="ti ti-star-filled text-sm"></i>
+              {{ $featuredLabel }}
+            </div>
           @endif
 
           <h3 id="tier-{{ $plan->id }}" class="text-lg/8 font-semibold {{ $featured ? 'text-primary' : 'text-gray-900' }}">{{ $planTitle }}</h3>
@@ -86,7 +113,7 @@
           <p class="mt-6 flex items-baseline gap-x-1 price-monthly" data-cents="{{ $monthlyC }}">
             @if($monthlyC !== null)
               <span class="text-4xl font-semibold tracking-tight text-gray-900">{{ number_format($monthlyC / 100, 2) }}$</span>
-              <span class="text-sm/6 font-semibold text-gray-600">/ شهريًا</span>
+              <span class="text-sm/6 font-semibold text-gray-600">/ month</span>
             @else
               <span class="text-gray-400">—</span>
             @endif
@@ -95,7 +122,7 @@
           <p class="mt-6 flex items-baseline gap-x-1 price-annual hidden" data-cents="{{ $annualC }}">
             @if($annualC !== null)
               <span class="text-4xl font-semibold tracking-tight text-gray-900">{{ number_format($annualC / 100, 2) }}$</span>
-              <span class="text-sm/6 font-semibold text-gray-600">/ سنويًا</span>
+              <span class="text-sm/6 font-semibold text-gray-600">/ year</span>
             @else
               <span class="text-gray-400">—</span>
             @endif
@@ -103,20 +130,27 @@
 
           <button type="submit" name="plan_id" value="{{ $plan->id }}" aria-describedby="tier-{{ $plan->id }}"
             class="mt-6 block w-full rounded-md px-3 py-2 text-center text-sm/6 font-semibold text-white bg-primary/90 hover:bg-primary/90 shadow-md transition">
-            اشترك الآن
+            {{ __("Choose Plan") }}
           </button>
 
           <ul role="list" class="mt-8 space-y-3 text-sm/6 text-gray-600 xl:mt-10 text-right">
             @forelse ($features as $feat)
-              <li class="flex items-center gap-x-3">✅ {{ $feat }}</li>
+              <li class="flex items-center gap-x-3">
+                <span class="flex h-6 w-6 items-center justify-center rounded-full {{ $feat['available'] ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-200 text-gray-500' }}">
+                  <i class="ti {{ $feat['available'] ? 'ti-circle-check-filled' : 'ti-circle-x-filled' }}"></i>
+                </span>
+                <span class="{{ $feat['available'] ? 'text-gray-700' : 'text-gray-400 line-through' }}">
+                  {{ $feat['text'] }}
+                </span>
+              </li>
             @empty
-              <li class="text-gray-400">—</li>
+              <li class="text-gray-400">&mdash;</li>
             @endforelse
           </ul>
         </div>
       @empty
         <div class="col-span-3 text-center text-gray-500">
-          لا توجد خطط متاحة حالياً.
+          {{ __("No plans are currently available.") }}
         </div>
       @endforelse
 
