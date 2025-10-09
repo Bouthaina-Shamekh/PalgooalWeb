@@ -150,10 +150,35 @@ class Plan extends Model
 
     public function getFeaturedLabelAttribute(): ?string
     {
-        $label = $this->attributes['featured_label'] ?? null;
-        if ($this->is_featured && !$label) {
+        $label = null;
+
+        $translation = $this->translation();
+        if ($translation) {
+            $translated = $translation->getAttributeValue('featured_label');
+            if (is_string($translated)) {
+                $trimmed = trim($translated);
+                if ($trimmed !== '') {
+                    $label = $trimmed;
+                }
+            } elseif ($translated !== null) {
+                $label = $translated;
+            }
+        }
+
+        if ($label === null || $label === '') {
+            $raw = $this->getRawOriginal('featured_label');
+            if (is_string($raw)) {
+                $trimmed = trim($raw);
+                $label = $trimmed !== '' ? $trimmed : null;
+            } else {
+                $label = $raw;
+            }
+        }
+
+        if ($this->is_featured && (!$label || $label === '')) {
             return __('Most Popular');
         }
-        return $label;
+
+        return $label ?: null;
     }
 }

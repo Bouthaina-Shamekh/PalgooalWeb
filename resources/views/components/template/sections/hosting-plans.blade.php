@@ -73,29 +73,37 @@
           $planTitle = $t?->title ?? $plan->slug;
           $planDesc = $t?->description ?? ($plan->name ?? '');
           $rawFeatures = is_array($t?->features) ? $t->features : [];
-          $features = collect($rawFeatures)
-              ->map(function ($item) {
-                  if (is_array($item)) {
-                      $text = isset($item['text']) ? trim((string) $item['text']) : '';
-                      $available = array_key_exists('available', $item)
-                          ? filter_var($item['available'], FILTER_VALIDATE_BOOLEAN)
-                          : true;
-                  } else {
-                      $text = trim((string) $item);
-                      $available = true;
-                  }
+          $normalizeFeatures = function ($items) {
+              return collect(is_array($items) ? $items : [])
+                  ->map(function ($item) {
+                      if (is_array($item)) {
+                          $text = isset($item['text']) ? trim((string) $item['text']) : '';
+                          $available = array_key_exists('available', $item)
+                              ? filter_var($item['available'], FILTER_VALIDATE_BOOLEAN)
+                              : true;
+                      } else {
+                          $text = trim((string) $item);
+                          $available = true;
+                      }
 
-                  return [
-                      'text' => $text,
-                      'available' => (bool) $available,
-                  ];
-              })
-              ->filter(fn ($feature) => trim((string) ($feature['text'] ?? '')) !== '')
-              ->values();
+                      return [
+                          'text' => $text,
+                          'available' => (bool) $available,
+                      ];
+                  })
+                  ->filter(fn ($feature) => trim((string) ($feature['text'] ?? '')) !== '')
+                  ->values();
+          };
+          $hasBillingBuckets = is_array($rawFeatures) && (array_key_exists('monthly', $rawFeatures) || array_key_exists('annual', $rawFeatures));
+          $featuresMonthly = $normalizeFeatures($hasBillingBuckets ? ($rawFeatures['monthly'] ?? []) : $rawFeatures);
+          $featuresAnnual = $normalizeFeatures($hasBillingBuckets ? ($rawFeatures['annual'] ?? []) : ($hasBillingBuckets ? [] : $rawFeatures));
+          if (!$hasBillingBuckets) {
+              $featuresAnnual = $featuresMonthly;
+          }
           $monthlyC = $plan->monthly_price_cents;
           $annualC = $plan->annual_price_cents;
           $featured = (bool) ($plan->is_featured ?? false);
-          $featuredLabel = $plan->featured_label ?? __('Most Popular');
+          $featuredLabel = $t?->featured_label ?? $plan->featured_label ?? __('Most Popular');
         @endphp
 
         <div class="group/tier rounded-3xl p-8 ring-1 ring-primary xl:p-10 bg-white relative {{ $featured ? 'scale-105 ring-2 shadow-xl' : '' }}" data-plan-sub-type="{{ $monthlyC != null ? 'monthly' : 'annually' }}" data-plan-id="{{ $plan->id }}">
@@ -133,8 +141,23 @@
             {{ __("Choose Plan") }}
           </button>
 
-          <ul role="list" class="mt-8 space-y-3 text-sm/6 text-gray-600 xl:mt-10 text-right">
-            @forelse ($features as $feat)
+          <ul role="list" class="mt-8 space-y-3 text-sm/6 text-gray-600 xl:mt-10 text-right" data-feature-frequency="monthly">
+            @forelse ($featuresMonthly as $feat)
+              <li class="flex items-center gap-x-3">
+                <span class="flex h-6 w-6 items-center justify-center rounded-full {{ $feat['available'] ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-200 text-gray-500' }}">
+                  <i class="ti {{ $feat['available'] ? 'ti-circle-check-filled' : 'ti-circle-x-filled' }}"></i>
+                </span>
+                <span class="{{ $feat['available'] ? 'text-gray-700' : 'text-gray-400 line-through' }}">
+                  {{ $feat['text'] }}
+                </span>
+              </li>
+            @empty
+              <li class="text-gray-400">&mdash;</li>
+            @endforelse
+          </ul>
+
+          <ul role="list" class="mt-8 space-y-3 text-sm/6 text-gray-600 xl:mt-10 text-right hidden" data-feature-frequency="annual">
+            @forelse ($featuresAnnual as $feat)
               <li class="flex items-center gap-x-3">
                 <span class="flex h-6 w-6 items-center justify-center rounded-full {{ $feat['available'] ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-200 text-gray-500' }}">
                   <i class="ti {{ $feat['available'] ? 'ti-circle-check-filled' : 'ti-circle-x-filled' }}"></i>
@@ -166,14 +189,20 @@
     const freqRadios = Array.from(form.querySelectorAll('input[name="frequency"]'));
     const monthlyEls = Array.from(form.querySelectorAll('.price-monthly'));
     const annualEls = Array.from(form.querySelectorAll('.price-annual'));
+    const featureMonthlyLists = Array.from(form.querySelectorAll('[data-feature-frequency="monthly"]'));
+    const featureAnnualLists = Array.from(form.querySelectorAll('[data-feature-frequency="annual"]'));
 
     function showMonthly() {
       monthlyEls.forEach(el => el.classList.remove('hidden'));
       annualEls.forEach(el => el.classList.add('hidden'));
+      featureMonthlyLists.forEach(el => el.classList.remove('hidden'));
+      featureAnnualLists.forEach(el => el.classList.add('hidden'));
     }
     function showAnnual() {
       monthlyEls.forEach(el => el.classList.add('hidden'));
       annualEls.forEach(el => el.classList.remove('hidden'));
+      featureMonthlyLists.forEach(el => el.classList.add('hidden'));
+      featureAnnualLists.forEach(el => el.classList.remove('hidden'));
     }
 
     // init based on checked

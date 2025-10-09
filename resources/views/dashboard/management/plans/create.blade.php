@@ -123,19 +123,6 @@
                                 @enderror
                             </div>
 
-                            <!-- Featured label -->
-                            <div class="col-span-12 md:col-span-6">
-                                <label class="block text-sm font-medium mb-1">Featured Badge Label</label>
-                                <input type="text" name="featured_label"
-                                    class="w-full border rounded-lg px-3 py-2"
-                                    value="{{ old('featured_label') }}" placeholder="Most Popular">
-                                <p class="text-xs text-gray-500 mt-1">Shown when the plan is marked as featured.
-                                    Leave empty to use the default text.</p>
-                                @error('featured_label')
-                                    <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-
                             <!-- Server -->
                             <div class="col-span-12 md:col-span-6">
                                 <label class="block text-sm font-medium mb-1">Server</label>
@@ -208,6 +195,21 @@
                                             @enderror
                                         </div>
 
+                                        <!-- Featured badge label -->
+                                        <div class="col-span-12 md:col-span-6">
+                                            <label class="block text-sm font-medium mb-1">{{ __('Featured Badge Label') }}
+                                                ({{ $label }})</label>
+                                            <input type="text" name="featured_label[{{ $locale }}]"
+                                                class="w-full border rounded-lg px-3 py-2"
+                                                value="{{ old('featured_label.' . $locale) }}" placeholder="{{ __('Most Popular') }}">
+                                            <p class="text-xs text-gray-500 mt-1">
+                                                {{ __('Shown when the plan is marked as featured. Leave empty to use the default text.') }}
+                                            </p>
+                                            @error('featured_label.' . $locale)
+                                                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                                            @enderror
+                                        </div>
+
                                         <!-- Features -->
                                         <div class="col-span-12">
                                             <label class="block text-sm font-medium mb-1">Features
@@ -217,78 +219,127 @@
                                                 if ($rawFeatures === null) {
                                                     $rawFeatures = [];
                                                 }
-                                                $featureItems = collect($rawFeatures)
-                                                    ->map(function ($item) {
-                                                        if (is_array($item)) {
-                                                            $text = isset($item['text']) ? trim((string) $item['text']) : '';
-                                                            $available = array_key_exists('available', $item)
-                                                                ? filter_var($item['available'], FILTER_VALIDATE_BOOLEAN)
-                                                                : true;
-                                                        } else {
-                                                            $text = trim((string) $item);
-                                                            $available = true;
-                                                        }
+                                                $billingOptions = [
+                                                    'monthly' => __('Monthly'),
+                                                    'annual' => __('Annual'),
+                                                ];
+                                                $rawFeatures = is_array($rawFeatures) ? $rawFeatures : [];
+                                                $hasBillingSplit = array_intersect(array_keys($rawFeatures), array_keys($billingOptions)) !== [];
 
-                                                        return [
-                                                            'text' => $text,
-                                                            'available' => (bool) $available,
-                                                        ];
-                                                    })
-                                                    ->filter(fn($feature) => $feature['text'] !== '')
-                                                    ->values();
+                                                $normalizeFeature = function ($item) {
+                                                    if (is_array($item)) {
+                                                        $text = isset($item['text']) ? trim((string) $item['text']) : '';
+                                                        $available = array_key_exists('available', $item)
+                                                            ? filter_var($item['available'], FILTER_VALIDATE_BOOLEAN)
+                                                            : true;
+                                                    } else {
+                                                        $text = trim((string) $item);
+                                                        $available = true;
+                                                    }
+
+                                                    return [
+                                                        'text' => $text,
+                                                        'available' => (bool) $available,
+                                                    ];
+                                                };
+
+                                                $featureBuckets = [];
+                                                foreach ($billingOptions as $billingKey => $billingLabel) {
+                                                    $bucketSource = $hasBillingSplit
+                                                        ? ($rawFeatures[$billingKey] ?? [])
+                                                        : ($billingKey === 'monthly' ? $rawFeatures : []);
+                                                    $featureBuckets[$billingKey] = collect(
+                                                        is_array($bucketSource) ? $bucketSource : []
+                                                    )
+                                                        ->map($normalizeFeature)
+                                                        ->filter(fn($feature) => $feature['text'] !== '')
+                                                        ->values();
+                                                }
                                             @endphp
 
-                                            <div class="space-y-2" data-feature-wrapper data-locale="{{ $locale }}"
-                                                data-next-index="{{ $featureItems->count() }}"
-                                                data-available-label="{{ __('Available') }}"
-                                                data-remove-label="{{ __('Remove feature') }}">
-                                                @foreach ($featureItems as $index => $feature)
-                                                    <div class="flex flex-col sm:flex-row sm:items-center gap-3"
-                                                        data-feature-row>
-                                                        <div class="flex-1 w-full">
-                                                            <input type="text"
-                                                                name="features[{{ $locale }}][{{ $index }}][text]"
-                                                                class="w-full border rounded-lg px-3 py-2"
-                                                                value="{{ $feature['text'] }}"
-                                                                placeholder="e.g. Domain">
-                                                        </div>
-                                                        <label class="inline-flex items-center gap-2 text-sm">
-                                                            <input type="hidden"
-                                                                name="features[{{ $locale }}][{{ $index }}][available]"
-                                                                value="0">
-                                                            <input type="checkbox"
-                                                                name="features[{{ $locale }}][{{ $index }}][available]"
-                                                                value="1"
-                                                                class="h-4 w-4 text-primary border-gray-300 rounded"
-                                                                @checked($feature['available'])>
-                                                            <span>{{ __('Available') }}</span>
-                                                        </label>
-                                                        <button type="button"
-                                                            class="text-red-600 hover:text-red-800"
-                                                            data-remove-feature>
-                                                            &times;
-                                                            <span class="sr-only">{{ __('Remove feature') }}</span>
-                                                        </button>
-                                                    </div>
+                                            <div class="flex flex-wrap items-center gap-2 mb-3" data-feature-tabs>
+                                                @foreach ($billingOptions as $billingKey => $billingLabel)
+                                                    <button type="button"
+                                                        class="feature-cycle-tab px-3 py-1 rounded-md border transition text-sm {{ $loop->first ? 'bg-white border-gray-300 text-gray-800 font-semibold shadow-sm' : 'bg-gray-100 border-transparent text-gray-500' }}"
+                                                        data-feature-tab
+                                                        data-locale="{{ $locale }}"
+                                                        data-billing="{{ $billingKey }}">
+                                                        {{ $billingLabel }}
+                                                    </button>
                                                 @endforeach
                                             </div>
 
-                                            <div class="mt-2 flex items-center gap-2">
-                                                <button type="button"
-                                                    class="px-3 py-2 bg-primary text-white rounded-lg"
-                                                    data-add-feature="{{ $locale }}">Add Feature</button>
-                                                <span class="text-xs text-gray-500">Use the availability toggle to
-                                                    highlight whether the feature is included.</span>
-                                            </div>
+                                            @foreach ($billingOptions as $billingKey => $billingLabel)
+                                                @php
+                                                    /** @var \Illuminate\Support\Collection $featureItems */
+                                                    $featureItems = $featureBuckets[$billingKey] ?? collect();
+                                                @endphp
+                                                <div class="{{ $loop->first ? 'block' : 'hidden' }}"
+                                                    data-feature-panel
+                                                    data-locale="{{ $locale }}"
+                                                    data-billing="{{ $billingKey }}">
+                                                    <div class="space-y-2"
+                                                        data-feature-wrapper
+                                                        data-locale="{{ $locale }}"
+                                                        data-billing="{{ $billingKey }}"
+                                                        data-next-index="{{ $featureItems->count() }}"
+                                                        data-available-label="{{ __('Available') }}"
+                                                        data-remove-label="{{ __('Remove feature') }}">
+                                                        @foreach ($featureItems as $index => $feature)
+                                                            <div class="flex flex-col sm:flex-row sm:items-center gap-3"
+                                                                data-feature-row>
+                                                                <div class="flex-1 w-full">
+                                                                    <input type="text"
+                                                                        name="features[{{ $locale }}][{{ $billingKey }}][{{ $index }}][text]"
+                                                                        class="w-full border rounded-lg px-3 py-2"
+                                                                        value="{{ $feature['text'] }}"
+                                                                        placeholder="e.g. Domain">
+                                                                </div>
+                                                                <label class="inline-flex items-center gap-2 text-sm">
+                                                                    <input type="hidden"
+                                                                        name="features[{{ $locale }}][{{ $billingKey }}][{{ $index }}][available]"
+                                                                        value="0">
+                                                                    <input type="checkbox"
+                                                                        name="features[{{ $locale }}][{{ $billingKey }}][{{ $index }}][available]"
+                                                                        value="1"
+                                                                        class="h-4 w-4 text-primary border-gray-300 rounded"
+                                                                        @checked($feature['available'])>
+                                                                    <span>{{ __('Available') }}</span>
+                                                                </label>
+                                                                <button type="button"
+                                                                    class="text-red-600 hover:text-red-800"
+                                                                    data-remove-feature>
+                                                                    &times;
+                                                                    <span class="sr-only">{{ __('Remove feature') }}</span>
+                                                                </button>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
 
-                                            @if ($errors->has("features.$locale"))
-                                                <p class="text-red-600 text-sm mt-1">
-                                                    {{ $errors->first("features.$locale") }}</p>
-                                            @endif
-                                            @if ($errors->has("features.$locale.*.text"))
-                                                <p class="text-red-600 text-sm mt-1">
-                                                    {{ $errors->first("features.$locale.*.text") }}</p>
-                                            @endif
+                                                    <div class="mt-2 flex items-center gap-2">
+                                                        <button type="button"
+                                                            class="px-3 py-2 bg-primary text-white rounded-lg"
+                                                            data-add-feature
+                                                            data-locale="{{ $locale }}"
+                                                            data-billing="{{ $billingKey }}">
+                                                            {{ __('Add Feature') }}
+                                                        </button>
+                                                        <span class="text-xs text-gray-500">
+                                                            {{ __('Use the availability toggle to highlight whether the feature is included.') }}
+                                                        </span>
+                                                    </div>
+
+                                                    @if ($errors->has("features.$locale.$billingKey"))
+                                                        <p class="text-red-600 text-sm mt-1">
+                                                            {{ $errors->first("features.$locale.$billingKey") }}</p>
+                                                    @endif
+                                                    @if ($errors->has("features.$locale.$billingKey.*.text"))
+                                                        <p class="text-red-600 text-sm mt-1">
+                                                            {{ $errors->first("features.$locale.$billingKey.*.text") }}
+                                                        </p>
+                                                    @endif
+                                                </div>
+                                            @endforeach
                                         </div>
                                     </div>
                                 </div>
@@ -404,9 +455,10 @@
                 .replace(/>/g, '&gt;');
         }
 
-        function appendFeatureRow(wrapper, locale, textValue = '', available = true) {
+        function appendFeatureRow(wrapper, locale, billing, textValue = '', available = true) {
+            const bucket = billing || wrapper.dataset.billing || 'monthly';
             const nextIndex = parseInt(wrapper.dataset.nextIndex || '0', 10);
-            const namePrefix = 'features[' + locale + '][' + nextIndex + ']';
+            const namePrefix = 'features[' + locale + '][' + bucket + '][' + nextIndex + ']';
             const row = document.createElement('div');
             row.className = 'flex flex-col sm:flex-row sm:items-center gap-3';
             row.setAttribute('data-feature-row', '');
@@ -463,12 +515,45 @@
 
             document.querySelectorAll('[data-add-feature]').forEach(button => {
                 button.addEventListener('click', () => {
-                    const locale = button.dataset.addFeature;
-                    const wrapper = document.querySelector('[data-feature-wrapper][data-locale=\"' + locale + '\"]');
+                    const locale = button.dataset.locale;
+                    const billing = button.dataset.billing;
+                    const selector = '[data-feature-wrapper][data-locale=\"' + locale + '\"][data-billing=\"' + billing + '\"]';
+                    const wrapper = document.querySelector(selector);
                     if (!wrapper) {
                         return;
                     }
-                    appendFeatureRow(wrapper, locale, '', true);
+                    appendFeatureRow(wrapper, locale, billing, '', true);
+                });
+            });
+
+            const ACTIVE_TAB_CLASSES = ['bg-white', 'border-gray-300', 'text-gray-800', 'font-semibold', 'shadow-sm'];
+            const INACTIVE_TAB_CLASSES = ['bg-gray-100', 'border-transparent', 'text-gray-500'];
+
+            document.querySelectorAll('[data-feature-tab]').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const locale = tab.dataset.locale;
+                    const billing = tab.dataset.billing;
+
+                    document
+                        .querySelectorAll('[data-feature-tab][data-locale=\"' + locale + '\"]')
+                        .forEach(btn => {
+                            btn.classList.remove(...ACTIVE_TAB_CLASSES);
+                            btn.classList.add(...INACTIVE_TAB_CLASSES);
+                        });
+                    tab.classList.remove(...INACTIVE_TAB_CLASSES);
+                    tab.classList.add(...ACTIVE_TAB_CLASSES);
+
+                    document
+                        .querySelectorAll('[data-feature-panel][data-locale=\"' + locale + '\"]')
+                        .forEach(panel => {
+                            if (panel.dataset.billing === billing) {
+                                panel.classList.remove('hidden');
+                                panel.classList.add('block');
+                            } else {
+                                panel.classList.add('hidden');
+                                panel.classList.remove('block');
+                            }
+                        });
                 });
             });
         });

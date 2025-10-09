@@ -13,6 +13,7 @@ class PlanTranslation extends Model
         'title',
         'description',
         'features',
+        'featured_label',
     ];
 
     protected $casts = [
@@ -41,5 +42,23 @@ class PlanTranslation extends Model
     public function getDescriptionAttribute($value): string
     {
         return $value ?? '';
+    }
+
+    public function getFeaturedLabelAttribute($value): ?string
+    {
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            if ($trimmed !== '') {
+                return $trimmed;
+            }
+        } elseif ($value !== null) {
+            return $value;
+        }
+
+        if (!$this->relationLoaded('plan') && method_exists($this, 'load')) {
+            $this->load('plan');
+        }
+
+        return $this->plan?->getRawOriginal('featured_label');
     }
 }
