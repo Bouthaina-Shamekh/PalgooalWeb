@@ -83,6 +83,17 @@
                 @else
                     <p class="text-sm text-gray-500">{{ t('section.No_category_selected', 'No category selected — all plans will be shown') }}</p>
                 @endif
+
+                <div class="mt-3 space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                    <p>
+                        <span class="font-semibold">{{ t('section.Title', 'Title') }}:</span>
+                        {{ trim((string)($translationsData[$activeLang]['title'] ?? '')) !== '' ? $translationsData[$activeLang]['title'] : '—' }}
+                    </p>
+                    <p>
+                        <span class="font-semibold">{{ t('section.Brief_description', 'Brief description') }}:</span>
+                        {{ trim((string)($translationsData[$activeLang]['subtitle'] ?? '')) !== '' ? $translationsData[$activeLang]['subtitle'] : '—' }}
+                    </p>
+                </div>
             </div>
 
             <div>

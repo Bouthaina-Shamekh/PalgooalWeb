@@ -5,43 +5,50 @@
     'category' => null,
 ])
 
-<form id="plansForm" class="group/tiers bg-background py-24 sm:py-32" dir="rtl" action="/subscribe" method="POST">
+<form id="plansForm" class="group/tiers bg-background py-24 sm:py-32"  action="/subscribe" method="POST">
   @csrf
 
   <div class="mx-auto max-w-7xl px-6 lg:px-8">
 
     {{-- Header: show category title/description if provided, otherwise section title/subtitle --}}
     @php
-      $headerTitle = $title ?: __('Hosting Plans');
-      $headerSubtitle = $subtitle ?: __('Choose the plan that fits your needs');
+      $titleText = trim((string) $title);
+      $subtitleText = trim((string) $subtitle);
+
+      $categoryLabel = '';
+      $categoryDesc = '';
+
       if ($category) {
-          $catLabel = $category->translation()?->title
+          $categoryLabel = $category->translation()?->title
                     ?? $category->translations->first()?->title
                     ?? ('Category #' . $category->id);
-          $catDesc = $category->translation()?->description
+          $categoryDesc = $category->translation()?->description
                    ?? $category->translations->first()?->description
                    ?? null;
       }
+
+      $categoryLabel = trim((string) $categoryLabel);
+      $categoryDesc = trim((string) $categoryDesc);
+
+      $fallbackTitle = __('Hosting Plans');
+      $fallbackSubtitle = __('Choose the plan that fits your needs');
+
+      $displayEyebrow = $categoryLabel !== '' ? $categoryLabel : '';
+      $displayDescription = $subtitleText !== '' ? $subtitleText : $fallbackSubtitle;
+      $displayTitle = $titleText !== '' ? $titleText : $fallbackTitle;
+
     @endphp
 
     <div class="mx-auto max-w-4xl text-center">
-      @if(isset($category) && $category)
-        <h2 class="text-base/7 font-semibold text-secondary">{{ $catLabel }}</h2>
-        @if($catDesc)
-          <p class="text-title-h2 text-primary font-extrabold mb-4">{{ $catDesc }}</p>
-        @else
-          <p class="text-title-h2 text-primary font-extrabold mb-4">{{ $headerSubtitle }}</p>
-        @endif
-      @else
-        <h2 class="text-base/7 font-semibold text-secondary">{{ $headerTitle }}</h2>
-        <p class="text-title-h2 text-primary font-extrabold mb-4">{{ $headerSubtitle }}</p>
+      @if ($displayEyebrow !== '')
+        <h2 class="text-base/7 font-semibold text-secondary">{{ $displayEyebrow }}</h2>
       @endif
+      <p class="text-title-h2 text-primary font-extrabold mb-4">{{ $displayTitle }}</p>
     </div>
 
-    {{-- optional explanation line (only when no category description and no explicit subtitle) --}}
-    @if(!$category && $subtitle)
+    @if ($displayDescription !== '')
       <p class="mx-auto mt-6 max-w-2xl text-center text-base font-medium text-pretty text-gray-600 sm:text-xl/8">
-        {{ $subtitle }}
+        {{ $displayDescription }}
       </p>
     @endif
 
@@ -53,12 +60,12 @@
             <label class="group relative rounded-full px-3 py-1 has-checked:bg-primary">
               <input type="radio" name="frequency" value="monthly" checked
                 class="absolute inset-0 appearance-none rounded-full" />
-              <span class="text-gray-500 group-has-checked:text-white">شهريًا</span>
+              <span class="text-gray-500 group-has-checked:text-white">{{ t('frontend.monthly', 'monthly') }}</span>
             </label>
             <label class="group relative rounded-full px-3 py-1 has-checked:bg-primary">
               <input type="radio" name="frequency" value="annually"
                 class="absolute inset-0 appearance-none rounded-full" />
-              <span class="text-gray-500 group-has-checked:text-white">سنويًا</span>
+              <span class="text-gray-500 group-has-checked:text-white">{{ t('frontend.annually', 'annually') }}</span>
             </label>
           </div>
         </fieldset>
@@ -106,7 +113,12 @@
           $featuredLabel = $t?->featured_label ?? $plan->featured_label ?? __('Most Popular');
         @endphp
 
-        <div class="group/tier rounded-3xl p-8 ring-1 ring-primary xl:p-10 bg-white relative {{ $featured ? 'scale-105 ring-2 shadow-xl' : '' }}" data-plan-sub-type="{{ $monthlyC != null ? 'monthly' : 'annually' }}" data-plan-id="{{ $plan->id }}">
+        <div
+          class="group/tier rounded-3xl p-8 ring-1 ring-primary xl:p-10 bg-white relative {{ $featured ? 'scale-105 ring-2 shadow-xl' : '' }}"
+          data-plan-id="{{ $plan->id }}"
+          data-plan-monthly="{{ $monthlyC !== null ? 'true' : 'false' }}"
+          data-plan-annual="{{ $annualC !== null ? 'true' : 'false' }}"
+        >
           @if ($featured)
             <div class="absolute -top-4 -start-4 flex items-center gap-1 rounded-full bg-primary text-white text-xs font-bold px-3 py-1 shadow">
               <i class="ti ti-star-filled text-sm"></i>
@@ -192,6 +204,8 @@
     const featureMonthlyLists = Array.from(form.querySelectorAll('[data-feature-frequency="monthly"]'));
     const featureAnnualLists = Array.from(form.querySelectorAll('[data-feature-frequency="annual"]'));
 
+    const getSelectedFrequency = () => form.querySelector('input[name="frequency"]:checked')?.value || 'monthly';
+
     function showMonthly() {
       monthlyEls.forEach(el => el.classList.remove('hidden'));
       annualEls.forEach(el => el.classList.add('hidden'));
@@ -206,7 +220,7 @@
     }
 
     // init based on checked
-    const checked = form.querySelector('input[name="frequency"]:checked')?.value || 'monthly';
+    const checked = getSelectedFrequency();
     if (checked === 'annually') showAnnual(); else showMonthly();
 
     // listen changes
@@ -214,21 +228,27 @@
       if (this.value === 'annually') showAnnual(); else showMonthly();
     }));
 
-    // optional: intercept submit to include frequency explicitly (already included by radio)
+    // pass the selected frequency when the user submits the plan
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       const btn = e.submitter;
       const planId = btn?.value;
       const planCard = btn?.closest('[data-plan-id]');
-      const planSubType = btn?.closest('[data-plan-sub-type]').dataset.planSubType;
-      if (planCard) {
-        const isActive = true; // if you store active flag per plan card, you can check it here
-        if (!isActive) {
-          e.preventDefault();
-          alert('هذه الخطة غير متاحة حالياً.');
-        }
-        window.location.href = '/checkout/cart?plan_id=' + planId + '&plan_sub_type=' + planSubType;
+      if (!planId) return;
+      if (!planCard) return;
+
+      const selectedFrequency = getSelectedFrequency();
+      const hasMonthly = planCard.dataset.planMonthly === 'true';
+      const hasAnnual = planCard.dataset.planAnnual === 'true';
+
+      if ((selectedFrequency === 'monthly' && !hasMonthly) || (selectedFrequency === 'annually' && !hasAnnual)) {
+        alert(selectedFrequency === 'annually'
+          ? '{{ __("This plan does not offer annual billing.") }}'
+          : '{{ __("This plan does not offer monthly billing.") }}');
+        return;
       }
+
+      window.location.href = '/checkout/cart?plan_id=' + planId + '&plan_sub_type=' + selectedFrequency;
     });
   })();
 </script>

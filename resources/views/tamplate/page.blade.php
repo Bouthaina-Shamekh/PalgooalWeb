@@ -181,7 +181,7 @@
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
                 ],
-                'hosting-plans' => (function () use ($content) {
+                'hosting-plans' => (function () use ($content, $title) {
                     // default
                     $cat = null;
 

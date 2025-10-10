@@ -1,0 +1,28 @@
+*** Begin Patch
+*** Update File: resources/views/components/template/sections/hosting-plans.blade.php
+@@
+-      const planCard = btn?.closest('[data-plan-id]');
+-      if (planCard) {
+-        const isActive = true; // if you store active flag per plan card, you can check it here
+-        if (!isActive) {
+-          e.preventDefault();
+-          alert('??? ????? ??? ????? ??????.');
+-        }
+-        window.location.href = '/checkout/cart?plan_id=' + planId + '&plan_sub_type=' + planSubType;
+-      }
++      const planCard = btn?.closest('[data-plan-id]');
++      if (!planCard) return;
++
++      const selectedFrequency = getSelectedFrequency();
++      const hasMonthly = planCard.dataset.planMonthly === 'true';
++      const hasAnnual = planCard.dataset.planAnnual === 'true';
++
++      if ((selectedFrequency === 'monthly' && !hasMonthly) || (selectedFrequency === 'annually' && !hasAnnual)) {
++        alert(selectedFrequency === 'annually'
++          ? '{{ __("This plan does not offer annual billing.") }}'
++          : '{{ __("This plan does not offer monthly billing.") }}');
++        return;
++      }
++
++      window.location.href = '/checkout/cart?plan_id=' + planId + '&plan_sub_type=' + selectedFrequency;
+*** End Patch
