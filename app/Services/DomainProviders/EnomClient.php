@@ -2,7 +2,7 @@
 
 namespace App\Services\DomainProviders;
 
-use App\Models\DomainProvider;
+use DomainProvider;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -15,7 +15,7 @@ class EnomClient
             : 'https://reseller.enom.com/interface.asp';
     }
 
-    /** الترتيب: ApiToken -> ApiKey -> UID/PW */
+    /** ?د???ز???ز?è?ذ: ApiToken -> ApiKey -> UID/PW */
     protected function authParams(DomainProvider $p): array
     {
         if (!empty($p->api_token)) {
@@ -34,7 +34,7 @@ class EnomClient
         ]);
     }
 
-    /** طلب HTTP عام إلى eNom */
+    /** ?????ذ HTTP ???د?à ?ح???ë eNom */
     protected function request(DomainProvider $p, array $params): array
     {
         $endpoint = $this->endpointFor($p);
@@ -61,14 +61,14 @@ class EnomClient
         }
         if (stripos($ct, 'xml') === false) {
             Log::warning('Enom non-XML', ['ms' => $ms, 'ct' => $ct, 'snippet' => mb_substr($body, 0, 300)]);
-            return ['ok' => false, 'reason' => 'non_xml', 'message' => 'استجابة غير بصيغة XML.'];
+            return ['ok' => false, 'reason' => 'non_xml', 'message' => '?د???ز?ش?د?ذ?ر ???è?? ?ذ???è???ر XML.'];
         }
 
         $body = preg_replace('/^\xEF\xBB\xBF/', '', $body);
         $xml  = @simplexml_load_string($body, 'SimpleXMLElement', \LIBXML_NOCDATA | \LIBXML_NOERROR | \LIBXML_NOWARNING);
         if ($xml === false) {
             Log::warning('Enom XML parse failed', ['ms' => $ms, 'snippet' => mb_substr($body, 0, 300)]);
-            return ['ok' => false, 'reason' => 'xml_parse_error', 'message' => 'فشل تحليل XML.'];
+            return ['ok' => false, 'reason' => 'xml_parse_error', 'message' => '?????? ?ز?ص???è?? XML.'];
         }
 
         if ((int)($xml->ErrCount ?? 0) > 0) {
@@ -82,7 +82,7 @@ class EnomClient
         return ['ok' => true, 'xml' => $xml];
     }
 
-    /** الرصيد */
+    /** ?د???????è?» */
     public function getBalance(DomainProvider $p): array
     {
         try {
@@ -113,13 +113,13 @@ class EnomClient
                 if (preg_match('/<currency>([A-Z]{3})</i', $s, $m2)) $currency = strtoupper($m2[1]);
             }
 
-            return ['ok' => true, 'reason' => 'ok', 'message' => 'تم جلب الرصيد بنجاح.', 'balance' => $balance, 'currency' => $currency];
+            return ['ok' => true, 'reason' => 'ok', 'message' => '?ز?à ?ش???ذ ?د???????è?» ?ذ???ش?د?ص.', 'balance' => $balance, 'currency' => $currency];
         } catch (\Throwable $e) {
             return ['ok' => false, 'reason' => 'exception', 'message' => $e->getMessage(), 'balance' => null, 'currency' => null];
         }
     }
 
-    /** تحويل نوع العملية */
+    /** ?ز?ص?ê?è?? ???ê?? ?د?????à???è?ر */
     protected function productType(string $action): ?int
     {
         $map = ['register' => 10, 'renew' => 16, 'transfer' => 19];
@@ -127,7 +127,7 @@ class EnomClient
         return $map[$k] ?? null;
     }
 
-    /** Parser لنتائج <productprice> */
+    /** Parser ?????ز?د?خ?ش <productprice> */
     protected function parsePriceXml(\SimpleXMLElement $xml): array
     {
         $price = null;
@@ -209,7 +209,7 @@ class EnomClient
         return ['ok' => ($price !== null), 'price' => $price, 'enabled' => $enabled, 'currency' => $currency, 'source' => 'reseller', 'raw' => $r['xml']];
     }
 
-    /** محاولة الحصول على أي سعر متاح */
+    /** ?à?ص?د?ê???ر ?د???ص???ê?? ?????ë ?ث?è ?????? ?à?ز?د?ص */
     public function getAnyPrice(DomainProvider $p, string $tld, string $action, int $years = 1): array
     {
         $first = $this->getProductPrice($p, $tld, $action, $years);
@@ -219,7 +219,19 @@ class EnomClient
         if ($second['ok'] && $second['price'] !== null) return $second;
 
         $third = $this->getResellerPrice($p, $tld, $action, $years);
-        return $third; // fallback أخير
+        return $third; // fallback ?ث?«?è??
+    }
+
+    public function purchaseDomain(DomainProvider $p, array $params): array
+    {
+        $payload = array_merge([
+            'command' => 'Purchase',
+            'UseDNS' => 'default',
+        ], $params);
+
+        return $this->request($p, $payload);
     }
 }
+
+
 

@@ -72,6 +72,12 @@ Route::group([
     })->middleware(['auth'])->name('headers');
 
 
+    Route::get('domains/{domain}/register', [DomainController::class, 'editRegister'])->name('domains.register.edit');
+    Route::put('domains/{domain}/register', [DomainController::class, 'updateRegister'])->name('domains.register.update');
+    Route::get('domains/{domain}/renew', [DomainController::class, 'editRenew'])->name('domains.renew.edit');
+    Route::put('domains/{domain}/renew', [DomainController::class, 'updateRenew'])->name('domains.renew.update');
+    Route::get('domains/{domain}/dns', [DomainController::class, 'editDns'])->name('domains.dns.edit');
+    Route::put('domains/{domain}/dns', [DomainController::class, 'updateDns'])->name('domains.dns.update');
     Route::resource('domains', DomainController::class)->names('domains');
 
     //media
