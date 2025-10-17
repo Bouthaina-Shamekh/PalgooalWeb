@@ -39,10 +39,11 @@ class InvoiceController extends Controller
     public function create()
     {
         return view('dashboard.management.invoices.create', [
-            'clients'        => Client::orderBy('first_name')->get(['id', 'first_name', 'last_name', 'email']),
-            'subscriptions'  => Subscription::all(['id', 'plan_id', 'user_id']),
-            'domains'        => Domain::all(['id', 'name', 'tld', 'status']),
-            'invoice'        => new Invoice(),
+            'clients'       => Client::orderBy('first_name')->get(['id', 'first_name', 'last_name', 'email']),
+            'subscriptions' => Subscription::with('client:id,first_name,last_name')
+                ->get(['id', 'plan_id', 'client_id']),
+            'domains'       => Domain::select('id', 'domain_name', 'status')->get(),
+            'invoice'       => new Invoice(),
         ]);
     }
 
@@ -63,17 +64,17 @@ class InvoiceController extends Controller
             'items.*.unit_price_cents' => ['required', 'integer', 'min:0'],
         ]);
 
-        // تحقق شرطي من المرجع حسب نوع البند
+        // طھط­ظ‚ظ‚ ط´ط±ط·ظٹ ظ…ظ† ط§ظ„ظ…ط±ط¬ط¹ ط­ط³ط¨ ظ†ظˆط¹ ط§ظ„ط¨ظ†ط¯
         $this->validateReferenceIds($data['items']);
 
-        // ضبط التواريخ
+        // ط¶ط¨ط· ط§ظ„طھظˆط§ط±ظٹط®
         $due      = $data['due_date'] ? Carbon::parse($data['due_date']) : Carbon::now()->addDays(7);
         $paidDate = $data['paid_date'] ? Carbon::parse($data['paid_date']) : null;
 
         if ($data['status'] !== 'paid') {
             $paidDate = null;
         } elseif ($paidDate && $paidDate->isBefore(Carbon::now()->subYears(5))) {
-            // حارس منطقي لمنع تاريخ غير معقول
+            // ط­ط§ط±ط³ ظ…ظ†ط·ظ‚ظٹ ظ„ظ…ظ†ط¹ طھط§ط±ظٹط® ط؛ظٹط± ظ…ط¹ظ‚ظˆظ„
             $paidDate = Carbon::now();
         }
 
@@ -105,10 +106,10 @@ class InvoiceController extends Controller
                 ]);
             }
 
-            // تفعيل الطلب المرتبط لو الحالة Paid
+            // طھظپط¹ظٹظ„ ط§ظ„ط·ظ„ط¨ ط§ظ„ظ…ط±طھط¨ط· ظ„ظˆ ط§ظ„ط­ط§ظ„ط© Paid
             $this->maybeActivateRelatedOrder($invoice);
 
-            return redirect()->route('dashboard.invoices.index')->with('ok', 'تم إنشاء الفاتورة');
+            return redirect()->route('dashboard.invoices.index')->with('ok', 'طھظ… ط¥ظ†ط´ط§ط، ط§ظ„ظپط§طھظˆط±ط©');
         });
     }
 
@@ -117,8 +118,9 @@ class InvoiceController extends Controller
         return view('dashboard.management.invoices.edit', [
             'invoice'       => $invoice->load('items', 'client'),
             'clients'       => Client::orderBy('first_name')->get(['id', 'first_name', 'last_name', 'email']),
-            'subscriptions' => Subscription::all(['id', 'plan_id', 'user_id']),
-            'domains'       => Domain::all(['id', 'name', 'tld', 'status']),
+            'subscriptions' => Subscription::with('client:id,first_name,last_name')
+                ->get(['id', 'plan_id', 'client_id']),
+            'domains'       => Domain::select('id', 'domain_name', 'status')->get(),
         ]);
     }
 
@@ -159,7 +161,7 @@ class InvoiceController extends Controller
                 'total_cents'     => $totals['total_cents'],
             ]);
 
-            // تحديث البنود (إعادة إدخال بسيطة وآمنة)
+            // طھط­ط¯ظٹط« ط§ظ„ط¨ظ†ظˆط¯ (ط¥ط¹ط§ط¯ط© ط¥ط¯ط®ط§ظ„ ط¨ط³ظٹط·ط© ظˆط¢ظ…ظ†ط©)
             $invoice->items()->delete();
             foreach ($data['items'] as $item) {
                 $invoice->items()->create([
@@ -174,7 +176,7 @@ class InvoiceController extends Controller
 
             $this->maybeActivateRelatedOrder($invoice);
 
-            return redirect()->route('dashboard.invoices.index')->with('ok', 'تم تحديث الفاتورة');
+            return redirect()->route('dashboard.invoices.index')->with('ok', 'طھظ… طھط­ط¯ظٹط« ط§ظ„ظپط§طھظˆط±ط©');
         });
     }
 
@@ -188,10 +190,10 @@ class InvoiceController extends Controller
         if ($request->ajax()) {
             return response()->json(['ok' => true]);
         }
-        return redirect()->route('dashboard.invoices.index')->with('ok', 'تم حذف الفاتورة');
+        return redirect()->route('dashboard.invoices.index')->with('ok', 'طھظ… ط­ط°ظپ ط§ظ„ظپط§طھظˆط±ط©');
     }
 
-    // إجراء جماعي على الفواتير
+    // ط¥ط¬ط±ط§ط، ط¬ظ…ط§ط¹ظٹ ط¹ظ„ظ‰ ط§ظ„ظپظˆط§طھظٹط±
     public function bulk(Request $request)
     {
         $data = $request->validate([
@@ -267,18 +269,18 @@ class InvoiceController extends Controller
                         $amount   = number_format(($inv->total_cents ?? 0) / 100, 2);
                         $currency = $inv->currency ?? 'USD';
                         $bodyLines = [
-                            "مرحباً {$client->first_name},",
+                            "ظ…ط±ط­ط¨ط§ظ‹ {$client->first_name},",
                             '',
-                            "هذه رسالة تذكير بفاتورة رقم {$inv->number}.",
-                            "قيمة الفاتورة: {$amount} {$currency}.",
-                            $inv->due_date ? "تاريخ الاستحقاق: {$inv->due_date->format('Y-m-d')}." : '',
+                            "ظ‡ط°ظ‡ ط±ط³ط§ظ„ط© طھط°ظƒظٹط± ط¨ظپط§طھظˆط±ط© ط±ظ‚ظ… {$inv->number}.",
+                            "ظ‚ظٹظ…ط© ط§ظ„ظپط§طھظˆط±ط©: {$amount} {$currency}.",
+                            $inv->due_date ? "طھط§ط±ظٹط® ط§ظ„ط§ط³طھط­ظ‚ط§ظ‚: {$inv->due_date->format('Y-m-d')}." : '',
                             '',
-                            'يرجى التواصل معنا في حال وجود أي استفسار.',
-                            'فريق Palgoals',
+                            'ظٹط±ط¬ظ‰ ط§ظ„طھظˆط§طµظ„ ظ…ط¹ظ†ط§ ظپظٹ ط­ط§ظ„ ظˆط¬ظˆط¯ ط£ظٹ ط§ط³طھظپط³ط§ط±.',
+                            'ظپط±ظٹظ‚ Palgoals',
                         ];
-                        // استخدم Queue إن متاح: Mail::to($email)->queue(new YourMailable($inv));
+                        // ط§ط³طھط®ط¯ظ… Queue ط¥ظ† ظ…طھط§ط­: Mail::to($email)->queue(new YourMailable($inv));
                         Mail::raw(implode(PHP_EOL, array_filter($bodyLines)), function ($message) use ($email, $inv) {
-                            $message->to($email)->subject('تذكير بالدفع - ' . $inv->number);
+                            $message->to($email)->subject('طھط°ظƒظٹط± ط¨ط§ظ„ط¯ظپط¹ - ' . $inv->number);
                         });
                         $affected++;
                     } catch (\Throwable $e) {
@@ -292,10 +294,10 @@ class InvoiceController extends Controller
         if ($request->ajax()) {
             return response()->json(['affected' => $affected]);
         }
-        return redirect()->back()->with('ok', "تم تنفيذ الإجراء على {$affected} فاتورة(ات)");
+        return redirect()->back()->with('ok', "طھظ… طھظ†ظپظٹط° ط§ظ„ط¥ط¬ط±ط§ط، ط¹ظ„ظ‰ {$affected} ظپط§طھظˆط±ط©(ط§طھ)");
     }
 
-    // عرض فاتورة واحدة
+    // ط¹ط±ط¶ ظپط§طھظˆط±ط© ظˆط§ط­ط¯ط©
     public function show(Invoice $invoice)
     {
         $invoice->load(['items.subscription.plan', 'items.domain', 'client']);
@@ -309,7 +311,7 @@ class InvoiceController extends Controller
     }
 
     /**
-     * تحقق أن reference_id موجود فعليًا حسب نوع البند.
+     * طھط­ظ‚ظ‚ ط£ظ† reference_id ظ…ظˆط¬ظˆط¯ ظپط¹ظ„ظٹظ‹ط§ ط­ط³ط¨ ظ†ظˆط¹ ط§ظ„ط¨ظ†ط¯.
      */
     protected function validateReferenceIds(array $items): void
     {
@@ -324,7 +326,7 @@ class InvoiceController extends Controller
     }
 
     /**
-     * حساب الإجماليات مرة واحدة (جاهزة لإضافة خصومات/ضرائب مستقبلًا).
+     * ط­ط³ط§ط¨ ط§ظ„ط¥ط¬ظ…ط§ظ„ظٹط§طھ ظ…ط±ط© ظˆط§ط­ط¯ط© (ط¬ط§ظ‡ط²ط© ظ„ط¥ط¶ط§ظپط© ط®طµظˆظ…ط§طھ/ط¶ط±ط§ط¦ط¨ ظ…ط³طھظ‚ط¨ظ„ظ‹ط§).
      */
     protected function computeTotals(array $items): array
     {
@@ -333,8 +335,8 @@ class InvoiceController extends Controller
             $subtotal += ((int)$i['unit_price_cents']) * ((int)$i['qty']);
         }
 
-        $discount = 0; // ادمج كوبونات/خصومات هنا لاحقًا
-        $tax      = 0; // احتسب الضريبة هنا عند الحاجة
+        $discount = 0; // ط§ط¯ظ…ط¬ ظƒظˆط¨ظˆظ†ط§طھ/ط®طµظˆظ…ط§طھ ظ‡ظ†ط§ ظ„ط§ط­ظ‚ظ‹ط§
+        $tax      = 0; // ط§ط­طھط³ط¨ ط§ظ„ط¶ط±ظٹط¨ط© ظ‡ظ†ط§ ط¹ظ†ط¯ ط§ظ„ط­ط§ط¬ط©
 
         return [
             'subtotal_cents' => $subtotal,
@@ -345,7 +347,7 @@ class InvoiceController extends Controller
     }
 
     /**
-     * توليد رقم فاتورة فريد مع تحقّق من التعارض.
+     * طھظˆظ„ظٹط¯ ط±ظ‚ظ… ظپط§طھظˆط±ط© ظپط±ظٹط¯ ظ…ط¹ طھط­ظ‚ظ‘ظ‚ ظ…ظ† ط§ظ„طھط¹ط§ط±ط¶.
      */
     protected function generateUniqueNumber(): string
     {
@@ -357,7 +359,7 @@ class InvoiceController extends Controller
     }
 
     /**
-     * تفعيل الطلب المرتبط بالفاتورة عندما تصبح مدفوعة.
+     * طھظپط¹ظٹظ„ ط§ظ„ط·ظ„ط¨ ط§ظ„ظ…ط±طھط¨ط· ط¨ط§ظ„ظپط§طھظˆط±ط© ط¹ظ†ط¯ظ…ط§ طھطµط¨ط­ ظ…ط¯ظپظˆط¹ط©.
      */
     protected function maybeActivateRelatedOrder(Invoice $invoice): void
     {
@@ -372,7 +374,7 @@ class InvoiceController extends Controller
                 $order->status = 'active';
                 $order->save();
 
-                // إن كان لديك OrderController::processActivation
+                // ط¥ظ† ظƒط§ظ† ظ„ط¯ظٹظƒ OrderController::processActivation
                 if (class_exists(\App\Http\Controllers\Dashboard\Management\OrderController::class)) {
                     app(\App\Http\Controllers\Dashboard\Management\OrderController::class)
                         ->processActivation($order);
