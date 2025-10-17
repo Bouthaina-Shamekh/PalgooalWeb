@@ -72,7 +72,7 @@ class DomainController extends Controller
             $invoice->items()->create([
                 'item_type' => 'domain',
                 'reference_id' => $domain->id,
-                'description' => 'رسوم الدومين: ' . $domain->domain_name,
+                'description' => 'تسجيل النطاق: ' . $domain->domain_name,
                 'qty' => 1,
                 'unit_price_cents' => $price_cents,
                 'total_cents' => $price_cents,
@@ -113,7 +113,7 @@ class DomainController extends Controller
 
             if ($invoiceItem && $invoiceItem->invoice) {
                 $invoiceItem->update([
-                    'description' => 'تحديث الدومين: ' . $domain->domain_name,
+                    'description' => 'تحديث النطاق: ' . $domain->domain_name,
                 ]);
             }
         });

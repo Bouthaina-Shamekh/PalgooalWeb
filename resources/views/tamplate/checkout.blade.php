@@ -1180,27 +1180,58 @@
         function fillSuccessInvoice(data) {
             const body = document.getElementById('sx-invoice-body');
             if (!body) return;
-            let html = '';
-            if (data.order_no) html +=
-                `<tr class='bg-gray-50 dark:bg-gray-800'><td class="py-3 px-4">رقم الطلب</td><td class="py-3 px-4 font-bold">${data.order_no}</td></tr>`;
-            if (data.template_name) html +=
-                `<tr><td class="py-3 px-4">القالب</td><td class="py-3 px-4">${data.template_name}</td></tr>`;
-            html += `<tr><td class="py-3 px-4">مدة الاشتراك</td><td class="py-3 px-4">12 شهر</td></tr>`;
-            if (data.template_price_html) html +=
-                `<tr><td class="py-3 px-4">سعر القالب</td><td class="py-3 px-4">${data.template_price_html}</td></tr>`;
-            else if (data.template_price) html +=
-                `<tr><td class="py-3 px-4">سعر القالب</td><td class="py-3 px-4">${data.template_price}</td></tr>`;
-            if (data.domain) html += `<tr><td class="py-3 px-4">الدومين</td><td class="py-3 px-4">${data.domain}</td></tr>`;
-            if (data.domain_price) html +=
-                `<tr><td class="py-3 px-4">سعر الدومين</td><td class="py-3 px-4">${data.domain_price}</td></tr>`;
-            if (data.discount) html +=
-                `<tr><td class="py-3 px-4">الخصم</td><td class="py-3 px-4 text-green-700">-${data.discount}</td></tr>`;
-            if (data.tax) html += `<tr><td class="py-3 px-4">الضريبة</td><td class="py-3 px-4">${data.tax}</td></tr>`;
-            if (data.total) html +=
-                `<tr class='bg-green-50 dark:bg-green-900 font-extrabold text-lg'><td class="py-4 px-4">الإجمالي المستحق</td><td class="py-4 px-4 text-green-700">${data.total}</td></tr>`;
-            body.innerHTML = html;
-        }
 
+            while (body.firstChild) body.removeChild(body.firstChild);
+
+            const textFromValue = (value) => {
+                if (value === null || value === undefined) return '';
+                const str = typeof value === 'string' ? value : String(value);
+                if (!str) return '';
+                if (!/[<&]/.test(str)) return str;
+                try {
+                    const doc = new DOMParser().parseFromString('<!doctype html><body>' + str, 'text/html');
+                    return (doc.body.textContent || '').trim();
+                } catch {
+                    return str.replace(/<[^>]*>/g, '').trim();
+                }
+            };
+
+            const appendRow = (label, value, opts = {}) => {
+                const textValue = textFromValue(value);
+                if (!textValue && !opts.allowEmpty) return;
+                const tr = document.createElement('tr');
+                if (opts.rowClass) tr.className = opts.rowClass;
+                const tdLabel = document.createElement('td');
+                tdLabel.className = opts.labelClass || 'py-3 px-4';
+                tdLabel.textContent = label;
+                const tdValue = document.createElement('td');
+                tdValue.className = opts.valueClass || 'py-3 px-4';
+                tdValue.textContent = textValue;
+                tr.appendChild(tdLabel);
+                tr.appendChild(tdValue);
+                body.appendChild(tr);
+            };
+
+            appendRow('??? ????', data.order_no, {
+                rowClass: 'bg-gray-50 dark:bg-gray-800',
+                valueClass: 'py-3 px-4 font-bold',
+            });
+            appendRow('????', data.template_name);
+            appendRow('? ??????', '12 ??', { allowEmpty: true });
+            const templatePrice = data.template_price_html ?? data.template_price;
+            appendRow('?? ????', templatePrice);
+            appendRow('??????', data.domain);
+            appendRow('?? ??????', data.domain_price);
+            appendRow('???', data.discount ? '-' + data.discount : '', {
+                valueClass: 'py-3 px-4 text-green-700',
+            });
+            appendRow('????', data.tax);
+            appendRow('????? ?????', data.total, {
+                rowClass: 'bg-green-50 dark:bg-green-900 font-extrabold text-lg',
+                labelClass: 'py-4 px-4',
+                valueClass: 'py-4 px-4 text-green-700',
+            });
+        }
         /* ========================== منطق الصفحة ========================== */
         document.addEventListener('DOMContentLoaded', function() {
             // رابط اختيار القالب يحمل الدومين الحالي إن وُجد
@@ -2078,3 +2109,4 @@
 
     {{-- <livewire:checkout-client :template_id="$template_id" /> --}}
 </x-template.layouts.index-layouts>
+

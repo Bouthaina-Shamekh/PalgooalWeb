@@ -1,7 +1,42 @@
+@php
+    $itemTypes = config('invoices.item_types', [
+        'subscription' => 'اشتراك استضافة',
+        'domain' => 'نطاق',
+    ]);
+
+    if (empty($itemTypes)) {
+        $itemTypes = [
+            'subscription' => 'Subscription',
+            'domain' => 'Domain',
+        ];
+    }
+
+    $defaultItemType = array_key_first($itemTypes);
+    $prefilledItems = (isset($invoice) && $invoice->exists)
+        ? $invoice->items->map(fn ($item) => $item->only([
+            'item_type',
+            'reference_id',
+            'description',
+            'qty',
+            'unit_price_cents',
+        ]))->toArray()
+        : null;
+
+    $items = old('items', $prefilledItems ?? [
+        [
+            'item_type' => $defaultItemType,
+            'reference_id' => '',
+            'description' => '',
+            'qty' => 1,
+            'unit_price_cents' => 0,
+        ],
+    ]);
+@endphp
+
 <div class="col-span-12 md:col-span-6">
     <label class="form-label">العميل</label>
     <select name="client_id" class="form-select" required>
-        <option value="">-- اختر عميل --</option>
+        <option value="">-- اختر العميل --</option>
         @foreach ($clients as $client)
             <option value="{{ $client->id }}"
                 {{ old('client_id', $invoice->client_id ?? '') == $client->id ? 'selected' : '' }}>
@@ -18,11 +53,9 @@
     <label class="form-label">الحالة</label>
     <select name="status" class="form-select" required>
         <option value="draft" {{ old('status', $invoice->status ?? '') == 'draft' ? 'selected' : '' }}>مسودة</option>
-        <option value="unpaid" {{ old('status', $invoice->status ?? '') == 'unpaid' ? 'selected' : '' }}>غير مدفوعة
-        </option>
+        <option value="unpaid" {{ old('status', $invoice->status ?? '') == 'unpaid' ? 'selected' : '' }}>غير مدفوعة</option>
         <option value="paid" {{ old('status', $invoice->status ?? '') == 'paid' ? 'selected' : '' }}>مدفوعة</option>
-        <option value="cancelled" {{ old('status', $invoice->status ?? '') == 'cancelled' ? 'selected' : '' }}>ملغاة
-        </option>
+        <option value="cancelled" {{ old('status', $invoice->status ?? '') == 'cancelled' ? 'selected' : '' }}>ملغاة</option>
     </select>
     @error('status')
         <span class="text-red-600">{{ $message }}</span>
@@ -47,42 +80,26 @@
     @enderror
 </div>
 
-{{-- بنود الفاتورة --}}
+{{-- عناصر الفاتورة --}}
 <div class="col-span-12">
-    <h3 class="font-bold mb-3">بنود الفاتورة</h3>
+    <h3 class="font-bold mb-3">عناصر الفاتورة</h3>
 
     <div id="invoice-items" class="space-y-4">
-        @php
-            $items = old(
-                'items',
-                isset($invoice)
-                    ? $invoice->items->toArray()
-                    : [
-                        [
-                            'item_type' => 'subscription',
-                            'reference_id' => '',
-                            'description' => '',
-                            'qty' => 1,
-                            'unit_price_cents' => 0,
-                        ],
-                    ],
-            );
-        @endphp
-
         @foreach ($items as $i => $item)
             <div class="p-4 border rounded-md bg-gray-50 invoice-item grid grid-cols-12 gap-4">
                 <div class="col-span-12 md:col-span-2">
                     <label class="form-label">النوع</label>
                     <select name="items[{{ $i }}][item_type]" class="form-select">
-                        <option value="subscription" {{ $item['item_type'] == 'subscription' ? 'selected' : '' }}>
-                            اشتراك
-                        </option>
-                        <option value="domain" {{ $item['item_type'] == 'domain' ? 'selected' : '' }}>دومين</option>
+                        @foreach ($itemTypes as $value => $label)
+                            <option value="{{ $value }}" {{ ($item['item_type'] ?? $defaultItemType) === $value ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
 
                 <div class="col-span-12 md:col-span-2">
-                    <label class="form-label">ID المرجع</label>
+                    <label class="form-label">المعرف المرجعي (ID)</label>
                     <input type="text" name="items[{{ $i }}][reference_id]" class="form-control" required
                         value="{{ $item['reference_id'] }}">
                 </div>
@@ -100,7 +117,7 @@
                 </div>
 
                 <div class="col-span-6 md:col-span-2">
-                    <label class="form-label">السعر (سنت)</label>
+                    <label class="form-label">سعر الوحدة (بالسنت)</label>
                     <input type="number" name="items[{{ $i }}][unit_price_cents]" class="form-control"
                         min="0" required value="{{ $item['unit_price_cents'] }}">
                 </div>
@@ -112,7 +129,7 @@
         @endforeach
     </div>
 
-    <button type="button" id="add-item" class="btn btn-secondary mt-4">+ إضافة بند</button>
+    <button type="button" id="add-item" class="btn btn-secondary mt-4">+ إضافة عنصر</button>
 </div>
 
 <div class="col-span-12 text-right mt-4">
@@ -122,22 +139,30 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        let itemsContainer = document.getElementById('invoice-items');
-        let addBtn = document.getElementById('add-item');
+        const itemsContainer = document.getElementById('invoice-items');
+        const addBtn = document.getElementById('add-item');
+        const itemTypes = @json($itemTypes);
+        const defaultItemType = @json($defaultItemType);
+
+        const buildTypeOptions = (selectedValue) => {
+            return Object.entries(itemTypes)
+                .map(([value, label]) => `<option value="${value}" ${value === selectedValue ? 'selected' : ''}>${label}</option>`)
+                .join('');
+        };
 
         addBtn.addEventListener('click', () => {
-            let index = itemsContainer.querySelectorAll('.invoice-item').length;
-            let html = `
+            const index = itemsContainer.querySelectorAll('.invoice-item').length;
+            const typeOptions = buildTypeOptions(defaultItemType);
+            const html = `
             <div class="p-4 border rounded-md bg-gray-50 invoice-item grid grid-cols-12 gap-4 mt-2">
                 <div class="col-span-12 md:col-span-2">
                     <label class="form-label">النوع</label>
                     <select name="items[${index}][item_type]" class="form-select">
-                        <option value="subscription">اشتراك</option>
-                        <option value="domain">دومين</option>
+                        ${typeOptions}
                     </select>
                 </div>
                 <div class="col-span-12 md:col-span-2">
-                    <label class="form-label">ID المرجع</label>
+                    <label class="form-label">المعرف المرجعي (ID)</label>
                     <input type="text" name="items[${index}][reference_id]" class="form-control" required>
                 </div>
                 <div class="col-span-12 md:col-span-4">
@@ -149,7 +174,7 @@
                     <input type="number" name="items[${index}][qty]" class="form-control" min="1" value="1" required>
                 </div>
                 <div class="col-span-6 md:col-span-2">
-                    <label class="form-label">السعر (سنت)</label>
+                    <label class="form-label">سعر الوحدة (بالسنت)</label>
                     <input type="number" name="items[${index}][unit_price_cents]" class="form-control" min="0" value="0" required>
                 </div>
                 <div class="col-span-12 md:col-span-1 flex items-end">
@@ -159,9 +184,12 @@
             itemsContainer.insertAdjacentHTML('beforeend', html);
         });
 
-        itemsContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-item')) {
-                e.target.closest('.invoice-item').remove();
+        itemsContainer.addEventListener('click', (event) => {
+            if (event.target.classList.contains('remove-item')) {
+                const itemRow = event.target.closest('.invoice-item');
+                if (itemRow) {
+                    itemRow.remove();
+                }
             }
         });
     });

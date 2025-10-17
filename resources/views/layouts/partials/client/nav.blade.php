@@ -15,9 +15,8 @@
             <div class="card pc-user-card mx-[15px] mb-[15px] bg-theme-sidebaruserbg dark:bg-themedark-sidebaruserbg">
                 <div class="card-body !p-5">
                     <div class="flex items-center">
-                        <img class="shrink-0 w-[45px] h-[45px] rounded-full"
-                            src="https://ui-avatars.com/api/?name={{ Auth::user()->first_name . ' ' . Auth::user()->last_name }}"
-                            alt="user-image" />
+                        <x-dashboard.avatar :name="Auth::user()->first_name . ' ' . Auth::user()->last_name" size="45"
+                            class="shrink-0 w-[45px] h-[45px]" />
                         <div class="ml-4 mr-2 grow">
                             <h6 class="mb-0">{{ Auth::user()->first_name . ' ' . Auth::user()->last_name }}</h6>
                             <small>Role</small>

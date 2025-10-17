@@ -4,10 +4,10 @@
         <div class="page-block">
             <ul class="breadcrumb">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard.invoices.index') }}">الفواتير</a></li>
-                <li class="breadcrumb-item" aria-current="page">إضافة فاتورة</li>
+                <li class="breadcrumb-item" aria-current="page">إنشاء فاتورة</li>
             </ul>
             <div class="page-header-title">
-                <h2 class="mb-0">إضافة فاتورة جديدة</h2>
+                <h2 class="mb-0">إنشاء فاتورة جديدة</h2>
             </div>
         </div>
     </div>
@@ -17,7 +17,7 @@
         <div class="col-span-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="mb-0">المعلومات الأساسية</h5>
+                    <h5 class="mb-0">بيانات الفاتورة</h5>
                 </div>
                 <div class="card-body">
                     @if(session('ok'))

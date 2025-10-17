@@ -11,8 +11,8 @@
                 class="card pc-user-card mx-[15px] mb-[15px] bg-theme-sidebaruserbg dark:bg-themedark-sidebaruserbg border border-secondary-100/10">
                 <div class="card-body !p-4">
                     <div class="flex items-center gap-3">
-                        <img class="shrink-0 w-[48px] h-[48px] rounded-full border border-secondary-200"
-                            src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}" alt="user-image" />
+                        <x-dashboard.avatar :name="Auth::user()->name" size="48"
+                            class="shrink-0 w-[48px] h-[48px] border border-secondary-200" />
                         <div class="grow">
                             <h6 class="mb-0 text-sm font-semibold">{{ Auth::user()->name }}</h6>
                             <small class="text-xs text-muted">{{ Auth::user()->email }}</small>

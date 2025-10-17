@@ -152,8 +152,7 @@
                 <li class="dropdown pc-h-item header-user-profile">
                     <a class="pc-head-link dropdown-toggle arrow-none me-0" data-pc-toggle="dropdown" href="#"
                         role="button" aria-haspopup="false" data-pc-auto-close="outside" aria-expanded="false">
-                        <img src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}" alt="user-image"
-                            class="user-avtar w-10 h-10 rounded-full" />
+                        <x-dashboard.avatar :name="Auth::user()->name" size="40" class="user-avtar w-10 h-10" />
                     </a>
                     <div class="dropdown-menu dropdown-user-profile dropdown-menu-end pc-h-dropdown p-2">
                         <div class="dropdown-header flex items-center justify-between py-4 px-5">
@@ -164,7 +163,7 @@
                                 style="max-height: calc(100vh - 225px)">
                                 <div class="flex mb-1 items-center">
                                     <div class="shrink-0">
-                                        <img src="https://ui-avatars.com/api/?name={{ Auth::user()->name }}" alt="user-image" class="w-10 rounded-full" />
+                                        <x-dashboard.avatar :name="Auth::user()->name" size="40" class="w-10" />
                                     </div>
                                     <div class="grow ms-3">
                                         <h6 class="mb-1">{{ Auth::user()->name }}</h6>
@@ -219,3 +218,9 @@
         </div>
     </div>
 </header>
+
+
+
+
+
+

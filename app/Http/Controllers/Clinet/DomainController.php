@@ -54,7 +54,7 @@ class DomainController extends Controller
             'status' => 'required',
         ]);
 
-        Domain::create($validated);
+        $domain = Domain::create($validated);
 
         $price_cents = 0;
 
@@ -70,8 +70,8 @@ class DomainController extends Controller
 
         $invoice->items()->create([
             'item_type' => 'domain',
-            'reference_id' => $validated['id'],
-            'description' => 'تسجيل دومين ' . $validated['domain_name'],
+            'reference_id' => $domain->id,
+            'description' => 'Domain registration: ' . $domain->domain_name,
             'qty' => 1,
             'unit_price_cents' => $price_cents,
             'total_cents' => $price_cents,
@@ -111,7 +111,7 @@ class DomainController extends Controller
 
         if ($invoiceItem && $invoiceItem->invoice) {
             $invoiceItem->update([
-                'description' => 'تحديث دومين: ' . $domain->domain_name,
+                'description' => 'تحديث النطاق: ' . $domain->domain_name,
             ]);
         }
 

@@ -207,81 +207,121 @@ class CheckoutController extends Controller
                     // بإمكانك لاحقًا إضافة invoice_items لكل دومين إن رغبت
                 } else {
                     $unitCents = $showDiscount ? (int) ($discPrice * 100) : (int) ($basePrice * 100);
-                    $discountCents = $showDiscount ? (int) (($basePrice - $discPrice) * 100) : 0;
                     $unitCentsPlan = $showDiscountPlan ? (int) ($discPricePlan * 100) : (int) ($basePricePlan * 100);
-                    $discountCentsPlan = $showDiscountPlan ? (int) (($basePricePlan - $discPricePlan) * 100) : 0;
+                    $subscriptionLineConfigs = [];
+
+                    if (!$isNotTemplate) {
+                        $planTemplate = $template?->plan;
+                        $subscriptionLineConfigs[] = [
+                            'description'   => $template_name ?: ($planTemplate?->name ?? ''),
+                            'unit_cents'    => $unitCents,
+                            'base_cents'    => (int) (($basePrice ?? 0) * 100),
+                            'plan'          => $planTemplate,
+                            'billing_cycle' => $planTemplate?->billing_cycle ?? 'annually',
+                        ];
+                    }
+
+                    if (!$isNotPlan && $plan) {
+                        $subscriptionLineConfigs[] = [
+                            'description'   => $plan_name ?? '',
+                            'unit_cents'    => $unitCentsPlan,
+                            'base_cents'    => (int) (($basePricePlan ?? 0) * 100),
+                            'plan'          => $plan,
+                            'billing_cycle' => null,
+                        ];
+                    }
+
+                    $subscriptionBaseSum = array_sum(array_map(
+                        fn ($config) => $config['base_cents'],
+                        $subscriptionLineConfigs
+                    ));
+                    $subscriptionTotalSum = array_sum(array_map(
+                        fn ($config) => $config['unit_cents'],
+                        $subscriptionLineConfigs
+                    ));
+                    $domainLineTotal = array_reduce(
+                        $items,
+                        fn ($carry, $domainItem) => $carry + (int) ($domainItem['price_cents'] ?? 0),
+                        0
+                    );
+                    $baseSubtotal = $subscriptionBaseSum + $domainLineTotal;
+                    $lineTotals = $subscriptionTotalSum + $domainLineTotal;
+                    $discountCentsTotal = max(0, $baseSubtotal - $lineTotals);
 
                     $invoice = \App\Models\Invoice::create([
                         'client_id'      => $order->client_id,
                         'number'         => 'INV-' . $order->order_number,
                         'status'         => 'draft',
-                        'subtotal_cents' => (int) ($isNotTemplate ? ($basePrice * 100) : ($basePricePlan * 100)),
-                        'discount_cents' => ($isNotTemplate ? $discountCents : $discountCentsPlan),
+                        'subtotal_cents' => $baseSubtotal,
+                        'discount_cents' => $discountCentsTotal,
                         'tax_cents'      => 0,
-                        'total_cents'    => ($isNotTemplate ? $unitCents : $unitCentsPlan),
+                        'total_cents'    => $lineTotals,
                         'currency'       => 'USD',
                         'due_date'       => now()->addDays(3),
                         'order_id'       => $order->id,
                     ]);
 
-                    \App\Models\InvoiceItem::create([
-                        'invoice_id'       => $invoice->id,
-                        'item_type'        => 'subscription',
-                        'reference_id'     => !$isNotTemplate ? $template_id : ($isNotPlan ? $plan_id : null),
-                        'description'      => !$isNotTemplate ? $template_name : ($isNotPlan ? $plan->name : ''),
-                        'qty'              => 1,
-                        'unit_price_cents' => !$isNotTemplate ? $unitCents : $unitCentsPlan,
-                        'total_cents'      => !$isNotTemplate ? $unitCents : $unitCentsPlan,
-                    ]);
+                    $firstDomainItem = $order->items()
+                        ->whereNotNull('domain')
+                        ->where('domain', '<>', '')
+                        ->orderBy('id')
+                        ->first();
 
-                    if (!$isNotTemplate) {
-                        // 4) إنشاء اشتراك Pending (اختياريًا؛ حسب منطقك)
-                        $planTemplate = $template?->plan;
-                        if ($planTemplate) {
-                            // استخرج دومين إن وُجد بند به دومين
-                            $firstDomainItem = $order->items()
-                                ->whereNotNull('domain')
-                                ->where('domain', '<>', '')
-                                ->orderBy('id')
-                                ->first();
+                    foreach ($subscriptionLineConfigs as $config) {
+                        $planModel = $config['plan'];
+                        $subscription = null;
 
-                            \App\Models\Subscription::create([
+                        if ($planModel) {
+                            $subscriptionData = [
                                 'client_id'     => $order->client_id,
-                                'plan_id'       => $planTemplate->id,
+                                'plan_id'       => $planModel->id,
                                 'status'        => 'pending',
-                                'billing_cycle' => $planTemplate->billing_cycle ?? 'annually',
-                                'price'         => $unitCents / 100,
-                                'server_id'     => $planTemplate->server_id ?? null,
+                                'price'         => $config['unit_cents'] / 100,
+                                'server_id'     => $planModel->server_id ?? null,
                                 'domain_option' => $normalizedOption ?? 'subdomain',
                                 'domain_name'   => $firstDomainItem->domain ?? $request->input('domain'),
                                 'starts_at'     => now(),
                                 'next_due_date' => now()->addMonth(),
-                            ]);
+                            ];
+
+                            if (!empty($config['billing_cycle'])) {
+                                $subscriptionData['billing_cycle'] = $config['billing_cycle'];
+                            }
+
+                            $subscription = \App\Models\Subscription::create($subscriptionData);
                         }
+
+                        \App\Models\InvoiceItem::create([
+                            'invoice_id'       => $invoice->id,
+                            'item_type'        => 'subscription',
+                            'reference_id'     => $subscription?->id,
+                            'description'      => trim($config['description']) !== ''
+                                ? $config['description']
+                                : ($subscription ? 'Subscription #' . $subscription->id : 'Subscription'),
+                            'qty'              => 1,
+                            'unit_price_cents' => $config['unit_cents'],
+                            'total_cents'      => $config['unit_cents'],
+                        ]);
                     }
-                    if (!$isNotPlan) {
-                        // 4) إنشاء اشتراك Pending (اختياريًا؛ حسب منطقك)
-                        if ($plan) {
-                            // استخرج دومين إن وُجد بند به دومين
-                            $firstDomainItem = $order->items()
-                                ->whereNotNull('domain')
-                                ->where('domain', '<>', '')
-                                ->orderBy('id')
-                                ->first();
 
-                            \App\Models\Subscription::create([
-                                'client_id'     => $order->client_id,
-                                'plan_id'       => $plan->id,
-                                'status'        => 'pending',
-                                // 'billing_cycle' => $plan->billing_cycle ?? 'annually',
-                                'price'         => $unitCentsPlan / 100,
-                                'server_id'     => $plan->server_id ?? null,
-                                'domain_option' => $normalizedOption ?? 'subdomain',
-                                'domain_name'   => $firstDomainItem->domain ?? $request->input('domain'),
-                                'starts_at'     => now(),
-                                'next_due_date' => now()->addMonth(),
-                            ]);
+                    foreach ($items as $domainItem) {
+                        $unitCentsDomain = (int) ($domainItem['price_cents'] ?? 0);
+                        $domainName = $domainItem['domain'] ?? null;
+
+                        if ($unitCentsDomain <= 0 && empty($domainName)) {
+                            continue;
                         }
+
+                        $invoice->items()->create([
+                            'item_type'        => 'domain',
+                            'reference_id'     => null,
+                            'description'      => $domainName
+                                ? 'Domain registration: ' . $domainName
+                                : 'Domain registration',
+                            'qty'              => 1,
+                            'unit_price_cents' => $unitCentsDomain,
+                            'total_cents'      => $unitCentsDomain,
+                        ]);
                     }
                 }
 

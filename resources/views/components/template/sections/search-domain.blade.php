@@ -29,7 +29,7 @@
         <!-- شريط البحث -->
         <div class="relative max-w-xl mx-auto">
             <label for="domainInput" class="sr-only">ابحث عن دومين</label>
-            <input id="domainInput" type="text" dir="ltr" placeholder="palgoals أو palgoals.com, palgoals.net"
+            <input id="domainInput" type="text"  placeholder="palgoals أو palgoals.com, palgoals.net"
                 class="w-full rounded-2xl bg-white/10 text-white placeholder-white/60 border border-white/15
                     focus:border-white/30 focus:outline-none focus:ring-4 focus:ring-white/10
                     ps-12 pe-4 py-3 transition text-start placeholder:text-start"
