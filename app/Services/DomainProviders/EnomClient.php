@@ -80,6 +80,43 @@ class EnomClient
             return ['ok' => false, 'reason' => 'provider_error', 'message' => $msg, 'xml' => $xml];
         }
 
+        $responseSummaries = [];
+        if (isset($xml->responses)) {
+            foreach ($xml->responses->children() as $response) {
+                $code = isset($response->ResponseNumber) ? (int) $response->ResponseNumber : null;
+                $msg  = isset($response->ResponseString) ? trim((string) $response->ResponseString) : null;
+                $responseSummaries[] = ['code' => $code, 'message' => $msg];
+
+                if ($code !== null && $code >= 300) {
+                    $human = $msg ?: 'eNom rejected the request.';
+                    return [
+                        'ok' => false,
+                        'reason' => 'provider_response',
+                        'message' => $human,
+                        'code' => $code,
+                        'xml' => $xml,
+                    ];
+                }
+            }
+        }
+
+        if (isset($xml->RRPCode) && (int) $xml->RRPCode >= 3000) {
+            $rrpMessage = isset($xml->RRPText) ? trim((string) $xml->RRPText) : 'Registrar returned an error.';
+            return [
+                'ok' => false,
+                'reason' => 'rrp_error',
+                'message' => $rrpMessage,
+                'code' => (int) $xml->RRPCode,
+                'xml' => $xml,
+            ];
+        }
+
+        Log::debug('Enom command response', [
+            'command' => $params['command'] ?? null,
+            'ms' => $ms,
+            'responses' => $responseSummaries,
+        ]);
+
         return ['ok' => true, 'xml' => $xml];
     }
 
