@@ -98,18 +98,34 @@ class CheckoutController extends Controller
         $showDiscount = $hasDiscount && (!$template?->discount_ends_at || now()->lt($template->discount_ends_at));
 
         // معلومات الخطة (إن وجد)
-        $plan    = $isNotPlan ? null : \App\Models\Plan::find($plan_id);
-        $translation = $plan?->translations()->where('locale', app()->getLocale())->first();
-        $plan_name = $translation?->name ?? $plan?->name ?? '';
-
-        $monthlyPricePlan = (float) ($plan->monthly_price_cents / 100 ?? 0);
-        $annualPricePlan = (float) ($plan->annual_price_cents / 100 ?? 0);
+        $plan = $isNotPlan ? null : \App\Models\Plan::find($plan_id);
+        $planTranslation = null;
+        $plan_name = '';
+        $monthlyPricePlan = 0.0;
+        $annualPricePlan = 0.0;
         $plan_sub_type = $request->query('plan_sub_type');
-        $basePricePlan = $plan_sub_type == 'monthly' ? $monthlyPricePlan : $annualPricePlan;
-        $discRawPlan   = $plan->discount_price ?? 0;
-        $discPricePlan = $discRawPlan > 0 ? (float) $discRawPlan : null;
-        $hasDiscountPlan  = !is_null($discPricePlan) && $discPricePlan > 0 && $discPricePlan < $basePricePlan;
-        $showDiscountPlan = $hasDiscountPlan && (!$plan?->discount_ends_at || now()->lt($plan->discount_ends_at));
+        $basePricePlan = 0.0;
+        $discRawPlan = null;
+        $discPricePlan = null;
+        $hasDiscountPlan = false;
+        $showDiscountPlan = false;
+
+        if ($plan) {
+            $planTranslation = $plan->translations()->where('locale', app()->getLocale())->first();
+            $plan_name = $planTranslation?->name ?? $plan->name ?? '';
+            $monthlyPricePlan = (float) (($plan->monthly_price_cents ?? 0) / 100);
+            $annualPricePlan = (float) (($plan->annual_price_cents ?? 0) / 100);
+            $basePricePlan = $plan_sub_type === 'monthly' ? $monthlyPricePlan : $annualPricePlan;
+
+            if ($basePricePlan <= 0) {
+                $basePricePlan = $annualPricePlan > 0 ? $annualPricePlan : $monthlyPricePlan;
+            }
+
+            $discRawPlan = $plan->discount_price;
+            $discPricePlan = !is_null($discRawPlan) && $discRawPlan > 0 ? (float) $discRawPlan : null;
+            $hasDiscountPlan = $discPricePlan !== null && $basePricePlan > 0 && $discPricePlan < $basePricePlan;
+            $showDiscountPlan = $hasDiscountPlan && (!$plan->discount_ends_at || now()->lt($plan->discount_ends_at));
+        }
 
         // تطبيع اختيار الدومين القادم من الواجهة (للاشتراك)
         $rawOption = $request->input('domain_option'); // قد لا يكون موجودًا
