@@ -15,6 +15,14 @@ class Domain extends Model
         'renewal_date',
         'status',
         'payment_method',
+        'nameservers',
+        'dns_last_note',
+        'dns_last_synced_at',
+    ];
+
+    protected $casts = [
+        'nameservers' => 'array',
+        'dns_last_synced_at' => 'datetime',
     ];
 
     public function client(): BelongsTo

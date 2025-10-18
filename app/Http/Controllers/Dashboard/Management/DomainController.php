@@ -469,8 +469,7 @@ class DomainController extends Controller
     }
 
     /**
-     * Persist DNS changes for the given domain.
-     * (Placeholder implementation until provider integration is available.)
+     * Persist DNS changes for the given domain and push them to the registrar.
      */
     public function updateDns(Request $request, Domain $domain)
     {
@@ -480,12 +479,147 @@ class DomainController extends Controller
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $requestedNameservers = array_values(array_filter(
-            $validated['nameservers'] ?? [],
-            fn($value) => filled($value)
-        ));
+        $requestedNameservers = $this->normalizeNameservers($validated['nameservers'] ?? []);
 
-        // @todo: Integrate with registrar API / persistence layer.
-        return back()->with('success', __('DNS update request captured. Please complete the integration to push changes.'));
+        if (count($requestedNameservers) < 2) {
+            return back()
+                ->withInput()
+                ->withErrors(['nameservers' => __('Please provide at least two nameservers.')]);
+        }
+
+        $invalidNameservers = collect($requestedNameservers)
+            ->reject(fn($ns) => $this->isValidNameserver($ns))
+            ->values();
+
+        if ($invalidNameservers->isNotEmpty()) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'nameservers' => __('Invalid nameserver value(s): :nameservers', [
+                        'nameservers' => $invalidNameservers->implode(', '),
+                    ]),
+                ]);
+        }
+
+        $registrar = strtolower((string) $domain->registrar);
+        if ($registrar === '') {
+            return back()
+                ->withInput()
+                ->withErrors(['nameservers' => __('Domain registrar is not set. Assign a registrar before pushing DNS changes.')]);
+        }
+
+        $provider = DomainProvider::query()
+            ->active()
+            ->ofType($registrar)
+            ->first();
+
+        if (!$provider) {
+            return back()
+                ->withInput()
+                ->withErrors(['nameservers' => __('No active provider configuration found for :registrar.', ['registrar' => $registrar])]);
+        }
+
+        $syncResult = $this->pushNameserversToProvider($provider, $domain, $requestedNameservers);
+        if (!($syncResult['ok'] ?? false)) {
+            $message = $syncResult['message'] ?? __('Unable to update nameservers with the registrar.');
+            return back()
+                ->withInput()
+                ->withErrors(['nameservers' => $message]);
+        }
+
+        $payload = [
+            'nameservers' => $requestedNameservers,
+            'dns_last_synced_at' => now(),
+        ];
+
+        if (array_key_exists('notes', $validated)) {
+            $payload['dns_last_note'] = $validated['notes'];
+        }
+
+        $domain->forceFill($payload)->save();
+
+        Log::info('Domain DNS synced with provider', [
+            'domain_id' => $domain->id,
+            'domain' => $domain->domain_name,
+            'provider_id' => $provider->id,
+            'provider_type' => $provider->type,
+            'nameservers' => $requestedNameservers,
+        ]);
+
+        $providerName = $provider->name ?: $provider->type;
+
+        return back()->with('success', __('Nameservers updated and synced with :provider.', [
+            'provider' => Str::title($providerName),
+        ]));
+    }
+
+    protected function normalizeNameservers(array $nameservers): array
+    {
+        return collect($nameservers ?? [])
+            ->map(fn($value) => strtolower(trim((string) $value)))
+            ->map(fn($ns) => rtrim($ns, '.'))
+            ->filter(fn($ns) => $ns !== '')
+            ->unique()
+            ->values()
+            ->take(12)
+            ->all();
+    }
+
+    protected function isValidNameserver(string $hostname): bool
+    {
+        return (bool) preg_match('/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i', $hostname);
+    }
+
+    protected function pushNameserversToProvider(DomainProvider $provider, Domain $domain, array $nameservers): array
+    {
+        try {
+            $type = strtolower((string) $provider->type);
+
+            if ($type === 'namecheap') {
+                $client = new NamecheapClient($provider);
+                $response = $client->setCustomNameservers($domain->domain_name, $nameservers);
+
+                if (!($response['ok'] ?? false)) {
+                    return [
+                        'ok' => false,
+                        'message' => $response['message'] ?? __('Namecheap rejected the DNS update request.'),
+                    ];
+                }
+
+                return ['ok' => true];
+            }
+
+            if ($type === 'enom') {
+                $client = new EnomClient();
+                $response = $client->updateNameservers($provider, $domain->domain_name, $nameservers);
+
+                if (!($response['ok'] ?? false)) {
+                    return [
+                        'ok' => false,
+                        'message' => $response['message'] ?? __('Enom rejected the DNS update request.'),
+                    ];
+                }
+
+                return ['ok' => true];
+            }
+
+            return [
+                'ok' => false,
+                'message' => __('DNS sync is not yet implemented for :provider.', ['provider' => $type ?: 'unknown']),
+            ];
+        } catch (\Throwable $e) {
+            Log::error('Domain DNS sync failed', [
+                'domain_id' => $domain->id,
+                'domain' => $domain->domain_name,
+                'provider_id' => $provider->id,
+                'provider_type' => $provider->type,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'ok' => false,
+                'message' => __('Failed to sync with registrar: :message', ['message' => $e->getMessage()]),
+            ];
+        }
     }
 }

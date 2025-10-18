@@ -6,6 +6,7 @@ use App\Models\DomainProvider;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Str;
 
 class NamecheapClient
 {
@@ -200,5 +201,41 @@ class NamecheapClient
             return ['ok' => false, 'reason' => 'exception', 'message' => $e->getMessage()];
         }
     }
-}
 
+    public function setCustomNameservers(string $fqdn, array $nameservers): array
+    {
+        [$sld, $tld] = $this->splitDomainParts($fqdn);
+
+        if (!$sld || !$tld) {
+            return [
+                'ok' => false,
+                'reason' => 'invalid_domain',
+                'message' => 'تعذر تقسيم النطاق إلى SLD/TLD لإرسال إعدادات الـ DNS.',
+            ];
+        }
+
+        $payload = [
+            'Command' => 'namecheap.domains.dns.setCustom',
+            'SLD' => $sld,
+            'TLD' => $tld,
+            'Nameservers' => implode(',', array_slice($nameservers, 0, 12)),
+        ];
+
+        return $this->request($payload);
+    }
+
+    protected function splitDomainParts(string $fqdn): array
+    {
+        $fqdn = strtolower(trim($fqdn));
+        if (!str_contains($fqdn, '.')) {
+            return [null, null];
+        }
+
+        $parts = explode('.', $fqdn, 2);
+
+        $sld = isset($parts[0]) ? Str::of($parts[0])->ascii()->trim()->value() : null;
+        $tld = isset($parts[1]) ? Str::of($parts[1])->ascii()->trim()->value() : null;
+
+        return [$sld ?: null, $tld ?: null];
+    }
+}

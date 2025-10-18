@@ -21,6 +21,19 @@
             </div>
         @endif
 
+        @if ($domain->dns_last_synced_at)
+            <div class="bg-blue-50 text-blue-800 border border-blue-200 p-4 rounded">
+                <div class="text-sm">
+                    {{ __('Last sync with registrar on :date', ['date' => $domain->dns_last_synced_at->timezone(config('app.timezone', 'UTC'))->format('Y-m-d H:i')]) }}
+                </div>
+                @if ($domain->dns_last_note)
+                    <div class="text-xs mt-1 text-blue-700">
+                        {{ __('Last note: :note', ['note' => $domain->dns_last_note]) }}
+                    </div>
+                @endif
+            </div>
+        @endif
+
         @if ($errors->any())
             <div class="bg-red-100 text-red-800 p-4 rounded">
                 <ul class="ps-5 list-disc space-y-1">
@@ -69,7 +82,7 @@
                     {{ __('Internal note (optional)') }}
                 </label>
                 <textarea id="dns-notes" name="notes" rows="4" class="form-control"
-                    placeholder="{{ __('Share any additional instructions for the team handling this change.') }}">{{ old('notes') }}</textarea>
+                    placeholder="{{ __('Share any additional instructions for the team handling this change.') }}">{{ old('notes', $domain->dns_last_note) }}</textarea>
             </section>
 
             <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

@@ -5,6 +5,7 @@ namespace App\Services\DomainProviders;
 use App\Models\DomainProvider;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class EnomClient
 {
@@ -230,6 +231,47 @@ class EnomClient
         ], $params);
 
         return $this->request($p, $payload);
+    }
+
+    public function updateNameservers(DomainProvider $p, string $fqdn, array $nameservers): array
+    {
+        [$sld, $tld] = $this->splitDomainParts($fqdn);
+
+        if (!$sld || !$tld) {
+            return [
+                'ok' => false,
+                'reason' => 'invalid_domain',
+                'message' => 'Unable to split domain into SLD/TLD for nameserver update.',
+            ];
+        }
+
+        $payload = [
+            'command' => 'ModifyNS',
+            'SLD' => $sld,
+            'TLD' => $tld,
+            'UseDNS' => 'custom',
+        ];
+
+        foreach (array_slice(array_values($nameservers), 0, 12) as $index => $nameserver) {
+            $payload['NS' . ($index + 1)] = $nameserver;
+        }
+
+        return $this->request($p, $payload);
+    }
+
+    protected function splitDomainParts(string $fqdn): array
+    {
+        $fqdn = strtolower(trim($fqdn));
+        if (!str_contains($fqdn, '.')) {
+            return [null, null];
+        }
+
+        $parts = explode('.', $fqdn, 2);
+
+        $sld = isset($parts[0]) ? Str::of($parts[0])->ascii()->trim()->value() : null;
+        $tld = isset($parts[1]) ? Str::of($parts[1])->ascii()->trim()->value() : null;
+
+        return [$sld ?: null, $tld ?: null];
     }
 }
 
