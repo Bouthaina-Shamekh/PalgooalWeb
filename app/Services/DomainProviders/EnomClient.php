@@ -2,7 +2,7 @@
 
 namespace App\Services\DomainProviders;
 
-use DomainProvider;
+use App\Models\DomainProvider;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
