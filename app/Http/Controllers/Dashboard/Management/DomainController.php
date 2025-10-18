@@ -267,7 +267,7 @@ class DomainController extends Controller
 
         $nameservers = array_pad(
             array_values(array_filter($nameserversRaw, fn($value) => filled($value))),
-            2,
+            5,
             ''
         );
 
@@ -316,6 +316,14 @@ class DomainController extends Controller
             } else {
                 $remoteDns['error'] = __('No active provider configuration found for :registrar.', ['registrar' => $registrar]);
             }
+        }
+
+        if (!empty($remoteDns['nameservers'])) {
+            $nameservers = array_pad(
+                array_values(array_filter($remoteDns['nameservers'], fn($value) => filled($value))),
+                5,
+                ''
+            );
         }
 
         return view('dashboard.management.domains.dns', [

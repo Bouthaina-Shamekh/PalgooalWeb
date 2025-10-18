@@ -311,36 +311,55 @@ class EnomClient
             ];
         }
 
-        $response = $this->request($p, [
+        $dnsResponse = $this->request($p, [
             'command' => 'GetDNS',
             'SLD' => $sld,
             'TLD' => $tld,
         ]);
 
-        if (!($response['ok'] ?? false)) {
-            return $response;
+        if (($dnsResponse['ok'] ?? false) === false) {
+            $dnsResponse = null;
         }
 
-        $xml = $response['xml'];
+        $infoResponse = $this->request($p, [
+            'command' => 'GetDomainInfo',
+            'SLD' => $sld,
+            'TLD' => $tld,
+        ]);
+
+        if (($infoResponse['ok'] ?? false) === false) {
+            return $infoResponse;
+        }
+
+        $xml = $infoResponse['xml'];
         $useDns = strtolower(trim((string) ($xml->UseDNS ?? '')));
         $nameservers = [];
 
         for ($i = 1; $i <= 12; $i++) {
             $hostKey = 'host' . $i;
             $nsKey = 'ns' . $i;
+            $dnsKey = 'dns' . $i;
+            $nameServerKey = 'nameserver' . $i;
 
             if (isset($xml->{$hostKey}) && trim((string) $xml->{$hostKey}) !== '') {
                 $nameservers[] = trim((string) $xml->{$hostKey});
+            } elseif (isset($xml->{$dnsKey}) && trim((string) $xml->{$dnsKey}) !== '') {
+                $nameservers[] = trim((string) $xml->{$dnsKey});
+            } elseif (isset($xml->{$nameServerKey}) && trim((string) $xml->{$nameServerKey}) !== '') {
+                $nameservers[] = trim((string) $xml->{$nameServerKey});
             } elseif (isset($xml->{$nsKey}) && trim((string) $xml->{$nsKey}) !== '') {
                 $nameservers[] = trim((string) $xml->{$nsKey});
             }
         }
 
-        if (empty($nameservers) && isset($xml->dns) && isset($xml->dns->entry)) {
-            foreach ($xml->dns->entry as $entry) {
-                $value = trim((string) ($entry->hostname ?? $entry->host ?? ''));
-                if ($value !== '') {
-                    $nameservers[] = $value;
+        if (empty($nameservers) && $dnsResponse) {
+            $dnsXml = $dnsResponse['xml'];
+            if (isset($dnsXml->dns) && isset($dnsXml->dns->entry)) {
+                foreach ($dnsXml->dns->entry as $entry) {
+                    $value = trim((string) ($entry->hostname ?? $entry->host ?? ''));
+                    if ($value !== '') {
+                        $nameservers[] = $value;
+                    }
                 }
             }
         }

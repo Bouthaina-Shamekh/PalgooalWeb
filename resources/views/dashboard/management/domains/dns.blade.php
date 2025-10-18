@@ -118,15 +118,26 @@
           </div>
         </div>
 
-        <div id="nameserver-fields" class="grid grid-cols-1 gap-4 md:grid-cols-2" data-min="2" data-max="12" aria-describedby="ns-help">
-          @php $oldNs = old('nameservers', $nameservers ?? []); @endphp
-          @forelse ($oldNs as $index => $nameserver)
-            <div class="space-y-1 ns-item">
-              <label for="nameserver_{{ $index }}" class="text-sm font-medium text-gray-700">
-                {{ __('Nameserver :number', ['number' => $index + 1]) }}
+        @php
+          $baseSlots = 5;
+          $oldNs = array_values(old('nameservers', $nameservers ?? []));
+          if (count($oldNs) < $baseSlots) {
+            $oldNs = array_pad($oldNs, $baseSlots, '');
+          }
+        @endphp
+        <div id="nameserver-fields" class="grid grid-cols-1 gap-4 md:grid-cols-2" data-min="{{ $baseSlots }}" data-max="12" data-fixed-count="{{ $baseSlots }}" aria-describedby="ns-help">
+          @foreach ($oldNs as $index => $nameserver)
+            @php $isFixed = $index < $baseSlots; @endphp
+            <div class="space-y-1 ns-item" data-fixed="{{ $isFixed ? 'true' : 'false' }}">
+              <label for="nameserver_{{ $index }}" class="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <span class="ns-label-text">{{ __('Nameserver :number', ['number' => $index + 1]) }}</span>
+                <span class="badge-placeholder inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600 {{ $index < 2 ? '' : 'hidden' }}">
+                  {{ __('Required') }}
+                </span>
               </label>
               <div class="flex gap-2">
-                <input type="text"
+                <input
+                  type="text"
                   name="nameservers[{{ $index }}]"
                   id="nameserver_{{ $index }}"
                   value="{{ $nameserver }}"
@@ -136,39 +147,19 @@
                   placeholder="ns{{ $index + 1 }}.example.com"
                   pattern="^([a-z0-9-]+\.)+[a-z]{2,}$"
                   aria-invalid="false"
-                  />
-                <button type="button" class="btn btn-secondary !px-2 remove-ns" title="{{ __('Remove') }}">
+                />
+                <button
+                  type="button"
+                  class="btn btn-secondary !px-2 remove-ns {{ $isFixed ? 'opacity-0 pointer-events-none' : '' }}"
+                  data-fixed="{{ $isFixed ? 'true' : 'false' }}"
+                  title="{{ __('Remove') }}"
+                >
                   <i class="ti ti-x"></i>
                 </button>
               </div>
               <p class="text-xs text-gray-500">{{ __('Example: ns1.example.com') }}</p>
             </div>
-          @empty
-            {{-- في حال لا توجد قيم سابقة، أضف حقلين افتراضيين --}}
-            @for ($i = 0; $i < 2; $i++)
-              <div class="space-y-1 ns-item">
-                <label for="nameserver_{{ $i }}" class="text-sm font-medium text-gray-700">
-                  {{ __('Nameserver :number', ['number' => $i + 1]) }}
-                </label>
-                <div class="flex gap-2">
-                  <input type="text"
-                    name="nameservers[{{ $i }}]"
-                    id="nameserver_{{ $i }}"
-                    class="form-control flex-1"
-                    inputmode="url"
-                    dir="ltr"
-                    placeholder="ns{{ $i + 1 }}.example.com"
-                    pattern="^([a-z0-9-]+\.)+[a-z]{2,}$"
-                    aria-invalid="false"
-                    />
-                  <button type="button" class="btn btn-secondary !px-2 remove-ns" title="{{ __('Remove') }}">
-                    <i class="ti ti-x"></i>
-                  </button>
-                </div>
-                <p class="text-xs text-gray-500">{{ __('Example: ns1.example.com') }}</p>
-              </div>
-            @endfor
-          @endforelse
+          @endforeach
         </div>
 
         <div id="ns-help" class="flex items-center justify-between mt-2">
@@ -201,11 +192,14 @@
 
   {{-- Template لحقل NS للاستخدام الديناميكي --}}
   <template id="ns-template">
-    <div class="space-y-1 ns-item">
-      <label class="text-sm font-medium text-gray-700"></label>
+    <div class="space-y-1 ns-item" data-fixed="false">
+      <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+        <span class="ns-label-text"></span>
+        <span class="badge-placeholder inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600 hidden"></span>
+      </label>
       <div class="flex gap-2">
         <input type="text" class="form-control flex-1" inputmode="url" dir="ltr" placeholder="" pattern="^([a-z0-9-]+\.)+[a-z]{2,}$" aria-invalid="false" />
-        <button type="button" class="btn btn-secondary !px-2 remove-ns" title="{{ __('Remove') }}">
+        <button type="button" class="btn btn-secondary !px-2 remove-ns" data-fixed="false" title="{{ __('Remove') }}">
           <i class="ti ti-x"></i>
         </button>
       </div>
@@ -224,6 +218,12 @@
 
       const MIN = parseInt(fieldsContainer.dataset.min || '2', 10);
       const MAX = parseInt(fieldsContainer.dataset.max || '12', 10);
+      const BASE = parseInt(fieldsContainer.dataset.fixedCount || '0', 10);
+      const LABEL_TEXT = `{{ __('Nameserver') }}`;
+      const REQUIRED_BADGE = `{{ __('Required') }}`;
+      const MIN_MSG = `{{ __('Please provide at least :n nameservers.', ['n' => $baseSlots]) }}`;
+      const MAX_MSG = `{{ __('You can add up to :n nameservers.', ['n' => 12]) }}`;
+      const FIX_MSG = `{{ __('Please fix the highlighted fields.') }}`;
 
       /** Helpers */
       const updateNames = () => {
@@ -231,11 +231,34 @@
         items.forEach((item, i) => {
           const label = item.querySelector('label');
           const input = item.querySelector('input');
-          label.textContent = `{{ __('Nameserver') }} ${i + 1}`;
-          label.setAttribute('for', `nameserver_${i}`);
+          const textSpan = label?.querySelector('.ns-label-text');
+          const badge = label?.querySelector('.badge-placeholder');
+          const isFixed = i < BASE;
+
+          item.dataset.fixed = isFixed ? 'true' : 'false';
+          label?.setAttribute('for', `nameserver_${i}`);
+          if (textSpan) {
+            textSpan.textContent = `${LABEL_TEXT} ${i + 1}`;
+          }
+          if (badge) {
+            if (i < 2) {
+              badge.textContent = REQUIRED_BADGE;
+              badge.classList.remove('hidden');
+            } else {
+              badge.classList.add('hidden');
+              badge.textContent = REQUIRED_BADGE;
+            }
+          }
           input.id = `nameserver_${i}`;
           input.name = `nameservers[${i}]`;
           input.placeholder = `ns${i + 1}.example.com`;
+
+          const removeBtn = item.querySelector('.remove-ns');
+          if (removeBtn) {
+            removeBtn.dataset.fixed = isFixed ? 'true' : 'false';
+            removeBtn.classList.toggle('opacity-0', isFixed);
+            removeBtn.classList.toggle('pointer-events-none', isFixed);
+          }
         });
         counterEl.textContent = `${items.length}/${MAX}`;
       };
@@ -249,8 +272,8 @@
       const validateAll = () => {
         let ok = true;
         const items = fieldsContainer.querySelectorAll('.ns-item');
-        if (items.length < MIN) { ok = false; showError(`{{ __('Please provide at least :n nameservers.', ['n' => 2]) }}`); }
-        else if (items.length > MAX) { ok = false; showError(`{{ __('You can add up to :n nameservers.', ['n' => 12]) }}`); }
+        if (items.length < MIN) { ok = false; showError(MIN_MSG); }
+        else if (items.length > MAX) { ok = false; showError(MAX_MSG); }
         else {
           showError('');
         }
@@ -268,14 +291,16 @@
         return ok;
       };
 
-      const addField = (value = '') => {
+      const addField = (value = '', { focus = true } = {}) => {
         const count = fieldsContainer.querySelectorAll('.ns-item').length;
-        if (count >= MAX) { showError(`{{ __('You can add up to :n nameservers.', ['n' => 12]) }}`); return; }
+        if (count >= MAX) { showError(MAX_MSG); return; }
 
         const node = tmpl.content.firstElementChild.cloneNode(true);
         const input = node.querySelector('input');
+        const removeBtn = node.querySelector('.remove-ns');
         input.value = value || '';
-        node.querySelector('.remove-ns').addEventListener('click', () => {
+        removeBtn.dataset.fixed = 'false';
+        removeBtn.addEventListener('click', () => {
           node.remove();
           updateNames();
           validateAll();
@@ -284,20 +309,23 @@
         fieldsContainer.appendChild(node);
         updateNames();
         validateAll();
+        if (focus) {
+          input.focus();
+        }
       };
 
       // أزرار موجودة مسبقًا
       fieldsContainer.querySelectorAll('.remove-ns').forEach(btn => {
         btn.addEventListener('click', (e) => {
+          if (btn.dataset.fixed === 'true') return;
           const items = fieldsContainer.querySelectorAll('.ns-item');
-          if (items.length <= MIN) return; // لا تحذف أقل من الحد الأدنى
           e.currentTarget.closest('.ns-item').remove();
           updateNames();
           validateAll();
         });
       });
 
-      addButton?.addEventListener('click', () => addField(''));
+      addButton?.addEventListener('click', () => addField('', { focus: true }));
 
       // Presets
       presetSelect?.addEventListener('change', () => {
@@ -312,11 +340,26 @@
         const list = presets[v];
         if (!list) return;
 
-        // امسح وأعد التعبئة
-        fieldsContainer.innerHTML = '';
-        list.forEach(ns => addField(ns));
+        const items = Array.from(fieldsContainer.querySelectorAll('.ns-item'));
+        const baseItems = items.slice(0, BASE);
+
+        baseItems.forEach((item, idx) => {
+          const input = item.querySelector('input');
+          input.value = list[idx] ?? '';
+        });
+
+        items.slice(BASE).forEach(item => item.remove());
+
         updateNames();
         validateAll();
+
+        if (list.length > BASE) {
+          for (let i = BASE; i < list.length && i < MAX; i++) {
+            addField(list[i], { focus: false });
+          }
+        }
+
+        presetSelect.value = '';
       });
 
       // تحقق فوري عند الكتابة
@@ -333,7 +376,7 @@
       form.addEventListener('submit', (e) => {
         if (!validateAll()) {
           e.preventDefault();
-          showError(`{{ __('Please fix the highlighted fields.') }}`);
+          showError(FIX_MSG);
           fieldsContainer.querySelector('[aria-invalid="true"]')?.focus();
         }
       });
