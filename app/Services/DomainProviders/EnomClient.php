@@ -287,13 +287,70 @@ class EnomClient
             'SLD' => $sld,
             'TLD' => $tld,
             'UseDNS' => 'custom',
+            'CustomDNS' => '1',
         ];
 
         foreach (array_slice(array_values($nameservers), 0, 12) as $index => $nameserver) {
-            $payload['NS' . ($index + 1)] = $nameserver;
+            $position = $index + 1;
+            $payload['NS' . $position] = $nameserver;
+            $payload['HostName' . $position] = $nameserver;
         }
 
         return $this->request($p, $payload);
+    }
+
+    public function getDns(DomainProvider $p, string $fqdn): array
+    {
+        [$sld, $tld] = $this->splitDomainParts($fqdn);
+
+        if (!$sld || !$tld) {
+            return [
+                'ok' => false,
+                'reason' => 'invalid_domain',
+                'message' => 'Unable to split domain into SLD/TLD for GetDNS request.',
+            ];
+        }
+
+        $response = $this->request($p, [
+            'command' => 'GetDNS',
+            'SLD' => $sld,
+            'TLD' => $tld,
+        ]);
+
+        if (!($response['ok'] ?? false)) {
+            return $response;
+        }
+
+        $xml = $response['xml'];
+        $useDns = strtolower(trim((string) ($xml->UseDNS ?? '')));
+        $nameservers = [];
+
+        for ($i = 1; $i <= 12; $i++) {
+            $hostKey = 'host' . $i;
+            $nsKey = 'ns' . $i;
+
+            if (isset($xml->{$hostKey}) && trim((string) $xml->{$hostKey}) !== '') {
+                $nameservers[] = trim((string) $xml->{$hostKey});
+            } elseif (isset($xml->{$nsKey}) && trim((string) $xml->{$nsKey}) !== '') {
+                $nameservers[] = trim((string) $xml->{$nsKey});
+            }
+        }
+
+        if (empty($nameservers) && isset($xml->dns) && isset($xml->dns->entry)) {
+            foreach ($xml->dns->entry as $entry) {
+                $value = trim((string) ($entry->hostname ?? $entry->host ?? ''));
+                if ($value !== '') {
+                    $nameservers[] = $value;
+                }
+            }
+        }
+
+        return [
+            'ok' => true,
+            'use_dns' => $useDns !== '' ? $useDns : null,
+            'nameservers' => array_values(array_unique($nameservers)),
+            'xml' => $xml,
+        ];
     }
 
     protected function splitDomainParts(string $fqdn): array

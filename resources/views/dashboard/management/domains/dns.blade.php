@@ -1,4 +1,5 @@
 {{-- resources/views/dashboard/management/domains/dns.blade.php --}}
+@php use Illuminate\Support\Str; @endphp
 <x-dashboard-layout>
   <div class="container mx-auto py-6 max-w-5xl space-y-6">
     <div>
@@ -16,6 +17,55 @@
 
     @if (session('success'))
       <div class="bg-green-100 text-green-800 p-4 rounded">{{ session('success') }}</div>
+    @endif
+
+    @if (!empty($remoteDns))
+      <div class="bg-slate-50 border border-slate-200 p-4 rounded">
+        <div class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+          <div class="text-sm font-medium text-slate-700">
+            {{ __('Registrar DNS snapshot') }}
+          </div>
+          @if (!empty($remoteDns['fetched_at']))
+            <div class="text-xs text-slate-500">
+              {{ __('Fetched at :date', [
+                  'date' => $remoteDns['fetched_at']->timezone(config('app.timezone', 'UTC'))->format('Y-m-d H:i'),
+              ]) }}
+            </div>
+          @endif
+        </div>
+
+        @if (!empty($remoteDns['error']))
+          <div class="mt-2 text-sm text-red-600">
+            {{ $remoteDns['error'] }}
+          </div>
+        @else
+          @php
+            $statusKey = $remoteDns['status'] ?? null;
+            $statusMap = [
+              'default' => __('Provider default (Use our name servers)'),
+              'custom' => __('Custom nameservers enabled'),
+              'park' => __('Parked at provider'),
+            ];
+            $statusText = $statusKey ? ($statusMap[$statusKey] ?? Str::title($statusKey)) : __('Unknown');
+          @endphp
+          <div class="mt-2 text-sm text-slate-600">
+            {{ __('Mode: :status', ['status' => $statusText]) }}
+          </div>
+          <div class="mt-2">
+            @if (!empty($remoteDns['nameservers']))
+              <ul class="text-sm text-slate-700 space-y-1 list-disc ps-5">
+                @foreach ($remoteDns['nameservers'] as $ns)
+                  <li>{{ $ns }}</li>
+                @endforeach
+              </ul>
+            @else
+              <div class="text-sm text-slate-500">
+                {{ __('Registrar did not return explicit nameserver records.') }}
+              </div>
+            @endif
+          </div>
+        @endif
+      </div>
     @endif
 
     @if ($domain->dns_last_synced_at)

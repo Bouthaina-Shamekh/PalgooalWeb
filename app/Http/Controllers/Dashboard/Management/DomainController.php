@@ -271,9 +271,57 @@ class DomainController extends Controller
             ''
         );
 
+        $remoteDns = [
+            'provider' => null,
+            'status' => null,
+            'nameservers' => [],
+            'error' => null,
+            'fetched_at' => null,
+        ];
+
+        $registrar = strtolower((string) $domain->registrar);
+        if ($registrar !== '') {
+            $provider = DomainProvider::query()
+                ->active()
+                ->ofType($registrar)
+                ->first();
+
+            if ($provider) {
+                $remoteDns['provider'] = $provider->type;
+                try {
+                    if ($provider->type === 'enom') {
+                        $client = new EnomClient();
+                        $result = $client->getDns($provider, $domain->domain_name);
+
+                        if ($result['ok'] ?? false) {
+                            $remoteDns['status'] = $result['use_dns'] ?? null;
+                            $remoteDns['nameservers'] = $result['nameservers'] ?? [];
+                        } else {
+                            $remoteDns['error'] = $result['message'] ?? __('Unable to fetch DNS state from registrar.');
+                        }
+                    } else {
+                        $remoteDns['error'] = __('Fetching DNS snapshot is not implemented for :provider yet.', ['provider' => Str::title($provider->type)]);
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Failed to fetch registrar DNS snapshot', [
+                        'domain_id' => $domain->id,
+                        'domain' => $domain->domain_name,
+                        'provider_id' => $provider->id,
+                        'provider_type' => $provider->type,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $remoteDns['error'] = __('Unable to contact registrar: :message', ['message' => $e->getMessage()]);
+                }
+                $remoteDns['fetched_at'] = now();
+            } else {
+                $remoteDns['error'] = __('No active provider configuration found for :registrar.', ['registrar' => $registrar]);
+            }
+        }
+
         return view('dashboard.management.domains.dns', [
             'domain' => $domain,
             'nameservers' => $nameservers,
+            'remoteDns' => $remoteDns,
         ]);
     }
 
@@ -320,6 +368,15 @@ class DomainController extends Controller
 
         $syncResult = $this->pushNameserversToProvider($provider, $domain, $requestedNameservers);
         if (!($syncResult['ok'] ?? false)) {
+            Log::warning('Domain DNS sync rejected by provider', [
+                'domain_id' => $domain->id,
+                'domain' => $domain->domain_name,
+                'provider_id' => $provider->id,
+                'provider_type' => $provider->type,
+                'message' => $syncResult['message'] ?? null,
+                'code' => $syncResult['code'] ?? null,
+                'cid' => $syncResult['cid'] ?? null,
+            ]);
             $message = $syncResult['message'] ?? __('Unable to update nameservers with the registrar.');
             if (!empty($syncResult['cid'])) $message .= " (cid: {$syncResult['cid']})";
             return back()->withInput()->withErrors(['nameservers' => $message]);
