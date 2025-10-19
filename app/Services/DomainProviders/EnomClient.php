@@ -336,19 +336,27 @@ class EnomClient
         $nameservers = [];
 
         for ($i = 1; $i <= 12; $i++) {
-            $hostKey = 'host' . $i;
-            $nsKey = 'ns' . $i;
-            $dnsKey = 'dns' . $i;
-            $nameServerKey = 'nameserver' . $i;
+            $candidates = [
+                'host' . $i,
+                'Host' . $i,
+                'ns' . $i,
+                'Ns' . $i,
+                'dns' . $i,
+                'Dns' . $i,
+                'nameserver' . $i,
+                'Nameserver' . $i,
+                'nameServer' . $i,
+                'NameServer' . $i,
+            ];
 
-            if (isset($xml->{$hostKey}) && trim((string) $xml->{$hostKey}) !== '') {
-                $nameservers[] = trim((string) $xml->{$hostKey});
-            } elseif (isset($xml->{$dnsKey}) && trim((string) $xml->{$dnsKey}) !== '') {
-                $nameservers[] = trim((string) $xml->{$dnsKey});
-            } elseif (isset($xml->{$nameServerKey}) && trim((string) $xml->{$nameServerKey}) !== '') {
-                $nameservers[] = trim((string) $xml->{$nameServerKey});
-            } elseif (isset($xml->{$nsKey}) && trim((string) $xml->{$nsKey}) !== '') {
-                $nameservers[] = trim((string) $xml->{$nsKey});
+            foreach ($candidates as $key) {
+                if (isset($xml->{$key})) {
+                    $value = trim((string) $xml->{$key});
+                    if ($value !== '') {
+                        $nameservers[] = $value;
+                        break;
+                    }
+                }
             }
         }
 
