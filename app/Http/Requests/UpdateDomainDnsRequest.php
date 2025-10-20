@@ -11,6 +11,21 @@ class UpdateDomainDnsRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $nameservers = $this->input('nameservers');
+
+        if (is_array($nameservers)) {
+            $filtered = collect($nameservers)
+                ->map(fn($value) => is_string($value) ? trim($value) : $value)
+                ->filter(fn($value) => filled($value))
+                ->values()
+                ->all();
+
+            $this->merge(['nameservers' => $filtered]);
+        }
+    }
+
     public function rules(): array
     {
         return [

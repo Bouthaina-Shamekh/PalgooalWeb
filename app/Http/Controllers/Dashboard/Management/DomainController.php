@@ -252,24 +252,10 @@ class DomainController extends Controller
     /** DNS: فورم */
     public function editDns(Domain $domain)
     {
-        $nameserversRaw = $domain->nameservers ?? [];
+        $minNameservers = 2;
+        $maxNameservers = 12;
 
-        if (is_string($nameserversRaw)) {
-            $decoded = json_decode($nameserversRaw, true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                $nameserversRaw = $decoded;
-            }
-        }
-
-        if (!is_array($nameserversRaw)) {
-            $nameserversRaw = [];
-        }
-
-        $nameservers = array_pad(
-            array_values(array_filter($nameserversRaw, fn($value) => filled($value))),
-            5,
-            ''
-        );
+        $nameservers = [];
 
         $remoteDns = [
             'provider' => null,
@@ -296,6 +282,30 @@ class DomainController extends Controller
                         if ($result['ok'] ?? false) {
                             $remoteDns['status'] = $result['use_dns'] ?? null;
                             $remoteDns['nameservers'] = $result['nameservers'] ?? [];
+                            if (empty($remoteDns['nameservers'] ?? []) && ($remoteDns['status'] ?? null) === 'default') {
+                                $remoteDns['nameservers'] = [
+                                    'dns1.name-services.com',
+                                    'dns2.name-services.com',
+                                    'dns3.name-services.com',
+                                    'dns4.name-services.com',
+                                ];
+                            }
+                        } else {
+                            $remoteDns['error'] = $result['message'] ?? __('Unable to fetch DNS state from registrar.');
+                        }
+                    } elseif ($provider->type === 'namecheap') {
+                        $client = new NamecheapClient($provider);
+                        $result = $client->getNameservers($domain->domain_name);
+
+                        if ($result['ok'] ?? false) {
+                            $remoteDns['status'] = ($result['is_using_default'] ?? null) === true ? 'default' : 'custom';
+                            $remoteDns['nameservers'] = $result['nameservers'] ?? [];
+                            if (empty($remoteDns['nameservers'] ?? []) && ($remoteDns['status'] ?? null) === 'default') {
+                                $remoteDns['nameservers'] = [
+                                    'dns1.registrar-servers.com',
+                                    'dns2.registrar-servers.com',
+                                ];
+                            }
                         } else {
                             $remoteDns['error'] = $result['message'] ?? __('Unable to fetch DNS state from registrar.');
                         }
@@ -318,18 +328,18 @@ class DomainController extends Controller
             }
         }
 
-        if (!empty($remoteDns['nameservers'])) {
-            $nameservers = array_pad(
-                array_values(array_filter($remoteDns['nameservers'], fn($value) => filled($value))),
-                5,
-                ''
-            );
+        $nameservers = array_values(array_filter($remoteDns['nameservers'] ?? [], fn($value) => filled($value)));
+        $nameservers = array_slice($nameservers, 0, $maxNameservers);
+        if (count($nameservers) < $minNameservers) {
+            $nameservers = array_pad($nameservers, $minNameservers, '');
         }
 
         return view('dashboard.management.domains.dns', [
             'domain' => $domain,
             'nameservers' => $nameservers,
             'remoteDns' => $remoteDns,
+            'minNameservers' => $minNameservers,
+            'maxNameservers' => $maxNameservers,
         ]);
     }
 

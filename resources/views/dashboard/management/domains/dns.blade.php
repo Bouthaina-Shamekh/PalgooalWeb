@@ -119,19 +119,19 @@
         </div>
 
         @php
-          $baseSlots = 5;
+          $requiredCount = $minNameservers ?? 2;
+          $maxSlots = $maxNameservers ?? 12;
           $oldNs = array_values(old('nameservers', $nameservers ?? []));
-          if (count($oldNs) < $baseSlots) {
-            $oldNs = array_pad($oldNs, $baseSlots, '');
-          }
+          $displaySlots = min($maxSlots, max($requiredCount, count($oldNs)));
+          $oldNs = array_pad($oldNs, $displaySlots, '');
         @endphp
-        <div id="nameserver-fields" class="grid grid-cols-1 gap-4 md:grid-cols-2" data-min="{{ $baseSlots }}" data-max="12" data-fixed-count="{{ $baseSlots }}" aria-describedby="ns-help">
+        <div id="nameserver-fields" class="grid grid-cols-1 gap-4 md:grid-cols-2" data-min="{{ $requiredCount }}" data-max="{{ $maxSlots }}" data-fixed-count="{{ $requiredCount }}" aria-describedby="ns-help">
           @foreach ($oldNs as $index => $nameserver)
-            @php $isFixed = $index < $baseSlots; @endphp
+            @php $isFixed = $index < $requiredCount; @endphp
             <div class="space-y-1 ns-item" data-fixed="{{ $isFixed ? 'true' : 'false' }}">
               <label for="nameserver_{{ $index }}" class="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <span class="ns-label-text">{{ __('Nameserver :number', ['number' => $index + 1]) }}</span>
-                <span class="badge-placeholder inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600 {{ $index < 2 ? '' : 'hidden' }}">
+                <span class="badge-placeholder inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-600 {{ $index < $requiredCount ? '' : 'hidden' }}">
                   {{ __('Required') }}
                 </span>
               </label>
@@ -164,7 +164,7 @@
 
         <div id="ns-help" class="flex items-center justify-between mt-2">
           <p class="text-xs text-gray-500">
-            {{ __('DNS updates usually take effect after the registry processes them. You can add up to 12 nameservers.') }}
+            {{ __('DNS updates usually take effect after the registry processes them. You can add up to :max nameservers.', ['max' => $maxSlots]) }}
           </p>
           <p id="ns-counter" class="text-xs text-gray-500"></p>
         </div>
@@ -190,7 +190,7 @@
     </form>
   </div>
 
-  {{-- Template لحقل NS للاستخدام الديناميكي --}}
+  {{-- Template for dynamically added nameserver rows --}}
   <template id="ns-template">
     <div class="space-y-1 ns-item" data-fixed="false">
       <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
@@ -221,8 +221,8 @@
       const BASE = parseInt(fieldsContainer.dataset.fixedCount || '0', 10);
       const LABEL_TEXT = `{{ __('Nameserver') }}`;
       const REQUIRED_BADGE = `{{ __('Required') }}`;
-      const MIN_MSG = `{{ __('Please provide at least :n nameservers.', ['n' => $baseSlots]) }}`;
-      const MAX_MSG = `{{ __('You can add up to :n nameservers.', ['n' => 12]) }}`;
+      const MIN_MSG = `{{ __('Please provide at least :n nameservers.', ['n' => $requiredCount]) }}`;
+      const MAX_MSG = `{{ __('You can add up to :n nameservers.', ['n' => $maxSlots]) }}`;
       const FIX_MSG = `{{ __('Please fix the highlighted fields.') }}`;
 
       /** Helpers */
@@ -241,7 +241,7 @@
             textSpan.textContent = `${LABEL_TEXT} ${i + 1}`;
           }
           if (badge) {
-            if (i < 2) {
+            if (i < BASE) {
               badge.textContent = REQUIRED_BADGE;
               badge.classList.remove('hidden');
             } else {

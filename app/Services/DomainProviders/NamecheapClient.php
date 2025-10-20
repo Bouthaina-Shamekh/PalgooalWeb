@@ -224,6 +224,66 @@ class NamecheapClient
         return $this->request($payload);
     }
 
+    public function getNameservers(string $fqdn): array
+    {
+        [$sld, $tld] = $this->splitDomainParts($fqdn);
+
+        if (!$sld || !$tld) {
+            return [
+                'ok' => false,
+                'reason' => 'invalid_domain',
+                'message' => '�?�?���? �?�?�?�?�? �?�?�?���?�? �?�?�? SLD/TLD �?�?�?�?�?�? �?�?�?�?�?�?�? �?�?�? DNS.',
+            ];
+        }
+
+        $response = $this->request([
+            'Command' => 'namecheap.domains.dns.getList',
+            'SLD' => $sld,
+            'TLD' => $tld,
+        ]);
+
+        if (($response['ok'] ?? false) === false) {
+            return $response;
+        }
+
+        $xml = $response['xml'];
+
+        $nameservers = [];
+        $isUsingDefault = null;
+
+        if (isset($xml->CommandResponse->DomainDNSGetListResult)) {
+            $resultNode = $xml->CommandResponse->DomainDNSGetListResult;
+            $attr = $resultNode->attributes();
+            if ($attr && isset($attr['IsUsingOurDNS'])) {
+                $isUsingDefault = strtolower((string) $attr['IsUsingOurDNS']) === 'true';
+            }
+
+            foreach ($resultNode->Nameserver ?? [] as $node) {
+                $value = trim((string) $node);
+                if ($value !== '') {
+                    $nameservers[] = strtolower($value);
+                }
+            }
+        }
+
+        if (empty($nameservers)) {
+            $fallback = $xml->xpath('//*[local-name()="Nameserver"]') ?: [];
+            foreach ($fallback as $node) {
+                $value = trim((string) $node);
+                if ($value !== '') {
+                    $nameservers[] = strtolower($value);
+                }
+            }
+        }
+
+        return [
+            'ok' => true,
+            'nameservers' => array_values(array_unique($nameservers)),
+            'is_using_default' => $isUsingDefault,
+            'xml' => $xml,
+        ];
+    }
+
     protected function splitDomainParts(string $fqdn): array
     {
         $fqdn = strtolower(trim($fqdn));
