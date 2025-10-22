@@ -20,7 +20,7 @@
                         <h5 class="mb-3 sm:mb-0">Clients List</h5>
                         <div>
                            @can('create','App\\Models\Client')
-                           <a href="#" wire:click="showAdd" class="btn btn-primary">Add Client</a>
+                           <a href="#" wire:click.prevent="showAdd" class="btn btn-primary">Add Client</a>
                            @endcan
                         </div>
                     </div>
@@ -54,11 +54,12 @@
                             <tbody>
                                 @forelse ($clients as $client)
                                 <tr>
-                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ ($clients->firstItem() ?? 1) + $loop->index }}</td>
                                     <td>
                                         <div class="flex items-center w-44">
                                             <div class="shrink-0">
                                                 <img src="{{ $client->avatar ? asset('storage/' . $client->avatar) : asset('assets/images/user/avatar-1.jpg') }}"
+                                                     alt="{{ trim(($client->first_name ?? '') . ' ' . ($client->last_name ?? '')) ?: 'Client avatar' }}"
                                                      class="rounded-full w-10 h-10 object-cover" />
                                             </div>
                                             <div class="grow ltr:ml-3 rtl:mr-3">
@@ -145,6 +146,17 @@
                                                     class="w-8 h-8 rounded-lg inline-flex items-center justify-center btn-link-secondary hover:bg-yellow-50 hover:text-yellow-600 transition-colors"
                                                     title="Edit Client">
                                                 <i class="ti ti-edit text-lg leading-none"></i>
+                                            </button>
+                                            @endcan
+
+                                            @can('login','App\\Models\\Client')
+                                            <button type="button"
+                                                    wire:click="loginAs({{ $client->id }})"
+                                                    wire:loading.attr="disabled"
+                                                    class="w-8 h-8 rounded-lg inline-flex items-center justify-center btn-link-secondary hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                                                    title="Login as Client"
+                                                    @if(!$client->can_login) disabled aria-disabled="true" @endif>
+                                                <i class="ti ti-login text-lg leading-none"></i>
                                             </button>
                                             @endcan
 

@@ -1,7 +1,7 @@
 <nav class="pc-sidebar">
     <div class="navbar-wrapper">
         <div class="m-header flex items-center py-4 px-6 h-header-height">
-            <a href="../dashboard/index.html" class="b-brand flex items-center gap-3">
+            <a href="/" class="b-brand flex items-center gap-3">
                 <!-- ========   Change your logo from here   ============ -->
                 <img src="{{$settings?->admin_logo ? asset(path: 'storage/' . $settings->admin_logo) : asset('assets/tamplate/images/logo.svg') }}" alt="Palgoals Logo" class="img-fluid logo-lg" itemprop="logo" loading="lazy" />
             </a>

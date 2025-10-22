@@ -423,6 +423,39 @@ class ClientComponent extends Component
         $this->resetPage();
     }
 
+    public function loginAs($id)
+    {
+        $admin = Auth::user();
+
+        if (!$admin || !$admin->can('login', Client::class)) {
+            $this->showAlert('You are not authorized to login as clients.', 'danger');
+            return;
+        }
+
+        $client = Client::findOrFail($id);
+
+        if (!$client->can_login) {
+            $this->showAlert('Client login is disabled.', 'warning');
+            return;
+        }
+
+        Auth::guard('client')->login($client);
+
+        ActivityLog::create([
+            'actor_type' => 'admin',
+            'actor_id' => $admin->id,
+            'action' => 'client.impersonated',
+            'meta' => [
+                'client_id' => $client->id,
+                'client_email' => $client->email,
+            ]
+        ]);
+
+        session()->flash('success', 'You are now logged in as the client.');
+
+        return redirect()->route('client.home');
+    }
+
     public function updateSearch()
     {
         $this->resetPage();

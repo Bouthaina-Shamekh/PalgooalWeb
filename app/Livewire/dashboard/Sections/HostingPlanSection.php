@@ -2,9 +2,9 @@
 
 namespace App\Livewire\Dashboard\Sections;
 
-use App\Models\SectionTranslation;
-use App\Models\PlanCategory;
 use App\Models\Plan;
+use App\Models\PlanCategory;
+use App\Models\SectionTranslation;
 
 class HostingPlanSection extends BaseSectionComponent
 {
@@ -16,9 +16,8 @@ class HostingPlanSection extends BaseSectionComponent
 
     public function mount()
     {
-        parent::mount(); // استدعاء mount من BaseSectionComponent
+        parent::mount();
 
-        // إعداد البيانات للترجمات
         foreach ($this->languages as $lang) {
             $translation = $this->section->translations->firstWhere('locale', $lang->code);
             $content = is_array($translation?->content) ? $translation->content : [];
@@ -30,46 +29,49 @@ class HostingPlanSection extends BaseSectionComponent
             ];
         }
 
-        // تحميل التصنيفات
         $this->availableCategories = PlanCategory::with('translations')->get();
 
-        // تهيئة التصنيف المحدد
         $sectionTranslation = $this->section->translations->firstWhere('locale', app()->getLocale())
             ?? $this->section->translations->first();
 
         $storedContent = is_array($sectionTranslation?->content) ? $sectionTranslation->content : [];
 
         $this->selectedCategoryId = $storedContent['plan_category_id'] ?? null;
-        $this->categorySlug = $storedContent['plan_category_slug'] ?? '';
+        $this->categorySlug = isset($storedContent['plan_category_slug'])
+            ? trim((string) $storedContent['plan_category_slug'])
+            : '';
 
         if ($this->selectedCategoryId) {
             $this->selectedCategory = PlanCategory::with('translations')->find($this->selectedCategoryId);
-        } elseif (!empty($this->categorySlug)) {
-            $this->selectedCategory = PlanCategory::whereHas('translations', function ($q) {
-                $q->where('slug', $this->categorySlug);
+        } elseif ($this->categorySlug !== '') {
+            $this->selectedCategory = PlanCategory::whereHas('translations', function ($query) {
+                $query->where('slug', $this->categorySlug);
             })->with('translations')->first();
         }
 
         $this->recalcPreviewCount();
     }
 
-    public function updatedSelectedCategoryId($val)
+    public function updatedSelectedCategoryId($value)
     {
         $this->categorySlug = '';
-        $this->selectedCategory = $val ? PlanCategory::with('translations')->find($val) : null;
+        $this->selectedCategory = $value ? PlanCategory::with('translations')->find($value) : null;
+
         $this->recalcPreviewCount();
     }
 
-    public function updatedCategorySlug($val)
+    public function updatedCategorySlug($value)
     {
+        $slug = trim((string) $value);
+        $this->categorySlug = $slug;
         $this->selectedCategory = null;
-        $slug = trim((string)$val);
+
         if ($slug !== '') {
-            $cat = PlanCategory::whereHas('translations', function ($q) use ($slug) {
-                $q->where('slug', $slug);
+            $this->selectedCategory = PlanCategory::whereHas('translations', function ($query) use ($slug) {
+                $query->where('slug', $slug);
             })->with('translations')->first();
-            $this->selectedCategory = $cat;
         }
+
         $this->recalcPreviewCount();
     }
 
@@ -80,12 +82,15 @@ class HostingPlanSection extends BaseSectionComponent
         if ($this->selectedCategory) {
             $query->where('plan_category_id', $this->selectedCategory->id);
         } elseif ($this->selectedCategoryId) {
-            $query->where('plan_category_id', (int)$this->selectedCategoryId);
-        } elseif (!empty($this->categorySlug)) {
-            $cat = PlanCategory::whereHas('translations', function ($q) {
-                $q->where('slug', $this->categorySlug);
+            $query->where('plan_category_id', (int) $this->selectedCategoryId);
+        } elseif ($this->categorySlug !== '') {
+            $category = PlanCategory::whereHas('translations', function ($query) {
+                $query->where('slug', $this->categorySlug);
             })->first();
-            if ($cat) $query->where('plan_category_id', $cat->id);
+
+            if ($category) {
+                $query->where('plan_category_id', $category->id);
+            }
         }
 
         $this->previewPlansCount = $query->count();
@@ -93,12 +98,16 @@ class HostingPlanSection extends BaseSectionComponent
 
     public function updateHostingPlansSection()
     {
+        $this->categorySlug = trim((string) $this->categorySlug);
+
         $this->validate([
             "translationsData.{$this->activeLang}.title" => 'required|string|max:250',
             "translationsData.{$this->activeLang}.subtitle" => 'nullable|string|max:500',
             'selectedCategoryId' => 'nullable|integer|exists:plan_categories,id',
             'categorySlug' => 'nullable|string|max:200',
         ]);
+
+        $this->selectedCategoryId = $this->selectedCategoryId ? (int) $this->selectedCategoryId : null;
 
         foreach ($this->translationsData as $locale => $data) {
             $translation = SectionTranslation::firstOrNew([
@@ -110,8 +119,8 @@ class HostingPlanSection extends BaseSectionComponent
             $translation->content = [
                 'subtitle' => $data['subtitle'] ?? '',
                 'hosting-plans' => $data['hosting-plans'] ?? [],
-                'plan_category_id' => $this->selectedCategoryId ? (int)$this->selectedCategoryId : null,
-                'plan_category_slug' => $this->categorySlug ?: null,
+                'plan_category_id' => $this->selectedCategoryId,
+                'plan_category_slug' => $this->categorySlug !== '' ? $this->categorySlug : null,
             ];
 
             $translation->save();
@@ -120,8 +129,7 @@ class HostingPlanSection extends BaseSectionComponent
         $this->section->order = $this->order;
         $this->section->save();
 
-        // استخدام Flash Session فقط مثل سكشناتك الأخرى
-        $this->flashSuccess('تم تحديث قسم الخطط بنجاح.');
+        $this->flashSuccess('Hosting plan section updated successfully.');
     }
 
     public function removeHostingPlansSection($locale, $index)
