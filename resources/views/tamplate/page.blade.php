@@ -126,6 +126,7 @@
         $sectionComponents = [
             'hero' => 'hero',
             'features' => 'features',
+            'features-2' => 'features-2',
             'services' => 'services',
             'templates' => 'templates',
             'works' => 'works',
@@ -166,6 +167,37 @@
                         ? $content['features']
                         : array_filter(array_map('trim', explode("\n", $content['features'] ?? ''))),
                 ],
+                'features-2' => (function () use ($content, $title) {
+                    $features = collect($content['features'] ?? [])
+                        ->filter(function ($item) {
+                            if (!is_array($item)) {
+                                return false;
+                            }
+
+                            $title = trim((string) ($item['title'] ?? ''));
+                            $description = trim((string) ($item['description'] ?? ''));
+                            $icon = trim((string) ($item['icon'] ?? ''));
+
+                            return $title !== '' || $description !== '' || $icon !== '';
+                        })
+                        ->map(function ($item) {
+                            return [
+                                'icon' => $item['icon'] ?? '',
+                                'title' => $item['title'] ?? '',
+                                'description' => $item['description'] ?? '',
+                            ];
+                        })
+                        ->values()
+                        ->all();
+
+                    return [
+                        'title' => $title,
+                        'subtitle' => $content['subtitle'] ?? '',
+                        'button_text' => $content['button_text'] ?? '',
+                        'button_url' => $content['button_url'] ?? '',
+                        'features' => $features,
+                    ];
+                })(),
                 'services' => [
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',

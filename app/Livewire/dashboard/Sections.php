@@ -31,6 +31,7 @@ class Sections extends Component
     public array $availableKeys = [
         'hero',
         'features',
+        'features-2',
         'services',
         'templates',
         'works',
@@ -47,6 +48,7 @@ class Sections extends Component
     public array $keyMeta = [
         'hero'            => ['label' => 'الواجهة الرئيسية (Hero)',                    'unique' => true,  'desc' => 'بانر رئيسي مع عنوان/وصف وأزرار.', 'thumb' => null],
         'features'        => ['label' => 'مميزات (Features)',                          'unique' => true,  'desc' => 'قائمة مميزات مع أيقونات.',       'thumb' => null],
+        'features-2'      => ['label' => 'مميزات متقدمة (Features 2)',                 'unique' => true,  'desc' => 'شبكة مميزات بأيقونات ورسوم.',    'thumb' => null],
         'services'        => ['label' => 'الخدمات (Services)',                          'unique' => true,  'desc' => 'شبكة للخدمات مع وصف مختصر.',     'thumb' => null],
         'templates'       => ['label' => 'القوالب (Templates)',                         'unique' => true,  'desc' => 'قائمة قوالب ديناميكية.',         'thumb' => null],
         'works'           => ['label' => 'الأعمال (Works)',                             'unique' => false, 'desc' => 'معرض أعمال قابل للتكرار.',       'thumb' => null],
@@ -198,9 +200,12 @@ class Sections extends Component
 
                     switch ($this->sectionKey) {
                         case 'features':
+                        case 'features-2':
                             $featuresRaw = $data['features'] ?? '';
                             $content = [
                                 'subtitle' => $data['subtitle'] ?? '',
+                                'button_text' => $data['button_text'] ?? '',
+                                'button_url' => $data['button_url'] ?? '',
                                 'features' => is_array($featuresRaw)
                                     ? $featuresRaw
                                     : array_filter(array_map('trim', explode("\n", $featuresRaw))),

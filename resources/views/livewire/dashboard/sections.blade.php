@@ -33,6 +33,10 @@
                 <livewire:dashboard.sections.features-section :section="$section" wire:key="features-{{ $section->id }}" />
             @break
 
+            @case('features-2')
+                <livewire:dashboard.sections.features2-section :section="$section" wire:key="features-2-{{ $section->id }}" />
+            @break
+
             @case('banner')
                 <livewire:dashboard.sections.banner-section :section="$section" wire:key="banner-{{ $section->id }}" />
             @break
