@@ -206,6 +206,7 @@ class Sections extends Component
                                 'subtitle' => $data['subtitle'] ?? '',
                                 'button_text' => $data['button_text'] ?? '',
                                 'button_url' => $data['button_url'] ?? '',
+                                'background_variant' => $data['background_variant'] ?? 'white',
                                 'features' => is_array($featuresRaw)
                                     ? $featuresRaw
                                     : array_filter(array_map('trim', explode("\n", $featuresRaw))),

@@ -190,11 +190,46 @@
                         ->values()
                         ->all();
 
+                    $backgroundPresets = [
+                        'white',
+                        'gray',
+                        'stone',
+                        'slate-light',
+                        'slate-dark',
+                        'zinc-dark',
+                        'black',
+                        'sky',
+                        'blue',
+                        'indigo',
+                        'violet',
+                        'purple',
+                        'amber',
+                        'orange',
+                        'rose',
+                        'rose-deep',
+                        'emerald',
+                        'emerald-deep',
+                        'teal',
+                    ];
+
+                    $backgroundVariant = $content['background_variant'] ?? null;
+                    if (!in_array($backgroundVariant, $backgroundPresets, true)) {
+                        $legacy = $content['background_color'] ?? null;
+                        $backgroundVariant = match (is_string($legacy) ? strtolower(trim($legacy)) : null) {
+                            '#ffffff', '#fff'       => 'white',
+                            '#f9fafb', '#f8fafc'    => 'gray',
+                            '#eff6ff', '#e0f2fe'    => 'subtle-blue',
+                            '#0f172a', '#111827'    => 'slate',
+                            default                 => 'white',
+                        };
+                    }
+
                     return [
                         'title' => $title,
                         'subtitle' => $content['subtitle'] ?? '',
                         'button_text' => $content['button_text'] ?? '',
                         'button_url' => $content['button_url'] ?? '',
+                        'background_variant' => $backgroundVariant,
                         'features' => $features,
                     ];
                 })(),
