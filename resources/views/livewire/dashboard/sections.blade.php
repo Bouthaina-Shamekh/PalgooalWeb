@@ -37,6 +37,14 @@
                 <livewire:dashboard.sections.features2-section :section="$section" wire:key="features-2-{{ $section->id }}" />
             @break
 
+            @case('features-3')
+                <livewire:dashboard.sections.features-section :section="$section" wire:key="features-3-{{ $section->id }}" />
+            @break
+
+            @case('cta')
+                <livewire:dashboard.sections.cta-section :section="$section" wire:key="cta-{{ $section->id }}" />
+            @break
+
             @case('banner')
                 <livewire:dashboard.sections.banner-section :section="$section" wire:key="banner-{{ $section->id }}" />
             @break
@@ -74,6 +82,10 @@
             @case('hosting-plans')
                 <livewire:dashboard.sections.hosting-plan-section :section="$section"
                     wire:key="hosting-plans-{{ $section->id }}" />
+            @break
+
+            @case('faq')
+                <livewire:dashboard.sections.faq-section :section="$section" wire:key="faq-{{ $section->id }}" />
             @break
 
             @case('templates-pages')

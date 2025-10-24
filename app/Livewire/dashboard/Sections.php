@@ -22,16 +22,19 @@ class Sections extends Component
     public $translations = [];
     public $translationsData = [];
 
-    /** لوحة ودجت جانبية (بدون مودال) */
+    /** ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آµط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ»ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ´ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ² ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ´ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ°ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± (ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ°ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ»ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ  ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ»ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چ) */
     public bool $showPalette = false;
     public ?string $paletteSearch = null;
     public $paletteOrder = null;
 
-    /** مفاتيح متاحة (lowercase موحّدة) */
+    /** Available section keys (lowercase) */
+    /** Available section keys (lowercase) */
     public array $availableKeys = [
         'hero',
         'features',
         'features-2',
+        'features-3',
+        'cta',
         'services',
         'templates',
         'works',
@@ -42,25 +45,28 @@ class Sections extends Component
         'search-domain',
         'templates-pages',
         'hosting-plans',
+        'faq',
     ];
 
-    /** وصف/إعدادات عرض لكل ودجت */
+    /** Display metadata for the palette cards */
     public array $keyMeta = [
-        'hero'            => ['label' => 'الواجهة الرئيسية (Hero)',                    'unique' => true,  'desc' => 'بانر رئيسي مع عنوان/وصف وأزرار.', 'thumb' => null],
-        'features'        => ['label' => 'مميزات (Features)',                          'unique' => true,  'desc' => 'قائمة مميزات مع أيقونات.',       'thumb' => null],
-        'features-2'      => ['label' => 'مميزات متقدمة (Features 2)',                 'unique' => true,  'desc' => 'شبكة مميزات بأيقونات ورسوم.',    'thumb' => null],
-        'services'        => ['label' => 'الخدمات (Services)',                          'unique' => true,  'desc' => 'شبكة للخدمات مع وصف مختصر.',     'thumb' => null],
-        'templates'       => ['label' => 'القوالب (Templates)',                         'unique' => true,  'desc' => 'قائمة قوالب ديناميكية.',         'thumb' => null],
-        'works'           => ['label' => 'الأعمال (Works)',                             'unique' => false, 'desc' => 'معرض أعمال قابل للتكرار.',       'thumb' => null],
-        'home-works'      => ['label' => 'أعمالنا في الهوم (Home Works)',               'unique' => true,  'desc' => 'مقتطف أعمال للرئيسية.',          'thumb' => null],
-        'testimonials'    => ['label' => 'آراء العملاء (Testimonials)',                 'unique' => true,  'desc' => 'سلايدر تقييمات العملاء.',        'thumb' => null],
-        'blog'            => ['label' => 'المدونة (Blog)',                               'unique' => true,  'desc' => 'آخر المقالات مع المزيد.',        'thumb' => null],
-        'banner'          => ['label' => 'اللوحة (Banner)',                             'unique' => false, 'desc' => 'بانر بسيط لنص + زر.',            'thumb' => null],
-        'search-domain'   => ['label' => 'بحث الدومين (Search Domain)',                 'unique' => true,  'desc' => 'محرك بحث دومين.',               'thumb' => null],
-        'templates-pages' => ['label' => 'عرض القوالب مع فلتر (Templates Pages)',       'unique' => true,  'desc' => 'شبكة قوالب بفلترة وترتيب.',     'thumb' => null],
-        'hosting-plans'   => ['label' => 'خطط الاستضافة (Hosting Plans)',               'unique' => true,  'desc' => 'عرض خطط الاستضافة المتاحة.',    'thumb' => null],
+        'hero'            => ['label' => 'Hero',               'unique' => true,  'desc' => 'Primary hero banner with heading, description, and actions.', 'thumb' => null],
+        'features'        => ['label' => 'Features',           'unique' => true,  'desc' => 'Icon list that highlights product benefits.',                   'thumb' => null],
+        'features-2'      => ['label' => 'Features 2',         'unique' => true,  'desc' => 'Expanded feature grid with optional button.',                  'thumb' => null],
+        'features-3'      => ['label' => 'Features 3',         'unique' => true,  'desc' => 'Layered feature cards with white background.',                'thumb' => null],
+        'cta'             => ['label' => 'Call To Action',     'unique' => false, 'desc' => 'Promotional block with headline and primary button.',        'thumb' => null],
+        'services'        => ['label' => 'Services',           'unique' => true,  'desc' => 'Service list with short supporting copy.',                   'thumb' => null],
+        'templates'       => ['label' => 'Templates',          'unique' => true,  'desc' => 'Dynamic listing of available templates.',                     'thumb' => null],
+        'works'           => ['label' => 'Works',              'unique' => false, 'desc' => 'Portfolio/gallery grid that can repeat.',                     'thumb' => null],
+        'home-works'      => ['label' => 'Home Works',         'unique' => true,  'desc' => 'Homepage spotlight of selected works with CTA.',             'thumb' => null],
+        'testimonials'    => ['label' => 'Testimonials',       'unique' => true,  'desc' => 'Customer testimonials slider/carousel.',                     'thumb' => null],
+        'blog'            => ['label' => 'Blog',               'unique' => true,  'desc' => 'Latest blog posts preview with links.',                       'thumb' => null],
+        'banner'          => ['label' => 'Banner',             'unique' => false, 'desc' => 'Simple banner for text plus optional button.',               'thumb' => null],
+        'search-domain'   => ['label' => 'Search Domain',      'unique' => true,  'desc' => 'Domain search widget.',                                       'thumb' => null],
+        'templates-pages' => ['label' => 'Templates Pages',    'unique' => true,  'desc' => 'Template grid with filtering and ordering.',                  'thumb' => null],
+        'hosting-plans'   => ['label' => 'Hosting Plans',      'unique' => true,  'desc' => 'Overview of available hosting plans.',                         'thumb' => null],
+        'faq'             => ['label' => 'FAQ',                'unique' => false, 'desc' => 'Frequently asked questions with answers.',                   'thumb' => null],
     ];
-
     public $activeLang;
 
     public function mount($pageId)
@@ -94,21 +100,21 @@ class Sections extends Component
         }
     }
 
-    /** تطبيع المفتاح إلى lowercase + دعم الأسماء القديمة */
+    /** ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ²ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢أ¢â‚¬â€œط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ°ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ£ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ²ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آµ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ­ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ« lowercase + ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ»ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ£ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ  ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ«ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œأ¢â‚¬ع‘ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ© ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ©ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ»ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± */
     private function normalizeKey(?string $key): string
     {
         $k = trim((string)$key);
         if ($k === '') return '';
         $k = Str::of($k)->lower()->toString();
 
-        // خرائط قديمة → جديدة
+        // ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ«ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€œأ¢â‚¬â„¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ®ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢أ¢â‚¬â€œ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ©ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ»ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± ط·آ·ط¢آ¸ط·آ¢أ¢â‚¬آ ط·آ¸أ¢â‚¬â„¢ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ´ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ»ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ»ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ±
         if (in_array($k, ['search_domain', 'searchdomain'])) {
             return 'search-domain';
         }
         return $k;
     }
 
-    /** فتح اللوحة الجانبية */
+    /** ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ²ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آµ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آµط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ´ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ°ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± */
     #[On('open-sections-palette')]
     public function openPalette(): void
     {
@@ -121,19 +127,19 @@ class Sections extends Component
         $this->showPalette = false;
     }
 
-    /** إضافة من الودجت */
+    /** ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ­ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ  ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ»ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ´ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ² */
     public function addFromPalette(string $key): void
     {
         $key = $this->normalizeKey($key);
 
-        // تتبّع للمساعدة على التشخيص خصوصاً مع Hosting Plans
+        // ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ²ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ²ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ°ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¸أ¢â‚¬ع©ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ£ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œأ¢â‚¬ع‘ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ£ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ»ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ£ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ« ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ²ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œط¢آ¤ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ«ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط·إ’ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ«ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط·إ’ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط·إ’ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¯ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ£ Hosting Plans
         logger()->info('[Sections] addFromPalette clicked', [
             'page_id' => $this->pageId,
             'key' => $key,
         ]);
 
         if (!in_array($key, $this->availableKeys, true)) {
-            session()->flash('error', 'نوع السكشن غير معروف.');
+            session()->flash('error', 'ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ£ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œأ¢â‚¬ع‘ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œط¢آ¤ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ  ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢أ¢â‚¬ع©ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€œأ¢â‚¬â„¢ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ£ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€œأ¢â‚¬â„¢ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾.');
             return;
         }
 
@@ -156,12 +162,12 @@ class Sections extends Component
         }));
     }
 
-    /** إضافة/حفظ سكشن */
+    /** ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ­ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ±/ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آµط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢أ¢â‚¬آ¢ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œأ¢â‚¬ع‘ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œط¢آ¤ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ  */
     public function addSection()
     {
         $this->sectionKey = $this->normalizeKey($this->sectionKey);
 
-        // تتبّع محاولات الإضافة للمساعدة في التشخيص
+        // ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ²ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ²ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ°ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¸أ¢â‚¬ع©ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ£ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آµط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ² ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ­ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œأ¢â‚¬ع‘ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ£ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ»ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ²ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œط¢آ¤ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ«ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط·إ’
         if ($this->sectionKey === 'hosting-plans') {
             logger()->info('[Sections] Trying to add hosting-plans', [
                 'page_id' => $this->pageId,
@@ -171,12 +177,12 @@ class Sections extends Component
         $this->validate([
             'sectionKey' => 'required',
         ], [], [
-            'sectionKey' => 'نوع السكشن',
+            'sectionKey' => 'ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ£ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œأ¢â‚¬ع‘ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œط¢آ¤ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ ',
         ]);
 
-        // لا تحقق تفرد — السماح بإضافة أي سكشن أكثر من مرة
+        // ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ²ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آµط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ©ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ© ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ²ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€œأ¢â‚¬â„¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ» ط·آ·ط¢آ¸ط·آ¢أ¢â€ڑآ¬ط·آ¢ط¢آ¤ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œأ¢â‚¬ع‘ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آµ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ°ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ­ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ«ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œأ¢â‚¬ع‘ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œط¢آ¤ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ  ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ«ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ³ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€œأ¢â‚¬â„¢ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ  ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€œأ¢â‚¬â„¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ±
 
-        // حساب order آمن: لو الجدول فارغ يرجع null فنجعل قيمة افتراضية 1
+        // ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آµط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œأ¢â‚¬ع‘ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ° order ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¹آ¾ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ : ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ´ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ»ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€œأ¢â‚¬â„¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢أ¢â‚¬ع© ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€œأ¢â‚¬â„¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ´ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ£ null ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ´ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ£ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ©ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ²ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€œأ¢â‚¬â„¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¢آ¢ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¨ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± 1
         $order = $this->sectionOrder ?: (Section::where('page_id', $this->pageId)->max('order') ?? 0) + 1;
 
         switch ($this->sectionKey) {
@@ -200,16 +206,35 @@ class Sections extends Component
 
                     switch ($this->sectionKey) {
                         case 'features':
-                        case 'features-2':
+                        case 'features-3':
                             $featuresRaw = $data['features'] ?? '';
                             $content = [
                                 'subtitle' => $data['subtitle'] ?? '',
-                                'button_text' => $data['button_text'] ?? '',
-                                'button_url' => $data['button_url'] ?? '',
-                                'background_variant' => $data['background_variant'] ?? 'white',
                                 'features' => is_array($featuresRaw)
                                     ? $featuresRaw
                                     : array_filter(array_map('trim', explode("\n", $featuresRaw))),
+                            ];
+                            break;
+
+                        case 'features-2':
+                            $featuresRaw = $data['features'] ?? '';
+                            $content = [
+                                'subtitle'           => $data['subtitle'] ?? '',
+                                'button_text'        => $data['button_text'] ?? '',
+                                'button_url'         => $data['button_url'] ?? '',
+                                'background_variant' => $data['background_variant'] ?? 'white',
+                                'features'           => is_array($featuresRaw)
+                                    ? $featuresRaw
+                                    : array_filter(array_map('trim', explode("\n", $featuresRaw))),
+                            ];
+                            break;
+
+                        case 'cta':
+                            $content = [
+                                'subtitle'            => $data['subtitle'] ?? '',
+                                'badge'               => $data['badge'] ?? '',
+                                'primary_button_text' => $data['primary_button_text'] ?? ($data['button_text'] ?? ''),
+                                'primary_button_url'  => $data['primary_button_url'] ?? ($data['button_url'] ?? ''),
                             ];
                             break;
 
@@ -245,18 +270,44 @@ class Sections extends Component
                                 'template-sections' => $data['template-sections'] ?? '',
                             ];
                             break;
+
                         case 'hosting-plans':
                             $content = [
-                                'subtitle'       => $data['subtitle'] ?? '',
-                                'hosting-plans'  => is_array($data['hosting-plans'] ?? null)
+                                'subtitle'      => $data['subtitle'] ?? '',
+                                'hosting-plans' => is_array($data['hosting-plans'] ?? null)
                                     ? $data['hosting-plans']
                                     : [],
                             ];
                             break;
 
+                        case 'faq':
+                            $itemsRaw = $data['items'] ?? $data['faq'] ?? [];
+                            $items = is_array($itemsRaw) ? $itemsRaw : [];
+
+                            $content = [
+                                'subtitle' => $data['subtitle'] ?? '',
+                                'items'    => array_values(array_filter(array_map(static function ($item) {
+                                    if (!is_array($item)) {
+                                        return null;
+                                    }
+
+                                    $question = trim((string)($item['question'] ?? ''));
+                                    $answer   = trim((string)($item['answer'] ?? ''));
+
+                                    if ($question === '' && $answer === '') {
+                                        return null;
+                                    }
+
+                                    return [
+                                        'question' => $question,
+                                        'answer'   => $answer,
+                                    ];
+                                }, $items))),
+                            ];
+                            break;
+
                         case 'testimonials':
                         case 'search-domain':
-                        
                         case 'blog':
                             $content = [];
                             break;
@@ -273,7 +324,7 @@ class Sections extends Component
 
         $this->reset(['sectionKey', 'sectionOrder', 'translations', 'translationsData']);
         $this->loadSections();
-        session()->flash('success', 'تم إضافة السكشن بنجاح.');
+        session()->flash('success', 'Section created successfully.');
     }
 
     public function updateSection($sectionId, $locale = null)
@@ -302,7 +353,7 @@ class Sections extends Component
         }
 
         $this->loadSections();
-        session()->flash('success', 'تم تحديث السكشن بنجاح.');
+        session()->flash('success', 'Section updated successfully.');
     }
 
     #[On('deleteSection')]
@@ -317,10 +368,10 @@ class Sections extends Component
             }
             $this->loadSections();
 
-            // أرسل حدث للواجهة (JS) بأن الحذف تم بنجاح - Livewire v3
+            // ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ«ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€œأ¢â‚¬â„¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œأ¢â‚¬ع‘ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آµط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ¢ط¢آ»ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ³ ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¹آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ´ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ§ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ± (JS) ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ°ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ«ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ  ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آµط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€œأ¢â‚¬ع©ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ²ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ  ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ°ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ´ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آµ - Livewire v3
             $this->dispatch('section-deleted-success', sectionId: $id);
         } catch (Exception $e) {
-            logger()->error('فشل حذف السكشن: ' . $e->getMessage());
+            logger()->error('ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œط¢آ¤ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آµط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€œأ¢â‚¬ع©ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢ط¸آ¾ ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ¯ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬â€چط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œأ¢â‚¬ع‘ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط£آ¢أ¢â‚¬â€Œط¢آ¤ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¢أ¢â‚¬آ : ' . $e->getMessage());
             $this->dispatch('section-delete-failed', sectionId: $id, error: $e->getMessage());
         }
     }

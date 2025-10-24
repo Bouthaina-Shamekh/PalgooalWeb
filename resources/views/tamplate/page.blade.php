@@ -127,6 +127,8 @@
             'hero' => 'hero',
             'features' => 'features',
             'features-2' => 'features-2',
+            'features-3' => 'features-3',
+            'cta' => 'cta',
             'services' => 'services',
             'templates' => 'templates',
             'works' => 'works',
@@ -137,6 +139,7 @@
             'search-domain' => 'search-domain',
             'templates-pages' => 'templates-pages',
             'hosting-plans' => 'hosting-plans',
+            'faq' => 'faq',
         ];
     @endphp
     @foreach ($page->sections as $section)
@@ -216,11 +219,26 @@
                     if (!in_array($backgroundVariant, $backgroundPresets, true)) {
                         $legacy = $content['background_color'] ?? null;
                         $backgroundVariant = match (is_string($legacy) ? strtolower(trim($legacy)) : null) {
-                            '#ffffff', '#fff'       => 'white',
-                            '#f9fafb', '#f8fafc'    => 'gray',
-                            '#eff6ff', '#e0f2fe'    => 'subtle-blue',
-                            '#0f172a', '#111827'    => 'slate',
-                            default                 => 'white',
+                            '#ffffff', '#fff'          => 'white',
+                            '#f9fafb', '#f8fafc'       => 'gray',
+                            '#faf5f0', '#f5e9df'       => 'stone',
+                            '#e2e8f0', '#cbd5e1'       => 'slate-light',
+                            '#0f172a', '#111827'       => 'slate-dark',
+                            '#18181b'                  => 'zinc-dark',
+                            '#020617'                  => 'black',
+                            '#eff6ff', '#e0f2fe'       => 'sky',
+                            '#dbeafe', '#bfdbfe'       => 'blue',
+                            '#4f46e5', '#312e81'       => 'indigo',
+                            '#7c3aed', '#5b21b6'       => 'violet',
+                            '#9333ea', '#6b21a8'       => 'purple',
+                            '#fef3c7', '#fde68a'       => 'amber',
+                            '#f97316', '#ea580c'       => 'orange',
+                            '#ffe4e6', '#fecdd3'       => 'rose',
+                            '#e11d48', '#be123c'       => 'rose-deep',
+                            '#ecfdf5', '#d1fae5'       => 'emerald',
+                            '#059669', '#047857'       => 'emerald-deep',
+                            '#14b8a6', '#0f766e'       => 'teal',
+                            default                    => 'white',
                         };
                     }
 
@@ -231,6 +249,70 @@
                         'button_url' => $content['button_url'] ?? '',
                         'background_variant' => $backgroundVariant,
                         'features' => $features,
+                    ];
+                })(),
+                'features-3' => (function () use ($content, $title) {
+                    $features = collect($content['features'] ?? [])
+                        ->filter(function ($item) {
+                            if (!is_array($item)) {
+                                return false;
+                            }
+
+                            $title = trim((string) ($item['title'] ?? ''));
+                            $description = trim((string) ($item['description'] ?? ''));
+                            $icon = trim((string) ($item['icon'] ?? ''));
+
+                            return $title !== '' || $description !== '' || $icon !== '';
+                        })
+                        ->map(function ($item) {
+                            return [
+                                'icon' => $item['icon'] ?? '',
+                                'title' => $item['title'] ?? '',
+                                'description' => $item['description'] ?? '',
+                            ];
+                        })
+                        ->values()
+                        ->all();
+
+                    return [
+                        'title' => $title,
+                        'subtitle' => $content['subtitle'] ?? '',
+                        'features' => $features,
+                    ];
+                })(),
+                'cta' => (function () use ($content, $title) {
+                    return [
+                        'title'               => $title,
+                        'subtitle'            => $content['subtitle'] ?? '',
+                        'badge'               => $content['badge'] ?? '',
+                        'primary_button_text' => $content['primary_button_text'] ?? ($content['button_text'] ?? ''),
+                        'primary_button_url'  => $content['primary_button_url'] ?? ($content['button_url'] ?? ''),
+                    ];
+                })(),
+                'faq' => (function () use ($content, $title) {
+                    $items = collect($content['items'] ?? $content['faq'] ?? [])
+                        ->map(function ($item) {
+                            if (!is_array($item)) {
+                                $question = trim((string) $item);
+                                return $question === '' ? null : ['question' => $question, 'answer' => ''];
+                            }
+
+                            $question = trim((string) ($item['question'] ?? ''));
+                            $answer = trim((string) ($item['answer'] ?? ''));
+
+                            return ($question === '' && $answer === '') ? null : [
+                                'question' => $question,
+                                'answer'   => $answer,
+                            ];
+                        })
+                        ->filter()
+                        ->values()
+                        ->all();
+
+                    return [
+                        'title'    => $title,
+                        'subtitle' => $content['subtitle'] ?? '',
+                        'items'    => $items,
                     ];
                 })(),
                 'services' => [
