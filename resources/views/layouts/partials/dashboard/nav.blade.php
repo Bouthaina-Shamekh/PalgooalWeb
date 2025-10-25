@@ -109,15 +109,15 @@
                         </a>
                     </li>
                 @endcan
-                @can('view', 'App\\Models\Feedback')
+                @can('view', 'App\\Models\\Testimonial')
                     <li class="pc-item">
-                        <a href="{{ route('dashboard.feedbacks.index') }}" class="pc-link">
+                        <a href="{{ route('dashboard.testimonials.index') }}" class="pc-link">
                             <span class="pc-micon">
                                 <span class="pc-micon">
                                     <i class="fas fa-star"></i>
                                 </span>
                             </span>
-                            <span class="pc-mtext">{{ t('dashboard.feedbacks', 'testimonial') }}</span>
+                            <span class="pc-mtext">{{ t('dashboard.testimonials', 'testimonial') }}</span>
                         </a>
                     </li>
                 @endcan

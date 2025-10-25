@@ -13,9 +13,9 @@ class HomeController extends Controller
     {
         return view('dashboard.index');
     }
-    public function feedbacks()
+    public function testimonials()
     {
-        return view('dashboard.feedbacks');
+        return view('dashboard.testimonials');
     }
     public function general_settings()
     {

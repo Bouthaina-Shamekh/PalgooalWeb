@@ -1,11 +1,9 @@
-<x-dashboard-layout>
-
-
+﻿<x-dashboard-layout>
     <div class="container mx-auto py-6">
-        <h1 class="text-2xl font-bold mb-4">إدارة التقييمات</h1>
+        <h1 class="text-2xl font-bold mb-4">إدارة الشهادات</h1>
 
-        @can('create', 'App\\Models\\Feedback')
-            <a href="{{ route('dashboard.feedbacks.create') }}" class="btn btn-primary mb-4">➕ إضافة تقييم جديد</a>
+        @can('create', 'App\\Models\\Testimonial')
+            <a href="{{ route('dashboard.testimonials.create') }}" class="btn btn-primary mb-4">إضافة شهادة جديدة</a>
         @endcan
 
         @if (session('success'))
@@ -21,35 +19,35 @@
                         <th>#</th>
                         <th>الصورة</th>
                         <th>الاسم ({{ app()->getLocale() }})</th>
-                        <th>التقييم</th>
-                        <th>النص ({{ app()->getLocale() }})</th>
+                        <th>عدد النجوم</th>
+                        <th>نص الشهادة ({{ app()->getLocale() }})</th>
                         <th>الإجراءات</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach ($feedbacks as $feedback)
+                    @foreach ($testimonials as $testimonial)
                         <tr>
                             <td>{{ $loop->iteration }}</td>
                             <td>
-                                <img src="{{ asset('storage/' . $feedback->image) }}" class="w-10 h-10">
+                                <img src="{{ asset('storage/' . $testimonial->image) }}" class="w-10 h-10" alt="صورة الشهادة">
                             </td>
                             <td>
-                                {{ $feedback->translation()?->name }}
+                                {{ $testimonial->translation()?->name ?? 'غير متوفر' }}
                             </td>
-                            <td>{{ $feedback->star }}</td>
+                            <td>{{ $testimonial->star }}</td>
                             <td>
-                                {{ $feedback->translation()?->feedback }}
+                                {{ $testimonial->translation()?->feedback ?? 'لا يوجد نص' }}
                             </td>
                             <td style="display: flex; gap: 5px;">
-                                @can('edit', 'App\\Models\\Feedback')
-                                    <a href="{{ route('dashboard.feedbacks.edit', $feedback->id) }}"
+                                @can('edit', 'App\\Models\\Testimonial')
+                                    <a href="{{ route('dashboard.testimonials.edit', $testimonial->id) }}"
                                         class="btn btn-sm btn-warning">تعديل</a>
                                 @endcan
-                                @can('delete', 'App\\Models\\Feedback')
-                                    <form action="{{ route('dashboard.feedbacks.destroy', $feedback->id) }}" method="POST">
+                                @can('delete', 'App\\Models\\Testimonial')
+                                    <form action="{{ route('dashboard.testimonials.destroy', $testimonial->id) }}" method="POST">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-danger">حذف</button>
+                                        <button type="submit" class="btn btn-danger" onclick="return confirm('هل أنت متأكد من حذف هذه الشهادة؟');">حذف</button>
                                     </form>
                                 @endcan
                             </td>
@@ -60,7 +58,7 @@
         </div>
 
         <div class="mt-4">
-            {{ $feedbacks->links() }}
+            {{ $testimonials->links() }}
         </div>
     </div>
 </x-dashboard-layout>

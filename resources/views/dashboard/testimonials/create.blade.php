@@ -1,6 +1,6 @@
-<x-dashboard-layout>
+﻿<x-dashboard-layout>
     <div class="container mx-auto py-6 max-w-5xl">
-        <h1 class="text-2xl font-bold mb-6">✏️ تعديل التقييم: {{ $feedback->translation()?->name }}</h1>
+        <h1 class="text-2xl font-bold mb-6">إضافة شهادة جديدة</h1>
 
         @if ($errors->any())
             <div class="bg-red-100 text-red-800 p-4 mb-6 rounded">
@@ -12,12 +12,11 @@
             </div>
         @endif
 
-        <form action="{{ route('dashboard.feedbacks.update', $feedback->id) }}" method="POST"
-            enctype="multipart/form-data" class="grid grid-cols-12 gap-x-6">
+        <form action="{{ route('dashboard.testimonials.store') }}" method="POST" enctype="multipart/form-data"
+            class="grid grid-cols-12 gap-x-6">
             @csrf
-            @method('PUT')
 
-            @include('dashboard.feedbacks._form')
+            @include('dashboard.testimonials._form')
 
         </form>
     </div>

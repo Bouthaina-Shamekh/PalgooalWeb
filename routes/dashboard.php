@@ -13,7 +13,7 @@ use App\Http\Controllers\Dashboard\Management\ServerController;
 use App\Http\Controllers\Dashboard\Management\SubscriptionController;
 use App\Http\Controllers\Dashboard\MediaController;
 use App\Http\Controllers\Dashboard\ServicesController;
-use App\Http\Controllers\Dashboard\FeedbacksController;
+use App\Http\Controllers\Dashboard\TestimonialsController;
 use App\Http\Controllers\Dashboard\TranslationValueController;
 use App\Http\Controllers\Dashboard\ServicesTranslationController;
 use App\Http\Controllers\Dashboard\TemplateController;
@@ -56,7 +56,7 @@ Route::group([
     Route::post('translation-values/import', [TranslationValueController::class, 'import'])->name('translation-values.import');
 
     Route::resource('services', ServicesController::class);
-    Route::resource('feedbacks', FeedbacksController::class);
+    Route::resource('testimonials', TestimonialsController::class);
     Route::resource('portfolios', PortfolioController::class);
 
     Route::get('clients', function () {

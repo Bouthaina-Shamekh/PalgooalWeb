@@ -1,4 +1,4 @@
-<div class="p-6">
+﻿<div class="p-6">
     <style>
         .masonry {
             column-count: 4;
@@ -94,7 +94,7 @@
                     icon: '{{ $alertType }}',
                     title: '{{ $alertType === 'success' ? 'نجاح' : 'خطأ' }}',
                     text: '{{ $alertMessage }}',
-                    confirmButtonText: 'موافق'
+                    confirmButtonText: 'حسناً'
                 });
             });
         </script>
@@ -103,9 +103,9 @@
     {{-- Index View --}}
     @if ($mode === 'index')
         <div class="mb-6 flex justify-between items-center">
-            <h2 class="text-2xl font-bold">التقييمات</h2>
-            @can('create','App\\Models\\Feedback')
-            <button wire:click="showAdd" class="btn btn-primary">+ إضافة تقييم</button>
+            <h2 class="text-2xl font-bold">ط§ظ„طھظ‚ظٹظٹظ…ط§طھ</h2>
+            @can('create','App\\Models\\Testimonial')
+            <button wire:click="showAdd" class="btn btn-primary">+ ط¥ط¶ط§ظپط© طھظ‚ظٹظٹظ…</button>
             @endcan
         </div>
 
@@ -113,35 +113,35 @@
             <thead class="bg-gray-100">
                 <tr>
                     <th class="p-2">#</th>
-                    <th class="p-2">الصورة</th>
-                    <th class="p-2">الاسم ({{ app()->getLocale() }})</th>
-                    <th class="p-2">التقييم</th>
-                    <th class="p-2">النص ({{ app()->getLocale() }})</th>
-                    <th class="p-2">الإجراءات</th>
+                    <th class="p-2">ط§ظ„طµظˆط±ط©</th>
+                    <th class="p-2">ط§ظ„ط§ط³ظ… ({{ app()->getLocale() }})</th>
+                    <th class="p-2">ط§ظ„طھظ‚ظٹظٹظ…</th>
+                    <th class="p-2">ط§ظ„ظ†طµ ({{ app()->getLocale() }})</th>
+                    <th class="p-2">ط§ظ„ط¥ط¬ط±ط§ط،ط§طھ</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach ($feedbacks as $feedback)
+                @foreach ($testimonials as $testimonial)
                     <tr class="border-t">
                         <td class="p-2">{{ $loop->iteration }}</td>
                         <td class="p-2">
-                            <img src="{{ asset('storage/' . $feedback->image) }}" class="w-10 h-10">
+                            <img src="{{ asset('storage/' . $testimonial->image) }}" class="w-10 h-10">
                         </td>
                         <td class="p-2">
-                            {{ $feedback->translation()?->name }}
+                            {{ $testimonial->translation()?->name }}
                         </td>
-                        <td class="p-2">{{ $feedback->star }}</td>
+                        <td class="p-2">{{ $testimonial->star }}</td>
                         <td class="p-2">
-                            {{ $feedback->translation()?->feedback }}
+                            {{ $testimonial->translation()?->feedback }}
                         </td>
                         <td class="p-2 space-x-2">
-                            @can('edit','App\\Models\\Feedback')
-                            <button wire:click="showEdit({{ $feedback->id }})"
-                                class="btn btn-sm btn-warning">تعديل</button>
+                            @can('edit','App\\Models\\Testimonial')
+                            <button wire:click="showEdit({{ $testimonial->id }})"
+                                class="btn btn-sm btn-warning">طھط¹ط¯ظٹظ„</button>
                             @endcan
-                            @can('delete','App\\Models\\Feedback')
-                            <button onclick="confirmDeleteFeedback({{ $feedback->id }})"
-                                class="btn btn-danger">حذف</button>
+                            @can('delete','App\\Models\\Testimonial')
+                            <button onclick="confirmDeleteTestimonial({{ $testimonial->id }})"
+                                class="btn btn-danger">ط­ط°ظپ</button>
                             @endcan
                         </td>
                     </tr>
@@ -150,85 +150,85 @@
         </table>
 
         <div class="mt-4">
-            {{ $feedbacks->links() }}
+            {{ $testimonials->links() }}
         </div>
     @endif
 
     {{-- Add/Edit View --}}
     @if (in_array($mode, ['add', 'edit']))
         <div class="mb-4">
-            <h2 class="text-xl font-bold">{{ $mode === 'edit' ? 'تعديل تقييم' : 'إضافة تقييم' }}</h2>
+            <h2 class="text-xl font-bold">{{ $mode === 'edit' ? 'طھط¹ط¯ظٹظ„ طھظ‚ظٹظٹظ…' : 'ط¥ط¶ط§ظپط© طھظ‚ظٹظٹظ…' }}</h2>
         </div>
 
         <form wire:submit.prevent="save" class="grid grid-cols-12 gap-6">
-            {{-- الصورة --}}
+            {{-- ط§ظ„طµظˆط±ط© --}}
             <div class="col-span-6">
-                <label class="block text-sm font-medium">الصورة</label>
+                <label class="block text-sm font-medium">ط§ظ„طµظˆط±ط©</label>
                 <div class="flex items-center gap-2">
-                    <input type="text" id="imageInput" wire:model="feedback.image" class="form-control hidden">
+                    <input type="text" id="imageInput" wire:model="testimonial.image" class="form-control hidden">
                     <button type="button" data-pc-toggle="modal" data-pc-target="#mediaModal" id="openMediaModalBtn"
                         class="bg-primary text-white px-2 py-1 rounded text-sm">
-                        اختر من الوسائط أو ارفع جديد
+                        ط§ط®طھط± ظ…ظ† ط§ظ„ظˆط³ط§ط¦ط· ط£ظˆ ط§ط±ظپط¹ ط¬ط¯ظٹط¯
                     </button>
                 </div>
 
-                @if ($feedback['image'])
-                    <img src="{{ asset('storage/' . $feedback['image']) }}" class="mt-2 w-12 h-12">
+                @if ($testimonial['image'])
+                    <img src="{{ asset('storage/' . $testimonial['image']) }}" class="mt-2 w-12 h-12">
                 @endif
             </div>
 
 
-            {{-- الترتيب --}}
+            {{-- ط§ظ„طھط±طھظٹط¨ --}}
             <div class="col-span-6">
-                <label class="block text-sm font-medium">ترتيب الظهور</label>
-                <input type="number" wire:model="feedback.order" class="form-control">
-                @error('feedback.order')
+                <label class="block text-sm font-medium">طھط±طھظٹط¨ ط§ظ„ط¸ظ‡ظˆط±</label>
+                <input type="number" wire:model="testimonial.order" class="form-control">
+                @error('testimonial.order')
                     <span class="text-red-600">{{ $message }}</span>
                 @enderror
             </div>
 
-            {{-- التقييم --}}
+            {{-- ط§ظ„طھظ‚ظٹظٹظ… --}}
             <div class="col-span-6">
-                <label class="block text-sm font-medium">التقييم</label>
-                <input type="number" wire:model="feedback.star" class="form-control">
-                @error('feedback.star')
+                <label class="block text-sm font-medium">ط§ظ„طھظ‚ظٹظٹظ…</label>
+                <input type="number" wire:model="testimonial.star" class="form-control">
+                @error('testimonial.star')
                     <span class="text-red-600">{{ $message }}</span>
                 @enderror
             </div>
 
-            {{-- الترجمات --}}
+            {{-- ط§ظ„طھط±ط¬ظ…ط§طھ --}}
             <div class="col-span-12 grid grid-cols-{{ count($languages) }} gap-4">
                 @foreach ($languages as $index => $lang)
                     <div class="border p-4 rounded shadow-sm">
                         <h4 class="text-lg font-bold mb-2">{{ $lang->native }}</h4>
 
-                        <input type="text" class="form-control mb-2" placeholder="الاسم"
-                            wire:model="feedbackTranslations.{{ $index }}.name">
+                        <input type="text" class="form-control mb-2" placeholder="ط§ظ„ط§ط³ظ…"
+                            wire:model="testimonialTranslations.{{ $index }}.name">
 
-                        <textarea class="form-control" rows="3" placeholder="النص"
-                            wire:model="feedbackTranslations.{{ $index }}.feedback"></textarea>
+                        <textarea class="form-control" rows="3" placeholder="ط§ظ„ظ†طµ"
+                            wire:model="testimonialTranslations.{{ $index }}.feedback"></textarea>
 
-                        <input type="text" class="form-control mb-2" placeholder="المهنة"
-                            wire:model="feedbackTranslations.{{ $index }}.major">
+                        <input type="text" class="form-control mb-2" placeholder="ط§ظ„ظ…ظ‡ظ†ط©"
+                            wire:model="testimonialTranslations.{{ $index }}.major">
 
-                        <input type="hidden" wire:model="feedbackTranslations.{{ $index }}.locale">
+                        <input type="hidden" wire:model="testimonialTranslations.{{ $index }}.locale">
                     </div>
                 @endforeach
             </div>
 
             <div class="col-span-12 text-right mt-6">
-                <button type="button" wire:click="showIndex" class="btn btn-secondary">إلغاء</button>
-                <button type="submit" class="btn btn-primary">حفظ</button>
+                <button type="button" wire:click="showIndex" class="btn btn-secondary">ط¥ظ„ط؛ط§ط،</button>
+                <button type="submit" class="btn btn-primary">ط­ظپط¸</button>
             </div>
         </form>
 
 
-        {{-- مودال الوسائط --}}
+        {{-- ظ…ظˆط¯ط§ظ„ ط§ظ„ظˆط³ط§ط¦ط· --}}
         <div class="modal fade" id="mediaModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title text-2xl font-bold mb-6">📁 مكتبة الوسائط</h5>
+                        <h5 class="modal-title text-2xl font-bold mb-6">ًں“پ ظ…ظƒطھط¨ط© ط§ظ„ظˆط³ط§ط¦ط·</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" id="closeMediaModal"
                             data-pc-modal-dismiss="#mediaModal">
                             <i class="fas fa-times"></i>
@@ -238,16 +238,16 @@
                         <form id="uploadForm" enctype="multipart/form-data" class="mb-3">
                             <input type="hidden" name="_token" value="{{ csrf_token() }}">
                             <input type="file" name="image" id="imageInput" class="form-control mb-2" required>
-                            <button type="button" id="uploadFormBtn" class="btn btn-primary">رفع صورة</button>
+                            <button type="button" id="uploadFormBtn" class="btn btn-primary">ط±ظپط¹ طµظˆط±ط©</button>
                         </form>
                         <div id="mediaGrid" class="masonry">
-                            {{-- الصور ستُملأ تلقائيًا عبر jQuery --}}
+                            {{-- ط§ظ„طµظˆط± ط³طھظڈظ…ظ„ط£ طھظ„ظ‚ط§ط¦ظٹظ‹ط§ ط¹ط¨ط± jQuery --}}
                         </div>
                     </div>
                     {{-- <div class="modal-footer px-4 py-3">
                 <button type="button" class="btn btn-secondary" data-pc-modal-dismiss="#editModal"
-                    id="closeEditModal">إلغاء</button>
-                <button type="submit" class="btn btn-success">💾 حفظ التعديلات</button>
+                    id="closeEditModal">ط¥ظ„ط؛ط§ط،</button>
+                <button type="submit" class="btn btn-success">ًں’¾ ط­ظپط¸ ط§ظ„طھط¹ط¯ظٹظ„ط§طھ</button>
             </div> --}}
                 </div>
             </div>
@@ -257,19 +257,19 @@
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">تأكيد الحذف</h5>
+                        <h5 class="modal-title">طھط£ظƒظٹط¯ ط§ظ„ط­ط°ظپ</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" id="closeDeleteModal"
                             data-pc-modal-dismiss="#confirmDeleteModal">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
                     <div class="modal-body">
-                        هل أنت متأكد من حذف هذه الصورة؟
+                        ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط­ط°ظپ ظ‡ط°ظ‡ ط§ظ„طµظˆط±ط©طں
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-pc-modal-dismiss="#confirmDeleteModal"
-                            id="closeDeleteModal">إلغاء</button>
-                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">نعم، حذف</button>
+                            id="closeDeleteModal">ط¥ظ„ط؛ط§ط،</button>
+                        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">ظ†ط¹ظ…طŒ ط­ط°ظپ</button>
                     </div>
                 </div>
             </div>
@@ -278,10 +278,10 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
-        function confirmDeleteFeedback(feedbackId) {
+        function confirmDeleteTestimonial(testimonialId) {
             Swal.fire({
                 title: 'هل أنت متأكد؟',
-                text: 'لن تتمكن من التراجع بعد الحذف!',
+                text: 'لا يمكن التراجع عن حذف هذه الشهادة.',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'نعم، احذف',
@@ -290,31 +290,31 @@
                 cancelButtonColor: '#3085d6'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    Livewire.dispatch('deleteFeedbackConfirmed', {
-                        id: feedbackId
+                    Livewire.dispatch('deleteTestimonialConfirmed', {
+                        id: testimonialId
                     });
                 }
             });
         }
 
-        window.addEventListener('feedback-deleted-success', () => {
+        window.addEventListener('testimonial-deleted-success', () => {
             Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'success',
-                title: '✅ تم حذف الخدمة بنجاح',
+                title: 'âœ… طھظ… ط­ط°ظپ ط§ظ„ط®ط¯ظ…ط© ط¨ظ†ط¬ط§ط­',
                 showConfirmButton: false,
                 timer: 2000,
                 timerProgressBar: true
             });
         });
 
-        window.addEventListener('feedback-delete-failed', () => {
+        window.addEventListener('testimonial-delete-failed', () => {
             Swal.fire({
                 toast: true,
                 position: 'top-end',
                 icon: 'error',
-                title: '❌ فشل حذف الخدمة',
+                title: 'â‌Œ ظپط´ظ„ ط­ط°ظپ ط§ظ„ط®ط¯ظ…ط©',
                 showConfirmButton: false,
                 timer: 2000,
                 timerProgressBar: true
@@ -349,7 +349,7 @@
             const fileInput = $form.find('input[type="file"]')[0];
 
             if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-                alert('من فضلك اختر صورة قبل الرفع.');
+                alert('ظ…ظ† ظپط¶ظ„ظƒ ط§ط®طھط± طµظˆط±ط© ظ‚ط¨ظ„ ط§ظ„ط±ظپط¹.');
                 return;
             }
 
@@ -367,14 +367,14 @@
                 },
                 error: function(xhr) {
                     console.error(xhr.responseText || xhr.statusText);
-                    alert('تعذّر رفع الصورة.');
+                    alert('طھط¹ط°ظ‘ط± ط±ظپط¹ ط§ظ„طµظˆط±ط©.');
                 }
             });
         });
 
 
 
-        // جلب الصور
+        // ط¬ظ„ط¨ ط§ظ„طµظˆط±
         function loadMedia() {
             $.get("{{ route('dashboard.media.index') }}", function(data) {
                 let html = '';
@@ -383,7 +383,7 @@
                 <div class="masonry-item position-relative overflow-hidden" data-path="${item.file_path}">
                     <img src="/storage/${item.file_path}" class="img-fluid media-image">
                     <div class="media-actions position-absolute top-0 end-0 p-2" style="display: none;">
-                        <button class="btn btn-sm btn-light border rounded-circle me-1 delete-btn" data-id="${item.id}" title="حذف">
+                        <button class="btn btn-sm btn-light border rounded-circle me-1 delete-btn" data-id="${item.id}" title="ط­ط°ظپ">
                             <i class="fas fa-trash text-danger"></i>
                         </button>
                     </div>
@@ -403,7 +403,7 @@
         $(document).on('click', '.delete-btn', function() {
             deleteId = $(this).data('id');
 
-            // افتح المودال بضغط الزر
+            // ط§ظپطھط­ ط§ظ„ظ…ظˆط¯ط§ظ„ ط¨ط¶ط؛ط· ط§ظ„ط²ط±
             $('#openDeleteModalBtn').click();
         });
 
@@ -423,7 +423,7 @@
                 });
             }
         });
-        // اختيار الصورة
+        // ط§ط®طھظٹط§ط± ط§ظ„طµظˆط±ط©
         $(document).on('click', '.masonry-item', function() {
             let path = $(this).data('path');
             $('#closeMediaModal').click();
@@ -435,3 +435,5 @@
         });
     });
 </script>
+
+

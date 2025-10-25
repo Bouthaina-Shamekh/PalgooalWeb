@@ -1,3 +1,3 @@
 <x-dashboard-layout>
-    <livewire:dashboard.feedbacks />
+    <livewire:dashboard.testimonials />
 </x-dashboard-layout>

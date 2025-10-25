@@ -40,12 +40,12 @@
             'edit' => __('admin.Edit Domain'),
             'delete' => __('admin.Delete Domain'),
         ],
-        'feedbacks' => [
-            'name' => __('admin.Feedbacks'),
-            'view' => __('admin.View Feedbacks'),
-            'create' => __('admin.Create Feedback'),
-            'edit' => __('admin.Edit Feedback'),
-            'delete' => __('admin.Delete Feedback'),
+        'testimonials' => [
+            'name' => __('admin.Testimonials'),
+            'view' => __('admin.View Testimonials'),
+            'create' => __('admin.Create Testimonial'),
+            'edit' => __('admin.Edit Testimonial'),
+            'delete' => __('admin.Delete Testimonial'),
         ],
         'generalsettings' => [
             'name' => __('admin.General Settings'),
@@ -158,5 +158,4 @@
             'delete' => __('admin.Delete Translation Value'),
         ],
     ];
-
 
