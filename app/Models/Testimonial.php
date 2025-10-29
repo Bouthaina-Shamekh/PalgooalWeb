@@ -11,7 +11,7 @@ class Testimonial extends Model
 
     public function translations()
     {
-        return $this->hasMany(TestimonialTranslation::class);
+        return $this->hasMany(TestimonialTranslation::class, 'feedback_id', 'id');
     }
 
     public function translation($locale = null)

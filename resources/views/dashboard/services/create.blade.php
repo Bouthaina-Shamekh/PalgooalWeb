@@ -43,7 +43,7 @@
                     </div>
                     <div>
                         <h1 class="text-3xl font-bold text-gray-900">إضافة خدمة جديدة</h1>
-                        <p class="text-gray-600 mt-1">إضافة خدمة جديدة إلى النظام مع جميع التفاصيل المطلوبة</p>
+                        <p class="text-gray-600 mt-1">أضف خدمة جديدة لتنظيم عروضك وتعزيز حضورك الرقمي.</p>
                     </div>
                 </div>
             </div>
@@ -60,7 +60,7 @@
                             </svg>
                         </div>
                         <div class="mr-3">
-                            <h3 class="text-red-800 font-semibold mb-2">يرجى تصحيح الأخطاء التالية:</h3>
+                            <h3 class="text-red-800 font-semibold mb-2">يرجى مراجعة الأخطاء التالية:</h3>
                             <ul class="list-disc list-inside space-y-1 text-red-700">
                                 @foreach ($errors->all() as $error)
                                     <li>{{ $error }}</li>
@@ -81,9 +81,9 @@
                                 d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z">
                             </path>
                         </svg>
-                        معلومات الخدمة
+                        تفاصيل الخدمة
                     </h2>
-                    <p class="text-gray-600 mt-1">املأ جميع الحقول المطلوبة لإضافة خدمة جديدة</p>
+                    <p class="text-gray-600 mt-1">املأ التفاصيل التالية لإضافة خدمة جديدة.</p>
                 </div>
 
                 <form action="{{ route('dashboard.services.store') }}" method="POST" enctype="multipart/form-data"
@@ -98,7 +98,7 @@
     </div>
 
     <style>
-        /* تحسين شكل النموذج */
+        /* Input field styling */
         .form-control {
             @apply w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white;
         }
@@ -107,7 +107,7 @@
             @apply shadow-lg border-blue-500 ring-2 ring-blue-200;
         }
 
-        /* تحسين الأزرار */
+        /* Button styling */
         .btn {
             @apply px-6 py-3 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
         }
@@ -120,22 +120,22 @@
             @apply bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 focus:ring-gray-300;
         }
 
-        /* تحسين التسميات */
+        /* Label styling */
         label {
             @apply text-sm font-semibold text-gray-700 mb-2 block;
         }
 
-        /* تحسين رسائل الخطأ */
+        /* Validation message styling */
         .text-red-600 {
             @apply text-red-500 text-sm mt-1 block;
         }
 
-        /* تحسين الحدود والظلال */
+        /* Card border */
         .border {
             @apply border-gray-200 rounded-xl shadow-sm;
         }
 
-        /* تحسين المودال */
+        /* Modal appearance */
         .modal-content {
             @apply rounded-2xl border-0 shadow-2xl;
         }

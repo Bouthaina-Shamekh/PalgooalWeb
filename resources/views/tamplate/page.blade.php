@@ -1,5 +1,6 @@
 ﻿@php
     use App\Models\Service;
+    use App\Models\Testimonial;
     use App\Services\TemplateService;
     use App\Models\CategoryTemplate;
     use App\Models\DomainTld;
@@ -326,9 +327,14 @@
                     'button_text-1' => $content['button_text-1'] ?? '',
                     'button_url-1' => $content['button_url-1'] ?? '',
                 ],
-                'works', 'testimonials', 'banner' => [
+                'works', 'banner' => [
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
+                ],
+                'testimonials' => [
+                    'title' => $title,
+                    'subtitle' => $content['subtitle'] ?? '',
+                    'testimonials' => Testimonial::with('translations')->orderBy('order')->get(),
                 ],
                 'hosting-plans' => (function () use ($content, $title) {
                     // default
