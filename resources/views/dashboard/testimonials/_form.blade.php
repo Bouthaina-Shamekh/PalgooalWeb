@@ -1,486 +1,365 @@
-﻿@php
+@php
     $testimonial = $testimonial ?? $feedback ?? null;
     $testimonialTranslations = $testimonialTranslations ?? $feedbackTranslations ?? [];
 @endphp
 
-{{-- الصورة --}}
-<div class="col-span-6 space-y-4">
-    <label class="block text-sm font-medium text-gray-700">الصورة</label>
+{{-- Testimonial Image --}}
+@include('dashboard.partials.media-picker-advanced', [
+    'fieldName' => 'image_path',
+    'value' => $testimonial?->image ?? null,
+    'label' => 'صورة العميل',
+    'buttonText' => 'اختر أو حمّل صورة العميل من مكتبة الوسائط',
+    'supportedFormatsText' => 'الصيغ المدعومة: JPG, PNG, SVG',
+])
 
-    <div class="flex flex-wrap items-center gap-3">
-        <input type="hidden" id="imagePathInput" name="image_path"
-            value="{{ old('image_path', $testimonial?->image ?? '') }}">
-
-        <button type="button" id="openMediaModalBtn"
-            class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                    d="M12 4v16m8-8H4" />
+{{-- Display Order --}}
+<div class="col-span-6">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 h-full">
+        <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+            <svg class="w-5 h-5 ml-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4">
+                </path>
             </svg>
-            <span>اختيار من مكتبة الوسائط</span>
-        </button>
+            ترتيب الظهور
+        </label>
+        <input type="number" name="order" min="1"
+            value="{{ old('order', $testimonial?->order ?? 1) }}" class="form-control"
+            placeholder="مثال: 1 للظهور أولاً">
+        <p class="text-xs text-gray-500 mt-2">استخدم أرقامًا متسلسلة للتحكم في ترتيب بطاقات الشهادات.</p>
+        @error('order')
+            <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
+        @enderror
     </div>
-
-    @php
-        $initialImagePath = old('image_path', $testimonial?->image ?? '');
-    @endphp
-    <div id="imagePreview"
-        class="flex h-28 w-full items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white/80">
-        @if ($initialImagePath)
-            <img src="{{ asset('storage/' . $initialImagePath) }}" alt="الصورة الحالية"
-                class="h-24 w-24 rounded-xl object-cover shadow">
-        @else
-            <p class="text-sm text-gray-500">لم يتم اختيار صورة بعد</p>
-        @endif
-    </div>
-
-    <div class="space-y-2">
-        <label for="uploadImageInput" class="block text-sm font-medium text-gray-700">رفع صورة جديدة</label>
-        <input type="file" id="uploadImageInput" name="image" accept="image/*"
-            class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
-        <p class="text-xs text-gray-500">يمكنك رفع صورة بديلة من جهازك (الحد الأقصى 5MB).</p>
-    </div>
-
-    @error('image_path')
-        <p class="text-sm text-red-600">{{ $message }}</p>
-    @enderror
-    @error('image')
-        <p class="text-sm text-red-600">{{ $message }}</p>
-    @enderror
 </div>
 
-{{-- ترتيب العرض --}}
-<div class="col-span-6 space-y-2">
-    <label class="block text-sm font-medium text-gray-700">ترتيب العرض</label>
-    <input type="number" name="order" min="1"
-        value="{{ old('order', $testimonial?->order ?? '') }}"
-        class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
-    @error('order')
-        <p class="text-sm text-red-600">{{ $message }}</p>
-    @enderror
-</div>
 
-{{-- التقييم بالنجوم --}}
-<div class="col-span-6 space-y-2">
-    <label class="block text-sm font-medium text-gray-700">عدد النجوم</label>
-    <input type="number" name="star" min="1" max="5"
-        value="{{ old('star', $testimonial?->star ?? '') }}"
-        class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
-    <p class="text-xs text-gray-500">اختر قيمة من 1 إلى 5.</p>
-    @error('star')
-        <p class="text-sm text-red-600">{{ $message }}</p>
-    @enderror
+{{-- Stars --}}
+<div class="col-span-6">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 h-full">
+        <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+            <svg class="w-4 h-4 ml-2 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.967a1 1 0 00.95.69h4.174c.969 0 1.371 1.24.588 1.81l-3.378 2.455a1 1 0 00-.364 1.118l1.286 3.966c.3.922-.755 1.688-1.54 1.118l-3.379-2.454a1 1 0 00-1.175 0l-3.379 2.454c-.784.57-1.838-.196-1.539-1.118l1.285-3.966a1 1 0 00-.364-1.118L2.96 9.394c-.783-.57-.38-1.81.588-1.81h4.174a1 1 0 00.95-.69l1.286-3.967z">
+                </path>
+            </svg>
+            عدد النجوم
+        </label>
+        <input type="number" name="star" min="1" max="5"
+            value="{{ old('star', $testimonial?->star ?? '') }}" class="form-control"
+            placeholder="اختر قيمة من 1 إلى 5">
+        <p class="text-xs text-gray-500 mt-2">يستخدم هذا الحقل لعرض معدل التقييم (الحد الأدنى 1 والحد الأقصى 5).</p>
+        @error('star')
+            <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
+        @enderror
+    </div>
 </div>
+@php
+    $languageErrorMap = [];
+    $firstErrorLang = null;
 
-{{-- الترجمات --}}
+    foreach ($languages as $language) {
+        $code = $language->code;
+        $languageErrorMap[$code] =
+            $errors->has("testimonialTranslations.$code.name") ||
+            $errors->has("testimonialTranslations.$code.feedback") ||
+            $errors->has("testimonialTranslations.$code.major") ||
+            $errors->has("testimonialTranslations.$code.locale");
+
+        if ($languageErrorMap[$code] && $firstErrorLang === null) {
+            $firstErrorLang = $code;
+        }
+    }
+
+    $initialTabCode = $firstErrorLang ?? ($languages->first()->code ?? null);
+@endphp
+
+{{-- Translations --}}
 <div class="col-span-12 mt-8">
-    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
-        <div class="px-6 pt-5">
-            <h3 class="text-lg font-semibold text-gray-800">الترجمات</h3>
-            <p class="mt-1 text-sm text-gray-500">يرجى تعبئة تفاصيل الشهادة لكل لغة متاحة.</p>
-        </div>
+    <div class="bg-gradient-to-r from-indigo-50 to-blue-50 p-6 rounded-2xl border border-indigo-200 shadow-sm mb-6">
+        <h3 class="flex items-center text-xl font-semibold text-gray-800 mb-2">
+            <svg class="w-6 h-6 ml-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M3 5h12M9 3v2m3.5 13.5a18.5 18.5 0 01-6-7.5m6 7.5h7M11 21l4.5-10L20 21M12.75 5C11.8 10.8 8.1 15.6 3 18.1">
+                </path>
+            </svg>
+            الترجمات
+        </h3>
+        <p class="text-gray-600 text-sm">قم بتعبئة بيانات التقييم لكل لغة متاحة لضمان تجربة متكاملة.</p>
+    </div>
 
-        <div class="flex flex-wrap gap-2 border-b border-gray-200 px-6 pt-4" role="tablist">
-            @foreach ($languages as $lang)
-                <button type="button" data-lang="{{ $lang->code }}" role="tab"
-                    aria-controls="lang-panel-{{ $lang->code }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}"
-                    class="lang-tab rounded-lg px-3 py-2 text-sm font-medium transition {{ $loop->first ? 'bg-indigo-600 text-white shadow' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
-                    {{ $lang->native }}
+    <div class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+        <div class="flex border-b border-gray-200 mb-0 space-x-2 rtl:space-x-reverse px-6 pt-6 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300"
+            role="tablist" id="languageTabs">
+            @foreach ($languages as $index => $lang)
+                @php
+                    $code = $lang->code;
+                    $hasLanguageError = $languageErrorMap[$code] ?? false;
+                    $isDefaultActive = $firstErrorLang ? $firstErrorLang === $code : $loop->first;
+                    $tabClasses = 'lang-tab lang-tab-btn px-4 py-3 rounded-t-lg transition-all duration-200 focus:outline-none whitespace-nowrap hover:bg-gray-50 ';
+
+                    if ($isDefaultActive) {
+                        $tabClasses .= $hasLanguageError
+                            ? 'bg-red-50 text-red-700 border-b-2 border-red-500 font-semibold focus:ring-red-400 '
+                            : 'bg-white text-indigo-600 border-b-2 border-indigo-500 font-semibold focus:ring-indigo-400 ';
+                    } else {
+                        $tabClasses .= $hasLanguageError
+                            ? 'bg-red-50 text-red-700 border border-red-200 focus:ring-red-400 '
+                            : 'bg-gray-100 text-gray-600 border-transparent focus:ring-indigo-400 ';
+                    }
+                @endphp
+                <button type="button" onclick="switchLanguageTab('{{ $code }}')"
+                    onkeydown="handleTabKeydown(event, '{{ $code }}')" id="lang-tab-{{ $code }}"
+                    role="tab" aria-controls="lang-panel-{{ $code }}"
+                    aria-selected="{{ $isDefaultActive ? 'true' : 'false' }}" tabindex="{{ $isDefaultActive ? '0' : '-1' }}"
+                    aria-invalid="{{ $hasLanguageError ? 'true' : 'false' }}" data-lang-code="{{ $code }}"
+                    data-has-error="{{ $hasLanguageError ? 'true' : 'false' }}" class="{{ trim($tabClasses) }}">
+                    <div class="lang-tab-label flex items-center space-x-2 rtl:space-x-reverse">
+                        <div
+                            class="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-bold">
+                            {{ strtoupper(substr($code, 0, 2)) }}
+                        </div>
+                        <span>{{ $lang->native }}</span>
+                        @if ($hasLanguageError)
+                            <span class="lang-error-indicator inline-flex items-center gap-1 text-xs font-semibold text-red-600">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z"></path>
+                                </svg>
+                                <span>تحقق</span>
+                            </span>
+                        @endif
+                        @if ($isDefaultActive)
+                            <svg class="lang-checkmark w-4 h-4 {{ $hasLanguageError ? 'text-red-500' : 'text-indigo-500' }}" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        @endif
+                    </div>
                 </button>
             @endforeach
         </div>
 
-        <div class="space-y-8 px-6 py-6">
+        <div class="p-6 bg-gray-50">
             @foreach ($languages as $lang)
                 @php
                     $translation = $testimonialTranslations[$lang->code] ?? null;
+                    $panelCode = $lang->code;
+                    $panelHasError = $languageErrorMap[$panelCode] ?? false;
+                    $shouldShowPanel = $firstErrorLang ? $firstErrorLang === $panelCode : $loop->first;
                 @endphp
-                <div id="lang-panel-{{ $lang->code }}" role="tabpanel"
-                    class="lang-panel {{ $loop->first ? 'block' : 'hidden' }} space-y-6">
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">اسم صاحب الشهادة</label>
-                        <input type="text" name="testimonialTranslations[{{ $lang->code }}][name]"
-                            value="{{ old('testimonialTranslations.' . $lang->code . '.name', $translation['name'] ?? '') }}"
-                            class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
-                        @error('testimonialTranslations.' . $lang->code . '.name')
-                            <p class="text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                <div id="lang-panel-{{ $panelCode }}" role="tabpanel"
+                    aria-labelledby="lang-tab-{{ $panelCode }}"
+                    class="lang-panel {{ $shouldShowPanel ? 'block' : 'hidden' }} transition-all duration-300 ease-out"
+                    data-lang-panel="{{ $panelCode }}" data-has-error="{{ $panelHasError ? 'true' : 'false' }}">
+                    <div class="space-y-6">
+                        <div>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <svg class="w-4 h-4 ml-2 text-indigo-500" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 11c0 4.418-1.79 8-4 8s-4-3.582-4-8 1.79-8 4-8 4 3.582 4 8zm0 0c0 4.418 1.79 8 4 8s4-3.582 4-8-1.79-8-4-8-4 3.582-4 8z">
+                                    </path>
+                                </svg>
+                                اسم صاحب التقييم
+                            </label>
+                            <input type="text" name="testimonialTranslations[{{ $lang->code }}][name]"
+                                value="{{ old('testimonialTranslations.' . $lang->code . '.name', $translation['name'] ?? '') }}"
+                                class="form-control" placeholder="أدخل اسم صاحب التقييم">
+                            @error('testimonialTranslations.' . $lang->code . '.name')
+                                <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
+                            @enderror
+                        </div>
 
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">نص الشهادة</label>
-                        <textarea rows="4" name="testimonialTranslations[{{ $lang->code }}][feedback]"
-                            class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">{{ old('testimonialTranslations.' . $lang->code . '.feedback', $translation['feedback'] ?? '') }}</textarea>
-                        @error('testimonialTranslations.' . $lang->code . '.feedback')
-                            <p class="text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                        <div>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <svg class="w-4 h-4 ml-2 text-indigo-500" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M7 8h10M7 12h8m-5 4h5M5 6h-.01M5 10h-.01M5 14h-.01M5 18h-.01"></path>
+                                </svg>
+                                نص التقييم
+                            </label>
+                            <textarea rows="4" name="testimonialTranslations[{{ $lang->code }}][feedback]" class="form-control min-h-[120px]"
+                                placeholder="اكتب التقييم">{{ old('testimonialTranslations.' . $lang->code . '.feedback', $translation['feedback'] ?? '') }}</textarea>
+                            @error('testimonialTranslations.' . $lang->code . '.feedback')
+                                <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
+                            @enderror
+                        </div>
 
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">المسمى الوظيفي</label>
-                        <input type="text" name="testimonialTranslations[{{ $lang->code }}][major]"
-                            value="{{ old('testimonialTranslations.' . $lang->code . '.major', $translation['major'] ?? '') }}"
-                            class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
-                        @error('testimonialTranslations.' . $lang->code . '.major')
-                            <p class="text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                        <div>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <svg class="w-4 h-4 ml-2 text-indigo-500" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.69 6.479A11.952 11.952 0 0112 21.75a11.952 11.952 0 01-6.85-4.693 12.086 12.086 0 01.69-6.479L12 14z">
+                                    </path>
+                                </svg>
+                                المسمى الوظيفي أو مجال العمل
+                            </label>
+                            <input type="text" name="testimonialTranslations[{{ $lang->code }}][major]"
+                                value="{{ old('testimonialTranslations.' . $lang->code . '.major', $translation['major'] ?? '') }}"
+                                class="form-control" placeholder="مثال: مدير التسويق">
+                            @error('testimonialTranslations.' . $lang->code . '.major')
+                                <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
+                            @enderror
+                        </div>
 
-                    <input type="hidden" name="testimonialTranslations[{{ $lang->code }}][locale]"
-                        value="{{ $lang->code }}">
+                        <input type="hidden" name="testimonialTranslations[{{ $lang->code }}][locale]"
+                            value="{{ $lang->code }}">
+                    </div>
                 </div>
             @endforeach
         </div>
     </div>
 </div>
-
-<div class="col-span-12 mt-6 flex justify-end gap-3">
-    <a href="{{ route('dashboard.testimonials.index') }}"
-        class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400">إلغاء</a>
-    <button type="submit"
-        class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">حفظ</button>
-</div>
-
-{{-- نافذة اختيار الوسائط --}}
-<div id="mediaModal" class="fixed inset-0 z-[9999] hidden">
-    <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" data-modal-dismiss></div>
-
-    <div class="relative mx-auto flex h-full max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-            <div>
-                <h2 class="text-lg font-semibold text-gray-800">مكتبة الوسائط</h2>
-                <p class="text-sm text-gray-500">اختر صورة من المكتبة أو قم برفع صورة جديدة.</p>
-            </div>
-            <button type="button" data-modal-dismiss
-                class="inline-flex items-center justify-center rounded-full border border-gray-300 bg-white p-2 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400">
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
-        </div>
-
-        <div class="flex-1 overflow-hidden">
-            <div class="grid gap-6 px-6 py-6">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div class="flex w-full max-w-md items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2">
-                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                d="M21 21l-4.35-4.35m0 0A7 7 0 1010 17.5a7 7 0 006.65-4.85z" />
-                        </svg>
-                        <input type="text" id="mediaSearch" placeholder="ابحث عن صورة" autocomplete="off"
-                            class="w-full border-0 bg-transparent text-sm text-gray-700 focus:outline-none">
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button type="button" id="mediaRefresh"
-                            class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400">
-                            تحديث القائمة
-                        </button>
-                    </div>
-                </div>
-
-                <div class="space-y-4">
-                    <div id="mediaMessage" class="hidden rounded-lg px-4 py-3 text-sm"></div>
-
-                    <div id="mediaLoading" class="hidden items-center justify-center py-12">
-                        <svg class="h-6 w-6 animate-spin text-indigo-500" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke-width="4"></circle>
-                            <path class="opacity-75" stroke-width="4" d="M4 12a8 8 0 018-8"></path>
-                        </svg>
-                    </div>
-
-                    <div id="mediaEmpty"
-                        class="hidden rounded-xl border border-dashed border-gray-300 px-4 py-12 text-center text-sm text-gray-500">
-                        لا توجد عناصر في المكتبة بعد.
-                    </div>
-
-                    <div class="max-h-[50vh] overflow-y-auto rounded-xl border border-gray-200 bg-gray-50 p-4">
-                        <div id="mediaGrid" class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4"></div>
-                    </div>
-                </div>
-
-                <form id="mediaUploadForm" class="space-y-3 rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm">
-                    <h3 class="text-sm font-semibold text-gray-700">رفع صورة جديدة</h3>
-                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-                        <input type="file" id="mediaUploadInput" name="image" accept="image/*"
-                            class="flex-1 min-w-[180px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200">
-                        <button type="submit"
-                            class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-400">
-                            رفع الصورة
-                        </button>
-                    </div>
-                    <p class="text-xs text-gray-500">الامتدادات المدعومة: JPG, PNG, GIF, WEBP, SVG بحجم أقصى 10MB.</p>
-                </form>
-            </div>
-        </div>
-
-        <div class="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
-            <button type="button" data-modal-dismiss
-                class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400">إغلاق</button>
-            <button type="button" id="useSelectedMedia"
-                class="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">استخدام الصورة</button>
-        </div>
+{{-- Actions --}}
+<div class="col-span-12 mt-8">
+    <div
+        class="bg-gradient-to-r from-gray-50 to-white p-6 rounded-2xl border border-gray-200 flex flex-col sm:flex-row items-center justify-end gap-4">
+        <a href="{{ route('dashboard.testimonials.index') }}"
+            class="inline-flex items-center px-8 py-3 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-gray-300">
+            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            إلغاء
+        </a>
+        <button type="submit"
+            class="inline-flex items-center px-8 py-3 btn btn-primary">
+            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            حفظ التقييم
+        </button>
     </div>
 </div>
 
+
 @push('scripts')
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        (function($) {
-            const MEDIA_INDEX_URL = "{{ route('dashboard.media.index') }}";
-            const MEDIA_STORE_URL = "{{ route('dashboard.media.store') }}";
-            const MEDIA_DELETE_URL = "{{ route('dashboard.media.destroy', ':id') }}";
-            const STORAGE_BASE_URL = "{{ rtrim(asset('storage'), '/') }}";
-            const placeholderHtml = '<p class="text-sm text-gray-500">لم يتم اختيار صورة بعد</p>';
+        (() => {
+            const tabIds = @json($languages->pluck('code'));
+            const firstErrorLang = @json($firstErrorLang ?? '');
+            const defaultLang = @json($languages->first()->code ?? '');
+            const storageKey = 'testimonialActiveLangTab';
 
-            const $mediaModal = $('#mediaModal');
-            const $mediaGrid = $('#mediaGrid');
-            const $mediaLoading = $('#mediaLoading');
-            const $mediaEmpty = $('#mediaEmpty');
-            const $mediaMessage = $('#mediaMessage');
-            const $mediaSearch = $('#mediaSearch');
-            const $mediaUploadForm = $('#mediaUploadForm');
-            const $mediaUploadInput = $('#mediaUploadInput');
-            const $imagePathInput = $('#imagePathInput');
-            const $imagePreview = $('#imagePreview');
-            const $uploadImageInput = $('#uploadImageInput');
+            function applyTabClasses(tab, isActive) {
+                const hasError = tab.dataset.hasError === 'true';
+                const classesToRemove = [
+                    'bg-white', 'text-indigo-600', 'border-b-2', 'border-indigo-500', 'font-semibold',
+                    'bg-gray-100', 'text-gray-600', 'border-transparent',
+                    'bg-red-50', 'text-red-700', 'border-red-500', 'border-red-200', 'border',
+                    'focus:ring-indigo-400', 'focus:ring-red-400'
+                ];
+                tab.classList.remove(...classesToRemove);
 
-            let mediaItems = [];
-            let selectedMediaId = null;
-
-            function openMediaModal() {
-                selectedMediaId = null;
-                showMessage('');
-                $mediaModal.removeClass('hidden').addClass('flex');
-                loadMedia();
-            }
-
-            function closeMediaModal() {
-                $mediaModal.removeClass('flex').addClass('hidden');
-                showMessage('');
-            }
-
-            function showMessage(message, type = 'info') {
-                const classes = {
-                    info: 'bg-blue-50 text-blue-700 border border-blue-100',
-                    success: 'bg-green-50 text-green-700 border border-green-100',
-                    warning: 'bg-amber-50 text-amber-700 border border-amber-100',
-                    error: 'bg-red-50 text-red-700 border border-red-100'
-                };
-
-                if (!message) {
-                    $mediaMessage.addClass('hidden').removeClass('bg-blue-50 bg-green-50 bg-amber-50 bg-red-50 text-blue-700 text-green-700 text-amber-700 text-red-700 border');
-                    $mediaMessage.text('');
-                    return;
-                }
-
-                $mediaMessage.removeClass('hidden bg-blue-50 bg-green-50 bg-amber-50 bg-red-50 text-blue-700 text-green-700 text-amber-700 text-red-700 border');
-                $mediaMessage.addClass(classes[type] || classes.info);
-                $mediaMessage.text(message);
-            }
-
-            function formatBytes(bytes) {
-                if (!bytes) return '0 KB';
-                const sizes = ['B', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(1024));
-                return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
-            }
-
-            function renderMedia(items) {
-                if (!items.length) {
-                    $mediaGrid.empty();
-                    $mediaEmpty.removeClass('hidden');
-                    return;
-                }
-                $mediaEmpty.addClass('hidden');
-
-                const cards = items.map(item => {
-                    const url = item.url || `${STORAGE_BASE_URL}/${item.file_path}`;
-                    const name = item.name || 'بدون اسم';
-                    const size = formatBytes(item.size || 0);
-                    const isSelected = selectedMediaId === item.id;
-                    const selectedClasses = isSelected ? 'ring-2 ring-indigo-500 border-indigo-400' : 'hover:border-indigo-400';
-
-                    return `
-                        <div class="media-card relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition cursor-pointer ${selectedClasses}"
-                             data-id="${item.id}" data-path="${item.file_path}" data-url="${url}">
-                            <img src="${url}" alt="${name}" class="h-40 w-full object-cover" loading="lazy">
-                            <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2 text-white">
-                                <p class="text-xs font-semibold truncate" title="${name}">${name}</p>
-                                <p class="text-[11px] opacity-80">${size}</p>
-                            </div>
-                            <button type="button" class="delete-media absolute top-2 right-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-red-500 shadow hover:bg-red-100"
-                                data-id="${item.id}" title="حذف">
-                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                    `;
-                }).join('');
-
-                $mediaGrid.html(cards);
-            }
-
-            function loadMedia() {
-                $mediaLoading.removeClass('hidden');
-                $.get(MEDIA_INDEX_URL)
-                    .done(function(response) {
-                        mediaItems = Array.isArray(response) ? response : (response?.data || []);
-                        renderMedia(mediaItems);
-                    })
-                    .fail(function() {
-                        renderMedia([]);
-                        showMessage('تعذر تحميل مكتبة الوسائط.', 'error');
-                    })
-                    .always(function() {
-                        $mediaLoading.addClass('hidden');
-                    });
-            }
-
-            function applySelectedImage(path, url) {
-                if (!url) {
-                    url = `${STORAGE_BASE_URL}/${path}`;
-                }
-                $imagePathInput.val(path);
-                $imagePreview.html(`<img src="${url}" alt="الصورة المختارة" class="h-24 w-24 rounded-xl object-cover shadow">`);
-            }
-
-            function resetPreviewIfEmpty() {
-                const path = $imagePathInput.val();
-                if (!path && !$uploadImageInput[0].files.length) {
-                    $imagePreview.html(placeholderHtml);
-                }
-            }
-
-            function debounce(fn, delay) {
-                let timeout;
-                return function(...args) {
-                    clearTimeout(timeout);
-                    timeout = setTimeout(() => fn.apply(this, args), delay);
-                };
-            }
-
-            $('[data-modal-dismiss]').on('click', function() {
-                closeMediaModal();
-            });
-
-            $('#openMediaModalBtn').on('click', function(e) {
-                e.preventDefault();
-                openMediaModal();
-            });
-
-            $('#useSelectedMedia').on('click', function() {
-                if (!selectedMediaId) {
-                    showMessage('يرجى اختيار صورة أولاً.', 'warning');
-                    return;
-                }
-                const selected = mediaItems.find(item => item.id === selectedMediaId);
-                if (!selected) {
-                    showMessage('لم يتم العثور على الصورة المختارة.', 'error');
-                    return;
-                }
-                applySelectedImage(selected.file_path, selected.url);
-                closeMediaModal();
-            });
-
-            $('#mediaRefresh').on('click', function() {
-                loadMedia();
-            });
-
-            $mediaSearch.on('input', debounce(function() {
-                const term = $(this).val().toLowerCase();
-                const filtered = !term
-                    ? mediaItems
-                    : mediaItems.filter(item => (item.name || '').toLowerCase().includes(term));
-                renderMedia(filtered);
-            }, 200));
-
-            $(document).on('click', '.media-card', function() {
-                const id = Number($(this).data('id'));
-                selectedMediaId = id;
-                $('.media-card').removeClass('ring-2 ring-indigo-500 border-indigo-400');
-                $(this).addClass('ring-2 ring-indigo-500 border-indigo-400');
-            });
-
-            $(document).on('click', '.delete-media', function(e) {
-                e.stopPropagation();
-                const id = $(this).data('id');
-                if (!confirm('هل أنت متأكد من حذف هذه الصورة؟')) {
-                    return;
-                }
-                $.ajax({
-                    url: MEDIA_DELETE_URL.replace(':id', id),
-                    type: 'DELETE',
-                    data: {
-                        _token: '{{ csrf_token() }}'
+                if (isActive) {
+                    if (hasError) {
+                        tab.classList.add('bg-red-50', 'text-red-700', 'border-b-2', 'border-red-500', 'font-semibold', 'focus:ring-red-400');
+                    } else {
+                        tab.classList.add('bg-white', 'text-indigo-600', 'border-b-2', 'border-indigo-500', 'font-semibold', 'focus:ring-indigo-400');
                     }
-                }).done(function() {
-                    if (selectedMediaId === id) {
-                        selectedMediaId = null;
+                } else {
+                    if (hasError) {
+                        tab.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200', 'focus:ring-red-400');
+                    } else {
+                        tab.classList.add('bg-gray-100', 'text-gray-600', 'border-transparent', 'focus:ring-indigo-400');
                     }
-                    showMessage('تم حذف الصورة بنجاح.', 'success');
-                    loadMedia();
-                }).fail(function() {
-                    showMessage('تعذر حذف الصورة.', 'error');
-                });
-            });
-
-            $mediaUploadForm.on('submit', function(e) {
-                e.preventDefault();
-                const file = $mediaUploadInput[0].files[0];
-                if (!file) {
-                    showMessage('يرجى اختيار ملف لرفعه.', 'warning');
-                    return;
                 }
-                const formData = new FormData();
-                formData.append('_token', '{{ csrf_token() }}');
-                formData.append('image', file);
-
-                showMessage('جاري رفع الصورة...', 'info');
-
-                $.ajax({
-                    url: MEDIA_STORE_URL,
-                    type: 'POST',
-                    data: formData,
-                    processData: false,
-                    contentType: false
-                }).done(function() {
-                    $mediaUploadInput.val('');
-                    showMessage('تم رفع الصورة بنجاح.', 'success');
-                    loadMedia();
-                }).fail(function(xhr) {
-                    const msg = xhr.responseJSON?.message || 'تعذر رفع الصورة، حاول لاحقًا.';
-                    showMessage(msg, 'error');
-                });
-            });
-
-            $uploadImageInput.on('change', function() {
-                if (!this.files || !this.files[0]) {
-                    resetPreviewIfEmpty();
-                    return;
-                }
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    $imagePreview.html(`<img src="${event.target.result}" alt="الصورة الجديدة" class="h-24 w-24 rounded-xl object-cover shadow">`);
-                    $imagePathInput.val('');
-                };
-                reader.readAsDataURL(this.files[0]);
-            });
-
-            $('.lang-tab').on('click', function() {
-                const lang = $(this).data('lang');
-                $('.lang-tab').removeClass('bg-indigo-600 text-white shadow').addClass('bg-gray-100 text-gray-600');
-                $(this).removeClass('bg-gray-100 text-gray-600').addClass('bg-indigo-600 text-white shadow');
-
-                $('.lang-panel').addClass('hidden');
-                $(`#lang-panel-${lang}`).removeClass('hidden');
-            });
-
-            const currentPath = $imagePathInput.val();
-            if (!currentPath && !$imagePreview.find('img').length) {
-                $imagePreview.html(placeholderHtml);
             }
-        })(jQuery);
+
+            function updatePanelVisibility(activeCode) {
+                document.querySelectorAll('.lang-panel').forEach(panel => {
+                    panel.classList.add('hidden');
+                });
+                const panel = document.getElementById(`lang-panel-${activeCode}`);
+                if (panel) {
+                    panel.classList.remove('hidden');
+                }
+            }
+
+            function switchLanguageTab(langCode) {
+                const tabs = document.querySelectorAll('.lang-tab-btn');
+                tabs.forEach(tab => {
+                    const isActive = tab.id === `lang-tab-${langCode}`;
+                    applyTabClasses(tab, isActive);
+                    tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                    tab.setAttribute('tabindex', isActive ? '0' : '-1');
+                    tab.querySelector('.lang-checkmark')?.remove();
+                });
+
+                const activeTab = document.getElementById(`lang-tab-${langCode}`);
+                if (activeTab) {
+                    const label = activeTab.querySelector('.lang-tab-label');
+                    if (label && !label.querySelector('.lang-checkmark')) {
+                        const checkIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                        checkIcon.setAttribute('class', `lang-checkmark w-4 h-4 ${activeTab.dataset.hasError === 'true' ? 'text-red-500' : 'text-indigo-500'}`);
+                        checkIcon.setAttribute('fill', 'none');
+                        checkIcon.setAttribute('stroke', 'currentColor');
+                        checkIcon.setAttribute('viewBox', '0 0 24 24');
+                        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        path.setAttribute('stroke-linecap', 'round');
+                        path.setAttribute('stroke-linejoin', 'round');
+                        path.setAttribute('stroke-width', '2');
+                        path.setAttribute('d', 'M5 13l4 4L19 7');
+                        checkIcon.appendChild(path);
+                        label.appendChild(checkIcon);
+                    }
+                }
+
+                updatePanelVisibility(langCode);
+
+                if (tabIds.includes(langCode)) {
+                    localStorage.setItem(storageKey, langCode);
+                }
+            }
+
+            function handleTabKeydown(event, langCode) {
+                const tabs = Array.from(document.querySelectorAll('.lang-tab-btn'));
+                const currentIndex = tabs.findIndex(tab => tab.id === `lang-tab-${langCode}`);
+                if (currentIndex === -1) {
+                    return;
+                }
+
+                let nextIndex = null;
+                switch (event.key) {
+                    case 'ArrowLeft':
+                        nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+                        break;
+                    case 'ArrowRight':
+                        nextIndex = (currentIndex + 1) % tabs.length;
+                        break;
+                    case 'Home':
+                        nextIndex = 0;
+                        break;
+                    case 'End':
+                        nextIndex = tabs.length - 1;
+                        break;
+                }
+
+                if (nextIndex !== null) {
+                    event.preventDefault();
+                    const nextCode = tabs[nextIndex].id.replace('lang-tab-', '');
+                    switchLanguageTab(nextCode);
+                    tabs[nextIndex].focus();
+                }
+            }
+
+            window.switchLanguageTab = switchLanguageTab;
+            window.handleTabKeydown = handleTabKeydown;
+
+            document.addEventListener('DOMContentLoaded', () => {
+                const saved = localStorage.getItem(storageKey);
+                const initial = firstErrorLang || (saved && tabIds.includes(saved) ? saved : (defaultLang || tabIds[0]));
+                if (initial) {
+                    switchLanguageTab(initial);
+                }
+            });
+        })();
     </script>
 @endpush
+
+
+
+

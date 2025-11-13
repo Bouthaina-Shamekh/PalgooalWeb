@@ -151,5 +151,55 @@
         .modal-footer {
             @apply bg-gray-50 border-t border-gray-200 rounded-b-2xl;
         }
+
+        /* Media picker button */
+        #openMediaModalBtn {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            font-weight: 600;
+            color: #ffffff;
+            background: linear-gradient(135deg, #4f46e5, #4338ca);
+            box-shadow: 0 15px 30px -12px rgba(79, 70, 229, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+        }
+
+        #openMediaModalBtn:hover {
+            transform: translateY(-2px);
+            background: linear-gradient(135deg, #4338ca, #312e81);
+            box-shadow: 0 18px 36px -14px rgba(67, 56, 202, 0.55);
+        }
+
+        #openMediaModalBtn:focus {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.3);
+        }
+
+        #openMediaModalBtn::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 1rem;
+            background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.18), transparent 55%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #openMediaModalBtn:hover::after {
+            opacity: 1;
+        }
+
+        #openMediaModalBtn svg {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+
+        #openMediaModalBtn span {
+            font-size: 1rem;
+        }
     </style>
 </x-dashboard-layout>
