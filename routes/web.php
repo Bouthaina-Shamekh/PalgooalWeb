@@ -39,6 +39,11 @@ Route::middleware(['setLocale'])->group(function () {
         return redirect()->route('checkout.cart');
     })->name('cart');
 
+    Route::get('/testimonials/submit', [\App\Http\Controllers\Frontend\TestimonialSubmissionController::class, 'create'])
+        ->name('testimonials.submit');
+    Route::post('/testimonials/submit', [\App\Http\Controllers\Frontend\TestimonialSubmissionController::class, 'store'])
+        ->name('testimonials.submit.store');
+
     // صفحات أخرى عبر slug
     Route::get('/{slug}', function ($slug) {
         $page = Page::with(['translations', 'sections.translations'])

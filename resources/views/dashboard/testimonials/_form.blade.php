@@ -54,6 +54,37 @@
         @enderror
     </div>
 </div>
+
+{{-- Approval Status --}}
+@php
+    $isApprovedValue = (int) old('is_approved', $testimonial?->is_approved ?? 1);
+@endphp
+<div class="col-span-6">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 h-full">
+        <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+            <svg class="w-5 h-5 ml-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M5 13l4 4L19 7">
+                </path>
+            </svg>
+            حالة النشر
+        </label>
+        <div class="flex items-center gap-4">
+            <input type="hidden" name="is_approved" value="0">
+            <label class="inline-flex items-center cursor-pointer">
+                <input type="checkbox" name="is_approved" value="1" class="sr-only peer"
+                    {{ $isApprovedValue ? 'checked' : '' }}>
+                <div
+                    class="w-14 h-8 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-200 rounded-full peer peer-checked:bg-green-500 transition">
+                </div>
+                <span class="mr-3 text-sm text-gray-600">
+                    {{ $isApprovedValue ? 'سيظهر فوراً في الموقع' : 'سيبقى قيد المراجعة' }}
+                </span>
+            </label>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">قم بإلغاء التحديد لإبقاء التقييم في وضع قيد المراجعة حتى يتم اعتماده لاحقاً.</p>
+    </div>
+</div>
 @php
     $languageErrorMap = [];
     $firstErrorLang = null;

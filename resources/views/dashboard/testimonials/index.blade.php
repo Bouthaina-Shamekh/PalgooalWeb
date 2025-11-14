@@ -21,6 +21,7 @@
                         <th>الاسم ({{ app()->getLocale() }})</th>
                         <th>عدد النجوم</th>
                         <th>نص الشهادة ({{ app()->getLocale() }})</th>
+                        <th>حالة الاعتماد</th>
                         <th>الإجراءات</th>
                     </tr>
                 </thead>
@@ -37,6 +38,13 @@
                             <td>{{ $testimonial->star }}</td>
                             <td>
                                 {{ $testimonial->translation()?->feedback ?? 'لا يوجد نص' }}
+                            </td>
+                            <td>
+                                @if ($testimonial->is_approved)
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">معتمد</span>
+                                @else
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">بانتظار الموافقة</span>
+                                @endif
                             </td>
                             <td style="display: flex; gap: 5px;">
                                 @can('edit', 'App\\Models\\Testimonial')

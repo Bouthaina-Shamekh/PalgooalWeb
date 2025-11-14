@@ -334,7 +334,7 @@
                 'testimonials' => [
                     'title' => $title,
                     'subtitle' => $content['subtitle'] ?? '',
-                    'testimonials' => Testimonial::with('translations')->orderBy('order')->get(),
+                    'testimonials' => Testimonial::approved()->with('translations')->orderBy('order')->get(),
                 ],
                 'hosting-plans' => (function () use ($content, $title) {
                     // default

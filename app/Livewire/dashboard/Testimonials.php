@@ -28,6 +28,7 @@ class Testimonials extends Component
         'image' => '',
         'star' => '',
         'order' => '',
+        'is_approved' => true,
     ];
 
     public $testimonialTranslations = [];
@@ -83,6 +84,7 @@ class Testimonials extends Component
             'image' => $testimonial->image,
             'star' => $testimonial->star,
             'order' => $testimonial->order,
+            'is_approved' => (bool) $testimonial->is_approved,
         ];
 
         $this->testimonialTranslations = [];
@@ -108,7 +110,7 @@ class Testimonials extends Component
     public function resetForm()
     {
         $this->testimonialId = null;
-        $this->testimonial = ['image' => '', 'star' => '', 'order' => ''];
+        $this->testimonial = ['image' => '', 'star' => '', 'order' => '', 'is_approved' => true];
         $this->resetTranslationForm();
     }
 
@@ -117,12 +119,14 @@ class Testimonials extends Component
         $this->validate([
             'testimonial.order' => 'required|integer',
             'testimonial.image' => 'nullable',
+            'testimonial.is_approved' => 'boolean',
             'testimonialTranslations.*.feedback' => 'required|string',
             'testimonialTranslations.*.name' => 'required|string',
             'testimonialTranslations.*.major' => 'required|string',
         ]);
 
         $data = $this->testimonial;
+        $data['is_approved'] = (bool) ($data['is_approved'] ?? false);
 
         if ($this->testimonialId) {
             $testimonial = Testimonial::findOrFail($this->testimonialId);

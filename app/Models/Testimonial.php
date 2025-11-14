@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Testimonial extends Model
 {
-    protected $fillable = ['image', 'star', 'order'];
+    protected $fillable = ['image', 'star', 'order', 'is_approved'];
     protected $table = 'feedbacks';
 
     public function translations()
@@ -18,5 +18,10 @@ class Testimonial extends Model
     {
         $locale = $locale ?? app()->getLocale();
         return $this->translations->where('locale', $locale)->first();
+    }
+
+    public function scopeApproved($query)
+    {
+        return $query->where('is_approved', true);
     }
 }

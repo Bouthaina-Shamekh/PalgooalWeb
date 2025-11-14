@@ -1,9 +1,25 @@
 @php
     $fieldName = $fieldName ?? 'icon';
     $value = old($fieldName, $value ?? '');
-    $label = $label ?? 'أيقونة الخدمة';
-    $buttonText = $buttonText ?? 'اختر أو حدد أيقونة جديدة من مكتبة الوسائط';
-    $supportedFormatsText = $supportedFormatsText ?? 'الصيغ المدعومة: JPG, PNG, SVG';
+    $label = $label ?? '������ ������';
+    $buttonText = $buttonText ?? '���� �� ��� ������ ����� �� ����� �������';
+    $supportedFormatsText = $supportedFormatsText ?? '����� ��������: JPG, PNG, SVG';
+    $cleanValue = trim((string) $value);
+    $hasSelectedImage = $cleanValue !== '';
+    $placeholderImage = asset('assets/dashboard/images/media-placeholder.svg');
+    $selectedImageUrl = $hasSelectedImage
+        ? (\Illuminate\Support\Str::startsWith($cleanValue, ['http://', 'https://', '//'])
+            ? $cleanValue
+            : asset('storage/' . ltrim($cleanValue, '/')))
+        : null;
+    $selectedMessage = t('dashboard.media.preview.selected_message', 'تم اختيار الصورة بنجاح!');
+    $selectedDescription = t('dashboard.media.preview.selected_description', 'يمكنك تغيير الصورة في أي وقت بالضغط على زر اختيار الصورة مرة أخرى.');
+    $placeholderMessage = t('dashboard.media.preview.placeholder_message', 'لم يتم اختيار أي صورة بعد، لذا سنعرض صورة افتراضية مؤقتة.');
+    $placeholderDescription = t('dashboard.media.preview.placeholder_description', 'اضغط على زر اختيار الصورة لاختيار صورة من مكتبة الوسائط أو قم برفع صورة جديدة.');
+    $selectedAlt = t('dashboard.media.preview.selected_alt', 'الصورة المختارة');
+    $placeholderAlt = t('dashboard.media.preview.placeholder_alt', 'الصورة الافتراضية');
+    $previewBorderClass = $hasSelectedImage ? 'border-2 border-green-200 dark:border-green-700' : 'border border-dashed border-gray-300 dark:border-gray-600';
+    $previewMessageClass = $hasSelectedImage ? 'text-green-700 dark:text-green-300' : 'text-gray-600 dark:text-gray-300';
 @endphp
 
 {{-- الأيقونة --}}
@@ -67,19 +83,29 @@
             </div>
         </div>
 
-        @if (!empty($value))
-            <div
-                class="preview-container mt-4 p-4 bg-white dark:bg-gray-800 rounded-xl border-2 border-green-200 dark:border-green-700 shadow-sm">
-                <div class="flex items-center gap-3">
-                    <img src="{{ asset('storage/' . ltrim($value, '/')) }}"
-                        class="preview-image w-16 h-16 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 object-cover">
-                    <div>
-                        <p class="preview-message text-sm font-medium text-green-700 dark:text-green-300 mb-1">تم تحديث الأيقونة بنجاح!</p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">يمكنك تغييرها في أي وقت عبر "اختيار أيقونة جديدة"</p>
-                    </div>
+        <div
+            class="preview-container mt-4 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm {{ $previewBorderClass }}"
+            data-placeholder-image="{{ $placeholderImage }}"
+            data-placeholder-alt="{{ e($placeholderAlt) }}"
+            data-selected-alt="{{ e($selectedAlt) }}"
+            data-placeholder-message="{{ e($placeholderMessage) }}"
+            data-placeholder-description="{{ e($placeholderDescription) }}"
+            data-selected-message="{{ e($selectedMessage) }}"
+            data-selected-description="{{ e($selectedDescription) }}">
+            <div class="flex items-center gap-3">
+                <img src="{{ $hasSelectedImage ? $selectedImageUrl : $placeholderImage }}"
+                    alt="{{ e($hasSelectedImage ? $selectedAlt : $placeholderAlt) }}"
+                    class="preview-image w-16 h-16 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 object-cover">
+                <div>
+                    <p class="preview-message text-sm font-medium {{ $previewMessageClass }}">
+                        {{ $hasSelectedImage ? $selectedMessage : $placeholderMessage }}
+                    </p>
+                    <p class="preview-description text-xs text-gray-500 dark:text-gray-400">
+                        {{ $hasSelectedImage ? $selectedDescription : $placeholderDescription }}
+                    </p>
                 </div>
             </div>
-        @endif
+        </div>
     </div>
 </div>
 <div class="fixed inset-0 z-[9999] hidden" id="mediaModal" aria-hidden="true" aria-modal="true" role="dialog"
@@ -1272,25 +1298,50 @@
 
             function updateIconPreview(path) {
                 const $section = $('#iconInput').closest('.col-span-6');
-                let $preview = $section.find('.preview-container');
+                const $preview = $section.find('.preview-container');
                 if (!$preview.length) {
-                    $preview = $(`
-        <div class="preview-container mt-4 p-4 bg-white dark:bg-gray-800 rounded-xl border-2 border-green-200 dark:border-green-700 shadow-sm">
-          <div class="flex items-center gap-3">
-            <img class="preview-image w-16 h-16 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 object-cover" />
-            <div>
-              <p class="preview-message text-sm font-medium text-green-700 dark:text-green-300 mb-1">تم اختيار الأيقونة بنجاح!</p>
-              <p class="text-xs text-gray-500 dark:text-gray-400">يمكنك تغييرها بالضغط على "اختر من الوسائط"</p>
-            </div>
-          </div>
-        </div>`);
-                    $section.find('.bg-gradient-to-r').append($preview);
+                    return;
                 }
-                $preview.addClass('border-2 border-green-200 dark:border-green-700');
-                $preview.find('.preview-image').attr('src', "/storage/" + path).attr('alt',
-                    'أيقونة الخدمة');
+
+                const placeholderImage = $preview.data('placeholderImage');
+                const placeholderAlt = $preview.data('placeholderAlt') || 'Placeholder image';
+                const selectedAlt = $preview.data('selectedAlt') || 'Selected image';
+                const placeholderMessage = $preview.data('placeholderMessage') || '';
+                const placeholderDescription = $preview.data('placeholderDescription') || '';
+                const selectedMessage = $preview.data('selectedMessage') || '';
+                const selectedDescription = $preview.data('selectedDescription') || '';
+
+                const $image = $preview.find('.preview-image');
+                const $message = $preview.find('.preview-message');
+                const $description = $preview.find('.preview-description');
+
+                const placeholderBorderClasses = 'border border-dashed border-gray-300 dark:border-gray-600';
+                const selectedBorderClasses = 'border-2 border-green-200 dark:border-green-700';
+                const placeholderTextClasses = 'text-gray-600 dark:text-gray-300';
+                const selectedTextClasses = 'text-green-700 dark:text-green-300';
+
+                if (!path) {
+                    $preview.removeClass(selectedBorderClasses).addClass(placeholderBorderClasses);
+                    if (placeholderImage) {
+                        $image.attr('src', placeholderImage);
+                    }
+                    $image.attr('alt', placeholderAlt);
+                    $message.removeClass(selectedTextClasses).addClass(placeholderTextClasses).text(placeholderMessage);
+                    if ($description.length) {
+                        $description.text(placeholderDescription);
+                    }
+                    return;
+                }
+
+                $preview.removeClass(placeholderBorderClasses).addClass(selectedBorderClasses);
+                $image.attr('src', '/storage/' + path).attr('alt', selectedAlt);
+                $message.removeClass(placeholderTextClasses).addClass(selectedTextClasses).text(selectedMessage);
+                if ($description.length) {
+                    $description.text(selectedDescription);
+                }
                 $preview.hide().fadeIn(250);
             }
+
 
             // حذف صورة
             let deleteId = null;

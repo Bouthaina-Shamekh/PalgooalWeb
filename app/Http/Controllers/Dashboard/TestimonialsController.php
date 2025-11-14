@@ -9,6 +9,7 @@ use App\Models\TestimonialTranslation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class TestimonialsController extends Controller
@@ -37,30 +38,19 @@ class TestimonialsController extends Controller
 
     public function store(Request $request)
     {
-        $localeCodes = $this->languages->pluck('code')->filter()->values()->all();
-
-        $translationLocaleRules = ['required', 'string'];
-        if (!empty($localeCodes)) {
-            $translationLocaleRules[] = Rule::in($localeCodes);
-        }
-
-        $request->validate([
-            'order' => 'required|integer|min:1',
-            'star' => 'nullable|integer|min:1|max:5',
-            'image' => 'nullable|image',
-            'image_path' => 'nullable|string',
-            'testimonialTranslations' => 'required|array',
-            'testimonialTranslations.*.locale' => $translationLocaleRules,
-            'testimonialTranslations.*.feedback' => 'required|string',
-            'testimonialTranslations.*.name' => 'required|string',
-            'testimonialTranslations.*.major' => 'required|string',
-        ]);
+        $validated = $this->validateTestimonialRequest($request);
 
         DB::beginTransaction();
 
         try {
-            $testimonialData = $request->only(['star', 'order']);
-            $imagePath = trim((string) $request->input('image_path', ''));
+            $testimonialData = [
+                'order' => $validated['order'],
+                'star' => $validated['star'] ?? null,
+                'is_approved' => array_key_exists('is_approved', $validated)
+                    ? (bool) $validated['is_approved']
+                    : true,
+            ];
+            $imagePath = trim((string) ($validated['image_path'] ?? ''));
 
             if ($request->hasFile('image')) {
                 $testimonialData['image'] = $request->file('image')->store('testimonials', 'public');
@@ -70,7 +60,8 @@ class TestimonialsController extends Controller
 
             $testimonial = Testimonial::create($testimonialData);
 
-            foreach ($request->input('testimonialTranslations', []) as $translation) {
+            $translations = $this->extractCompleteTranslations($validated['testimonialTranslations'] ?? []);
+            foreach ($translations as $translation) {
                 TestimonialTranslation::create([
                     'feedback_id' => $testimonial->id,
                     'locale' => $translation['locale'],
@@ -120,23 +111,19 @@ class TestimonialsController extends Controller
             $translationLocaleRules[] = Rule::in($localeCodes);
         }
 
-        $request->validate([
-            'order' => 'required|integer|min:1',
-            'star' => 'nullable|integer|min:1|max:5',
-            'image' => 'nullable|image',
-            'image_path' => 'nullable|string',
-            'testimonialTranslations' => 'required|array',
-            'testimonialTranslations.*.locale' => $translationLocaleRules,
-            'testimonialTranslations.*.feedback' => 'required|string',
-            'testimonialTranslations.*.name' => 'required|string',
-            'testimonialTranslations.*.major' => 'required|string',
-        ]);
+        $validated = $this->validateTestimonialRequest($request);
 
         DB::beginTransaction();
 
         try {
-            $testimonialData = $request->only(['star', 'order']);
-            $imagePath = trim((string) $request->input('image_path', ''));
+            $testimonialData = [
+                'order' => $validated['order'],
+                'star' => $validated['star'] ?? null,
+                'is_approved' => array_key_exists('is_approved', $validated)
+                    ? (bool) $validated['is_approved']
+                    : $testimonial->is_approved,
+            ];
+            $imagePath = trim((string) ($validated['image_path'] ?? ''));
 
             if ($request->hasFile('image')) {
                 $newImagePath = $request->file('image')->store('testimonials', 'public');
@@ -152,10 +139,11 @@ class TestimonialsController extends Controller
 
             $testimonial->update($testimonialData);
 
-            $translationsInput = $request->input('testimonialTranslations', []);
-            $providedLocales = collect($translationsInput)->pluck('locale')->filter()->all();
+            $translationsInput = $validated['testimonialTranslations'] ?? [];
+            $translations = $this->extractCompleteTranslations($translationsInput);
+            $providedLocales = array_column($translations, 'locale');
 
-            foreach ($translationsInput as $translation) {
+            foreach ($translations as $translation) {
                 TestimonialTranslation::updateOrCreate(
                     ['feedback_id' => $testimonial->id, 'locale' => $translation['locale']],
                     [
@@ -203,5 +191,105 @@ class TestimonialsController extends Controller
 
             return back()->withErrors(['error' => $th->getMessage()]);
         }
+    }
+
+    protected function validateTestimonialRequest(Request $request): array
+    {
+        $localeCodes = $this->languages->pluck('code')->filter()->values()->all();
+
+        $translationLocaleRules = ['required', 'string'];
+        if (!empty($localeCodes)) {
+            $translationLocaleRules[] = Rule::in($localeCodes);
+        }
+
+        $rules = [
+            'order' => 'required|integer|min:1',
+            'star' => 'nullable|integer|min:1|max:5',
+            'image' => 'nullable|image',
+            'image_path' => 'nullable|string',
+            'is_approved' => 'nullable|boolean',
+            'testimonialTranslations' => 'required|array',
+            'testimonialTranslations.*.locale' => $translationLocaleRules,
+            'testimonialTranslations.*.feedback' => 'nullable|string',
+            'testimonialTranslations.*.name' => 'nullable|string',
+            'testimonialTranslations.*.major' => 'nullable|string',
+        ];
+
+        $validator = Validator::make($request->all(), $rules);
+        $languageLabels = $this->languages->mapWithKeys(
+            fn($language) => [$language->code => $language->name ?? strtoupper($language->code)]
+        );
+
+        $validator->after(function ($validator) use ($request, $languageLabels) {
+            $translations = $request->input('testimonialTranslations', []);
+            $hasCompleteLanguage = false;
+
+            foreach ($translations as $code => $translation) {
+                $feedback = trim((string) ($translation['feedback'] ?? ''));
+                $name = trim((string) ($translation['name'] ?? ''));
+                $major = trim((string) ($translation['major'] ?? ''));
+                $hasAny = $feedback !== '' || $name !== '' || $major !== '';
+
+                if ($feedback !== '' && $name !== '' && $major !== '') {
+                    $hasCompleteLanguage = true;
+                    continue;
+                }
+
+                if ($hasAny) {
+                    $label = $languageLabels[$translation['locale'] ?? $code] ?? ($translation['locale'] ?? $code);
+
+                    if ($feedback === '') {
+                        $validator->errors()->add(
+                            "testimonialTranslations.$code.feedback",
+                            __('هذا الحقل مطلوب للغة :lang.', ['lang' => $label])
+                        );
+                    }
+                    if ($name === '') {
+                        $validator->errors()->add(
+                            "testimonialTranslations.$code.name",
+                            __('هذا الحقل مطلوب للغة :lang.', ['lang' => $label])
+                        );
+                    }
+                    if ($major === '') {
+                        $validator->errors()->add(
+                            "testimonialTranslations.$code.major",
+                            __('هذا الحقل مطلوب للغة :lang.', ['lang' => $label])
+                        );
+                    }
+                }
+            }
+
+            if (!$hasCompleteLanguage) {
+                $validator->errors()->add(
+                    'testimonialTranslations',
+                    __('يرجى تعبئة جميع الحقول للغة واحدة على الأقل.')
+                );
+            }
+        });
+
+        return $validator->validate();
+    }
+
+    protected function extractCompleteTranslations(array $translations): array
+    {
+        $complete = [];
+
+        foreach ($translations as $translation) {
+            $locale = $translation['locale'] ?? null;
+            $feedback = trim((string) ($translation['feedback'] ?? ''));
+            $name = trim((string) ($translation['name'] ?? ''));
+            $major = trim((string) ($translation['major'] ?? ''));
+
+            if ($locale && $feedback !== '' && $name !== '' && $major !== '') {
+                $complete[] = [
+                    'locale' => $locale,
+                    'feedback' => $feedback,
+                    'name' => $name,
+                    'major' => $major,
+                ];
+            }
+        }
+
+        return $complete;
     }
 }

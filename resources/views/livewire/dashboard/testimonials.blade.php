@@ -117,6 +117,7 @@
                     <th class="p-2">ط§ظ„ط§ط³ظ… ({{ app()->getLocale() }})</th>
                     <th class="p-2">ط§ظ„طھظ‚ظٹظٹظ…</th>
                     <th class="p-2">ط§ظ„ظ†طµ ({{ app()->getLocale() }})</th>
+                    <th class="p-2">حالة الاعتماد</th>
                     <th class="p-2">ط§ظ„ط¥ط¬ط±ط§ط،ط§طھ</th>
                 </tr>
             </thead>
@@ -133,6 +134,13 @@
                         <td class="p-2">{{ $testimonial->star }}</td>
                         <td class="p-2">
                             {{ $testimonial->translation()?->feedback }}
+                        </td>
+                        <td class="p-2">
+                            @if ($testimonial->is_approved)
+                                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">معتمد</span>
+                            @else
+                                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">بانتظار الموافقة</span>
+                            @endif
                         </td>
                         <td class="p-2 space-x-2">
                             @can('edit','App\\Models\\Testimonial')
@@ -194,6 +202,22 @@
                 @error('testimonial.star')
                     <span class="text-red-600">{{ $message }}</span>
                 @enderror
+            </div>
+
+            {{-- حالة الاعتماد --}}
+            <div class="col-span-6">
+                <label class="block text-sm font-medium">حالة الاعتماد</label>
+                <div class="flex items-center gap-3 mt-2">
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" wire:model="testimonial.is_approved" class="sr-only peer">
+                        <div class="w-14 h-8 bg-gray-200 rounded-full peer-checked:bg-green-500 transition relative">
+                            <span class="absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow peer-checked:translate-x-6 transition"></span>
+                        </div>
+                    </label>
+                    <span class="text-sm text-gray-600">
+                        {{ $testimonial['is_approved'] ? 'سيظهر فوراً على الموقع' : 'سيبقى قيد المراجعة' }}
+                    </span>
+                </div>
             </div>
 
             {{-- ط§ظ„طھط±ط¬ظ…ط§طھ --}}
