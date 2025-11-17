@@ -1,103 +1,171 @@
 <?php
 
 use App\Http\Controllers\Dashboard\Management\DomainSearchController;
-use App\Http\Controllers\Dashboard\TemplateController;
+use App\Http\Controllers\Frontend\CartController;
 use App\Http\Controllers\Frontend\CheckoutController;
-use App\Livewire\Dashboard\Template\TemplateShowPage;
+use App\Http\Controllers\Frontend\TemplateController as FrontTemplateController;
+use App\Http\Controllers\Frontend\TemplateReviewController;
+use App\Http\Controllers\Frontend\TestimonialSubmissionController;
 use App\Models\Language;
 use App\Models\Page;
 use App\Models\Portfolio;
-use App\Models\Template;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Frontend\TemplateController as FrontTemplateController;
-use App\Http\Controllers\Frontend\TemplateReviewController;
-// use App\Http\Controllers\Dashboard\Management\DomainTldController; // نقل الراوت إلى dashboard.php
-// use App\Http\Controllers\Dashboard\Management\DomainTldController; // moved apply-pricing route to dashboard group
-
-// Route::get('/', function () {
-//     return view('tamplate.home');
-// });
 
 Route::middleware(['setLocale'])->group(function () {
 
+    /*
+    |--------------------------------------------------------------------------
+    | Home Page
+    |--------------------------------------------------------------------------
+    */
     Route::get('/', function () {
         $page = Page::with(['translations', 'sections.translations'])
             ->where('is_home', true)
             ->where('is_active', true)
             ->first();
 
-        if (!$page) {
+        if (! $page) {
             abort(404, 'لم يتم تحديد الصفحة الرئيسية بعد.');
         }
-        view()->share('currentPage', $page);
-        return view('tamplate.page', ['page' => $page]);
-    });
 
-    // صفحات أخرى عبر slug (catch-all) — ضع المسارات الخاصة قبل هذا لتجنّب التقاطها
-    // صفحة سلة بسيطة للزوار: تعرض الدومينات المخزنة في localStorage عبر JS
+        view()->share('currentPage', $page);
+
+        return view('tamplate.page', ['page' => $page]);
+    })->name('frontend.home');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cart (frontend alias → checkout.cart)
+    |--------------------------------------------------------------------------
+    */
     Route::get('/cart', function () {
         return redirect()->route('checkout.cart');
     })->name('cart');
 
-    Route::get('/testimonials/submit', [\App\Http\Controllers\Frontend\TestimonialSubmissionController::class, 'create'])
+    /*
+    |--------------------------------------------------------------------------
+    | Testimonials
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/testimonials/submit', [TestimonialSubmissionController::class, 'create'])
         ->name('testimonials.submit');
-    Route::post('/testimonials/submit', [\App\Http\Controllers\Frontend\TestimonialSubmissionController::class, 'store'])
+
+    Route::post('/testimonials/submit', [TestimonialSubmissionController::class, 'store'])
         ->name('testimonials.submit.store');
 
-    // صفحات أخرى عبر slug
-    Route::get('/{slug}', function ($slug) {
-        $page = Page::with(['translations', 'sections.translations'])
-            ->where('is_active', true)
-            ->whereSlug($slug)
-            ->firstOrFail();
-        view()->share('currentPage', $page);
-        return view('tamplate.page', ['page' => $page]);
-    })->where('slug', '^(?!client|admin|dashboard|api|storage|templates|change-locale|checkout|portfolio|invoices|bulk).*$');
-
-
+    /*
+    |--------------------------------------------------------------------------
+    | Portfolio
+    |--------------------------------------------------------------------------
+    */
     Route::get('portfolio/{slug}', function ($slug) {
         $portfolio = Portfolio::with(['translations'])
             ->where('slug', $slug)
             ->orWhere('id', $slug)
             ->firstOrFail();
+
         return view('tamplate.portfolio', ['portfolio' => $portfolio]);
     })->name('portfolio.show');
 
-    Route::get('/checkout/client/{template_id}', [CheckoutController::class, 'index'])->name('checkout');
+    /*
+    |--------------------------------------------------------------------------
+    | Checkout + Cart (server-side)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/checkout/client/{template_id}', [CheckoutController::class, 'index'])
+        ->name('checkout');
+
     // Checkout entrypoint for domain-only cart (from /cart)
-    Route::get('/checkout/cart', [CheckoutController::class, 'cart'])->name('checkout.cart');
-    Route::post('/checkout/cart/process', [CheckoutController::class, 'processCart'])->name('checkout.cart.process');
+    Route::get('/checkout/cart', [CheckoutController::class, 'cart'])
+        ->name('checkout.cart');
+
+    Route::post('/checkout/cart/process', [CheckoutController::class, 'processCart'])
+        ->name('checkout.cart.process');
+
     // Allow processing without a template by making template_id optional
-    Route::post('/checkout/client/{template_id?}/process/{plan_id?}', [CheckoutController::class, 'process'])->name('checkout.process');
+    Route::post('/checkout/client/{template_id?}/process/{plan_id?}', [CheckoutController::class, 'process'])
+        ->name('checkout.process');
+
     // Store client-side cart into server session (AJAX)
-    Route::post('/cart/store', [\App\Http\Controllers\Frontend\CartController::class, 'store'])->name('cart.store');
+    Route::post('/cart/store', [CartController::class, 'store'])
+        ->name('cart.store');
+
     // Clear domain-only cart from session (AJAX)
-    Route::post('/cart/clear', [\App\Http\Controllers\Frontend\CartController::class, 'clear'])->name('cart.clear');
+    Route::post('/cart/clear', [CartController::class, 'clear'])
+        ->name('cart.clear');
+
     // Domain-only checkout (no template binding)
     Route::get('/checkout/domains', function () {
         return view('tamplate.checkout-domains');
     })->name('checkout.domains');
-    Route::post('/checkout/domains/process', [\App\Http\Controllers\Frontend\CartController::class, 'processDomains'])->name('checkout.domains.process');
+
+    Route::post(
+        '/checkout/domains/process',
+        [CartController::class, 'processDomains']
+    )->name('checkout.domains.process');
+
     Route::get('/checkout/domains/success', function () {
         return view('tamplate.checkout-domains-success');
     })->name('checkout.domains.success');
 
-    Route::get('/templates/{slug}', [FrontTemplateController::class, 'show'])->name('template.show');
-    Route::get('/templates/{slug}/preview', [FrontTemplateController::class, 'preview'])->name('template.preview');
-    Route::post('templates/{template}/reviews', [TemplateReviewController::class, 'store'])
-        ->name('frontend.templates.reviews.store')
-        ->whereNumber('template');
+    /*
+    |--------------------------------------------------------------------------
+    | Templates (blueprints / legacy)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/templates/{slug}', [FrontTemplateController::class, 'show'])
+        ->name('template.show');
 
-    Route::get('/domains', [DomainSearchController::class, 'page'])->name('domains.page');
+    Route::get('/templates/{slug}/preview', [FrontTemplateController::class, 'preview'])
+        ->name('template.preview');
+
+    Route::post('templates/{template_id}/reviews', [TemplateReviewController::class, 'store'])
+        ->name('frontend.templates.reviews.store')
+        ->whereNumber('template_id');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Domains search (frontend)
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/domains', [DomainSearchController::class, 'page'])
+        ->name('domains.page');
+
     // API لفحص التوافر (AJAX)
     Route::get('/api/domains/check', [DomainSearchController::class, 'check'])
-        ->middleware(['throttle:30,1']) // معدل بسيط
+        ->middleware(['throttle:30,1'])
         ->name('domains.check');
 
+    /*
+    |--------------------------------------------------------------------------
+    | Dynamic CMS Pages by slug (must stay after specific routes)
+    |--------------------------------------------------------------------------
+    |
+    | نستخدم هذا الراوت لكل صفحات الـ CMS مثل /about, /templates, /services...
+    | ويُستثنى منه المسارات الخاصة مثل client, admin, dashboard, templates, ...
+    */
+    Route::get('/{slug}', function ($slug) {
+        $page = Page::with(['translations', 'sections.translations'])
+            ->where('is_active', true)
+            ->whereSlug($slug)
+            ->firstOrFail();
 
+        view()->share('currentPage', $page);
 
+        return view('tamplate.page', ['page' => $page]);
+    })
+        ->where('slug', '^(?!client|admin|dashboard|api|storage|templates|change-locale|checkout|portfolio|invoices|bulk).*$')
+        ->name('frontend.page.show');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Locale Switching
+    |--------------------------------------------------------------------------
+    */
     Route::get('change-locale/{locale}', function ($locale) {
-        $language = Language::where('code', $locale)->where('is_active', true)->first();
+        $language = Language::where('code', $locale)
+            ->where('is_active', true)
+            ->first();
 
         if ($language) {
             session(['locale' => $locale]);
@@ -106,11 +174,13 @@ Route::middleware(['setLocale'])->group(function () {
         return redirect()->back();
     })->name('change_locale');
 
-
-    // باقي Routes
+    /*
+    |--------------------------------------------------------------------------
+    | Dashboard / Client routes
+    |--------------------------------------------------------------------------
+    */
     require __DIR__ . '/dashboard.php';
     require __DIR__ . '/client.php';
 });
-
 
 require __DIR__ . '/lang.php';

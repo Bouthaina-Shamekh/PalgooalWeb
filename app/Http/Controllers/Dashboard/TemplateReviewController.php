@@ -13,39 +13,50 @@ class TemplateReviewController extends Controller
      * عرض قائمة المراجعات مع البحث والفلاتر
      */
     public function index(Request $request)
-{
-    $text     = trim((string) $request->input('q', ''));
-    $approved = $request->has('approved') && $request->input('approved') !== '' ? $request->boolean('approved') : null;
-    $rating   = $request->filled('rating') ? (int) $request->input('rating') : null;
+    {
+        $text = trim((string) $request->input('q', ''));
 
-    $reviews = \App\Models\TemplateReview::query()
-        ->with([
-            // ✅ اللغات على القوالب فقط
-            'template.translations:id,template_id,slug,locale',
-            // لا يوجد لغات هنا
-            'client:id,first_name,last_name,email',
-            'user:id,name,email',
-        ])
-        ->when($text !== '', function ($query) use ($text) {
-            $query->where(function ($q) use ($text) {
-                $q->where('comment', 'like', "%{$text}%")
-                  ->orWhere('author_name', 'like', "%{$text}%")
-                  ->orWhere('author_email', 'like', "%{$text}%")
-                  ->orWhereHas('client', fn($c) => $c->where('first_name','like',"%{$text}%")
-                                                     ->orWhere('last_name','like',"%{$text}%")
-                                                     ->orWhere('email','like',"%{$text}%"))
-                  ->orWhereHas('user', fn($u) => $u->where('name','like',"%{$text}%")
-                                                   ->orWhere('email','like',"%{$text}%"));
-            });
-        })
-        ->when(!is_null($approved), fn($q) => $q->where('approved', $approved))
-        ->when($rating, fn($q) => $q->where('rating', $rating))
-        ->latest()
-        ->paginate(20)
-        ->withQueryString();
+        // null = بدون فلتر، otherwise true/false
+        $approved = $request->filled('approved') && $request->input('approved') !== ''
+            ? $request->boolean('approved')
+            : null;
 
-    return view('dashboard.templates.reviews', compact('reviews'));
-}
+        // لو المستخدم ما اختار تقييم، نخليه null عشان ما نفلتر
+        $rating = $request->filled('rating')
+            ? (int) $request->input('rating')
+            : null;
+
+        $reviews = TemplateReview::query()
+            ->with([
+                // 🟢 تحميل بيانات الترجمة على القالب
+                'template.translations:id,template_id,slug,locale',
+                'client:id,first_name,last_name,email',
+                'user:id,name,email',
+            ])
+            ->when($text !== '', function ($query) use ($text) {
+                $query->where(function ($q) use ($text) {
+                    $q->where('comment', 'like', "%{$text}%")
+                        ->orWhere('author_name', 'like', "%{$text}%")
+                        ->orWhere('author_email', 'like', "%{$text}%")
+                        ->orWhereHas('client', function ($c) use ($text) {
+                            $c->where('first_name', 'like', "%{$text}%")
+                                ->orWhere('last_name', 'like', "%{$text}%")
+                                ->orWhere('email', 'like', "%{$text}%");
+                        })
+                        ->orWhereHas('user', function ($u) use ($text) {
+                            $u->where('name', 'like', "%{$text}%")
+                                ->orWhere('email', 'like', "%{$text}%");
+                        });
+                });
+            })
+            ->when(!is_null($approved), fn($q) => $q->where('approved', $approved))
+            ->when(!is_null($rating), fn($q) => $q->where('rating', $rating))
+            ->latest()
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('dashboard.templates.reviews', compact('reviews'));
+    }
 
     /**
      * اعتماد مراجعة مفردة
@@ -74,7 +85,9 @@ class TemplateReviewController extends Controller
      */
     public function destroy(TemplateReview $review)
     {
-        $review->delete(); // يدعم SoftDeletes إن كانت مفعّلة على الموديل
+        // يدعم SoftDeletes إن كانت مفعّلة على الموديل
+        $review->delete();
+
         return back()->with('success', 'تم حذف المراجعة بنجاح.');
     }
 
@@ -84,9 +97,9 @@ class TemplateReviewController extends Controller
     public function bulk(Request $request)
     {
         $data = $request->validate([
-            'ids'    => ['required','array','min:1'],
-            'ids.*'  => ['integer','distinct'],
-            'action' => ['required','in:approve,reject,delete'],
+            'ids'    => ['required', 'array', 'min:1'],
+            'ids.*'  => ['integer', 'distinct'],
+            'action' => ['required', 'in:approve,reject,delete'],
         ], [
             'ids.required' => 'يرجى اختيار عنصر واحد على الأقل.',
         ]);
@@ -103,8 +116,9 @@ class TemplateReviewController extends Controller
                 $affected = $q->update(['approved' => 1]);
             } elseif ($action === 'reject') {
                 $affected = $q->update(['approved' => 0]);
-            } else { // delete
-                $affected = $q->delete(); // SoftDeletes إن وُجدت
+            } else {
+                // delete (يدعم SoftDeletes إن وُجدت)
+                $affected = $q->delete();
             }
         });
 

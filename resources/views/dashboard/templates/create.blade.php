@@ -1,10 +1,20 @@
 <x-dashboard-layout>
-    <div class="container mx-auto py-6 max-w-5xl">
-        <h1 class="text-2xl font-bold mb-6">➕ إضافة قالب جديد</h1>
+    <div class="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
 
+        {{-- Header --}}
+        <div class="flex items-center justify-between gap-4 mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">➕ إضافة قالب جديد</h1>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    قم بإضافة قالب جديد مع كل الترجمات، المميزات، الصور، التفاصيل والوسوم.
+                </p>
+            </div>
+        </div>
+
+        {{-- Errors --}}
         @if ($errors->any())
-            <div class="bg-red-100 text-red-800 p-4 mb-6 rounded">
-                <ul class="list-disc ps-6">
+            <div class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                <ul class="list-disc ps-5 space-y-1">
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach
@@ -13,96 +23,166 @@
         @endif
 
         <form action="{{ route('dashboard.templates.store') }}" method="POST" enctype="multipart/form-data"
-            class="space-y-6 bg-white p-6 shadow rounded-lg">
+            class="space-y-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm p-6 sm:p-8">
             @csrf
 
-            <!-- التصنيف -->
+            {{-- التصنيف --}}
             <div>
-                <label class="block font-bold mb-1">تصنيف القالب:</label>
-                <select name="category_template_id" required class="w-full border border-gray-300 rounded p-2">
+                <label class="block font-bold mb-1 text-gray-800 dark:text-gray-100">تصنيف القالب:</label>
+                <select name="category_template_id" required
+                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-900 text-sm focus:ring-primary focus:border-primary">
                     <option value="">اختر التصنيف</option>
                     @foreach ($categories as $category)
-                        <option value="{{ $category->id }}">{{ $category->translation?->name ?? 'بدون اسم' }}</option>
+                        <option value="{{ $category->id }}" @selected(old('category_template_id') == $category->id)>
+                            {{ $category->translation?->name ?? 'بدون اسم' }}
+                        </option>
                     @endforeach
                 </select>
             </div>
 
-            <!-- خطة الاستضافة -->
+            {{-- خطة الاستضافة --}}
             <div>
-                <label class="block font-bold mb-1">خطة الاستضافة المرتبطة:</label>
-                <select name="plan_id" required class="w-full border border-gray-300 rounded p-2">
+                <label class="block font-bold mb-1 text-gray-800 dark:text-gray-100">خطة الاستضافة المرتبطة:</label>
+                <select name="plan_id" required
+                    class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2.5 bg-white dark:bg-gray-900 text-sm focus:ring-primary focus:border-primary">
                     <option value="">اختر الخطة</option>
                     @foreach ($plans as $plan)
-                        <option value="{{ $plan->id }}">{{ $plan->name }}
-                            ({{ number_format($plan->price_cents / 100, 2) }} $)</option>
+                        <option value="{{ $plan->id }}" @selected(old('plan_id') == $plan->id)>
+                            {{ $plan->name }} ({{ number_format($plan->price_cents / 100, 2) }} $)
+                        </option>
                     @endforeach
                 </select>
             </div>
 
-            <!-- السعر والخصم -->
+            {{-- السعر والخصم --}}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label class="block font-bold mb-1">السعر ($):</label>
-                    <input type="number" name="price" step="0.01" required class="w-full border p-2 rounded" />
+                    <label class="block font-bold mb-1 text-gray-800 dark:text-gray-100">السعر ($):</label>
+                    <input type="number" name="price" step="0.01" required value="{{ old('price') }}"
+                        class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-900 text-sm focus:ring-primary focus:border-primary" />
                 </div>
                 <div>
-                    <label class="block font-bold mb-1">سعر الخصم ($):</label>
-                    <input type="number" name="discount_price" step="0.01" class="w-full border p-2 rounded" />
+                    <label class="block font-bold mb-1 text-gray-800 dark:text-gray-100">سعر الخصم ($):</label>
+                    <input type="number" name="discount_price" step="0.01" value="{{ old('discount_price') }}"
+                        class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-900 text-sm focus:ring-primary focus:border-primary" />
                 </div>
                 <div>
-                    <label class="block font-bold mb-1">تاريخ انتهاء الخصم:</label>
-                    <input type="datetime-local" name="discount_ends_at" class="w-full border p-2 rounded" />
+                    <label class="block font-bold mb-1 text-gray-800 dark:text-gray-100">تاريخ انتهاء الخصم:</label>
+                    <input type="datetime-local" name="discount_ends_at" value="{{ old('discount_ends_at') }}"
+                        class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-900 text-sm focus:ring-primary focus:border-primary" />
                 </div>
             </div>
 
-            <!-- رفع الصورة -->
+            {{-- رفع الصورة --}}
             <div>
-                <label class="block font-bold mb-1">صورة القالب:</label>
-                <input type="file" name="image" accept="image/*" required class="w-full border p-2 rounded" />
+                <label class="block font-bold mb-1 text-gray-800 dark:text-gray-100">صورة القالب:</label>
+                <input type="file" name="image" accept="image/*"
+                    class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-900 text-sm focus:ring-primary focus:border-primary"
+                    @if (!old('image')) required @endif />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    يُفضّل صورة أفقية بنسبة 16:9 أو 5:3 لعرضها في صفحة التفاصيل.
+                </p>
             </div>
 
-            <!-- الترجمة -->
-            <div>
-                <h3 class="text-lg font-bold mb-2">الترجمات:</h3>
+            {{-- الترجمة --}}
+            @php
+                $firstLocale = $languages->first()->code ?? null;
+            @endphp
 
-                <div class="space-y-6">
+            <div x-data="{ activeLocale: '{{ $firstLocale }}' }" class="mt-6">
+                <h3 class="text-lg font-bold mb-3 text-gray-900 dark:text-gray-100">الترجمات:</h3>
+
+                {{-- Tabs Header --}}
+                <div
+                    class="inline-flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-gray-700 pb-2 mb-4">
                     @foreach ($languages as $language)
                         @php $locale = $language->code; @endphp
-                        <div class="border rounded p-4" data-locale-section>
-                            <h4 class="font-bold mb-2 text-primary">[{{ $language->name }}]</h4>
+                        <button type="button" @click="activeLocale = '{{ $locale }}'"
+                            :class="activeLocale === '{{ $locale }}'
+                                ?
+                                'bg-primary text-white shadow-sm' :
+                                'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200'"
+                            class="px-3 py-1.5 rounded-full text-sm font-semibold border border-transparent hover:border-primary/40 transition-colors">
+                            {{ $language->name }} ({{ $locale }})
+                        </button>
+                    @endforeach
+                </div>
 
-                            <input type="hidden" name="translations[{{ $loop->index }}][locale]"
+                {{-- Tabs Content --}}
+                <div class="space-y-6">
+                    @foreach ($languages as $language)
+                        @php
+                            $locale = $language->code;
+                            $i = $loop->index;
+                        @endphp
+
+                        <div x-show="activeLocale === '{{ $locale }}'" x-cloak
+                            class="border border-gray-200 dark:border-gray-700 rounded-xl p-4 sm:p-5 bg-gray-50/60 dark:bg-gray-900"
+                            data-locale-section>
+                            <div class="flex items-center justify-between gap-2 mb-3">
+                                <h4 class="font-bold text-primary text-base sm:text-lg">
+                                    [{{ $language->name }}] ({{ $locale }})
+                                </h4>
+                                <span class="text-xs text-gray-500 dark:text-gray-400">
+                                    بيانات هذه اللغة فقط.
+                                </span>
+                            </div>
+
+                            <input type="hidden" name="translations[{{ $i }}][locale]"
                                 value="{{ $locale }}">
-                            <div class="mb-2">
-                                <label class="block font-semibold mb-1">الاسم:</label>
-                                <input type="text" name="translations[{{ $loop->index }}][name]"
-                                    class="name-input w-full border p-2 rounded" required />
+
+                            {{-- الاسم --}}
+                            <div class="mb-3">
+                                <label class="block font-semibold mb-1 text-gray-800 dark:text-gray-100">الاسم:</label>
+                                <input type="text" name="translations[{{ $i }}][name]"
+                                    class="name-input w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-900 text-sm focus:ring-primary focus:border-primary"
+                                    required value="{{ old("translations.$i.name") }}" />
                             </div>
-                            <div class="mb-2">
-                                <label class="block font-semibold mb-1 flex justify-between items-center">
+
+                            {{-- slug --}}
+                            <div class="mb-3">
+                                <label
+                                    class="block font-semibold mb-1 flex justify-between items-center text-gray-800 dark:text-gray-100">
                                     <span>الرابط (slug):</span>
-                                    <button type="button" class="generate-slug text-sm text-blue-600 hover:underline"
-                                        title="توليد تلقائي">🔁 توليد تلقائي</button>
+                                    <button type="button"
+                                        class="generate-slug text-xs sm:text-sm text-blue-600 hover:underline"
+                                        title="توليد تلقائي من الاسم">
+                                        🔁 توليد تلقائي
+                                    </button>
                                 </label>
-                                <input type="text" name="translations[{{ $loop->index }}][slug]"
-                                    class="slug-input w-full border p-2 rounded" required />
-                            </div>
-                            <div class="mb-2">
-                                <label class="block font-semibold mb-1">رابط المعاينة (اختياري):</label>
-                                <input type="url" name="translations[{{ $loop->index }}][preview_url]"
-                                    class="w-full border p-2 rounded" />
-                            </div>
-
-                            <div class="mb-2">
-                                <label class="block font-semibold mb-1">الوصف:</label>
-                                <textarea name="translations[{{ $loop->index }}][description]" rows="4" class="w-full border p-2 rounded"
-                                    required></textarea>
+                                <input type="text" name="translations[{{ $i }}][slug]"
+                                    class="slug-input w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-900 text-sm focus:ring-primary focus:border-primary"
+                                    required value="{{ old("translations.$i.slug") }}" />
+                                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    يُستخدم هذا الحقل في الرابط: مثال: <code>my-store-template</code>
+                                </p>
                             </div>
 
+                            {{-- رابط المعاينة --}}
+                            <div class="mb-3">
+                                <label class="block font-semibold mb-1 text-gray-800 dark:text-gray-100">
+                                    رابط المعاينة (اختياري):
+                                </label>
+                                <input type="url" name="translations[{{ $i }}][preview_url]"
+                                    class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-900 text-sm focus:ring-primary focus:border-primary"
+                                    value="{{ old("translations.$i.preview_url") }}" />
+                            </div>
+
+                            {{-- الوصف --}}
+                            <div class="mb-4">
+                                <label class="block font-semibold mb-1 text-gray-800 dark:text-gray-100">الوصف:</label>
+                                <textarea name="translations[{{ $i }}][description]" rows="4"
+                                    class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-900 text-sm focus:ring-primary focus:border-primary"
+                                    required>{{ old("translations.$i.description") }}</textarea>
+                            </div>
+
+                            {{-- المميزات (Features) --}}
                             <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white"
                                 data-features-wrapper>
                                 <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">المميزات (Features)</h4>
+                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">
+                                        المميزات (Features)
+                                    </h4>
                                     <div class="flex items-center gap-2">
                                         <button type="button"
                                             class="add-feature inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">
@@ -121,13 +201,14 @@
                                 <div class="space-y-3" data-features-list>
                                     {{-- يتم ملؤها ديناميكياً --}}
                                 </div>
-
                             </div>
+
                             {{-- المعرض (Gallery) --}}
                             <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white"
                                 data-gallery-wrapper>
                                 <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">صور من القالب (Gallery)
+                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">
+                                        صور من القالب (Gallery)
                                     </h4>
                                     <div class="flex items-center gap-2">
                                         <button type="button"
@@ -148,27 +229,36 @@
                                     {{-- يتم ملؤها ديناميكياً --}}
                                 </div>
                             </div>
+
                             {{-- التفاصيل (Details) --}}
                             <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white"
                                 data-details-wrapper>
                                 <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">تفاصيل القالب (Details)
+                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">
+                                        تفاصيل إضافية (Details)
                                     </h4>
                                     <div class="flex items-center gap-2">
                                         <button type="button"
-                                            class="add-detail inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">إضافة
-                                            سطر</button>
+                                            class="add-detail inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">
+                                            إضافة سطر
+                                        </button>
                                         <button type="button"
-                                            class="clear-details inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200">مسح
-                                            الكل</button>
+                                            class="clear-details inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200">
+                                            مسح الكل
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="space-y-3" data-details-list></div>
+                                <div class="space-y-3" data-details-list>
+                                    {{-- يتم ملؤها ديناميكياً --}}
+                                </div>
                             </div>
+
                             {{-- المواصفات (Specs) --}}
                             <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white" data-specs-wrapper>
                                 <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">تفاصيل القالب (Specs)</h4>
+                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">
+                                        مواصفات القالب (Specs)
+                                    </h4>
                                     <div class="flex items-center gap-2">
                                         <button type="button"
                                             class="add-spec inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">
@@ -184,12 +274,17 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="space-y-3" data-specs-list></div>
+                                <div class="space-y-3" data-specs-list>
+                                    {{-- يتم ملؤها ديناميكياً --}}
+                                </div>
                             </div>
+
                             {{-- الوسوم (Tags) --}}
                             <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white" data-tags-wrapper>
                                 <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">الوسوم (Tags)</h4>
+                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">
+                                        الوسوم (Tags)
+                                    </h4>
                                 </div>
                                 <div class="flex items-center gap-2 mb-3">
                                     <input type="text"
@@ -206,24 +301,29 @@
                                 </div>
                                 <div class="flex flex-wrap gap-2" data-tags-list></div>
                             </div>
-                            {{-- الحقل المخفي الموحّد لِجميع التفاصيل (features/gallery/specs/tags) --}}
-                            <input type="hidden" name="translations[{{ $loop->index }}][details]"
-                                class="details-json" value="">
-                            <p class="mt-2 text-xs text-gray-500">يتم حفظ المميزات + المعرض + المواصفات + الوسوم كـ
-                                JSON تلقائيًا.</p>
 
+                            {{-- الحقل المخفي الموحد (JSON) --}}
+                            <input type="hidden" name="translations[{{ $i }}][details]"
+                                class="details-json" value="">
+                            <p class="mt-2 text-xs text-gray-500">
+                                يتم حفظ المميزات + المعرض + المواصفات + التفاصيل + الوسوم كـ JSON تلقائيًا.
+                            </p>
                         </div>
                     @endforeach
                 </div>
             </div>
-            <div>
-                <button type="submit" class="bg-primary hover:bg-primary/80 text-white font-bold py-2 px-4 rounded">
+
+
+            <div class="pt-2">
+                <button type="submit"
+                    class="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-white font-bold py-2.5 px-6 rounded-lg text-sm shadow">
                     💾 حفظ القالب
                 </button>
             </div>
         </form>
     </div>
 
+    {{-- توليد الـ slug --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const sections = document.querySelectorAll('[data-locale-section]');
@@ -248,20 +348,21 @@
                 }
             });
 
-            // الدالة المساعدة
             function generateSlug(input, isManual = false) {
-                let slug = input
+                let slug = (input || '')
                     .toLowerCase()
                     .trim()
-                    .replace(/[\s_]+/g, '-') // replace spaces and underscores with hyphens
-                    .replace(/[^a-zA-Z0-9\u0600-\u06FF\-]+/g, '') // keep Arabic + letters + numbers
-                    .replace(/\-\-+/g, '-') // merge multiple hyphens
-                    .replace(/^-+|-+$/g, ''); // remove hyphens from start/end
+                    .replace(/[\s_]+/g, '-')
+                    .replace(/[^a-zA-Z0-9\u0600-\u06FF\-]+/g, '')
+                    .replace(/\-\-+/g, '-')
+                    .replace(/^-+|-+$/g, '');
 
                 return slug;
             }
         });
     </script>
+
+    {{-- JSON builder للـ features / gallery / specs / details / tags --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('[data-locale-section]').forEach(section => {
@@ -280,7 +381,7 @@
                 const addSpec = section.querySelector('.add-spec');
                 const clearSpecs = section.querySelector('.clear-specs');
 
-                // التفاصيل (Details) ← مفقود سابقاً
+                // التفاصيل (Details)
                 const listDetails = section.querySelector('[data-details-list]');
                 const addDetail = section.querySelector('.add-detail');
                 const clearDetails = section.querySelector('.clear-details');
@@ -294,8 +395,11 @@
                 const detailsInp = section.querySelector('.details-json');
 
                 function escapeHtml(str) {
-                    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+                    return (str || '')
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
                         .replace(/'/g, '&#039;');
                 }
 
@@ -306,14 +410,20 @@
                 }) {
                     const row = document.createElement('div');
                     row.className =
-                        'feature-row grid grid-cols-1 sm:grid-cols-[1fr_160px_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
-                    row.innerHTML =
-                        `
-        <input type="text" class="feat-title w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-               placeholder="عنوان الميزة" value="${escapeHtml(item.title)}">
-        <input type="text" class="feat-icon w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-               placeholder="🎨 أيقونة (اختياري)" value="${escapeHtml(item.icon || '')}">
-        <button type="button" class="remove-feature inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>`;
+                        'feature-row grid grid-cols-1 sm:grid-cols-[1fr_160px_auto] gap-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900';
+                    row.innerHTML = `
+                        <input type="text"
+                               class="feat-title w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 p-2 text-sm focus:border-primary focus:ring-primary"
+                               placeholder="عنوان الميزة"
+                               value="${escapeHtml(item.title)}">
+                        <input type="text"
+                               class="feat-icon w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 p-2 text-sm focus:border-primary focus:ring-primary"
+                               placeholder="🎨 أيقونة (اختياري)"
+                               value="${escapeHtml(item.icon || '')}">
+                        <button type="button"
+                                class="remove-feature inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-100">
+                            حذف
+                        </button>`;
                     row.querySelector('.remove-feature').addEventListener('click', () => {
                         row.remove();
                         syncJson();
@@ -329,14 +439,20 @@
                 }) {
                     const row = document.createElement('div');
                     row.className =
-                        'image-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
-                    row.innerHTML =
-                        `
-        <input type="text" class="img-src w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-               placeholder="رابط الصورة" value="${escapeHtml(item.src)}">
-        <input type="text" class="img-alt w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-               placeholder="نص بديل (ALT)" value="${escapeHtml(item.alt || '')}">
-        <button type="button" class="remove-image inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>`;
+                        'image-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900';
+                    row.innerHTML = `
+                        <input type="text"
+                               class="img-src w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 p-2 text-sm focus:border-primary focus:ring-primary"
+                               placeholder="رابط الصورة"
+                               value="${escapeHtml(item.src)}">
+                        <input type="text"
+                               class="img-alt w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 p-2 text-sm focus:border-primary focus:ring-primary"
+                               placeholder="نص بديل (ALT)"
+                               value="${escapeHtml(item.alt || '')}">
+                        <button type="button"
+                                class="remove-image inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-100">
+                            حذف
+                        </button>`;
                     row.querySelector('.remove-image').addEventListener('click', () => {
                         row.remove();
                         syncJson();
@@ -352,14 +468,20 @@
                 }) {
                     const row = document.createElement('div');
                     row.className =
-                        'spec-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
-                    row.innerHTML =
-                        `
-        <input type="text" class="spec-name w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-               placeholder="الاسم" value="${escapeHtml(item.name)}">
-        <input type="text" class="spec-value w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-               placeholder="القيمة" value="${escapeHtml(item.value)}">
-        <button type="button" class="remove-spec inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>`;
+                        'spec-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900';
+                    row.innerHTML = `
+                        <input type="text"
+                               class="spec-name w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 p-2 text-sm focus:border-primary focus:ring-primary"
+                               placeholder="الاسم"
+                               value="${escapeHtml(item.name)}">
+                        <input type="text"
+                               class="spec-value w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 p-2 text-sm focus:border-primary focus:ring-primary"
+                               placeholder="القيمة"
+                               value="${escapeHtml(item.value)}">
+                        <button type="button"
+                                class="remove-spec inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-100">
+                            حذف
+                        </button>`;
                     row.querySelector('.remove-spec').addEventListener('click', () => {
                         row.remove();
                         syncJson();
@@ -368,21 +490,27 @@
                     return row;
                 }
 
-                // Row: Detail ← جديد
+                // Row: Detail
                 function detailRow(item = {
                     name: '',
                     value: ''
                 }) {
                     const row = document.createElement('div');
                     row.className =
-                        'detail-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
-                    row.innerHTML =
-                        `
-        <input type="text" class="detail-name w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-               placeholder="العنصر (مثال: آخر تحديث)" value="${escapeHtml(item.name)}">
-        <input type="text" class="detail-value w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-               placeholder="القيمة (مثال: يوليو 2025)" value="${escapeHtml(item.value)}">
-        <button type="button" class="remove-detail inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>`;
+                        'detail-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900';
+                    row.innerHTML = `
+                        <input type="text"
+                               class="detail-name w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 p-2 text-sm focus:border-primary focus:ring-primary"
+                               placeholder="العنصر (مثال: آخر تحديث)"
+                               value="${escapeHtml(item.name)}">
+                        <input type="text"
+                               class="detail-value w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-950 p-2 text-sm focus:border-primary focus:ring-primary"
+                               placeholder="القيمة (مثال: يوليو 2025)"
+                               value="${escapeHtml(item.value)}">
+                        <button type="button"
+                                class="remove-detail inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-100">
+                            حذف
+                        </button>`;
                     row.querySelector('.remove-detail').addEventListener('click', () => {
                         row.remove();
                         syncJson();
@@ -395,16 +523,19 @@
                 function addTagChip(label) {
                     const text = (label || '').trim();
                     if (!text || !tagsList) return;
+
                     const exists = Array.from(tagsList.querySelectorAll('[data-tag]'))
                         .some(el => (el.dataset.tag || '').toLowerCase() === text.toLowerCase());
                     if (exists) return;
 
                     const chip = document.createElement('span');
                     chip.className =
-                        'inline-flex items-center gap-1 bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full';
+                        'inline-flex items-center gap-1 bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-200 text-xs font-bold px-3 py-1 rounded-full';
                     chip.setAttribute('data-tag', text);
-                    chip.innerHTML = `${escapeHtml(text)}
-        <button type="button" class="remove-tag ml-1 text-primary hover:text-primary/70">×</button>`;
+                    chip.innerHTML = `
+                        ${escapeHtml(text)}
+                        <button type="button" class="remove-tag ml-1 text-primary hover:text-primary/70">×</button>
+                    `;
                     chip.querySelector('.remove-tag').addEventListener('click', () => {
                         chip.remove();
                         syncJson();
@@ -415,28 +546,33 @@
 
                 // Sync JSON
                 function syncJson() {
-                    const features = Array.from(listFeatures?.querySelectorAll('.feature-row') || []).map(
-                        r => ({
+                    const features = Array.from(listFeatures?.querySelectorAll('.feature-row') || [])
+                        .map(r => ({
                             title: r.querySelector('.feat-title')?.value.trim() || '',
-                            icon: r.querySelector('.feat-icon')?.value.trim() || ''
-                        })).filter(x => x.title.length);
+                            icon: r.querySelector('.feat-icon')?.value.trim() || '',
+                        }))
+                        .filter(x => x.title.length);
 
-                    const gallery = Array.from(listImages?.querySelectorAll('.image-row') || []).map(r => ({
-                        src: r.querySelector('.img-src')?.value.trim() || '',
-                        alt: r.querySelector('.img-alt')?.value.trim() || ''
-                    })).filter(x => x.src.length);
+                    const gallery = Array.from(listImages?.querySelectorAll('.image-row') || [])
+                        .map(r => ({
+                            src: r.querySelector('.img-src')?.value.trim() || '',
+                            alt: r.querySelector('.img-alt')?.value.trim() || '',
+                        }))
+                        .filter(x => x.src.length);
 
-                    const specs = Array.from(listSpecs?.querySelectorAll('.spec-row') || []).map(r => ({
-                        name: r.querySelector('.spec-name')?.value.trim() || '',
-                        value: r.querySelector('.spec-value')?.value.trim() || ''
-                    })).filter(x => x.name && x.value);
+                    const specs = Array.from(listSpecs?.querySelectorAll('.spec-row') || [])
+                        .map(r => ({
+                            name: r.querySelector('.spec-name')?.value.trim() || '',
+                            value: r.querySelector('.spec-value')?.value.trim() || '',
+                        }))
+                        .filter(x => x.name && x.value);
 
-                    // تفاصيل القالب (Details) ← نجمعها
-                    const details = Array.from(listDetails?.querySelectorAll('.detail-row') || []).map(r =>
-                        ({
+                    const details = Array.from(listDetails?.querySelectorAll('.detail-row') || [])
+                        .map(r => ({
                             name: r.querySelector('.detail-name')?.value.trim() || '',
-                            value: r.querySelector('.detail-value')?.value.trim() || ''
-                        })).filter(x => x.name && x.value);
+                            value: r.querySelector('.detail-value')?.value.trim() || '',
+                        }))
+                        .filter(x => x.name && x.value);
 
                     const tags = Array.from(tagsList?.querySelectorAll('[data-tag]') || [])
                         .map(el => (el.dataset.tag || '').trim())
@@ -452,7 +588,7 @@
                     payload.features = features;
                     payload.gallery = gallery;
                     payload.specs = specs;
-                    payload.details = details; // ← مهم
+                    payload.details = details;
                     payload.tags = tags;
 
                     detailsInp.value = JSON.stringify(payload);
@@ -462,9 +598,11 @@
                 (function init() {
                     let existing = {};
                     try {
-                        if (detailsInp.value) existing = JSON.parse(detailsInp.value) || {};
-                        else if (detailsInp.dataset.existing) existing = JSON.parse(detailsInp.dataset
-                            .existing) || {};
+                        if (detailsInp.value) {
+                            existing = JSON.parse(detailsInp.value) || {};
+                        } else if (detailsInp.dataset.existing) {
+                            existing = JSON.parse(detailsInp.dataset.existing) || {};
+                        }
                     } catch (e) {
                         existing = {};
                     }
@@ -496,7 +634,7 @@
                         }
                     }
 
-                    // Details ← تعبئة من الموجود
+                    // Details
                     if (listDetails) {
                         if (Array.isArray(existing.details) && existing.details.length) {
                             existing.details.forEach(d => listDetails.appendChild(detailRow(d)));
@@ -538,7 +676,6 @@
                         syncJson();
                     });
 
-                    // Events: Details
                     addDetail?.addEventListener('click', () => {
                         listDetails.appendChild(detailRow());
                         syncJson();
@@ -548,7 +685,6 @@
                         syncJson();
                     });
 
-                    // Events: Tags
                     addTagBtn?.addEventListener('click', () => {
                         addTagChip(tagsInput.value);
                         tagsInput.value = '';
@@ -571,7 +707,4 @@
             });
         });
     </script>
-
-
-
 </x-dashboard-layout>

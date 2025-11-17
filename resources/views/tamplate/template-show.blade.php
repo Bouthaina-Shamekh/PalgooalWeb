@@ -116,7 +116,8 @@
                     </div>
                     <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         @if ($translation?->preview_url)
-                            <a href="{{ route('template.preview', $translation->slug) }}" target="_blank" rel="noopener"
+                            <a href="{{ route('template.preview', $translation->slug) }}" target="_blank"
+                                rel="noopener"
                                 class="flex items-center justify-center gap-2.5 text-center bg-primary hover:bg-primary/90 text-white py-3 rounded-lg font-bold shadow-lg shadow-primary/30 hover:shadow-primary/40 transition-all duration-300 transform hover:-translate-y-0.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
                                     fill="currentColor">
@@ -314,7 +315,7 @@
                     <!-- نموذج إضافة مراجعة (يظهر عند الضغط ) -->
                     <div x-show="addReview" x-collapse class="mb-8" x-data="{ rating: 0, hoverRating: 0 }">
                         <form x-ref="form" method="POST"
-                            action="{{ route('frontend.templates.reviews.store', ['template' => $template->id]) }}"
+                            action="{{ route('frontend.templates.reviews.store', ['template_id' => $template->id]) }}"
                             @submit.prevent="if(rating===0){ alert('يرجى اختيار تقييم من 1 إلى 5'); return; } $refs.form.submit();">
                             @csrf
                             @if (session('success'))
@@ -375,7 +376,7 @@
                     </div>
                     <!-- قائمة المراجعات الحالية -->
                     <div class="space-y-6">
-                        @foreach ($template->reviews()->approved()->latest()->take(10)->get() as $review)
+                        @foreach ($template->reviews as $review)
                             @php
                                 // الاسم المعرُوض
                                 $displayName =
@@ -570,7 +571,8 @@
                         </button>
                     @endif
                     @php $finalPriceCents = (int) round($finalPrice * 100); @endphp
-                    <a id="subscribeNow" href="{{ route('checkout.cart', ['template_id' => $template->id, 'review' => 1, 'domain' => request('domain')]) }}"
+                    <a id="subscribeNow"
+                        href="{{ route('checkout.cart', ['template_id' => $template->id, 'review' => 1, 'domain' => request('domain')]) }}"
                         data-template-id="{{ $template->id }}"
                         data-template-name="{{ $translation?->name ?? ($template->name ?? 'Template') }}"
                         data-price-cents="{{ $finalPriceCents }}"
@@ -602,16 +604,21 @@
                         <div class="space-y-4 text-sm">
                             @foreach ($specs as $row)
                                 <div class="flex justify-between">
-                                    <span
-                                        class="font-semibold text-gray-700 dark:text-gray-300">{{ $row['name'] }}</span>
-                                    <span
-                                        class="text-gray-500 dark:text-gray-400 font-medium">{{ $row['value'] }}</span>
+                                    <span class="font-semibold text-gray-700 dark:text-gray-300">
+                                        {{ $row['name'] }}
+                                    </span>
+                                    <span class="text-gray-500 dark:text-gray-400 font-medium">
+                                        {{ $row['value'] }}
+                                    </span>
                                 </div>
                             @endforeach
-                        @else
-                            <div class="space-y-4 text-sm">
-                                <p class="text-xs text-gray-500 dark:text-gray-400">لا يوجد تفاصيل للقالب</p>
-                            </div>
+                        </div>
+                    @else
+                        <div class="space-y-4 text-sm">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                لا يوجد تفاصيل للقالب
+                            </p>
+                        </div>
                     @endif
                     <div class="pt-2">
                         <span
@@ -694,138 +701,112 @@
             }
         })();
     </script>
-
-
-
-
-
-
-
 </x-template.layouts.index-layouts>
 <script src="//unpkg.com/alpinejs" defer></script>
 <script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('priceBox', (cfg) => ({
-            rating: Number(cfg.rating || 0),
-            countdown: '--:--:--',
-            endsAt: cfg.endsAt ? new Date(cfg.endsAt).getTime() : null,
+    (function() {
+        const CART_KEY = 'palgoals_cart';
 
-            init() {
-                if (!cfg.hasDiscount || !this.endsAt) return;
-                this.tick();
-                this._timer = setInterval(() => this.tick(), 1000);
-                this.$watch('endsAt', () => this.tick());
-            },
-            tick() {
-                const now = Date.now();
-                let diff = (this.endsAt - now);
-                if (diff <= 0) {
-                    this.countdown = '00:00:00';
-                    clearInterval(this._timer);
-                    return;
-                }
-                const h = Math.floor(diff / 3_600_000);
-                diff %= 3_600_000;
-                const m = Math.floor(diff / 60_000);
-                diff %= 60_000;
-                const s = Math.floor(diff / 1_000);
-                this.countdown = [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+        function readCart() {
+            const legacy = localStorage.getItem('palgoals_cart_domains');
+            const unified = localStorage.getItem(CART_KEY);
+            let items = [];
+            try {
+                items = unified ? JSON.parse(unified) : [];
+            } catch {
+                items = [];
             }
-        }))
-    })
-</script>
-<script>
-  (function() {
-    const CART_KEY = 'palgoals_cart';
-
-    function readCart() {
-      const legacy = localStorage.getItem('palgoals_cart_domains');
-      const unified = localStorage.getItem(CART_KEY);
-      let items = [];
-      try { items = unified ? JSON.parse(unified) : []; } catch { items = []; }
-      if (legacy && !unified) {
-        try {
-          const old = JSON.parse(legacy);
-          if (Array.isArray(old)) {
-            items = items.concat(old.map(it => ({
-              kind: 'domain',
-              domain: String(it.domain || '').toLowerCase(),
-              item_option: it.item_option ?? it.option ?? null,
-              price_cents: Number(it.price_cents) || 0,
-              meta: it.meta ?? null,
-            })));
-            // (اختياري) بعد الدمج الأول احذف المفتاح القديم لتفادي أي لبس لاحقًا:
-            // localStorage.removeItem('palgoals_cart_domains');
-          }
-        } catch {}
-      }
-      return Array.isArray(items) ? items : [];
-    }
-
-    function writeCart(items) {
-      localStorage.setItem(CART_KEY, JSON.stringify(items || []));
-    }
-
-    function addOrIncrementTemplate(items, tplItem) {
-      const id = Number(tplItem.template_id) || 0;
-      let found = false;
-      const out = items.map(it => {
-        if (it?.kind === 'template' && Number(it.template_id) === id) {
-          found = true;
-          return { ...it, qty: Math.max(1, Number(it.qty || 1) + Number(tplItem.qty || 1)) };
+            if (legacy && !unified) {
+                try {
+                    const old = JSON.parse(legacy);
+                    if (Array.isArray(old)) {
+                        items = items.concat(old.map(it => ({
+                            kind: 'domain',
+                            domain: String(it.domain || '').toLowerCase(),
+                            item_option: it.item_option ?? it.option ?? null,
+                            price_cents: Number(it.price_cents) || 0,
+                            meta: it.meta ?? null,
+                        })));
+                        // (اختياري) بعد الدمج الأول احذف المفتاح القديم لتفادي أي لبس لاحقًا:
+                        // localStorage.removeItem('palgoals_cart_domains');
+                    }
+                } catch {}
+            }
+            return Array.isArray(items) ? items : [];
         }
-        return it;
-      });
-      if (!found) out.push({ ...tplItem, qty: Math.max(1, Number(tplItem.qty || 1)) });
-      return out;
-    }
 
-    function addTemplateToCartFrom(btn) {
-      try {
-        const tpl = {
-          kind: 'template',
-          template_id: Number(btn.dataset.templateId) || null,
-          template_name: btn.dataset.templateName || 'Template',
-          qty: 1,
-          price_cents: Number(btn.dataset.priceCents) || 0,
-          meta: null,
+        function writeCart(items) {
+            localStorage.setItem(CART_KEY, JSON.stringify(items || []));
+        }
+
+        function addOrIncrementTemplate(items, tplItem) {
+            const id = Number(tplItem.template_id) || 0;
+            let found = false;
+            const out = items.map(it => {
+                if (it?.kind === 'template' && Number(it.template_id) === id) {
+                    found = true;
+                    return {
+                        ...it,
+                        qty: Math.max(1, Number(it.qty || 1) + Number(tplItem.qty || 1))
+                    };
+                }
+                return it;
+            });
+            if (!found) out.push({
+                ...tplItem,
+                qty: Math.max(1, Number(tplItem.qty || 1))
+            });
+            return out;
+        }
+
+        function addTemplateToCartFrom(btn) {
+            try {
+                const tpl = {
+                    kind: 'template',
+                    template_id: Number(btn.dataset.templateId) || null,
+                    template_name: btn.dataset.templateName || 'Template',
+                    qty: 1,
+                    price_cents: Number(btn.dataset.priceCents) || 0,
+                    meta: null,
+                };
+                if (!tpl.template_id) return;
+                const items = readCart();
+                const updated = addOrIncrementTemplate(items, tpl);
+                writeCart(updated);
+            } catch (err) {
+                console.error('Add to cart failed:', err);
+            }
+        }
+
+        const btn = document.getElementById('subscribeNow');
+        if (!btn) return;
+
+        // ✅ حارس لمنع الإضافة المزدوجة أثناء الانتقال
+        let addedOnce = false;
+        const handleAdd = () => {
+            if (addedOnce) return;
+            addedOnce = true;
+            addTemplateToCartFrom(btn);
+            // إعادة الضبط بعد قليل (في حال فتح في تبويب جديد مثلاً)
+            setTimeout(() => {
+                addedOnce = false;
+            }, 800);
         };
-        if (!tpl.template_id) return;
-        const items = readCart();
-        const updated = addOrIncrementTemplate(items, tpl);
-        writeCart(updated);
-      } catch (err) {
-        console.error('Add to cart failed:', err);
-      }
-    }
 
-    const btn = document.getElementById('subscribeNow');
-    if (!btn) return;
+        // Click (يسار)
+        btn.addEventListener('click', handleAdd);
 
-    // ✅ حارس لمنع الإضافة المزدوجة أثناء الانتقال
-    let addedOnce = false;
-    const handleAdd = () => {
-      if (addedOnce) return;
-      addedOnce = true;
-      addTemplateToCartFrom(btn);
-      // إعادة الضبط بعد قليل (في حال فتح في تبويب جديد مثلاً)
-      setTimeout(() => { addedOnce = false; }, 800);
-    };
+        // Middle click (زر أوسط)
+        btn.addEventListener('auxclick', (e) => {
+            if (e.button === 1) handleAdd();
+        });
 
-    // Click (يسار)
-    btn.addEventListener('click', handleAdd);
-
-    // Middle click (زر أوسط)
-    btn.addEventListener('auxclick', (e) => {
-      if (e.button === 1) handleAdd();
-    });
-
-    // Keyboard: عالج فقط Space — واترك Enter يطلق click تلقائيًا
-    btn.addEventListener('keydown', (e) => {
-      if (e.key === ' ') {
-        e.preventDefault(); // منع سكرول الصفحة
-        handleAdd();
-      }
-    });
-  })();
+        // Keyboard: عالج فقط Space — واترك Enter يطلق click تلقائيًا
+        btn.addEventListener('keydown', (e) => {
+            if (e.key === ' ') {
+                e.preventDefault(); // منع سكرول الصفحة
+                handleAdd();
+            }
+        });
+    })();
 </script>

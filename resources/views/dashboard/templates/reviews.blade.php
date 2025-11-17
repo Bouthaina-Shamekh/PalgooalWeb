@@ -179,26 +179,26 @@
 
           <!-- التعليق: إظهار المزيد -->
           @php
-            $cleanComment = \Illuminate\Support\Str::of($review->comment ?? '')
-                              ->trim()
-                              ->trim('"')
-                              ->toString();
-          @endphp
-          <td class="p-3 align-top max-w-[380px]">
-            @if($cleanComment)
-              <details class="group">
-                <summary class="cursor-pointer list-none text-gray-700 dark:text-gray-200">
-                  <span class="line-clamp-1 group-open:line-clamp-none truncate" title="{{ $cleanComment }}">
-                    {{ $cleanComment }}
-                  </span>
-                  <span class="text-xs text-blue-600 dark:text-blue-400 group-open:hidden">إظهار المزيد</span>
-                  <span class="text-xs text-blue-600 dark:text-blue-400 hidden group-open:inline">إخفاء</span>
-                </summary>
-              </details>
-            @else
-              <span class="text-gray-400">—</span>
-            @endif
-          </td>
+    $cleanComment = \Illuminate\Support\Str::of($review->comment ?? '')
+                      ->trim()
+                      ->trim('"')
+                      ->toString();
+@endphp
+<td class="p-3 align-top max-w-[380px]">
+    @if($cleanComment)
+        <details class="group">
+            <summary class="cursor-pointer list-none text-gray-700 dark:text-gray-200">
+                <span class="line-clamp-1 group-open:line-clamp-none truncate" title="{{ e($cleanComment) }}">
+                    {{ e($cleanComment) }}
+                </span>
+                <span class="text-xs text-blue-600 dark:text-blue-400 group-open:hidden">إظهار المزيد</span>
+                <span class="text-xs text-blue-600 dark:text-blue-400 hidden group-open:inline">إخفاء</span>
+            </summary>
+        </details>
+    @else
+        <span class="text-gray-400">—</span>
+    @endif
+</td>
 
           <!-- التحكم -->
           <td class="p-3 align-top">
@@ -252,7 +252,7 @@
       disabled>تطبيق</button>
 
     {{-- سيتم نسخ ids[] المختارة قبل الإرسال --}}
-    <input type="hidden" id="idsClonerTarget">
+    {{-- <input type="hidden" id="idsClonerTarget"> --}}
   </form>
 
   <!-- ترقيم الصفحات -->
