@@ -154,7 +154,7 @@ Route::middleware(['setLocale'])->group(function () {
 
         return view('tamplate.page', ['page' => $page]);
     })
-        ->where('slug', '^(?!client|admin|dashboard|api|storage|templates|change-locale|checkout|portfolio|invoices|bulk).*$')
+        ->where('slug', '^(?!client|admin|dashboard|api|storage|change-locale|checkout|portfolio|invoices|bulk).*$')
         ->name('frontend.page.show');
 
     /*

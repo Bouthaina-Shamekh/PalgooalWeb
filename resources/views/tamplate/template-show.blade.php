@@ -83,8 +83,11 @@
                             class="hover:underline text-white font-semibold">{{ t('Frontend.Home', 'Home') }}</a>
                         <span class="mx-2">/</span>
                     </li>
+                    @php
+                    $templatesSlug = page_slug('templates');
+                    @endphp
                     <li>
-                        <a href="{{ url('/template') }}"
+                        <a href="{{ route('frontend.page.show', $templatesSlug) }}"
                             class="hover:underline text-white font-semibold">{{ t('Frontend.Template', 'Template') }}</a>
                         <span class="mx-2">/</span>
                     </li>
