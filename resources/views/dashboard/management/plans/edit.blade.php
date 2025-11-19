@@ -72,6 +72,29 @@
                                 @enderror
                             </div>
 
+                            <div class="col-span-12 md:col-span-6">
+                                <label class="block text-sm font-medium mb-1">Plan Type</label>
+                                @php
+                                    $selectedType = old('plan_type', $plan->plan_type ?? \App\Models\Plan::TYPE_MULTI_TENANT);
+                                @endphp
+                                <select name="plan_type"
+                                    class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary/30">
+                                    <option value="{{ \App\Models\Plan::TYPE_MULTI_TENANT }}"
+                                        {{ $selectedType === \App\Models\Plan::TYPE_MULTI_TENANT ? 'selected' : '' }}>
+                                        Multi-Tenant (بدون cPanel)
+                                    </option>
+                                    <option value="{{ \App\Models\Plan::TYPE_HOSTING }}"
+                                        {{ $selectedType === \App\Models\Plan::TYPE_HOSTING ? 'selected' : '' }}>
+                                        Hosting / WordPress (يتضمن cPanel)
+                                    </option>
+                                </select>
+                                <p class="text-xs text-gray-500 mt-1">يحدد إن كان الاشتراك يحتاج تفعيل استضافة أم يكتفي
+                                    بمنصة Palgoals.</p>
+                                @error('plan_type')
+                                    <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+
                             <!-- Monthly Price -->
                             <div class="col-span-12 md:col-span-6">
                                 <label class="block text-sm font-medium mb-1">Monthly Price (USD)</label>

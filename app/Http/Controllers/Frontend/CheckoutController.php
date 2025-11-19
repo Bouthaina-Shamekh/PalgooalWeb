@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Frontend;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProvisionSubscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -149,7 +150,10 @@ class CheckoutController extends Controller
         }
 
         try {
+            $provisionQueue = [];
+
             $result = DB::transaction(function () use (
+                &$provisionQueue,
                 $isDomainOnly,
                 $isNotTemplate,
                 $isNotPlan,
@@ -305,6 +309,9 @@ class CheckoutController extends Controller
                             }
 
                             $subscription = \App\Models\Subscription::create($subscriptionData);
+                            if ($subscription) {
+                                $provisionQueue[] = $subscription;
+                            }
                         }
 
                         \App\Models\InvoiceItem::create([
@@ -343,6 +350,10 @@ class CheckoutController extends Controller
 
                 return $order;
             });
+
+            foreach ($provisionQueue as $subscription) {
+                ProvisionSubscription::dispatch($subscription->id);
+            }
 
             // احفظ مرجعًا في الجلسة
             session([

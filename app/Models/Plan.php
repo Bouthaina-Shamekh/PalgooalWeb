@@ -8,9 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Plan extends Model
 {
+    public const TYPE_MULTI_TENANT = 'multi_tenant';
+    public const TYPE_HOSTING = 'hosting';
+
     protected $fillable = [
         'name',
         'slug',
+        'plan_type',
         'monthly_price_cents',
         'annual_price_cents',
         'server_id',
@@ -29,6 +33,16 @@ class Plan extends Model
         'monthly_price_cents' => 'integer',
         'annual_price_cents' => 'integer',
     ];
+
+    public function isHosting(): bool
+    {
+        return $this->plan_type === self::TYPE_HOSTING;
+    }
+
+    public function isMultiTenant(): bool
+    {
+        return $this->plan_type === self::TYPE_MULTI_TENANT;
+    }
 
     /**
      * Subscriptions related to this plan

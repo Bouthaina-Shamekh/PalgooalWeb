@@ -159,6 +159,7 @@ class PlanController extends Controller
             'server_id' => ['nullable', 'integer', 'exists:servers,id'],
             'server_package' => ['nullable', 'string', 'max:255'],
             'plan_category_id' => ['nullable', 'integer', 'exists:plan_categories,id'],
+            'plan_type' => ['required', Rule::in([Plan::TYPE_MULTI_TENANT, Plan::TYPE_HOSTING])],
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
         ]);
@@ -173,6 +174,7 @@ class PlanController extends Controller
         // slug and top-level name
         $data['slug'] = $data['slug'] ?: Str::slug($translation['name']);
         $data['name'] = $translation['name'];
+        $data['plan_type'] = $data['plan_type'] ?? Plan::TYPE_MULTI_TENANT;
 
         // If server_package is not provided, default it to the plan name so provisioning can use it
         if (empty($data['server_package'])) {
@@ -231,6 +233,7 @@ class PlanController extends Controller
             'server_id' => ['nullable', 'integer', 'exists:servers,id'],
             'server_package' => ['nullable', 'string', 'max:255'],
             'plan_category_id' => ['nullable', 'integer', 'exists:plan_categories,id'],
+            'plan_type' => ['required', Rule::in([Plan::TYPE_MULTI_TENANT, Plan::TYPE_HOSTING])],
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
         ]);
@@ -244,6 +247,7 @@ class PlanController extends Controller
 
         $data['slug'] = $data['slug'] ?: Str::slug($translation['name']);
         $data['name'] = $translation['name'];
+        $data['plan_type'] = $data['plan_type'] ?? $plan->plan_type ?? Plan::TYPE_MULTI_TENANT;
 
         // Ensure server_package defaults to the human-readable name when left empty
         if (empty($data['server_package'])) {

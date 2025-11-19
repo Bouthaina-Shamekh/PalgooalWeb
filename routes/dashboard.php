@@ -157,6 +157,10 @@ Route::group([
         '/subscriptions/{subscription}/sync',
         [SubscriptionController::class, 'syncWithProvider']
     )->name('subscriptions.sync');
+    Route::post(
+        '/subscriptions/{subscription}/provision',
+        [SubscriptionController::class, 'provision']
+    )->name('subscriptions.provision');
 
     Route::get(
         '/subscriptions/{subscription}/cpanel-login',

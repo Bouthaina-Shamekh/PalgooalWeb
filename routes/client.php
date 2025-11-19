@@ -3,10 +3,9 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Clinet\HomeController;
 use App\Http\Controllers\Clinet\DomainController;
+use App\Http\Controllers\Clinet\SubscriptionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
-
 
 Route::get('client/', function () {
     return redirect()->route('client.home');
@@ -17,18 +16,20 @@ Route::group([
     'prefix' => 'client',
     'as' => 'client.',
 ], function () {
-
     Route::get('/home', [HomeController::class, 'index'])->name('home');
     Route::get('/update_account_clinet', [HomeController::class, 'updateClient'])->name('update_account');
 
     Route::get('/search', [DomainController::class, 'search'])->name('domains.search');
-    Route::post('/search', [DomainController::class, 'processSearch'])->name('domains.search.process'); // Process domain search
-    Route::get('/buy', [DomainController::class, 'buy'])->name('domains.buy'); // Show buy form for available domain
-    Route::post('/purchase', [DomainController::class, 'purchase'])->name('domains.purchase');    // Process domain purchase
+    Route::post('/search', [DomainController::class, 'processSearch'])->name('domains.search.process');
+    Route::get('/buy', [DomainController::class, 'buy'])->name('domains.buy');
+    Route::post('/purchase', [DomainController::class, 'purchase'])->name('domains.purchase');
 
     Route::resource('domains', DomainController::class)->names('domains');
 
     Route::get('subscriptions', [HomeController::class, 'subscriptions'])->name('subscriptions');
+    Route::get('subscriptions/{subscription}', [SubscriptionController::class, 'show'])->name('subscriptions.show');
+    Route::post('subscriptions/{subscription}/sections/{section}', [SubscriptionController::class, 'updateSection'])
+        ->name('subscriptions.sections.update');
     Route::get('invoices', [HomeController::class, 'invoices'])->name('invoices');
 });
 

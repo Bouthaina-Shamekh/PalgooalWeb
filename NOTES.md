@@ -135,3 +135,18 @@
   - تثبيت مسار `/templates/{slug}` لعرض القالب عبر `TemplateController@show`.
   - توحيد أسماء الراوت الخاصة بالـ Checkout والـ Domains.
 - توثيق قواعد التسمية وتنظيم الصفحات في هذا الملف NOTES.md.
+### 2025-11-19
+
+- اعتماد جدول `subscriptions` كوحدة تينانت رسمية وإضافة الحقول الخاصة بالمحتوى والتفعيل (template, engine, subdomain، بيانات cPanel، حالة provisioning).
+- بناء خدمة التفعيل `TenantProvisioningService` مع Job `ProvisionSubscription`، وربطها بعملية الشراء (Checkout) وبزر إعادة التفعيل في لوحة الإدارة، مع إشعارات البريد والـNotifications.
+- إضافة حقل `plan_type` لتمييز خطط Multi-Tenant عن خطط الاستضافة/WordPress، وتحديث نماذج لوحة الإدارة (`plans/create`, `plans/edit`) ليتحكم بها الفريق من الواجهة.
+- إنشاء نظام المحتوى المخصص للتينانت (`subscription_pages`, `subscription_sections`, الترجمات) وخدمة `TemplateBlueprintService` مع blueprint افتراضي تحت `resources/blueprints/default.php`.
+- توفير صفحة إدارة الاشتراك داخل لوحة العميل (`client/subscriptions/{subscription}`) تعرض الصفحات والأقسام وتسمح بتعديل العناوين والمحتوى (نص عادي أو JSON اختياري).
+
+#### التطويرات القادمة
+
+- واجهة عرض فعلية لصفحات التينانت على الدومين/السّب دومين (public frontend) باستخدام بيانات `subscription_pages`.
+- أدوات تحرير أسهل داخل لوحة العميل (Page Builder مبسط مع معاينة مباشرة) وربما مكتبة عناصر جاهزة.
+- دعم أعضاء الفريق وصلاحياتهم لكل تينانت (مثلاً دعوة محررين).
+- إمكانية اختيار Blueprint مختلف لكل قالب، مع استيراد/تصدير المحتوى.
+- دمج خطوات استضافة WordPress (عند `plan_type = hosting`) مع تثبيت القالب والإضافات تلقائياً بعد إنشاء cPanel.

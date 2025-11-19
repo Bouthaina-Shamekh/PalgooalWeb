@@ -359,6 +359,23 @@
                                                             </button>
                                                         </form>
                                                     @endif
+                                                    <form
+                                                        action="{{ route('dashboard.subscriptions.provision', $sub) }}"
+                                                        method="POST">
+                                                        @csrf
+                                                        <button type="submit" role="menuitem"
+                                                            class="flex items-center gap-2 px-3 py-2 rounded hover:bg-gray-50 dark:hover:bg-gray-800 text-sm text-gray-700">
+                                                            <svg class="w-4 h-4 text-gray-500" viewBox="0 0 24 24"
+                                                                fill="none" stroke="currentColor"
+                                                                stroke-width="2">
+                                                                <path d="M12 6v6l4 2"></path>
+                                                                <path
+                                                                    d="M21 12a9 9 0 1 0-9 9 9 9 0 0 0 9-9Z">
+                                                                </path>
+                                                            </svg>
+                                                            إعادة التفعيل
+                                                        </button>
+                                                    </form>
                                                     <form action="{{ route('dashboard.subscriptions.sync', $sub) }}"
                                                         method="POST">
                                                         @csrf
@@ -416,7 +433,7 @@
                                             @endif
                                             @if ($syncAt)
                                                 <div class="text-xs text-gray-400 mt-1">
-                                                    {{ \Illuminate\Support\Facades\Carbon::parse($syncAt)->diffForHumans() }}
+                                                    {{ \Illuminate\Support\Carbon::parse($syncAt)->diffForHumans() }}
                                                 </div>
                                             @endif
                                         </td>

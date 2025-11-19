@@ -69,27 +69,12 @@
                                         <td>{{ $sub->server ? $sub->server->name : '-' }}</td>
                                         <td>{{ $sub->next_due_date }}</td>
                                         <td>{{ $sub->domain_name }}</td>
-                                        <td class="whitespace-nowrap">
-                                            <div class="flex flex-wrap gap-1 justify-center">
-                                                @if ($sub->domain_name)
-                                                    <a href="{{ route('dashboard.subscriptions.cpanel-login', $sub->id) }}"
-                                                        target="_blank"
-                                                        class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
-                                                        title="دخول cPanel">
-                                                        <i class="ti ti-login text-xl leading-none"></i>
-                                                    </a>
-                                                    <form
-                                                        action="{{ route('dashboard.subscriptions.install-wordpress', $sub->id) }}"
-                                                        method="POST" style="display:inline-block">
-                                                        @csrf
-                                                        <button class="btn btn-xs btn-warning"
-                                                            title="تنصيب ووردبريس تلقائي"
-                                                            onclick="return confirm('سيتم تنصيب ووردبريس تلقائيًا. هل أنت متأكد؟')">
-                                                            <i class="ti ti-brand-wordpress"></i>
-                                                        </button>
-                                                    </form>
-                                                @endif
-                                            </div>
+                                        <td class="whitespace-nowrap text-center">
+                                            <a href="{{ route('client.subscriptions.show', $sub) }}"
+                                                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-primary/10 text-primary hover:bg-primary/20 transition">
+                                                <i class="ti ti-edit text-base"></i>
+                                                إدارة
+                                            </a>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -104,3 +89,4 @@
         </div>
     </div>
 </x-client-layout>
+

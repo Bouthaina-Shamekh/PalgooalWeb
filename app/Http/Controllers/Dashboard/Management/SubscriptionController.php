@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Dashboard\Management;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProvisionSubscription;
 use App\Models\Subscription;
 use App\Models\Client;
 use App\Models\Plan;
@@ -62,6 +63,13 @@ class SubscriptionController extends Controller
             $error = 'بيانات السيرفر غير مكتملة.';
         }
         return back()->with('connection_result', $result ?: $error);
+    }
+
+    public function provision(Subscription $subscription)
+    {
+        ProvisionSubscription::dispatch($subscription->id, true);
+
+        return back()->with('toast_success', 'تم إرسال طلب تفعيل الاشتراك إلى قائمة الانتظار.');
     }
     public function index()
     {

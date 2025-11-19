@@ -146,7 +146,7 @@
                             class="w-56 rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
                             <option>palgoals.com</option>
                             <option>palgoals.store</option>
-                            <option>palgoals.site</option>
+                                <option>wpgoals.com</option>
                         </select>
                     </div>
                     <p class="text-xs text-gray-500">سنوفر لك Subdomain مجاني لبدء مشروعك بسرعة (يمكن الترقيه لاحقاً
