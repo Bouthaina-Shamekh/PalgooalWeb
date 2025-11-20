@@ -70,11 +70,19 @@
                                         <td>{{ $sub->next_due_date }}</td>
                                         <td>{{ $sub->domain_name }}</td>
                                         <td class="whitespace-nowrap text-center">
-                                            <a href="{{ route('client.subscriptions.show', $sub) }}"
-                                                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-primary/10 text-primary hover:bg-primary/20 transition">
-                                                <i class="ti ti-edit text-base"></i>
-                                                إدارة
-                                            </a>
+                                            <div class="flex flex-col items-center gap-1">
+                                                <a href="{{ route('client.subscriptions.show', $sub) }}"
+                                                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm bg-primary/10 text-primary hover:bg-primary/20 transition">
+                                                    <i class="ti ti-edit text-base"></i>
+                                                    إدارة
+                                                </a>
+                                                @if (app()->environment('local'))
+                                                    <a href="{{ route('tenant.preview', $sub) }}" target="_blank"
+                                                        class="text-xs text-gray-500 hover:text-primary transition">
+                                                        معاينة محلية
+                                                    </a>
+                                                @endif
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach

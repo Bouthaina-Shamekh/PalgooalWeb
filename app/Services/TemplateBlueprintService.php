@@ -44,6 +44,8 @@ class TemplateBlueprintService
                 foreach ($pageData['sections'] ?? [] as $sectionData) {
                     $section = $page->sections()->create([
                         'key' => $sectionData['key'] ?? null,
+                        'type' => $sectionData['type'] ?? ($sectionData['key'] ?? 'generic'),
+                        'variant' => $sectionData['variant'] ?? null,
                         'sort_order' => $sectionData['sort_order'] ?? 0,
                     ]);
 

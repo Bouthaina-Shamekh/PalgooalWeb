@@ -19,4 +19,11 @@ return [
     |--------------------------------------------------------------------------
     */
     'subdomain_max_length' => env('TENANCY_SUBDOMAIN_MAX_LENGTH', 24),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Primary marketing domain (requests here stay على المنصة الرئيسية)
+    |--------------------------------------------------------------------------
+    */
+    'primary_domain' => env('TENANCY_PRIMARY_DOMAIN', parse_url(env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?? 'localhost'),
 ];

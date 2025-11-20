@@ -30,6 +30,14 @@ Route::group([
     Route::get('subscriptions/{subscription}', [SubscriptionController::class, 'show'])->name('subscriptions.show');
     Route::post('subscriptions/{subscription}/sections/{section}', [SubscriptionController::class, 'updateSection'])
         ->name('subscriptions.sections.update');
+    Route::get('subscriptions/{subscription}/pages/{page}/builder', [\App\Http\Controllers\Clinet\PageBuilderController::class, 'builder'])
+        ->name('subscriptions.pages.builder');
+    Route::post('subscriptions/{subscription}/pages/{page}/sections/reorder', [\App\Http\Controllers\Clinet\PageBuilderController::class, 'reorder'])
+        ->name('subscriptions.pages.sections.reorder');
+    Route::post('subscriptions/{subscription}/pages/{page}/sections/add', [\App\Http\Controllers\Clinet\PageBuilderController::class, 'addSection'])
+        ->name('subscriptions.pages.sections.add');
+    Route::post('subscriptions/{subscription}/sections/{section}/update', [\App\Http\Controllers\Clinet\PageBuilderController::class, 'updateSection'])
+        ->name('client.subscriptions.sections.update');
     Route::get('invoices', [HomeController::class, 'invoices'])->name('invoices');
 });
 

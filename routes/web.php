@@ -8,8 +8,12 @@ use App\Http\Controllers\Frontend\TemplateReviewController;
 use App\Http\Controllers\Frontend\TestimonialSubmissionController;
 use App\Models\Language;
 use App\Models\Page;
+use App\Models\Plan;
 use App\Models\Portfolio;
+use App\Models\Subscription;
+use App\Models\SubscriptionPage;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\View;
 
 Route::middleware(['setLocale'])->group(function () {
 
@@ -154,8 +158,63 @@ Route::middleware(['setLocale'])->group(function () {
 
         return view('tamplate.page', ['page' => $page]);
     })
-        ->where('slug', '^(?!client|admin|dashboard|api|storage|change-locale|checkout|portfolio|invoices|bulk).*$')
-        ->name('frontend.page.show');
+    ->where('slug', '^(?!client|admin|dashboard|api|storage|change-locale|checkout|portfolio|invoices|bulk|tenant-preview).*$')
+    ->name('frontend.page.show');
+
+    if (app()->environment('local')) {
+        Route::get('/tenant-preview/{subscription}', function (Subscription $subscription) {
+            $subscription->loadMissing('plan');
+
+            if (
+                ! $subscription->plan
+                || $subscription->plan->plan_type !== Plan::TYPE_MULTI_TENANT
+                || $subscription->provisioning_status !== Subscription::PROVISIONING_ACTIVE
+            ) {
+                abort(404, 'Subscription is not an active multi-tenant.');
+            }
+
+            $page = SubscriptionPage::with(['translations', 'sections.translations'])
+                ->where('subscription_id', $subscription->id)
+                ->where('is_home', true)
+                ->firstOrFail();
+
+            View::share('tenantSubscription', $subscription);
+
+            return view('tenant.site', [
+                'subscription' => $subscription,
+                'page' => $page,
+            ]);
+        })->name('tenant.preview');
+
+        Route::get('/tenant-preview/{subscription}/{slug}', function (Subscription $subscription, string $slug) {
+            $subscription->loadMissing('plan');
+
+            if (
+                ! $subscription->plan
+                || $subscription->plan->plan_type !== Plan::TYPE_MULTI_TENANT
+                || $subscription->provisioning_status !== Subscription::PROVISIONING_ACTIVE
+            ) {
+                abort(404, 'Subscription is not an active multi-tenant.');
+            }
+
+            $page = SubscriptionPage::with(['translations', 'sections.translations'])
+                ->where('subscription_id', $subscription->id)
+                ->where(function ($query) use ($slug) {
+                    $query->where('slug', $slug)
+                        ->orWhereHas('translations', function ($translationQuery) use ($slug) {
+                            $translationQuery->where('slug', $slug);
+                        });
+                })
+                ->firstOrFail();
+
+            View::share('tenantSubscription', $subscription);
+
+            return view('tenant.site', [
+                'subscription' => $subscription,
+                'page' => $page,
+            ]);
+        })->name('tenant.preview.page');
+    }
 
     /*
     |--------------------------------------------------------------------------

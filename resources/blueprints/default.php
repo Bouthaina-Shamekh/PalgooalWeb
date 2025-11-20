@@ -3,92 +3,96 @@
 return [
     'pages' => [
         [
-            'slug' => 'home',
+            'slug' => 'restaurant-home',
             'is_home' => true,
             'translations' => [
-                'ar' => [
-                    'slug' => 'الرئيسية',
-                    'title' => 'ابدأ متجرك خلال دقائق',
-                    'content' => 'صفحة رئيسية افتراضية تحتوي على أقسام بطل وخدمات.',
-                ],
                 'en' => [
                     'slug' => 'home',
-                    'title' => 'Launch Your Site in Minutes',
-                    'content' => 'Default home page generated for new tenants.',
+                    'title' => 'The Finest Taste Restaurant',
+                ],
+                'ar' => [
+                    'slug' => 'الرئيسية',
+                    'title' => 'مطعم المذاق الأفضل',
                 ],
             ],
             'sections' => [
                 [
-                    'key' => 'hero',
+                    'key' => 'hero-block',
+                    'type' => 'hero',
+                    'variant' => 'restaurant',
                     'sort_order' => 1,
                     'translations' => [
-                        'ar' => [
-                            'title' => 'منصة Palgoals',
+                        'en' => [
+                            'title' => 'Where flavors meet stories',
                             'content' => [
-                                'subtitle' => 'قوالب احترافية متعددة اللغات',
-                                'cta' => 'ابدأ الآن',
+                                'subtitle' => 'Seasonal ingredients, chef-crafted menus, and warm hospitality.',
+                                'button_label' => 'Reserve a Table',
+                                'button_url' => '#menu',
+                                'image' => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836',
                             ],
                         ],
-                        'en' => [
-                            'title' => 'Palgoals Platform',
+                        'ar' => [
+                            'title' => 'مذاقات شرقية بلمسة عصرية',
                             'content' => [
-                                'subtitle' => 'Professional multilingual templates',
-                                'cta' => 'Get Started',
+                                'subtitle' => 'أطباق موسمية بمنتجات طازجة وخدمة دافئة.',
+                                'button_label' => 'احجز طاولتك',
+                                'button_url' => '#menu',
+                                'image' => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836',
                             ],
                         ],
                     ],
                 ],
                 [
-                    'key' => 'features',
+                    'key' => 'menu-block',
+                    'type' => 'menu',
+                    'variant' => 'two-column',
                     'sort_order' => 2,
                     'translations' => [
-                        'ar' => [
-                            'title' => 'مزايا رئيسية',
+                        'en' => [
+                            'title' => 'Chef selection',
                             'content' => [
-                                ['title' => 'متجاوب', 'description' => 'يعمل مع جميع الأجهزة'],
-                                ['title' => 'متعدد اللغات', 'description' => 'يدعم العربية والإنجليزية'],
+                                'items' => [
+                                    ['name' => 'Quinoa Garden Salad', 'description' => 'Herbs, citrus oil, roasted seeds.', 'price' => '$12'],
+                                    ['name' => 'Charred Lamb Ribs', 'description' => 'House glaze, grilled vegetables.', 'price' => '$25'],
+                                    ['name' => 'Vanilla Creme Brulee', 'description' => 'Torch caramel, Madagascar vanilla.', 'price' => '$10'],
+                                ],
                             ],
                         ],
-                        'en' => [
-                            'title' => 'Key Features',
+                        'ar' => [
+                            'title' => 'قائمة المذاقات',
                             'content' => [
-                                ['title' => 'Responsive', 'description' => 'Looks great on every device'],
-                                ['title' => 'Multilingual', 'description' => 'Supports Arabic and English'],
+                                'items' => [
+                                    ['name' => 'سلطة كينوا', 'description' => 'أعشاب مع زيت حمضي وبذور محمصة.', 'price' => '35₪'],
+                                    ['name' => 'ريش مشوية', 'description' => 'تتبيلة خاصة وخضار موسمية مشوية.', 'price' => '75₪'],
+                                    ['name' => 'كريم بروليه', 'description' => 'فانيلا مخملية مع طبقة كراميل.', 'price' => '28₪'],
+                                ],
                             ],
                         ],
                     ],
                 ],
-            ],
-        ],
-        [
-            'slug' => 'about',
-            'translations' => [
-                'ar' => [
-                    'slug' => 'من-نحن',
-                    'title' => 'عن منصتك',
-                    'content' => 'صفحة تعرّف الزوار على أعمالك وخدماتك.',
-                ],
-                'en' => [
-                    'slug' => 'about',
-                    'title' => 'About Your Business',
-                    'content' => 'Tell your visitors about your values and services.',
-                ],
-            ],
-            'sections' => [
                 [
-                    'key' => 'story',
-                    'sort_order' => 1,
+                    'key' => 'testimonials-block',
+                    'type' => 'testimonials',
+                    'sort_order' => 3,
                     'translations' => [
-                        'ar' => [
-                            'title' => 'قصتنا',
+                        'en' => [
+                            'title' => 'Guests say',
                             'content' => [
-                                'body' => 'نص افتراضي قابل للتخصيص من لوحة التحكم.',
+                                'items' => [
+                                    ['name' => 'Lina', 'text' => 'Flavors that feel like home.', 'rating' => 5],
+                                    ['name' => 'Karim', 'text' => 'Fast service and cozy ambience.', 'rating' => 4],
+                                    ['name' => 'Dana', 'text' => 'Our go-to place for celebrations.', 'rating' => 5],
+                                ],
                             ],
                         ],
-                        'en' => [
-                            'title' => 'Our Story',
+                        'ar' => [
+                            'title' => 'شهادات زوارنا',
                             'content' => [
-                                'body' => 'Sample text that tenant can edit from dashboard.',
+                                'items' => [
+                                    ['name' => 'ليان', 'text' => 'النكهات تعكس روح المكان.', 'rating' => 5],
+                                    ['name' => 'كريم', 'text' => 'خدمة سريعة وأجواء مريحة.', 'rating' => 4],
+                                    ['name' => 'دانا', 'text' => 'أفضل مكان لعشاء عائلي.', 'rating' => 5],
+                                ],
                             ],
                         ],
                     ],

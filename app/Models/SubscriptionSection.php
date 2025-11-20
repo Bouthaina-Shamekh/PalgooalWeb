@@ -11,7 +11,13 @@ class SubscriptionSection extends Model
     protected $fillable = [
         'subscription_page_id',
         'key',
+        'type',
+        'variant',
         'sort_order',
+    ];
+
+    protected $casts = [
+        'sort_order' => 'int',
     ];
 
     public function page(): BelongsTo

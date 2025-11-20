@@ -71,7 +71,7 @@
                             ?? $page->translations->first();
                     @endphp
                     <div class="border rounded-xl mb-4">
-                        <div class="px-4 py-3 bg-gray-50 rounded-t-xl flex items-center justify-between">
+                        <div class="px-4 py-3 bg-gray-50 rounded-t-xl flex items-center justify-between gap-3">
                             <div>
                                 <h4 class="font-semibold text-gray-800">
                                     {{ $pageTrans->title ?? $page->slug }}
@@ -83,9 +83,15 @@
                                     slug: {{ $pageTrans->slug ?? $page->slug }}
                                 </p>
                             </div>
-                            <span class="text-xs px-2 py-0.5 rounded-full {{ $page->is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-200 text-gray-600' }}">
-                                {{ $page->is_active ? 'نشطة' : 'معطلة' }}
-                            </span>
+                            <div class="flex items-center gap-2">
+                                <a href="{{ route('client.subscriptions.pages.builder', [$subscription, $page]) }}"
+                                    class="text-xs px-3 py-1 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition">
+                                    Page Builder
+                                </a>
+                                <span class="text-xs px-2 py-0.5 rounded-full {{ $page->is_active ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-200 text-gray-600' }}">
+                                    {{ $page->is_active ? 'نشطة' : 'معطلة' }}
+                                </span>
+                            </div>
                         </div>
                         <div class="p-4 space-y-4">
                             @forelse ($page->sections as $section)
