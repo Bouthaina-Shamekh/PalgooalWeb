@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Plan;
-use App\Models\Subscription;
+use App\Models\Tenancy\Subscription;
 use App\Models\User;
 use App\Notifications\AdminSubscriptionProvisioned;
 use App\Notifications\SubscriptionProvisionedNotification;

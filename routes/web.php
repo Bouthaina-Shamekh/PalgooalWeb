@@ -1,17 +1,17 @@
 <?php
 
-use App\Http\Controllers\Dashboard\Management\DomainSearchController;
-use App\Http\Controllers\Frontend\CartController;
-use App\Http\Controllers\Frontend\CheckoutController;
-use App\Http\Controllers\Frontend\TemplateController as FrontTemplateController;
-use App\Http\Controllers\Frontend\TemplateReviewController;
-use App\Http\Controllers\Frontend\TestimonialSubmissionController;
+use App\Http\Controllers\Admin\Management\DomainSearchController;
+use App\Http\Controllers\Front\CartController;
+use App\Http\Controllers\Front\CheckoutController;
+use App\Http\Controllers\Front\TemplateController as FrontTemplateController;
+use App\Http\Controllers\Front\TemplateReviewController;
+use App\Http\Controllers\Front\TestimonialSubmissionController;
 use App\Models\Language;
 use App\Models\Page;
 use App\Models\Plan;
 use App\Models\Portfolio;
-use App\Models\Subscription;
-use App\Models\SubscriptionPage;
+use App\Models\Tenancy\Subscription;
+use App\Models\Tenancy\SubscriptionPage;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 

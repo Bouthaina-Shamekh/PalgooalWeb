@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Subscription;
+use App\Models\Tenancy\Subscription;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 

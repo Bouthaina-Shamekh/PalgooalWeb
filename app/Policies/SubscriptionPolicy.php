@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Models\Subscription;
+use App\Models\Tenancy\Subscription;
 use App\Models\User;
 use App\Models\Client;
 

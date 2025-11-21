@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Storage;
+
+
+class HomeController extends Controller
+{
+    public function index()
+    {
+        return view('dashboard.index');
+    }
+    public function testimonials()
+    {
+        return view('dashboard.testimonials');
+    }
+    public function general_settings()
+    {
+        return view('dashboard.general-setting');
+    }
+    public function clients()
+    {
+        return view('dashboard.clients');
+    }
+
+
+    public function sites()
+    {
+        return view('dashboard.sites');
+    }
+
+    public function subscriptions()
+    {
+        return view('dashboard.subscriptions');
+    }
+    public function plans()
+    {
+        return view('dashboard.plans');
+    }
+}
+

@@ -3,27 +3,27 @@
 use Illuminate\Support\Facades\Route;
 
 // Dashboard Controllers
-use App\Http\Controllers\Dashboard\HomeController;
-use App\Http\Controllers\Dashboard\UserController;
-use App\Http\Controllers\Dashboard\LanguageController;
-use App\Http\Controllers\Dashboard\TranslationValueController;
-use App\Http\Controllers\Dashboard\ServicesController;
-use App\Http\Controllers\Dashboard\TestimonialsController;
-use App\Http\Controllers\Dashboard\TemplateController;
-use App\Http\Controllers\Dashboard\TemplateReviewController;
-use App\Http\Controllers\Dashboard\MediaController;
-use App\Http\Controllers\Dashboard\PortfolioController;
+use App\Http\Controllers\Admin\HomeController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\LanguageController;
+use App\Http\Controllers\Admin\TranslationValueController;
+use App\Http\Controllers\Admin\ServicesController;
+use App\Http\Controllers\Admin\TestimonialsController;
+use App\Http\Controllers\Admin\TemplateController;
+use App\Http\Controllers\Admin\TemplateReviewController;
+use App\Http\Controllers\Admin\MediaController;
+use App\Http\Controllers\Admin\PortfolioController;
 
 // Management Controllers
-use App\Http\Controllers\Dashboard\Management\DomainController;
-use App\Http\Controllers\Dashboard\Management\InvoiceController;
-use App\Http\Controllers\Dashboard\Management\OrderController as ManagementOrderController;
-use App\Http\Controllers\Dashboard\Management\PlanController;
-use App\Http\Controllers\Dashboard\Management\ServerController;
-use App\Http\Controllers\Dashboard\Management\SubscriptionController;
-use App\Http\Controllers\Dashboard\Management\DomainProviderController;
-use App\Http\Controllers\Dashboard\Management\DomainTldController;
-use App\Http\Controllers\Dashboard\Management\PlanCategoryController;
+use App\Http\Controllers\Admin\Management\DomainController;
+use App\Http\Controllers\Admin\Management\InvoiceController;
+use App\Http\Controllers\Admin\Management\OrderController as ManagementOrderController;
+use App\Http\Controllers\Admin\Management\PlanController;
+use App\Http\Controllers\Admin\Management\ServerController;
+use App\Http\Controllers\Admin\Management\SubscriptionController;
+use App\Http\Controllers\Admin\Management\DomainProviderController;
+use App\Http\Controllers\Admin\Management\DomainTldController;
+use App\Http\Controllers\Admin\Management\PlanCategoryController;
 
 // ─────────────────────────────────────────────
 // تحويل /admin إلى الصفحة الرئيسية للداشبورد

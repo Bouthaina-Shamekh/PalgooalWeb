@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Models\Subscription;
+use App\Models\Tenancy\Subscription;
 use App\Services\SubscriptionSyncService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
