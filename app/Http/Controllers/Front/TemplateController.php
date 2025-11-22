@@ -35,7 +35,7 @@ class TemplateController extends Controller
             'reviews.user:id,name',
         ]);
 
-        return view('tamplate.template-show', compact('template', 'translation'));
+        return view('front.pages.template-show', compact('template', 'translation'));
     }
 
     /**
@@ -66,7 +66,7 @@ class TemplateController extends Controller
 
         $embedAllowed = $sameOrigin || $isSubdomain;
 
-        return view('tamplate.view-templat', compact('template', 'translation', 'previewUrl', 'embedAllowed'));
+        return view('front.pages.view-template', compact('template', 'translation', 'previewUrl', 'embedAllowed'));
     }
 
     /**

@@ -1,3 +1,3 @@
 <x-dashboard-layout>
-    <livewire:dashboard.client-component />
+    <livewire:admin.clients.client-list />
 </x-dashboard-layout>

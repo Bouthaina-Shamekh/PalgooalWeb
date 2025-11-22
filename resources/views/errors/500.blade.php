@@ -1,4 +1,4 @@
-@include('layouts.partials.dashboard.head')
+@include('dashboard.layouts.partials..head')
     <div class="wrapper vh-100">
         <div class="align-items-center h-100 d-flex w-50 mx-auto">
             <div class="mx-auto text-center">
@@ -13,4 +13,5 @@
             </div>
         </div>
     </div>
-@include('layouts.partials.dashboard.end')
+@include('dashboard.layouts.partials..end')
+

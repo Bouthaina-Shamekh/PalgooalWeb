@@ -45,7 +45,7 @@ class DomainTldController extends Controller
 
         return redirect()
             ->route('dashboard.domain_tlds.index', ['provider_id' => $provider->id])
-            ->with('ok', "تمت المزامنة: أضفنا {$report['added']} وحدثنا {$report['updated']} • {$report['message']}");
+            ->with('ok', "طھظ…طھ ط§ظ„ظ…ط²ط§ظ…ظ†ط©: ط£ط¶ظپظ†ط§ {$report['added']} ظˆط­ط¯ط«ظ†ط§ {$report['updated']} â€¢ {$report['message']}");
     }
 
     public function updateSale(Request $req)
@@ -62,7 +62,7 @@ class DomainTldController extends Controller
             }
         });
 
-        return back()->with('ok', 'تم حفظ أسعار البيع.');
+        return back()->with('ok', 'طھظ… ط­ظپط¸ ط£ط³ط¹ط§ط± ط§ظ„ط¨ظٹط¹.');
     }
 
     protected function syncFromNamecheap(\App\Models\DomainProvider $p, array $onlyTlds = []): array
@@ -94,11 +94,11 @@ class DomainTldController extends Controller
         $tldsTouched = 0;
         $message = '';
 
-        // مغلّف XPath آمن: يضمن تسجيل namespace 'nc' على نفس السياق قبل كل استعلام
+        // ظ…ط؛ظ„ظ‘ظپ XPath ط¢ظ…ظ†: ظٹط¶ظ…ظ† طھط³ط¬ظٹظ„ namespace 'nc' ط¹ظ„ظ‰ ظ†ظپط³ ط§ظ„ط³ظٹط§ظ‚ ظ‚ط¨ظ„ ظƒظ„ ط§ط³طھط¹ظ„ط§ظ…
         $NS = 'http://api.namecheap.com/xml.response';
         $xp = function (\SimpleXMLElement $ctx, string $expr) use ($NS): array {
             $ctx->registerXPathNamespace('nc', $NS);
-            $res = @$ctx->xpath($expr);        // @ لمنع التحذيرات
+            $res = @$ctx->xpath($expr);        // @ ظ„ظ…ظ†ط¹ ط§ظ„طھط­ط°ظٹط±ط§طھ
             return is_array($res) ? $res : [];
         };
 
@@ -108,22 +108,22 @@ class DomainTldController extends Controller
                 ->get($endpoint, $params);
 
             if (!$resp->ok() || stripos((string)$resp->header('Content-Type'), 'xml') === false) {
-                return [null, "HTTP {$resp->status()} أو غير XML"];
+                return [null, "HTTP {$resp->status()} ط£ظˆ ط؛ظٹط± XML"];
             }
             $xml = @simplexml_load_string((string)$resp->body(), 'SimpleXMLElement', \LIBXML_NOCDATA | \LIBXML_NOERROR | \LIBXML_NOWARNING);
             return $xml ? [$xml, null] : [null, 'XML parse error'];
         };
 
-        // لو ما مرّرت قائمة، استخدم ما هو معلّم in_catalog
+        // ظ„ظˆ ظ…ط§ ظ…ط±ظ‘ط±طھ ظ‚ط§ط¦ظ…ط©طŒ ط§ط³طھط®ط¯ظ… ظ…ط§ ظ‡ظˆ ظ…ط¹ظ„ظ‘ظ… in_catalog
         if (empty($onlyTlds)) {
             $onlyTlds = \App\Models\DomainTld::where('provider_id', $p->id)
                 ->where('in_catalog', true)->pluck('tld')->all();
         }
         if (empty($onlyTlds)) {
-            return ['added' => 0, 'updated' => 0, 'tlds' => 0, 'message' => 'لا توجد TLDs مختارة (in_catalog).'];
+            return ['added' => 0, 'updated' => 0, 'tlds' => 0, 'message' => 'ظ„ط§ طھظˆط¬ط¯ TLDs ظ…ط®طھط§ط±ط© (in_catalog).'];
         }
 
-        // أداة استخراج (years, price, currency) من أي عقدة تسعير
+        // ط£ط¯ط§ط© ط§ط³طھط®ط±ط§ط¬ (years, price, currency) ظ…ظ† ط£ظٹ ط¹ظ‚ط¯ط© طھط³ط¹ظٹط±
         $extractPricing = function (\SimpleXMLElement $node): array {
             $a = $node->attributes();
 
@@ -133,12 +133,12 @@ class DomainTldController extends Controller
             $years = (int)preg_replace('/\D+/', '', $durationRaw);
             if ($years <= 0) $years = 1;
 
-            // Price: YourPrice > Price (Attribute أو Child)
+            // Price: YourPrice > Price (Attribute ط£ظˆ Child)
             $priceStr = (string)($a['YourPrice'] ?? $a['Price'] ?? '');
             if ($priceStr === '') $priceStr = (string)($node->YourPrice ?? $node->Price ?? '');
             $price = ($priceStr !== '' ? (float)$priceStr : null);
 
-            // Currency (اختياري)
+            // Currency (ط§ط®طھظٹط§ط±ظٹ)
             $curr = (string)($a['Currency'] ?? $node->Currency ?? '');
 
             return [$years, $price, $curr ?: null];
@@ -156,7 +156,7 @@ class DomainTldController extends Controller
                     $message .= " [{$tldWanted} {$action}: $err]";
                     continue;
                 }
-                // جهّز الـnamespace على الجذر قبل أي XPath
+                // ط¬ظ‡ظ‘ط² ط§ظ„ظ€namespace ط¹ظ„ظ‰ ط§ظ„ط¬ط°ط± ظ‚ط¨ظ„ ط£ظٹ XPath
                 $xp($xml, '.');
                 $statusOk = strcasecmp((string)($xml['Status'] ?? ''), 'OK') === 0;
                 if (!$statusOk) {
@@ -164,17 +164,17 @@ class DomainTldController extends Controller
                     continue;
                 }
 
-                // منتجات = TLDs
+                // ظ…ظ†طھط¬ط§طھ = TLDs
                 $products = $xp($xml, '//nc:Product');
                 if (empty($products)) {
-                    // fallback لو رد بدون namespace (نادر)
+                    // fallback ظ„ظˆ ط±ط¯ ط¨ط¯ظˆظ† namespace (ظ†ط§ط¯ط±)
                     $products = $xp($xml, '//Product');
                 }
                 if (empty($products)) continue;
 
                 DB::transaction(function () use ($products, $action, $p, &$added, &$updated, &$tldsTouched, $xp, $extractPricing) {
                     foreach ($products as $prod) {
-                        // سجل namespace على النود نفسها قبل أي xpath عليها
+                        // ط³ط¬ظ„ namespace ط¹ظ„ظ‰ ط§ظ„ظ†ظˆط¯ ظ†ظپط³ظ‡ط§ ظ‚ط¨ظ„ ط£ظٹ xpath ط¹ظ„ظٹظ‡ط§
                         $xp($prod, '.');
 
                         $nameAttr = $prod['Name'] ?? $prod['name'] ?? null;
@@ -187,10 +187,10 @@ class DomainTldController extends Controller
                         );
                         $tldsTouched++;
 
-                        // اجمع كل عقد التسعير المحتملة تحت المنتج
+                        // ط§ط¬ظ…ط¹ ظƒظ„ ط¹ظ‚ط¯ ط§ظ„طھط³ط¹ظٹط± ط§ظ„ظ…ط­طھظ…ظ„ط© طھط­طھ ط§ظ„ظ…ظ†طھط¬
                         $nodes = $xp($prod, './/nc:DurationRange|.//nc:Price');
                         if (empty($nodes)) {
-                            // fallback بدون namespace
+                            // fallback ط¨ط¯ظˆظ† namespace
                             $nodes = $xp($prod, './/DurationRange|.//Price');
                         }
 
@@ -206,7 +206,7 @@ class DomainTldController extends Controller
                                 'years'         => $years,
                             ]);
                             $ex = $pr->exists;
-                            $pr->cost = $cost; // نحدّث التكلفة فقط
+                            $pr->cost = $cost; // ظ†ط­ط¯ظ‘ط« ط§ظ„طھظƒظ„ظپط© ظپظ‚ط·
                             $pr->save();
                             $ex ? $updated++ : $added++;
 
@@ -226,7 +226,7 @@ class DomainTldController extends Controller
 
     protected function syncFromEnom(\App\Models\DomainProvider $p): array
     {
-        // اختر الـTLDs من الكتالوج أو ثبّت قائمة صغيرة كبداية
+        // ط§ط®طھط± ط§ظ„ظ€TLDs ظ…ظ† ط§ظ„ظƒطھط§ظ„ظˆط¬ ط£ظˆ ط«ط¨ظ‘طھ ظ‚ط§ط¦ظ…ط© طµط؛ظٹط±ط© ظƒط¨ط¯ط§ظٹط©
         $tlds = \App\Models\DomainTld::where('provider_id', $p->id)
             ->where('in_catalog', true)
             ->pluck('tld')->all();
@@ -235,7 +235,7 @@ class DomainTldController extends Controller
             $tlds = ['com', 'net', 'org', 'shop', 'xyz', 'live', 'news', 'rocks', 'ninja'];
         }
 
-        $client  = app(\App\Services\DomainProviders\EnomClient::class);
+        $client  = app(\App\Services\Domains\Clients\EnomClient::class);
         $added = 0;
         $updated = 0;
         $tldsTouched = 0;
@@ -271,11 +271,11 @@ class DomainTldController extends Controller
                         $row->save();
                     }
                 } else {
-                    // خزّن سطر تشخيصي مفيد يظهر لك في الفلاش
+                    // ط®ط²ظ‘ظ† ط³ط·ط± طھط´ط®ظٹطµظٹ ظ…ظپظٹط¯ ظٹط¸ظ‡ط± ظ„ظƒ ظپظٹ ط§ظ„ظپظ„ط§ط´
                     $reason = $r['reason'] ?? ($r['source'] ?? 'unknown');
                     $m = $r['message'] ?? 'no price';
                     $msgParts[] = "{$tld} {$act}: {$reason}" . ($m ? " ({$m})" : '');
-                    // نترك السعر كما هو (قد يكون موجودًا من مزامنة سابقة)
+                    // ظ†طھط±ظƒ ط§ظ„ط³ط¹ط± ظƒظ…ط§ ظ‡ظˆ (ظ‚ط¯ ظٹظƒظˆظ† ظ…ظˆط¬ظˆط¯ظ‹ط§ ظ…ظ† ظ…ط²ط§ظ…ظ†ط© ط³ط§ط¨ظ‚ط©)
                 }
             }
         }
@@ -287,8 +287,8 @@ class DomainTldController extends Controller
 
     public function saveCatalog(Request $req)
     {
-        $visible  = $req->input('visible_ids', []);            // الصفوف المعروضة في الصفحة الحالية
-        $selected = array_keys($req->input('catalog', []));    // المختارة في هذه الصفحة
+        $visible  = $req->input('visible_ids', []);            // ط§ظ„طµظپظˆظپ ط§ظ„ظ…ط¹ط±ظˆط¶ط© ظپظٹ ط§ظ„طµظپط­ط© ط§ظ„ط­ط§ظ„ظٹط©
+        $selected = array_keys($req->input('catalog', []));    // ط§ظ„ظ…ط®طھط§ط±ط© ظپظٹ ظ‡ط°ظ‡ ط§ظ„طµظپط­ط©
 
         if (!empty($visible)) {
             DomainTld::whereIn('id', $visible)->update(['in_catalog' => false]);
@@ -300,7 +300,7 @@ class DomainTldController extends Controller
         $providerId = (int)$req->input('provider_id');
         return redirect()
             ->route('dashboard.domain_tlds.index', array_filter(['provider_id' => $providerId ?: null]))
-            ->with('ok', 'تم تحديث كتالوج TLD للصفحة الحالية بنجاح.');
+            ->with('ok', 'طھظ… طھط­ط¯ظٹط« ظƒطھط§ظ„ظˆط¬ TLD ظ„ظ„طµظپط­ط© ط§ظ„ط­ط§ظ„ظٹط© ط¨ظ†ط¬ط§ط­.');
     }
 
     public function saveAll(Request $req)
@@ -337,7 +337,7 @@ class DomainTldController extends Controller
         $providerId = (int)$req->input('provider_id');
         return redirect()
             ->route('dashboard.domain_tlds.index', array_filter(['provider_id' => $providerId ?: null]))
-            ->with('ok', 'تم حفظ الكتالوج وأسعار البيع لهذه الصفحة.');
+            ->with('ok', 'طھظ… ط­ظپط¸ ط§ظ„ظƒطھط§ظ„ظˆط¬ ظˆط£ط³ط¹ط§ط± ط§ظ„ط¨ظٹط¹ ظ„ظ‡ط°ظ‡ ط§ظ„طµظپط­ط©.');
     }
 
     public function applyPricing(Request $req)
@@ -355,7 +355,7 @@ class DomainTldController extends Controller
             'visible_ids'      => ['array'],
             'years'            => ['nullable', 'integer', 'min:1', 'max:10'],
         ], [], [
-            'value' => 'قيمة التسعير',
+            'value' => 'ظ‚ظٹظ…ط© ط§ظ„طھط³ط¹ظٹط±',
         ]);
 
         $scope          = $v['scope'];
@@ -434,8 +434,8 @@ class DomainTldController extends Controller
             });
         });
 
-        $note = "حدّثنا {$updated} | تخطّينا بدون تكلفة {$skippedNoCost}" . ($overwrite ? '' : " | محمية {$skippedProtected}");
-        return back()->with('ok', "تم تطبيق التسعير تلقائيًا. {$note}");
+        $note = "ط­ط¯ظ‘ط«ظ†ط§ {$updated} | طھط®ط·ظ‘ظٹظ†ط§ ط¨ط¯ظˆظ† طھظƒظ„ظپط© {$skippedNoCost}" . ($overwrite ? '' : " | ظ…ط­ظ…ظٹط© {$skippedProtected}");
+        return back()->with('ok', "طھظ… طھط·ط¨ظٹظ‚ ط§ظ„طھط³ط¹ظٹط± طھظ„ظ‚ط§ط¦ظٹظ‹ط§. {$note}");
     }
 
     public function destroy(DomainTld $domainTld)
@@ -444,7 +444,7 @@ class DomainTldController extends Controller
             $domainTld->prices()->delete();
             $domainTld->delete();
         });
-        return back()->with('ok', 'تم حذف الـ TLD بنجاح.');
+        return back()->with('ok', 'طھظ… ط­ط°ظپ ط§ظ„ظ€ TLD ط¨ظ†ط¬ط§ط­.');
     }
 
     public function bulkDestroy(Request $req)
@@ -458,7 +458,8 @@ class DomainTldController extends Controller
             DomainTldPrice::whereIn('domain_tld_id', $ids)->delete();
             DomainTld::whereIn('id', $ids)->delete();
         });
-        return back()->with('ok', 'تم حذف العناصر المحددة.');
+        return back()->with('ok', 'طھظ… ط­ط°ظپ ط§ظ„ط¹ظ†ط§طµط± ط§ظ„ظ…ط­ط¯ط¯ط©.');
     }
 }
+
 

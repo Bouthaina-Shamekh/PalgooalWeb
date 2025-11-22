@@ -23,7 +23,7 @@ class DashboardLayout extends Component
      */
     public function render(): View|Closure|string
     {
-        return view('layouts.dashboard-layout', [
+        return view('dashboard.layouts.app', [
             'title' => $this->title,
         ]);
     }

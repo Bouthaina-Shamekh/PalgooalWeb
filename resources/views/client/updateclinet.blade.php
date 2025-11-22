@@ -1,3 +1,3 @@
 <x-client-layout>
-<livewire:account-client />
+<livewire:client.account.account-client />
 </x-client-layout>

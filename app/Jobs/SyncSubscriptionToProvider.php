@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Tenancy\Subscription;
-use App\Services\SubscriptionSyncService;
+use App\Services\Tenancy\SubscriptionSyncService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;

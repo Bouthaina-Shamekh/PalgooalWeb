@@ -5,34 +5,34 @@ namespace App\Http\Controllers\Admin\Management;
 use App\Http\Controllers\Controller;
 use App\Models\DomainProvider;
 use App\Models\DomainTldPrice;
-use App\Services\DomainProviders\EnomClient;
+use App\Services\Domains\Clients\EnomClient;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class DomainSearchController extends Controller
 {
-    /** صفحة بسيطة (اختياري) */
+    /** طµظپط­ط© ط¨ط³ظٹط·ط© (ط§ط®طھظٹط§ط±ظٹ) */
     public function page()
     {
         return view('domains.search');
     }
 
-    /** API: فحص توافر الدومينات + إرجاع أرخص سعر من كل المزوّدين (بدون كشف الأسماء) */
+    /** API: ظپط­طµ طھظˆط§ظپط± ط§ظ„ط¯ظˆظ…ظٹظ†ط§طھ + ط¥ط±ط¬ط§ط¹ ط£ط±ط®طµ ط³ط¹ط± ظ…ظ† ظƒظ„ ط§ظ„ظ…ط²ظˆظ‘ط¯ظٹظ† (ط¨ط¯ظˆظ† ظƒط´ظپ ط§ظ„ط£ط³ظ…ط§ط،) */
     public function check(Request $req)
     {
         $started = microtime(true);
 
-        // 1) تطبيع قائمة الدومينات المطلوبة
+        // 1) طھط·ط¨ظٹط¹ ظ‚ط§ط¦ظ…ط© ط§ظ„ط¯ظˆظ…ظٹظ†ط§طھ ط§ظ„ظ…ط·ظ„ظˆط¨ط©
         $domains = $this->normalizeDomains($req);
         if (empty($domains)) {
             return response()->json([
                 'ok'      => false,
-                'message' => 'يرجى إدخال اسم دومين صحيح.',
+                'message' => 'ظٹط±ط¬ظ‰ ط¥ط¯ط®ط§ظ„ ط§ط³ظ… ط¯ظˆظ…ظٹظ† طµط­ظٹط­.',
             ], 422);
         }
 
-        // 2) اختر مزوّد واحد للفحص السريع (نعطي أولوية لاسمشيپ)، بدون كشف اسمه للواجهة
+        // 2) ط§ط®طھط± ظ…ط²ظˆظ‘ط¯ ظˆط§ط­ط¯ ظ„ظ„ظپط­طµ ط§ظ„ط³ط±ظٹط¹ (ظ†ط¹ط·ظٹ ط£ظˆظ„ظˆظٹط© ظ„ط§ط³ظ…ط´ظٹظ¾)طŒ ط¨ط¯ظˆظ† ظƒط´ظپ ط§ط³ظ…ظ‡ ظ„ظ„ظˆط§ط¬ظ‡ط©
         $provider = DomainProvider::active()
             ->whereIn('type', ['namecheap', 'enom'])
             ->orderByRaw("FIELD(type,'namecheap','enom')")
@@ -41,11 +41,11 @@ class DomainSearchController extends Controller
         if (!$provider) {
             return response()->json([
                 'ok'      => false,
-                'message' => 'لا يوجد مزوّد دومينات فعّال.',
+                'message' => 'ظ„ط§ ظٹظˆط¬ط¯ ظ…ط²ظˆظ‘ط¯ ط¯ظˆظ…ظٹظ†ط§طھ ظپط¹ظ‘ط§ظ„.',
             ], 422);
         }
 
-        // 3) فحص التوافر فقط
+        // 3) ظپط­طµ ط§ظ„طھظˆط§ظپط± ظپظ‚ط·
         $check = $provider->type === 'namecheap'
             ? $this->namecheapCheck($provider, $domains)
             : $this->enomCheck($provider, $domains);
@@ -54,7 +54,7 @@ class DomainSearchController extends Controller
             $durationMs = (int) round((microtime(true) - $started) * 1000);
             return response()->json([
                 'ok'          => false,
-                'message'     => $check['message'] ?? 'تعذّر الفحص.',
+                'message'     => $check['message'] ?? 'طھط¹ط°ظ‘ط± ط§ظ„ظپط­طµ.',
                 'reason'      => $check['reason']  ?? 'provider_error',
                 'duration_ms' => $durationMs,
                 'results'     => [],
@@ -62,7 +62,7 @@ class DomainSearchController extends Controller
             ], 422);
         }
 
-        // 4) خرّج خريطة التوافر {domain => [available,is_premium, premium_price?]}
+        // 4) ط®ط±ظ‘ط¬ ط®ط±ظٹط·ط© ط§ظ„طھظˆط§ظپط± {domain => [available,is_premium, premium_price?]}
         $availability = [];
         foreach ($check['results'] ?? [] as $row) {
             $key = strtolower((string)($row['domain'] ?? ''));
@@ -75,7 +75,7 @@ class DomainSearchController extends Controller
                 ];
             }
         }
-        // أي نطاق لم يرجع من المزود، اعتبره غير متاح
+        // ط£ظٹ ظ†ط·ط§ظ‚ ظ„ظ… ظٹط±ط¬ط¹ ظ…ظ† ط§ظ„ظ…ط²ظˆط¯طŒ ط§ط¹طھط¨ط±ظ‡ ط؛ظٹط± ظ…طھط§ط­
         foreach ($domains as $d) {
             $k = strtolower($d);
             if (!isset($availability[$k])) {
@@ -83,20 +83,20 @@ class DomainSearchController extends Controller
             }
         }
 
-        // 5) أرخص سعر (sale ثم cost) لكل TLD من قاعدة البيانات (register/1y) عبر جميع المزوّدين الفعّالين
+        // 5) ط£ط±ط®طµ ط³ط¹ط± (sale ط«ظ… cost) ظ„ظƒظ„ TLD ظ…ظ† ظ‚ط§ط¹ط¯ط© ط§ظ„ط¨ظٹط§ظ†ط§طھ (register/1y) ط¹ط¨ط± ط¬ظ…ظٹط¹ ط§ظ„ظ…ط²ظˆظ‘ط¯ظٹظ† ط§ظ„ظپط¹ظ‘ط§ظ„ظٹظ†
         $tlds = array_unique(array_map(fn($d) => strtolower(pathinfo($d, PATHINFO_EXTENSION)), $domains));
         $bestPriceByTld = $this->bestPricesForTlds($tlds);
 
-        // 6) تركيب النتائج النهائية (بدون كشف اسم أي مزوّد)
+        // 6) طھط±ظƒظٹط¨ ط§ظ„ظ†طھط§ط¦ط¬ ط§ظ„ظ†ظ‡ط§ط¦ظٹط© (ط¨ط¯ظˆظ† ظƒط´ظپ ط§ط³ظ… ط£ظٹ ظ…ط²ظˆظ‘ط¯)
         $results = [];
         foreach ($domains as $domain) {
             $key = strtolower($domain);
             $tld = strtolower(pathinfo($domain, PATHINFO_EXTENSION));
             $availRow = $availability[$key];
 
-            // السعر المعروض:
-            // - إن كان Premium ونيم شيب أرسل سعر بريميوم → نعرضه كما هو (قد يختلف عن الجدول).
-            // - غير ذلك → نعرض أرخص سعر من جدولنا (sale ثم cost).
+            // ط§ظ„ط³ط¹ط± ط§ظ„ظ…ط¹ط±ظˆط¶:
+            // - ط¥ظ† ظƒط§ظ† Premium ظˆظ†ظٹظ… ط´ظٹط¨ ط£ط±ط³ظ„ ط³ط¹ط± ط¨ط±ظٹظ…ظٹظˆظ… â†’ ظ†ط¹ط±ط¶ظ‡ ظƒظ…ط§ ظ‡ظˆ (ظ‚ط¯ ظٹط®طھظ„ظپ ط¹ظ† ط§ظ„ط¬ط¯ظˆظ„).
+            // - ط؛ظٹط± ط°ظ„ظƒ â†’ ظ†ط¹ط±ط¶ ط£ط±ط®طµ ط³ط¹ط± ظ…ظ† ط¬ط¯ظˆظ„ظ†ط§ (sale ط«ظ… cost).
             $price = null;
             $currency = null;
 
@@ -124,10 +124,10 @@ class DomainSearchController extends Controller
 
         return response()->json([
             'ok'          => true,
-            'message'     => $check['message'] ?? 'تم.',
+            'message'     => $check['message'] ?? 'طھظ….',
             'reason'      => $check['reason']  ?? 'ok',
-            // لا نرجّع اسم مزوّد:
-            // 'provider' محذوف عمداً
+            // ظ„ط§ ظ†ط±ط¬ظ‘ط¹ ط§ط³ظ… ظ…ط²ظˆظ‘ط¯:
+            // 'provider' ظ…ط­ط°ظˆظپ ط¹ظ…ط¯ط§ظ‹
             'duration_ms' => $durationMs,
             'results'     => $results,
             'fetched_at'  => now()->toIso8601String(),
@@ -142,9 +142,9 @@ class DomainSearchController extends Controller
             $endpoint = $this->namecheapEndpoint($p);
             $params = [
                 'ApiUser'    => trim((string)$p->username),
-                'ApiKey'     => trim((string)$p->api_key),     // مفكوك تلقائيًا عبر casts
+                'ApiKey'     => trim((string)$p->api_key),     // ظ…ظپظƒظˆظƒ طھظ„ظ‚ط§ط¦ظٹظ‹ط§ ط¹ط¨ط± casts
                 'UserName'   => trim((string)$p->username),
-                'ClientIp'   => trim((string)$p->client_ip),   // يجب أن يكون مبيّضًا في لوحة Namecheap
+                'ClientIp'   => trim((string)$p->client_ip),   // ظٹط¬ط¨ ط£ظ† ظٹظƒظˆظ† ظ…ط¨ظٹظ‘ط¶ظ‹ط§ ظپظٹ ظ„ظˆط­ط© Namecheap
                 'Command'    => 'namecheap.domains.check',
                 'DomainList' => implode(',', $domains),
             ];
@@ -158,12 +158,12 @@ class DomainSearchController extends Controller
                 ->get($endpoint, $params);
 
             if (!$resp->ok() || stripos((string)$resp->header('Content-Type'), 'xml') === false) {
-                return ['ok' => false, 'message' => "HTTP {$resp->status()} أو استجابة غير XML", 'reason' => 'http_error'];
+                return ['ok' => false, 'message' => "HTTP {$resp->status()} ط£ظˆ ط§ط³طھط¬ط§ط¨ط© ط؛ظٹط± XML", 'reason' => 'http_error'];
             }
 
             $xml = @simplexml_load_string((string)$resp->body(), 'SimpleXMLElement', \LIBXML_NOCDATA | \LIBXML_NOWARNING | \LIBXML_NOERROR);
             if ($xml === false) {
-                return ['ok' => false, 'message' => 'تعذر تحليل XML', 'reason' => 'xml_parse_error'];
+                return ['ok' => false, 'message' => 'طھط¹ط°ط± طھط­ظ„ظٹظ„ XML', 'reason' => 'xml_parse_error'];
             }
 
             $xml->registerXPathNamespace('nc', 'http://api.namecheap.com/xml.response');
@@ -171,7 +171,7 @@ class DomainSearchController extends Controller
 
             if (strcasecmp($statusAttr, 'OK') !== 0) {
                 $err = $xml->xpath('//nc:Errors/nc:Error')[0] ?? null;
-                $msg = $err ? (string)$err : 'تعذّر تنفيذ الطلب.';
+                $msg = $err ? (string)$err : 'طھط¹ط°ظ‘ط± طھظ†ظپظٹط° ط§ظ„ط·ظ„ط¨.';
                 return ['ok' => false, 'message' => $msg, 'reason' => 'provider_error'];
             }
 
@@ -196,15 +196,15 @@ class DomainSearchController extends Controller
                     'domain'     => $domain,
                     'available'  => $available,
                     'is_premium' => $isPremium,
-                    'price'      => $price,     // فقط للبريميوم إن توفّر
+                    'price'      => $price,     // ظپظ‚ط· ظ„ظ„ط¨ط±ظٹظ…ظٹظˆظ… ط¥ظ† طھظˆظپظ‘ط±
                     'currency'   => $currency,
                 ];
             }
 
-            return ['ok' => true, 'results' => $out, 'reason' => 'ok', 'message' => 'تم.'];
+            return ['ok' => true, 'results' => $out, 'reason' => 'ok', 'message' => 'طھظ….'];
         } catch (\Throwable $e) {
             Log::error('Namecheap check exception', ['error' => $e->getMessage()]);
-            return ['ok' => false, 'message' => 'استثناء: ' . $e->getMessage(), 'reason' => 'exception'];
+            return ['ok' => false, 'message' => 'ط§ط³طھط«ظ†ط§ط،: ' . $e->getMessage(), 'reason' => 'exception'];
         }
     }
 
@@ -234,7 +234,7 @@ class DomainSearchController extends Controller
 
                 $r = $client->checkAvailability($p, $sld, $tld);
                 if (!empty($r['ok']) === false && isset($r['message'])) {
-                    return ['ok' => false, 'message' => $r['message'] ?? 'تعذّر الفحص.', 'reason' => $r['reason'] ?? 'provider_error'];
+                    return ['ok' => false, 'message' => $r['message'] ?? 'طھط¹ط°ظ‘ط± ط§ظ„ظپط­طµ.', 'reason' => $r['reason'] ?? 'provider_error'];
                 }
 
                 $out[] = [
@@ -246,10 +246,10 @@ class DomainSearchController extends Controller
                 ];
             }
 
-            return ['ok' => true, 'results' => $out, 'reason' => 'ok', 'message' => 'تم.'];
+            return ['ok' => true, 'results' => $out, 'reason' => 'ok', 'message' => 'طھظ….'];
         } catch (\Throwable $e) {
             Log::error('Enom check exception', ['error' => $e->getMessage()]);
-            return ['ok' => false, 'message' => 'استثناء: ' . $e->getMessage(), 'reason' => 'exception'];
+            return ['ok' => false, 'message' => 'ط§ط³طھط«ظ†ط§ط،: ' . $e->getMessage(), 'reason' => 'exception'];
         }
     }
 
@@ -306,7 +306,7 @@ class DomainSearchController extends Controller
 
     protected function isValidLabel(string $s): bool
     {
-        // 1..63، أحرف/أرقام/شرطة، لا يبدأ أو ينتهي بشرطة
+        // 1..63طŒ ط£ط­ط±ظپ/ط£ط±ظ‚ط§ظ…/ط´ط±ط·ط©طŒ ظ„ط§ ظٹط¨ط¯ط£ ط£ظˆ ظٹظ†طھظ‡ظٹ ط¨ط´ط±ط·ط©
         return (bool) preg_match('/^(?!-)[a-z0-9-]{1,63}(?<!-)$/', $s);
     }
 
@@ -315,7 +315,7 @@ class DomainSearchController extends Controller
         return (bool) preg_match('/^(?:[a-z]{2,63}|[a-z0-9.-]{2,63})$/', $tld);
     }
 
-    /** أقل سعر لكل TLD من جميع المزوّدين الفعّالين (register/1y)، بدون كشف أسماء */
+    /** ط£ظ‚ظ„ ط³ط¹ط± ظ„ظƒظ„ TLD ظ…ظ† ط¬ظ…ظٹط¹ ط§ظ„ظ…ط²ظˆظ‘ط¯ظٹظ† ط§ظ„ظپط¹ظ‘ط§ظ„ظٹظ† (register/1y)طŒ ط¨ط¯ظˆظ† ظƒط´ظپ ط£ط³ظ…ط§ط، */
     protected function bestPricesForTlds(array $tlds): array
     {
         if (empty($tlds)) return [];
@@ -339,10 +339,10 @@ class DomainSearchController extends Controller
 
         $best = [];
         foreach ($rows as $r) {
-            // نعتمد فقط المزوّدين الفعّالين و TLDs المفعّلة
+            // ظ†ط¹طھظ…ط¯ ظپظ‚ط· ط§ظ„ظ…ط²ظˆظ‘ط¯ظٹظ† ط§ظ„ظپط¹ظ‘ط§ظ„ظٹظ† ظˆ TLDs ط§ظ„ظ…ظپط¹ظ‘ظ„ط©
             if (!$r->is_active || !$r->enabled) continue;
 
-            // إن حبيت تقصرها على الموجود في الكتالوج فقط فعّل السطر التالي:
+            // ط¥ظ† ط­ط¨ظٹطھ طھظ‚طµط±ظ‡ط§ ط¹ظ„ظ‰ ط§ظ„ظ…ظˆط¬ظˆط¯ ظپظٹ ط§ظ„ظƒطھط§ظ„ظˆط¬ ظپظ‚ط· ظپط¹ظ‘ظ„ ط§ظ„ط³ط·ط± ط§ظ„طھط§ظ„ظٹ:
             // if (!$r->in_catalog) continue;
 
             $price = $r->sale ?? $r->cost;
@@ -360,4 +360,5 @@ class DomainSearchController extends Controller
         return $best;
     }
 }
+
 

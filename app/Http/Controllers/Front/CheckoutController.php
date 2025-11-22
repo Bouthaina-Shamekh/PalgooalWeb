@@ -15,7 +15,7 @@ class CheckoutController extends Controller
         $template = \App\Models\Template::find($template_id);
         $translation = $template?->translations()->where('locale', app()->getLocale())->first();
 
-        return view('tamplate.checkout', compact('template_id', 'template', 'translation'));
+        return view('front.pages.checkout', compact('template_id', 'template', 'translation'));
     }
 
     /**
@@ -42,7 +42,7 @@ class CheckoutController extends Controller
             $plan_translation = $plan?->translations()->where('locale', app()->getLocale())->first();
         }
 
-        return view('tamplate.checkout', compact('template_id', 'template', 'translation', 'items', 'plan_id', 'plan', 'plan_translation', 'plan_sub_type'));
+        return view('front.pages.checkout', compact('template_id', 'template', 'translation', 'items', 'plan_id', 'plan', 'plan_translation', 'plan_sub_type'));
     }
 
     /**

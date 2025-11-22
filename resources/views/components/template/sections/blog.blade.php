@@ -1,6 +1,6 @@
 @php
     use Illuminate\Support\Facades\Cache;
-    use App\Services\BlogFeedService;
+    use App\Services\Feeds\BlogFeedService;
 
     $blogs = Cache::remember('latest_blog_posts', now()->addMinutes(60), function () {
         return (new BlogFeedService())->getLatest(5);

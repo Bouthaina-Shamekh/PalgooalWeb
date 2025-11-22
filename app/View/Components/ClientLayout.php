@@ -23,6 +23,6 @@ class ClientLayout extends Component
      */
     public function render(): View|Closure|string
     {
-        return view('layouts.client-layout');
+        return view('client.layouts.app');
     }
 }

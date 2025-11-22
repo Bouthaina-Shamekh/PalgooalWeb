@@ -1,4 +1,4 @@
-@include('layouts.partials.dashboard.head', [
+@include('dashboard.layouts.partials..head', [
 'title' => __('Register'),
 ])
 
@@ -118,4 +118,5 @@
 
 </style>
 
-@include('layouts.partials.dashboard.end')
+@include('dashboard.layouts.partials..end')
+

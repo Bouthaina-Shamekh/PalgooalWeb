@@ -20,7 +20,7 @@
         ? $baseSeo->with($seo instanceof SeoMeta ? $seo->toArray() : (array) $seo)
         : $baseSeo;
 
-    $defaultSchema = trim(view('tamplate.layouts.schema')->render());
+    $defaultSchema = trim(view('front.layouts.partials.schema')->render());
     if ($defaultSchema !== '') {
         $existingSchema = $seoPayload->toArray()['schema'] ?? [];
         $existingSchema[] = $defaultSchema;
@@ -28,13 +28,13 @@
     }
 @endphp
 
-@include('tamplate.layouts.head', ['seo' => $seoPayload])
-@include('tamplate.layouts.header')
+@include('front.layouts.partials.head', ['seo' => $seoPayload])
+@include('front.layouts.partials.header')
 {{ $slot }}
 
 <!-- [ Footer ] start -->
-@include('tamplate.layouts.footer')
+@include('front.layouts.partials.footer')
 <!-- [ Footer ] end -->
 <!-- [ Customizer ] start -->
-@include('tamplate.layouts.end')
+@include('front.layouts.partials.end')
 <!-- [ Customizer ] end -->

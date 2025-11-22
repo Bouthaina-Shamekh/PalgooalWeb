@@ -34,7 +34,7 @@ Route::middleware(['setLocale'])->group(function () {
 
         view()->share('currentPage', $page);
 
-        return view('tamplate.page', ['page' => $page]);
+        return view('front.pages.page', ['page' => $page]);
     })->name('frontend.home');
 
     /*
@@ -68,7 +68,7 @@ Route::middleware(['setLocale'])->group(function () {
             ->orWhere('id', $slug)
             ->firstOrFail();
 
-        return view('tamplate.portfolio', ['portfolio' => $portfolio]);
+        return view('front.pages.portfolio', ['portfolio' => $portfolio]);
     })->name('portfolio.show');
 
     /*
@@ -100,7 +100,7 @@ Route::middleware(['setLocale'])->group(function () {
 
     // Domain-only checkout (no template binding)
     Route::get('/checkout/domains', function () {
-        return view('tamplate.checkout-domains');
+        return view('front.pages.checkout-domains');
     })->name('checkout.domains');
 
     Route::post(
@@ -109,7 +109,7 @@ Route::middleware(['setLocale'])->group(function () {
     )->name('checkout.domains.process');
 
     Route::get('/checkout/domains/success', function () {
-        return view('tamplate.checkout-domains-success');
+        return view('front.pages.checkout-domains-success');
     })->name('checkout.domains.success');
 
     /*
@@ -156,7 +156,7 @@ Route::middleware(['setLocale'])->group(function () {
 
         view()->share('currentPage', $page);
 
-        return view('tamplate.page', ['page' => $page]);
+        return view('front.pages.page', ['page' => $page]);
     })
     ->where('slug', '^(?!client|admin|dashboard|api|storage|change-locale|checkout|portfolio|invoices|bulk|tenant-preview).*$')
     ->name('frontend.page.show');

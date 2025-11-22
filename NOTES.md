@@ -150,3 +150,13 @@
 - دعم أعضاء الفريق وصلاحياتهم لكل تينانت (مثلاً دعوة محررين).
 - إمكانية اختيار Blueprint مختلف لكل قالب، مع استيراد/تصدير المحتوى.
 - دمج خطوات استضافة WordPress (عند `plan_type = hosting`) مع تثبيت القالب والإضافات تلقائياً بعد إنشاء cPanel.
+### 2025-11-21 - Structure/Namespaces
+
+- Controllers: moved dashboard controllers to `App\Http\Controllers\Admin\...`, fixed client folder name, front controllers under `App\Http\Controllers\Front`.
+- Tenancy models: moved subscription/site models to `app/Models/Tenancy/*` (`Subscription`, `SubscriptionPage`, `SubscriptionSection`, `SubscriptionSectionTranslation`, `Site`) and updated all usages to `App\Models\Tenancy\...`.
+- Admin views: dashboard layout/partials now under `resources/views/dashboard/layouts/**` with `@extends('dashboard.layouts.app')` and `dashboard.layouts.partials.*`.
+- Client views: client layout/partials under `resources/views/client/layouts/**` with `@extends('client.layouts.app')` and `client.layouts.partials.*`.
+- Front views: renamed namespace `tamplate.*` -> `front.*`, moved to `resources/views/front/**`, and updated controller/route view calls accordingly.
+
+
+

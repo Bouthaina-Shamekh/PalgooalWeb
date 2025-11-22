@@ -18,7 +18,7 @@ class TestimonialSubmissionController extends Controller
 
         abort_if($languages->isEmpty(), 404);
 
-        return view('tamplate.testimonials.submit', [
+        return view('front.testimonials.submit', [
             'languages' => $languages,
         ]);
     }
