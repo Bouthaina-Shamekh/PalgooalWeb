@@ -1,3 +1,3 @@
 <x-dashboard-layout>
-    <livewire:dashboard.header.header-manager />
+    <livewire:admin.header.header-manager />
 </x-dashboard-layout>

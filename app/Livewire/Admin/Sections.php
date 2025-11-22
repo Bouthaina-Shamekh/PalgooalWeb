@@ -383,7 +383,7 @@ class Sections extends Component
 
     public function render()
     {
-        return view('livewire.dashboard.sections', [
+        return view('livewire.admin.sections', [
             'languages'     => $this->languages,
             'sections'      => $this->sections,
             'availableKeys' => $this->availableKeys,

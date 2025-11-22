@@ -142,7 +142,7 @@ class HostingPlanSection extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.hosting-plans-section', [
+        return view('livewire.admin.sections.hosting-plans-section', [
             'availableCategories' => $this->availableCategories,
             'selectedCategory' => $this->selectedCategory,
             'previewPlansCount' => $this->previewPlansCount,

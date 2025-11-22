@@ -55,7 +55,7 @@ class CtaSection extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.cta-section');
+        return view('livewire.admin.sections.cta-section');
     }
 }
 

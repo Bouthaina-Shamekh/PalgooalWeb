@@ -64,7 +64,7 @@ class HomeWorksSection extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.home-works-section');
+        return view('livewire.admin.sections.home-works-section');
     }
 }
 

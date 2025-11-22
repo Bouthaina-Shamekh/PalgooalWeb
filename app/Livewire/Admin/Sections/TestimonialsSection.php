@@ -56,7 +56,7 @@ class TestimonialsSection extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.testimonials-section');
+        return view('livewire.admin.sections.testimonials-section');
     }
 }
 

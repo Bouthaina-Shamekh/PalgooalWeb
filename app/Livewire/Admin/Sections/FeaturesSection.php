@@ -66,7 +66,7 @@ class FeaturesSection extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.features-section');
+        return view('livewire.admin.sections.features-section');
     }
 }
  

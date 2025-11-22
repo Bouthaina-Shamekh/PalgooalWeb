@@ -62,7 +62,7 @@ class ServicesSection extends BaseSectionComponent
     
     public function render()
     {
-        return view('livewire.dashboard.sections.services-section');
+        return view('livewire.admin.sections.services-section');
     }
 }
 

@@ -155,7 +155,7 @@ class Features2Section extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.features-2', [
+        return view('livewire.admin.sections.features-2', [
             'backgroundPresets' => $this->backgroundPresets,
             'backgroundGroups'  => $this->backgroundGroups,
         ]);

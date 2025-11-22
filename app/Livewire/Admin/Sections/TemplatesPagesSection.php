@@ -59,7 +59,7 @@ class TemplatesPagesSection extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.templates-pages-section');
+        return view('livewire.admin.sections.templates-pages-section');
     }
 }
 

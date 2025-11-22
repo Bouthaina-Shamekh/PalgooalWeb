@@ -1,3 +1,3 @@
 <x-dashboard-layout>
-    <livewire:dashboard.portfolios />
+    <livewire:admin.portfolios />
 </x-dashboard-layout>

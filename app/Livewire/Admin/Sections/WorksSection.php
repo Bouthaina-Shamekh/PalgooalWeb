@@ -60,7 +60,7 @@ class WorksSection extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.works-section');
+        return view('livewire.admin.sections.works-section');
     }
 }
 

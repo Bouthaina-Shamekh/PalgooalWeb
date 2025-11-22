@@ -1,3 +1,3 @@
 <x-dashboard-layout>
-    <livewire:dashboard.template.category-management />
+    <livewire:admin.template.category-management />
 </x-dashboard-layout>

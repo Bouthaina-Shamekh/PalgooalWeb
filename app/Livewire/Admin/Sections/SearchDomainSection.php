@@ -59,7 +59,7 @@ class SearchDomainSection extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.search-domain-section');
+        return view('livewire.admin.sections.search-domain-section');
     }
 }
 

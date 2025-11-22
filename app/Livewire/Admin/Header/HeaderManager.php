@@ -363,7 +363,7 @@ class HeaderManager extends Component
 
     public function render()
     {
-        return view('livewire.dashboard.header.header-manager');
+        return view('livewire.admin.header.header-manager');
     }
 }
 

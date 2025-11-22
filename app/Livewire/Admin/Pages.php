@@ -214,6 +214,6 @@ class Pages extends Component
     }
     public function render()
     {
-        return view("livewire.dashboard.pages.{$this->view}");
+        return view("livewire.admin.pages.{$this->view}");
     }
 }

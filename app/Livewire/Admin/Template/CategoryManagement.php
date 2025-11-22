@@ -146,7 +146,7 @@ class CategoryManagement extends Component
 
     public function render()
     {
-        return view('livewire.dashboard.template.category-management');
+        return view('livewire.admin.template.category-management');
     }
 }
 

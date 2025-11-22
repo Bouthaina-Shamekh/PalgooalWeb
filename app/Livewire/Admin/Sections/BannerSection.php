@@ -59,7 +59,7 @@ class BannerSection extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.banner-section');
+        return view('livewire.admin.sections.banner-section');
     }
 }
 

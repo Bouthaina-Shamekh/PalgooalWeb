@@ -1,4 +1,4 @@
 <x-dashboard-layout> 
-    <livewire:dashboard.pages />
+    <livewire:admin.pages />
     @include('dashboard.partials.media-picker', ['modalId' => 'pageMediaModal'])
 </x-dashboard-layout>

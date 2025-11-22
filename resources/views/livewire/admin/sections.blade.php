@@ -26,70 +26,70 @@
     @foreach ($sections as $section)
         @switch($section->key)
             @case('hero')
-                <livewire:dashboard.sections.hero-section :section="$section" wire:key="hero-{{ $section->id }}" />
+                <livewire:admin.sections.hero-section :section="$section" wire:key="hero-{{ $section->id }}" />
             @break
 
             @case('features')
-                <livewire:dashboard.sections.features-section :section="$section" wire:key="features-{{ $section->id }}" />
+                <livewire:admin.sections.features-section :section="$section" wire:key="features-{{ $section->id }}" />
             @break
 
             @case('features-2')
-                <livewire:dashboard.sections.features2-section :section="$section" wire:key="features-2-{{ $section->id }}" />
+                <livewire:admin.sections.features2-section :section="$section" wire:key="features-2-{{ $section->id }}" />
             @break
 
             @case('features-3')
-                <livewire:dashboard.sections.features-section :section="$section" wire:key="features-3-{{ $section->id }}" />
+                <livewire:admin.sections.features-section :section="$section" wire:key="features-3-{{ $section->id }}" />
             @break
 
             @case('cta')
-                <livewire:dashboard.sections.cta-section :section="$section" wire:key="cta-{{ $section->id }}" />
+                <livewire:admin.sections.cta-section :section="$section" wire:key="cta-{{ $section->id }}" />
             @break
 
             @case('banner')
-                <livewire:dashboard.sections.banner-section :section="$section" wire:key="banner-{{ $section->id }}" />
+                <livewire:admin.sections.banner-section :section="$section" wire:key="banner-{{ $section->id }}" />
             @break
 
             @case('services')
-                <livewire:dashboard.sections.services-section :section="$section" wire:key="services-{{ $section->id }}" />
+                <livewire:admin.sections.services-section :section="$section" wire:key="services-{{ $section->id }}" />
             @break
 
             @case('works')
-                <livewire:dashboard.sections.works-section :section="$section" wire:key="works-{{ $section->id }}" />
+                <livewire:admin.sections.works-section :section="$section" wire:key="works-{{ $section->id }}" />
             @break
 
             @case('home-works')
-                <livewire:dashboard.sections.home-works-section :section="$section" wire:key="home-works-{{ $section->id }}" />
+                <livewire:admin.sections.home-works-section :section="$section" wire:key="home-works-{{ $section->id }}" />
             @break
 
             @case('templates')
-                <livewire:dashboard.sections.templates-section :section="$section" wire:key="templates-{{ $section->id }}" />
+                <livewire:admin.sections.templates-section :section="$section" wire:key="templates-{{ $section->id }}" />
             @break
 
             @case('testimonials')
-                <livewire:dashboard.sections.testimonials-section :section="$section"
+                <livewire:admin.sections.testimonials-section :section="$section"
                     wire:key="testimonials-{{ $section->id }}" />
             @break
 
             @case('blog')
-                <livewire:dashboard.sections.blogs-section :section="$section" wire:key="blog-{{ $section->id }}" />
+                <livewire:admin.sections.blogs-section :section="$section" wire:key="blog-{{ $section->id }}" />
             @break
 
             @case('search-domain')
-                <livewire:dashboard.sections.search-domain-section :section="$section"
+                <livewire:admin.sections.search-domain-section :section="$section"
                     wire:key="search-domain-{{ $section->id }}" />
             @break
 
             @case('hosting-plans')
-                <livewire:dashboard.sections.hosting-plan-section :section="$section"
+                <livewire:admin.sections.hosting-plan-section :section="$section"
                     wire:key="hosting-plans-{{ $section->id }}" />
             @break
 
             @case('faq')
-                <livewire:dashboard.sections.faq-section :section="$section" wire:key="faq-{{ $section->id }}" />
+                <livewire:admin.sections.faq-section :section="$section" wire:key="faq-{{ $section->id }}" />
             @break
 
             @case('templates-pages')
-                <livewire:dashboard.sections.templates-pages-section :section="$section"
+                <livewire:admin.sections.templates-pages-section :section="$section"
                     wire:key="templates-pages-{{ $section->id }}" />
             @break
 

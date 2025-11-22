@@ -174,7 +174,7 @@ class Testimonials extends Component
     public function render()
     {
         $testimonials = Testimonial::with('translations')->paginate($this->perPage);
-        return view('livewire.dashboard.testimonials', compact('testimonials'));
+        return view('livewire.admin.testimonials', compact('testimonials'));
     }
 }
 

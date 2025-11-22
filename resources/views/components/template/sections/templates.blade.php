@@ -15,13 +15,17 @@
         data-aos-delay="200">
         @forelse ($templates as $template)
             @php
-                $translation = $template->translation();
+                $translation = $template->translation() ?? $template->translations->first();
+                $slug = $translation->slug ?? $template->slug ?? $template->id;
+                $name = $translation->name ?? __('Template');
+                $description = $translation->description ?? '';
+                $previewUrl = $translation->preview_url ?? null;
             @endphp
-            <a href="/templates/{{ $translation->slug }}@if(request('domain'))?domain={{ urlencode(request('domain')) }}@endif" class="block h-full">
+            <a href="/templates/{{ $slug }}@if(request('domain'))?domain={{ urlencode(request('domain')) }}@endif" class="block h-full">
                 <article
                     class="h-full flex flex-col bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden relative group transition-transform duration-300 hover:-translate-y-2 hover:shadow-2xl border border-primary/10">
-                    <meta itemprop="name" content="{{ $translation->name }}">
-                    <meta itemprop="description" content="{{ $translation->description }}">
+                    <meta itemprop="name" content="{{ $name }}">
+                    <meta itemprop="description" content="{{ $description }}">
                     <meta itemprop="sku" content="template-{{ $template->id }}">
                     <meta itemprop="category" content="{{ $template->categoryTemplate->translation?->name }}">
                     <meta itemprop="brand" content="Palgoals">
@@ -29,7 +33,7 @@
                     <meta itemprop="price" content="{{ $template->discount_price ?? $template->price }}" />
                     <meta itemprop="availability" content="https://schema.org/InStock" />
                     <div class="relative">
-                        <img src="{{ asset('storage/' . $template->image) }}" alt="{{ $translation->name }}"
+                        <img src="{{ asset('storage/' . $template->image) }}" alt="{{ $name }}"
                             class="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105 group-hover:brightness-95" />
                         @if ($template->discount_price)
                             <div
@@ -44,7 +48,7 @@
                         @endif
                         <div
                             class="absolute top-2 right-2 rtl:right-auto rtl:left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            @if ($translation->preview_url)
+                            @if ($previewUrl)
                                 <button
                                     class="bg-white/80 dark:bg-white/20 hover:bg-primary text-primary hover:text-white rounded-full p-2 shadow-md transition"
                                     title="معاينة القالب" aria-label="معاينة القالب">
@@ -70,9 +74,9 @@
                         <div>
                             <h3
                                 class="text-suptitle font-bold text-primary/90 dark:text-white group-hover:text-secondary mb-2">
-                                {{ $translation->name }}</h3>
+                                {{ $name }}</h3>
                             <p class="text-primary/70 dark:text-gray-300 text-sm">
-                                {{ Str::limit(strip_tags($translation->description), 70) }}</p>
+                                {{ Str::limit(strip_tags($description), 70) }}</p>
                         </div>
                         <div class="mt-4 flex justify-between items-center text-sm font-bold">
 

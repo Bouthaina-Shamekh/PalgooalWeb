@@ -61,7 +61,7 @@ class BlogsSection extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.blogs-section');
+        return view('livewire.admin.sections.blogs-section');
     }
 }
 

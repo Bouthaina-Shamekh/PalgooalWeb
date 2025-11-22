@@ -92,7 +92,7 @@ class HeroSection extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.hero-section');
+        return view('livewire.admin.sections.hero-section');
     }
 }
 

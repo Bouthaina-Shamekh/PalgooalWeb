@@ -56,7 +56,7 @@ class TemplatesSection extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.templates-section');
+        return view('livewire.admin.sections.templates-section');
     }
 }
 

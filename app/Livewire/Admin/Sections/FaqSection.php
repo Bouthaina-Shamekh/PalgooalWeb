@@ -116,7 +116,7 @@ class FaqSection extends BaseSectionComponent
 
     public function render()
     {
-        return view('livewire.dashboard.sections.faq-section');
+        return view('livewire.admin.sections.faq-section');
     }
 }
 

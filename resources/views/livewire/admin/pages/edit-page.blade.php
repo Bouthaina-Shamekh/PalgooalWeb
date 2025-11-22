@@ -244,7 +244,7 @@
 
     @if ($editingPageId && $mode === 'edit')
         <div class="mt-10">
-            <livewire:dashboard.sections :pageId="$editingPageId" />
+            <livewire:admin.sections :pageId="$editingPageId" />
         </div>
     @endif
 </div>
