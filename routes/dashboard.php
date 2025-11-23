@@ -125,17 +125,20 @@ Route::group([
 
     Route::resource('domains', DomainController::class)->names('domains');
 
-    // ───── الميديا (Media Library) ─────
-    Route::get('media', function () {
+    // ───── صفحة واجهة مكتبة الميديا (Blade) ─────
+    Route::get('/media-library', function () {
         return view('dashboard.media');
     })->name('media');
 
-    Route::get('/media-index', [MediaController::class, 'index'])->name('media.index');
-    Route::post('/media', [MediaController::class, 'store'])->name('media.store');
-    Route::get('/media/{id}', [MediaController::class, 'show'])->name('media.show');
-    Route::get('/media/{id}/edit', [MediaController::class, 'edit'])->name('media.edit');
-    Route::put('/media/{id}', [MediaController::class, 'update'])->name('media.update');
-    Route::delete('/media/{id}', [MediaController::class, 'destroy'])->name('media.destroy');
+    // ───── API خاصة بالمكتبة (JSON) ─────
+    Route::prefix('media')->name('media.')->group(function () {
+        Route::get('/', [MediaController::class, 'index'])->name('index');
+        Route::post('/', [MediaController::class, 'store'])->name('store');
+        Route::get('/{id}', [MediaController::class, 'show'])->name('show');
+        Route::get('/{id}/edit', [MediaController::class, 'edit'])->name('edit');
+        Route::match(['put', 'patch'], '/{id}', [MediaController::class, 'update'])->name('update');
+        Route::delete('/{id}', [MediaController::class, 'destroy'])->name('destroy');
+    });
 
     // ───── قوالب ووردبريس (Templates) ─────
     Route::get('templates/category', function () {

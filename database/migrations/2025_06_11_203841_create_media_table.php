@@ -13,15 +13,40 @@ return new class extends Migration
     {
         Schema::create('media', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+
+            // Internal stored file name (usually hashed)
+            $table->string('file_name');
+
+            // Original file name as uploaded by the user
+            $table->string('file_original_name')->nullable();
+
+            // Relative path inside storage (e.g. media/2025/06/file.jpg)
             $table->string('file_path');
-            $table->string('mime_type');
-            $table->unsignedBigInteger('size');
-            $table->unsignedBigInteger('uploader_id')->nullable(); // يمكن ربطه بجدول users لاحقاً
+
+            // Basic technical info
+            $table->string('file_extension', 20)->nullable();
+            $table->string('mime_type')->nullable();
+            $table->unsignedBigInteger('size')->default(0); // in bytes
+
+            // Optional classification (image, video, audio, document, other)
+            $table->string('file_type', 50)->nullable();
+
+            // Disk name (public, s3, etc.)
+            $table->string('disk', 50)->default('public');
+
+            // Optional image dimensions
+            $table->unsignedInteger('width')->nullable();
+            $table->unsignedInteger('height')->nullable();
+
+            // Ownership / uploader
+            $table->unsignedBigInteger('uploader_id')->nullable()->index();
+
+            // SEO / content fields
             $table->string('alt')->nullable();
             $table->string('title')->nullable();
             $table->text('caption')->nullable();
             $table->text('description')->nullable();
+
             $table->timestamps();
         });
     }
