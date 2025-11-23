@@ -2,7 +2,7 @@
     use Illuminate\Support\Facades\Cache;
     use App\Services\Feeds\BlogFeedService;
 
-    $blogs = Cache::remember('latest_blog_posts', now()->addMinutes(60), function () {
+    $blogs = Cache::remember('latest_blog_posts_with_images', now()->addMinutes(60), function () {
         return (new BlogFeedService())->getLatest(5);
     });
     // $blogs = (new BlogFeedService())->getLatest(5);
@@ -22,10 +22,13 @@
   <div class="swiper blog-swiper">
     <div class="swiper-wrapper" data-aos="zoom-in" data-aos-delay="200">
       @foreach ($blogs as $blog)
+        @php
+            $imageUrl = $blog['image'] ?? asset('assets/tamplate/images/wordpress.webp');
+        @endphp
     <div class="swiper-slide flex justify-center h-full">
         <article class="blog-card group bg-white dark:bg-gray-900 dark:shadow-none dark:border-gray-700" itemscope itemtype="https://schema.org/BlogPosting">
             <div class="relative">
-                <img src="{{ $blog['image'] }}" loading="lazy" alt="صورة غلاف مقال: {{ $blog['title'] }}" class="blog-img">
+                <img src="{{ $imageUrl }}" loading="lazy" alt="صورة غلاف مقال: {{ $blog['title'] }}" class="blog-img">
                 <span class="blog-tag bg-primary/90 dark:bg-primary">{{ $blog['categories'][0] ?? 'مدونة' }}</span>
             </div>
             <div class="blog-content">

@@ -18,16 +18,20 @@
             @endphp
             <div class="swiper-wrapper">
                 @foreach ($works as $work)
+                    @php
+                        $translation = $work->translations->firstWhere('locale', app()->getLocale()) ?? $work->translations->first();
+                        $title = $translation->title ?? $work->title ?? 'بدون عنوان';
+                    @endphp
                     <a href="{{ route('portfolio.show', $work->slug ?? $work->id) }}"
                         class="swiper-slide flex flex-col items-center text-center animate-fade-in-up hover:scale-105 transition-transform duration-300">
                         <div class="w-full max-w-xs overflow-hidden rounded-lg">
-                            <img src="{{ asset('storage/' . $work->default_image) }}" role="img" alt="{{ $work->translations->firstWhere('locale', app()->getLocale())->title }}"
+                            <img src="{{ asset('storage/' . $work->default_image) }}" role="img" alt="{{ $title }}"
                                 class="rounded-lg hover:brightness-90 transition duration-300" loading="lazy"
                                 decoding="async" />
                         </div>
                         <h3
                             class="font-extrabold text-suptitle mt-4 animate-fade-in-up delay-150 text-center text-primary dark:text-white">
-                            {{ $work->translations->firstWhere('locale', app()->getLocale())->title }}</h3>
+                            {{ $title }}</h3>
                     </a>
                 @endforeach
             </div>
