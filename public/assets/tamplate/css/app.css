@@ -715,6 +715,12 @@
   .z-\[70\] {
     z-index: 70;
   }
+  .z-\[90\] {
+    z-index: 90;
+  }
+  .z-\[91\] {
+    z-index: 91;
+  }
   .z-\[100\] {
     z-index: 100;
   }
@@ -733,6 +739,9 @@
   .z-\[2000\] {
     z-index: 2000;
   }
+  .z-\[9998\] {
+    z-index: 9998;
+  }
   .z-\[9999\] {
     z-index: 9999;
   }
@@ -741,6 +750,9 @@
   }
   .z-\[10001\] {
     z-index: 10001;
+  }
+  .z-\[99999\] {
+    z-index: 99999;
   }
   .col-1 {
     grid-column: 1;
@@ -1174,6 +1186,9 @@
   .max-h-96 {
     max-height: calc(var(--spacing) * 96);
   }
+  .max-h-\[80vh\] {
+    max-height: 80vh;
+  }
   .max-h-\[90vh\] {
     max-height: 90vh;
   }
@@ -1188,6 +1203,9 @@
   }
   .min-h-6 {
     min-height: calc(var(--spacing) * 6);
+  }
+  .min-h-\[100px\] {
+    min-height: 100px;
   }
   .min-h-\[120px\] {
     min-height: 120px;
@@ -2093,6 +2111,9 @@
   }
   .border-indigo-200 {
     border-color: var(--color-indigo-200);
+  }
+  .border-indigo-400 {
+    border-color: var(--color-indigo-400);
   }
   .border-indigo-500 {
     border-color: var(--color-indigo-500);
@@ -5009,13 +5030,6 @@
       }
     }
   }
-  .hover\:text-slate-800 {
-    &:hover {
-      @media (hover: hover) {
-        color: var(--color-slate-800);
-      }
-    }
-  }
   .hover\:text-white {
     &:hover {
       @media (hover: hover) {
@@ -5529,11 +5543,6 @@
   .sm\:w-64 {
     @media (width >= 40rem) {
       width: calc(var(--spacing) * 64);
-    }
-  }
-  .sm\:w-72 {
-    @media (width >= 40rem) {
-      width: calc(var(--spacing) * 72);
     }
   }
   .sm\:w-80 {
@@ -6731,11 +6740,6 @@
       background-color: var(--color-sky-900);
     }
   }
-  .dark\:bg-slate-800 {
-    @media (prefers-color-scheme: dark) {
-      background-color: var(--color-slate-800);
-    }
-  }
   .dark\:bg-slate-900 {
     @media (prefers-color-scheme: dark) {
       background-color: var(--color-slate-900);
@@ -7003,11 +7007,6 @@
   .dark\:text-slate-200 {
     @media (prefers-color-scheme: dark) {
       color: var(--color-slate-200);
-    }
-  }
-  .dark\:text-slate-300 {
-    @media (prefers-color-scheme: dark) {
-      color: var(--color-slate-300);
     }
   }
   .dark\:text-slate-400 {

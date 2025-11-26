@@ -1,6 +1,6 @@
 @php
-    $testimonial = $testimonial ?? $feedback ?? null;
-    $testimonialTranslations = $testimonialTranslations ?? $feedbackTranslations ?? [];
+    $testimonial = $testimonial ?? ($feedback ?? null);
+    $testimonialTranslations = $testimonialTranslations ?? ($feedbackTranslations ?? []);
 @endphp
 
 {{-- Testimonial Image --}}
@@ -12,7 +12,62 @@
     'supportedFormatsText' => 'الصيغ المدعومة: JPG, PNG, SVG',
 ]) --}}
 
-@include('dashboard.partials.media-picker')
+
+{{-- مثال داخل أي فورم في لوحة التحكم --}}
+{{-- Testimonial Image (Media Picker الجديد بنفس منطق القديم) --}}
+@php
+    // القيمة الحالية القادمة من الداتابيس أو من old()
+    $currentImageValue = old('image_path', $testimonial?->image ?? null);
+@endphp
+
+<div class="col-span-6">
+    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 h-full space-y-3">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+            صورة العميل
+        </label>
+
+        {{-- هذا الـ input هو نفسه fieldName القديم: image_path --}}
+        <input
+            type="hidden"
+            id="featured_image_id"
+            name="image_path"
+            value="{{ $currentImageValue }}">
+
+        {{-- زر فتح مكتبة الوسائط --}}
+        <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 btn-open-media-picker"
+            data-target-input="featured_image_id"
+            data-target-preview="featured_image_preview"
+            data-multiple="false">
+            اختر أو حمّل صورة العميل من مكتبة الوسائط
+        </button>
+
+        <p class="text-[11px] text-gray-400">
+            الصيغ المدعومة: JPG, PNG, SVG
+        </p>
+
+        {{-- منطقة المعاينة --}}
+        <div id="featured_image_preview" class="mt-2 flex flex-wrap gap-2">
+            @if ($currentImageValue)
+                <div class="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                    <img
+                        src="{{ $currentImageValue }}"
+                        alt="صورة العميل"
+                        class="w-full h-full object-cover">
+                </div>
+            @endif
+        </div>
+
+        @error('image_path')
+            <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
+        @enderror
+    </div>
+</div>
+
+
+
+
 
 {{-- Display Order --}}
 <div class="col-span-6">
@@ -25,9 +80,8 @@
             </svg>
             ترتيب الظهور
         </label>
-        <input type="number" name="order" min="1"
-            value="{{ old('order', $testimonial?->order ?? 1) }}" class="form-control"
-            placeholder="مثال: 1 للظهور أولاً">
+        <input type="number" name="order" min="1" value="{{ old('order', $testimonial?->order ?? 1) }}"
+            class="form-control" placeholder="مثال: 1 للظهور أولاً">
         <p class="text-xs text-gray-500 mt-2">استخدم أرقامًا متسلسلة للتحكم في ترتيب بطاقات الشهادات.</p>
         @error('order')
             <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
@@ -65,8 +119,7 @@
     <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 h-full">
         <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
             <svg class="w-5 h-5 ml-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M5 13l4 4L19 7">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7">
                 </path>
             </svg>
             حالة النشر
@@ -84,7 +137,8 @@
                 </span>
             </label>
         </div>
-        <p class="text-xs text-gray-500 mt-2">قم بإلغاء التحديد لإبقاء التقييم في وضع قيد المراجعة حتى يتم اعتماده لاحقاً.</p>
+        <p class="text-xs text-gray-500 mt-2">قم بإلغاء التحديد لإبقاء التقييم في وضع قيد المراجعة حتى يتم اعتماده
+            لاحقاً.</p>
     </div>
 </div>
 @php
@@ -129,7 +183,8 @@
                     $code = $lang->code;
                     $hasLanguageError = $languageErrorMap[$code] ?? false;
                     $isDefaultActive = $firstErrorLang ? $firstErrorLang === $code : $loop->first;
-                    $tabClasses = 'lang-tab lang-tab-btn px-4 py-3 rounded-t-lg transition-all duration-200 focus:outline-none whitespace-nowrap hover:bg-gray-50 ';
+                    $tabClasses =
+                        'lang-tab lang-tab-btn px-4 py-3 rounded-t-lg transition-all duration-200 focus:outline-none whitespace-nowrap hover:bg-gray-50 ';
 
                     if ($isDefaultActive) {
                         $tabClasses .= $hasLanguageError
@@ -144,7 +199,8 @@
                 <button type="button" onclick="switchLanguageTab('{{ $code }}')"
                     onkeydown="handleTabKeydown(event, '{{ $code }}')" id="lang-tab-{{ $code }}"
                     role="tab" aria-controls="lang-panel-{{ $code }}"
-                    aria-selected="{{ $isDefaultActive ? 'true' : 'false' }}" tabindex="{{ $isDefaultActive ? '0' : '-1' }}"
+                    aria-selected="{{ $isDefaultActive ? 'true' : 'false' }}"
+                    tabindex="{{ $isDefaultActive ? '0' : '-1' }}"
                     aria-invalid="{{ $hasLanguageError ? 'true' : 'false' }}" data-lang-code="{{ $code }}"
                     data-has-error="{{ $hasLanguageError ? 'true' : 'false' }}" class="{{ trim($tabClasses) }}">
                     <div class="lang-tab-label flex items-center space-x-2 rtl:space-x-reverse">
@@ -154,7 +210,8 @@
                         </div>
                         <span>{{ $lang->native }}</span>
                         @if ($hasLanguageError)
-                            <span class="lang-error-indicator inline-flex items-center gap-1 text-xs font-semibold text-red-600">
+                            <span
+                                class="lang-error-indicator inline-flex items-center gap-1 text-xs font-semibold text-red-600">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z"></path>
@@ -163,8 +220,8 @@
                             </span>
                         @endif
                         @if ($isDefaultActive)
-                            <svg class="lang-checkmark w-4 h-4 {{ $hasLanguageError ? 'text-red-500' : 'text-indigo-500' }}" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
+                            <svg class="lang-checkmark w-4 h-4 {{ $hasLanguageError ? 'text-red-500' : 'text-indigo-500' }}"
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M5 13l4 4L19 7"></path>
                             </svg>
@@ -214,8 +271,8 @@
                                 </svg>
                                 نص التقييم
                             </label>
-                            <textarea rows="4" name="testimonialTranslations[{{ $lang->code }}][feedback]" class="form-control min-h-[120px]"
-                                placeholder="اكتب التقييم">{{ old('testimonialTranslations.' . $lang->code . '.feedback', $translation['feedback'] ?? '') }}</textarea>
+                            <textarea rows="4" name="testimonialTranslations[{{ $lang->code }}][feedback]"
+                                class="form-control min-h-[120px]" placeholder="اكتب التقييم">{{ old('testimonialTranslations.' . $lang->code . '.feedback', $translation['feedback'] ?? '') }}</textarea>
                             @error('testimonialTranslations.' . $lang->code . '.feedback')
                                 <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
                             @enderror
@@ -254,12 +311,12 @@
         <a href="{{ route('dashboard.testimonials.index') }}"
             class="inline-flex items-center px-8 py-3 bg-gray-500 hover:bg-gray-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-gray-300">
             <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                </path>
             </svg>
             إلغاء
         </a>
-        <button type="submit"
-            class="inline-flex items-center px-8 py-3 btn btn-primary">
+        <button type="submit" class="inline-flex items-center px-8 py-3 btn btn-primary">
             <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
             </svg>
@@ -289,15 +346,19 @@
 
                 if (isActive) {
                     if (hasError) {
-                        tab.classList.add('bg-red-50', 'text-red-700', 'border-b-2', 'border-red-500', 'font-semibold', 'focus:ring-red-400');
+                        tab.classList.add('bg-red-50', 'text-red-700', 'border-b-2', 'border-red-500', 'font-semibold',
+                            'focus:ring-red-400');
                     } else {
-                        tab.classList.add('bg-white', 'text-indigo-600', 'border-b-2', 'border-indigo-500', 'font-semibold', 'focus:ring-indigo-400');
+                        tab.classList.add('bg-white', 'text-indigo-600', 'border-b-2', 'border-indigo-500',
+                            'font-semibold', 'focus:ring-indigo-400');
                     }
                 } else {
                     if (hasError) {
-                        tab.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200', 'focus:ring-red-400');
+                        tab.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200',
+                        'focus:ring-red-400');
                     } else {
-                        tab.classList.add('bg-gray-100', 'text-gray-600', 'border-transparent', 'focus:ring-indigo-400');
+                        tab.classList.add('bg-gray-100', 'text-gray-600', 'border-transparent',
+                        'focus:ring-indigo-400');
                     }
                 }
             }
@@ -327,7 +388,9 @@
                     const label = activeTab.querySelector('.lang-tab-label');
                     if (label && !label.querySelector('.lang-checkmark')) {
                         const checkIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                        checkIcon.setAttribute('class', `lang-checkmark w-4 h-4 ${activeTab.dataset.hasError === 'true' ? 'text-red-500' : 'text-indigo-500'}`);
+                        checkIcon.setAttribute('class',
+                            `lang-checkmark w-4 h-4 ${activeTab.dataset.hasError === 'true' ? 'text-red-500' : 'text-indigo-500'}`
+                            );
                         checkIcon.setAttribute('fill', 'none');
                         checkIcon.setAttribute('stroke', 'currentColor');
                         checkIcon.setAttribute('viewBox', '0 0 24 24');
@@ -384,7 +447,8 @@
 
             document.addEventListener('DOMContentLoaded', () => {
                 const saved = localStorage.getItem(storageKey);
-                const initial = firstErrorLang || (saved && tabIds.includes(saved) ? saved : (defaultLang || tabIds[0]));
+                const initial = firstErrorLang || (saved && tabIds.includes(saved) ? saved : (defaultLang ||
+                    tabIds[0]));
                 if (initial) {
                     switchLanguageTab(initial);
                 }
@@ -392,7 +456,3 @@
         })();
     </script>
 @endpush
-
-
-
-

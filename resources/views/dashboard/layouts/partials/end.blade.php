@@ -47,6 +47,14 @@
 @livewireScripts
 {{-- <script src="{{asset('assets/dashboard/Sortable.min.js')}}"></script> --}}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    window.MEDIA_CONFIG = window.MEDIA_CONFIG || {};
+    window.MEDIA_CONFIG.baseUrl = window.MEDIA_CONFIG.baseUrl || "{{ url('admin/media') }}";
+    window.MEDIA_CONFIG.csrfToken = window.MEDIA_CONFIG.csrfToken || "{{ csrf_token() }}";
+</script>
 
+<script src="{{ asset('assets/dashboard/js/media-picker.js') }}" defer></script>
+
+@include('dashboard.partials.media-picker')
 </body>
 </html>
