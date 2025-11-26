@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Storage;
+use App\Models\User;
+
 
 class Media extends Model
 {
@@ -109,14 +111,24 @@ class Media extends Model
      */
     public function scopeSearch($query, ?string $term)
     {
-        if (!$term) {
-            return $query;
-        }
+        if (!$term) return $query;
 
         return $query->where(function ($q) use ($term) {
             $q->where('file_original_name', 'LIKE', "%{$term}%")
+                ->orWhere('file_name', 'LIKE', "%{$term}%")
                 ->orWhere('title', 'LIKE', "%{$term}%")
-                ->orWhere('caption', 'LIKE', "%{$term}%");
+                ->orWhere('caption', 'LIKE', "%{$term}%")
+                ->orWhere('description', 'LIKE', "%{$term}%");
         });
+    }
+
+    public function detectType()
+    {
+        if (str_starts_with($this->mime_type, 'image/')) return 'image';
+        if (str_starts_with($this->mime_type, 'video/')) return 'video';
+        if (str_starts_with($this->mime_type, 'audio/')) return 'audio';
+        if ($this->file_extension === 'pdf') return 'document';
+
+        return 'other';
     }
 }

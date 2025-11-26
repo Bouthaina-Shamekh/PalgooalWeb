@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\MediaResource;
 use App\Models\Media;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -14,35 +15,53 @@ class MediaController extends Controller
     /**
      * عرض قائمة الوسائط (مع دعم الفلترة والبحث والـ pagination).
      *
-     * Query params مقترحة:
+     * Query params:
      * - type=image|video|document|other
-     * - q=term (search)
+     * - search=term أو q=term
      * - per_page=40
      */
     public function index(Request $request)
     {
-        $query = Media::query()->latest();
-
-        // فلترة حسب نوع الميديا (image/video/document/other)
-        if ($type = $request->get('type')) {
-            $query->where('file_type', $type);
-        }
-
-        // بحث بسيط بالاسم الأصلي أو العنوان أو الكابشن
-        if ($term = $request->get('q')) {
-            $query->where(function ($q) use ($term) {
-                $q->where('file_original_name', 'LIKE', "%{$term}%")
-                    ->orWhere('title', 'LIKE', "%{$term}%")
-                    ->orWhere('caption', 'LIKE', "%{$term}%");
-            });
+        // لو الطلب عادي من المتصفح → رجّع صفحة Blade
+        if (! $request->wantsJson()) {
+            return view('dashboard.media');
         }
 
         $perPage = (int) $request->get('per_page', 40);
         $perPage = $perPage > 0 && $perPage <= 100 ? $perPage : 40;
 
-        $media = $query->paginate($perPage);
+        $query = Media::query()->latest();
 
-        return response()->json($media);
+        // فلترة حسب نوع الميديا (image/video/document/other)
+        if ($type = $request->get('type')) {
+            $query->where('file_type', $type);
+            // أو لو تحب تستخدم الـ scope:
+            // $query->ofType($type);
+        }
+
+        // بحث: ندعم search و q للتوافق مع الواجهة الحالية/القديمة
+        $term = $request->get('search') ?? $request->get('q');
+
+        if ($term) {
+            $query->where(function ($q) use ($term) {
+                $q->where('file_original_name', 'LIKE', "%{$term}%")
+                    ->orWhere('file_name', 'LIKE', "%{$term}%")
+                    ->orWhere('title', 'LIKE', "%{$term}%")
+                    ->orWhere('caption', 'LIKE', "%{$term}%")
+                    ->orWhere('description', 'LIKE', "%{$term}%");
+            });
+
+            // أو لو حاب، ممكن تستخدم scopeSearch في الـ Model:
+            // $query->search($term);
+        }
+
+        $paginator = $query->paginate($perPage);
+
+        // نحافظ على شكل الـ pagination كما هو،
+        // لكن نمرر كل عنصر على MediaResource
+        $paginator = $paginator->through(fn($media) => new MediaResource($media));
+
+        return response()->json($paginator);
     }
 
     /**
@@ -65,7 +84,9 @@ class MediaController extends Controller
                 $uploaded[] = $this->saveMediaFile($file);
             }
 
-            return response()->json(['uploaded' => $uploaded], 201);
+            return response()->json([
+                'uploaded' => MediaResource::collection(collect($uploaded)),
+            ], 201);
         }
 
         // رفع مفرد: image
@@ -76,7 +97,7 @@ class MediaController extends Controller
 
             $media = $this->saveMediaFile($request->file('image'));
 
-            return response()->json($media, 201);
+            return response()->json(new MediaResource($media), 201);
         }
 
         // لا يوجد ملفات مرسلة
@@ -92,7 +113,7 @@ class MediaController extends Controller
     {
         $media = Media::findOrFail($id);
 
-        return response()->json($media);
+        return response()->json(new MediaResource($media));
     }
 
     /**
@@ -102,7 +123,7 @@ class MediaController extends Controller
     {
         $media = Media::findOrFail($id);
 
-        return response()->json($media);
+        return response()->json(new MediaResource($media));
     }
 
     /**
@@ -113,9 +134,7 @@ class MediaController extends Controller
         $media = Media::findOrFail($id);
 
         $request->validate([
-            // لو حاب تسمح للمستخدم يعدّل الاسم الأصلي المعروض
             'file_original_name' => 'nullable|string|max:255',
-
             'alt'         => 'nullable|string|max:255',
             'title'       => 'nullable|string|max:255',
             'caption'     => 'nullable|string',
@@ -134,7 +153,7 @@ class MediaController extends Controller
 
         return response()->json([
             'message' => 'تم التحديث بنجاح',
-            'media'   => $media,
+            'media'   => new MediaResource($media),
         ]);
     }
 
@@ -145,10 +164,8 @@ class MediaController extends Controller
     {
         $media = Media::findOrFail($id);
 
-        // حذف الملف من التخزين إن وُجد
         if ($media->file_path) {
             $disk = $media->disk ?: 'public';
-
             Storage::disk($disk)->delete($media->file_path);
         }
 
@@ -164,26 +181,21 @@ class MediaController extends Controller
     {
         $disk = 'public';
 
-        // نبني مسار منظم: media/YYYY/MM
         $now  = now();
         $dir  = 'media/' . $now->format('Y') . '/' . $now->format('m');
 
-        // الامتداد والاسم الأصلي
         $originalName = $file->getClientOriginalName();
         $extension    = strtolower($file->getClientOriginalExtension());
         $mimeType     = $file->getMimeType();
 
-        // اسم ملف مُهشَّر لتفادي التعارض
         $hashedName = uniqid('', true) . '.' . $extension;
 
-        // نخزّن الملف باستخدام putFileAs لضبط المسار والاسم
         $path = Storage::disk($disk)->putFileAs($dir, $file, $hashedName);
 
-        // محاولة قراءة أبعاد الصورة (إن كانت صورة)
         $width  = null;
         $height = null;
 
-        if (str_starts_with($mimeType, 'image/')) {
+        if (str_starts_with((string) $mimeType, 'image/')) {
             try {
                 $imageSize = getimagesize($file->getPathname());
                 if ($imageSize) {
@@ -191,14 +203,12 @@ class MediaController extends Controller
                     $height = $imageSize[1] ?? null;
                 }
             } catch (\Throwable $e) {
-                // تجاهل أي خطأ في قراءة الأبعاد
+                // تجاهل الخطأ
             }
         }
 
-        // تصنيف نوع الميديا (image/document/other)
         $fileType = $this->detectFileType($mimeType, $extension);
 
-        // إنشاء السجل في قاعدة البيانات
         return Media::create([
             'file_name'          => $hashedName,
             'file_original_name' => $originalName,
@@ -234,7 +244,6 @@ class MediaController extends Controller
             return 'audio';
         }
 
-        // بعض الامتدادات الشائعة للوثائق
         $documentExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
         if (in_array($extension, $documentExtensions, true)) {
             return 'document';

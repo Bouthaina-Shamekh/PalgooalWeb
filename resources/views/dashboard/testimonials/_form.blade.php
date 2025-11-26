@@ -4,13 +4,15 @@
 @endphp
 
 {{-- Testimonial Image --}}
-@include('dashboard.partials.media-picker-advanced', [
+{{-- @include('dashboard.partials.media-picker-advanced', [
     'fieldName' => 'image_path',
     'value' => $testimonial?->image ?? null,
     'label' => 'صورة العميل',
     'buttonText' => 'اختر أو حمّل صورة العميل من مكتبة الوسائط',
     'supportedFormatsText' => 'الصيغ المدعومة: JPG, PNG, SVG',
-])
+]) --}}
+
+@include('dashboard.partials.media-picker')
 
 {{-- Display Order --}}
 <div class="col-span-6">

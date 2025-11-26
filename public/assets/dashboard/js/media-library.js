@@ -28,6 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailsFormEl = document.getElementById('details-form');
     const deleteBtnEl = document.getElementById('btn-delete');
 
+    // عناصر التحديد المتعدد
+    const selectionCountEl = document.getElementById('selection-count');
+    const clearSelectionBtnEl = document.getElementById('btn-clear-selection');
+    const bulkDeleteBtnEl = document.getElementById('btn-bulk-delete');
+
     // لو الصفحة مش هي صفحة المكتبة أو الـ config ناقص
     if (!gridEl || !baseUrl) {
         return;
@@ -38,8 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastPage = 1;
     let currentFilterType = '';
     let currentSearch = '';
-    let isLoading = false;       // خاص بتحميل القائمة فقط
-    let selectedMedia = null;
+    let isLoading = false; // خاص بتحميل القائمة
+    let selectedMedia = null; // آخر عنصر تم اختياره لعرض التفاصيل
+    const selectedItems = new Map(); // Multi-select: id -> item
 
     // 🔹 Helper: Debounce
     const debounce = (fn, delay = 300) => {
@@ -134,6 +140,40 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
     };
 
+    // 🔹 Helper: تحديث UI التحديد المتعدد
+    const updateSelectionUI = () => {
+        const count = selectedItems.size;
+        if (selectionCountEl) {
+            selectionCountEl.textContent = String(count);
+        }
+
+        if (count > 0) {
+            clearSelectionBtnEl && clearSelectionBtnEl.classList.remove('hidden');
+            bulkDeleteBtnEl && bulkDeleteBtnEl.classList.remove('hidden');
+        } else {
+            clearSelectionBtnEl && clearSelectionBtnEl.classList.add('hidden');
+            bulkDeleteBtnEl && bulkDeleteBtnEl.classList.add('hidden');
+        }
+    };
+
+    const clearDetailsPanel = () => {
+        selectedMedia = null;
+        if (!detailsPanelEl || !detailsEmptyEl) return;
+
+        detailsPanelEl.classList.add('hidden');
+        detailsEmptyEl.classList.remove('hidden');
+        detailsPreviewEl.src = '';
+        detailsTypeEl.textContent = '—';
+        detailsSizeEl.textContent = '—';
+        detailsDimensionsEl.textContent = '—';
+        detailsPathEl.textContent = '';
+        detailsOriginalNameEl.value = '';
+        detailsTitleEl.value = '';
+        detailsAltEl.value = '';
+        detailsCaptionEl.value = '';
+        detailsDescriptionEl.value = '';
+    };
+
     // 🔹 تحميل البيانات من الـ API
     const loadMedia = async (page = 1, append = false) => {
         if (isLoading) return;
@@ -207,6 +247,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 'media-item group relative w-full aspect-square rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-gray-50 dark:bg-gray-900 text-left';
             btn.dataset.id = item.id;
 
+            // لو هذا العنصر كان محدد سابقاً، أعد تفعيل الـ ring
+            if (selectedItems.has(item.id)) {
+                btn.classList.add('ring-2', 'ring-indigo-500');
+            }
+
             let inner = '';
 
             if (isImage) {
@@ -233,29 +278,49 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.innerHTML = inner;
 
             btn.addEventListener('click', () => {
-                document
-                    .querySelectorAll('.media-item')
-                    .forEach((el) =>
-                        el.classList.remove('ring-2', 'ring-indigo-500')
-                    );
-                btn.classList.add('ring-2', 'ring-indigo-500');
+                const alreadySelected = selectedItems.has(item.id);
 
-                selectMedia({
-                    id: item.id,
-                    url: imageUrl,
-                    name,
-                    mime_type: item.mime_type,
-                    size: item.size,
-                    width: item.width,
-                    height: item.height,
-                    path: item.file_path,
-                    file_type: item.file_type,
-                    alt: item.alt,
-                    title: item.title,
-                    caption: item.caption,
-                    description: item.description,
-                    readable_size: item.readable_size,
-                });
+                if (alreadySelected) {
+                    // إزالة من التحديد
+                    selectedItems.delete(item.id);
+                    btn.classList.remove('ring-2', 'ring-indigo-500');
+                } else {
+                    // إضافة إلى التحديد
+                    selectedItems.set(item.id, {
+                        id: item.id,
+                        url: imageUrl,
+                        name,
+                        mime_type: item.mime_type,
+                        size: item.size,
+                        width: item.width,
+                        height: item.height,
+                        path: item.file_path,
+                        file_type: item.file_type,
+                        alt: item.alt,
+                        title: item.title,
+                        caption: item.caption,
+                        description: item.description,
+                        readable_size: item.readable_size,
+                    });
+                    btn.classList.add('ring-2', 'ring-indigo-500');
+                }
+
+                updateSelectionUI();
+
+                // بالنسبة للـ Sidebar: نعرض آخر عنصر تم الضغط عليه إذا كان محدد
+                if (!alreadySelected) {
+                    const selectedItem = selectedItems.get(item.id);
+                    selectMedia(selectedItem);
+                } else {
+                    // لو لم يعد هناك أي عنصر محدد -> إخفاء الـ Sidebar
+                    if (selectedItems.size === 0) {
+                        clearDetailsPanel();
+                    } else {
+                        // اعرض آخر عنصر متبقي في التحديد
+                        const lastItem = Array.from(selectedItems.values()).at(-1);
+                        selectMedia(lastItem);
+                    }
+                }
             });
 
             gridEl.appendChild(btn);
@@ -334,7 +399,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 🔹 تحديث بيانات الوسيط (الميتا)
+    // 🔹 تحديث بيانات الوسيط (الميتا) لعنصر واحد (المعروض في الـ Sidebar)
     const updateDetails = async () => {
         if (!selectedMedia) return;
 
@@ -366,8 +431,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 🔹 حذف ملف
-    const deleteSelected = async () => {
+    // 🔹 حذف ملف واحد (العنصر المعروض في الـ Sidebar)
+    const deleteCurrent = async () => {
         if (!selectedMedia) return;
 
         if (!confirm('هل أنت متأكد من حذف هذا الملف؟')) return;
@@ -383,10 +448,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!res.ok) throw new Error('Delete failed');
 
+            // إزالة من قائمة التحديد المتعدد إن كان موجودًا
+            if (selectedItems.has(selectedMedia.id)) {
+                selectedItems.delete(selectedMedia.id);
+                updateSelectionUI();
+            }
+
             showToast('تم حذف الملف.', 'success');
-            selectedMedia = null;
-            detailsPanelEl.classList.add('hidden');
-            detailsEmptyEl.classList.remove('hidden');
+            clearDetailsPanel();
 
             currentPage = 1;
             await loadMedia(1);
@@ -394,6 +463,56 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(e);
             showToast('فشل حذف الملف، حاول مجددًا.', 'error');
         }
+    };
+
+    // 🔹 حذف جماعي لكل العناصر المحددة
+    const bulkDeleteSelected = async () => {
+        if (selectedItems.size === 0) return;
+
+        if (!confirm('هل أنت متأكد من حذف جميع العناصر المحددة؟')) return;
+
+        const ids = Array.from(selectedItems.keys());
+
+        try {
+            for (const id of ids) {
+                const res = await fetch(`${baseUrl}/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        Accept: 'application/json',
+                    },
+                });
+
+                if (!res.ok) {
+                    throw new Error('Delete failed');
+                }
+            }
+
+            showToast('تم حذف العناصر المحددة.', 'success');
+
+            selectedItems.clear();
+            updateSelectionUI();
+            clearDetailsPanel();
+
+            currentPage = 1;
+            await loadMedia(1);
+        } catch (e) {
+            console.error(e);
+            showToast('فشل حذف بعض العناصر، حاول مجددًا.', 'error');
+        }
+    };
+
+    // 🔹 إلغاء التحديد بالكامل
+    const clearSelection = () => {
+        selectedItems.clear();
+        updateSelectionUI();
+
+        // إزالة الـ ring من جميع العناصر
+        document
+            .querySelectorAll('.media-item')
+            .forEach((el) => el.classList.remove('ring-2', 'ring-indigo-500'));
+
+        clearDetailsPanel();
     };
 
     // 🔹 أحداث الواجهة
@@ -469,7 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     }
 
-    // حفظ التعديلات
+    // حفظ التعديلات (عنصر واحد)
     if (detailsFormEl) {
         detailsFormEl.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -477,14 +596,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // حذف
+    // حذف عنصر واحد من زر الحذف في الـ Sidebar
     if (deleteBtnEl) {
         deleteBtnEl.addEventListener('click', (e) => {
             e.preventDefault();
-            deleteSelected();
+            deleteCurrent();
+        });
+    }
+
+    // زر "إلغاء التحديد"
+    if (clearSelectionBtnEl) {
+        clearSelectionBtnEl.addEventListener('click', (e) => {
+            e.preventDefault();
+            clearSelection();
+        });
+    }
+
+    // زر "حذف المحدد"
+    if (bulkDeleteBtnEl) {
+        bulkDeleteBtnEl.addEventListener('click', (e) => {
+            e.preventDefault();
+            bulkDeleteSelected();
         });
     }
 
     // 🔹 تحميل أولي
+    updateSelectionUI();
     loadMedia(1);
 });

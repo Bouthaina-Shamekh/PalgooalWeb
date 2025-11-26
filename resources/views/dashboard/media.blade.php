@@ -76,13 +76,11 @@
                         </div>
 
                         {{-- حالة التحميل / الفارغ --}}
-                        <div id="media-loading"
-                            class="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                        <div id="media-loading" class="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
                             جاري التحميل...
                         </div>
 
-                        <div id="media-empty"
-                            class="mt-4 hidden text-center text-sm text-gray-400 dark:text-gray-500">
+                        <div id="media-empty" class="mt-4 hidden text-center text-sm text-gray-400 dark:text-gray-500">
                             لا توجد وسائط لعرضها حاليًا.
                         </div>
 
@@ -101,6 +99,26 @@
                         <h2 class="mb-3 text-sm font-semibold text-gray-800 dark:text-gray-100">
                             تفاصيل الوسائط
                         </h2>
+
+                        {{-- معلومات التحديد المتعدد --}}
+                        <div
+                            class="mb-3 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+                            <span>
+                                العناصر المحددة:
+                                <span id="selection-count">0</span>
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <button type="button" id="btn-clear-selection"
+                                    class="hidden text-[11px] text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                    إلغاء التحديد
+                                </button>
+                                <button type="button" id="btn-bulk-delete"
+                                    class="hidden text-[11px] text-red-500 hover:text-red-600">
+                                    حذف المحدد
+                                </button>
+                            </div>
+                        </div>
+
 
                         <div id="details-empty" class="text-xs text-gray-400 dark:text-gray-500">
                             اختر عنصرًا من المكتبة لعرض تفاصيله وتعديل بياناته.
