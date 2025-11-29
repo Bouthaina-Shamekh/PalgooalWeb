@@ -353,11 +353,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const items = Array.from(selectedItems.values());
 
-        // تخزين الـ IDs في الـ input (صيغة: "1" أو "1,5,9")
-        const ids = items.map((item) => item.id);
-        if (targetInput) {
-            targetInput.value = ids.join(',');
+        if (!items.length || !targetInput) {
+            closePicker();
+            return;
         }
+
+        let idsValue = '';
+
+        // ✅ لو الحقل single نخزن ID واحد فقط
+        if (!isMultiple) {
+            idsValue = String(items[0].id);
+        } else {
+            const ids = items.map((item) => item.id);
+            idsValue = ids.join(',');
+        }
+
+        // نخزن القيمة في الـ input (مثل featured_image_id)
+        targetInput.value = idsValue;
 
         // تعبئة الـ preview بالصور
         if (previewContainer) {

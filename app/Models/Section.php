@@ -29,4 +29,9 @@ class Section extends Model
     {
         return $this->belongsTo(Page::class);
     }
+
+    public function image()
+    {
+        return $this->belongsTo(\App\Models\Media::class, 'image_id');
+    }
 }

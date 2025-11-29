@@ -709,18 +709,6 @@
   .z-50 {
     z-index: 50;
   }
-  .z-\[69\] {
-    z-index: 69;
-  }
-  .z-\[70\] {
-    z-index: 70;
-  }
-  .z-\[90\] {
-    z-index: 90;
-  }
-  .z-\[91\] {
-    z-index: 91;
-  }
   .z-\[100\] {
     z-index: 100;
   }
@@ -1188,9 +1176,6 @@
   }
   .max-h-\[80vh\] {
     max-height: 80vh;
-  }
-  .max-h-\[90vh\] {
-    max-height: 90vh;
   }
   .max-h-\[95vh\] {
     max-height: 95vh;
@@ -2111,9 +2096,6 @@
   }
   .border-indigo-200 {
     border-color: var(--color-indigo-200);
-  }
-  .border-indigo-400 {
-    border-color: var(--color-indigo-400);
   }
   .border-indigo-500 {
     border-color: var(--color-indigo-500);

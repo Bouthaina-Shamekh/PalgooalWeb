@@ -1,3 +1,10 @@
+@php
+    use Illuminate\Support\Str;
+@endphp
+
+@php
+    $testimonials = collect($data['testimonials'] ?? []);
+@endphp
 <!-- Testimonials Section -->
 <section id="testimonials" class="bg-background py-20 px-4 sm:px-8 lg:px-24">
   <div class="max-w-4xl mx-auto text-center mb-12">
@@ -18,15 +25,15 @@
       <div class="swiper-wrapper" data-aos="zoom-in" data-aos-delay="200">
         @foreach ($testimonials as $testimonial)
           @php
-              $translation = $testimonial->translations->firstWhere('locale', app()->getLocale()) ?? $testimonial->translations->first();
-              $imagePath = trim((string) $testimonial->image);
-              $imageUrl = $imagePath !== ''
-                  ? (\Illuminate\Support\Str::startsWith($imagePath, ['http://', 'https://', '//'])
-                      ? $imagePath
-                      : asset('storage/' . ltrim($imagePath, '/')))
-                  : asset('assets/images/user1.webp');
-              $stars = max(0, min(5, (int) ($testimonial->star ?? 0)));
-          @endphp
+                    $translation = $testimonial->translations
+                        ->firstWhere('locale', app()->getLocale())
+                        ?? $testimonial->translations->first();
+
+                    // الصورة من علاقة media (image_id → Media)
+                    $imageUrl = $testimonial->image?->url ?? asset('assets/images/user1.webp');
+
+                    $stars = max(0, min(5, (int) ($testimonial->star ?? 0)));
+                @endphp
 
           <div class="swiper-slide flex justify-center">
             <figure class="testimonial-card" style="will-change: transform, opacity;">

@@ -1,13 +1,11 @@
-﻿@php
-    use Illuminate\Support\Str;
-    use App\Models\Media;
-@endphp
-<x-dashboard-layout>
+﻿<x-dashboard-layout>
     <div class="container mx-auto py-6">
         <h1 class="text-2xl font-bold mb-4">إدارة الشهادات</h1>
 
         @can('create', 'App\\Models\\Testimonial')
-            <a href="{{ route('dashboard.testimonials.create') }}" class="btn btn-primary mb-4">إضافة شهادة جديدة</a>
+            <a href="{{ route('dashboard.testimonials.create') }}" class="btn btn-primary mb-4">
+                إضافة شهادة جديدة
+            </a>
         @endcan
 
         @if (session('success'))
@@ -33,62 +31,67 @@
                     @foreach ($testimonials as $testimonial)
                         <tr>
                             <td>{{ $loop->iteration }}</td>
+
+                            {{-- الصورة من علاقة image (جدول media) --}}
                             <td>
                                 @php
-                                    $img = $testimonial->image;
-                                    $src = null;
-
-                                    if ($img) {
-                                        if (is_numeric($img)) {
-                                            // حالة القيم الجديدة: تخزين ID من جدول media
-                                            $media = Media::find($img);
-                                            $src = $media?->url; // يستخدم accessor من موديل Media
-                                        } elseif (Str::startsWith($img, ['http://', 'https://', '//'])) {
-                                            // حالة تخزين URL كامل
-                                            $src = $img;
-                                        } else {
-                                            // حالة قديمة: مسار داخل storage
-                                            $src = asset('storage/' . ltrim($img, '/'));
-                                        }
-                                    }
+                                    // باستخدام العلاقة مع موديل Media (مع with('image') من الكنترولر)
+                                    $src = $testimonial->image?->url;
                                 @endphp
 
                                 @if ($src)
-                                    <img src="{{ $src }}" class="w-10 h-10 rounded-full object-cover"
-                                        alt="صورة الشهادة">
+                                    <img src="{{ $src }}" class="w-10 h-10 rounded-full object-cover" alt="صورة الشهادة">
                                 @else
                                     <span class="text-xs text-gray-400">لا توجد صورة</span>
                                 @endif
                             </td>
+
+                            {{-- الاسم حسب اللغة الحالية --}}
                             <td>
                                 {{ $testimonial->translation()?->name ?? 'غير متوفر' }}
                             </td>
+
+                            {{-- عدد النجوم --}}
                             <td>{{ $testimonial->star }}</td>
+
+                            {{-- نص الشهادة حسب اللغة الحالية --}}
                             <td>
                                 {{ $testimonial->translation()?->feedback ?? 'لا يوجد نص' }}
                             </td>
+
+                            {{-- حالة الاعتماد --}}
                             <td>
                                 @if ($testimonial->is_approved)
                                     <span
-                                        class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">معتمد</span>
+                                        class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                                        معتمد
+                                    </span>
                                 @else
                                     <span
-                                        class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">بانتظار
-                                        الموافقة</span>
+                                        class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                                        بانتظار الموافقة
+                                    </span>
                                 @endif
                             </td>
+
+                            {{-- الإجراءات --}}
                             <td style="display: flex; gap: 5px;">
                                 @can('edit', 'App\\Models\\Testimonial')
                                     <a href="{{ route('dashboard.testimonials.edit', $testimonial->id) }}"
-                                        class="btn btn-sm btn-warning">تعديل</a>
+                                        class="btn btn-sm btn-warning">
+                                        تعديل
+                                    </a>
                                 @endcan
+
                                 @can('delete', 'App\\Models\\Testimonial')
                                     <form action="{{ route('dashboard.testimonials.destroy', $testimonial->id) }}"
                                         method="POST">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-danger"
-                                            onclick="return confirm('هل أنت متأكد من حذف هذه الشهادة؟');">حذف</button>
+                                            onclick="return confirm('هل أنت متأكد من حذف هذه الشهادة؟');">
+                                            حذف
+                                        </button>
                                     </form>
                                 @endcan
                             </td>

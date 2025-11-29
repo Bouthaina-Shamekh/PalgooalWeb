@@ -1,6 +1,17 @@
 @php
     $testimonial = $testimonial ?? ($feedback ?? null);
     $testimonialTranslations = $testimonialTranslations ?? ($feedbackTranslations ?? []);
+
+    // 🔹 قراءة الـ id الحالي للصورة (من old أو من الموديل)
+    $featuredImageId = old('featured_image_id', $testimonial->image_id ?? null);
+
+    // 🔹 تجهيز روابط المعاينة (تُستخدم في حالة التعديل فقط)
+    $featuredImageUrls = [];
+
+    if ($featuredImageId && $testimonial && $testimonial->image) {
+        // نستخدم الـ accessor getImageUrlAttribute في موديل Testimonial
+        $featuredImageUrls[] = $testimonial->image_url;
+    }
 @endphp
 
 {{-- Testimonial Image --}}
@@ -12,6 +23,21 @@
     'supportedFormatsText' => 'الصيغ المدعومة: JPG, PNG, SVG',
 ]) --}}
 
+<x-dashboard.media-picker
+    id="featured_image_id"
+    name="featured_image_id"
+    label="الصورة الرئيسية"
+    :value="$featuredImageId"
+    :preview-urls="$featuredImageUrls"
+    button-text="اختر صورة من المكتبة"
+/>
+
+
+
+@error('featured_image_id')
+    <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
+@enderror
+
 
 {{-- مثال داخل أي فورم في لوحة التحكم --}}
 {{-- Testimonial Image (Media Picker الجديد بنفس منطق القديم) --}}
@@ -20,26 +46,19 @@
     $currentImageValue = old('image_path', $testimonial?->image ?? null);
 @endphp
 
-<div class="col-span-6">
+<!--<div class="col-span-6">
     <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 h-full space-y-3">
         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
             صورة العميل
         </label>
 
         {{-- هذا الـ input هو نفسه fieldName القديم: image_path --}}
-        <input
-            type="hidden"
-            id="featured_image_id"
-            name="image_path"
-            value="{{ $currentImageValue }}">
+        <input type="hidden" id="featured_image_id" name="image_path" value="{{ $currentImageValue }}">
 
         {{-- زر فتح مكتبة الوسائط --}}
-        <button
-            type="button"
+        <button type="button"
             class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 btn-open-media-picker"
-            data-target-input="featured_image_id"
-            data-target-preview="featured_image_preview"
-            data-multiple="false">
+            data-target-input="featured_image_id" data-target-preview="featured_image_preview" data-multiple="false">
             اختر أو حمّل صورة العميل من مكتبة الوسائط
         </button>
 
@@ -51,10 +70,7 @@
         <div id="featured_image_preview" class="mt-2 flex flex-wrap gap-2">
             @if ($currentImageValue)
                 <div class="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                    <img
-                        src="{{ $currentImageValue }}"
-                        alt="صورة العميل"
-                        class="w-full h-full object-cover">
+                    <img src="{{ $currentImageValue }}" alt="صورة العميل" class="w-full h-full object-cover">
                 </div>
             @endif
         </div>
@@ -63,7 +79,7 @@
             <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
         @enderror
     </div>
-</div>
+</div> -->
 
 
 
@@ -355,10 +371,10 @@
                 } else {
                     if (hasError) {
                         tab.classList.add('bg-red-50', 'text-red-700', 'border', 'border-red-200',
-                        'focus:ring-red-400');
+                            'focus:ring-red-400');
                     } else {
                         tab.classList.add('bg-gray-100', 'text-gray-600', 'border-transparent',
-                        'focus:ring-indigo-400');
+                            'focus:ring-indigo-400');
                     }
                 }
             }
@@ -390,7 +406,7 @@
                         const checkIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
                         checkIcon.setAttribute('class',
                             `lang-checkmark w-4 h-4 ${activeTab.dataset.hasError === 'true' ? 'text-red-500' : 'text-indigo-500'}`
-                            );
+                        );
                         checkIcon.setAttribute('fill', 'none');
                         checkIcon.setAttribute('stroke', 'currentColor');
                         checkIcon.setAttribute('viewBox', '0 0 24 24');

@@ -69,7 +69,8 @@ class Media extends Model
         $disk = $this->disk ?: 'public';
 
         // لو عندك storage:link شغال، هذا يرجّع URL صحيح
-        return Storage::disk($disk)->url($this->file_path);
+        // return Storage::disk($disk)->url($this->file_path);
+        return Storage::disk($this->disk ?? 'public')->url($this->file_path);
     }
 
     /**

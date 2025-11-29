@@ -6,23 +6,27 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('feedbacks', function (Blueprint $table) {
             $table->id();
-            $table->string('image')->nullable();
+
+            // علاقة مع media
+            $table->foreignId('image_id')
+                ->nullable()
+                ->constrained('media')
+                ->nullOnDelete();
+
             $table->integer('star')->nullable();
             $table->integer('order')->default(0);
+
+            // ندمج is_approved هنا
+            $table->boolean('is_approved')->default(true);
+
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('feedbacks');
