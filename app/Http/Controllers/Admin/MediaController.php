@@ -10,36 +10,53 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * Class MediaController
+ *
+ * Centralized controller for managing media files in the dashboard.
+ * Responsibilities:
+ * - List media items with filters and pagination (API + Blade view)
+ * - Upload media (single & multiple)
+ * - Show/update media metadata
+ * - Delete media from storage and database
+ */
 class MediaController extends Controller
 {
     /**
-     * عرض قائمة الوسائط (مع دعم الفلترة والبحث والـ pagination).
+     * Display a list of media items (with filtering, search, and pagination).
+     *
+     * Behavior:
+     * - If the request does NOT expect JSON -> returns the Blade view (media page).
+     * - If the request expects JSON (AJAX/API) -> returns paginated JSON.
      *
      * Query params:
-     * - type=image|video|document|other
-     * - search=term أو q=term
-     * - per_page=40
+     * - type=image|video|document|other (filter by file_type)
+     * - search=term or q=term       (simple text search)
+     * - per_page=40                 (items per page, clamped between 1 and 100)
      */
     public function index(Request $request)
     {
-        // لو الطلب عادي من المتصفح → رجّع صفحة Blade
+        // If it's a normal browser request (HTML), return the media page view.
+        // The front-end (JS) will then consume the JSON API from the same route.
         if (! $request->wantsJson()) {
             return view('dashboard.media');
         }
 
+        // Sanitize per_page: default 40, maximum 100.
         $perPage = (int) $request->get('per_page', 40);
         $perPage = $perPage > 0 && $perPage <= 100 ? $perPage : 40;
 
+        // Base query: latest media items first
         $query = Media::query()->latest();
 
-        // فلترة حسب نوع الميديا (image/video/document/other)
+        // Optional type filter: image / video / document / other
         if ($type = $request->get('type')) {
             $query->where('file_type', $type);
-            // أو لو تحب تستخدم الـ scope:
+            // Alternatively, we could use the model scope:
             // $query->ofType($type);
         }
 
-        // بحث: ندعم search و q للتوافق مع الواجهة الحالية/القديمة
+        // Simple text search: supports both "search" and legacy "q" parameter
         $term = $request->get('search') ?? $request->get('q');
 
         if ($term) {
@@ -51,28 +68,34 @@ class MediaController extends Controller
                     ->orWhere('description', 'LIKE', "%{$term}%");
             });
 
-            // أو لو حاب، ممكن تستخدم scopeSearch في الـ Model:
+            // Or via the model scope (if you prefer a cleaner controller):
             // $query->search($term);
         }
 
+        // Standard Laravel paginator
         $paginator = $query->paginate($perPage);
 
-        // نحافظ على شكل الـ pagination كما هو،
-        // لكن نمرر كل عنصر على MediaResource
+        // Transform each media item into a MediaResource while keeping pagination meta
         $paginator = $paginator->through(fn($media) => new MediaResource($media));
 
         return response()->json($paginator);
     }
 
     /**
-     * رفع وسائط:
-     * - يدعم "image" (مفرد) أو "files[]" (متعدد)
-     * - الحد الأقصى 10MB لكل ملف
-     * - أنواع: jpeg, jpg, png, gif, webp, svg
+     * Handle media upload requests.
+     *
+     * Supported payloads:
+     * - Multiple files: "files[]" (e.g. from drag & drop or multi-select input)
+     * - Single file: "image"
+     *
+     * Constraints (per file):
+     * - Max size: 10MB
+     * - Allowed extensions: jpeg, jpg, png, gif, webp, svg
+     * - Allowed MIME types: image/jpeg, image/png, image/gif, image/webp, image/svg+xml
      */
     public function store(Request $request)
     {
-        // رفع متعدد: files[]
+        // Case 1: Multiple file upload using "files[]"
         if ($request->hasFile('files')) {
             $request->validate([
                 'files'   => 'required|array',
@@ -84,12 +107,13 @@ class MediaController extends Controller
                 $uploaded[] = $this->saveMediaFile($file);
             }
 
+            // Wrap uploaded models in resources for consistent API shape
             return response()->json([
                 'uploaded' => MediaResource::collection(collect($uploaded)),
             ], 201);
         }
 
-        // رفع مفرد: image
+        // Case 2: Single file upload using "image"
         if ($request->hasFile('image')) {
             $request->validate([
                 'image' => 'required|file|mimes:jpeg,jpg,png,gif,webp,svg|max:10240|mimetypes:image/jpeg,image/png,image/gif,image/webp,image/svg+xml',
@@ -100,14 +124,16 @@ class MediaController extends Controller
             return response()->json(new MediaResource($media), 201);
         }
 
-        // لا يوجد ملفات مرسلة
+        // No files provided → return 422 with an instructional error message
         return response()->json([
             'message' => 'حقل الصورة مفقود. أرسل "image" (ملف واحد) أو "files[]" (عدة ملفات).',
         ], 422);
     }
 
     /**
-     * عرض عنصر وسائط واحد
+     * Show a single media item as JSON.
+     *
+     * Useful for editing metadata or previewing additional details in the UI.
      */
     public function show($id)
     {
@@ -117,7 +143,10 @@ class MediaController extends Controller
     }
 
     /**
-     * (اختياري) نفس show للحفاظ على التوافق مع أي كود قديم
+     * Edit endpoint (optional).
+     *
+     * Kept for compatibility with any legacy code that might be calling /media/{id}/edit.
+     * It simply proxies to the same JSON response as show().
      */
     public function edit($id)
     {
@@ -127,7 +156,14 @@ class MediaController extends Controller
     }
 
     /**
-     * تحديث الحقول الوصفية للوسائط
+     * Update media metadata (does NOT replace the underlying file).
+     *
+     * Editable fields:
+     * - file_original_name
+     * - alt
+     * - title
+     * - caption
+     * - description
      */
     public function update(Request $request, $id)
     {
@@ -158,7 +194,11 @@ class MediaController extends Controller
     }
 
     /**
-     * حذف ملف وسائط + سجله
+     * Delete a media file from storage AND its database record.
+     *
+     * Notes:
+     * - Uses the disk column (default: "public")
+     * - Silently ignores missing files in storage (Storage::delete is safe)
      */
     public function destroy($id)
     {
@@ -175,12 +215,22 @@ class MediaController extends Controller
     }
 
     /**
-     * دالة مساعدة لحفظ ملف وإنشاء السجل في قاعدة البيانات
+     * Helper method to store an uploaded file and create the corresponding
+     * Media record in the database.
+     *
+     * Steps:
+     * - Determine storage disk and directory
+     * - Generate a unique file name
+     * - Store the file via Storage
+     * - Optionally read image dimensions (width/height)
+     * - Detect logical file type (image/video/audio/document/other)
+     * - Persist and return the Media model instance
      */
     private function saveMediaFile(UploadedFile $file): Media
     {
         $disk = 'public';
 
+        // Folder structure: media/YYYY/MM
         $now  = now();
         $dir  = 'media/' . $now->format('Y') . '/' . $now->format('m');
 
@@ -188,13 +238,16 @@ class MediaController extends Controller
         $extension    = strtolower($file->getClientOriginalExtension());
         $mimeType     = $file->getMimeType();
 
+        // Unique file name to avoid collisions
         $hashedName = uniqid('', true) . '.' . $extension;
 
+        // Store the file and get the relative path
         $path = Storage::disk($disk)->putFileAs($dir, $file, $hashedName);
 
         $width  = null;
         $height = null;
 
+        // If it’s an image, try to read its dimensions
         if (str_starts_with((string) $mimeType, 'image/')) {
             try {
                 $imageSize = getimagesize($file->getPathname());
@@ -203,12 +256,14 @@ class MediaController extends Controller
                     $height = $imageSize[1] ?? null;
                 }
             } catch (\Throwable $e) {
-                // تجاهل الخطأ
+                // Silently ignore any error while reading dimensions
             }
         }
 
+        // Classify into a logical file type
         $fileType = $this->detectFileType($mimeType, $extension);
 
+        // Create and return the Media record
         return Media::create([
             'file_name'          => $hashedName,
             'file_original_name' => $originalName,
@@ -225,7 +280,14 @@ class MediaController extends Controller
     }
 
     /**
-     * تصنيف نوع الميديا بناءً على mime/extension
+     * Determine the logical file_type value based on MIME type and extension.
+     *
+     * Returns one of:
+     * - image
+     * - video
+     * - audio
+     * - document
+     * - other
      */
     private function detectFileType(?string $mimeType, ?string $extension): string
     {
@@ -244,6 +306,7 @@ class MediaController extends Controller
             return 'audio';
         }
 
+        // Basic document extensions grouping
         $documentExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
         if (in_array($extension, $documentExtensions, true)) {
             return 'document';

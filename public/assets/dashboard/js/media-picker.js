@@ -1,12 +1,22 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // إعدادات عامة (نستخدم نفس MEDIA_CONFIG المستخدمة في مكتبة الوسائط)
+    /**
+     * ----------------------------------------------------------------------
+     *  Global configuration (shared with the main Media Library)
+     * ----------------------------------------------------------------------
+     * MEDIA_CONFIG is expected to be defined globally from Blade:
+     *   window.MEDIA_CONFIG = { baseUrl: '/admin/media', csrfToken: '...' }
+     */
     const mediaConfig = window.MEDIA_CONFIG || {};
     const baseUrl = mediaConfig.baseUrl || '/admin/media';
     const csrfToken =
         mediaConfig.csrfToken ||
         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
-    // عناصر المودال
+    /**
+     * ----------------------------------------------------------------------
+     *  Core DOM elements for the Media Picker Modal
+     * ----------------------------------------------------------------------
+     */
     const backdropEl = document.getElementById('media-picker-backdrop');
     const modalEl = document.getElementById('media-picker-modal');
     const gridEl = document.getElementById('media-picker-grid');
@@ -23,18 +33,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeBtnEl = document.getElementById('media-picker-close');
     const confirmBtnEl = document.getElementById('media-picker-confirm');
 
+    // All trigger buttons that open the media picker
     const openButtons = document.querySelectorAll('.btn-open-media-picker');
 
-    // عناصر الرفع من داخل الـ popup
+    /**
+     * Elements for uploading media directly from inside the popup
+     */
     const uploadBtnEl = document.getElementById('media-picker-upload-btn');
     const fileInputEl = document.getElementById('media-picker-file-input');
 
+    /**
+     * Drag & Drop area inside the popup
+     * - Allows dropping files directly to upload
+     */
+    const popupDropzoneEl = document.getElementById('media-picker-dropzone');
+
+    // If there is no modal or open button, the picker is not used on this page
     if (!modalEl || !gridEl || !openButtons.length) {
-        // لا يوجد picker مستخدم في الصفحة
         return;
     }
 
-    // الحالة الداخلية للـ Picker
+    /**
+     * ----------------------------------------------------------------------
+     *  Internal state
+     * ----------------------------------------------------------------------
+     */
     let pickerOpen = false;
     let currentPage = 1;
     let lastPage = 1;
@@ -42,15 +65,24 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSearch = '';
     let isLoading = false;
 
-    // إعداد الزر الذي فتح الـ Picker
+    // Information about the field that opened the picker
     let currentTargetInputId = null;
     let currentPreviewContainerId = null;
     let isMultiple = false;
 
-    // العناصر المحددة
-    const selectedItems = new Map(); // id → item
+    /**
+     * Map of selected media items
+     * - Key: media ID
+     * - Value: { id, url, name, file_type, mime_type }
+     */
+    const selectedItems = new Map();
 
-    // 🔹 Helper: Debounce
+    /**
+     * ----------------------------------------------------------------------
+     *  Utility: Debounce helper
+     * ----------------------------------------------------------------------
+     * Ensures a function is not called too frequently (used for search input)
+     */
     const debounce = (fn, delay = 300) => {
         let t;
         return (...args) => {
@@ -59,7 +91,12 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
-    // 🔹 Helper: Toast بسيط (مرئي)
+    /**
+     * ----------------------------------------------------------------------
+     *  Utility: Simple Toast Notification
+     * ----------------------------------------------------------------------
+     * Displays small notifications in the bottom corner of the screen.
+     */
     const showToast = (message, type = 'info') => {
         const colors = {
             info: 'bg-slate-900 text-white',
@@ -83,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
         el.innerHTML = `
             <div class="flex items-start gap-3">
                 <span class="mt-0.5">${message}</span>
-                <button class="ml-auto text-white/70 hover:text-white" aria-label="إغلاق">&times;</button>
+                <button class="ml-auto text-white/70 hover:text-white" aria-label="Close">&times;</button>
             </div>
         `;
 
@@ -107,13 +144,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // 🔹 إدارة المودال
+    /**
+     * ----------------------------------------------------------------------
+     *  Modal Handling: Open / Close
+     * ----------------------------------------------------------------------
+     */
+
+    /**
+     * Opens the media picker with a given configuration:
+     * - targetInputId: hidden input where the selected IDs will be stored
+     * - previewContainerId: container where thumbnails will be rendered
+     * - multiple: whether multiple selection is allowed
+     */
     const openPicker = (config) => {
         currentTargetInputId = config.targetInputId;
         currentPreviewContainerId = config.previewContainerId;
         isMultiple = config.multiple;
 
-        // إعادة الضبط
+        // Reset state for fresh view every time the picker opens
         currentPage = 1;
         lastPage = 1;
         currentFilterType = '';
@@ -123,18 +171,25 @@ document.addEventListener('DOMContentLoaded', () => {
         gridEl.innerHTML = '';
         if (emptyEl) emptyEl.classList.add('hidden');
 
+        // Let JS fully control the visibility of "Load more" button
         if (loadMoreBtnEl) {
-            loadMoreBtnEl.classList.add('hidden'); // نخلي JS يتحكم فيها بعد أول تحميل
+            loadMoreBtnEl.classList.add('hidden');
         }
 
+        // Show modal and backdrop
         backdropEl.classList.remove('hidden');
         modalEl.classList.remove('hidden');
         modalEl.classList.add('flex');
         pickerOpen = true;
 
+        // Initial media load
         loadMedia(1, false);
     };
 
+    /**
+     * Closes the media picker modal and hides the overlay.
+     * Does not clear the form values; it only hides the UI.
+     */
     const closePicker = () => {
         pickerOpen = false;
         backdropEl.classList.add('hidden');
@@ -142,7 +197,15 @@ document.addEventListener('DOMContentLoaded', () => {
         modalEl.classList.remove('flex');
     };
 
-    // 🔹 حالة التحميل
+    /**
+     * ----------------------------------------------------------------------
+     *  Loading State Helper
+     * ----------------------------------------------------------------------
+     */
+
+    /**
+     * Toggles the loading state and optionally clears the grid.
+     */
     const setLoading = (state, reset = false) => {
         isLoading = state;
         if (reset) {
@@ -158,18 +221,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 🔹 تحميل الوسائط من الـ API
+    /**
+     * ----------------------------------------------------------------------
+     *  Fetching Media Items from the API
+     * ----------------------------------------------------------------------
+     * Loads paginated media items, optionally appending to the grid.
+     */
     const loadMedia = async (page = 1, append = false) => {
         if (isLoading) return;
         setLoading(true, !append);
 
         const params = new URLSearchParams();
         params.set('page', page);
-        // نجعل الـ per_page صغير عشان يظهر معنا أكثر من صفحة بسهولة
+        // Small per_page so we always have multiple pages to test with
         params.set('per_page', '8');
         if (currentFilterType) params.set('type', currentFilterType);
         if (currentSearch) params.set('search', currentSearch);
-        params.set('_', Date.now().toString()); // كسر الكاش
+        // Cache-busting param
+        params.set('_', Date.now().toString());
 
         try {
             const res = await fetch(`${baseUrl}?${params.toString()}`, {
@@ -200,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             renderMediaItems(items);
 
-            // ✅ التحكم في زر "تحميل المزيد" (يظهر دائماً بعد أول تحميل)
+            // Handle "Load more" button visibility and state
             if (loadMoreBtnEl) {
                 loadMoreBtnEl.classList.remove('hidden');
 
@@ -220,7 +289,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 🔹 رسم العناصر داخل الـ Grid
+    /**
+     * ----------------------------------------------------------------------
+     *  Rendering Media Items inside the Grid
+     * ----------------------------------------------------------------------
+     * Creates clickable buttons for each media item (image or generic file).
+     */
     const renderMediaItems = (items) => {
         items.forEach((item) => {
             const isImage =
@@ -265,10 +339,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             btn.innerHTML = inner;
 
+            // Click handler for selecting/deselecting this item
             btn.addEventListener('click', () => {
                 const alreadySelected = selectedItems.has(item.id);
 
                 if (isMultiple) {
+                    // Multiple selection mode: toggle the item
                     if (alreadySelected) {
                         selectedItems.delete(item.id);
                         btn.classList.remove('ring-2', 'ring-indigo-500');
@@ -283,7 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         btn.classList.add('ring-2', 'ring-indigo-500');
                     }
                 } else {
-                    // وضع اختيار واحد فقط
+                    // Single selection mode: clear all, then select this one
                     selectedItems.clear();
                     document
                         .querySelectorAll('.media-picker-item')
@@ -308,7 +384,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // 🔹 تحديث واجهة التحديد
+    /**
+     * ----------------------------------------------------------------------
+     *  Selection UI Helpers
+     * ----------------------------------------------------------------------
+     */
+
+    /**
+     * Updates counters, "clear" button, and confirm button state
+     * based on how many items are currently selected.
+     */
     const updateSelectionUI = () => {
         const count = selectedItems.size;
         if (selectionCountEl) {
@@ -323,12 +408,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // تعطيل زر "استخدام العناصر المحددة" إذا لا يوجد أي عنصر
+        // Disable "Use selected items" button when nothing is selected
         if (confirmBtnEl) {
             confirmBtnEl.disabled = count === 0;
         }
     };
 
+    /**
+     * Clears all selected items and removes highlight from all tiles.
+     */
     const clearSelection = () => {
         selectedItems.clear();
         document
@@ -339,7 +427,14 @@ document.addEventListener('DOMContentLoaded', () => {
         updateSelectionUI();
     };
 
-    // 🔹 عند الضغط على "استخدام العناصر المحددة"
+    /**
+     * ----------------------------------------------------------------------
+     *  Applying the Selection back to the Form
+     * ----------------------------------------------------------------------
+     * Called when the user confirms their selection.
+     * - Writes the selected IDs into the hidden input (comma-separated)
+     * - Renders thumbnails in the preview container (if provided)
+     */
     const applySelection = () => {
         if (!currentTargetInputId) {
             closePicker();
@@ -353,25 +448,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const items = Array.from(selectedItems.values());
 
-        if (!items.length || !targetInput) {
-            closePicker();
-            return;
+        // Store IDs in hidden input: "1" or "1,5,9"
+        const ids = items.map((item) => item.id);
+        if (targetInput) {
+            targetInput.value = ids.join(',');
         }
 
-        let idsValue = '';
-
-        // ✅ لو الحقل single نخزن ID واحد فقط
-        if (!isMultiple) {
-            idsValue = String(items[0].id);
-        } else {
-            const ids = items.map((item) => item.id);
-            idsValue = ids.join(',');
-        }
-
-        // نخزن القيمة في الـ input (مثل featured_image_id)
-        targetInput.value = idsValue;
-
-        // تعبئة الـ preview بالصور
+        // Render preview images (small thumbnails)
         if (previewContainer) {
             previewContainer.innerHTML = '';
             items.forEach((item) => {
@@ -392,7 +475,14 @@ document.addEventListener('DOMContentLoaded', () => {
         closePicker();
     };
 
-    // 🔹 رفع ملفات من داخل الـ popup (مع تحديد آخر المرفوع تلقائيًا)
+    /**
+     * ----------------------------------------------------------------------
+     *  Uploading Files from inside the Popup
+     * ----------------------------------------------------------------------
+     * This is used both by:
+     * - Clicking "Upload New Image" button (file input)
+     * - Drag & Drop area (drop event)
+     */
     const uploadFilesFromPicker = async (files) => {
         if (!files || !files.length) return;
         if (!csrfToken) {
@@ -431,7 +521,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             showToast('تم رفع الصورة بنجاح.', 'success');
 
+            // Auto-select uploaded items
             if (newlyUploaded.length > 0) {
+                // In single-select mode, only use the last uploaded file
                 if (!isMultiple) {
                     newlyUploaded = [newlyUploaded[newlyUploaded.length - 1]];
                 }
@@ -455,6 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateSelectionUI();
             }
 
+            // Reload media grid to include the new uploads
             currentPage = 1;
             lastPage = 1;
             await loadMedia(1, false);
@@ -464,9 +557,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 🔹 أحداث الأزرار
+    /**
+     * ----------------------------------------------------------------------
+     *  Event Bindings
+     * ----------------------------------------------------------------------
+     */
 
-    // فتح الـ Picker من الأزرار
+    /**
+     * Open buttons: each one is bound to a specific hidden input and preview.
+     * Uses data attributes:
+     *  - data-target-input
+     *  - data-target-preview
+     *  - data-multiple
+     */
     openButtons.forEach((btn) => {
         btn.addEventListener('click', () => {
             const targetInputId = btn.dataset.targetInput;
@@ -475,7 +578,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!targetInputId) {
                 console.warn(
-                    '[MediaPicker] data-target-input غير محدد على الزر:',
+                    '[MediaPicker] data-target-input is not defined on button:',
                     btn
                 );
                 return;
@@ -489,18 +592,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // إغلاق
+    // Close modal via "Cancel" button
     if (cancelBtnEl) {
         cancelBtnEl.addEventListener('click', () => closePicker());
     }
+
+    // Close modal via "X" button
     if (closeBtnEl) {
         closeBtnEl.addEventListener('click', () => closePicker());
     }
+
+    // Close modal by clicking on the backdrop
     if (backdropEl) {
         backdropEl.addEventListener('click', () => closePicker());
     }
 
-    // زر إلغاء التحديد
+    // "Clear selection" button
     if (clearSelectionBtnEl) {
         clearSelectionBtnEl.addEventListener('click', (e) => {
             e.preventDefault();
@@ -508,7 +615,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // تأكيد الاختيار
+    // "Use selected items" button
     if (confirmBtnEl) {
         confirmBtnEl.addEventListener('click', (e) => {
             e.preventDefault();
@@ -516,7 +623,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // البحث
+    /**
+     * Search input with debounce:
+     * - Waits 400ms after user stops typing before firing a new request.
+     */
     if (searchInputEl) {
         searchInputEl.addEventListener(
             'input',
@@ -528,7 +638,11 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     }
 
-    // الفلاتر
+    /**
+     * Filter buttons:
+     * - Change the media type (image, video, document, other, etc.)
+     * - Reload the grid from page 1.
+     */
     if (filterButtons.length) {
         filterButtons.forEach((btn) => {
             btn.addEventListener('click', () => {
@@ -552,7 +666,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // زر "تحميل المزيد" داخل الـ popup
+    /**
+     * "Load more" pagination button
+     * - Loads the next page and appends items to the grid.
+     */
     if (loadMoreBtnEl) {
         loadMoreBtnEl.addEventListener('click', () => {
             if (!isLoading && currentPage < lastPage) {
@@ -561,7 +678,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // زر "رفع صورة جديدة" داخل الـ popup
+    /**
+     * Upload button inside the popup:
+     * - Triggers the hidden file input.
+     */
     if (uploadBtnEl && fileInputEl) {
         uploadBtnEl.addEventListener('click', () => {
             fileInputEl.click();
@@ -569,7 +689,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
         fileInputEl.addEventListener('change', (e) => {
             uploadFilesFromPicker(e.target.files);
+            // Reset input to allow re-uploading the same file if needed
             e.target.value = '';
+        });
+    }
+
+    /**
+     * ----------------------------------------------------------------------
+     *  Drag & Drop inside the popup (media-picker-dropzone)
+     * ----------------------------------------------------------------------
+     * Supports:
+     *  - Clicking on the dropzone to open the file picker
+     *  - Dragging files over the zone
+     *  - Dropping files to upload them directly
+     */
+    if (popupDropzoneEl && fileInputEl) {
+        // Clicking the dropzone opens the file picker
+        popupDropzoneEl.addEventListener('click', (e) => {
+            // Allow clicking anywhere inside the dropzone
+            if (e.target === popupDropzoneEl || popupDropzoneEl.contains(e.target)) {
+                fileInputEl.click();
+            }
+        });
+
+        // Highlight dropzone on drag enter/over
+        ['dragenter', 'dragover'].forEach(eventName => {
+            popupDropzoneEl.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                popupDropzoneEl.classList.add('border-indigo-400', 'bg-indigo-50');
+            });
+        });
+
+        // Remove highlight on drag leave/drop
+        ['dragleave', 'drop'].forEach(eventName => {
+            popupDropzoneEl.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                popupDropzoneEl.classList.remove('border-indigo-400', 'bg-indigo-50');
+            });
+        });
+
+        // Handle dropped files
+        popupDropzoneEl.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt?.files;
+            if (files && files.length) {
+                uploadFilesFromPicker(files);
+            }
         });
     }
 });

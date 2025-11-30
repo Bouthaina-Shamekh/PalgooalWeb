@@ -15,75 +15,12 @@
 @endphp
 
 {{-- Testimonial Image --}}
-{{-- @include('dashboard.partials.media-picker-advanced', [
-    'fieldName' => 'image_path',
-    'value' => $testimonial?->image ?? null,
-    'label' => 'صورة العميل',
-    'buttonText' => 'اختر أو حمّل صورة العميل من مكتبة الوسائط',
-    'supportedFormatsText' => 'الصيغ المدعومة: JPG, PNG, SVG',
-]) --}}
-
-<x-dashboard.media-picker
-    id="featured_image_id"
-    name="featured_image_id"
-    label="الصورة الرئيسية"
-    :value="$featuredImageId"
-    :preview-urls="$featuredImageUrls"
-    button-text="اختر صورة من المكتبة"
-/>
-
-
+<x-dashboard.media-picker id="featured_image_id" name="featured_image_id" label="الصورة الرئيسية" :value="$featuredImageId"
+    :preview-urls="$featuredImageUrls" button-text="اختر صورة من المكتبة" />
 
 @error('featured_image_id')
     <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
 @enderror
-
-
-{{-- مثال داخل أي فورم في لوحة التحكم --}}
-{{-- Testimonial Image (Media Picker الجديد بنفس منطق القديم) --}}
-@php
-    // القيمة الحالية القادمة من الداتابيس أو من old()
-    $currentImageValue = old('image_path', $testimonial?->image ?? null);
-@endphp
-
-<!--<div class="col-span-6">
-    <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 h-full space-y-3">
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
-            صورة العميل
-        </label>
-
-        {{-- هذا الـ input هو نفسه fieldName القديم: image_path --}}
-        <input type="hidden" id="featured_image_id" name="image_path" value="{{ $currentImageValue }}">
-
-        {{-- زر فتح مكتبة الوسائط --}}
-        <button type="button"
-            class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 btn-open-media-picker"
-            data-target-input="featured_image_id" data-target-preview="featured_image_preview" data-multiple="false">
-            اختر أو حمّل صورة العميل من مكتبة الوسائط
-        </button>
-
-        <p class="text-[11px] text-gray-400">
-            الصيغ المدعومة: JPG, PNG, SVG
-        </p>
-
-        {{-- منطقة المعاينة --}}
-        <div id="featured_image_preview" class="mt-2 flex flex-wrap gap-2">
-            @if ($currentImageValue)
-                <div class="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                    <img src="{{ $currentImageValue }}" alt="صورة العميل" class="w-full h-full object-cover">
-                </div>
-            @endif
-        </div>
-
-        @error('image_path')
-            <p class="text-sm text-red-600 mt-2">{{ $message }}</p>
-        @enderror
-    </div>
-</div> -->
-
-
-
-
 
 {{-- Display Order --}}
 <div class="col-span-6">

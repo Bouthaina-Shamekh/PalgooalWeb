@@ -88,28 +88,23 @@
             </div>
 
             {{-- Grid الوسائط --}}
-            <div id="media-picker-grid"
-                class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
+            <div id="media-picker-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
                 {{-- يتم تعبئتها عبر JS --}}
             </div>
 
-            <div id="media-picker-loading"
-                class="mt-2 text-center text-xs text-gray-500 dark:text-gray-400 hidden">
+            <div id="media-picker-loading" class="mt-2 text-center text-xs text-gray-500 dark:text-gray-400 hidden">
                 جاري التحميل...
             </div>
 
-            <div id="media-picker-empty"
-                class="mt-2 text-center text-xs text-gray-400 dark:text-gray-500 hidden">
+            <div id="media-picker-empty" class="mt-2 text-center text-xs text-gray-400 dark:text-gray-500 hidden">
                 لا توجد وسائط مطابقة حاليًا.
             </div>
             {{-- زر تحميل المزيد --}}
-    <button
-        type="button"
-        id="media-picker-load-more"
-        class="mt-4 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700
+            <button type="button" id="media-picker-load-more"
+                class="mt-4 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700
                hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800 hidden">
-        تحميل المزيد من الوسائط
-    </button>
+                تحميل المزيد من الوسائط
+            </button>
         </main>
 
         {{-- الفوتر --}}
