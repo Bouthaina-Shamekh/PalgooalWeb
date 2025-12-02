@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\TemplateController;
 use App\Http\Controllers\Admin\TemplateReviewController;
 use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\PortfolioController;
+use App\Http\Controllers\Admin\PageController;
 
 // Management Controllers
 use App\Http\Controllers\Admin\Management\DomainController;
@@ -99,9 +100,29 @@ Route::group([
         return view('dashboard.clients');
     })->name('clients');
 
-    Route::get('pages', function () {
-        return view('dashboard.page');
-    })->name('pages');
+    // ───── إدارة الصفحات (Marketing Pages) ─────
+    Route::prefix('pages')->name('pages.')->group(function () {
+        // قائمة الصفحات
+        Route::get('/', [PageController::class, 'index'])->name('index');
+
+        // إنشاء صفحة جديدة
+        Route::get('/create', [PageController::class, 'create'])->name('create');
+        Route::post('/', [PageController::class, 'store'])->name('store');
+
+        // تعديل صفحة
+        Route::get('/{page}/edit', [PageController::class, 'edit'])->name('edit');
+        Route::match(['put', 'patch'], '/{page}', [PageController::class, 'update'])->name('update');
+
+        // حذف صفحة
+        Route::delete('/{page}', [PageController::class, 'destroy'])->name('destroy');
+
+        // تفعيل/تعطيل صفحة
+        Route::post('/{page}/toggle-active', [PageController::class, 'toggleActive'])->name('toggle-active');
+
+        // تعيين كصفحة رئيسية
+        Route::post('/{page}/set-home', [PageController::class, 'setHome'])->name('set-home');
+    });
+
 
     Route::get('menus', function () {
         return view('dashboard.header');

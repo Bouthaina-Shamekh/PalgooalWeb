@@ -65,7 +65,7 @@
 
                 @can('view', 'App\\Models\\Page')
                     <li class="pc-item">
-                        <a href="{{ route('dashboard.pages') }}" class="pc-link">
+                        <a href="{{ route('dashboard.pages.index') }}" class="pc-link">
                             <span class="pc-micon">
                                 <span class="pc-micon">
                                     <i class="fas fa-file"></i>

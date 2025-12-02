@@ -14,6 +14,8 @@ use App\Models\Tenancy\Subscription;
 use App\Models\Tenancy\SubscriptionPage;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
+use App\Http\Controllers\Front\PageController as FrontPageController;
+
 
 Route::middleware(['setLocale'])->group(function () {
 
@@ -22,20 +24,8 @@ Route::middleware(['setLocale'])->group(function () {
     | Home Page
     |--------------------------------------------------------------------------
     */
-    Route::get('/', function () {
-        $page = Page::with(['translations', 'sections.translations'])
-            ->where('is_home', true)
-            ->where('is_active', true)
-            ->first();
-
-        if (! $page) {
-            abort(404, 'لم يتم تحديد الصفحة الرئيسية بعد.');
-        }
-
-        view()->share('currentPage', $page);
-
-        return view('front.pages.page', ['page' => $page]);
-    })->name('frontend.home');
+    Route::get('/', [FrontPageController::class, 'home'])
+        ->name('frontend.home');
 
     /*
     |--------------------------------------------------------------------------
@@ -148,18 +138,9 @@ Route::middleware(['setLocale'])->group(function () {
     | نستخدم هذا الراوت لكل صفحات الـ CMS مثل /about, /templates, /services...
     | ويُستثنى منه المسارات الخاصة مثل client, admin, dashboard, templates, ...
     */
-    Route::get('/{slug}', function ($slug) {
-        $page = Page::with(['translations', 'sections.translations'])
-            ->where('is_active', true)
-            ->whereSlug($slug)
-            ->firstOrFail();
-
-        view()->share('currentPage', $page);
-
-        return view('front.pages.page', ['page' => $page]);
-    })
-    ->where('slug', '^(?!client|admin|dashboard|api|storage|change-locale|checkout|portfolio|invoices|bulk|tenant-preview).*$')
-    ->name('frontend.page.show');
+    Route::get('/{slug}', [FrontPageController::class, 'show'])
+        ->where('slug', '^(?!client|admin|dashboard|api|storage|change-locale|checkout|portfolio|invoices|bulk|tenant-preview).*$')
+        ->name('frontend.page.show');
 
     if (app()->environment('local')) {
         Route::get('/tenant-preview/{subscription}', function (Subscription $subscription) {

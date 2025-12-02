@@ -6,6 +6,7 @@ use App\Models\GeneralSetting;
 use App\Models\Language;
 use App\Models\Page;
 use App\Models\User;
+use App\Support\Blocks\HeroBlock;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
@@ -59,5 +60,6 @@ class AppServiceProvider extends ServiceProvider
                 $view->with('currentPage', $page);
             }
         });
+        HeroBlock::register();
     }
 }
