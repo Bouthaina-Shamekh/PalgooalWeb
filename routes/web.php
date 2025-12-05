@@ -1,28 +1,36 @@
 <?php
 
-use App\Http\Controllers\Admin\Management\DomainSearchController;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\View;
+
+// Front Controllers
 use App\Http\Controllers\Front\CartController;
 use App\Http\Controllers\Front\CheckoutController;
 use App\Http\Controllers\Front\TemplateController as FrontTemplateController;
 use App\Http\Controllers\Front\TemplateReviewController;
 use App\Http\Controllers\Front\TestimonialSubmissionController;
+use App\Http\Controllers\Front\PageController as FrontPageController;
+
+// Admin / Management Controllers (used in frontend routes)
+use App\Http\Controllers\Admin\Management\DomainSearchController;
+
+// Models
 use App\Models\Language;
-use App\Models\Page;
 use App\Models\Plan;
 use App\Models\Portfolio;
 use App\Models\Tenancy\Subscription;
 use App\Models\Tenancy\SubscriptionPage;
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\View;
-use App\Http\Controllers\Front\PageController as FrontPageController;
-
 
 Route::middleware(['setLocale'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Home Page
+    | Marketing Home Page
     |--------------------------------------------------------------------------
+    | Uses Front\PageController@home which:
+    | - Finds the marketing homepage (is_home=1, is_active=1, context='marketing')
+    | - Falls back to the first active marketing page.
+    | - Renders resources/views/front/pages/page.blade.php
     */
     Route::get('/', [FrontPageController::class, 'home'])
         ->name('frontend.home');
@@ -51,8 +59,9 @@ Route::middleware(['setLocale'])->group(function () {
     |--------------------------------------------------------------------------
     | Portfolio
     |--------------------------------------------------------------------------
+    | Dedicated route for portfolio items (not handled by CMS pages).
     */
-    Route::get('portfolio/{slug}', function ($slug) {
+    Route::get('/portfolio/{slug}', function (string $slug) {
         $portfolio = Portfolio::with(['translations'])
             ->where('slug', $slug)
             ->orWhere('id', $slug)
@@ -93,10 +102,8 @@ Route::middleware(['setLocale'])->group(function () {
         return view('front.pages.checkout-domains');
     })->name('checkout.domains');
 
-    Route::post(
-        '/checkout/domains/process',
-        [CartController::class, 'processDomains']
-    )->name('checkout.domains.process');
+    Route::post('/checkout/domains/process', [CartController::class, 'processDomains'])
+        ->name('checkout.domains.process');
 
     Route::get('/checkout/domains/success', function () {
         return view('front.pages.checkout-domains-success');
@@ -104,7 +111,7 @@ Route::middleware(['setLocale'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Templates (blueprints / legacy)
+    | Templates (blueprints / legacy frontend)
     |--------------------------------------------------------------------------
     */
     Route::get('/templates/{slug}', [FrontTemplateController::class, 'show'])
@@ -113,7 +120,7 @@ Route::middleware(['setLocale'])->group(function () {
     Route::get('/templates/{slug}/preview', [FrontTemplateController::class, 'preview'])
         ->name('template.preview');
 
-    Route::post('templates/{template_id}/reviews', [TemplateReviewController::class, 'store'])
+    Route::post('/templates/{template_id}/reviews', [TemplateReviewController::class, 'store'])
         ->name('frontend.templates.reviews.store')
         ->whereNumber('template_id');
 
@@ -125,7 +132,7 @@ Route::middleware(['setLocale'])->group(function () {
     Route::get('/domains', [DomainSearchController::class, 'page'])
         ->name('domains.page');
 
-    // API لفحص التوافر (AJAX)
+    // API for availability check (AJAX)
     Route::get('/api/domains/check', [DomainSearchController::class, 'check'])
         ->middleware(['throttle:30,1'])
         ->name('domains.check');
@@ -135,13 +142,32 @@ Route::middleware(['setLocale'])->group(function () {
     | Dynamic CMS Pages by slug (must stay after specific routes)
     |--------------------------------------------------------------------------
     |
-    | نستخدم هذا الراوت لكل صفحات الـ CMS مثل /about, /templates, /services...
-    | ويُستثنى منه المسارات الخاصة مثل client, admin, dashboard, templates, ...
+    | This route is responsible for all marketing CMS pages like:
+    | - /about
+    | - /services
+    | - /contact
+    |
+    | It explicitly EXCLUDES:
+    | client, admin, dashboard, api, storage, change-locale, checkout,
+    | portfolio, invoices, bulk, tenant-preview
+    |
+    | NOTE:
+    | - Keep more specific routes (like /templates, /domains, /checkout/...)
+    |   ABOVE this route so they are matched first.
     */
     Route::get('/{slug}', [FrontPageController::class, 'show'])
-        ->where('slug', '^(?!client|admin|dashboard|api|storage|change-locale|checkout|portfolio|invoices|bulk|tenant-preview).*$')
+        ->where(
+            'slug',
+            '^(?!(client|admin|dashboard|api|storage|change-locale|checkout|portfolio|invoices|bulk|tenant-preview)(/|$)).*$'
+        )
         ->name('frontend.page.show');
 
+    /*
+    |--------------------------------------------------------------------------
+    | Tenant Preview (LOCAL env only)
+    |--------------------------------------------------------------------------
+    | Used for previewing tenant front pages during development.
+    */
     if (app()->environment('local')) {
         Route::get('/tenant-preview/{subscription}', function (Subscription $subscription) {
             $subscription->loadMissing('plan');
@@ -163,7 +189,7 @@ Route::middleware(['setLocale'])->group(function () {
 
             return view('tenant.site', [
                 'subscription' => $subscription,
-                'page' => $page,
+                'page'         => $page,
             ]);
         })->name('tenant.preview');
 
@@ -192,7 +218,7 @@ Route::middleware(['setLocale'])->group(function () {
 
             return view('tenant.site', [
                 'subscription' => $subscription,
-                'page' => $page,
+                'page'         => $page,
             ]);
         })->name('tenant.preview.page');
     }
@@ -202,7 +228,7 @@ Route::middleware(['setLocale'])->group(function () {
     | Locale Switching
     |--------------------------------------------------------------------------
     */
-    Route::get('change-locale/{locale}', function ($locale) {
+    Route::get('/change-locale/{locale}', function (string $locale) {
         $language = Language::where('code', $locale)
             ->where('is_active', true)
             ->first();
@@ -223,4 +249,9 @@ Route::middleware(['setLocale'])->group(function () {
     require __DIR__ . '/client.php';
 });
 
+/*
+|--------------------------------------------------------------------------
+| Language file routes (e.g. /lang.js ...)
+|--------------------------------------------------------------------------
+*/
 require __DIR__ . '/lang.php';

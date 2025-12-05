@@ -58,11 +58,9 @@
                                 @forelse ($pages as $p)
                                     @php
                                         $translation = $p->translation();
-                                        $title = $translation?->title ?? $p->slug ?? ('#' . $p->id);
-                                        $slug = $translation?->slug ?? $p->slug ?? '';
-                                        $frontUrl = $p->is_home
-                                            ? url('/')
-                                            : ($slug ? url($slug) : url('/'));
+                                        $title = $translation?->title ?? ($p->slug ?? '#' . $p->id);
+                                        $slug = $translation?->slug ?? ($p->slug ?? '');
+                                        $frontUrl = $p->is_home ? url('/') : ($slug ? url($slug) : url('/'));
                                     @endphp
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
@@ -90,7 +88,8 @@
                                                     {{ t('dashboard.Current_Homepage', 'Current Homepage') }}
                                                 </span>
                                             @else
-                                                <form action="{{ route('dashboard.pages.set-home', $p) }}" method="POST" class="inline">
+                                                <form action="{{ route('dashboard.pages.set-home', $p) }}"
+                                                    method="POST" class="inline">
                                                     @csrf
                                                     <button type="submit" class="btn btn-primary btn-sm">
                                                         {{ t('dashboard.Make_Homepage', 'Make Homepage') }}
@@ -101,7 +100,8 @@
 
                                         {{-- Status (toggle) --}}
                                         <td>
-                                            <form action="{{ route('dashboard.pages.toggle-active', $p) }}" method="POST" class="inline">
+                                            <form action="{{ route('dashboard.pages.toggle-active', $p) }}"
+                                                method="POST" class="inline">
                                                 @csrf
                                                 <button type="submit"
                                                     class="px-2 py-1 rounded text-xs
@@ -120,14 +120,14 @@
                                         <td class="space-x-1 rtl:space-x-reverse">
                                             {{-- View --}}
                                             <a href="{{ $frontUrl }}"
-                                               class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
-                                               target="_blank">
+                                                class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
+                                                target="_blank">
                                                 <i class="ti ti-eye text-xl leading-none"></i>
                                             </a>
 
                                             {{-- Edit --}}
                                             <a href="{{ route('dashboard.pages.edit', $p) }}"
-                                               class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
+                                                class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                                 <i class="ti ti-edit text-xl leading-none"></i>
                                             </a>
 
@@ -138,14 +138,21 @@
                                                 <i class="ti ti-trash text-xl"></i>
                                             </button>
 
+
                                             {{-- Hidden delete form --}}
                                             <form id="delete-page-{{ $p->id }}"
-                                                  action="{{ route('dashboard.pages.destroy', $p) }}"
-                                                  method="POST"
-                                                  class="hidden">
+                                                action="{{ route('dashboard.pages.destroy', $p) }}" method="POST"
+                                                class="hidden">
                                                 @csrf
                                                 @method('DELETE')
                                             </form>
+                                            {{-- Manage Sections --}}
+                                            <a href="{{ route('dashboard.pages.sections.index', $p) }}"
+                                                class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
+                                                title="{{ __('إدارة السكشنات') }}">
+                                                <i class="ti ti-layout-grid text-xl leading-none"></i>
+                                            </a>
+
                                         </td>
                                     </tr>
                                 @empty
@@ -191,12 +198,12 @@
         }
 
         Swal.fire({
-            title: '{{ __("هل أنت متأكد من حذف هذه الصفحة؟") }}',
-            text: '{{ __("لن تتمكن من التراجع عن هذا الإجراء!") }}',
+            title: '{{ __('هل أنت متأكد من حذف هذه الصفحة؟') }}',
+            text: '{{ __('لن تتمكن من التراجع عن هذا الإجراء!') }}',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: '{{ __("نعم، احذف الصفحة") }}',
-            cancelButtonText: '{{ __("إلغاء") }}',
+            confirmButtonText: '{{ __('نعم، احذف الصفحة') }}',
+            cancelButtonText: '{{ __('إلغاء') }}',
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6'
         }).then((result) => {
@@ -209,4 +216,3 @@
         });
     }
 </script>
-

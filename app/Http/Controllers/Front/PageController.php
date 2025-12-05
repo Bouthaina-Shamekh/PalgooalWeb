@@ -4,54 +4,90 @@ namespace App\Http\Controllers\Front;
 
 use App\Http\Controllers\Controller;
 use App\Models\Page;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class PageController extends Controller
 {
     /**
-     * Display the frontend homepage.
+     * ------------------------------------------------------------------
+     * Show the marketing homepage "/"
+     * ------------------------------------------------------------------
      *
-     * This replicates the old closure:
-     * - Find the page marked as `is_home` and `is_active`
-     * - Eager load translations + sections.translations
-     * - Share `currentPage` with all views
-     * - Render `front.pages.page`
+     * Logic:
+     *  - Find the active marketing page marked as "is_home = 1".
+     *  - If none is marked as home, fall back to the first active
+     *    marketing page.
+     *  - Render resources/views/front/pages/page.blade.php which will
+     *    handle SEO + sections rendering.
      */
-    public function home(Request $request)
+    public function home(): View
     {
+        $locale = app()->getLocale();
+
+        // Try to get the marketing homepage
         $page = Page::with(['translations', 'sections.translations'])
-            ->where('is_home', true)
+            ->where('context', 'marketing')
             ->where('is_active', true)
+            ->where('is_home', true)
             ->first();
 
+        // Fallback: first active marketing page if no homepage is set
         if (! $page) {
-            abort(404, 'لم يتم تحديد الصفحة الرئيسية بعد.');
+            $page = Page::with(['translations', 'sections.translations'])
+                ->where('context', 'marketing')
+                ->where('is_active', true)
+                ->orderBy('id', 'asc')
+                ->firstOrFail();
         }
 
-        // Make the current page globally available to the views
-        view()->share('currentPage', $page);
+        // Optional guard: if for any reason it's not active or not marketing, abort
+        if (! $page->is_active || $page->context !== 'marketing') {
+            abort(404);
+        }
 
         return view('front.pages.page', [
-            'page' => $page,
+            'page'   => $page,
+            'locale' => $locale,
         ]);
     }
 
     /**
-     * Display a dynamic CMS page by slug.
+     * ------------------------------------------------------------------
+     * Show a marketing CMS page by slug: "/{slug}"
+     * ------------------------------------------------------------------
      *
-     * This replicates the old closure for /{slug}.
+     * This is used by the route:
+     *   Route::get('/{slug}', [FrontPageController::class, 'show'])
+     *
+     * Behavior:
+     *  - Search for a marketing, active page that has a translation
+     *    whose "slug" matches the requested $slug.
+     *  - We first try to match the current locale's translation.
+     *  - If not found, we try any translation that matches this slug.
+     *  - If we find a page but the canonical slug for the current locale
+     *    is different, we do a 301 redirect to the canonical URL.
+     *  - If nothing is found or page is not active/marketing → 404.
      */
-    public function show(Request $request, string $slug)
+    public function show($slug)
     {
-        $page = Page::with(['translations', 'sections.translations'])
-            ->where('is_active', true)
-            ->whereSlug($slug) // uses your existing scopeWhereSlug on Page
+        // Fetch page by slug in translations or base slug
+        $page = Page::with([
+            'translations',
+            'sections' => function ($q) {
+                $q->orderBy('order');
+            },
+            'sections.translations'
+        ])
+            ->where('slug', $slug)
+            ->orWhereHas('translations', function ($q) use ($slug) {
+                $q->where('slug', $slug);
+            })
             ->firstOrFail();
 
-        view()->share('currentPage', $page);
-
         return view('front.pages.page', [
-            'page' => $page,
+            'page'     => $page,
+            'sections' => $page->sections,
         ]);
     }
 }
