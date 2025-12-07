@@ -19,6 +19,7 @@ class Section extends Model
         'page_id',
         'type',
         'variant',
+        'style',
         'order',
         'is_active',
     ];
@@ -28,6 +29,7 @@ class Section extends Model
      */
     protected $casts = [
         'is_active' => 'boolean',
+        'style'     => 'array',
     ];
 
     /**

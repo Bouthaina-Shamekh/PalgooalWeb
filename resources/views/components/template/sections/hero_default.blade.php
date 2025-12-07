@@ -33,7 +33,16 @@
      * }
      */
 
-    // Safe extraction with fallbacks
+    // ⬅️ NEW: read generic style from $section->style (JSON)
+    /** @var \App\Models\Section $section */
+    $style = is_array($section->style ?? null) ? $section->style : [];
+
+    // Tailwind-style tokens for background / alignment / padding
+    $bgColor   = $style['background_color'] ?? 'bg-background dark:bg-gray-950';
+    $textAlign = $style['text_align']       ?? 'rtl:text-right ltr:text-left';
+    $paddingY  = $style['padding_y']        ?? 'py-16 sm:py-20';
+
+    // Safe extraction with fallbacks for content
     $eyebrow   = $content['eyebrow'] ?? null;
     $heroTitle = $content['title'] ?? $title ?? '';
     $subtitle  = $content['subtitle'] ?? null;
@@ -56,7 +65,7 @@
 @endphp
 
 <section
-    class="relative overflow-hidden bg-background dark:bg-gray-950 text-primary dark:text-white py-16 sm:py-20 px-4 sm:px-8 lg:px-24 rtl:text-right ltr:text-left"
+    class="relative overflow-hidden {{ $bgColor }} text-primary dark:text-white {{ $paddingY }} px-4 sm:px-8 lg:px-24 {{ $textAlign }}"
 >
     {{-- Soft gradient background blob (purely decorative) --}}
     <div class="pointer-events-none absolute inset-x-0 -top-32 opacity-40 blur-3xl">
