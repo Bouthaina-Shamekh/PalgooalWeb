@@ -179,6 +179,9 @@
         'hosting-plans'   => 'hosting-plans',
         'faq'             => 'faq',
     ];
+
+    // Sections built via GrapesJS (stored JSON structure)
+    $builderSections = $page->builderStructure?->normalizedSections() ?? [];
 @endphp
 
 @extends('front.layouts.app')
@@ -187,7 +190,7 @@
     {{-- -----------------------------------------------------------------
          Fallback: if the page has NO sections → show simple page layout
        ----------------------------------------------------------------- --}}
-    @if ($page->sections->isEmpty())
+    @if ($page->sections->isEmpty() && empty($builderSections))
         <section class="bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
             <div class="max-w-4xl mx-auto">
                 {{-- Page heading --}}
@@ -210,6 +213,25 @@
          - If sections exist, we render them in order.
          - Each section type generates its own $data payload.
        ----------------------------------------------------------------- --}}
+    @if (!empty($builderSections))
+        @foreach ($builderSections as $builderSection)
+            @php
+                $componentKey = $builderSection['type'] ?? null;
+                $component    = $sectionComponents[$componentKey] ?? null;
+
+                if (! $component) {
+                    continue;
+                }
+
+                $data = $builderSection['data'] ?? [];
+            @endphp
+
+            <x-dynamic-component
+                :component="'template.sections.' . $component"
+                :data="$data"
+            />
+        @endforeach
+    @else
     @foreach ($page->sections as $section)
         @php
             /** @var \App\Models\Section $section */
@@ -599,14 +621,14 @@
                 :category="$data['category'] ?? null"
             />
         @elseif ($component === 'hero_default')
-    <x-dynamic-component
-        :component="'template.sections.' . $component"
-        :section="$section"
-        :title="$title"
-        :content="$content"
-        :variant="$section->variant"
-    />
-@else
+            <x-dynamic-component
+                :component="'template.sections.' . $component"
+                :section="$section"
+                :title="$title"
+                :content="$content"
+                :variant="$section->variant"
+            />
+        @else
             {{-- Default: component expects a `data` prop and optionally `templates` --}}
             <x-dynamic-component
                 :component="'template.sections.' . $component"
@@ -615,4 +637,5 @@
             />
         @endif
     @endforeach
+    @endif
 @endsection

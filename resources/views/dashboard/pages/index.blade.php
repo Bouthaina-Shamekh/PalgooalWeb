@@ -146,11 +146,11 @@
                                                 @csrf
                                                 @method('DELETE')
                                             </form>
-                                            {{-- Manage Sections --}}
-                                            <a href="{{ route('dashboard.pages.sections.index', $p) }}"
+                                            {{-- Page Builder --}}
+                                            <a href="{{ route('dashboard.pages.builder', $p) }}"
                                                 class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
-                                                title="{{ __('إدارة السكشنات') }}">
-                                                <i class="ti ti-layout-grid text-xl leading-none"></i>
+                                                title="{{ __('Page Builder') }}">
+                                                <i class="ti ti-vector text-xl leading-none"></i>
                                             </a>
 
                                         </td>

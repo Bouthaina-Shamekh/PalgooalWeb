@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\TemplateReviewController;
 use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\PortfolioController;
 use App\Http\Controllers\Admin\PageController;
+use App\Http\Controllers\Admin\PageBuilderController;
 use App\Http\Controllers\Admin\SectionController;
 
 // -----------------------------------------------------------------------------
@@ -150,6 +151,11 @@ Route::group([
 
             // Mark as homepage
             Route::post('/{page}/set-home', [PageController::class, 'setHome'])->name('set-home');
+
+            // Visual Page Builder (GrapesJS)
+            Route::get('/{page}/builder', [PageBuilderController::class, 'edit'])->name('builder');
+            Route::get('/{page}/builder/data', [PageBuilderController::class, 'loadData'])->name('builder.data');
+            Route::post('/{page}/builder/data', [PageBuilderController::class, 'saveData'])->name('builder.data.save');
         });
 
     // -------------------------------------------------------------------------

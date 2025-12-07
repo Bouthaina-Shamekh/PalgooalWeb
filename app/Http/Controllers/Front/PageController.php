@@ -26,7 +26,7 @@ class PageController extends Controller
         $locale = app()->getLocale();
 
         // Try to get the marketing homepage
-        $page = Page::with(['translations', 'sections.translations'])
+        $page = Page::with(['translations', 'sections.translations', 'builderStructure'])
             ->where('context', 'marketing')
             ->where('is_active', true)
             ->where('is_home', true)
@@ -34,7 +34,7 @@ class PageController extends Controller
 
         // Fallback: first active marketing page if no homepage is set
         if (! $page) {
-            $page = Page::with(['translations', 'sections.translations'])
+            $page = Page::with(['translations', 'sections.translations', 'builderStructure'])
                 ->where('context', 'marketing')
                 ->where('is_active', true)
                 ->orderBy('id', 'asc')
@@ -71,19 +71,41 @@ class PageController extends Controller
      */
     public function show($slug)
     {
-        // Fetch page by slug in translations or base slug
-        $page = Page::with([
+        $locale = app()->getLocale();
+
+        $baseQuery = Page::with([
             'translations',
             'sections' => function ($q) {
                 $q->orderBy('order');
             },
-            'sections.translations'
+            'sections.translations',
+            'builderStructure',
         ])
-            ->where('slug', $slug)
-            ->orWhereHas('translations', function ($q) use ($slug) {
-                $q->where('slug', $slug);
+            ->where('context', 'marketing')
+            ->where('is_active', true);
+
+        // Try current locale first
+        $page = (clone $baseQuery)
+            ->whereHas('translations', function ($q) use ($slug, $locale) {
+                $q->where('locale', $locale)
+                    ->where('slug', $slug);
             })
-            ->firstOrFail();
+            ->first();
+
+        // Fallback: any locale
+        if (! $page) {
+            $page = (clone $baseQuery)
+                ->whereHas('translations', function ($q) use ($slug) {
+                    $q->where('slug', $slug);
+                })
+                ->firstOrFail();
+        }
+
+        // Canonical redirect if the slug for this locale differs
+        $canonicalSlug = $page->translation($locale)?->slug;
+        if ($canonicalSlug && $canonicalSlug !== $slug) {
+            return redirect()->to('/' . ltrim($canonicalSlug, '/'), 301);
+        }
 
         return view('front.pages.page', [
             'page'     => $page,

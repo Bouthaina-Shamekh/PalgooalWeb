@@ -6,6 +6,7 @@ use App\Models\Tenancy\Subscription;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\PageBuilderStructure;
 
 class Page extends Model
 {
@@ -53,6 +54,14 @@ class Page extends Model
         // We keep the default ordering by `order` so sections are always sorted.
         return $this->hasMany(Section::class)
             ->orderBy('order');
+    }
+
+    /**
+     * Relationship: single builder structure JSON blob (GrapesJS).
+     */
+    public function builderStructure()
+    {
+        return $this->hasOne(PageBuilderStructure::class);
     }
 
     /**
