@@ -23,17 +23,25 @@ function ensureWrapperComponent(component) {
         components = [];
     }
 
-    // تأكد أن الـ wrapper الأساسي يغطي كامل الشاشة وله خلفية لطيفة
     const attrs = isPlainObject(component.attributes)
         ? { ...component.attributes }
         : {};
 
+    // Tailwind classes (لو حابب تخلي الخلفية من الثيم)
     const baseWrapperClasses =
-        'min-h-[calc(100vh-72px)] w-full bg-slate-50 dark:bg-slate-950';
+        'min-h-[calc(100vh-72px)] w-full';
 
     attrs.class = attrs.class
         ? `${attrs.class} ${baseWrapperClasses}`
         : baseWrapperClasses;
+
+    // inline style لضمان ملء الشاشة داخل iframe حتى لو Tailwind ما شاف الكلاسات
+    const baseWrapperStyles =
+        'min-height: calc(100vh - 72px); width: 100%;';
+
+    attrs.style = attrs.style
+        ? `${attrs.style}; ${baseWrapperStyles}`
+        : baseWrapperStyles;
 
     return {
         ...component,
@@ -42,6 +50,7 @@ function ensureWrapperComponent(component) {
         attributes: attrs,
     };
 }
+
 
 /**
  * Ensure a single frame is valid.
@@ -262,7 +271,10 @@ if (root) {
             ],
         },
         canvas: {
-            styles: canvasStyles,
+            styles: [
+                '/assets/tamplate/css/app.css', // هذا يحتوي Tailwind
+                '/assets/tamplate/css/custom.css', // لو عندك ملفاتك
+            ],
             scripts: [],
         },
     });
@@ -284,7 +296,7 @@ if (root) {
 function registerComponents(editor) {
     const domc = editor.DomComponents;
 
-    // HERO SECTION مع تصميم Tailwind قريب من الواجهة الأمامية
+    // HERO SECTION مطابق تقريبًا للـ Blade
     domc.addType('hero-section', {
         isComponent: (el) => el?.dataset?.sectionType === 'hero',
         model: {
@@ -293,152 +305,107 @@ function registerComponents(editor) {
                 tagName: 'section',
                 attributes: {
                     'data-section-type': 'hero',
-                    'data-alignment': 'left',
-                    class:
-                        'relative overflow-hidden bg-gradient-to-b ' +
-                        'from-slate-50 to-slate-100 ' +
-                        'dark:from-slate-900 dark:to-slate-950 ' +
-                        'py-16 md:py-24',
+                    class: 'relative bg-gradient-to-tr from-primary to-primary shadow-2xl overflow-hidden -mt-20 min-h-[calc(100vh-72px)]',
                 },
                 draggable: true,
                 droppable: false,
                 highlightable: true,
-                traits: [
-                    {
-                        name: 'data-alignment',
-                        label: 'Alignment',
-                        type: 'select',
-                        options: [
-                            { id: 'left', name: 'Left' },
-                            { id: 'center', name: 'Center' },
-                        ],
-                        changeProp: 1,
-                    },
-                    {
-                        name: 'data-background',
-                        label: 'Background (variant)',
-                        type: 'text',
-                        placeholder: 'light | dark | gradient',
-                        changeProp: 1,
-                    },
-                ],
+                // نقدر نضيف Traits لاحقًا لو حبينا نتحكم في خيارات الهيرو
+                traits: [],
                 components: [
+                    // صورة الخلفية
+                    {
+                        type: 'image',
+                        attributes: {
+                            src: '/assets/tamplate/images/template.webp',
+                            alt: '',
+                            'aria-hidden': 'true',
+                            decoding: 'async',
+                            loading: 'eager',
+                            fetchpriority: 'high',
+                            class: 'absolute inset-0 z-0 opacity-80 w-full h-full object-cover object-center ltr:scale-x-[-1] rtl:scale-x-100 transition-transform duration-500 ease-in-out',
+                        },
+                    },
+
+                    // المحتوى الرئيسي
                     {
                         tagName: 'div',
                         attributes: {
-                            class:
-                                'max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 ' +
-                                'grid lg:grid-cols-2 gap-10 items-center',
+                            class: 'relative z-10 px-4 sm:px-8 lg:px-24 py-20 sm:py-28 lg:py-32 flex flex-col-reverse md:flex-row items-center justify-between gap-12 min-h-[600px] lg:min-h-[700px]',
                         },
                         components: [
                             {
                                 tagName: 'div',
                                 attributes: {
-                                    class: 'space-y-6',
+                                    class: 'max-w-xl rtl:text-right ltr:text-left text-center md:text-start',
                                 },
                                 components: [
+                                    // العنوان
                                     {
                                         type: 'text',
                                         tagName: 'h1',
                                         attributes: {
                                             'data-field': 'title',
-                                            class:
-                                                'text-3xl sm:text-4xl md:text-5xl ' +
-                                                'font-extrabold tracking-tight ' +
-                                                'text-slate-900 dark:text-white',
+                                            class: 'text-3xl/20 sm:text-4xl/20 lg:text-5xl/20 font-extrabold text-white leading-tight drop-shadow-lg mb-6',
                                         },
-                                        content: 'Hero title',
+                                        content: 'عنوان غير متوفر',
                                     },
+                                    // الوصف
                                     {
                                         type: 'text',
                                         tagName: 'p',
                                         attributes: {
                                             'data-field': 'subtitle',
-                                            class:
-                                                'text-base sm:text-lg ' +
-                                                'text-slate-600 dark:text-slate-300 ' +
-                                                'max-w-xl',
+                                            class: 'text-white/90 text-base sm:text-lg font-light mb-8',
                                         },
-                                        content: 'Short supporting copy.',
+                                        content: 'نص وصفي قصير يوضح الفكرة الرئيسية للخدمة أو المنصة.',
                                     },
+                                    // الأزرار
                                     {
                                         tagName: 'div',
                                         attributes: {
-                                            class:
-                                                'flex flex-wrap gap-3 items-center',
+                                            class: 'flex flex-row flex-wrap gap-3 justify-center md:justify-start',
                                         },
                                         components: [
                                             {
                                                 type: 'link',
                                                 attributes: {
-                                                    'data-field':
-                                                        'primary-button',
+                                                    'data-field': 'primary-button',
                                                     href: '#',
-                                                    title: 'Primary action',
-                                                    class:
-                                                        'inline-flex items-center justify-center ' +
-                                                        'px-5 py-2.5 rounded-full ' +
-                                                        'text-sm font-semibold ' +
-                                                        'text-white ' +
-                                                        'bg-gradient-to-r from-[#6D28D9] via-[#9333EA] to-[#EC4899] ' +
-                                                        'shadow-sm hover:shadow-md ' +
-                                                        'focus:outline-none focus:ring-2 ' +
-                                                        'focus:ring-offset-2 focus:ring-[#9333EA]',
+                                                    'aria-label': 'ابدأ الآن',
+                                                    class: 'bg-secondary hover:bg-primary text-white font-bold px-6 py-3 rounded-lg shadow transition text-sm sm:text-base',
                                                 },
-                                                content: 'Primary action',
+                                                content: 'ابدأ الآن',
                                             },
                                             {
                                                 type: 'link',
                                                 attributes: {
-                                                    'data-field':
-                                                        'secondary-button',
+                                                    'data-field': 'secondary-button',
                                                     href: '#',
-                                                    title: 'Secondary action',
-                                                    class:
-                                                        'inline-flex items-center justify-center ' +
-                                                        'px-4 py-2.5 rounded-full ' +
-                                                        'text-sm font-semibold ' +
-                                                        'text-slate-700 dark:text-slate-100 ' +
-                                                        'bg-white/80 dark:bg-slate-900/60 ' +
-                                                        'border border-slate-200 dark:border-slate-700 ' +
-                                                        'hover:bg-white dark:hover:bg-slate-900 ' +
-                                                        'shadow-sm',
+                                                    class: 'bg-white/10 text-white font-bold px-6 py-3 rounded-lg shadow transition hover:bg-white/20 text-sm sm:text-base border border-white/30',
                                                 },
-                                                content: 'Secondary action',
+                                                content: 'استعرض القوالب',
                                             },
                                         ],
                                     },
                                 ],
                             },
-                            {
-                                tagName: 'div',
-                                attributes: {
-                                    class:
-                                        'relative flex justify-center lg:justify-end',
-                                },
-                                components: [
-                                    {
-                                        type: 'image',
-                                        attributes: {
-                                            'data-field': 'image',
-                                            src: 'https://placehold.co/800x400',
-                                            alt: 'Hero image',
-                                            class:
-                                                'w-full max-w-xl mx-auto ' +
-                                                'rounded-3xl border border-slate-200/70 dark:border-slate-700/70 ' +
-                                                'shadow-xl bg-slate-200 object-cover',
-                                        },
-                                    },
-                                ],
-                            },
                         ],
+                    },
+
+                    // الإضاءة السفلية
+                    {
+                        tagName: 'div',
+                        attributes: {
+                            class: 'absolute -bottom-20 -left-20 w-96 h-96 bg-white/10 rounded-full blur-3xl z-0',
+                        },
                     },
                 ],
             },
         },
     });
 
-    // FEATURES SECTION مع Grid جميل
+    // 👇 اترك باقي الـ components كما هي (features-section و feature-item ...)
     domc.addType('features-section', {
         isComponent: (el) => el?.dataset?.sectionType === 'features',
         model: {
@@ -448,9 +415,6 @@ function registerComponents(editor) {
                 attributes: {
                     'data-section-type': 'features',
                     'data-layout': 'grid',
-                    class:
-                        'py-16 bg-white dark:bg-slate-950 ' +
-                        'border-t border-slate-100 dark:border-slate-800/60',
                 },
                 draggable: true,
                 droppable: true,
@@ -468,71 +432,7 @@ function registerComponents(editor) {
                     },
                 ],
                 components: [
-                    {
-                        tagName: 'div',
-                        attributes: {
-                            class:
-                                'max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10',
-                        },
-                        components: [
-                            {
-                                tagName: 'header',
-                                attributes: {
-                                    class:
-                                        'max-w-3xl space-y-3 ' +
-                                        'rtl:text-right ltr:text-left',
-                                },
-                                components: [
-                                    {
-                                        type: 'text',
-                                        tagName: 'h2',
-                                        attributes: {
-                                            'data-field': 'title',
-                                            class:
-                                                'text-2xl sm:text-3xl font-bold ' +
-                                                'text-slate-900 dark:text-white',
-                                        },
-                                        content: 'Features title',
-                                    },
-                                    {
-                                        type: 'text',
-                                        tagName: 'p',
-                                        attributes: {
-                                            'data-field': 'subtitle',
-                                            class:
-                                                'text-sm sm:text-base ' +
-                                                'text-slate-600 dark:text-slate-300',
-                                        },
-                                        content: 'Why people choose us.',
-                                    },
-                                ],
-                            },
-                            {
-                                tagName: 'div',
-                                attributes: {
-                                    class:
-                                        'grid gap-6 sm:grid-cols-2 lg:grid-cols-3',
-                                },
-                                components: [
-                                    createFeatureItemComponent(
-                                        'Feature name',
-                                        'Explain the benefit and outcome.',
-                                        '<i class="ti ti-check"></i>'
-                                    ),
-                                    createFeatureItemComponent(
-                                        'Second feature',
-                                        'Add a short supporting line.',
-                                        '<i class="ti ti-bolt"></i>'
-                                    ),
-                                    createFeatureItemComponent(
-                                        'Third feature',
-                                        'What makes this special?',
-                                        '<i class="ti ti-rocket"></i>'
-                                    ),
-                                ],
-                            },
-                        ],
-                    },
+                    // ... نفس اللي عندك الآن
                 ],
             },
         },
@@ -547,11 +447,6 @@ function registerComponents(editor) {
                 attributes: {
                     'data-field': 'feature-item',
                     'data-icon': '<i class="ti ti-check"></i>',
-                    class:
-                        'relative overflow-hidden rounded-2xl ' +
-                        'border border-slate-200 dark:border-slate-800 ' +
-                        'bg-white dark:bg-slate-900/80 ' +
-                        'px-4 py-5 space-y-3 shadow-sm',
                 },
                 draggable: true,
                 droppable: false,
@@ -569,6 +464,7 @@ function registerComponents(editor) {
         },
     });
 }
+
 
 /**
  * Helper to create a feature-item block with Tailwind layout.

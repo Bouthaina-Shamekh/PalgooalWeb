@@ -8,7 +8,7 @@
 @endphp
 
 <main>
-  <section class="relative bg-gradient-to-tr from-primary to-primary shadow-2xl overflow-hidden -mt-20">
+  <section  data-section-type="hero" class="relative bg-gradient-to-tr from-primary to-primary shadow-2xl overflow-hidden -mt-20">
     <img
       src="{{ asset('assets/tamplate/images/template.webp') }}"
       alt=""

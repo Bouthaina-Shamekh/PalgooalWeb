@@ -42,6 +42,7 @@
          data-builder-url="{{ route('dashboard.pages.builder', $page) }}"
          data-page-id="{{ $page->id }}"
           data-canvas-styles='@json($canvasStyles)'
+          data-canvas-styles='@json([mix("assets/tamplate/css/app.css")])'
          >
 
         <header class="pointer-events-none fixed top-4 left-0 right-0 z-30 flex justify-center px-3">
