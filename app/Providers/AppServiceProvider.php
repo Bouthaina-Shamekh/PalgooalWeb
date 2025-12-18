@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
+use App\Support\Sections\SectionRegistry;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -60,6 +61,20 @@ class AppServiceProvider extends ServiceProvider
                 $view->with('currentPage', $page);
             }
         });
-        HeroBlock::register();
+        SectionRegistry::register('hero_default', [
+            'view' => 'components.template.sections.hero',
+            'default' => [
+                'title' => 'عنوان غير متوفر',
+                'subtitle' => '',
+                'primary_button' => [
+                    'label' => 'ابدأ الآن',
+                    'url' => '#',
+                ],
+                'secondary_button' => [
+                    'label' => 'استعرض القوالب',
+                    'url' => '#',
+                ],
+            ],
+        ]);
     }
 }

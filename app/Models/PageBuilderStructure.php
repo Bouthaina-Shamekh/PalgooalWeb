@@ -141,9 +141,26 @@ class PageBuilderStructure extends Model
      */
     protected function findChildByField(array $component, string $field): ?array
     {
-        return collect(Arr::get($component, 'components', []))
-            ->first(function ($child) use ($field) {
-                return Arr::get($child, 'attributes.data-field') === $field;
-            });
+        // 🔹 نبحث بشكل Recursively في كل الـ components
+        $children = Arr::get($component, 'components', []);
+
+        foreach ($children as $child) {
+            if (! is_array($child)) {
+                continue;
+            }
+
+            // لو هذا العنصر عنده data-field يطابق المطلوب → رجّعه
+            if (Arr::get($child, 'attributes.data-field') === $field) {
+                return $child;
+            }
+
+            // غير هيك، نكمّل البحث جواته
+            $found = $this->findChildByField($child, $field);
+            if ($found) {
+                return $found;
+            }
+        }
+
+        return null;
     }
 }

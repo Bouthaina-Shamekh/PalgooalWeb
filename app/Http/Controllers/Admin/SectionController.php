@@ -350,7 +350,6 @@ class SectionController extends Controller
     {
         switch ($type) {
             case 'hero_default':
-                // "features_raw" is optional textarea (one feature per line)
                 $featuresRaw = $content['features_raw'] ?? ($content['features'] ?? '');
                 if (is_array($featuresRaw)) {
                     $features = array_values(array_filter(array_map('trim', $featuresRaw)));
@@ -384,10 +383,7 @@ class SectionController extends Controller
                     'media_url'  => $content['media_url'] ?? null,
                 ];
 
-                // لاحقًا: أضف هنا normalize لباقي الأنواع (features, cta, hosting-plans ... إلخ)
-
             default:
-                // Default: return as-is (no special schema)
                 return $content;
         }
     }
