@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusText = document.querySelector('[data-status-text]');
     const statusTime = document.querySelector('[data-status-time]');
     const blockButtons = document.querySelectorAll('.builder-block-btn');
+    const previewButtons = document.querySelectorAll('[data-preview]');
 
     const storageKey = root?.dataset.pageId ? `builder-html-${root.dataset.pageId}` : null;
 
@@ -54,9 +55,88 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
     };
 
+    const setPreviewMode = (mode) => {
+        if (!root) return;
+        root.classList.remove('preview-desktop', 'preview-tablet', 'preview-mobile');
+        root.classList.add(`preview-${mode}`);
+        previewButtons.forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.preview === mode);
+        });
+    };
+
     const applyAlignment = (element, alignment) => {
         if (!element) return;
         element.style.textAlign = alignment || 'left';
+    };
+
+    const openFormModal = (title, fields, onSave) => {
+        const backdrop = document.createElement('div');
+        backdrop.className = 'builder-modal-backdrop';
+
+        const modal = document.createElement('div');
+        modal.className = 'builder-modal';
+
+        const heading = document.createElement('h3');
+        heading.textContent = title;
+        modal.appendChild(heading);
+
+        const form = document.createElement('div');
+        fields.forEach((field) => {
+            const wrap = document.createElement('div');
+            wrap.className = 'field';
+            const label = document.createElement('label');
+            label.textContent = field.label;
+            label.htmlFor = `fld-${field.name}`;
+            wrap.appendChild(label);
+            let input;
+            if (field.type === 'textarea') {
+                input = document.createElement('textarea');
+                input.value = field.value || '';
+            } else {
+                input = document.createElement('input');
+                input.type = field.type || 'text';
+                input.value = field.value || '';
+            }
+            input.id = `fld-${field.name}`;
+            input.name = field.name;
+            input.placeholder = field.placeholder || '';
+            wrap.appendChild(input);
+            form.appendChild(wrap);
+        });
+        modal.appendChild(form);
+
+        const actions = document.createElement('div');
+        actions.className = 'actions';
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'btn-secondary';
+        cancelBtn.textContent = 'إلغاء';
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'btn-primary';
+        saveBtn.textContent = 'حفظ';
+        actions.appendChild(cancelBtn);
+        actions.appendChild(saveBtn);
+        modal.appendChild(actions);
+
+        backdrop.appendChild(modal);
+        document.body.appendChild(backdrop);
+
+        const close = () => backdrop.remove();
+
+        cancelBtn.addEventListener('click', close);
+        backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) close();
+        });
+        saveBtn.addEventListener('click', () => {
+            const result = {};
+            fields.forEach((field) => {
+                const el = modal.querySelector(`#fld-${field.name}`);
+                result[field.name] = el ? el.value : '';
+            });
+            onSave(result);
+            close();
+        });
     };
 
     const attachBlockControls = (block) => {
@@ -223,6 +303,100 @@ document.addEventListener('DOMContentLoaded', () => {
         return section;
     };
 
+    const createHeroTemplateBlock = () => {
+        const wrapper = document.createElement('section');
+        wrapper.className = 'builder-block builder-block-fluid';
+        wrapper.dataset.type = 'hero-template';
+        wrapper.dataset.heading = 'Hero title';
+        wrapper.dataset.subtitle = 'Short description goes here.';
+        wrapper.dataset.primaryText = 'Get started';
+        wrapper.dataset.primaryUrl = '#';
+        wrapper.dataset.secondaryText = 'Learn more';
+        wrapper.dataset.secondaryUrl = '#';
+        wrapper.dataset.bg = 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1600&q=80';
+
+        wrapper.innerHTML = `
+<div class="relative bg-gradient-to-tr from-primary to-primary shadow-2xl overflow-hidden rounded-2xl">
+  <img data-hero-bg alt="" class="absolute inset-0 z-0 opacity-80 w-full h-full object-cover object-center ltr:scale-x-[-1] rtl:scale-x-100 transition-transform duration-500 ease-in-out" aria-hidden="true" decoding="async" loading="eager" />
+  <div class="relative z-10 px-4 sm:px-8 lg:px-12 py-14 sm:py-16 lg:py-20 flex flex-col-reverse lg:flex-row items-center justify-between gap-10 min-h-[360px]">
+    <div class="max-w-xl rtl:text-right ltr:text-left text-center lg:text-start space-y-6">
+      <h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white leading-tight drop-shadow-lg"></h2>
+      <p class="text-white/90 text-base sm:text-lg font-light"></p>
+      <div class="flex flex-row flex-wrap gap-3 justify-center lg:justify-start">
+        <a data-hero-primary href="#" class="bg-secondary hover:bg-primary text-white font-bold px-6 py-3 rounded-lg shadow transition text-sm sm:text-base"></a>
+        <a data-hero-secondary href="#" class="bg-white/10 text-white font-bold px-6 py-3 rounded-lg shadow transition hover:bg-white/20 text-sm sm:text-base border border-white/30"></a>
+      </div>
+    </div>
+  </div>
+  <div class="absolute -bottom-20 -left-20 w-72 h-72 bg-white/10 rounded-full blur-3xl z-0"></div>
+</div>
+        `;
+
+        const h = wrapper.querySelector('h2');
+        const p = wrapper.querySelector('p');
+        const bg = wrapper.querySelector('[data-hero-bg]');
+        const primary = wrapper.querySelector('[data-hero-primary]');
+        const secondary = wrapper.querySelector('[data-hero-secondary]');
+        if (h) h.textContent = wrapper.dataset.heading;
+        if (p) p.textContent = wrapper.dataset.subtitle;
+        if (bg) bg.src = wrapper.dataset.bg;
+        if (primary) {
+            primary.textContent = wrapper.dataset.primaryText;
+            primary.href = wrapper.dataset.primaryUrl;
+        }
+        if (secondary) {
+            secondary.textContent = wrapper.dataset.secondaryText;
+            secondary.href = wrapper.dataset.secondaryUrl;
+        }
+
+        attachBlockControls(wrapper);
+        return wrapper;
+    };
+
+    const createSupportHeroBlock = () => {
+        const wrapper = document.createElement('section');
+        wrapper.className = 'builder-block builder-block-fluid';
+        wrapper.dataset.type = 'support-hero';
+        wrapper.dataset.heading = 'Support center';
+        wrapper.dataset.body = 'Anim aute id magna aliqua ad ad non deserunt sunt. Qui irure qui lorem cupidatat commodo. Elit sunt amet fugiat veniam occaecat fugiat.';
+        wrapper.dataset.lightImg = 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&crop=focalpoint&fp-y=.8&w=1600&q=80&sat=-100&exp=15&blend-mode=screen';
+        wrapper.dataset.darkImg = 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&crop=focalpoint&fp-y=.8&w=1600&q=80&sat=-100&exp=15&blend-mode=multiply';
+        wrapper.dataset.colorFrom = '#ff4694';
+        wrapper.dataset.colorTo = '#776fff';
+        wrapper.innerHTML = `
+<div class="relative isolate overflow-hidden bg-white py-24 sm:py-32 dark:bg-gray-900 rounded-2xl">
+  <img data-support-light alt="" class="absolute inset-0 -z-10 w-full h-full object-cover opacity-10 dark:hidden" />
+  <img data-support-dark alt="" class="absolute inset-0 -z-10 w-full h-full object-cover hidden dark:block" />
+  <div aria-hidden="true" class="hidden sm:absolute sm:-top-10 sm:right-1/2 sm:-z-10 sm:mr-10 sm:block sm:transform-gpu sm:blur-3xl">
+    <div data-support-blob style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)" class="aspect-[1097/845] w-[274.25px] opacity-15 dark:opacity-20"></div>
+  </div>
+  <div aria-hidden="true" class="absolute -top-52 left-1/2 -z-10 -translate-x-1/2 transform-gpu blur-3xl sm:-top-28 sm:ml-16 sm:translate-x-0">
+    <div data-support-blob style="clip-path: polygon(74.1% 44.1%, 100% 61.6%, 97.5% 26.9%, 85.5% 0.1%, 80.7% 2%, 72.5% 32.5%, 60.2% 62.4%, 52.4% 68.1%, 47.5% 58.3%, 45.2% 34.5%, 27.5% 76.7%, 0.1% 64.9%, 17.9% 100%, 27.6% 76.8%, 76.1% 97.7%, 74.1% 44.1%)" class="aspect-[1097/845] w-[274.25px] opacity-15 dark:opacity-20"></div>
+  </div>
+  <div class="mx-auto max-w-7xl px-6 lg:px-8">
+    <div class="mx-auto max-w-2xl lg:mx-0">
+      <h2 class="text-5xl font-semibold tracking-tight text-gray-900 sm:text-7xl dark:text-white"></h2>
+      <p class="mt-8 text-lg font-medium text-gray-700 sm:text-xl dark:text-gray-400"></p>
+    </div>
+  </div>
+</div>
+        `;
+        const h2 = wrapper.querySelector('h2');
+        const p = wrapper.querySelector('p');
+        if (h2) h2.textContent = wrapper.dataset.heading;
+        if (p) p.textContent = wrapper.dataset.body;
+        const lightEl = wrapper.querySelector('[data-support-light]');
+        const darkEl = wrapper.querySelector('[data-support-dark]');
+        const blobs = wrapper.querySelectorAll('[data-support-blob]');
+        if (lightEl) lightEl.src = wrapper.dataset.lightImg;
+        if (darkEl) darkEl.src = wrapper.dataset.darkImg;
+        blobs.forEach((blob) => {
+            blob.style.backgroundImage = `linear-gradient(45deg, ${wrapper.dataset.colorFrom}, ${wrapper.dataset.colorTo})`;
+        });
+        attachBlockControls(wrapper);
+        return wrapper;
+    };
+
     const buildBlock = (type, payload = {}) => {
         switch (type) {
             case 'text':
@@ -253,16 +427,44 @@ document.addEventListener('DOMContentLoaded', () => {
                     section_padding: payload.padding || '24',
                     section_align: payload.align || 'left',
                 });
+            case 'support-hero':
+                return createSupportHeroBlock();
+            case 'hero-template':
+                return createHeroTemplateBlock();
             default:
                 return null;
         }
     };
 
+    const handleDrop = (type) => {
+        const block = buildBlock(type, {});
+        if (!block || !stage) return;
+        stage.appendChild(block);
+        updateEmptyState();
+        persistLocal();
+        setStatus('Unsaved', 'bg-amber-400');
+    };
+
     // Drag from block palette
     blockButtons.forEach((button) => {
+        const type = button.dataset.block;
+        if (!type) return;
+
+        // Drag to canvas
         button.addEventListener('dragstart', (e) => {
             e.dataTransfer.effectAllowed = 'copy';
-            e.dataTransfer.setData('text/plain', button.dataset.block);
+            e.dataTransfer.setData('text/plain', type);
+            e.dataTransfer.setData('application/builder-block', type);
+        });
+
+        // Click to add (fallback if drag not working)
+        button.addEventListener('click', () => {
+            const block = buildBlock(type, {});
+            if (!block || !stage) return;
+            stage.appendChild(block);
+            updateEmptyState();
+            persistLocal();
+            setStatus('Unsaved', 'bg-amber-400');
         });
     });
 
@@ -275,14 +477,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         stage.addEventListener('drop', (e) => {
             e.preventDefault();
-            const type = e.dataTransfer.getData('text/plain');
+            const type = e.dataTransfer.getData('application/builder-block') || e.dataTransfer.getData('text/plain');
             if (!type) return;
-            const block = buildBlock(type, {});
-            if (!block) return;
-            stage.appendChild(block);
-            updateEmptyState();
-            persistLocal();
-            setStatus('Unsaved', 'bg-amber-400');
+            handleDrop(type);
+        });
+    }
+
+    // Allow dropping directly on the empty state placeholder
+    if (emptyState) {
+        emptyState.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+        emptyState.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const type = e.dataTransfer.getData('application/builder-block') || e.dataTransfer.getData('text/plain');
+            if (!type) return;
+            handleDrop(type);
         });
     }
 
@@ -301,6 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const editBlock = (block, type) => {
+        let handledWithModal = false;
         switch (type) {
             case 'text': {
                 const heading = window.prompt('Heading', block.dataset.heading || 'Heading');
@@ -374,11 +586,86 @@ document.addEventListener('DOMContentLoaded', () => {
                 applyAlignment(block, block.dataset.align || 'left');
                 break;
             }
+            case 'hero-template': {
+                handledWithModal = true;
+                openFormModal('تعديل الـ Hero', [
+                    { label: 'العنوان', name: 'heading', value: block.dataset.heading || '' },
+                    { label: 'الوصف', name: 'subtitle', type: 'textarea', value: block.dataset.subtitle || '' },
+                    { label: 'النص الأساسي', name: 'primaryText', value: block.dataset.primaryText || '' },
+                    { label: 'رابط الأساسي', name: 'primaryUrl', type: 'url', value: block.dataset.primaryUrl || '#' },
+                    { label: 'النص الثانوي', name: 'secondaryText', value: block.dataset.secondaryText || '' },
+                    { label: 'رابط الثانوي', name: 'secondaryUrl', type: 'url', value: block.dataset.secondaryUrl || '#' },
+                    { label: 'صورة الخلفية', name: 'bg', type: 'url', value: block.dataset.bg || '' },
+                ], (values) => {
+                    block.dataset.heading = values.heading;
+                    block.dataset.subtitle = values.subtitle;
+                    block.dataset.primaryText = values.primaryText;
+                    block.dataset.primaryUrl = values.primaryUrl;
+                    block.dataset.secondaryText = values.secondaryText;
+                    block.dataset.secondaryUrl = values.secondaryUrl;
+                    block.dataset.bg = values.bg;
+
+                    const h2 = block.querySelector('h2');
+                    const p = block.querySelector('p');
+                    const bgImg = block.querySelector('[data-hero-bg]');
+                    const primary = block.querySelector('[data-hero-primary]');
+                    const secondary = block.querySelector('[data-hero-secondary]');
+                    if (h2) h2.textContent = block.dataset.heading || '';
+                    if (p) p.textContent = block.dataset.subtitle || '';
+                    if (bgImg && block.dataset.bg) bgImg.src = block.dataset.bg;
+                    if (primary) {
+                        primary.textContent = block.dataset.primaryText || '';
+                        primary.href = block.dataset.primaryUrl || '#';
+                    }
+                    if (secondary) {
+                        secondary.textContent = block.dataset.secondaryText || '';
+                        secondary.href = block.dataset.secondaryUrl || '#';
+                    }
+                    persistLocal();
+                    setStatus('Unsaved', 'bg-amber-400');
+                });
+                break;
+            }
+            case 'support-hero': {
+                handledWithModal = true;
+                openFormModal('تعديل Support Hero', [
+                    { label: 'العنوان', name: 'heading', value: block.dataset.heading || '' },
+                    { label: 'الوصف', name: 'body', type: 'textarea', value: block.dataset.body || '' },
+                    { label: 'صورة النور', name: 'lightImg', type: 'url', value: block.dataset.lightImg || '' },
+                    { label: 'صورة الداكن', name: 'darkImg', type: 'url', value: block.dataset.darkImg || '' },
+                    { label: 'لون التدرج (من)', name: 'colorFrom', type: 'color', value: block.dataset.colorFrom || '#ff4694' },
+                    { label: 'لون التدرج (إلى)', name: 'colorTo', type: 'color', value: block.dataset.colorTo || '#776fff' },
+                ], (values) => {
+                    block.dataset.heading = values.heading;
+                    block.dataset.body = values.body;
+                    block.dataset.lightImg = values.lightImg;
+                    block.dataset.darkImg = values.darkImg;
+                    block.dataset.colorFrom = values.colorFrom;
+                    block.dataset.colorTo = values.colorTo;
+                    const h2 = block.querySelector('h2');
+                    const p = block.querySelector('p');
+                    if (h2) h2.textContent = block.dataset.heading || '';
+                    if (p) p.textContent = block.dataset.body || '';
+                    const lightEl = block.querySelector('[data-support-light]');
+                    const darkEl = block.querySelector('[data-support-dark]');
+                    if (lightEl) lightEl.src = block.dataset.lightImg || '';
+                    if (darkEl) darkEl.src = block.dataset.darkImg || '';
+                    const blobs = block.querySelectorAll('[data-support-blob]');
+                    blobs.forEach((blob) => {
+                        blob.style.backgroundImage = `linear-gradient(45deg, ${block.dataset.colorFrom || '#ff4694'}, ${block.dataset.colorTo || '#776fff'})`;
+                    });
+                    persistLocal();
+                    setStatus('Unsaved', 'bg-amber-400');
+                });
+                break;
+            }
             default:
                 break;
         }
-        persistLocal();
-        setStatus('Unsaved', 'bg-amber-400');
+        if (!handledWithModal) {
+            persistLocal();
+            setStatus('Unsaved', 'bg-amber-400');
+        }
     };
 
     const rehydrateBlocks = () => {
@@ -394,6 +681,17 @@ document.addEventListener('DOMContentLoaded', () => {
             persistLocal();
             setStatus('Saved', 'bg-emerald-400');
         });
+    }
+
+    // Preview toggles (desktop/tablet/mobile)
+    if (previewButtons.length && root) {
+        previewButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.preview || 'desktop';
+                setPreviewMode(mode);
+            });
+        });
+        setPreviewMode('desktop');
     }
 
     // Language dropdown toggle (builder)

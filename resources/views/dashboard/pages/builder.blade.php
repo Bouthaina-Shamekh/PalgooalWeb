@@ -29,6 +29,10 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
+            min-height: 420px;
+            width: 100%;
+            margin-inline: auto;
+            align-items: stretch;
         }
         .builder-block {
             background: #ffffff;
@@ -39,6 +43,7 @@
             cursor: grab;
             position: relative;
             transition: box-shadow 0.2s ease, transform 0.2s ease;
+            width: 100%;
         }
         .builder-block:active {
             cursor: grabbing;
@@ -65,7 +70,53 @@
             border-radius: 12px;
             border: 1px solid #e2e8f0;
         }
-        .builder-button {
+        /* Fluid blocks (e.g., hero) take full width without white wrapper */
+        .builder-block-fluid {
+            width: 100%;
+            background: transparent;
+            border: none;
+            padding: 0;
+            box-shadow: none;
+            border-radius: 0;
+        }
+        .builder-block-fluid > * {
+            border-radius: 0;
+        }
+        /* Preview toggles */
+        .builder-preview-toggle {
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            border-radius: 999px;
+            padding: 4px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+        }
+        .builder-preview-btn {
+            border: none;
+            background: transparent;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+        }
+        .builder-preview-btn.active {
+            background: linear-gradient(90deg, #0ea5e9, #6366f1);
+            color: #fff;
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.25);
+        }
+        /* Preview widths */
+        #page-builder-root.preview-desktop #builder-stage {
+            max-width: 100%;
+        }
+        #page-builder-root.preview-tablet #builder-stage {
+            max-width: 820px;
+        }
+        #page-builder-root.preview-mobile #builder-stage {
+            max-width: 480px;
+        }
+        .builder-
+        utton {
             display: inline-flex;
             align-items: center;
             gap: 6px;
@@ -93,6 +144,7 @@
             gap: 6px;
             opacity: 0;
             transition: opacity 0.15s ease;
+            z-index: 30;
         }
         .builder-block:hover .block-actions {
             opacity: 1;
@@ -105,6 +157,81 @@
             font-size: 12px;
             padding: 4px 8px;
             box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+        }
+        /* Inline modal editor */
+        .builder-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.35);
+            backdrop-filter: blur(3px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            padding: 16px;
+        }
+        .builder-modal {
+            width: min(560px, 100%);
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18);
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+        }
+        .builder-modal h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 12px;
+        }
+        .builder-modal .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .builder-modal label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+        }
+        .builder-modal input,
+        .builder-modal textarea {
+            width: 100%;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 14px;
+            color: #0f172a;
+            background: #f8fafc;
+        }
+        .builder-modal textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+        .builder-modal .actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 6px;
+        }
+        .builder-modal button {
+            border-radius: 999px;
+            border: 1px solid #e2e8f0;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .builder-modal .btn-secondary {
+            background: #fff;
+            color: #0f172a;
+        }
+        .builder-modal .btn-primary {
+            background: linear-gradient(90deg, #0ea5e9, #6366f1);
+            color: #fff;
+            border: none;
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.25);
         }
 
         /* Language switcher override (dashboard component inside builder) */
@@ -209,14 +336,19 @@
                         <span class="text-slate-400">|</span>
                         <span class="text-slate-500" data-status-time>--:--</span>
                     </div>
+                    <div class="builder-preview-toggle flex items-center gap-1">
+                        <button type="button" class="builder-preview-btn active" data-preview="desktop">Desktop</button>
+                        <button type="button" class="builder-preview-btn" data-preview="tablet">Tablet</button>
+                        <button type="button" class="builder-preview-btn" data-preview="mobile">Mobile</button>
+                    </div>
                 </div>
             </div>
         </header>
 
         <main class="flex-1 flex bg-slate-50">
             <section class="flex-1 p-6 order-2">
-                <div class="h-full rounded-2xl border border-slate-200 bg-white shadow-sm builder-canvas">
-                    <div class="h-full overflow-auto p-8">
+                    <div class="h-full rounded-2xl border border-slate-200 bg-white shadow-sm builder-canvas">
+                        <div class="h-full overflow-auto p-4">
                         <div id="builder-empty-state" class="min-h-[420px] flex items-center justify-center text-center">
                             <div class="max-w-md space-y-3">
                                 <p class="text-sm font-semibold text-slate-700">{{ __('Drag blocks to start building') }}</p>
@@ -229,7 +361,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="builder-stage" class="builder-stage max-w-4xl mx-auto"></div>
+                        <div id="builder-stage" class="builder-stage w-full"></div>
                     </div>
                 </div>
             </section>
@@ -266,6 +398,20 @@
                             <span class="text-xs font-semibold text-slate-400">S</span>
                         </div>
                         <p class="text-xs text-slate-500 mt-1">{{ __('Title, body, and background') }}</p>
+                    </button>
+                    <button type="button" draggable="true" class="builder-block-btn text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-3 shadow-sm transition" data-block="support-hero" data-title="{{ __('Support hero') }}">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-semibold text-slate-800">{{ __('Support hero') }}</span>
+                            <span class="text-xs font-semibold text-slate-400">H</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">{{ __('Large hero with background') }}</p>
+                    </button>
+                    <button type="button" draggable="true" class="builder-block-btn text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-3 shadow-sm transition" data-block="hero-template" data-title="{{ __('Template hero') }}">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-semibold text-slate-800">{{ __('Template hero') }}</span>
+                            <span class="text-xs font-semibold text-slate-400">H</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-1">{{ __('Hero with CTA buttons') }}</p>
                     </button>
                 </div>
             </aside>
