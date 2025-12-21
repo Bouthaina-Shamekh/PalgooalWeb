@@ -33,7 +33,14 @@ class PageBuilderStructure extends Model
      */
     public function normalizedSections(): array
     {
-        $components = Arr::get($this->structure ?? [], 'pages.0.frames.0.component.components', []);
+        $structure = $this->structure ?? [];
+
+        // Lite builder format: { mode: 'lite-builder', blocks: [...] }
+        if (Arr::get($structure, 'mode') === 'lite-builder' && is_array(Arr::get($structure, 'blocks'))) {
+            return $this->mapLiteBlocks(Arr::get($structure, 'blocks', []));
+        }
+
+        $components = Arr::get($structure, 'pages.0.frames.0.component.components', []);
 
         return collect($components)
             ->map(fn(array $component) => $this->mapComponentToSection($component))
@@ -77,6 +84,86 @@ class PageBuilderStructure extends Model
 
             default => null,
         };
+    }
+
+    /**
+     * Map simplified blocks (lite builder) to sections.
+     *
+     * @param array<int, array{type:string,data:array}> $blocks
+     */
+    protected function mapLiteBlocks(array $blocks): array
+    {
+        return collect($blocks)
+            ->map(function ($block) {
+                $type = $block['type'] ?? '';
+                $data = $block['data'] ?? [];
+
+                return match ($type) {
+                    'text' => [
+                        'type' => 'text',
+                        'data' => [
+                            'title' => Arr::get($data, 'title', ''),
+                            'body'  => Arr::get($data, 'body', ''),
+                            'align' => Arr::get($data, 'align', 'left'),
+                        ],
+                    ],
+                    'image' => [
+                        'type' => 'image',
+                        'data' => [
+                            'url'   => Arr::get($data, 'url', ''),
+                            'alt'   => Arr::get($data, 'alt', ''),
+                            'width' => Arr::get($data, 'width', '100%'),
+                            'align' => Arr::get($data, 'align', 'center'),
+                        ],
+                    ],
+                    'button' => [
+                        'type' => 'button',
+                        'data' => [
+                            'text'  => Arr::get($data, 'text', ''),
+                            'url'   => Arr::get($data, 'url', '#'),
+                            'style' => Arr::get($data, 'style', 'primary'),
+                            'align' => Arr::get($data, 'align', 'center'),
+                        ],
+                    ],
+                    'section' => [
+                        'type' => 'section',
+                        'data' => [
+                            'title'   => Arr::get($data, 'title', ''),
+                            'body'    => Arr::get($data, 'body', ''),
+                            'bg'      => Arr::get($data, 'bg', '#ffffff'),
+                            'padding' => Arr::get($data, 'padding', '24'),
+                            'align'   => Arr::get($data, 'align', 'left'),
+                        ],
+                    ],
+                    'hero-template' => [
+                        'type' => 'hero-template',
+                        'data' => [
+                            'heading'       => Arr::get($data, 'heading', ''),
+                            'subtitle'      => Arr::get($data, 'subtitle', ''),
+                            'primary_text'  => Arr::get($data, 'primaryText', ''),
+                            'primary_url'   => Arr::get($data, 'primaryUrl', '#'),
+                            'secondary_text'=> Arr::get($data, 'secondaryText', ''),
+                            'secondary_url' => Arr::get($data, 'secondaryUrl', '#'),
+                            'bg'            => Arr::get($data, 'bg', ''),
+                        ],
+                    ],
+                    'support-hero' => [
+                        'type' => 'support-hero',
+                        'data' => [
+                            'heading'    => Arr::get($data, 'heading', ''),
+                            'body'       => Arr::get($data, 'body', ''),
+                            'light_img'  => Arr::get($data, 'lightImg', ''),
+                            'dark_img'   => Arr::get($data, 'darkImg', ''),
+                            'color_from' => Arr::get($data, 'colorFrom', '#ff4694'),
+                            'color_to'   => Arr::get($data, 'colorTo', '#776fff'),
+                        ],
+                    ],
+                    default => null,
+                };
+            })
+            ->filter()
+            ->values()
+            ->all();
     }
 
     /**

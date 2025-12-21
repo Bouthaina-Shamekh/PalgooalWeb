@@ -7,7 +7,7 @@
     use App\Models\Media;
     use Illuminate\Support\Str;
     use App\Support\SeoMeta;
-    use App\Support\Blocks\SectionRenderer;
+    use App\Support\Sections\SectionRenderer;
 
     /**
      * ------------------------------------------------------------------
@@ -163,6 +163,12 @@
     $sectionComponents = [
         'hero'            => 'hero',
         'hero_default'    => 'hero_default',          // New Hero Default block → reuse hero component
+        'hero-template'   => null,                    // Render inline
+        'support-hero'    => null,                    // Render inline
+        'text'            => null,                    // Render inline
+        'image'           => null,                    // Render inline
+        'button'          => null,                    // Render inline
+        'section'         => null,                    // Render inline
         'features'        => 'features',
         'features-2'      => 'features-2',
         'features-3'      => 'features-3',
@@ -218,18 +224,108 @@
             @php
                 $componentKey = $builderSection['type'] ?? null;
                 $component    = $sectionComponents[$componentKey] ?? null;
-
-                if (! $component) {
-                    continue;
-                }
-
-                $data = $builderSection['data'] ?? [];
+                $data         = $builderSection['data'] ?? [];
             @endphp
 
-            <x-dynamic-component
-                :component="'template.sections.' . $component"
-                :data="$data"
-            />
+            @if ($component)
+                <x-dynamic-component
+                    :component="'template.sections.' . $component"
+                    :data="$data"
+                />
+            @else
+                {{-- Inline rendering for lite-builder blocks --}}
+                @switch($componentKey)
+                    @case('text')
+                        <section class="py-10 px-4 sm:px-6 lg:px-8">
+                            <div class="max-w-4xl mx-auto text-{{ $data['align'] ?? 'left' }}">
+                                @if (!empty($data['title']))
+                                    <h2 class="text-2xl font-bold text-slate-900 mb-3">{{ $data['title'] }}</h2>
+                                @endif
+                                @if (!empty($data['body']))
+                                    <p class="text-slate-600">{{ $data['body'] }}</p>
+                                @endif
+                            </div>
+                        </section>
+                        @break
+
+                    @case('image')
+                        <section class="py-8 px-4 sm:px-6 lg:px-8">
+                            <div class="max-w-5xl mx-auto text-{{ $data['align'] ?? 'center' }}">
+                                <figure class="inline-block">
+                                    <img src="{{ $data['url'] ?? '' }}" alt="{{ $data['alt'] ?? '' }}" style="width: {{ $data['width'] ?? '100%' }};">
+                                    @if (!empty($data['alt']))
+                                        <figcaption class="text-sm text-slate-500 mt-2">{{ $data['alt'] }}</figcaption>
+                                    @endif
+                                </figure>
+                            </div>
+                        </section>
+                        @break
+
+                    @case('button')
+                        <section class="py-6 px-4 sm:px-6 lg:px-8">
+                            <div class="max-w-4xl mx-auto text-{{ $data['align'] ?? 'center' }}">
+                                <a href="{{ $data['url'] ?? '#' }}"
+                                   class="inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold {{ ($data['style'] ?? 'primary') === 'outline' ? 'border border-slate-300 text-slate-800 bg-white' : 'bg-primary text-white shadow' }}">
+                                    {{ $data['text'] ?? __('Button') }}
+                                </a>
+                            </div>
+                        </section>
+                        @break
+
+                    @case('section')
+                        <section class="py-10 px-4 sm:px-6 lg:px-8" style="background: {{ $data['bg'] ?? '#ffffff' }}; padding-top: {{ $data['padding'] ?? '24' }}px; padding-bottom: {{ $data['padding'] ?? '24' }}px;">
+                            <div class="max-w-5xl mx-auto text-{{ $data['align'] ?? 'left' }}">
+                                @if (!empty($data['title']))
+                                    <h2 class="text-2xl font-bold text-slate-900 mb-3">{{ $data['title'] }}</h2>
+                                @endif
+                                @if (!empty($data['body']))
+                                    <p class="text-slate-600">{{ $data['body'] }}</p>
+                                @endif
+                            </div>
+                        </section>
+                        @break
+
+                    @case('hero-template')
+                        <section class="relative overflow-hidden bg-gradient-to-tr from-primary to-indigo-600 py-16 px-4 sm:px-8 lg:px-12 text-white">
+                            <div class="max-w-5xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-10">
+                                <div class="max-w-xl text-center lg:text-left space-y-4">
+                                    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold">{{ $data['heading'] ?? '' }}</h1>
+                                    <p class="text-white/90 text-base sm:text-lg">{{ $data['subtitle'] ?? '' }}</p>
+                                    <div class="flex flex-wrap gap-3 justify-center lg:justify-start">
+                                        @if (!empty($data['primary_text']))
+                                            <a href="{{ $data['primary_url'] ?? '#' }}" class="bg-secondary hover:bg-primary text-white font-bold px-6 py-3 rounded-lg shadow transition text-sm sm:text-base">
+                                                {{ $data['primary_text'] }}
+                                            </a>
+                                        @endif
+                                        @if (!empty($data['secondary_text']))
+                                            <a href="{{ $data['secondary_url'] ?? '#' }}" class="bg-white/10 text-white font-bold px-6 py-3 rounded-lg shadow transition hover:bg-white/20 text-sm sm:text-base border border-white/30">
+                                                {{ $data['secondary_text'] }}
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
+                                @if (!empty($data['bg']))
+                                    <img src="{{ $data['bg'] }}" alt="" class="w-full max-w-xl rounded-2xl shadow-2xl">
+                                @endif
+                            </div>
+                        </section>
+                        @break
+
+                    @case('support-hero')
+                        <section class="relative isolate overflow-hidden bg-white py-16 sm:py-20">
+                            <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+                                <div class="max-w-2xl">
+                                    <h2 class="text-4xl font-semibold tracking-tight text-gray-900 sm:text-5xl">{{ $data['heading'] ?? '' }}</h2>
+                                    <p class="mt-4 text-lg text-gray-600">{{ $data['body'] ?? '' }}</p>
+                                </div>
+                            </div>
+                            @if (!empty($data['light_img']))
+                                <img src="{{ $data['light_img'] }}" alt="" class="absolute inset-0 -z-10 w-full h-full object-cover opacity-10">
+                            @endif
+                        </section>
+                        @break
+                @endswitch
+            @endif
         @endforeach
     @else
     @foreach ($page->sections as $section)

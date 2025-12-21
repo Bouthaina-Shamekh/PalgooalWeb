@@ -12,8 +12,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusTime = document.querySelector('[data-status-time]');
     const blockButtons = document.querySelectorAll('.builder-block-btn');
     const previewButtons = document.querySelectorAll('[data-preview]');
+    const previewToggleBtn = document.getElementById('preview-toggle-btn');
+    const previewMenu = document.getElementById('preview-menu');
+    const previewLabel = document.querySelector('[data-preview-label]');
+    const outlineList = document.getElementById('builder-outline-list');
+    const outlineEmpty = document.getElementById('builder-outline-empty');
+    const outlinePanel = document.getElementById('builder-outline');
+    const outlineEditor = document.getElementById('outline-editor');
+    const outlineEditorTitle = document.querySelector('[data-outline-editor-title]');
+    const outlineEditorFieldsWrap = document.getElementById('outline-editor-fields');
+    const outlineEditorBack = document.querySelectorAll('[data-outline-editor-back]');
+    const outlineEditorSave = document.querySelector('[data-outline-editor-save]');
+    const tabButtons = document.querySelectorAll('.builder-tab');
+    const tabContents = document.querySelectorAll('.builder-tab-content');
+    const tabHelpers = document.querySelectorAll('[data-tab-helper]');
 
     const storageKey = root?.dataset.pageId ? `builder-html-${root.dataset.pageId}` : null;
+    const saveUrl = root?.dataset.saveUrl || root?.dataset.saveurl;
+    const blockTypeLabels = {
+        text: 'Text',
+        image: 'Image',
+        button: 'Button',
+        section: 'Section',
+        'support-hero': 'Support hero',
+        'hero-template': 'Template hero',
+    };
+    let blockIdCounter = 0;
+    let outlineEditorSchema = [];
+
+    const ensureBlockId = (block) => {
+        if (!block) return null;
+        if (!block.dataset.blockId) {
+            blockIdCounter += 1;
+            block.dataset.blockId = `block-${Date.now()}-${blockIdCounter}`;
+        }
+        return block.dataset.blockId;
+    };
+
+    const getBlockLabel = (block) => {
+        if (!block) return 'Block';
+        const type = block.dataset.type || block.dataset.blockType || '';
+        const label = blockTypeLabels[type] || 'Block';
+        const heading = block.dataset.heading || block.dataset.title || block.dataset.text || '';
+        return heading ? `${label}: ${heading}` : label;
+    };
 
     const setStatus = (text, color) => {
         if (statusText) statusText.textContent = text;
@@ -29,6 +71,97 @@ document.addEventListener('DOMContentLoaded', () => {
     const persistLocal = () => {
         if (!storageKey || !stage) return;
         localStorage.setItem(storageKey, stage.innerHTML);
+    };
+
+    const serializeBlocks = () => {
+        if (!stage) return [];
+        return Array.from(stage.children).map((block) => {
+            const type = block.dataset.type || block.dataset.blockType || 'text';
+            const base = { type, data: {} };
+            switch (type) {
+                case 'text':
+                    base.data = {
+                        title: block.dataset.heading || '',
+                        body: block.dataset.body || '',
+                        align: block.dataset.align || 'left',
+                    };
+                    break;
+                case 'image':
+                    base.data = {
+                        url: block.dataset.url || '',
+                        alt: block.dataset.alt || '',
+                        width: block.dataset.width || '100%',
+                        align: block.dataset.align || 'center',
+                    };
+                    break;
+                case 'button':
+                    base.data = {
+                        text: block.dataset.text || '',
+                        url: block.dataset.url || '#',
+                        style: block.dataset.style || 'primary',
+                        align: block.dataset.align || 'center',
+                    };
+                    break;
+                case 'section':
+                    base.data = {
+                        title: block.dataset.title || '',
+                        body: block.dataset.body || '',
+                        bg: block.dataset.bg || '#ffffff',
+                        padding: block.dataset.padding || '24',
+                        align: block.dataset.align || 'left',
+                    };
+                    break;
+                case 'hero-template':
+                    base.data = {
+                        heading: block.dataset.heading || '',
+                        subtitle: block.dataset.subtitle || '',
+                        primaryText: block.dataset.primaryText || '',
+                        primaryUrl: block.dataset.primaryUrl || '#',
+                        secondaryText: block.dataset.secondaryText || '',
+                        secondaryUrl: block.dataset.secondaryUrl || '#',
+                        bg: block.dataset.bg || '',
+                    };
+                    break;
+                case 'support-hero':
+                    base.data = {
+                        heading: block.dataset.heading || '',
+                        body: block.dataset.body || '',
+                        lightImg: block.dataset.lightImg || '',
+                        darkImg: block.dataset.darkImg || '',
+                        colorFrom: block.dataset.colorFrom || '#ff4694',
+                        colorTo: block.dataset.colorTo || '#776fff',
+                    };
+                    break;
+                default:
+                    base.data = block.dataset;
+                    break;
+            }
+            return base;
+        });
+    };
+
+    const saveRemote = async () => {
+        if (!saveUrl) return;
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const payload = {
+            structure: {
+                mode: 'lite-builder',
+                blocks: serializeBlocks(),
+            },
+        };
+        const res = await fetch(saveUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrf,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+            throw new Error(`Save failed (${res.status})`);
+        }
+        return res.json();
     };
 
     const getValue = (source, name, fallback = '') => {
@@ -67,6 +200,336 @@ document.addEventListener('DOMContentLoaded', () => {
     const applyAlignment = (element, alignment) => {
         if (!element) return;
         element.style.textAlign = alignment || 'left';
+    };
+
+    let outlineSortable = null;
+    let outlineEditingBlock = null;
+    let outlineEditingType = null;
+
+    const highlightBlock = (block) => {
+        if (!block) return;
+        block.classList.add('ring', 'ring-sky-300', 'ring-offset-2');
+        setTimeout(() => {
+            block.classList.remove('ring', 'ring-sky-300', 'ring-offset-2');
+        }, 800);
+    };
+
+    const getEditorSchema = (type) => {
+        switch (type) {
+            case 'section':
+                return [
+                    { name: 'title', label: 'Title', type: 'text', placeholder: 'Section title' },
+                    { name: 'body', label: 'Body', type: 'textarea', placeholder: 'Describe this section.' },
+                    { name: 'bg', label: 'Background color', type: 'text', placeholder: '#ffffff' },
+                    { name: 'padding', label: 'Padding (px)', type: 'number', placeholder: '24' },
+                    {
+                        name: 'align',
+                        label: 'Align',
+                        type: 'select',
+                        options: [
+                            { value: 'left', label: 'Left' },
+                            { value: 'center', label: 'Center' },
+                            { value: 'right', label: 'Right' },
+                        ],
+                    },
+                ];
+            case 'hero-template':
+                return [
+                    { name: 'heading', label: 'Heading', type: 'text', placeholder: 'Hero title' },
+                    { name: 'subtitle', label: 'Subtitle', type: 'textarea', placeholder: 'Short description' },
+                    { name: 'primaryText', label: 'Primary text', type: 'text', placeholder: 'Get started' },
+                    { name: 'primaryUrl', label: 'Primary link', type: 'url', placeholder: '#' },
+                    { name: 'secondaryText', label: 'Secondary text', type: 'text', placeholder: 'Learn more' },
+                    { name: 'secondaryUrl', label: 'Secondary link', type: 'url', placeholder: '#' },
+                    { name: 'bg', label: 'Background image', type: 'url', placeholder: 'https://...' },
+                ];
+            case 'support-hero':
+                return [
+                    { name: 'heading', label: 'Heading', type: 'text', placeholder: 'Support center' },
+                    { name: 'body', label: 'Body', type: 'textarea', placeholder: 'Description' },
+                    { name: 'lightImg', label: 'Light image', type: 'url', placeholder: 'https://...' },
+                    { name: 'darkImg', label: 'Dark image', type: 'url', placeholder: 'https://...' },
+                    { name: 'colorFrom', label: 'Gradient from', type: 'color', placeholder: '#ff4694' },
+                    { name: 'colorTo', label: 'Gradient to', type: 'color', placeholder: '#776fff' },
+                ];
+            default:
+                return [];
+        }
+    };
+
+    const syncStageFromOutline = () => {
+        if (!stage || !outlineList) return;
+        const orderedIds = Array.from(outlineList.children).map((item) => item.dataset.blockId);
+        const blocks = Array.from(stage.children);
+        orderedIds.forEach((id) => {
+            const match = blocks.find((b) => b.dataset.blockId === id);
+            if (match) stage.appendChild(match);
+        });
+        persistLocal();
+        setStatus('Unsaved', 'bg-amber-400');
+        refreshOutline();
+    };
+
+    const refreshOutline = () => {
+        if (!outlineList || !stage) return;
+        const blocks = Array.from(stage.children);
+
+        if (outlineSortable) {
+            outlineSortable.destroy();
+            outlineSortable = null;
+        }
+
+        outlineList.innerHTML = '';
+
+        blocks.forEach((block, index) => {
+            const id = ensureBlockId(block);
+            const item = document.createElement('div');
+            item.className = 'builder-outline-item';
+            item.dataset.blockId = id;
+
+            const handle = document.createElement('span');
+            handle.className = 'builder-outline-handle';
+            handle.setAttribute('data-outline-drag', 'true');
+            handle.title = 'Drag to reorder';
+            handle.textContent = '::';
+
+            const meta = document.createElement('div');
+            meta.className = 'builder-outline-meta';
+
+            const title = document.createElement('div');
+            title.className = 'builder-outline-title';
+            title.textContent = getBlockLabel(block);
+
+            const type = document.createElement('div');
+            type.className = 'builder-outline-type';
+            type.textContent = `Block ${index + 1}`;
+
+            meta.appendChild(title);
+            meta.appendChild(type);
+
+            item.appendChild(handle);
+            item.appendChild(meta);
+
+            const actions = document.createElement('div');
+            actions.className = 'builder-outline-actions';
+
+            const editAction = document.createElement('button');
+            editAction.type = 'button';
+            editAction.className = 'builder-outline-btn';
+            editAction.textContent = 'Edit';
+
+            const delAction = document.createElement('button');
+            delAction.type = 'button';
+            delAction.className = 'builder-outline-btn';
+            delAction.textContent = 'Delete';
+
+            actions.appendChild(editAction);
+            actions.appendChild(delAction);
+            item.appendChild(actions);
+
+            item.addEventListener('click', (e) => {
+                if (e.target.closest('[data-outline-drag]')) return;
+                if (e.target === editAction || e.target === delAction) return;
+                block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                highlightBlock(block);
+            });
+
+            editAction.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const type = block.dataset.type || 'text';
+                if (['section', 'hero-template', 'support-hero'].includes(type)) {
+                    openOutlineEditor(block, type);
+                } else {
+                    editBlock(block, type);
+                    refreshOutline();
+                }
+            });
+
+            delAction.addEventListener('click', (e) => {
+                e.stopPropagation();
+                block.remove();
+                updateEmptyState();
+                persistLocal();
+                refreshOutline();
+                if (outlineEditingBlock === block) {
+                    closeOutlineEditor();
+                }
+                setStatus('Unsaved', 'bg-amber-400');
+            });
+
+            outlineList.appendChild(item);
+        });
+
+        if (outlineEmpty) {
+            outlineEmpty.classList.toggle('hidden', blocks.length > 0);
+        }
+
+        if (blocks.length) {
+            outlineSortable = Sortable.create(outlineList, {
+                animation: 150,
+                handle: '[data-outline-drag]',
+                ghostClass: 'opacity-50',
+                onEnd: () => {
+                    syncStageFromOutline();
+                },
+            });
+        }
+
+        if (!outlineEditingBlock) {
+            if (outlineList) outlineList.parentElement?.classList.remove('hidden');
+            if (outlineEditor) outlineEditor.classList.add('hidden');
+        }
+    };
+
+    const moveBlock = (block, direction) => {
+        if (!stage || !block) return;
+        if (direction === 'up') {
+            const prev = block.previousElementSibling;
+            if (prev) stage.insertBefore(block, prev);
+        } else if (direction === 'down') {
+            const next = block.nextElementSibling;
+            if (next) stage.insertBefore(next, block);
+        }
+        persistLocal();
+        refreshOutline();
+        setStatus('Unsaved', 'bg-amber-400');
+    };
+
+    const closeOutlineEditor = () => {
+        outlineEditingBlock = null;
+        outlineEditingType = null;
+        outlineEditorSchema = [];
+        if (outlineEditor) outlineEditor.classList.add('hidden');
+        if (outlinePanel) outlinePanel.classList.remove('hidden');
+        if (outlineEditorFieldsWrap) outlineEditorFieldsWrap.innerHTML = '';
+    };
+
+    const renderOutlineEditorFields = (schema, block) => {
+        if (!outlineEditorFieldsWrap) return;
+        outlineEditorFieldsWrap.innerHTML = '';
+        schema.forEach((field) => {
+            const wrap = document.createElement('div');
+            wrap.className = 'field';
+            const label = document.createElement('label');
+            label.textContent = field.label;
+            wrap.appendChild(label);
+
+            let input;
+            if (field.type === 'textarea') {
+                input = document.createElement('textarea');
+            } else if (field.type === 'select') {
+                input = document.createElement('select');
+                (field.options || []).forEach((opt) => {
+                    const option = document.createElement('option');
+                    option.value = opt.value;
+                    option.textContent = opt.label;
+                    input.appendChild(option);
+                });
+            } else {
+                input = document.createElement('input');
+                input.type = field.type || 'text';
+            }
+            input.dataset.editorInput = field.name;
+            input.placeholder = field.placeholder || '';
+            const value = block?.dataset?.[field.name] ?? '';
+            input.value = value;
+            wrap.appendChild(input);
+            outlineEditorFieldsWrap.appendChild(wrap);
+        });
+    };
+
+    const openOutlineEditor = (block, type) => {
+        if (!outlineEditor) return;
+        outlineEditingBlock = block;
+        outlineEditingType = type;
+        outlineEditorSchema = getEditorSchema(type);
+        setAsideTab('outline');
+        if (outlinePanel) outlinePanel.classList.add('hidden');
+        outlineEditor.classList.remove('hidden');
+        if (outlineEditorTitle) {
+            const label = blockTypeLabels[type] || 'Block';
+            outlineEditorTitle.textContent = `Edit ${label}`;
+        }
+        renderOutlineEditorFields(outlineEditorSchema, block);
+    };
+
+    const applySectionValues = (block, values) => {
+        block.dataset.title = values.title;
+        block.dataset.body = values.body;
+        block.dataset.bg = values.bg;
+        block.dataset.padding = values.padding;
+        block.dataset.align = values.align;
+        const h3 = block.querySelector('h3');
+        if (h3) h3.textContent = block.dataset.title || '';
+        const p = block.querySelector('p');
+        if (p) p.textContent = block.dataset.body || '';
+        block.style.backgroundColor = block.dataset.bg || '#ffffff';
+        block.style.padding = `${parseInt(block.dataset.padding || '24', 10)}px`;
+        applyAlignment(block, block.dataset.align || 'left');
+    };
+
+    const applyHeroTemplateValues = (block, values) => {
+        block.dataset.heading = values.heading;
+        block.dataset.subtitle = values.subtitle;
+        block.dataset.primaryText = values.primaryText;
+        block.dataset.primaryUrl = values.primaryUrl;
+        block.dataset.secondaryText = values.secondaryText;
+        block.dataset.secondaryUrl = values.secondaryUrl;
+        block.dataset.bg = values.bg;
+        const h2 = block.querySelector('h2');
+        const p = block.querySelector('p');
+        const bgImg = block.querySelector('[data-hero-bg]');
+        const primary = block.querySelector('[data-hero-primary]');
+        const secondary = block.querySelector('[data-hero-secondary]');
+        if (h2) h2.textContent = block.dataset.heading || '';
+        if (p) p.textContent = block.dataset.subtitle || '';
+        if (bgImg && block.dataset.bg) bgImg.src = block.dataset.bg;
+        if (primary) {
+            primary.textContent = block.dataset.primaryText || '';
+            primary.href = block.dataset.primaryUrl || '#';
+        }
+        if (secondary) {
+            secondary.textContent = block.dataset.secondaryText || '';
+            secondary.href = block.dataset.secondaryUrl || '#';
+        }
+    };
+
+    const applySupportHeroValues = (block, values) => {
+        block.dataset.heading = values.heading;
+        block.dataset.body = values.body;
+        block.dataset.lightImg = values.lightImg;
+        block.dataset.darkImg = values.darkImg;
+        block.dataset.colorFrom = values.colorFrom;
+        block.dataset.colorTo = values.colorTo;
+        const h2 = block.querySelector('h2');
+        const p = block.querySelector('p');
+        if (h2) h2.textContent = block.dataset.heading || '';
+        if (p) p.textContent = block.dataset.body || '';
+        const lightEl = block.querySelector('[data-support-light]');
+        const darkEl = block.querySelector('[data-support-dark]');
+        if (lightEl) lightEl.src = block.dataset.lightImg || '';
+        if (darkEl) darkEl.src = block.dataset.darkImg || '';
+        const blobs = block.querySelectorAll('[data-support-blob]');
+        blobs.forEach((blob) => {
+            blob.style.backgroundImage = `linear-gradient(45deg, ${block.dataset.colorFrom || '#ff4694'}, ${block.dataset.colorTo || '#776fff'})`;
+        });
+    };
+
+    const setAsideTab = (tab) => {
+        tabButtons.forEach((btn) => {
+            const isActive = btn.dataset.tabTarget === tab;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+        tabContents.forEach((content) => {
+            content.classList.toggle('active', content.dataset.tabContent === tab);
+        });
+        tabHelpers.forEach((helper) => {
+            helper.classList.toggle('hidden', helper.dataset.tabHelper !== tab);
+        });
+        if (tab === 'outline') {
+            refreshOutline();
+        }
     };
 
     const openFormModal = (title, fields, onSave) => {
@@ -141,6 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const attachBlockControls = (block) => {
         if (!block) return;
+        ensureBlockId(block);
         const type = block.dataset.type || block.dataset.blockType || 'text';
         const existing = block.querySelector('.block-actions');
         if (existing) existing.remove();
@@ -148,23 +612,48 @@ document.addEventListener('DOMContentLoaded', () => {
         const actions = document.createElement('div');
         actions.className = 'block-actions';
 
+        const upBtn = document.createElement('button');
+        upBtn.type = 'button';
+        upBtn.className = 'muted';
+        upBtn.textContent = 'Up';
+        upBtn.title = 'Move up';
+
+        const downBtn = document.createElement('button');
+        downBtn.type = 'button';
+        downBtn.className = 'muted';
+        downBtn.textContent = 'Down';
+        downBtn.title = 'Move down';
+
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
-        editBtn.textContent = '✏️';
+        editBtn.textContent = 'Edit';
         editBtn.title = 'Edit';
 
         const delBtn = document.createElement('button');
         delBtn.type = 'button';
-        delBtn.textContent = '🗑';
+        delBtn.textContent = 'Delete';
         delBtn.title = 'Delete';
 
+        actions.appendChild(upBtn);
+        actions.appendChild(downBtn);
         actions.appendChild(editBtn);
         actions.appendChild(delBtn);
         block.appendChild(actions);
 
+        upBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            moveBlock(block, 'up');
+        });
+
+        downBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            moveBlock(block, 'down');
+        });
+
         editBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             editBlock(block, type);
+            refreshOutline();
         });
 
         delBtn.addEventListener('click', (e) => {
@@ -172,6 +661,10 @@ document.addEventListener('DOMContentLoaded', () => {
             block.remove();
             updateEmptyState();
             persistLocal();
+            refreshOutline();
+            if (outlineEditingBlock === block) {
+                closeOutlineEditor();
+            }
             setStatus('Unsaved', 'bg-amber-400');
         });
     };
@@ -441,6 +934,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!block || !stage) return;
         stage.appendChild(block);
         updateEmptyState();
+        refreshOutline();
         persistLocal();
         setStatus('Unsaved', 'bg-amber-400');
     };
@@ -463,6 +957,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!block || !stage) return;
             stage.appendChild(block);
             updateEmptyState();
+            refreshOutline();
             persistLocal();
             setStatus('Unsaved', 'bg-amber-400');
         });
@@ -505,6 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ghostClass: 'opacity-50',
             onEnd: () => {
                 updateEmptyState();
+                refreshOutline();
                 persistLocal();
                 setStatus('Unsaved', 'bg-amber-400');
             },
@@ -567,96 +1063,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             }
             case 'section': {
-                const title = window.prompt('Title', block.dataset.title || 'Section title');
-                const body = window.prompt('Body', block.dataset.body || 'Describe this section.');
-                const bg = window.prompt('Background (hex)', block.dataset.bg || '#ffffff');
-                const padding = window.prompt('Padding (px)', block.dataset.padding || '24');
-                const align = window.prompt('Align (left/center/right)', block.dataset.align || 'left');
-                if (title !== null) block.dataset.title = title;
-                if (body !== null) block.dataset.body = body;
-                if (bg !== null) block.dataset.bg = bg;
-                if (padding !== null) block.dataset.padding = padding;
-                if (align !== null) block.dataset.align = align;
-                const h3 = block.querySelector('h3');
-                if (h3) h3.textContent = block.dataset.title || '';
-                const p = block.querySelector('p');
-                if (p) p.textContent = block.dataset.body || '';
-                block.style.backgroundColor = block.dataset.bg || '#ffffff';
-                block.style.padding = `${parseInt(block.dataset.padding || '24', 10)}px`;
-                applyAlignment(block, block.dataset.align || 'left');
+                openOutlineEditor(block, 'section');
+                handledWithModal = true;
                 break;
             }
             case 'hero-template': {
+                openOutlineEditor(block, 'hero-template');
                 handledWithModal = true;
-                openFormModal('تعديل الـ Hero', [
-                    { label: 'العنوان', name: 'heading', value: block.dataset.heading || '' },
-                    { label: 'الوصف', name: 'subtitle', type: 'textarea', value: block.dataset.subtitle || '' },
-                    { label: 'النص الأساسي', name: 'primaryText', value: block.dataset.primaryText || '' },
-                    { label: 'رابط الأساسي', name: 'primaryUrl', type: 'url', value: block.dataset.primaryUrl || '#' },
-                    { label: 'النص الثانوي', name: 'secondaryText', value: block.dataset.secondaryText || '' },
-                    { label: 'رابط الثانوي', name: 'secondaryUrl', type: 'url', value: block.dataset.secondaryUrl || '#' },
-                    { label: 'صورة الخلفية', name: 'bg', type: 'url', value: block.dataset.bg || '' },
-                ], (values) => {
-                    block.dataset.heading = values.heading;
-                    block.dataset.subtitle = values.subtitle;
-                    block.dataset.primaryText = values.primaryText;
-                    block.dataset.primaryUrl = values.primaryUrl;
-                    block.dataset.secondaryText = values.secondaryText;
-                    block.dataset.secondaryUrl = values.secondaryUrl;
-                    block.dataset.bg = values.bg;
-
-                    const h2 = block.querySelector('h2');
-                    const p = block.querySelector('p');
-                    const bgImg = block.querySelector('[data-hero-bg]');
-                    const primary = block.querySelector('[data-hero-primary]');
-                    const secondary = block.querySelector('[data-hero-secondary]');
-                    if (h2) h2.textContent = block.dataset.heading || '';
-                    if (p) p.textContent = block.dataset.subtitle || '';
-                    if (bgImg && block.dataset.bg) bgImg.src = block.dataset.bg;
-                    if (primary) {
-                        primary.textContent = block.dataset.primaryText || '';
-                        primary.href = block.dataset.primaryUrl || '#';
-                    }
-                    if (secondary) {
-                        secondary.textContent = block.dataset.secondaryText || '';
-                        secondary.href = block.dataset.secondaryUrl || '#';
-                    }
-                    persistLocal();
-                    setStatus('Unsaved', 'bg-amber-400');
-                });
                 break;
             }
             case 'support-hero': {
+                openOutlineEditor(block, 'support-hero');
                 handledWithModal = true;
-                openFormModal('تعديل Support Hero', [
-                    { label: 'العنوان', name: 'heading', value: block.dataset.heading || '' },
-                    { label: 'الوصف', name: 'body', type: 'textarea', value: block.dataset.body || '' },
-                    { label: 'صورة النور', name: 'lightImg', type: 'url', value: block.dataset.lightImg || '' },
-                    { label: 'صورة الداكن', name: 'darkImg', type: 'url', value: block.dataset.darkImg || '' },
-                    { label: 'لون التدرج (من)', name: 'colorFrom', type: 'color', value: block.dataset.colorFrom || '#ff4694' },
-                    { label: 'لون التدرج (إلى)', name: 'colorTo', type: 'color', value: block.dataset.colorTo || '#776fff' },
-                ], (values) => {
-                    block.dataset.heading = values.heading;
-                    block.dataset.body = values.body;
-                    block.dataset.lightImg = values.lightImg;
-                    block.dataset.darkImg = values.darkImg;
-                    block.dataset.colorFrom = values.colorFrom;
-                    block.dataset.colorTo = values.colorTo;
-                    const h2 = block.querySelector('h2');
-                    const p = block.querySelector('p');
-                    if (h2) h2.textContent = block.dataset.heading || '';
-                    if (p) p.textContent = block.dataset.body || '';
-                    const lightEl = block.querySelector('[data-support-light]');
-                    const darkEl = block.querySelector('[data-support-dark]');
-                    if (lightEl) lightEl.src = block.dataset.lightImg || '';
-                    if (darkEl) darkEl.src = block.dataset.darkImg || '';
-                    const blobs = block.querySelectorAll('[data-support-blob]');
-                    blobs.forEach((blob) => {
-                        blob.style.backgroundImage = `linear-gradient(45deg, ${block.dataset.colorFrom || '#ff4694'}, ${block.dataset.colorTo || '#776fff'})`;
-                    });
-                    persistLocal();
-                    setStatus('Unsaved', 'bg-amber-400');
-                });
                 break;
             }
             default:
@@ -665,6 +1083,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!handledWithModal) {
             persistLocal();
             setStatus('Unsaved', 'bg-amber-400');
+            refreshOutline();
         }
     };
 
@@ -674,12 +1093,19 @@ document.addEventListener('DOMContentLoaded', () => {
             attachBlockControls(block);
         });
         updateEmptyState();
+        refreshOutline();
     };
 
     if (saveBtn) {
-        saveBtn.addEventListener('click', () => {
+        saveBtn.addEventListener('click', async () => {
             persistLocal();
-            setStatus('Saved', 'bg-emerald-400');
+            try {
+                await saveRemote();
+                setStatus('Saved', 'bg-emerald-400');
+            } catch (err) {
+                console.error(err);
+                setStatus('Error saving', 'bg-red-400');
+            }
         });
     }
 
@@ -689,9 +1115,37 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.addEventListener('click', () => {
                 const mode = btn.dataset.preview || 'desktop';
                 setPreviewMode(mode);
+                if (previewLabel) previewLabel.textContent = btn.textContent.trim();
+                previewButtons.forEach((b) => b.classList.remove('active'));
+                btn.classList.add('active');
+                if (previewMenu) previewMenu.classList.remove('open');
             });
         });
         setPreviewMode('desktop');
+    }
+
+    // Preview dropdown toggle
+    if (previewToggleBtn && previewMenu) {
+        previewToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            previewMenu.classList.toggle('open');
+        });
+        document.addEventListener('click', (e) => {
+            if (!previewMenu.contains(e.target) && e.target !== previewToggleBtn) {
+                previewMenu.classList.remove('open');
+            }
+        });
+    }
+
+    // Aside tabs (Blocks / Outline)
+    if (tabButtons.length) {
+        tabButtons.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tabTarget || 'palette';
+                setAsideTab(tab);
+            });
+        });
+        setAsideTab('outline');
     }
 
     // Language dropdown toggle (builder)
@@ -727,4 +1181,63 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     restoreLocal();
-});
+
+    if (outlineEditorBack.length) {
+        outlineEditorBack.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                closeOutlineEditor();
+            });
+        });
+    }
+
+    const collectOutlineValues = () => {
+        const values = {};
+        if (!outlineEditorFieldsWrap) return values;
+        const inputs = outlineEditorFieldsWrap.querySelectorAll('[data-editor-input]');
+        inputs.forEach((field) => {
+            const key = field.dataset.editorInput;
+            if (!key) return;
+            values[key] = field.value || '';
+        });
+        return values;
+    };
+
+    if (outlineEditorSave) {
+        outlineEditorSave.addEventListener('click', () => {
+            if (!outlineEditingBlock || !outlineEditingType) return;
+            const values = collectOutlineValues();
+            if (outlineEditingType === 'section') {
+                applySectionValues(outlineEditingBlock, {
+                    title: values.title || 'Section title',
+                    body: values.body || 'Describe this section.',
+                    bg: values.bg || '#ffffff',
+                    padding: values.padding || '24',
+                    align: values.align || 'left',
+                });
+            } else if (outlineEditingType === 'hero-template') {
+                applyHeroTemplateValues(outlineEditingBlock, {
+                    heading: values.heading || 'Hero title',
+                    subtitle: values.subtitle || 'Short description goes here.',
+                    primaryText: values.primaryText || 'Get started',
+                    primaryUrl: values.primaryUrl || '#',
+                    secondaryText: values.secondaryText || 'Learn more',
+                    secondaryUrl: values.secondaryUrl || '#',
+                    bg: values.bg || '',
+                });
+            } else if (outlineEditingType === 'support-hero') {
+                applySupportHeroValues(outlineEditingBlock, {
+                    heading: values.heading || 'Support center',
+                    body: values.body || '',
+                    lightImg: values.lightImg || '',
+                    darkImg: values.darkImg || '',
+                    colorFrom: values.colorFrom || '#ff4694',
+                    colorTo: values.colorTo || '#776fff',
+                });
+            }
+            persistLocal();
+            refreshOutline();
+            setStatus('Unsaved', 'bg-amber-400');
+            closeOutlineEditor();
+        });
+    }
+    });
