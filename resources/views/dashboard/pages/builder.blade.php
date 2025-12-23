@@ -692,48 +692,34 @@
                 </div>
                 <div class="builder-tab-content active" data-tab-content="palette">
                     <div class="grid gap-3">
-                        <button type="button" draggable="true" class="builder-block-btn text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-3 shadow-sm transition" data-block="text" data-title="{{ __('Text block') }}">
+                        <button type="button" draggable="true" class="builder-block-btn text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-3 shadow-sm transition" data-block="features" data-title="{{ __('Features block') }}">
                             <div class="flex items-center justify-between">
-                                <span class="text-sm font-semibold text-slate-800">{{ __('Text') }}</span>
-                                <span class="text-xs font-semibold text-slate-400">T</span>
+                                <span class="text-sm font-semibold text-slate-800">{{ __('Features') }}</span>
+                                <span class="text-xs font-semibold text-slate-400">F</span>
                             </div>
-                            <p class="text-xs text-slate-500 mt-1">{{ __('Heading + paragraph') }}</p>
+                            <p class="text-xs text-slate-500 mt-1">{{ __('Feature list with title') }}</p>
                         </button>
-                        <button type="button" draggable="true" class="builder-block-btn text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-3 shadow-sm transition" data-block="image" data-title="{{ __('Image block') }}">
+                        <button type="button" draggable="true" class="builder-block-btn text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-3 shadow-sm transition" data-block="services" data-title="{{ __('Services block') }}">
                             <div class="flex items-center justify-between">
-                                <span class="text-sm font-semibold text-slate-800">{{ __('Image') }}</span>
-                                <span class="text-xs font-semibold text-slate-400">I</span>
+                                <span class="text-sm font-semibold text-slate-800">{{ __('Services') }}</span>
+                                <span class="text-xs font-semibold text-slate-400">Srv</span>
                             </div>
-                            <p class="text-xs text-slate-500 mt-1">{{ __('Single image with optional width') }}</p>
+                            <p class="text-xs text-slate-500 mt-1">{{ __('Service cards grid') }}</p>
                         </button>
-                        <button type="button" draggable="true" class="builder-block-btn text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-3 shadow-sm transition" data-block="button" data-title="{{ __('Button block') }}">
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm font-semibold text-slate-800">{{ __('Button') }}</span>
-                                <span class="text-xs font-semibold text-slate-400">B</span>
-                            </div>
-                            <p class="text-xs text-slate-500 mt-1">{{ __('CTA link with style') }}</p>
-                        </button>
-                        <button type="button" draggable="true" class="builder-block-btn text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-3 shadow-sm transition" data-block="section" data-title="{{ __('Section block') }}">
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm font-semibold text-slate-800">{{ __('Section') }}</span>
-                                <span class="text-xs font-semibold text-slate-400">S</span>
-                            </div>
-                            <p class="text-xs text-slate-500 mt-1">{{ __('Title, body, and background') }}</p>
-                        </button>
-                        <button type="button" draggable="true" class="builder-block-btn text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-3 shadow-sm transition" data-block="support-hero" data-title="{{ __('Support hero') }}">
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm font-semibold text-slate-800">{{ __('Support hero') }}</span>
-                                <span class="text-xs font-semibold text-slate-400">H</span>
-                            </div>
-                            <p class="text-xs text-slate-500 mt-1">{{ __('Large hero with background') }}</p>
-                        </button>
-                        <button type="button" draggable="true" class="builder-block-btn text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-3 shadow-sm transition" data-block="hero-template" data-title="{{ __('Template hero') }}">
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm font-semibold text-slate-800">{{ __('Template hero') }}</span>
-                                <span class="text-xs font-semibold text-slate-400">H</span>
-                            </div>
-                            <p class="text-xs text-slate-500 mt-1">{{ __('Hero with CTA buttons') }}</p>
-                        </button>
+                            <button type="button" draggable="true" class="builder-block-btn text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-3 shadow-sm transition" data-block="support-hero" data-title="{{ __('Support hero') }}">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-semibold text-slate-800">{{ __('Support hero') }}</span>
+                                    <span class="text-xs font-semibold text-slate-400">H</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-1">{{ __('Large hero with background') }}</p>
+                            </button>
+                            <button type="button" draggable="true" class="builder-block-btn text-left rounded-xl border border-slate-200 bg-white hover:bg-slate-50 p-3 shadow-sm transition" data-block="hero-template" data-title="{{ __('Template hero') }}">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-sm font-semibold text-slate-800">{{ __('Template hero') }}</span>
+                                    <span class="text-xs font-semibold text-slate-400">H</span>
+                                </div>
+                                <p class="text-xs text-slate-500 mt-1">{{ __('Hero with CTA buttons') }}</p>
+                            </button>
                     </div>
                 </div>
                 <div class="builder-tab-content" data-tab-content="outline">

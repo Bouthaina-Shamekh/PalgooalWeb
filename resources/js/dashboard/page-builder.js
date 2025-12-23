@@ -30,13 +30,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const storageKey = root?.dataset.pageId ? `builder-html-${root.dataset.pageId}` : null;
     const saveUrl = root?.dataset.saveUrl || root?.dataset.saveurl;
     const blockTypeLabels = {
-        text: 'Text',
-        image: 'Image',
-        button: 'Button',
-        section: 'Section',
+        features: 'Features',
+        services: 'Services',
         'support-hero': 'Support hero',
         'hero-template': 'Template hero',
     };
+    const unsupportedTypes = ['text', 'image', 'button', 'section'];
+    const defaultFeaturesItems = [
+        { title: 'Feature 1', description: 'Describe feature 1.' },
+        { title: 'Feature 2', description: 'Describe feature 2.' },
+        { title: 'Feature 3', description: 'Describe feature 3.' },
+    ];
+    const defaultServicesItems = [
+        { title: 'Service 1', description: 'Describe service 1.', icon: '', url: '#' },
+        { title: 'Service 2', description: 'Describe service 2.', icon: '', url: '#' },
+        { title: 'Service 3', description: 'Describe service 3.', icon: '', url: '#' },
+    ];
     let blockIdCounter = 0;
     let outlineEditorSchema = [];
 
@@ -73,44 +82,37 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem(storageKey, stage.innerHTML);
     };
 
+    const purgeUnsupportedBlocks = () => {
+        if (!stage) return;
+        Array.from(stage.querySelectorAll('.builder-block')).forEach((block) => {
+            const type = block.dataset.type || block.dataset.blockType || '';
+            if (unsupportedTypes.includes(type)) {
+                block.remove();
+            }
+        });
+    };
+
     const serializeBlocks = () => {
         if (!stage) return [];
         return Array.from(stage.children).map((block) => {
-            const type = block.dataset.type || block.dataset.blockType || 'text';
+            const type = block.dataset.type || block.dataset.blockType || 'unknown';
             const base = { type, data: {} };
             switch (type) {
-                case 'text':
-                    base.data = {
-                        title: block.dataset.heading || '',
-                        body: block.dataset.body || '',
-                        align: block.dataset.align || 'left',
-                    };
-                    break;
-                case 'image':
-                    base.data = {
-                        url: block.dataset.url || '',
-                        alt: block.dataset.alt || '',
-                        width: block.dataset.width || '100%',
-                        align: block.dataset.align || 'center',
-                    };
-                    break;
-                case 'button':
-                    base.data = {
-                        text: block.dataset.text || '',
-                        url: block.dataset.url || '#',
-                        style: block.dataset.style || 'primary',
-                        align: block.dataset.align || 'center',
-                    };
-                    break;
-                case 'section':
+                case 'features': {
+                    let features = [];
+                    try {
+                        features = JSON.parse(block.dataset.features || '[]');
+                    } catch {
+                        features = [];
+                    }
                     base.data = {
                         title: block.dataset.title || '',
-                        body: block.dataset.body || '',
-                        bg: block.dataset.bg || '#ffffff',
-                        padding: block.dataset.padding || '24',
-                        align: block.dataset.align || 'left',
+                        subtitle: block.dataset.subtitle || '',
+                        bg: block.dataset.bg || '',
+                        features,
                     };
                     break;
+                }
                 case 'hero-template':
                     base.data = {
                         heading: block.dataset.heading || '',
@@ -132,6 +134,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         colorTo: block.dataset.colorTo || '#776fff',
                     };
                     break;
+                case 'services': {
+                    let services = [];
+                    try {
+                        services = JSON.parse(block.dataset.services || '[]');
+                    } catch {
+                        services = [];
+                    }
+                    base.data = {
+                        badge: block.dataset.badge || '',
+                        title: block.dataset.title || '',
+                        subtitle: block.dataset.subtitle || '',
+                        bg: block.dataset.bg || '',
+                        services,
+                    };
+                    break;
+                }
                 default:
                     base.data = block.dataset;
                     break;
@@ -216,22 +234,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const getEditorSchema = (type) => {
         switch (type) {
-            case 'section':
+            case 'features':
                 return [
-                    { name: 'title', label: 'Title', type: 'text', placeholder: 'Section title' },
-                    { name: 'body', label: 'Body', type: 'textarea', placeholder: 'Describe this section.' },
-                    { name: 'bg', label: 'Background color', type: 'text', placeholder: '#ffffff' },
-                    { name: 'padding', label: 'Padding (px)', type: 'number', placeholder: '24' },
-                    {
-                        name: 'align',
-                        label: 'Align',
-                        type: 'select',
-                        options: [
-                            { value: 'left', label: 'Left' },
-                            { value: 'center', label: 'Center' },
-                            { value: 'right', label: 'Right' },
-                        ],
-                    },
+                    { name: 'title', label: 'Title', type: 'text', placeholder: 'Features' },
+                    { name: 'subtitle', label: 'Subtitle', type: 'textarea', placeholder: 'Short description' },
+                    { name: 'illustration', label: 'Illustration URL', type: 'text', placeholder: '/assets/tamplate/images/Fu.svg' },
+                    { name: 'bg', label: 'Background', type: 'color', placeholder: '#ffffff' },
+                    { name: 'items', label: 'Items', type: 'features-list' },
+                ];
+            case 'services':
+                return [
+                    { name: 'badge', label: 'Badge', type: 'text', placeholder: 'Our Services' },
+                    { name: 'title', label: 'Title', type: 'text', placeholder: 'What we offer' },
+                    { name: 'subtitle', label: 'Subtitle', type: 'textarea', placeholder: 'Short description' },
+                    { name: 'bg', label: 'Background', type: 'color', placeholder: '#f8fafc' },
+                    { name: 'items', label: 'Items', type: 'services-list' },
                 ];
             case 'hero-template':
                 return [
@@ -336,8 +353,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             editAction.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const type = block.dataset.type || 'text';
-                if (['section', 'hero-template', 'support-hero'].includes(type)) {
+                const type = block.dataset.type || 'unknown';
+                if (['features', 'hero-template', 'support-hero'].includes(type)) {
                     openOutlineEditor(block, type);
                 } else {
                     editBlock(block, type);
@@ -414,26 +431,144 @@ document.addEventListener('DOMContentLoaded', () => {
             label.textContent = field.label;
             wrap.appendChild(label);
 
-            let input;
-            if (field.type === 'textarea') {
-                input = document.createElement('textarea');
-            } else if (field.type === 'select') {
-                input = document.createElement('select');
-                (field.options || []).forEach((opt) => {
-                    const option = document.createElement('option');
-                    option.value = opt.value;
-                    option.textContent = opt.label;
-                    input.appendChild(option);
-                });
+            if (field.type === 'features-list') {
+                const listWrap = document.createElement('div');
+                listWrap.className = 'space-y-3';
+                listWrap.dataset.featureList = field.name;
+
+                const items = parseFeaturesItems(block?.dataset?.features);
+
+                const addItemRow = (item = {}) => {
+                    const row = document.createElement('div');
+                    row.className = 'rounded-lg border border-slate-200 p-3 bg-white space-y-2';
+                    row.dataset.featureRow = 'true';
+
+                    const titleInput = document.createElement('input');
+                    titleInput.type = 'text';
+                    titleInput.placeholder = 'Title';
+                    titleInput.value = item.title || '';
+                    titleInput.dataset.field = 'title';
+                    titleInput.className = 'w-full border border-slate-200 rounded px-2 py-1';
+
+                    const descInput = document.createElement('textarea');
+                    descInput.placeholder = 'Description';
+                    descInput.value = item.description || '';
+                    descInput.dataset.field = 'description';
+                    descInput.className = 'w-full border border-slate-200 rounded px-2 py-1';
+
+                    const iconInput = document.createElement('textarea');
+                    iconInput.placeholder = 'Icon (SVG or text)';
+                    iconInput.value = item.icon || '';
+                    iconInput.dataset.field = 'icon';
+                    iconInput.className = 'w-full border border-slate-200 rounded px-2 py-1';
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.textContent = 'Remove';
+                    removeBtn.className = 'text-sm text-red-600 border border-red-200 rounded px-2 py-1';
+                    removeBtn.addEventListener('click', () => row.remove());
+
+                    row.appendChild(titleInput);
+                    row.appendChild(descInput);
+                    row.appendChild(iconInput);
+                    row.appendChild(removeBtn);
+                    listWrap.appendChild(row);
+                };
+
+                items.forEach((item) => addItemRow(item));
+
+                const addBtn = document.createElement('button');
+                addBtn.type = 'button';
+                addBtn.textContent = 'Add item';
+                addBtn.className = 'text-sm text-slate-700 border border-slate-200 rounded px-3 py-1';
+                addBtn.addEventListener('click', () => addItemRow({ title: '', description: '', icon: '' }));
+
+                wrap.appendChild(listWrap);
+                wrap.appendChild(addBtn);
+            } else if (field.type === 'services-list') {
+                const listWrap = document.createElement('div');
+                listWrap.className = 'space-y-3';
+                listWrap.dataset.servicesList = field.name;
+
+                const items = parseServicesItems(block?.dataset?.services);
+
+                const addItemRow = (item = {}) => {
+                    const row = document.createElement('div');
+                    row.className = 'rounded-lg border border-slate-200 p-3 bg-white space-y-2';
+                    row.dataset.serviceRow = 'true';
+
+                    const titleInput = document.createElement('input');
+                    titleInput.type = 'text';
+                    titleInput.placeholder = 'Title';
+                    titleInput.value = item.title || '';
+                    titleInput.dataset.field = 'title';
+                    titleInput.className = 'w-full border border-slate-200 rounded px-2 py-1';
+
+                    const descInput = document.createElement('textarea');
+                    descInput.placeholder = 'Description';
+                    descInput.value = item.description || '';
+                    descInput.dataset.field = 'description';
+                    descInput.className = 'w-full border border-slate-200 rounded px-2 py-1';
+
+                    const iconInput = document.createElement('textarea');
+                    iconInput.placeholder = 'Icon URL (or SVG/text)';
+                    iconInput.value = item.icon || '';
+                    iconInput.dataset.field = 'icon';
+                    iconInput.className = 'w-full border border-slate-200 rounded px-2 py-1';
+
+                    const urlInput = document.createElement('input');
+                    urlInput.type = 'text';
+                    urlInput.placeholder = 'Link URL';
+                    urlInput.value = item.url || '';
+                    urlInput.dataset.field = 'url';
+                    urlInput.className = 'w-full border border-slate-200 rounded px-2 py-1';
+
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.textContent = 'Remove';
+                    removeBtn.className = 'text-sm text-red-600 border border-red-200 rounded px-2 py-1';
+                    removeBtn.addEventListener('click', () => row.remove());
+
+                    row.appendChild(titleInput);
+                    row.appendChild(descInput);
+                    row.appendChild(iconInput);
+                    row.appendChild(urlInput);
+                    row.appendChild(removeBtn);
+                    listWrap.appendChild(row);
+                };
+
+                items.forEach((item) => addItemRow(item));
+
+                const addBtn = document.createElement('button');
+                addBtn.type = 'button';
+                addBtn.textContent = 'Add service';
+                addBtn.className = 'text-sm text-slate-700 border border-slate-200 rounded px-3 py-1';
+                addBtn.addEventListener('click', () => addItemRow({ title: '', description: '', icon: '', url: '' }));
+
+                wrap.appendChild(listWrap);
+                wrap.appendChild(addBtn);
             } else {
-                input = document.createElement('input');
-                input.type = field.type || 'text';
+                let input;
+                if (field.type === 'textarea') {
+                    input = document.createElement('textarea');
+                } else if (field.type === 'select') {
+                    input = document.createElement('select');
+                    (field.options || []).forEach((opt) => {
+                        const option = document.createElement('option');
+                        option.value = opt.value;
+                        option.textContent = opt.label;
+                        input.appendChild(option);
+                    });
+                } else {
+                    input = document.createElement('input');
+                    input.type = field.type || 'text';
+                }
+                input.dataset.editorInput = field.name;
+                input.placeholder = field.placeholder || '';
+                const value = block?.dataset?.[field.name] ?? '';
+                input.value = value;
+                wrap.appendChild(input);
             }
-            input.dataset.editorInput = field.name;
-            input.placeholder = field.placeholder || '';
-            const value = block?.dataset?.[field.name] ?? '';
-            input.value = value;
-            wrap.appendChild(input);
             outlineEditorFieldsWrap.appendChild(wrap);
         });
     };
@@ -450,22 +585,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const label = blockTypeLabels[type] || 'Block';
             outlineEditorTitle.textContent = `Edit ${label}`;
         }
+        if (type === 'features') {
+            const items = parseFeaturesItems(block.dataset.features);
+            block.dataset.items = items
+                .map((item) => `${item.title || ''}|${item.description || ''}|${item.icon || ''}`)
+                .join('\n');
+        } else if (type === 'services') {
+            const items = parseServicesItems(block.dataset.services);
+            block.dataset.items = JSON.stringify(items);
+        }
         renderOutlineEditorFields(outlineEditorSchema, block);
-    };
-
-    const applySectionValues = (block, values) => {
-        block.dataset.title = values.title;
-        block.dataset.body = values.body;
-        block.dataset.bg = values.bg;
-        block.dataset.padding = values.padding;
-        block.dataset.align = values.align;
-        const h3 = block.querySelector('h3');
-        if (h3) h3.textContent = block.dataset.title || '';
-        const p = block.querySelector('p');
-        if (p) p.textContent = block.dataset.body || '';
-        block.style.backgroundColor = block.dataset.bg || '#ffffff';
-        block.style.padding = `${parseInt(block.dataset.padding || '24', 10)}px`;
-        applyAlignment(block, block.dataset.align || 'left');
     };
 
     const applyHeroTemplateValues = (block, values) => {
@@ -605,7 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const attachBlockControls = (block) => {
         if (!block) return;
         ensureBlockId(block);
-        const type = block.dataset.type || block.dataset.blockType || 'text';
+        const type = block.dataset.type || block.dataset.blockType || 'unknown';
         const existing = block.querySelector('.block-actions');
         if (existing) existing.remove();
 
@@ -669,99 +798,244 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const createTextBlock = (data) => {
-        const headingText = getValue(data, 'text_heading', 'Heading');
-        const bodyText = getValue(data, 'text_body', 'Add your text here.');
-        const alignment = getValue(data, 'text_align', 'left');
+    const parseFeaturesItems = (raw) => {
+        if (raw && Array.isArray(raw)) return raw.length ? raw : defaultFeaturesItems;
+        if (typeof raw === 'string') {
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) return parsed.length ? parsed : defaultFeaturesItems;
+            } catch {
+                return defaultFeaturesItems;
+            }
+        }
+        return defaultFeaturesItems;
+    };
 
-        const wrapper = document.createElement('div');
-        wrapper.className = 'builder-block';
-        wrapper.dataset.type = 'text';
-        wrapper.dataset.heading = headingText;
-        wrapper.dataset.body = bodyText;
-        wrapper.dataset.align = alignment;
-        applyAlignment(wrapper, alignment);
+    const parseFeaturesTextarea = (raw) => {
+        if (!raw) return defaultFeaturesItems;
+        return raw
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line, idx) => {
+                const [title, description, icon] = line.split('|');
+                return {
+                    title: (title || '').trim() || `Feature ${idx + 1}`,
+                    description: (description || '').trim(),
+                    icon: (icon || '').trim(),
+                };
+            });
+    };
 
-        if (headingText) {
-            const heading = document.createElement('h3');
-            heading.textContent = headingText;
-            wrapper.appendChild(heading);
+    const parseServicesItems = (raw) => {
+        if (raw && Array.isArray(raw)) return raw.length ? raw : defaultServicesItems;
+        if (typeof raw === 'string') {
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) return parsed.length ? parsed : defaultServicesItems;
+            } catch {
+                return defaultServicesItems;
+            }
+        }
+        return defaultServicesItems;
+    };
+
+    const renderFeaturesBlock = (block) => {
+        if (!block) return;
+        const title = block.dataset.title || 'Features';
+        const subtitle = block.dataset.subtitle || '';
+        const illustration = block.dataset.illustration || '/assets/tamplate/images/Fu.svg';
+        const bg = block.dataset.bg || '';
+        const items = parseFeaturesItems(block.dataset.features);
+
+        block.className = 'builder-block';
+        block.style.padding = '0';
+        block.style.background = 'transparent';
+        block.style.border = 'none';
+        block.style.boxShadow = 'none';
+        block.innerHTML = '';
+
+        const container = document.createElement('section');
+        container.className = 'w-full bg-gradient-to-br from-white via-slate-50 to-slate-100 border border-slate-200 rounded-2xl p-8 sm:p-10 lg:p-12 shadow-sm';
+        container.setAttribute('dir', 'auto');
+        if (bg) {
+            container.style.background = bg;
+            container.style.backgroundImage = 'none';
         }
 
-        if (bodyText) {
-            const body = document.createElement('p');
-            body.textContent = bodyText;
-            wrapper.appendChild(body);
+        const header = document.createElement('div');
+        header.className = 'text-center mb-10';
+
+        const h2 = document.createElement('h2');
+        h2.className = 'text-3xl sm:text-4xl font-extrabold text-primary mb-3 tracking-tight';
+        h2.textContent = title;
+        header.appendChild(h2);
+
+        if (subtitle) {
+            const subEl = document.createElement('p');
+            subEl.className = 'text-slate-600 text-base sm:text-lg max-w-3xl mx-auto';
+            subEl.textContent = subtitle;
+            header.appendChild(subEl);
         }
 
-        attachBlockControls(wrapper);
+        container.appendChild(header);
+
+        const grid = document.createElement('div');
+        grid.className = 'grid gap-12 lg:gap-10 lg:grid-cols-5 items-center';
+
+        const illustrationWrap = document.createElement('div');
+        illustrationWrap.className = 'lg:col-span-2 flex justify-center';
+        const illustrationImg = document.createElement('img');
+        illustrationImg.src = illustration;
+        illustrationImg.alt = '';
+        illustrationImg.className = 'max-w-[280px] sm:max-w-sm lg:max-w-[480px] w-full h-auto object-contain drop-shadow';
+        illustrationImg.loading = 'lazy';
+        illustrationWrap.appendChild(illustrationImg);
+        grid.appendChild(illustrationWrap);
+
+        const list = document.createElement('div');
+        list.className = 'lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-y-10 gap-x-6 text-center sm:text-start';
+
+        items.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'flex flex-col items-center sm:items-start gap-3';
+
+            const iconWrap = document.createElement('div');
+            iconWrap.className = 'w-12 h-12 flex items-center justify-center rounded-lg bg-primary/10 text-primary font-semibold shrink-0';
+            if (item.icon && typeof item.icon === 'string' && item.icon.includes('<')) {
+                iconWrap.innerHTML = item.icon;
+            } else {
+                const fallback = (item.icon || item.title || `${index + 1}`).toString().trim().charAt(0) || '•';
+                iconWrap.textContent = fallback;
+            }
+            card.appendChild(iconWrap);
+
+            const t = document.createElement('div');
+            t.className = 'text-lg font-semibold text-slate-900';
+            t.textContent = item.title || `Feature ${index + 1}`;
+            card.appendChild(t);
+
+            const d = document.createElement('p');
+            d.className = 'text-sm text-slate-600 leading-relaxed';
+            d.textContent = item.description || '';
+            card.appendChild(d);
+
+            list.appendChild(card);
+        });
+        grid.appendChild(list);
+
+        container.appendChild(grid);
+        block.appendChild(container);
+        attachBlockControls(block);
+    };
+
+    
+    const renderServicesBlock = (block) => {
+        if (!block) return;
+        const badge = block.dataset.badge || 'Our Services';
+        const title = block.dataset.title || 'What we offer';
+        const subtitle = block.dataset.subtitle || '';
+        const bg = block.dataset.bg || '';
+        const items = parseServicesItems(block.dataset.services);
+
+        const cardHtml = (item, idx) => {
+            const iconContent = (() => {
+                if (item.icon && item.icon.includes('<')) return item.icon;
+                if (item.icon) {
+                    return `<img src="${item.icon}" alt="${item.title || ''}" class="w-10 h-10 object-contain" loading="lazy">`;
+                }
+                const fallback = (item.title || `S${idx + 1}`).trim().charAt(0) || '•';
+                return `<span>${fallback}</span>`;
+            })();
+
+            const footer = item.url
+                ? `<span>Learn more</span><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>`
+                : `<span class="text-slate-500">No link provided</span>`;
+
+            const wrapperTag = item.url ? 'a' : 'div';
+            const hrefAttr = item.url ? `href="${item.url}"` : '';
+
+            return `
+                <${wrapperTag} ${hrefAttr} class="group bg-white rounded-3xl shadow-xl p-8 flex flex-col items-center text-center border border-primary/10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 h-full">
+                    <div class="bg-primary/10 group-hover:bg-primary/20 rounded-full p-4 mb-5 transition">
+                        ${iconContent}
+                    </div>
+                    <h3 class="font-bold text-lg text-primary mb-2 group-hover:text-secondary transition">${item.title || `Service ${idx + 1}`}</h3>
+                    <p class="text-tertiary text-sm mb-4">${item.description || ''}</p>
+                    <div class="relative mt-auto flex items-center gap-2 text-sm font-semibold text-primary/80 group-hover:text-primary">
+                        ${footer}
+                    </div>
+                </${wrapperTag}>
+            `;
+        };
+
+        const cardsHtml = items.map(cardHtml).join('');
+
+        block.className = 'builder-block builder-block-fluid';
+        block.style.padding = '0';
+        block.style.background = 'transparent';
+        block.style.border = 'none';
+        block.style.boxShadow = 'none';
+        block.innerHTML = `
+            <section class="relative py-20 px-4 sm:px-8 lg:px-24 bg-white rounded-2xl shadow-sm overflow-hidden" dir="auto">
+                <div class="absolute -top-20 -left-20 w-52 h-52 rounded-full bg-primary/5 blur-3xl"></div>
+                <div class="absolute -bottom-24 -right-16 w-60 h-60 rounded-full bg-secondary/10 blur-3xl"></div>
+                <div class="relative max-w-7xl mx-auto space-y-10">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl sm:text-4xl font-extrabold text-primary mb-4 tracking-tight">
+                            ${title}
+                        </h2>
+                        <p class="text-tertiary text-base sm:text-lg max-w-2xl mx-auto">
+                            ${subtitle || ''}
+                        </p>
+                    </div>
+                    <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                        ${cardsHtml}
+                    </div>
+                </div>
+            </section>
+        `;
+        const container = block.querySelector('section');
+        if (bg && container) {
+            container.style.background = bg;
+            container.style.backgroundImage = 'none';
+        }
+        attachBlockControls(block);
+    };
+
+const createFeaturesBlock = (data) => {
+        const title = getValue(data, 'features_title', 'Features');
+        const subtitle = getValue(data, 'features_subtitle', '');
+        const items = parseFeaturesItems(data.features_items);
+
+        const wrapper = document.createElement('section');
+        wrapper.dataset.type = 'features';
+        wrapper.dataset.title = title;
+        wrapper.dataset.subtitle = subtitle;
+        wrapper.dataset.features = JSON.stringify(items);
+        wrapper.dataset.illustration = data.features_illustration || '/assets/tamplate/images/Fu.svg';
+        wrapper.dataset.bg = data.features_bg || '';
+
+        renderFeaturesBlock(wrapper);
         return wrapper;
     };
 
-    const createImageBlock = (data) => {
-        const url = getValue(data, 'image_url', '');
-        if (!requireValue(url, 'Image URL is required.')) return null;
+    const createServicesBlock = (data) => {
+        const badge = getValue(data, 'services_badge', 'Our Services');
+        const title = getValue(data, 'services_title', 'What we offer');
+        const subtitle = getValue(data, 'services_subtitle', '');
+        const bg = getValue(data, 'services_bg', '');
+        const items = parseServicesItems(data.services_items);
 
-        const alt = getValue(data, 'image_alt', '');
-        const widthValue = getValue(data, 'image_width', '100%');
-        const alignment = getValue(data, 'image_align', 'center');
+        const wrapper = document.createElement('section');
+        wrapper.dataset.type = 'services';
+        wrapper.dataset.badge = badge;
+        wrapper.dataset.title = title;
+        wrapper.dataset.subtitle = subtitle;
+        wrapper.dataset.bg = bg;
+        wrapper.dataset.services = JSON.stringify(items);
 
-        const figure = document.createElement('figure');
-        figure.className = 'builder-block';
-        figure.dataset.type = 'image';
-        figure.dataset.url = url;
-        figure.dataset.alt = alt;
-        figure.dataset.width = widthValue;
-        figure.dataset.align = alignment;
-        applyAlignment(figure, alignment);
-
-        const img = document.createElement('img');
-        img.src = url;
-        img.alt = alt;
-
-        if (widthValue) {
-            img.style.width = /^\d+$/.test(widthValue) ? `${widthValue}px` : widthValue;
-        }
-
-        figure.appendChild(img);
-
-        if (alt) {
-            const caption = document.createElement('figcaption');
-            caption.textContent = alt;
-            caption.style.fontSize = '12px';
-            caption.style.color = '#64748b';
-            caption.style.marginTop = '8px';
-            figure.appendChild(caption);
-        }
-
-        attachBlockControls(figure);
-        return figure;
-    };
-
-    const createButtonBlock = (data) => {
-        const text = getValue(data, 'button_text', 'Click here');
-        if (!requireValue(text, 'Button text is required.')) return null;
-
-        const url = getValue(data, 'button_url', '#');
-        const style = getValue(data, 'button_style', 'primary');
-        const alignment = getValue(data, 'button_align', 'center');
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'builder-block';
-        wrapper.dataset.type = 'button';
-        wrapper.dataset.text = text;
-        wrapper.dataset.url = url;
-        wrapper.dataset.style = style;
-        wrapper.dataset.align = alignment;
-        applyAlignment(wrapper, alignment);
-
-        const link = document.createElement('a');
-        link.href = url;
-        link.textContent = text;
-        link.className = `builder-button ${style}`;
-        wrapper.appendChild(link);
-
-        attachBlockControls(wrapper);
+        renderServicesBlock(wrapper);
         return wrapper;
     };
 
@@ -892,33 +1166,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const buildBlock = (type, payload = {}) => {
         switch (type) {
-            case 'text':
-                return createTextBlock({
-                    text_heading: payload.heading || 'Heading',
-                    text_body: payload.body || 'Add your text here.',
-                    text_align: payload.align || 'left',
+            case 'features':
+                return createFeaturesBlock({
+                    features_title: payload.title || 'Features',
+                    features_subtitle: payload.subtitle || '',
+                    features_bg: payload.bg || '',
+                    features_items: payload.features || [],
                 });
-            case 'image':
-                return createImageBlock({
-                    image_url: payload.url || 'https://via.placeholder.com/1200x600',
-                    image_alt: payload.alt || '',
-                    image_width: payload.width || '100%',
-                    image_align: payload.align || 'center',
-                });
-            case 'button':
-                return createButtonBlock({
-                    button_text: payload.text || 'Click here',
-                    button_url: payload.url || '#',
-                    button_style: payload.style || 'primary',
-                    button_align: payload.align || 'center',
-                });
-            case 'section':
-                return createSectionBlock({
-                    section_title: payload.title || 'Section title',
-                    section_body: payload.body || 'Describe this section.',
-                    section_bg: payload.bg || '#ffffff',
-                    section_padding: payload.padding || '24',
-                    section_align: payload.align || 'left',
+            case 'services':
+                return createServicesBlock({
+                    services_badge: payload.badge || 'Our Services',
+                    services_title: payload.title || 'What we offer',
+                    services_subtitle: payload.subtitle || '',
+                    services_bg: payload.bg || '',
+                    services_items: payload.services || [],
                 });
             case 'support-hero':
                 return createSupportHeroBlock();
@@ -1010,60 +1271,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const editBlock = (block, type) => {
         let handledWithModal = false;
         switch (type) {
-            case 'text': {
-                const heading = window.prompt('Heading', block.dataset.heading || 'Heading');
-                const body = window.prompt('Body', block.dataset.body || 'Add your text here.');
-                const align = window.prompt('Align (left/center/right)', block.dataset.align || 'left');
-                if (heading !== null) block.dataset.heading = heading;
-                if (body !== null) block.dataset.body = body;
-                if (align !== null) block.dataset.align = align;
-                const h3 = block.querySelector('h3');
-                if (h3) h3.textContent = block.dataset.heading || '';
-                const p = block.querySelector('p');
-                if (p) p.textContent = block.dataset.body || '';
-                applyAlignment(block, block.dataset.align || 'left');
+            case 'features': {
+                openOutlineEditor(block, 'features');
+                handledWithModal = true;
                 break;
             }
-            case 'image': {
-                const url = window.prompt('Image URL', block.dataset.url || '');
-                const alt = window.prompt('Alt', block.dataset.alt || '');
-                const width = window.prompt('Width (e.g. 100% or 640px)', block.dataset.width || '100%');
-                const align = window.prompt('Align (left/center/right)', block.dataset.align || 'center');
-                if (url !== null) block.dataset.url = url;
-                if (alt !== null) block.dataset.alt = alt;
-                if (width !== null) block.dataset.width = width;
-                if (align !== null) block.dataset.align = align;
-                const img = block.querySelector('img');
-                if (img) {
-                    img.src = block.dataset.url || '';
-                    img.alt = block.dataset.alt || '';
-                    img.style.width = /^\d+$/.test(block.dataset.width || '') ? `${block.dataset.width}px` : (block.dataset.width || '100%');
-                }
-                applyAlignment(block, block.dataset.align || 'center');
-                const caption = block.querySelector('figcaption');
-                if (caption) caption.textContent = block.dataset.alt || '';
-                break;
-            }
-            case 'button': {
-                const text = window.prompt('Button text', block.dataset.text || 'Click here');
-                const url = window.prompt('Button URL', block.dataset.url || '#');
-                const style = window.prompt('Style (primary/outline)', block.dataset.style || 'primary');
-                const align = window.prompt('Align (left/center/right)', block.dataset.align || 'center');
-                if (text !== null) block.dataset.text = text;
-                if (url !== null) block.dataset.url = url;
-                if (style !== null) block.dataset.style = style;
-                if (align !== null) block.dataset.align = align;
-                const link = block.querySelector('a');
-                if (link) {
-                    link.textContent = block.dataset.text || '';
-                    link.href = block.dataset.url || '#';
-                    link.className = `builder-button ${block.dataset.style || 'primary'}`;
-                }
-                applyAlignment(block, block.dataset.align || 'center');
-                break;
-            }
-            case 'section': {
-                openOutlineEditor(block, 'section');
+            case 'services': {
+                openOutlineEditor(block, 'services');
                 handledWithModal = true;
                 break;
             }
@@ -1090,7 +1304,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const rehydrateBlocks = () => {
         if (!stage) return;
         Array.from(stage.children).forEach((block) => {
-            attachBlockControls(block);
+            const type = block.dataset.type || block.dataset.blockType;
+            if (type === 'features') {
+                // Re-render to match the latest template layout.
+                renderFeaturesBlock(block);
+            } else if (type === 'services') {
+                renderServicesBlock(block);
+            } else {
+                attachBlockControls(block);
+            }
         });
         updateEmptyState();
         refreshOutline();
@@ -1177,6 +1399,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (saved) {
             stage.innerHTML = saved;
         }
+        purgeUnsupportedBlocks();
         rehydrateBlocks();
     };
 
@@ -1199,6 +1422,27 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!key) return;
             values[key] = field.value || '';
         });
+        const featureList = outlineEditorFieldsWrap.querySelector('[data-feature-list]');
+        if (featureList) {
+            const rows = featureList.querySelectorAll('[data-feature-row]');
+            values.items = Array.from(rows).map((row) => {
+                const title = row.querySelector('[data-field="title"]')?.value?.trim() || '';
+                const description = row.querySelector('[data-field="description"]')?.value?.trim() || '';
+                const icon = row.querySelector('[data-field="icon"]')?.value || '';
+                return { title, description, icon };
+            }).filter((item) => item.title || item.description || item.icon);
+        }
+        const servicesList = outlineEditorFieldsWrap.querySelector('[data-services-list]');
+        if (servicesList) {
+            const rows = servicesList.querySelectorAll('[data-service-row]');
+            values.items = Array.from(rows).map((row) => {
+                const title = row.querySelector('[data-field="title"]')?.value?.trim() || '';
+                const description = row.querySelector('[data-field="description"]')?.value?.trim() || '';
+                const icon = row.querySelector('[data-field="icon"]')?.value || '';
+                const url = row.querySelector('[data-field="url"]')?.value?.trim() || '';
+                return { title, description, icon, url };
+            }).filter((item) => item.title || item.description || item.icon || item.url);
+        }
         return values;
     };
 
@@ -1206,14 +1450,14 @@ document.addEventListener('DOMContentLoaded', () => {
         outlineEditorSave.addEventListener('click', () => {
             if (!outlineEditingBlock || !outlineEditingType) return;
             const values = collectOutlineValues();
-            if (outlineEditingType === 'section') {
-                applySectionValues(outlineEditingBlock, {
-                    title: values.title || 'Section title',
-                    body: values.body || 'Describe this section.',
-                    bg: values.bg || '#ffffff',
-                    padding: values.padding || '24',
-                    align: values.align || 'left',
-                });
+            if (outlineEditingType === 'features') {
+                const items = Array.isArray(values.items) ? values.items : parseFeaturesTextarea(values.items || '');
+                outlineEditingBlock.dataset.title = values.title || 'Features';
+                outlineEditingBlock.dataset.subtitle = values.subtitle || '';
+                outlineEditingBlock.dataset.features = JSON.stringify(items);
+                outlineEditingBlock.dataset.illustration = values.illustration || '/assets/tamplate/images/Fu.svg';
+                outlineEditingBlock.dataset.bg = values.bg || '';
+                renderFeaturesBlock(outlineEditingBlock);
             } else if (outlineEditingType === 'hero-template') {
                 applyHeroTemplateValues(outlineEditingBlock, {
                     heading: values.heading || 'Hero title',

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
+use App\Models\Service;
 
 class PageBuilderStructure extends Model
 {
@@ -125,6 +126,16 @@ class PageBuilderStructure extends Model
                             'align' => Arr::get($data, 'align', 'center'),
                         ],
                     ],
+                    'features' => [
+                        'type' => 'features',
+                        'data' => [
+                            'title'    => Arr::get($data, 'title', ''),
+                            'subtitle' => Arr::get($data, 'subtitle', ''),
+                            'features' => is_array(Arr::get($data, 'features'))
+                                ? Arr::get($data, 'features')
+                                : [],
+                        ],
+                    ],
                     'section' => [
                         'type' => 'section',
                         'data' => [
@@ -156,6 +167,17 @@ class PageBuilderStructure extends Model
                             'dark_img'   => Arr::get($data, 'darkImg', ''),
                             'color_from' => Arr::get($data, 'colorFrom', '#ff4694'),
                             'color_to'   => Arr::get($data, 'colorTo', '#776fff'),
+                        ],
+                    ],
+                    'services' => [
+                        'type' => 'services',
+                        'data' => [
+                            'badge'    => Arr::get($data, 'badge', ''),
+                            'title'    => Arr::get($data, 'title', ''),
+                            'subtitle' => Arr::get($data, 'subtitle', ''),
+                            'bg'       => Arr::get($data, 'bg', ''),
+                            // Always fetch current services from DB so front matches dashboard content.
+                            'services' => Service::with('translations')->orderBy('order')->get(),
                         ],
                     ],
                     default => null,
