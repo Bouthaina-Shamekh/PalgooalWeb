@@ -205,70 +205,34 @@ class PageBuilderController extends Controller
     protected function extractHeroContentFromStructure(array $structure): ?array
     {
         $pages = $structure['pages'] ?? [];
-        if (empty($pages)) {
+        if (empty($pages)) return null;
+
+        $frames = $pages[0]['frames'] ?? [];
+        if (empty($frames)) return null;
+
+        $root = $frames[0]['component'] ?? null;
+        if (!is_array($root)) return null;
+
+        $hero = $this->findComponentByType($root, 'hero-section');
+        if (!$hero) return null;
+
+        // ابحث داخل الهيرو عن العناصر حسب data-field
+        $titleCmp = $this->findComponentByDataField($hero, 'title');
+        $subCmp   = $this->findComponentByDataField($hero, 'subtitle');
+        $priBtn   = $this->findComponentByDataField($hero, 'primary-button');
+        $secBtn   = $this->findComponentByDataField($hero, 'secondary-button');
+
+        $title = is_array($titleCmp) ? ($titleCmp['content'] ?? null) : null;
+        $subtitle = is_array($subCmp) ? ($subCmp['content'] ?? null) : null;
+
+        $primaryLabel = is_array($priBtn) ? ($priBtn['content'] ?? null) : null;
+        $primaryUrl   = is_array($priBtn) ? ($priBtn['attributes']['href'] ?? null) : null;
+
+        $secondaryLabel = is_array($secBtn) ? ($secBtn['content'] ?? null) : null;
+        $secondaryUrl   = is_array($secBtn) ? ($secBtn['attributes']['href'] ?? null) : null;
+
+        if (!$title && !$subtitle && !$primaryLabel && !$secondaryLabel) {
             return null;
-        }
-
-        // نفترض مؤقتًا أن الهيرو في أول صفحة وأول فريم
-        $page   = $pages[0] ?? [];
-        $frames = $page['frames'] ?? [];
-        if (empty($frames)) {
-            return null;
-        }
-
-        $rootComponent = $frames[0]['component'] ?? null;
-        if (!is_array($rootComponent)) {
-            return null;
-        }
-
-        // نبحث عن component من نوع hero-section (search recursive)
-        $hero = $this->findComponentByType($rootComponent, 'hero-section');
-
-        if (!$hero) {
-            return null;
-        }
-
-        // نطلع العنوان/الوصف/الأزرار من الـ children
-        $children = $hero['components'] ?? [];
-        if (empty($children)) {
-            return null;
-        }
-
-        // child[1] = المحتوى الرئيسي عادةً (الـ div اللي جواته العنوان، الوصف، الأزرار)
-        $contentWrapper = $children[1]['components'][0] ?? null;
-        if (!$contentWrapper) {
-            return null;
-        }
-
-        $inner = $contentWrapper['components'] ?? [];
-
-        // h1
-        $titleCmp = $inner[0] ?? null;
-        $subtitleCmp = $inner[1] ?? null;
-        $buttonsWrapper = $inner[2] ?? null;
-
-        $title    = is_array($titleCmp)    ? ($titleCmp['content']    ?? null) : null;
-        $subtitle = is_array($subtitleCmp) ? ($subtitleCmp['content'] ?? null) : null;
-
-        $primaryLabel    = null;
-        $primaryUrl      = null;
-        $secondaryLabel  = null;
-        $secondaryUrl    = null;
-
-        if (is_array($buttonsWrapper)) {
-            $buttons = $buttonsWrapper['components'] ?? [];
-            $primary   = $buttons[0] ?? null;
-            $secondary = $buttons[1] ?? null;
-
-            if (is_array($primary)) {
-                $primaryLabel = $primary['content'] ?? null;
-                $primaryUrl   = $primary['attributes']['href'] ?? null;
-            }
-
-            if (is_array($secondary)) {
-                $secondaryLabel = $secondary['content'] ?? null;
-                $secondaryUrl   = $secondary['attributes']['href'] ?? null;
-            }
         }
 
         return [
@@ -284,6 +248,29 @@ class PageBuilderController extends Controller
             ],
         ];
     }
+
+    /**
+     * يبحث Recursively عن component يحمل attributes[data-field] = $field
+     */
+    protected function findComponentByDataField(array $component, string $field): ?array
+    {
+        $attrs = $component['attributes'] ?? [];
+        if (is_array($attrs) && (($attrs['data-field'] ?? null) === $field)) {
+            return $component;
+        }
+
+        $children = $component['components'] ?? [];
+        if (!is_array($children)) return null;
+
+        foreach ($children as $child) {
+            if (!is_array($child)) continue;
+            $found = $this->findComponentByDataField($child, $field);
+            if ($found) return $found;
+        }
+
+        return null;
+    }
+
 
     /**
      * بحث Recursively عن component من نوع معيّن في شجرة GrapesJS
