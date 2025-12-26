@@ -1,10 +1,64 @@
 @import "tailwindcss";
 /* طبقاتك المخصصة (إن احتجت) */
 @layer components {
-    .container-xx {
-        @apply max-w-7xl mx-auto px-4;
-    }
+  /* العنوان الكبير فوق البلوكات (Palgoals Blocks) من الـ Blade */
+  .builder-blocks-title {
+    @apply text-[11px] uppercase tracking-[0.22em] font-semibold
+           text-slate-300 px-4 pb-2;
+  }
+
+  /* الحاوية العامة للبلوكات – بدون خلفية إضافية */
+  #gjs-blocks {
+    @apply bg-transparent px-3 pt-2 pb-4 space-y-4;
+  }
+
+  /* كل كاتيجوري (Hero, Services, Basic…) */
+  #gjs-blocks .gjs-block-category {
+    @apply space-y-2;
+  }
+
+  /* عنوان الكاتيجوري */
+  #gjs-blocks .gjs-title {
+    @apply flex items-center justify-between
+           text-[10px] uppercase tracking-[0.25em]
+           text-slate-400 px-1;
+  }
+
+  /* خط رفيع بعد عنوان الكاتيجوري */
+  #gjs-blocks .gjs-title::after {
+    content: "";
+    @apply flex-1 h-px ml-2 bg-slate-700/60 rounded-full;
+  }
+
+  /* حاوية البلوكات داخل كل كاتيجوري */
+  #gjs-blocks .gjs-blocks-c,
+  #gjs-blocks .gjs-blocks-wrapper {
+    @apply bg-transparent p-0 flex flex-col gap-2;
+  }
+
+  /* تصميم البلوك نفسه */
+  #gjs-blocks .gjs-block {
+    @apply w-full
+           rounded-2xl
+           bg-slate-900/75
+           border border-slate-700/70
+           px-6 py-4
+           text-[12px] font-semibold tracking-[0.22em] uppercase
+           text-slate-50 text-center cursor-pointer
+           shadow-sm
+           transition-all duration-150 ease-out
+           hover:-translate-y-0.5 hover:shadow-md
+           hover:bg-slate-800
+           hover:border-sky-400/80;
+  }
+
+  /* البلوك أثناء السحب */
+  #gjs-blocks .gjs-block.gjs-block-drag {
+    @apply opacity-90 shadow-lg;
+  }
 }
+
+
 
 
 @theme {

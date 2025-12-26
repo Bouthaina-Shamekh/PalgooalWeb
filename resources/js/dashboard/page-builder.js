@@ -3,7 +3,9 @@ import grapesjs from 'grapesjs';
 import 'grapesjs/dist/css/grapes.min.css';
 
 /**
+ * -------------------------------------------------------------
  * Helpers
+ * -------------------------------------------------------------
  */
 const q = (sel, root = document) => root.querySelector(sel);
 const qa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -26,7 +28,13 @@ function setStatus(text, dotState = 'idle') {
     }
 
     if (dotEl) {
-        dotEl.classList.remove('bg-amber-400', 'bg-emerald-500', 'bg-red-500', 'bg-sky-500', 'animate-pulse');
+        dotEl.classList.remove(
+            'bg-amber-400',
+            'bg-emerald-500',
+            'bg-red-500',
+            'bg-sky-500',
+            'animate-pulse',
+        );
 
         if (dotState === 'dirty') dotEl.classList.add('bg-amber-400', 'animate-pulse');
         else if (dotState === 'saving') dotEl.classList.add('bg-sky-500', 'animate-pulse');
@@ -67,29 +75,35 @@ function isNonEmptyObject(v) {
 }
 
 /**
+ * -------------------------------------------------------------
  * Bootstrap
+ * -------------------------------------------------------------
  */
 const root = q('#page-builder-root');
 
 if (root) {
     const loadUrl = root.dataset.loadUrl;
     const saveUrl = root.dataset.saveUrl;
+    const resetBtn = q('#builder-reset');
+    const langToggle = q('#builder-lang-toggle');
+    const langMenu = q('#builder-lang-menu');
 
-    // نقرأ اتجاه الموقع من الـ <html> في لوحة التحكم
+    // اتجاه لوحة التحكم (rtl / ltr)
     const appDir = document.documentElement.getAttribute('dir') || 'ltr';
     const isRtl = appDir === 'rtl';
     const emptyHint = isRtl
         ? 'ابدأ بسحب بلوك من اليمين…'
         : 'Start by dragging a block from the right…';
 
-    // UI
+    // UI elements
     const emptyState = q('#builder-empty-state');
     const saveBtn = q('#builder-save');
 
+    // Preview controls
     const previewToggleBtn = q('#preview-toggle-btn');
     const previewMenu = q('#preview-menu');
     const previewLabel = q('[data-preview-label]');
-    const previewBtns = qa('.builder-preview-btn');
+    const previewBtns = qa('.builder-preview-btn'); // Desktop / Tablet / Mobile
 
     // Sidebar containers
     const elBlocks = q('#gjs-blocks');
@@ -97,143 +111,395 @@ if (root) {
     const elTraits = q('#gjs-traits');
     const elStyles = q('#gjs-styles');
 
-    // Tabs
+    /**
+     * ---------------------------------------------------------
+     * Tabs (Blocks / Outline)
+     * ---------------------------------------------------------
+     */
     function initTabs() {
         const tabBtns = qa('.builder-tab[data-tab-target]');
         const tabContents = qa('.builder-tab-content[data-tab-content]');
         const helpers = qa('[data-tab-helper]');
 
         const setActive = (name) => {
-            tabBtns.forEach(btn => {
+            tabBtns.forEach((btn) => {
                 const active = btn.dataset.tabTarget === name;
                 btn.classList.toggle('active', active);
                 btn.setAttribute('aria-selected', active ? 'true' : 'false');
             });
-            tabContents.forEach(c => c.classList.toggle('active', c.dataset.tabContent === name));
-            helpers.forEach(h => h.classList.toggle('hidden', h.dataset.tabHelper !== name));
+
+            tabContents.forEach((c) => {
+                c.classList.toggle('active', c.dataset.tabContent === name);
+            });
+
+            helpers.forEach((h) => {
+                h.classList.toggle('hidden', h.dataset.tabHelper !== name);
+            });
         };
 
-        tabBtns.forEach(btn => btn.addEventListener('click', () => setActive(btn.dataset.tabTarget)));
+        tabBtns.forEach((btn) =>
+            btn.addEventListener('click', () => setActive(btn.dataset.tabTarget)),
+        );
+
         setActive('palette');
     }
 
+    /**
+     * ---------------------------------------------------------
+     * Preview (devices)
+     * ---------------------------------------------------------
+     */
     function initPreviewDropdown(editor) {
-        if (!previewToggleBtn || !previewMenu) return;
-
-        const close = () => previewMenu.classList.remove('open');
-        const toggle = () => previewMenu.classList.toggle('open');
-
-        previewToggleBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            toggle();
-        });
-
-        document.addEventListener('click', (e) => {
-            const inside = previewMenu.contains(e.target) || previewToggleBtn.contains(e.target);
-            if (!inside) close();
-        });
+        if (!previewBtns.length && !previewToggleBtn && !previewMenu) return;
 
         const deviceMap = {
-            desktop: { name: 'Desktop' },
-            tablet: { name: 'Tablet' },
-            mobile: { name: 'Mobile' },
+            desktop: 'Desktop',
+            tablet: 'Tablet',
+            mobile: 'Mobile',
         };
 
-        function setDevice(key) {
-            const d = deviceMap[key] || deviceMap.desktop;
-            editor.setDevice(d.name);
-            if (previewLabel) previewLabel.textContent = d.name;
-            previewBtns.forEach(b => b.classList.toggle('active', b.dataset.preview === key));
+        const deviceLabelMap = {
+            desktop: 'Desktop',
+            tablet: 'Tablet',
+            mobile: 'Mobile',
+        };
+
+        function updateDeviceButtons(activeId) {
+            previewBtns.forEach((btn) => {
+                const isActive = btn.dataset.preview === activeId;
+
+                btn.classList.toggle('bg-white', isActive);
+                btn.classList.toggle('text-slate-900', isActive);
+                btn.classList.toggle('shadow-sm', isActive);
+
+                btn.classList.toggle('bg-transparent', !isActive);
+                btn.classList.toggle('text-slate-500', !isActive);
+            });
+
+            if (previewLabel && deviceLabelMap[activeId]) {
+                previewLabel.textContent = deviceLabelMap[activeId];
+            }
         }
 
-        previewBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                setDevice(btn.dataset.preview || 'desktop');
-                close();
-            });
-        });
+        function setBuilderDevice(id) {
+            const deviceName = deviceMap[id] || 'Desktop';
+            editor.setDevice(deviceName);
+            updateDeviceButtons(id);
+        }
 
-        setDevice('desktop');
+        if (previewBtns.length) {
+            previewBtns.forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const id = btn.dataset.preview;
+                    setBuilderDevice(id);
+                });
+            });
+
+            setBuilderDevice('desktop');
+        }
+
+        if (previewToggleBtn && previewMenu) {
+            const close = () => previewMenu.classList.remove('open');
+            const toggle = () => previewMenu.classList.toggle('open');
+
+            previewToggleBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggle();
+            });
+
+            document.addEventListener('click', (e) => {
+                const inside =
+                    previewMenu.contains(e.target) || previewToggleBtn.contains(e.target);
+                if (!inside) close();
+            });
+        }
     }
 
+    /**
+     * ---------------------------------------------------------
+     * Blocks (Hero / Header / Services / Basic)
+     * ---------------------------------------------------------
+     */
     function registerBlocks(editor) {
         const bm = editor.BlockManager;
-        bm.add('pg-hero', {
-            label: 'Hero',
-            category: 'Palgoals',
-            content: `<main>
-            <section  data-section-type="hero" class="relative bg-gradient-to-tr from-primary to-primary shadow-2xl overflow-hidden -mt-20">
-             <img src="http://127.0.0.1:8000/assets/tamplate/images/template.webp" alt="" fetchpriority="high"
-             class="absolute inset-0 z-0 opacity-80 w-full h-full object-cover object-center ltr:scale-x-[-1] rtl:scale-x-100 transition-transform duration-500 ease-in-out"
-             aria-hidden="true"
-             decoding="async"
-             loading="eager"
-    />
 
-    <div class="relative z-10 px-4 sm:px-8 lg:px-24 py-20 sm:py-28 lg:py-32 flex flex-col-reverse md:flex-row items-center justify-between gap-12 min-h-[600px] lg:min-h-[700px]">
-      <div class="max-w-xl rtl:text-right ltr:text-left text-center md:text-start">
-        <h1 class="text-3xl/20 sm:text-4xl/20 lg:text-5xl/20 font-extrabold text-white leading-tight drop-shadow-lg mb-6">
-          {{ $data['title'] ?? 'عنوان غير متوفر' }}
-        </h1>
+        // صورة الهيرو - مسار نسبي يعمل على اللوكال والبرودكشن
+        const heroImage = '/assets/tamplate/images/template.webp';
 
-        <p class="text-white/90 text-base sm:text-lg font-light mb-8">
-          {{ $data['subtitle'] ?? '' }}
-        </p>
+        // نصوص حسب اللغة
+        const heroTitle = isRtl
+            ? 'أطلق موقعك الاحترافي في دقائق'
+            : 'Launch your professional website in minutes';
 
-        <div class="flex flex-row flex-wrap gap-3 justify-center md:justify-start">
-          {{-- Primary button --}}
-          <a href="{{ $primaryUrl }}"
-             aria-label="{{ $primaryText }}"
-             class="bg-secondary hover:bg-primary text-white font-bold px-6 py-3 rounded-lg shadow transition text-sm sm:text-base">
-            {{ $primaryText }}
-          </a>
+        const heroSubtitle = isRtl
+            ? 'منصة متكاملة لتصميم واستضافة موقعك مع دومين جاهز وربط كامل خلال دقائق، بدون تعقيد تقني.'
+            : 'All-in-one platform to design and host your website with a ready domain in minutes — no technical hassle.';
 
-          {{-- Secondary button (optional) --}}
-          <a href="{{ $secondaryUrl }}"
-             class="bg-white/10 text-white font-bold px-6 py-3 rounded-lg shadow transition hover:bg-white/20 text-sm sm:text-base border border-white/30">
-            {{ $secondaryText }}
-          </a>
-        </div>
+        const primaryText = isRtl ? 'ابدأ الآن' : 'Get Started';
+        const secondaryText = isRtl ? 'استكشف المزايا' : 'Explore features';
+
+        const heroDirectionClass = isRtl ? 'md:flex-row-reverse' : 'md:flex-row';
+
+        // ----------------- Categories -----------------
+        const heroCategory = {
+            id: 'pg-hero-category',
+            label: isRtl ? 'سكاشن الهيرو' : 'Hero sections',
+            open: true,
+        };
+
+        const headerCategory = {
+            id: 'pg-header-category',
+            label: isRtl ? 'الهيدر' : 'Headers',
+            open: false,
+        };
+
+        const servicesCategory = {
+            id: 'pg-services-category',
+            label: isRtl ? 'الخدمات' : 'Services',
+            open: false,
+        };
+
+        const basicCategory = {
+            id: 'pg-basic-category',
+            label: isRtl ? 'عناصر أساسية' : 'Basic elements',
+            open: true,
+        };
+
+        // ----------------- Hero (Main Palgoals Hero) -----------------
+        const heroMainContent = `
+<section data-section-type="hero"
+         data-gjs-name="Hero – Main"
+         class="relative bg-gradient-to-tr from-primary to-primary shadow-2xl overflow-hidden -mt-20">
+  <img src="${heroImage}"
+       alt="Palgoals templates preview"
+       fetchpriority="high"
+       class="absolute inset-0 z-0 opacity-80 w-full h-full object-cover object-center ltr:scale-x-[-1] rtl:scale-x-100 transition-transform duration-500 ease-in-out"
+       aria-hidden="true"
+       decoding="async"
+       loading="eager" />
+
+  <div class="relative z-10 px-4 sm:px-8 lg:px-24 py-20 sm:py-28 lg:py-32 flex flex-col-reverse ${heroDirectionClass} items-center justify-between gap-12 min-h-[600px] lg:min-h-[700px]">
+    <div class="max-w-xl rtl:text-right ltr:text-left text-center md:text-start"
+         data-gjs-name="Hero Content">
+      <h1 class="text-3xl/20 sm:text-4xl/20 lg:text-5xl/20 font-extrabold text-white leading-tight drop-shadow-lg mb-6"
+          data-field="title">
+        ${heroTitle}
+      </h1>
+
+      <p class="text-white/90 text-base sm:text-lg font-light mb-8"
+         data-field="subtitle">
+        ${heroSubtitle}
+      </p>
+
+      <div class="flex flex-row flex-wrap gap-3 justify-center md:justify-start"
+           data-gjs-name="Hero Buttons">
+        <a href="#"
+           data-field="primary-button"
+           class="bg-secondary hover:bg-primary text-white font-bold px-6 py-3 rounded-lg shadow transition text-sm sm:text-base">
+          ${primaryText}
+        </a>
+
+        <a href="#"
+           data-field="secondary-button"
+           class="bg-white/10 text-white font-bold px-6 py-3 rounded-lg shadow transition hover:bg-white/20 text-sm sm:text-base border border-white/30">
+          ${secondaryText}
+        </a>
       </div>
     </div>
+  </div>
 
-    <div class="absolute -bottom-20 -left-20 w-96 h-96 bg-white/10 rounded-full blur-3xl z-0"></div>
-  </section>
-</main>`,
+  <div class="absolute -bottom-20 -left-20 w-96 h-96 bg-white/10 rounded-full blur-3xl z-0"></div>
+</section>`.trim();
+
+        bm.add('pg-hero-main', {
+            label: 'Hero – Main',
+            category: heroCategory,
+            attributes: { title: 'Hero – Main' },
+            content: heroMainContent,
         });
 
+        // ----------------- Hero (Simple) -----------------
+        const heroSimpleContent = `
+<section data-section-type="hero"
+         data-gjs-name="Hero – Simple"
+         class="py-20 bg-background">
+  <div class="max-w-5xl mx-auto px-4 text-center rtl:text-right ltr:text-left">
+    <p class="mb-3 text-sm font-semibold tracking-[0.25em] uppercase text-secondary">
+      ${isRtl ? 'منصتك لبناء المواقع' : 'YOUR WEBSITE PLATFORM'}
+    </p>
+    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-primary mb-4">
+      ${heroTitle}
+    </h1>
+    <p class="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto mb-8">
+      ${heroSubtitle}
+    </p>
+    <div class="flex flex-wrap items-center justify-center gap-3">
+      <a href="#"
+         class="btn-primary text-sm sm:text-base">
+        ${primaryText}
+      </a>
+      <a href="#"
+         class="btn-outline text-sm sm:text-base">
+        ${secondaryText}
+      </a>
+    </div>
+  </div>
+</section>`.trim();
+
+        bm.add('pg-hero-simple', {
+            label: 'Hero – Simple',
+            category: heroCategory,
+            attributes: { title: 'Hero – Simple' },
+            content: heroSimpleContent,
+        });
+
+        // ----------------- Header -----------------
+        const headerContent = `
+<header data-section-type="header"
+        data-gjs-name="Main Header"
+        class="w-full border-b border-slate-100 bg-white/90 backdrop-blur-sm">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center font-black text-xs">
+        PG
+      </div>
+      <span class="font-extrabold text-primary text-sm sm:text-base">Palgoals</span>
+    </div>
+
+    <nav class="hidden md:flex items-center gap-4 text-sm font-medium text-slate-600 rtl:text-right ltr:text-left">
+      <a href="#" class="hover:text-primary">${isRtl ? 'الرئيسية' : 'Home'}</a>
+      <a href="#" class="hover:text-primary">${isRtl ? 'الخدمات' : 'Services'}</a>
+      <a href="#" class="hover:text-primary">${isRtl ? 'الأسعار' : 'Pricing'}</a>
+      <a href="#" class="hover:text-primary">${isRtl ? 'المدونة' : 'Blog'}</a>
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <a href="#"
+         class="hidden sm:inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-primary border border-primary/20 hover:bg-primary/5">
+         ${isRtl ? 'تسجيل الدخول' : 'Sign in'}
+      </a>
+      <a href="#"
+         class="btn-primary px-4 py-2 text-xs sm:text-sm">
+         ${isRtl ? 'أنشئ موقعك' : 'Create website'}
+      </a>
+    </div>
+  </div>
+</header>`.trim();
+
+        bm.add('pg-header-main', {
+            label: isRtl ? 'هيدر رئيسي' : 'Main header',
+            category: headerCategory,
+            attributes: { title: 'Header – Main' },
+            content: headerContent,
+        });
+
+        // ----------------- Services -----------------
+        const servicesContent = `
+<section data-section-type="services"
+         data-gjs-name="Services – 3 columns"
+         class="py-16 bg-white">
+  <div class="max-w-6xl mx-auto px-4">
+    <div class="text-center mb-10 rtl:text-right ltr:text-left">
+      <p class="badge mb-3">
+        ${isRtl ? 'خدمات رقمية' : 'Digital Services'}
+      </p>
+      <h2 class="text-2xl sm:text-3xl font-extrabold text-primary mb-2">
+        ${isRtl ? 'خدمات رقمية متكاملة لدعم نجاحك' : 'All-in-one digital services for your success'}
+      </h2>
+      <p class="text-slate-600 max-w-2xl mx-auto text-sm sm:text-base">
+        ${isRtl
+                ? 'اختر من مجموعة من الخدمات الجاهزة لتطوير حضورك الرقمي بسهولة وبدون تعقيد.'
+                : 'Pick from a set of ready-made services to grow your online presence with no hassle.'}
+      </p>
+    </div>
+
+    <div class="grid gap-5 md:grid-cols-3">
+      <article class="rounded-2xl border border-slate-100 bg-slate-50/60 p-5 shadow-sm">
+        <h3 class="font-bold text-primary mb-2 text-base">
+          ${isRtl ? 'استضافة ودومين' : 'Hosting & Domain'}
+        </h3>
+        <p class="text-xs sm:text-sm text-slate-600">
+          ${isRtl
+                ? 'استضافة سريعة وآمنة مع تسجيل الدومين وربط كامل للموقع خلال دقائق.'
+                : 'Fast, secure hosting with complete domain setup in minutes.'}
+        </p>
+      </article>
+
+      <article class="rounded-2xl border border-slate-100 bg-slate-50/60 p-5 shadow-sm">
+        <h3 class="font-bold text-primary mb-2 text-base">
+          ${isRtl ? 'قوالب جاهزة' : 'Ready templates'}
+        </h3>
+        <p class="text-xs sm:text-sm text-slate-600">
+          ${isRtl
+                ? 'قوالب احترافية جاهزة للتخصيص تناسب مختلف أنواع الأعمال.'
+                : 'Professional templates tailored for different business types.'}
+        </p>
+      </article>
+
+      <article class="rounded-2xl border border-slate-100 bg-slate-50/60 p-5 shadow-sm">
+        <h3 class="font-bold text-primary mb-2 text-base">
+          ${isRtl ? 'دعم فني' : 'Technical support'}
+        </h3>
+        <p class="text-xs sm:text-sm text-slate-600">
+          ${isRtl
+                ? 'دعم فني لمساعدتك في تشغيل وتطوير موقعك دون حاجة لخبرة تقنية.'
+                : 'Support team to help you run and evolve your website with no technical skills.'}
+        </p>
+      </article>
+    </div>
+  </div>
+</section>`.trim();
+
+        bm.add('pg-services-3cols', {
+            label: isRtl ? 'الخدمات – 3 أعمدة' : 'Services – 3 columns',
+            category: servicesCategory,
+            attributes: { title: 'Services – 3 columns' },
+            content: servicesContent,
+        });
+
+        // ----------------- Basic Elements -----------------
         bm.add('pg-text', {
             label: 'Text',
-            category: 'Basic',
-            content: `<p class="text-slate-700">اكتب النص هنا…</p>`,
+            category: basicCategory,
+            attributes: { title: 'Text block' },
+            content: `<p class="text-slate-700" data-gjs-name="Text">اكتب النص هنا…</p>`,
         });
 
         bm.add('pg-button', {
             label: 'Button',
-            category: 'Basic',
-            content: `<a href="#" class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-sky-600 text-white font-semibold">زر</a>`,
+            category: basicCategory,
+            attributes: { title: 'Button' },
+            content: `
+<a href="#"
+   data-gjs-name="Button"
+   class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700 transition">
+   ${isRtl ? 'زر' : 'Button'}
+</a>`.trim(),
         });
     }
 
-    // Start
+    // Tabs في الـ Sidebar
     initTabs();
-    // نقرأ رابط CSS من <link id="palgoals-app-css">
+
+    // تحميل CSS الرئيسي داخل الـ canvas
     const canvasStyles = [];
     const appCssLink = document.getElementById('palgoals-app-css');
     if (appCssLink && appCssLink.href) {
         canvasStyles.push(appCssLink.href);
     }
 
+    /**
+     * ---------------------------------------------------------
+     * GrapesJS init
+     * ---------------------------------------------------------
+     */
     const editor = grapesjs.init({
         container: '#gjs',
-        fromElement: true,
         height: '100%',
         width: 'auto',
         fromElement: false,
         noticeOnUnload: true,
-
-        // نحن نتولى الحفظ/التحميل
         storageManager: false,
 
         deviceManager: {
@@ -244,7 +510,6 @@ if (root) {
             ],
         },
 
-        // نستخدم البانلز الخاصة بنا
         panels: { defaults: [] },
 
         blockManager: elBlocks ? { appendTo: '#gjs-blocks' } : {},
@@ -254,11 +519,34 @@ if (root) {
             ? {
                 appendTo: '#gjs-styles',
                 sectors: [
-                    { name: 'Typography', open: true, buildProps: ['font-family', 'font-size', 'font-weight', 'color', 'line-height', 'text-align'] },
+                    {
+                        name: 'Typography',
+                        open: true,
+                        buildProps: [
+                            'font-family',
+                            'font-size',
+                            'font-weight',
+                            'color',
+                            'line-height',
+                            'text-align',
+                        ],
+                    },
                     { name: 'Spacing', open: false, buildProps: ['margin', 'padding'] },
-                    { name: 'Size', open: false, buildProps: ['width', 'height', 'max-width', 'min-height'] },
-                    { name: 'Borders', open: false, buildProps: ['border', 'border-radius', 'box-shadow'] },
-                    { name: 'Background', open: false, buildProps: ['background-color', 'background', 'opacity'] },
+                    {
+                        name: 'Size',
+                        open: false,
+                        buildProps: ['width', 'height', 'max-width', 'min-height'],
+                    },
+                    {
+                        name: 'Borders',
+                        open: false,
+                        buildProps: ['border', 'border-radius', 'box-shadow'],
+                    },
+                    {
+                        name: 'Background',
+                        open: false,
+                        buildProps: ['background-color', 'background', 'opacity'],
+                    },
                 ],
             }
             : {},
@@ -270,7 +558,11 @@ if (root) {
         },
     });
 
-    // دعم RTL / LTR داخل الـ iframe
+    /**
+     * ---------------------------------------------------------
+     * Canvas / RTL / empty state
+     * ---------------------------------------------------------
+     */
     editor.on('load', () => {
         if (emptyState) emptyState.style.display = 'none';
 
@@ -278,17 +570,15 @@ if (root) {
         const iframeHtml = doc.documentElement;
         const iframeBody = editor.Canvas.getBody();
 
-        // نمرّر الاتجاه للـ iframe
         iframeHtml.setAttribute('dir', appDir);
 
-        // ستايل أساسي
         iframeBody.style.background = 'transparent';
-        iframeBody.style.fontFamily = 'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
+        iframeBody.style.fontFamily =
+            'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
         iframeBody.style.color = '#0f172a';
         iframeBody.style.margin = '0';
         iframeBody.style.padding = '0';
 
-        // الـ wrapper root
         const wrapper = editor.getWrapper();
         const wrapperEl = wrapper.getEl();
 
@@ -300,7 +590,6 @@ if (root) {
             wrapperEl.style.boxSizing = 'border-box';
         }
 
-        // CSS داخل الـ iframe مع دعم RTL/LTR
         const style = doc.createElement('style');
         style.innerHTML = `
       [data-pg-selected]{
@@ -374,12 +663,30 @@ if (root) {
         doc.head.appendChild(style);
     });
 
-    // Selection label (من دون تغيير)
+    /**
+     * ---------------------------------------------------------
+     * Selection toolbar
+     * ---------------------------------------------------------
+     */
     editor.on('component:selected', (cmp) => {
         const el = cmp?.view?.el;
         if (!el) return;
-        const name = cmp.getAttributes()?.['data-gjs-name'] || cmp.get('type') || 'element';
-        el.setAttribute('data-pg-selected', name);
+
+        const tag = (cmp.get('tagName') || '').toLowerCase();
+        const type = cmp.get('type') || '';
+
+        if (tag === 'body' || type === 'wrapper') return;
+
+        cmp.set({
+            toolbar: [
+                { attributes: { title: 'Move' }, command: 'tlb-move' },
+                { attributes: { title: 'Copy' }, command: 'tlb-clone' },
+                {
+                    attributes: { title: 'Delete', class: 'text-red-600' },
+                    command: 'tlb-delete',
+                },
+            ],
+        });
     });
 
     editor.on('component:deselected', (cmp) => {
@@ -392,10 +699,19 @@ if (root) {
     initPreviewDropdown(editor);
 
     /**
-     * Load / Save
+     * ---------------------------------------------------------
+     * Load / Save / Dirty state
+     * ---------------------------------------------------------
      */
     let isDirty = false;
     let isSaving = false;
+
+    const markDirty = () => {
+        if (!isDirty) {
+            isDirty = true;
+            setStatus('Unsaved', 'dirty');
+        }
+    };
 
     async function loadProject() {
         try {
@@ -404,11 +720,18 @@ if (root) {
             const data = await fetchJson(loadUrl, { method: 'GET' });
             const structure = data?.structure;
 
-            if (isNonEmptyObject(structure) && (structure.pages || structure.assets || structure.styles || structure.components)) {
+            if (
+                isNonEmptyObject(structure) &&
+                (structure.pages ||
+                    structure.assets ||
+                    structure.styles ||
+                    structure.components)
+            ) {
                 editor.loadProjectData(structure);
             } else {
-                // رسالة افتراضية حسب RTL / LTR
-                editor.setComponents(`<div class="p-10 text-slate-600">${emptyHint}</div>`);
+                editor.setComponents(
+                    `<div class="p-10 text-slate-600">${emptyHint}</div>`,
+                );
             }
 
             editor.getWrapper().set({ droppable: true });
@@ -445,14 +768,19 @@ if (root) {
         }
     }
 
-    // Dirty tracking
-    const markDirty = () => {
-        if (!isDirty) {
-            isDirty = true;
-            setStatus('Unsaved', 'dirty');
+    function resetPage() {
+        if (!window.confirm('سيتم مسح كل محتوى الصفحة الحالية، هل أنت متأكد؟')) {
+            return;
         }
-    };
 
+        editor.DomComponents.clear();
+        editor.setComponents('');
+
+        markDirty();
+        setStatus('Page cleared', 'dirty');
+    }
+
+    // Dirty tracking
     editor.on('component:add', markDirty);
     editor.on('component:update', markDirty);
     editor.on('component:remove', markDirty);
@@ -465,6 +793,40 @@ if (root) {
         });
     }
 
+    if (resetBtn) {
+        resetBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            resetPage();
+        });
+    }
+
+    /**
+     * ---------------------------------------------------------
+     * Language dropdown (الهيدر)
+     * ---------------------------------------------------------
+     */
+    if (langToggle && langMenu) {
+        langToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            langMenu.classList.toggle('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!langMenu.classList.contains('hidden')) {
+                const clickedInside =
+                    langMenu.contains(e.target) || langToggle.contains(e.target);
+                if (!clickedInside) {
+                    langMenu.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+    /**
+     * ---------------------------------------------------------
+     * Keyboard shortcuts (Ctrl+S / Cmd+S)
+     * ---------------------------------------------------------
+     */
     document.addEventListener('keydown', (e) => {
         const isMac = navigator.platform.toUpperCase().includes('MAC');
         const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
@@ -474,6 +836,6 @@ if (root) {
         }
     });
 
-    // Load now
+    // أخيرًا: تحميل المشروع
     loadProject();
 }
