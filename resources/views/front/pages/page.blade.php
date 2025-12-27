@@ -61,6 +61,7 @@
     /**
      * ------------------------------------------------------------------
      * Resolve OpenGraph image
+     * ------------------------------------------------------------------
      * - If value is numeric: treat as Media ID from our Media Library
      * - If value is a URL (http/https/relative): use / wrap via asset()
      * - Fallback to default image
@@ -73,7 +74,6 @@
         // Case A: og_image stores Media ID
         $media = Media::find((int) $rawOgImage);
         if ($media) {
-            // Adjust "url" accessor/column according to your Media model
             $pageOgImage = $media->url ?? ($media->file_url ?? null);
         }
     } elseif (is_string($rawOgImage) && $rawOgImage !== '') {
@@ -137,10 +137,7 @@
         'schema'      => [$pageSchema],
     ]);
 
-    /**
-     * Expose SEO variables to the layout (front.layouts.app)
-     * So the layout can build <head> tags using these.
-     */
+    // Expose vars to layout
     $title       = $pageTitle;
     $description = $pageDescription;
     $keywords    = $pageKeywords;
@@ -151,24 +148,20 @@
      * ------------------------------------------------------------------
      * Section → Blade component mapping
      * ------------------------------------------------------------------
-     * Each page section has ->type (string).
-     * We map that type to a Blade component under template.sections.*:
-     *
-     *  hero / hero_default  → template.sections.hero
-     *  features             → template.sections.features
-     *  templates-pages      → template.sections.templates-pages
-     *  ...etc
+     * This is used BOTH for:
+     *  - builderSections (from GrapesJS → normalizedSections())
+     *  - legacy $page->sections from admin sections module
      * ------------------------------------------------------------------
      */
     $sectionComponents = [
         'hero'            => 'hero',
-        'hero_default'    => 'hero_default',          // New Hero Default block → reuse hero component
-        'hero-template'   => null,                    // Render inline
-        'support-hero'    => null,                    // Render inline
-        'text'            => null,                    // Render inline
-        'image'           => null,                    // Render inline
-        'button'          => null,                    // Render inline
-        'section'         => null,                    // Render inline
+        'hero_default'    => 'hero_default',
+        'hero-template'   => null,    // inline
+        'support-hero'    => null,    // inline
+        'text'            => null,    // inline
+        'image'           => null,    // inline
+        'button'          => null,    // inline
+        'section'         => null,    // inline
         'features'        => 'features',
         'features-2'      => 'features-2',
         'features-3'      => 'features-3',
@@ -194,7 +187,7 @@
 
 @section('content')
     {{-- -----------------------------------------------------------------
-         Fallback: if the page has NO sections → show simple page layout
+         Fallback: if the page has NO sections and NO builder → simple page
        ----------------------------------------------------------------- --}}
     @if ($page->sections->isEmpty() && empty($builderSections))
         <section class="bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
@@ -215,25 +208,24 @@
     @endif
 
     {{-- -----------------------------------------------------------------
-         Dynamic sections rendering (Page Builder)
-         - If sections exist, we render them in order.
-         - Each section type generates its own $data payload.
-       ----------------------------------------------------------------- --}}
+         1) Render sections coming from GrapesJS Builder (normalizedSections)
+         ----------------------------------------------------------------- --}}
     @if (!empty($builderSections))
         @foreach ($builderSections as $builderSection)
             @php
-                $componentKey = $builderSection['type'] ?? null;
+                $componentKey = $builderSection['type'] ?? null;   // e.g. hero, features, text,...
                 $component    = $sectionComponents[$componentKey] ?? null;
                 $data         = $builderSection['data'] ?? [];
             @endphp
 
             @if ($component)
+                {{-- Use dedicated Blade component under template.sections.* --}}
                 <x-dynamic-component
                     :component="'template.sections.' . $component"
                     :data="$data"
                 />
             @else
-                {{-- Inline rendering for lite-builder blocks --}}
+                {{-- Inline rendering for lite-builder / free blocks --}}
                 @switch($componentKey)
                     @case('text')
                         <section class="py-10 px-4 sm:px-6 lg:px-8">
@@ -273,7 +265,10 @@
                         @break
 
                     @case('section')
-                        <section class="py-10 px-4 sm:px-6 lg:px-8" style="background: {{ $data['bg'] ?? '#ffffff' }}; padding-top: {{ $data['padding'] ?? '24' }}px; padding-bottom: {{ $data['padding'] ?? '24' }}px;">
+                        <section class="py-10 px-4 sm:px-6 lg:px-8"
+                                 style="background: {{ $data['bg'] ?? '#ffffff' }};
+                                        padding-top: {{ $data['padding'] ?? '24' }}px;
+                                        padding-bottom: {{ $data['padding'] ?? '24' }}px;">
                             <div class="max-w-5xl mx-auto text-{{ $data['align'] ?? 'left' }}">
                                 @if (!empty($data['title']))
                                     <h2 class="text-2xl font-bold text-slate-900 mb-3">{{ $data['title'] }}</h2>
@@ -328,410 +323,420 @@
             @endif
         @endforeach
     @else
-    @foreach ($page->sections as $section)
-        @php
-            /** @var \App\Models\Section $section */
+        {{-- -----------------------------------------------------------------
+             2) Legacy sections from admin (if no builderSections found)
+           ----------------------------------------------------------------- --}}
+        @foreach ($page->sections as $section)
+            @php
+                /** @var \App\Models\Section $section */
 
-            $key       = $section->type;                       // e.g. "hero", "hero_default", "features", ...
-            $component = $sectionComponents[$key] ?? null;
+                $key       = $section->type;                  // e.g. hero, features, templates-pages...
+                $component = $sectionComponents[$key] ?? null;
 
-            // Skip unknown types gracefully
-            if (! $component) {
-                continue;
-            }
+                // skip unknown types gracefully
+                if (! $component && $key !== 'hero') {
+                    continue;
+                }
 
-            $translation = $section->translation();
-            $content     = $translation?->content ?? [];
-            $title       = $translation?->title ?? '';
+                $translation = $section->translation();
+                $content     = $translation?->content ?? [];
+                $title       = $translation?->title ?? '';
 
-            /**
-             * Prepare $data for each section type
-             * - This $data array will be passed to the Blade component
-             * - Each component expects specific props structure
-             */
-            $data = ($key === 'hero')
-                ? SectionRenderer::render($section) // Dedicated renderer for hero-style sections
-                : match ($key) {
-                    'features' => [
-                        'title'    => $title,
-                        'subtitle' => $content['subtitle'] ?? '',
-                        'features' => is_array($content['features'] ?? null)
-                            ? $content['features']
-                            : array_filter(
-                                array_map(
-                                    'trim',
-                                    explode("\n", $content['features'] ?? '')
-                                )
-                            ),
-                    ],
+                // Special handling: "hero" sections are fully rendered via SectionRenderer
+                $heroHtml = null;
 
-                    'features-2' => (function () use ($content, $title) {
-                        $features = collect($content['features'] ?? [])
-                            ->filter(function ($item) {
-                                if (! is_array($item)) {
-                                    return false;
-                                }
-
-                                $title       = trim((string) ($item['title'] ?? ''));
-                                $description = trim((string) ($item['description'] ?? ''));
-                                $icon        = trim((string) ($item['icon'] ?? ''));
-
-                                return $title !== '' || $description !== '' || $icon !== '';
-                            })
-                            ->map(function ($item) {
-                                return [
-                                    'icon'        => $item['icon'] ?? '',
-                                    'title'       => $item['title'] ?? '',
-                                    'description' => $item['description'] ?? '',
-                                ];
-                            })
-                            ->values()
-                            ->all();
-
-                        // Background preset mapping (design tokens)
-                        $backgroundPresets = [
-                            'white',
-                            'gray',
-                            'stone',
-                            'slate-light',
-                            'slate-dark',
-                            'zinc-dark',
-                            'black',
-                            'sky',
-                            'blue',
-                            'indigo',
-                            'violet',
-                            'purple',
-                            'amber',
-                            'orange',
-                            'rose',
-                            'rose-deep',
-                            'emerald',
-                            'emerald-deep',
-                            'teal',
-                        ];
-
-                        $backgroundVariant = $content['background_variant'] ?? null;
-
-                        if (! in_array($backgroundVariant, $backgroundPresets, true)) {
-                            $legacy = $content['background_color'] ?? null;
-
-                            $backgroundVariant = match (is_string($legacy) ? strtolower(trim($legacy)) : null) {
-                                '#ffffff', '#fff'    => 'white',
-                                '#f9fafb', '#f8fafc' => 'gray',
-                                '#faf5f0', '#f5e9df' => 'stone',
-                                '#e2e8f0', '#cbd5e1' => 'slate-light',
-                                '#0f172a', '#111827' => 'slate-dark',
-                                '#18181b'            => 'zinc-dark',
-                                '#020617'            => 'black',
-                                '#eff6ff', '#e0f2fe' => 'sky',
-                                '#dbeafe', '#bfdbfe' => 'blue',
-                                '#4f46e5', '#312e81' => 'indigo',
-                                '#7c3aed', '#5b21b6' => 'violet',
-                                '#9333ea', '#6b21a8' => 'purple',
-                                '#fef3c7', '#fde68a' => 'amber',
-                                '#f97316', '#ea580c' => 'orange',
-                                '#ffe4e6', '#fecdd3' => 'rose',
-                                '#e11d48', '#be123c' => 'rose-deep',
-                                '#ecfdf5', '#d1fae5' => 'emerald',
-                                '#059669', '#047857' => 'emerald-deep',
-                                '#14b8a6', '#0f766e' => 'teal',
-                                default              => 'white',
-                            };
-                        }
-
-                        return [
-                            'title'              => $title,
-                            'subtitle'           => $content['subtitle'] ?? '',
-                            'button_text'        => $content['button_text'] ?? '',
-                            'button_url'         => $content['button_url'] ?? '',
-                            'background_variant' => $backgroundVariant,
-                            'features'           => $features,
-                        ];
-                    })(),
-
-                    'features-3' => (function () use ($content, $title) {
-                        $features = collect($content['features'] ?? [])
-                            ->filter(function ($item) {
-                                if (! is_array($item)) {
-                                    return false;
-                                }
-
-                                $title       = trim((string) ($item['title'] ?? ''));
-                                $description = trim((string) ($item['description'] ?? ''));
-                                $icon        = trim((string) ($item['icon'] ?? ''));
-
-                                return $title !== '' || $description !== '' || $icon !== '';
-                            })
-                            ->map(function ($item) {
-                                return [
-                                    'icon'        => $item['icon'] ?? '',
-                                    'title'       => $item['title'] ?? '',
-                                    'description' => $item['description'] ?? '',
-                                ];
-                            })
-                            ->values()
-                            ->all();
-
-                        return [
+                if ($key === 'hero') {
+                    $heroHtml = SectionRenderer::render($section);
+                    $data = []; // not used by components in this case
+                } else {
+                    /**
+                     * Prepare $data for each section type
+                     * - This $data array will be passed to the Blade component
+                     */
+                    $data = match ($key) {
+                        'features' => [
                             'title'    => $title,
                             'subtitle' => $content['subtitle'] ?? '',
-                            'features' => $features,
-                        ];
-                    })(),
+                            'features' => is_array($content['features'] ?? null)
+                                ? $content['features']
+                                : array_filter(
+                                    array_map(
+                                        'trim',
+                                        explode("\n", $content['features'] ?? '')
+                                    )
+                                ),
+                        ],
 
-                    'cta' => [
-                        'title'               => $title,
-                        'subtitle'            => $content['subtitle'] ?? '',
-                        'badge'               => $content['badge'] ?? '',
-                        'primary_button_text' => $content['primary_button_text'] ?? ($content['button_text'] ?? ''),
-                        'primary_button_url'  => $content['primary_button_url'] ?? ($content['button_url'] ?? ''),
-                    ],
+                        'features-2' => (function () use ($content, $title) {
+                            $features = collect($content['features'] ?? [])
+                                ->filter(function ($item) {
+                                    if (! is_array($item)) {
+                                        return false;
+                                    }
 
-                    'faq' => (function () use ($content, $title) {
-                        $items = collect($content['items'] ?? $content['faq'] ?? [])
-                            ->map(function ($item) {
-                                if (! is_array($item)) {
-                                    $question = trim((string) $item);
-                                    return $question === ''
-                                        ? null
-                                        : ['question' => $question, 'answer' => ''];
-                                }
+                                    $title       = trim((string) ($item['title'] ?? ''));
+                                    $description = trim((string) ($item['description'] ?? ''));
+                                    $icon        = trim((string) ($item['icon'] ?? ''));
 
-                                $question = trim((string) ($item['question'] ?? ''));
-                                $answer   = trim((string) ($item['answer'] ?? ''));
-
-                                return ($question === '' && $answer === '')
-                                    ? null
-                                    : [
-                                        'question' => $question,
-                                        'answer'   => $answer,
-                                    ];
-                            })
-                            ->filter()
-                            ->values()
-                            ->all();
-
-                        return [
-                            'title'    => $title,
-                            'subtitle' => $content['subtitle'] ?? '',
-                            'items'    => $items,
-                        ];
-                    })(),
-
-                    'services' => [
-                        'title'    => $title,
-                        'subtitle' => $content['subtitle'] ?? '',
-                        'services' => Service::with('translations')
-                            ->orderBy('order')
-                            ->get(),
-                    ],
-
-                    'home-works' => [
-                        'title'         => $title,
-                        'subtitle'      => $content['subtitle'] ?? '',
-                        'button_text-1' => $content['button_text-1'] ?? '',
-                        'button_url-1'  => $content['button_url-1'] ?? '',
-                    ],
-
-                    'works', 'banner' => [
-                        'title'    => $title,
-                        'subtitle' => $content['subtitle'] ?? '',
-                    ],
-
-                    'testimonials' => [
-                        'title'        => $title,
-                        'subtitle'     => $content['subtitle'] ?? '',
-                        'testimonials' => Testimonial::approved()
-                            ->with('translations')
-                            ->orderBy('order')
-                            ->get(),
-                    ],
-
-                    'hosting-plans' => (function () use ($content, $title) {
-                        $cat   = null;
-
-                        $query = \App\Models\Plan::where('is_active', true)
-                            ->with(['translations', 'category.translations'])
-                            ->orderBy('id', 'asc');
-
-                        // Filter by explicit plan_category_id
-                        if (! empty($content['plan_category_id'])) {
-                            $query->where('plan_category_id', (int) $content['plan_category_id']);
-
-                            $cat = \App\Models\PlanCategory::with('translations')
-                                ->find((int) $content['plan_category_id']);
-                        }
-                        // Or filter by category slug
-                        elseif (! empty($content['plan_category_slug'])) {
-                            $slug = (string) $content['plan_category_slug'];
-
-                            $cat = \App\Models\PlanCategory::whereHas('translations', function ($q) use ($slug) {
-                                    $q->where('slug', $slug)->where('locale', app()->getLocale());
+                                    return $title !== '' || $description !== '' || $icon !== '';
                                 })
-                                ->with('translations')
-                                ->first();
+                                ->map(function ($item) {
+                                    return [
+                                        'icon'        => $item['icon'] ?? '',
+                                        'title'       => $item['title'] ?? '',
+                                        'description' => $item['description'] ?? '',
+                                    ];
+                                })
+                                ->values()
+                                ->all();
 
-                            if (! $cat) {
+                            // Background preset mapping (design tokens)
+                            $backgroundPresets = [
+                                'white',
+                                'gray',
+                                'stone',
+                                'slate-light',
+                                'slate-dark',
+                                'zinc-dark',
+                                'black',
+                                'sky',
+                                'blue',
+                                'indigo',
+                                'violet',
+                                'purple',
+                                'amber',
+                                'orange',
+                                'rose',
+                                'rose-deep',
+                                'emerald',
+                                'emerald-deep',
+                                'teal',
+                            ];
+
+                            $backgroundVariant = $content['background_variant'] ?? null;
+
+                            if (! in_array($backgroundVariant, $backgroundPresets, true)) {
+                                $legacy = $content['background_color'] ?? null;
+
+                                $backgroundVariant = match (is_string($legacy) ? strtolower(trim($legacy)) : null) {
+                                    '#ffffff', '#fff'    => 'white',
+                                    '#f9fafb', '#f8fafc' => 'gray',
+                                    '#faf5f0', '#f5e9df' => 'stone',
+                                    '#e2e8f0', '#cbd5e1' => 'slate-light',
+                                    '#0f172a', '#111827' => 'slate-dark',
+                                    '#18181b'            => 'zinc-dark',
+                                    '#020617'            => 'black',
+                                    '#eff6ff', '#e0f2fe' => 'sky',
+                                    '#dbeafe', '#bfdbfe' => 'blue',
+                                    '#4f46e5', '#312e81' => 'indigo',
+                                    '#7c3aed', '#5b21b6' => 'violet',
+                                    '#9333ea', '#6b21a8' => 'purple',
+                                    '#fef3c7', '#fde68a' => 'amber',
+                                    '#f97316', '#ea580c' => 'orange',
+                                    '#ffe4e6', '#fecdd3' => 'rose',
+                                    '#e11d48', '#be123c' => 'rose-deep',
+                                    '#ecfdf5', '#d1fae5' => 'emerald',
+                                    '#059669', '#047857' => 'emerald-deep',
+                                    '#14b8a6', '#0f766e' => 'teal',
+                                    default              => 'white',
+                                };
+                            }
+
+                            return [
+                                'title'              => $title,
+                                'subtitle'           => $content['subtitle'] ?? '',
+                                'button_text'        => $content['button_text'] ?? '',
+                                'button_url'         => $content['button_url'] ?? '',
+                                'background_variant' => $backgroundVariant,
+                                'features'           => $features,
+                            ];
+                        })(),
+
+                        'features-3' => (function () use ($content, $title) {
+                            $features = collect($content['features'] ?? [])
+                                ->filter(function ($item) {
+                                    if (! is_array($item)) {
+                                        return false;
+                                    }
+
+                                    $title       = trim((string) ($item['title'] ?? ''));
+                                    $description = trim((string) ($item['description'] ?? ''));
+                                    $icon        = trim((string) ($item['icon'] ?? ''));
+
+                                    return $title !== '' || $description !== '' || $icon !== '';
+                                })
+                                ->map(function ($item) {
+                                    return [
+                                        'icon'        => $item['icon'] ?? '',
+                                        'title'       => $item['title'] ?? '',
+                                        'description' => $item['description'] ?? '',
+                                    ];
+                                })
+                                ->values()
+                                ->all();
+
+                            return [
+                                'title'    => $title,
+                                'subtitle' => $content['subtitle'] ?? '',
+                                'features' => $features,
+                            ];
+                        })(),
+
+                        'cta' => [
+                            'title'               => $title,
+                            'subtitle'            => $content['subtitle'] ?? '',
+                            'badge'               => $content['badge'] ?? '',
+                            'primary_button_text' => $content['primary_button_text'] ?? ($content['button_text'] ?? ''),
+                            'primary_button_url'  => $content['primary_button_url'] ?? ($content['button_url'] ?? ''),
+                        ],
+
+                        'faq' => (function () use ($content, $title) {
+                            $items = collect($content['items'] ?? $content['faq'] ?? [])
+                                ->map(function ($item) {
+                                    if (! is_array($item)) {
+                                        $question = trim((string) $item);
+                                        return $question === ''
+                                            ? null
+                                            : ['question' => $question, 'answer' => ''];
+                                    }
+
+                                    $question = trim((string) ($item['question'] ?? ''));
+                                    $answer   = trim((string) ($item['answer'] ?? ''));
+
+                                    return ($question === '' && $answer === '')
+                                        ? null
+                                        : [
+                                            'question' => $question,
+                                            'answer'   => $answer,
+                                        ];
+                                })
+                                ->filter()
+                                ->values()
+                                ->all();
+
+                            return [
+                                'title'    => $title,
+                                'subtitle' => $content['subtitle'] ?? '',
+                                'items'    => $items,
+                            ];
+                        })(),
+
+                        'services' => [
+                            'title'    => $title,
+                            'subtitle' => $content['subtitle'] ?? '',
+                            'services' => Service::with('translations')
+                                ->orderBy('order')
+                                ->get(),
+                        ],
+
+                        'home-works' => [
+                            'title'         => $title,
+                            'subtitle'      => $content['subtitle'] ?? '',
+                            'button_text-1' => $content['button_text-1'] ?? '',
+                            'button_url-1'  => $content['button_url-1'] ?? '',
+                        ],
+
+                        'works', 'banner' => [
+                            'title'    => $title,
+                            'subtitle' => $content['subtitle'] ?? '',
+                        ],
+
+                        'testimonials' => [
+                            'title'        => $title,
+                            'subtitle'     => $content['subtitle'] ?? '',
+                            'testimonials' => Testimonial::approved()
+                                ->with('translations')
+                                ->orderBy('order')
+                                ->get(),
+                        ],
+
+                        'hosting-plans' => (function () use ($content, $title) {
+                            $cat   = null;
+
+                            $query = \App\Models\Plan::where('is_active', true)
+                                ->with(['translations', 'category.translations'])
+                                ->orderBy('id', 'asc');
+
+                            // Filter by explicit plan_category_id
+                            if (! empty($content['plan_category_id'])) {
+                                $query->where('plan_category_id', (int) $content['plan_category_id']);
+
+                                $cat = \App\Models\PlanCategory::with('translations')
+                                    ->find((int) $content['plan_category_id']);
+                            }
+                            // Or filter by category slug
+                            elseif (! empty($content['plan_category_slug'])) {
+                                $slug = (string) $content['plan_category_slug'];
+
                                 $cat = \App\Models\PlanCategory::whereHas('translations', function ($q) use ($slug) {
-                                        $q->where('slug', $slug);
+                                        $q->where('slug', $slug)->where('locale', app()->getLocale());
                                     })
                                     ->with('translations')
                                     ->first();
-                            }
 
-                            if ($cat) {
-                                $query->where('plan_category_id', $cat->id);
-                            } else {
-                                // If no category found, force empty result
-                                $query->whereRaw('0 = 1');
-                            }
-                        }
-
-                        $plans = $query->get();
-
-                        return [
-                            'title'    => $title ?? '',
-                            'subtitle' => $content['subtitle'] ?? '',
-                            'plans'    => $plans,
-                            'category' => $cat,
-                        ];
-                    })(),
-
-                    'templates' => [
-                        'title'     => $title,
-                        'subtitle'  => $content['subtitle'] ?? '',
-                        'templates' => \App\Models\Template::with('translations')
-                            ->latest()
-                            ->take(8)
-                            ->get(),
-                    ],
-
-                    'blog' => [
-                        'title'         => $title,
-                        'subtitle'      => $content['subtitle'] ?? '',
-                        'button_text-1' => $content['button_text-1'] ?? '',
-                        'button_url-1'  => $content['button_url-1'] ?? '',
-                    ],
-
-                    'search-domain' => (function () use ($title) {
-                        // TLDs in catalog
-                        $defaultTlds = DomainTld::where('in_catalog', true)
-                            ->orderBy('tld')
-                            ->pluck('tld')
-                            ->map(fn ($t) => strtolower(ltrim($t, '.')))
-                            ->values()
-                            ->all();
-
-                        // Fallback prices for 1-year register
-                        $fallbackPrices = DomainTldPrice::with('tld')
-                            ->whereIn(
-                                'domain_tld_id',
-                                DomainTld::where('in_catalog', true)->pluck('id')
-                            )
-                            ->where('action', 'register')
-                            ->where('years', 1)
-                            ->get()
-                            ->mapWithKeys(function ($p) {
-                                $tld = strtolower($p->tld->tld ?? '');
-                                if ($tld === '') {
-                                    return [];
+                                if (! $cat) {
+                                    $cat = \App\Models\PlanCategory::whereHas('translations', function ($q) use ($slug) {
+                                            $q->where('slug', $slug);
+                                        })
+                                        ->with('translations')
+                                        ->first();
                                 }
-                                $price = $p->sale ?? $p->cost;
-                                return $price !== null ? [$tld => (float) $price] : [];
-                            })
-                            ->toArray();
 
-                        return [
-                            'title'           => $title,
-                            'subtitle'        => '',
-                            'default_tlds'    => $defaultTlds,
-                            'fallback_prices' => $fallbackPrices,
-                            'currency'        => 'USD',
-                        ];
-                    })(),
+                                if ($cat) {
+                                    $query->where('plan_category_id', $cat->id);
+                                } else {
+                                    // If no category found, force empty result
+                                    $query->whereRaw('0 = 1');
+                                }
+                            }
 
-                    'templates-pages' => [
-                        'max_price'           => $content['max_price'] ?? 500,
-                        'sort_by'             => request('sort', $content['sort_by'] ?? 'default'),
-                        'show_filter_sidebar' => $content['show_filter_sidebar'] ?? true,
-                        'selectedCategory'    => $content['selectedCategory'] ?? 'all',
-                        'templates'           => \App\Models\Template::with([
-                                'translations',
-                                'categoryTemplate.translations',
-                            ])
-                            ->latest()
-                            ->take(60)
-                            ->get(),
-                        'categories' => \App\Models\CategoryTemplate::with([
-                                'translations' => function ($q) {
-                                    $q->where('locale', app()->getLocale())
-                                      ->orWhere('locale', 'ar');
-                                },
-                            ])
-                            ->get()
-                            ->map(function ($cat) {
-                                $t =
-                                    $cat->translations->firstWhere('locale', app()->getLocale())
-                                    ?? $cat->translations->firstWhere('locale', 'ar');
+                            $plans = $query->get();
 
-                                $cat->translated_name = $t?->name ?? 'غير معروف';
-                                $cat->translated_slug = $t?->slug ?? ($cat->slug ?? 'uncategorized');
+                            return [
+                                'title'    => $title ?? '',
+                                'subtitle' => $content['subtitle'] ?? '',
+                                'plans'    => $plans,
+                                'category' => $cat,
+                            ];
+                        })(),
 
-                                return $cat;
-                            }),
-                    ],
+                        'templates' => [
+                            'title'     => $title,
+                            'subtitle'  => $content['subtitle'] ?? '',
+                            'templates' => \App\Models\Template::with('translations')
+                                ->latest()
+                                ->take(8)
+                                ->get(),
+                        ],
 
-                    default => [],
-                };
-        @endphp
+                        'blog' => [
+                            'title'         => $title,
+                            'subtitle'      => $content['subtitle'] ?? '',
+                            'button_text-1' => $content['button_text-1'] ?? '',
+                            'button_url-1'  => $content['button_url-1'] ?? '',
+                        ],
 
-        {{-- -----------------------------------------------------------------
-             Render each section using its dedicated Blade component
-             Special cases (templates-pages, search-domain, hosting-plans)
-             receive explicit props; others receive a generic `$data` payload.
-           ----------------------------------------------------------------- --}}
-        @if ($component === 'templates-pages')
-            <x-dynamic-component
-                :component="'template.sections.' . $component"
-                :templates="$data['templates']"
-                :categories="$data['categories']"
-                :max_price="$data['max_price']"
-                :sort_by="$data['sort_by']"
-                :show_filter_sidebar="$data['show_filter_sidebar']"
-                :selectedCategory="$data['selectedCategory']"
-            />
-        @elseif ($component === 'search-domain')
-            <x-dynamic-component
-                :component="'template.sections.' . $component"
-                :default-tlds="$data['default_tlds'] ?? []"
-                :fallback-prices="$data['fallback_prices'] ?? []"
-                :currency="$data['currency'] ?? 'USD'"
-            />
-        @elseif ($component === 'hosting-plans')
-            <x-dynamic-component
-                :component="'template.sections.' . $component"
-                :plans="$data['plans'] ?? collect()"
-                :title="$data['title'] ?? ''"
-                :subtitle="$data['subtitle'] ?? ''"
-                :category="$data['category'] ?? null"
-            />
-        @elseif ($component === 'hero_default')
-            <x-dynamic-component
-                :component="'template.sections.' . $component"
-                :section="$section"
-                :title="$title"
-                :content="$content"
-                :variant="$section->variant"
-            />
-        @else
-            {{-- Default: component expects a `data` prop and optionally `templates` --}}
-            <x-dynamic-component
-                :component="'template.sections.' . $component"
-                :data="$data"
-                :templates="$data['templates'] ?? collect()"
-            />
-        @endif
-    @endforeach
+                        'search-domain' => (function () use ($title) {
+                            // TLDs in catalog
+                            $defaultTlds = DomainTld::where('in_catalog', true)
+                                ->orderBy('tld')
+                                ->pluck('tld')
+                                ->map(fn ($t) => strtolower(ltrim($t, '.')))
+                                ->values()
+                                ->all();
+
+                            // Fallback prices for 1-year register
+                            $fallbackPrices = DomainTldPrice::with('tld')
+                                ->whereIn(
+                                    'domain_tld_id',
+                                    DomainTld::where('in_catalog', true)->pluck('id')
+                                )
+                                ->where('action', 'register')
+                                ->where('years', 1)
+                                ->get()
+                                ->mapWithKeys(function ($p) {
+                                    $tld = strtolower($p->tld->tld ?? '');
+                                    if ($tld === '') {
+                                        return [];
+                                    }
+                                    $price = $p->sale ?? $p->cost;
+                                    return $price !== null ? [$tld => (float) $price] : [];
+                                })
+                                ->toArray();
+
+                            return [
+                                'title'           => $title,
+                                'subtitle'        => '',
+                                'default_tlds'    => $defaultTlds,
+                                'fallback_prices' => $fallbackPrices,
+                                'currency'        => 'USD',
+                            ];
+                        })(),
+
+                        'templates-pages' => [
+                            'max_price'           => $content['max_price'] ?? 500,
+                            'sort_by'             => request('sort', $content['sort_by'] ?? 'default'),
+                            'show_filter_sidebar' => $content['show_filter_sidebar'] ?? true,
+                            'selectedCategory'    => $content['selectedCategory'] ?? 'all',
+                            'templates'           => \App\Models\Template::with([
+                                    'translations',
+                                    'categoryTemplate.translations',
+                                ])
+                                ->latest()
+                                ->take(60)
+                                ->get(),
+                            'categories' => \App\Models\CategoryTemplate::with([
+                                    'translations' => function ($q) {
+                                        $q->where('locale', app()->getLocale())
+                                          ->orWhere('locale', 'ar');
+                                    },
+                                ])
+                                ->get()
+                                ->map(function ($cat) {
+                                    $t =
+                                        $cat->translations->firstWhere('locale', app()->getLocale())
+                                        ?? $cat->translations->firstWhere('locale', 'ar');
+
+                                    $cat->translated_name = $t?->name ?? 'غير معروف';
+                                    $cat->translated_slug = $t?->slug ?? ($cat->slug ?? 'uncategorized');
+
+                                    return $cat;
+                                }),
+                        ],
+
+                        default => [],
+                    };
+                }
+            @endphp
+
+            {{-- Hero (legacy sections) rendered as raw HTML from SectionRenderer --}}
+            @if ($key === 'hero')
+                {!! $heroHtml !!}
+                @continue
+            @endif
+
+            {{-- Special cases with explicit props --}}
+            @if ($component === 'templates-pages')
+                <x-dynamic-component
+                    :component="'template.sections.' . $component"
+                    :templates="$data['templates']"
+                    :categories="$data['categories']"
+                    :max_price="$data['max_price']"
+                    :sort_by="$data['sort_by']"
+                    :show_filter_sidebar="$data['show_filter_sidebar']"
+                    :selectedCategory="$data['selectedCategory']"
+                />
+            @elseif ($component === 'search-domain')
+                <x-dynamic-component
+                    :component="'template.sections.' . $component"
+                    :default-tlds="$data['default_tlds'] ?? []"
+                    :fallback-prices="$data['fallback_prices'] ?? []"
+                    :currency="$data['currency'] ?? 'USD'"
+                />
+            @elseif ($component === 'hosting-plans')
+                <x-dynamic-component
+                    :component="'template.sections.' . $component"
+                    :plans="$data['plans'] ?? collect()"
+                    :title="$data['title'] ?? ''"
+                    :subtitle="$data['subtitle'] ?? ''"
+                    :category="$data['category'] ?? null"
+                />
+            @elseif ($component === 'hero_default')
+                <x-dynamic-component
+                    :component="'template.sections.' . $component"
+                    :section="$section"
+                    :title="$title"
+                    :content="$content"
+                    :variant="$section->variant"
+                />
+            @else
+                {{-- Default: section component expects a `data` prop --}}
+                <x-dynamic-component
+                    :component="'template.sections.' . $component"
+                    :data="$data"
+                    :templates="$data['templates'] ?? collect()"
+                />
+            @endif
+        @endforeach
     @endif
 @endsection

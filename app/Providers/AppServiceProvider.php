@@ -61,20 +61,34 @@ class AppServiceProvider extends ServiceProvider
                 $view->with('currentPage', $page);
             }
         });
-        SectionRegistry::register('hero_default', [
-            'view' => 'components.template.sections.hero',
-            'default' => [
-                'title' => 'عنوان غير متوفر',
-                'subtitle' => '',
-                'primary_button' => [
-                    'label' => 'ابدأ الآن',
-                    'url' => '#',
-                ],
-                'secondary_button' => [
-                    'label' => 'استعرض القوالب',
-                    'url' => '#',
-                ],
-            ],
+        // Hero section
+        SectionRegistry::register('hero', [
+            // Blade view used to render this section
+            'view'  => 'components.template.sections.hero',
+
+            // Optional metadata (for UI/builders if تحتاج مستقبلاً)
+            'label' => 'Hero',
+            'group' => 'hero',
+        ]);
+
+        // Features section (اللي اشتغلنا عليه الآن)
+        SectionRegistry::register('features', [
+            'view'  => 'components.template.sections.features',
+            'label' => 'Features',
+            'group' => 'content',
+        ]);
+
+        // تقدر تسجل باقي الأنواع بنفس الفكرة:
+        SectionRegistry::register('services', [
+            'view'  => 'components.template.sections.services',
+            'label' => 'Services',
+            'group' => 'content',
+        ]);
+
+        SectionRegistry::register('templates', [
+            'view'  => 'components.template.sections.templates',
+            'label' => 'Templates',
+            'group' => 'content',
         ]);
     }
 }

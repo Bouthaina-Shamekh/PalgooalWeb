@@ -1,62 +1,121 @@
 @import "tailwindcss";
 /* طبقاتك المخصصة (إن احتجت) */
 @layer components {
-  /* العنوان الكبير فوق البلوكات (Palgoals Blocks) من الـ Blade */
-  .builder-blocks-title {
-    @apply text-[11px] uppercase tracking-[0.22em] font-semibold
-           text-slate-300 px-4 pb-2;
+  /* لوحة البلوكات العامة (يمكنك استخدامها في الـ Blade إن أردت) */
+  .pg-blocks-panel {
+    @apply bg-[#F9F6FB]
+           rounded-3xl
+           border border-[#240B36]/10
+           shadow-[0_14px_40px_rgba(36,11,54,0.08)]
+           px-4 py-3 space-y-3;
   }
 
-  /* الحاوية العامة للبلوكات – بدون خلفية إضافية */
+  .pg-blocks-header {
+    @apply flex items-center justify-between px-1;
+  }
+
+  .pg-blocks-title-main {
+    @apply text-[11px] uppercase tracking-[0.28em]
+           font-semibold text-[#240B36];
+  }
+
+  .pg-blocks-sub {
+    @apply text-[11px] font-medium text-[#AE1028];
+  }
+
+  /* حاوية البلوكات في GrapesJS */
   #gjs-blocks {
-    @apply bg-transparent px-3 pt-2 pb-4 space-y-4;
+    @apply bg-transparent space-y-3;
   }
 
-  /* كل كاتيجوري (Hero, Services, Basic…) */
+  /* عنوان كل كاتيجوري (سكاشن الهيرو / الهيدر / الخدمات / عناصر أساسية) */
   #gjs-blocks .gjs-block-category {
-    @apply space-y-2;
+    @apply rounded-2xl overflow-hidden
+           border border-slate-200/90
+           bg-white
+           shadow-[0_6px_18px_rgba(15,23,42,0.06)]
+           transition-all duration-200;
   }
 
-  /* عنوان الكاتيجوري */
   #gjs-blocks .gjs-title {
-    @apply flex items-center justify-between
-           text-[10px] uppercase tracking-[0.25em]
-           text-slate-400 px-1;
+    @apply flex items-center justify-between gap-2
+           px-4 py-2.5
+           text-[13px] font-semibold
+           text-slate-600;
   }
 
-  /* خط رفيع بعد عنوان الكاتيجوري */
+  /* سهم بسيط لفتح/إغلاق الكاتيجوري (من GrapesJS نفسه) */
+  #gjs-blocks .gjs-title::before {
+    content: "";
+    @apply block w-1 h-6 rounded-full
+           bg-gradient-to-b from-[#240B36] to-[#AE1028];
+  }
+
   #gjs-blocks .gjs-title::after {
     content: "";
-    @apply flex-1 h-px ml-2 bg-slate-700/60 rounded-full;
+    @apply flex-1 h-px ml-3 bg-slate-200 rounded-full;
   }
 
-  /* حاوية البلوكات داخل كل كاتيجوري */
+  .gjs-block-category.gjs-open {
+    @apply border-[#240B36]/20 shadow-[0_10px_26px_rgba(36,11,54,0.12)];
+  }
+
+  .gjs-block-category.gjs-open > .gjs-title {
+    @apply text-[#240B36];
+  }
+
+  /* شبكة كروت داخل كل كاتيجوري – شبيه Elementor */
   #gjs-blocks .gjs-blocks-c,
   #gjs-blocks .gjs-blocks-wrapper {
-    @apply bg-transparent p-0 flex flex-col gap-2;
+    @apply bg-gradient-to-b from-slate-50 to-white
+           px-3 pb-3 pt-1
+           grid gap-3 grid-cols-2;
   }
 
-  /* تصميم البلوك نفسه */
+  @screen md {
+    #gjs-blocks .gjs-blocks-c,
+    #gjs-blocks .gjs-blocks-wrapper {
+      @apply grid-cols-3;
+    }
+  }
+
+  /* إزالة شكل GrapesJS الافتراضي للبلوك */
   #gjs-blocks .gjs-block {
-    @apply w-full
-           rounded-2xl
-           bg-slate-900/75
-           border border-slate-700/70
-           px-6 py-4
-           text-[12px] font-semibold tracking-[0.22em] uppercase
-           text-slate-50 text-center cursor-pointer
-           shadow-sm
-           transition-all duration-150 ease-out
-           hover:-translate-y-0.5 hover:shadow-md
-           hover:bg-slate-800
-           hover:border-sky-400/80;
+    @apply p-0 bg-transparent border-0 shadow-none;
   }
 
-  /* البلوك أثناء السحب */
-  #gjs-blocks .gjs-block.gjs-block-drag {
-    @apply opacity-90 shadow-lg;
+  /* الكرت نفسه الذي نستخدمه في label (pg-block-card) */
+  .pg-block-card {
+    @apply w-full
+           flex flex-col items-center justify-center gap-2
+           rounded-xl
+           border border-slate-200
+           bg-white
+           py-4 px-3
+           text-center
+           transition-all duration-150
+           hover:border-[#AE1028]/80
+           hover:bg-[#240B36]/5;
+  }
+
+  .pg-block-icon {
+    @apply w-10 h-10 flex items-center justify-center
+           rounded-full bg-primary/5 text-primary;
+  }
+
+  .pg-block-icon svg {
+    @apply w-5 h-5;
+  }
+
+  .pg-block-title {
+    @apply text-[11px] font-semibold tracking-[0.16em]
+           text-slate-700 uppercase;
   }
 }
+
+
+
+
 
 
 

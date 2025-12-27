@@ -9,12 +9,38 @@ use App\Models\Service;
 
 class PageBuilderStructure extends Model
 {
+    /**
+     * Table for visual page builder structures.
+     *
+     * We are in a transition from older "structure" JSON column
+     * to a cleaner schema:
+     *  - project : full GrapesJS projectData (array)
+     *  - html    : compiled HTML for frontend rendering
+     *  - css     : compiled CSS for frontend rendering
+     *
+     * For backward compatibility:
+     *  - normalizedSections() will read from project if available,
+     *    otherwise falls back to "structure".
+     */
+    protected $table = 'page_builder_structures';
+
     protected $fillable = [
         'page_id',
+
+        // New recommended fields
+        'project',
+        'html',
+        'css',
+
+        // Legacy field (still used until old data is migrated)
         'structure',
     ];
 
     protected $casts = [
+        // New preferred storage for GrapesJS project data
+        'project'   => 'array',
+
+        // Legacy storage (older code may still use it)
         'structure' => 'array',
     ];
 
@@ -27,6 +53,25 @@ class PageBuilderStructure extends Model
     }
 
     /**
+     * Helper to get current builder project array in a unified way.
+     *
+     * Prefer $this->project (new schema), but fall back to $this->structure
+     * so old rows continue to work until fully migrated.
+     */
+    public function getCurrentProject(): array
+    {
+        if (is_array($this->project) && ! empty($this->project)) {
+            return $this->project;
+        }
+
+        if (is_array($this->structure) && ! empty($this->structure)) {
+            return $this->structure;
+        }
+
+        return [];
+    }
+
+    /**
      * Convert the stored GrapesJS project structure into a
      * simple list of sections consumable by Blade components.
      *
@@ -34,7 +79,8 @@ class PageBuilderStructure extends Model
      */
     public function normalizedSections(): array
     {
-        $structure = $this->structure ?? [];
+        // ✅ استخدام project الجديد، أو structure القديم كـ fallback
+        $structure = $this->getCurrentProject();
 
         // Lite builder format: { mode: 'lite-builder', blocks: [...] }
         if (Arr::get($structure, 'mode') === 'lite-builder' && is_array(Arr::get($structure, 'blocks'))) {
@@ -153,7 +199,7 @@ class PageBuilderStructure extends Model
                             'subtitle'      => Arr::get($data, 'subtitle', ''),
                             'primary_text'  => Arr::get($data, 'primaryText', ''),
                             'primary_url'   => Arr::get($data, 'primaryUrl', '#'),
-                            'secondary_text'=> Arr::get($data, 'secondaryText', ''),
+                            'secondary_text' => Arr::get($data, 'secondaryText', ''),
                             'secondary_url' => Arr::get($data, 'secondaryUrl', '#'),
                             'bg'            => Arr::get($data, 'bg', ''),
                         ],

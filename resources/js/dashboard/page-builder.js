@@ -125,11 +125,15 @@ if (root) {
             tabBtns.forEach((btn) => {
                 const active = btn.dataset.tabTarget === name;
                 btn.classList.toggle('active', active);
+                btn.dataset.selected = active ? 'true' : 'false';
                 btn.setAttribute('aria-selected', active ? 'true' : 'false');
             });
 
             tabContents.forEach((c) => {
-                c.classList.toggle('active', c.dataset.tabContent === name);
+                const active = c.dataset.tabContent === name;
+                c.classList.toggle('active', active);
+                c.classList.toggle('hidden', !active);
+                c.setAttribute('aria-hidden', active ? 'false' : 'true');
             });
 
             helpers.forEach((h) => {
@@ -224,10 +228,15 @@ if (root) {
     function registerBlocks(editor) {
         const bm = editor.BlockManager;
 
-        // صورة الهيرو - مسار نسبي يعمل على اللوكال والبرودكشن
+        // Global direction flag (rtl / ltr)
+        const isRtl =
+            document.documentElement.dir === 'rtl' ||
+            document.body.dir === 'rtl';
+
+        // Shared preview image (hero / templates)
         const heroImage = '/assets/tamplate/images/template.webp';
 
-        // نصوص حسب اللغة
+        // Hero content
         const heroTitle = isRtl
             ? 'أطلق موقعك الاحترافي في دقائق'
             : 'Launch your professional website in minutes';
@@ -241,35 +250,185 @@ if (root) {
 
         const heroDirectionClass = isRtl ? 'md:flex-row-reverse' : 'md:flex-row';
 
-        // ----------------- Categories -----------------
-        const heroCategory = {
-            id: 'pg-hero-category',
-            label: isRtl ? 'سكاشن الهيرو' : 'Hero sections',
-            open: true,
-        };
+        // Features content
+        const featuresSectionTitle = isRtl
+            ? 'خدمات رقمية متكاملة تدعم نجاحك'
+            : 'All-in-one digital services for your success';
 
-        const headerCategory = {
-            id: 'pg-header-category',
-            label: isRtl ? 'الهيدر' : 'Headers',
-            open: false,
-        };
+        const featuresSectionSubtitle = isRtl
+            ? 'منصة واحدة تجمع بين الاستضافة، القوالب الجاهزة، وربط الدومين خلال دقائق.'
+            : 'One platform that brings hosting, ready-made templates and domain connection in minutes.';
 
-        const servicesCategory = {
-            id: 'pg-services-category',
-            label: isRtl ? 'الخدمات' : 'Services',
-            open: false,
-        };
+        const featuresConfig = isRtl
+            ? [
+                {
+                    title: 'إطلاق سريع',
+                    description: 'امتلك موقعك الجاهز خلال دقائق مع إعداد تلقائي كامل.',
+                },
+                {
+                    title: 'تصاميم احترافية',
+                    description: 'قوالب مصممة بعناية لتناسب مختلف الأنشطة والمتاجر.',
+                },
+                {
+                    title: 'دعم فني مستمر',
+                    description: 'فريق مختص لمساعدتك في أي وقت خلال رحلتك الرقمية.',
+                },
+                {
+                    title: 'أداء عالي',
+                    description: 'استضافة مستقرة وسريعة لتجربة استخدام مميزة.',
+                },
+                {
+                    title: 'مرونة التخصيص',
+                    description: 'تحكم في محتوى موقعك بسهولة بدون خبرة برمجية.',
+                },
+                {
+                    title: 'تكاملات جاهزة',
+                    description: 'ربط مع بوابات الدفع وأدوات التسويق بكل سهولة.',
+                },
+            ]
+            : [
+                {
+                    title: 'Fast launch',
+                    description: 'Get your website live in minutes with full automatic setup.',
+                },
+                {
+                    title: 'Professional designs',
+                    description: 'Carefully crafted templates for different niches and stores.',
+                },
+                {
+                    title: 'Ongoing support',
+                    description: 'A dedicated team ready to help you throughout your journey.',
+                },
+                {
+                    title: 'High performance',
+                    description: 'Stable and fast hosting for a great user experience.',
+                },
+                {
+                    title: 'Flexible customization',
+                    description: 'Easily manage your content without any technical background.',
+                },
+                {
+                    title: 'Ready integrations',
+                    description: 'Connect payment gateways and marketing tools in no time.',
+                },
+            ];
 
-        const basicCategory = {
-            id: 'pg-basic-category',
-            label: isRtl ? 'عناصر أساسية' : 'Basic elements',
-            open: true,
-        };
+        const featuresItemsHtml = featuresConfig
+            .map(
+                (item, index) => `
+<div class="group rounded-2xl bg-white/90 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-700
+           p-5 sm:p-6 shadow-[0_10px_30px_rgba(15,23,42,0.06)]
+           hover:shadow-[0_18px_40px_rgba(15,23,42,0.14)]
+           transition-all duration-200"
+     data-gjs-name="Feature Item"
+     data-feature-index="${index}">
+  <div class="flex flex-col items-center sm:items-start gap-4">
+    <div class="w-12 h-12 flex items-center justify-center rounded-xl
+                bg-primary/10 text-primary
+                group-hover:bg-primary group-hover:text-white
+                transition-colors duration-200 shrink-0">
+      <!-- Placeholder icon circle (you can later replace with SVG via editor) -->
+      <span class="w-2 h-2 rounded-full bg-current shadow-[0_0_0_3px_rgba(255,255,255,0.35)]"></span>
+    </div>
+    <span class="text-base sm:text-lg font-semibold text-slate-900 dark:text-white text-center sm:text-start"
+          data-field="feature-title">
+      ${item.title}
+    </span>
+  </div>
+  <p class="mt-2 text-sm text-gray-600 dark:text-gray-300 leading-relaxed text-center sm:text-start"
+     data-field="feature-description">
+    ${item.description}
+  </p>
+</div>`.trim()
+            )
+            .join('\n');
 
-        // ----------------- Hero (Main Palgoals Hero) -----------------
-        const heroMainContent = `
+        const featuresSectionHtml = `
+<section data-section-type="features"
+         data-gjs-name="Features Section"
+         class="py-20 sm:py-24 lg:py-28 px-4 sm:px-6 lg:px-8 bg-background" dir="auto">
+  <div class="container-xx">
+    <!-- Section heading -->
+    <div class="text-center max-w-2xl mx-auto mb-12 sm:mb-14 lg:mb-16">
+      <h2 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-primary tracking-tight mb-4"
+          data-field="title">
+        ${featuresSectionTitle}
+      </h2>
+      <p class="text-tertiary text-sm sm:text-base leading-relaxed"
+         data-field="subtitle">
+        ${featuresSectionSubtitle}
+      </p>
+    </div>
+
+    <!-- Main grid: illustration + features cards -->
+    <div class="grid gap-12 lg:gap-16 lg:grid-cols-5 items-center">
+      <!-- Illustration (optional static preview image) -->
+      <div class="lg:col-span-2 flex justify-center" data-gjs-name="Illustration">
+        <img
+          src="/assets/tamplate/images/Fu.svg"
+          alt="Platform features"
+          class="max-w-[260px] sm:max-w-sm lg:max-w-[420px] w-full h-auto object-contain mx-auto
+                 animate-fade-in-up transition-transform duration-500 ease-out hover:scale-105"
+          loading="lazy"
+        />
+      </div>
+
+      <!-- Features list -->
+      <div class="lg:col-span-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8"
+             data-gjs-name="Features Grid">
+          ${featuresItemsHtml}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>`.trim();
+
+        const iconHero = `
+<svg viewBox="0 0 24 24" fill="none"
+     stroke="currentColor" stroke-width="1.6"
+     stroke-linecap="round" stroke-linejoin="round">
+  <rect x="3.5" y="5" width="17" height="14" rx="2.5"></rect>
+  <path d="M8 9h8M7 13h4M7 16h3"></path>
+</svg>`.trim();
+
+        const iconFeatures = `
+<svg viewBox="0 0 24 24" fill="none"
+     stroke="currentColor" stroke-width="1.6"
+     stroke-linecap="round" stroke-linejoin="round">
+  <rect x="3" y="4" width="18" height="16" rx="2.5"></rect>
+  <path d="M8 9h8M8 13h5M8 17h3"></path>
+</svg>`.trim();
+
+        const iconText = `
+<svg viewBox="0 0 24 24" fill="none"
+     stroke="currentColor" stroke-width="1.6"
+     stroke-linecap="round" stroke-linejoin="round">
+  <path d="M5 7h14M5 12h10M5 17h7"></path>
+</svg>`.trim();
+
+        const iconButton = `
+<svg viewBox="0 0 24 24" fill="none"
+     stroke="currentColor" stroke-width="1.6"
+     stroke-linecap="round" stroke-linejoin="round">
+  <rect x="4" y="9" width="16" height="6" rx="3"></rect>
+  <path d="M9 12h6"></path>
+</svg>`.trim();
+
+        const makeLabel = (iconSvg, title) => `
+<div class="pg-block-card">
+  <div class="pg-block-icon">
+    ${iconSvg}
+  </div>
+  <div class="pg-block-title">
+    ${title}
+  </div>
+</div>
+`.trim();
+
+        const heroContent = `
 <section data-section-type="hero"
-         data-gjs-name="Hero – Main"
+         data-gjs-name="Hero"
          class="relative bg-gradient-to-tr from-primary to-primary shadow-2xl overflow-hidden -mt-20">
   <img src="${heroImage}"
        alt="Palgoals templates preview"
@@ -312,168 +471,54 @@ if (root) {
   <div class="absolute -bottom-20 -left-20 w-96 h-96 bg-white/10 rounded-full blur-3xl z-0"></div>
 </section>`.trim();
 
-        bm.add('pg-hero-main', {
-            label: 'Hero – Main',
-            category: heroCategory,
-            attributes: { title: 'Hero – Main' },
-            content: heroMainContent,
+        bm.add('pg-hero', {
+            id: 'pg-hero',
+            label: makeLabel(iconHero, isRtl ? 'سكشن هيرو' : 'Hero Section'),
+            category: {
+                id: 'pg-hero-sections',
+                label: isRtl ? 'سكاشن الهيرو' : 'Hero Sections',
+                open: true,
+            },
+            content: heroContent,
         });
 
-        // ----------------- Hero (Simple) -----------------
-        const heroSimpleContent = `
-<section data-section-type="hero"
-         data-gjs-name="Hero – Simple"
-         class="py-20 bg-background">
-  <div class="max-w-5xl mx-auto px-4 text-center rtl:text-right ltr:text-left">
-    <p class="mb-3 text-sm font-semibold tracking-[0.25em] uppercase text-secondary">
-      ${isRtl ? 'منصتك لبناء المواقع' : 'YOUR WEBSITE PLATFORM'}
-    </p>
-    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-primary mb-4">
-      ${heroTitle}
-    </h1>
-    <p class="text-slate-600 text-base sm:text-lg max-w-2xl mx-auto mb-8">
-      ${heroSubtitle}
-    </p>
-    <div class="flex flex-wrap items-center justify-center gap-3">
-      <a href="#"
-         class="btn-primary text-sm sm:text-base">
-        ${primaryText}
-      </a>
-      <a href="#"
-         class="btn-outline text-sm sm:text-base">
-        ${secondaryText}
-      </a>
-    </div>
-  </div>
-</section>`.trim();
-
-        bm.add('pg-hero-simple', {
-            label: 'Hero – Simple',
-            category: heroCategory,
-            attributes: { title: 'Hero – Simple' },
-            content: heroSimpleContent,
+        bm.add('pg-features', {
+            id: 'pg-features',
+            label: makeLabel(iconFeatures, isRtl ? 'مميزات' : 'Features'),
+            category: {
+                id: 'pg-content-sections',
+                label: isRtl ? 'سكاشن المحتوى' : 'Content Sections',
+                open: true,
+            },
+            content: featuresSectionHtml,
         });
 
-        // ----------------- Header -----------------
-        const headerContent = `
-<header data-section-type="header"
-        data-gjs-name="Main Header"
-        class="w-full border-b border-slate-100 bg-white/90 backdrop-blur-sm">
-  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-    <div class="flex items-center gap-2">
-      <div class="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center font-black text-xs">
-        PG
-      </div>
-      <span class="font-extrabold text-primary text-sm sm:text-base">Palgoals</span>
-    </div>
-
-    <nav class="hidden md:flex items-center gap-4 text-sm font-medium text-slate-600 rtl:text-right ltr:text-left">
-      <a href="#" class="hover:text-primary">${isRtl ? 'الرئيسية' : 'Home'}</a>
-      <a href="#" class="hover:text-primary">${isRtl ? 'الخدمات' : 'Services'}</a>
-      <a href="#" class="hover:text-primary">${isRtl ? 'الأسعار' : 'Pricing'}</a>
-      <a href="#" class="hover:text-primary">${isRtl ? 'المدونة' : 'Blog'}</a>
-    </nav>
-
-    <div class="flex items-center gap-2">
-      <a href="#"
-         class="hidden sm:inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-primary border border-primary/20 hover:bg-primary/5">
-         ${isRtl ? 'تسجيل الدخول' : 'Sign in'}
-      </a>
-      <a href="#"
-         class="btn-primary px-4 py-2 text-xs sm:text-sm">
-         ${isRtl ? 'أنشئ موقعك' : 'Create website'}
-      </a>
-    </div>
-  </div>
-</header>`.trim();
-
-        bm.add('pg-header-main', {
-            label: isRtl ? 'هيدر رئيسي' : 'Main header',
-            category: headerCategory,
-            attributes: { title: 'Header – Main' },
-            content: headerContent,
-        });
-
-        // ----------------- Services -----------------
-        const servicesContent = `
-<section data-section-type="services"
-         data-gjs-name="Services – 3 columns"
-         class="py-16 bg-white">
-  <div class="max-w-6xl mx-auto px-4">
-    <div class="text-center mb-10 rtl:text-right ltr:text-left">
-      <p class="badge mb-3">
-        ${isRtl ? 'خدمات رقمية' : 'Digital Services'}
-      </p>
-      <h2 class="text-2xl sm:text-3xl font-extrabold text-primary mb-2">
-        ${isRtl ? 'خدمات رقمية متكاملة لدعم نجاحك' : 'All-in-one digital services for your success'}
-      </h2>
-      <p class="text-slate-600 max-w-2xl mx-auto text-sm sm:text-base">
-        ${isRtl
-                ? 'اختر من مجموعة من الخدمات الجاهزة لتطوير حضورك الرقمي بسهولة وبدون تعقيد.'
-                : 'Pick from a set of ready-made services to grow your online presence with no hassle.'}
-      </p>
-    </div>
-
-    <div class="grid gap-5 md:grid-cols-3">
-      <article class="rounded-2xl border border-slate-100 bg-slate-50/60 p-5 shadow-sm">
-        <h3 class="font-bold text-primary mb-2 text-base">
-          ${isRtl ? 'استضافة ودومين' : 'Hosting & Domain'}
-        </h3>
-        <p class="text-xs sm:text-sm text-slate-600">
-          ${isRtl
-                ? 'استضافة سريعة وآمنة مع تسجيل الدومين وربط كامل للموقع خلال دقائق.'
-                : 'Fast, secure hosting with complete domain setup in minutes.'}
-        </p>
-      </article>
-
-      <article class="rounded-2xl border border-slate-100 bg-slate-50/60 p-5 shadow-sm">
-        <h3 class="font-bold text-primary mb-2 text-base">
-          ${isRtl ? 'قوالب جاهزة' : 'Ready templates'}
-        </h3>
-        <p class="text-xs sm:text-sm text-slate-600">
-          ${isRtl
-                ? 'قوالب احترافية جاهزة للتخصيص تناسب مختلف أنواع الأعمال.'
-                : 'Professional templates tailored for different business types.'}
-        </p>
-      </article>
-
-      <article class="rounded-2xl border border-slate-100 bg-slate-50/60 p-5 shadow-sm">
-        <h3 class="font-bold text-primary mb-2 text-base">
-          ${isRtl ? 'دعم فني' : 'Technical support'}
-        </h3>
-        <p class="text-xs sm:text-sm text-slate-600">
-          ${isRtl
-                ? 'دعم فني لمساعدتك في تشغيل وتطوير موقعك دون حاجة لخبرة تقنية.'
-                : 'Support team to help you run and evolve your website with no technical skills.'}
-        </p>
-      </article>
-    </div>
-  </div>
-</section>`.trim();
-
-        bm.add('pg-services-3cols', {
-            label: isRtl ? 'الخدمات – 3 أعمدة' : 'Services – 3 columns',
-            category: servicesCategory,
-            attributes: { title: 'Services – 3 columns' },
-            content: servicesContent,
-        });
-
-        // ----------------- Basic Elements -----------------
         bm.add('pg-text', {
-            label: 'Text',
-            category: basicCategory,
-            attributes: { title: 'Text block' },
-            content: `<p class="text-slate-700" data-gjs-name="Text">اكتب النص هنا…</p>`,
+            id: 'pg-text',
+            label: makeLabel(iconText, isRtl ? 'نص' : 'Text'),
+            category: {
+                id: 'pg-basic-elements',
+                label: isRtl ? 'عناصر أساسية' : 'Basic Elements',
+                open: false,
+            },
+            content: `
+<p class="text-slate-700" data-gjs-name="Text Block">
+  ${isRtl ? 'اكتب النص هنا…' : 'Write your text here…'}
+</p>`.trim(),
         });
 
         bm.add('pg-button', {
-            label: 'Button',
-            category: basicCategory,
-            attributes: { title: 'Button' },
+            id: 'pg-button',
+            label: makeLabel(iconButton, isRtl ? 'زر' : 'Button'),
+            category: {
+                id: 'pg-basic-elements',
+                label: isRtl ? 'عناصر أساسية' : 'Basic Elements',
+                open: false,
+            },
             content: `
 <a href="#"
    data-gjs-name="Button"
-   class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-sky-600 text-white font-semibold hover:bg-sky-700 transition">
+   class="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-sky-600 text-white font-semibold">
    ${isRtl ? 'زر' : 'Button'}
 </a>`.trim(),
         });
@@ -744,6 +789,15 @@ if (root) {
         }
     }
 
+    /**
+     * Save current project to the backend.
+     *
+     * - structure: full GrapesJS projectData (used later to reopen the builder)
+     * - html     : compiled HTML output for frontend rendering
+     * - css      : compiled CSS output for frontend rendering
+     *
+     * This matches PageBuilderController::saveData() validation.
+     */
     async function saveProject() {
         if (isSaving) return;
 
@@ -751,11 +805,20 @@ if (root) {
             isSaving = true;
             setStatus('Saving…', 'saving');
 
+            // Full project (components, styles, pages, assets...)
             const structure = editor.getProjectData();
+
+            // Final rendered output
+            const html = editor.getHtml();
+            const css = editor.getCss();
 
             await fetchJson(saveUrl, {
                 method: 'POST',
-                body: { structure },
+                body: {
+                    structure,
+                    html,
+                    css,
+                },
             });
 
             isDirty = false;

@@ -26,19 +26,28 @@ class PageBuilderController extends Controller
 
     /**
      * Return stored GrapesJS project data for this page.
+     *
+     * 👉 الآن نعتمد على حقل "project" الجديد،
+     *   مع دعم fallback لحقل "structure" القديم (عن طريق الموديل).
      */
     public function loadData(Page $page): JsonResponse
     {
         $builder = $page->builderStructure;
 
-        // لو فيه structure محفوظ، رجّعه زي ما هو
-        if ($builder && is_array($builder->structure) && !empty($builder->structure)) {
-            return response()->json([
-                'structure' => $builder->structure,
-            ]);
+        if ($builder) {
+            // getCurrentProject() ميثود في الموديل يرجّع project أو structure القديم
+            $project = $builder->getCurrentProject();
+
+            if (!empty($project) && is_array($project)) {
+                return response()->json([
+                    'structure' => $project,   // هذا ما يتوقعه GrapesJS
+                    'html'      => $builder->html,
+                    'css'       => $builder->css,
+                ]);
+            }
         }
 
-        // لو مافيش structure → نبني واحد افتراضي من سكشن الـ hero_default
+        // لو ما فيش بيانات محفوظة → نبني هيكل افتراضي من سكشن hero_default
         $locale = app()->getLocale();
 
         $heroSection = Section::with(['translations' => function ($q) use ($locale) {
@@ -50,12 +59,11 @@ class PageBuilderController extends Controller
 
         $content = $heroSection?->translations->first()?->content ?? [];
 
-        $title    = $content['title']    ?? 'عنوان غير متوفر';
-        $subtitle = $content['subtitle'] ?? 'نص وصفي قصير يوضح الفكرة الرئيسية للخدمة أو المنصة.';
-        $primaryLabel = $content['primary_button']['label'] ?? 'ابدأ الآن';
+        $title          = $content['title']    ?? 'عنوان غير متوفر';
+        $subtitle       = $content['subtitle'] ?? 'نص وصفي قصير يوضح الفكرة الرئيسية للخدمة أو المنصة.';
+        $primaryLabel   = $content['primary_button']['label']   ?? 'ابدأ الآن';
         $secondaryLabel = $content['secondary_button']['label'] ?? 'استعرض القوالب';
 
-        // 👇 هذا شبيه بالـ JSON اللي عندك، بس ديناميكي
         $structure = [
             'pages' => [
                 [
@@ -180,7 +188,8 @@ class PageBuilderController extends Controller
                                             ],
                                             [
                                                 'attributes' => [
-                                                    'class' => 'absolute -bottom-20 -left-20 w-96 h-96 bg-white/10 rounded-full blur-3xl z-0',
+                                                    'class' =>
+                                                    'absolute -bottom-20 -left-20 w-96 h-96 bg-white/10 rounded-full blur-3xl z-0',
                                                 ],
                                             ],
                                         ],
@@ -202,6 +211,9 @@ class PageBuilderController extends Controller
         ]);
     }
 
+    /**
+     * نحاول استخراج بيانات الهيرو من الـ project (أو structure) لتحديث hero_default section.
+     */
     protected function extractHeroContentFromStructure(array $structure): ?array
     {
         $pages = $structure['pages'] ?? [];
@@ -271,7 +283,6 @@ class PageBuilderController extends Controller
         return null;
     }
 
-
     /**
      * بحث Recursively عن component من نوع معيّن في شجرة GrapesJS
      */
@@ -299,31 +310,46 @@ class PageBuilderController extends Controller
         return null;
     }
 
-
     /**
-     * Save GrapesJS project data (components JSON) for this page.
+     * Save GrapesJS project data for this page.
+     *
+     * ✅ الآن نخزّن:
+     *  - project : JSON كامل من getProjectData()
+     *  - html    : ناتج getHtml()
+     *  - css     : ناتج getCss()
+     * ونحدث hero_default section كما كان سابقًا.
      */
     public function saveData(Request $request, Page $page): JsonResponse
     {
         $validated = $request->validate([
-            'structure' => 'required|array',
+            'structure' => 'required|array',   // projectData من GrapesJS
+            'html'      => 'required|string', // HTML النهائي للفرونت
+            'css'       => 'nullable|string', // CSS النهائي للفرونت
         ]);
 
-        $structure = $validated['structure'];
+        $project = $validated['structure'];
+        $html    = $validated['html'];
+        $css     = $validated['css'] ?? null;
 
-        // 1) نخزن الـ structure في جدول page_builder_structures
+        // 1) نخزن الـ project + html + css في جدول page_builder_structures
         $builder = PageBuilderStructure::updateOrCreate(
             ['page_id' => $page->id],
-            ['structure' => $structure]
+            [
+                'project'   => $project,
+                'html'      => $html,
+                'css'       => $css,
+
+                // اختياري: نخزّن كمان في structure عشان التوافق الرجعي
+                'structure' => $project,
+            ]
         );
 
-        // 2) نحاول نحدّث hero_default section من نفس الـ structure
-        $heroContent = $this->extractHeroContentFromStructure($structure);
+        // 2) نحاول نحدّث hero_default section من نفس الـ project (نفس منطقك القديم)
+        $heroContent = $this->extractHeroContentFromStructure($project);
 
         if ($heroContent) {
             $locale = app()->getLocale();
 
-            // نجيب سكشن hero_default
             $section = Section::where('page_id', $page->id)
                 ->where('type', 'hero_default')
                 ->first();
@@ -334,7 +360,6 @@ class PageBuilderController extends Controller
                     'locale'     => $locale,
                 ]);
 
-                // ندمج الـ content القديم مع الجديد (عشان ما نضيع حقول ثانية مثل media أو features)
                 $oldContent = is_array($translation->content) ? $translation->content : [];
 
                 $translation->content = array_merge($oldContent, $heroContent);
@@ -344,7 +369,7 @@ class PageBuilderController extends Controller
 
         return response()->json([
             'status'    => 'ok',
-            'structure' => $builder->structure,
+            'structure' => $builder->project,
         ]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Support\Sections;
 
+
 class SectionRegistry
 {
     protected static array $sections = [];
