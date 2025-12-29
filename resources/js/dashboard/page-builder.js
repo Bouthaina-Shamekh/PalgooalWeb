@@ -79,11 +79,15 @@ function isNonEmptyObject(v) {
  * Bootstrap
  * -------------------------------------------------------------
  */
-const root = q('#page-builder-root');
+const root = document.getElementById('page-builder-root');
 
 if (root) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
     const loadUrl = root.dataset.loadUrl;
     const saveUrl = root.dataset.saveUrl;
+    const previewUrl = root.dataset.previewUrl;
+    const builderUrl = root.dataset.builderUrl;
     const resetBtn = q('#builder-reset');
     const langToggle = q('#builder-lang-toggle');
     const langMenu = q('#builder-lang-menu');
@@ -433,7 +437,7 @@ if (root) {
   <img src="${heroImage}"
        alt="Palgoals templates preview"
        fetchpriority="high"
-       class="absolute inset-0 z-0 opacity-80 w-full h-full object-cover object-center ltr:scale-x-[-1] rtl:scale-x-100 transition-transform duration-500 ease-in-out"
+       class="absolute inset 0 z-0 opacity-80 w-full h-full object-cover object-center ltr:scale-x-[-1] rtl:scale-x-100 transition-transform duration-500 ease-in-out"
        aria-hidden="true"
        decoding="async"
        loading="eager" />
@@ -524,6 +528,387 @@ if (root) {
         });
     }
 
+    /**
+     * Register "Features" section block + component types
+     */
+    /**
+     * Register "Features" section + feature item block
+     */
+    /**
+     * Register "Features" section
+     * - One block only: Features Section
+     * - Feature items are managed من داخل السكشن نفسه (Clone)
+     */
+    /**
+     * Register "Features" section
+     * - Block واحد فقط: Features Section
+     * - المميزات تُدار من داخل السكشن نفسه (Clone + زر إضافة من الـ Traits)
+     */
+    function registerFeaturesSection(editor) {
+        const domc = editor.DomComponents;
+        const bm = editor.BlockManager;
+        const tm = editor.TraitManager;
+
+        // نحدد اتجاه الواجهة (RTL / LTR) لاستخدامه في النصوص
+        const isRtl =
+            document.documentElement.dir === 'rtl' ||
+            document.body.dir === 'rtl';
+
+        /**
+         * ------------------------------------------------------------------
+         * 0) Trait مخصص لإضافة ميزة جديدة من داخل سكشن المميزات
+         * ------------------------------------------------------------------
+         */
+        tm.addType('pg-add-feature', {
+            // UI for the trait (button + helper text)
+            createInput({ trait }) {
+                const root = document.createElement('div');
+                root.className = 'pg-features-controls flex flex-col gap-1.5';
+
+                root.innerHTML = `
+      <button type="button"
+          class="pg-add-feature-btn gjs-btn-prim w-full text-[11px] py-1.5 rounded-md !bg-primary !text-white hover:opacity-90">
+          ${isRtl ? '➕ إضافة ميزة جديدة' : '➕ Add feature'}
+      </button>
+      <small class="text-[10px] text-slate-500">
+          ${isRtl
+                        ? 'يمكنك أيضًا نسخ بطاقات المميزات يدويًا من داخل السكشن.'
+                        : 'You can also duplicate feature cards directly in the canvas.'
+                    }
+      </small>
+    `;
+
+                const btn = root.querySelector('.pg-add-feature-btn');
+                // نربط الكليك يدويًا على نفس View (this)
+                btn.addEventListener('click', (e) => this.onAddFeature(e));
+
+                return root;
+            },
+
+            // لما المستخدم يضغط على الزر
+            onAddFeature(event) {
+                if (event?.preventDefault) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+
+                // الكمبوننت الهدف هو سكشن المميزات نفسه
+                const section = this.target || editor.getSelected();
+                if (!section) return;
+
+                // نبحث عن grid المميزات داخل السكشن
+                let grid = section.find('[data-gjs-name="Features Grid"]')[0];
+                if (!grid) {
+                    grid = section;
+                }
+
+                const items = grid.find('[data-pg-feature="item"]');
+                let newItem;
+
+                if (items.length > 0) {
+                    // نعمل Clone لآخر بطاقة موجودة
+                    newItem = items[items.length - 1].clone();
+                    grid.append(newItem);
+                } else {
+                    // لا يوجد عناصر → ننشئ واحدة جديدة من النوع pg-feature-item
+                    newItem = grid.append({
+                        type: 'pg-feature-item',
+                    })[0];
+                }
+
+                if (!newItem) return;
+
+                // ضبط النصوص الافتراضية
+                const defaultTitle = isRtl ? 'عنوان الميزة' : 'Feature title';
+                const defaultDesc = isRtl
+                    ? 'وصف مختصر للميزة يوضح فائدتها للمستخدم.'
+                    : 'Short description that explains the benefit.';
+
+                newItem.addAttributes({
+                    'data-pg-feature-title': defaultTitle,
+                    'data-pg-feature-description': defaultDesc,
+                });
+
+                const titleEl = newItem.find('.pg-feature-title')[0];
+                const descEl = newItem.find('.pg-feature-desc')[0];
+
+                if (titleEl) {
+                    titleEl.components(defaultTitle);
+                }
+                if (descEl) {
+                    descEl.components(defaultDesc);
+                }
+
+                // اختيار العنصر الجديد في GrapesJS لتوضيح أنه أُضيف
+                editor.select(newItem);
+            },
+        });
+
+
+        /**
+         * ------------------------------------------------------------------
+         * 1) Section type: pg-features-section
+         * ------------------------------------------------------------------
+         */
+        domc.addType('pg-features-section', {
+            isComponent(el) {
+                if (!el || !el.getAttribute) return false;
+                return el.getAttribute('data-pg-section') === 'features';
+            },
+
+            model: {
+                defaults: {
+                    tagName: 'section',
+                    attributes: {
+                        'data-pg-section': 'features',
+                        'data-pg-title': isRtl
+                            ? 'خدمات رقمية متكاملة تدعم نجاحك'
+                            : 'All-in-one digital services for your success',
+                        'data-pg-subtitle': isRtl
+                            ? 'منصة واحدة تجمع بين الاستضافة، القوالب الجاهزة، وربط الدومين خلال دقائق.'
+                            : 'One platform that combines hosting, templates and domain connection in minutes.',
+                    },
+                    classes: [
+                        'pg-features-section',
+                        'py-20',
+                        'px-4',
+                        'sm:px-8',
+                        'lg:px-24',
+                        'bg-background',
+                    ],
+                    traits: [
+                        {
+                            type: 'text',
+                            label: isRtl ? 'العنوان الرئيسي' : 'Main title',
+                            name: 'data-pg-title',
+                        },
+                        {
+                            type: 'textarea',
+                            label: isRtl ? 'الوصف (Subtitle)' : 'Subtitle',
+                            name: 'data-pg-subtitle',
+                            rows: 3,
+                        },
+                        {
+                            type: 'pg-add-feature',
+                            label: isRtl ? 'إدارة المميزات' : 'Features',
+                            name: 'pg-add-feature',
+                        },
+                    ],
+                },
+
+                init() {
+                    this.on('change:attributes:data-pg-title', this.updateTitleFromAttr);
+                    this.on('change:attributes:data-pg-subtitle', this.updateSubtitleFromAttr);
+                },
+
+                updateTitleFromAttr() {
+                    const attrs = this.getAttributes();
+                    const title = attrs['data-pg-title'] || '';
+                    const header = this.find('.pg-features-title')[0];
+
+                    if (header) {
+                        header.components(
+                            title ||
+                            (isRtl
+                                ? 'خدمات رقمية متكاملة تدعم نجاحك'
+                                : 'All-in-one digital services for your success'),
+                        );
+                    }
+                },
+
+                updateSubtitleFromAttr() {
+                    const attrs = this.getAttributes();
+                    const subtitle = attrs['data-pg-subtitle'] || '';
+                    const subEl = this.find('.pg-features-subtitle')[0];
+
+                    if (subEl) {
+                        subEl.components(subtitle || '');
+                    }
+                },
+            },
+        });
+
+        /**
+         * ------------------------------------------------------------------
+         * 2) Feature item type: pg-feature-item
+         *     (لا يوجد له Block منفصل في الـ BlockManager)
+         * ------------------------------------------------------------------
+         */
+        domc.addType('pg-feature-item', {
+            isComponent(el) {
+                if (!el || !el.getAttribute) return false;
+                return el.getAttribute('data-pg-feature') === 'item';
+            },
+
+            model: {
+                defaults: {
+                    tagName: 'div',
+                    attributes: {
+                        'data-pg-feature': 'item',
+                        'data-pg-feature-title': isRtl ? 'عنوان الميزة' : 'Feature title',
+                        'data-pg-feature-description': isRtl
+                            ? 'وصف مختصر للميزة يوضح فائدتها للمستخدم.'
+                            : 'Short description that explains the benefit.',
+                    },
+                    classes: [
+                        'pg-feature-item',
+                        'flex',
+                        'flex-col',
+                        'items-center',
+                        'sm:items-start',
+                        'gap-4',
+                        'rounded-2xl',
+                        'bg-white',
+                        'p-5',
+                        'shadow-sm',
+                        'border',
+                        'border-slate-100',
+                        'hover:shadow-md',
+                        'transition-all',
+                        'duration-200',
+                    ],
+                    components: [
+                        {
+                            type: 'text',
+                            attributes: {
+                                class: 'pg-feature-icon w-12 h-12 flex items-center justify-center rounded-lg bg-primary/10 text-primary text-xl',
+                            },
+                            content: '★',
+                        },
+                        {
+                            type: 'text',
+                            attributes: {
+                                class: 'pg-feature-title text-base font-semibold text-slate-900',
+                            },
+                            content: isRtl ? 'عنوان الميزة' : 'Feature title',
+                        },
+                        {
+                            type: 'text',
+                            attributes: {
+                                class: 'pg-feature-desc text-sm text-slate-600 leading-relaxed',
+                            },
+                            content: isRtl
+                                ? 'وصف مختصر للميزة يوضح فائدتها للمستخدم.'
+                                : 'Short description that explains the benefit.',
+                        },
+                    ],
+                    traits: [
+                        {
+                            type: 'text',
+                            label: isRtl ? 'عنوان الميزة' : 'Feature title',
+                            name: 'data-pg-feature-title',
+                        },
+                        {
+                            type: 'textarea',
+                            label: isRtl ? 'وصف الميزة' : 'Feature description',
+                            name: 'data-pg-feature-description',
+                            rows: 3,
+                        },
+                    ],
+                },
+
+                init() {
+                    this.on('change:attributes:data-pg-feature-title', this.syncTitle);
+                    this.on('change:attributes:data-pg-feature-description', this.syncDescription);
+                },
+
+                syncTitle() {
+                    const attrs = this.getAttributes();
+                    const title = attrs['data-pg-feature-title'] || '';
+                    const titleEl = this.find('.pg-feature-title')[0];
+
+                    if (titleEl) {
+                        titleEl.components(
+                            title || (isRtl ? 'عنوان الميزة' : 'Feature title'),
+                        );
+                    }
+                },
+
+                syncDescription() {
+                    const attrs = this.getAttributes();
+                    const desc = attrs['data-pg-feature-description'] || '';
+                    const descEl = this.find('.pg-feature-desc')[0];
+
+                    if (descEl) {
+                        descEl.components(
+                            desc ||
+                            (isRtl
+                                ? 'وصف مختصر للميزة يوضح فائدتها للمستخدم.'
+                                : 'Short description that explains the benefit.'),
+                        );
+                    }
+                },
+            },
+        });
+
+        /**
+         * ------------------------------------------------------------------
+         * 3) Block: Features Section (block واحد في البلوك مانجر)
+         * ------------------------------------------------------------------
+         */
+        bm.add('pg-features-section', {
+            label: 'Features Section',
+            category: {
+                id: 'pg-content-sections',
+                label: isRtl ? 'سكاشن المحتوى' : 'Content Sections',
+                open: true,
+            },
+            attributes: { title: isRtl ? 'مميزات المنصة' : 'Platform Features' },
+            content: `
+      <section data-pg-section="features" class="pg-features-section py-20 px-4 sm:px-8 lg:px-24 bg-background">
+        <div class="max-w-7xl mx-auto">
+          <div class="text-center mb-12">
+            <h2 class="pg-features-title text-3xl sm:text-4xl font-extrabold text-primary mb-4 tracking-tight">
+              ${isRtl ? 'خدمات رقمية متكاملة تدعم نجاحك' : 'All-in-one digital services for your success'}
+            </h2>
+            <p class="pg-features-subtitle text-tertiary text-suptitle/9 sm:text-suptitle/9 max-w-2xl mx-auto">
+              ${isRtl
+                    ? 'منصة واحدة تجمع بين الاستضافة، القوالب الجاهزة، وربط الدومين خلال دقائق.'
+                    : 'One platform that brings hosting, templates and domain connection in minutes.'
+                }
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8" data-gjs-name="Features Grid">
+            <div data-pg-feature="item" class="pg-feature-item flex flex-col items-center sm:items-start gap-4 rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
+              <div class="pg-feature-icon w-12 h-12 flex items-center justify-center rounded-lg bg-primary/10 text-primary text-xl">★</div>
+              <div class="pg-feature-title text-base font-semibold text-slate-900">${isRtl ? 'إطلاق سريع' : 'Fast launch'
+                }</div>
+              <div class="pg-feature-desc text-sm text-slate-600 leading-relaxed">${isRtl
+                    ? 'امتلك موقعك الجاهز خلال دقائق مع إعداد تلقائي كامل.'
+                    : 'Get your website live in minutes with full automatic setup.'
+                }</div>
+            </div>
+
+            <div data-pg-feature="item" class="pg-feature-item flex flex-col items-center sm:items-start gap-4 rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
+              <div class="pg-feature-icon w-12 h-12 flex items-center justify-center rounded-lg bg-primary/10 text-primary text-xl">★</div>
+              <div class="pg-feature-title text-base font-semibold text-slate-900">${isRtl ? 'تصاميم احترافية' : 'Professional designs'
+                }</div>
+              <div class="pg-feature-desc text-sm text-slate-600 leading-relaxed">${isRtl
+                    ? 'قوالب مصممة بعناية لتناسب مختلف الأنشطة والمتاجر.'
+                    : 'Carefully crafted templates for different niches and stores.'
+                }</div>
+            </div>
+
+            <div data-pg-feature="item" class="pg-feature-item flex flex-col items-center sm:items-start gap-4 rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
+              <div class="pg-feature-icon w-12 h-12 flex items-center justify-center rounded-lg bg-primary/10 text-primary text-xl">★</div>
+              <div class="pg-feature-title text-base font-semibold text-slate-900">${isRtl ? 'دعم فني مستمر' : 'Ongoing support'
+                }</div>
+              <div class="pg-feature-desc text-sm text-slate-600 leading-relaxed">${isRtl
+                    ? 'فريق مختص لمساعدتك في أي وقت خلال رحلتك الرقمية.'
+                    : 'A dedicated team ready to help you anytime in your digital journey.'
+                }</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    `,
+        });
+    }
+
+
+
+
     // Tabs في الـ Sidebar
     initTabs();
 
@@ -603,41 +988,65 @@ if (root) {
         },
     });
 
+
     /**
      * ---------------------------------------------------------
      * Canvas / RTL / empty state
      * ---------------------------------------------------------
      */
     editor.on('load', () => {
+        // Hide empty state in the outer UI
         if (emptyState) emptyState.style.display = 'none';
 
         const doc = editor.Canvas.getDocument();
-        const iframeHtml = doc.documentElement;
-        const iframeBody = editor.Canvas.getBody();
+        if (!doc) return;
 
-        iframeHtml.setAttribute('dir', appDir);
+        const htmlEl = doc.documentElement;
+        const bodyEl = editor.Canvas.getBody();
+        const headEl = doc.head || doc.querySelector('head');
 
-        iframeBody.style.background = 'transparent';
-        iframeBody.style.fontFamily =
-            'system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif';
-        iframeBody.style.color = '#0f172a';
-        iframeBody.style.margin = '0';
-        iframeBody.style.padding = '0';
+        // 1) Base direction + body styling inside the canvas iframe
+        htmlEl.setAttribute('dir', appDir);
 
+        Object.assign(bodyEl.style, {
+            background: 'transparent',
+            fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+            color: '#0f172a',
+            margin: '0',
+            padding: '0',
+        });
+
+        // 2) Ensure wrapper stretches full width
         const wrapper = editor.getWrapper();
-        const wrapperEl = wrapper.getEl();
+        const wrapperEl = wrapper?.getEl?.();
 
-        wrapper.set({ droppable: true });
-        if (wrapperEl) {
-            wrapperEl.style.width = '100%';
-            wrapperEl.style.maxWidth = '100%';
-            wrapperEl.style.margin = '0';
-            wrapperEl.style.boxSizing = 'border-box';
+        if (wrapper) {
+            wrapper.set({ droppable: true });
         }
 
+        if (wrapperEl) {
+            Object.assign(wrapperEl.style, {
+                width: '100%',
+                maxWidth: '100%',
+                margin: '0',
+                boxSizing: 'border-box',
+            });
+        }
+
+        // 3) Inject Tailwind CSS file into the iframe <head>
+        if (headEl) {
+            const twLink = doc.createElement('link');
+            twLink.rel = 'stylesheet';
+            twLink.href = '/assets/tamplate/css/app.css';
+            headEl.appendChild(twLink);
+        }
+
+        // 4) Extra CSS (selection highlight, wrapper behaviour, empty hint)
         const style = doc.createElement('style');
+        const emptyHintSafe = (emptyHint || '').replace(/"/g, '\\"');
+
         style.innerHTML = `
-      [data-pg-selected]{
+      [data-pg-selected] {
         outline: 2px dashed #2563eb;
         outline-offset: 4px;
         position: relative;
@@ -667,7 +1076,8 @@ if (root) {
         right: auto;
       }
 
-      html, body {
+      html,
+      body {
         height: 100%;
       }
 
@@ -697,7 +1107,7 @@ if (root) {
       }
 
       .gjs-wrapper:empty::before {
-        content: "${emptyHint}";
+        content: "${emptyHintSafe}";
         display: block;
         text-align: center;
         color: #64748b;
@@ -705,8 +1115,12 @@ if (root) {
         padding-top: 60px;
       }
     `;
-        doc.head.appendChild(style);
+
+        if (headEl) {
+            headEl.appendChild(style);
+        }
     });
+
 
     /**
      * ---------------------------------------------------------
@@ -742,20 +1156,37 @@ if (root) {
     // Blocks + preview
     registerBlocks(editor);
     initPreviewDropdown(editor);
+    registerFeaturesSection(editor);
+
 
     /**
      * ---------------------------------------------------------
-     * Load / Save / Dirty state
+     * Load / Save / Dirty state + Autosave
      * ---------------------------------------------------------
      */
     let isDirty = false;
     let isSaving = false;
+
+    const AUTOSAVE_DELAY = 3000;
+    let autosaveTimer = null;
 
     const markDirty = () => {
         if (!isDirty) {
             isDirty = true;
             setStatus('Unsaved', 'dirty');
         }
+
+        // Schedule autosave after delay
+        if (autosaveTimer) {
+            clearTimeout(autosaveTimer);
+        }
+
+        autosaveTimer = window.setTimeout(() => {
+            if (!isSaving && isDirty) {
+                // auto = true
+                saveProject(true);
+            }
+        }, AUTOSAVE_DELAY);
     };
 
     async function loadProject() {
@@ -797,13 +1228,15 @@ if (root) {
      * - css      : compiled CSS output for frontend rendering
      *
      * This matches PageBuilderController::saveData() validation.
+     *
+     * @param {boolean} isAuto - إذا كان الحفظ تلقائي (true) أو يدوي (false)
      */
-    async function saveProject() {
+    async function saveProject(isAuto = false) {
         if (isSaving) return;
 
         try {
             isSaving = true;
-            setStatus('Saving…', 'saving');
+            setStatus(isAuto ? 'Auto saving…' : 'Saving…', 'saving');
 
             // Full project (components, styles, pages, assets...)
             const structure = editor.getProjectData();
@@ -822,12 +1255,17 @@ if (root) {
             });
 
             isDirty = false;
-            setStatus('Saved', 'saved');
+            setStatus(isAuto ? 'Auto saved' : 'Saved', 'saved');
         } catch (e) {
             console.error('[Builder] save failed:', e);
             setStatus('Save failed', 'error');
         } finally {
             isSaving = false;
+
+            if (autosaveTimer) {
+                clearTimeout(autosaveTimer);
+                autosaveTimer = null;
+            }
         }
     }
 
@@ -852,7 +1290,8 @@ if (root) {
     if (saveBtn) {
         saveBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            saveProject();
+            // manual save
+            saveProject(false);
         });
     }
 
@@ -895,7 +1334,8 @@ if (root) {
         const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
         if (cmdOrCtrl && e.key.toLowerCase() === 's') {
             e.preventDefault();
-            saveProject();
+            // manual save
+            saveProject(false);
         }
     });
 

@@ -148,9 +148,9 @@
      * ------------------------------------------------------------------
      * Section → Blade component mapping
      * ------------------------------------------------------------------
-     * This is used BOTH for:
-     *  - builderSections (from GrapesJS → normalizedSections())
-     *  - legacy $page->sections from admin sections module
+     * Used for:
+     *  - builderSections (GrapesJS → normalizedSections())
+     *  - legacy $page->sections from admin module
      * ------------------------------------------------------------------
      */
     $sectionComponents = [
@@ -179,38 +179,46 @@
         'faq'             => 'faq',
     ];
 
-    // Sections built via GrapesJS (stored JSON structure)
-    $builderSections = $page->builderStructure?->normalizedSections() ?? [];
+    /**
+     * ------------------------------------------------------------------
+     * Builder Data (GrapesJS)
+     * ------------------------------------------------------------------
+     * - $publishedHtml / $publishedCss: snapshot from "Publish" action
+     * - $builderSections: normalized sections array from project JSON
+     * ------------------------------------------------------------------
+     */
+    $builder       = $page->builderStructure;
+    $publishedHtml = $builder?->published_html;
+    $publishedCss  = $builder?->published_css_path;
+
+    $builderSections = $builder?->normalizedSections() ?? [];
 @endphp
 
 @extends('front.layouts.app')
 
 @section('content')
     {{-- -----------------------------------------------------------------
-         Fallback: if the page has NO sections and NO builder → simple page
+         PRIORITY ORDER:
+         1) Published Builder snapshot (HTML + optional external CSS)
+         2) Builder sections (normalizedSections)
+         3) Legacy sections from admin
+         4) Plain WYSIWYG fallback if everything is empty
        ----------------------------------------------------------------- --}}
-    @if ($page->sections->isEmpty() && empty($builderSections))
-        <section class="bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
-            <div class="max-w-4xl mx-auto">
-                {{-- Page heading --}}
-                <header class="mb-6">
-                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                        {{ $pageTitle }}
-                    </h1>
-                </header>
 
-                {{-- Rich content from WYSIWYG --}}
-                <article class="prose prose-slate lg:prose-lg dark:prose-invert max-w-none">
-                    {!! $pageTranslation?->content ?: '<p>' . e(__('لا يوجد محتوى لهذه الصفحة حالياً.')) . '</p>' !!}
-                </article>
-            </div>
-        </section>
-    @endif
+    {{-- 1) Published Builder snapshot --}}
+    @if ($publishedHtml)
+        @push('styles')
+            @if ($publishedCss)
+                <link rel="stylesheet" href="{{ asset($publishedCss) }}">
+            @endif
+        @endpush
 
-    {{-- -----------------------------------------------------------------
-         1) Render sections coming from GrapesJS Builder (normalizedSections)
-         ----------------------------------------------------------------- --}}
-    @if (!empty($builderSections))
+        <div class="pg-builder-page">
+            {!! $publishedHtml !!}
+        </div>
+
+    {{-- 2) Builder sections (normalizedSections) --}}
+    @elseif (!empty($builderSections))
         @foreach ($builderSections as $builderSection)
             @php
                 $componentKey = $builderSection['type'] ?? null;   // e.g. hero, features, text,...
@@ -225,16 +233,21 @@
                     :data="$data"
                 />
             @else
-                {{-- Inline rendering for lite-builder / free blocks --}}
+                {{-- Inline rendering for lite/freestyle blocks --}}
                 @switch($componentKey)
                     @case('text')
                         <section class="py-10 px-4 sm:px-6 lg:px-8">
                             <div class="max-w-4xl mx-auto text-{{ $data['align'] ?? 'left' }}">
                                 @if (!empty($data['title']))
-                                    <h2 class="text-2xl font-bold text-slate-900 mb-3">{{ $data['title'] }}</h2>
+                                    <h2 class="text-2xl font-bold text-slate-900 mb-3">
+                                        {{ $data['title'] }}
+                                    </h2>
                                 @endif
+
                                 @if (!empty($data['body']))
-                                    <p class="text-slate-600">{{ $data['body'] }}</p>
+                                    <p class="text-slate-600">
+                                        {{ $data['body'] }}
+                                    </p>
                                 @endif
                             </div>
                         </section>
@@ -244,9 +257,15 @@
                         <section class="py-8 px-4 sm:px-6 lg:px-8">
                             <div class="max-w-5xl mx-auto text-{{ $data['align'] ?? 'center' }}">
                                 <figure class="inline-block">
-                                    <img src="{{ $data['url'] ?? '' }}" alt="{{ $data['alt'] ?? '' }}" style="width: {{ $data['width'] ?? '100%' }};">
+                                    <img
+                                        src="{{ $data['url'] ?? '' }}"
+                                        alt="{{ $data['alt'] ?? '' }}"
+                                        style="width: {{ $data['width'] ?? '100%' }};"
+                                    >
                                     @if (!empty($data['alt']))
-                                        <figcaption class="text-sm text-slate-500 mt-2">{{ $data['alt'] }}</figcaption>
+                                        <figcaption class="text-sm text-slate-500 mt-2">
+                                            {{ $data['alt'] }}
+                                        </figcaption>
                                     @endif
                                 </figure>
                             </div>
@@ -256,8 +275,15 @@
                     @case('button')
                         <section class="py-6 px-4 sm:px-6 lg:px-8">
                             <div class="max-w-4xl mx-auto text-{{ $data['align'] ?? 'center' }}">
+                                @php
+                                    $isOutline = ($data['style'] ?? 'primary') === 'outline';
+                                @endphp
+
                                 <a href="{{ $data['url'] ?? '#' }}"
-                                   class="inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold {{ ($data['style'] ?? 'primary') === 'outline' ? 'border border-slate-300 text-slate-800 bg-white' : 'bg-primary text-white shadow' }}">
+                                   class="inline-flex items-center gap-2 px-5 py-3 rounded-full text-sm font-semibold
+                                          {{ $isOutline
+                                                ? 'border border-slate-300 text-slate-800 bg-white'
+                                                : 'bg-primary text-white shadow' }}">
                                     {{ $data['text'] ?? __('Button') }}
                                 </a>
                             </div>
@@ -271,10 +297,15 @@
                                         padding-bottom: {{ $data['padding'] ?? '24' }}px;">
                             <div class="max-w-5xl mx-auto text-{{ $data['align'] ?? 'left' }}">
                                 @if (!empty($data['title']))
-                                    <h2 class="text-2xl font-bold text-slate-900 mb-3">{{ $data['title'] }}</h2>
+                                    <h2 class="text-2xl font-bold text-slate-900 mb-3">
+                                        {{ $data['title'] }}
+                                    </h2>
                                 @endif
+
                                 @if (!empty($data['body']))
-                                    <p class="text-slate-600">{{ $data['body'] }}</p>
+                                    <p class="text-slate-600">
+                                        {{ $data['body'] }}
+                                    </p>
                                 @endif
                             </div>
                         </section>
@@ -284,21 +315,31 @@
                         <section class="relative overflow-hidden bg-gradient-to-tr from-primary to-indigo-600 py-16 px-4 sm:px-8 lg:px-12 text-white">
                             <div class="max-w-5xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-10">
                                 <div class="max-w-xl text-center lg:text-left space-y-4">
-                                    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold">{{ $data['heading'] ?? '' }}</h1>
-                                    <p class="text-white/90 text-base sm:text-lg">{{ $data['subtitle'] ?? '' }}</p>
+                                    <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold">
+                                        {{ $data['heading'] ?? '' }}
+                                    </h1>
+
+                                    <p class="text-white/90 text-base sm:text-lg">
+                                        {{ $data['subtitle'] ?? '' }}
+                                    </p>
+
                                     <div class="flex flex-wrap gap-3 justify-center lg:justify-start">
                                         @if (!empty($data['primary_text']))
-                                            <a href="{{ $data['primary_url'] ?? '#' }}" class="bg-secondary hover:bg-primary text-white font-bold px-6 py-3 rounded-lg shadow transition text-sm sm:text-base">
+                                            <a href="{{ $data['primary_url'] ?? '#' }}"
+                                               class="bg-secondary hover:bg-primary text-white font-bold px-6 py-3 rounded-lg shadow transition text-sm sm:text-base">
                                                 {{ $data['primary_text'] }}
                                             </a>
                                         @endif
+
                                         @if (!empty($data['secondary_text']))
-                                            <a href="{{ $data['secondary_url'] ?? '#' }}" class="bg-white/10 text-white font-bold px-6 py-3 rounded-lg shadow transition hover:bg-white/20 text-sm sm:text-base border border-white/30">
+                                            <a href="{{ $data['secondary_url'] ?? '#' }}"
+                                               class="bg-white/10 text-white font-bold px-6 py-3 rounded-lg shadow transition hover:bg-white/20 text-sm sm:text-base border border-white/30">
                                                 {{ $data['secondary_text'] }}
                                             </a>
                                         @endif
                                     </div>
                                 </div>
+
                                 @if (!empty($data['bg']))
                                     <img src="{{ $data['bg'] }}" alt="" class="w-full max-w-xl rounded-2xl shadow-2xl">
                                 @endif
@@ -310,10 +351,16 @@
                         <section class="relative isolate overflow-hidden bg-white py-16 sm:py-20">
                             <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
                                 <div class="max-w-2xl">
-                                    <h2 class="text-4xl font-semibold tracking-tight text-gray-900 sm:text-5xl">{{ $data['heading'] ?? '' }}</h2>
-                                    <p class="mt-4 text-lg text-gray-600">{{ $data['body'] ?? '' }}</p>
+                                    <h2 class="text-4xl font-semibold tracking-tight text-gray-900 sm:text-5xl">
+                                        {{ $data['heading'] ?? '' }}
+                                    </h2>
+
+                                    <p class="mt-4 text-lg text-gray-600">
+                                        {{ $data['body'] ?? '' }}
+                                    </p>
                                 </div>
                             </div>
+
                             @if (!empty($data['light_img']))
                                 <img src="{{ $data['light_img'] }}" alt="" class="absolute inset-0 -z-10 w-full h-full object-cover opacity-10">
                             @endif
@@ -322,10 +369,9 @@
                 @endswitch
             @endif
         @endforeach
-    @else
-        {{-- -----------------------------------------------------------------
-             2) Legacy sections from admin (if no builderSections found)
-           ----------------------------------------------------------------- --}}
+
+    {{-- 3) Legacy sections from admin (no builder snapshot / sections) --}}
+    @elseif ($page->sections->isNotEmpty())
         @foreach ($page->sections as $section)
             @php
                 /** @var \App\Models\Section $section */
@@ -333,7 +379,7 @@
                 $key       = $section->type;                  // e.g. hero, features, templates-pages...
                 $component = $sectionComponents[$key] ?? null;
 
-                // skip unknown types gracefully
+                // Skip completely unknown types (except hero which is rendered via SectionRenderer)
                 if (! $component && $key !== 'hero') {
                     continue;
                 }
@@ -738,5 +784,21 @@
                 />
             @endif
         @endforeach
+
+    {{-- 4) WYSIWYG fallback (no builder, no sections) --}}
+    @else
+        <section class="bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-4xl mx-auto">
+                <header class="mb-6">
+                    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                        {{ $pageTitle }}
+                    </h1>
+                </header>
+
+                <article class="prose prose-slate lg:prose-lg dark:prose-invert max-w-none">
+                    {!! $pageTranslation?->content ?: '<p>' . e(__('لا يوجد محتوى لهذه الصفحة حالياً.')) . '</p>' !!}
+                </article>
+            </div>
+        </section>
     @endif
 @endsection

@@ -62,6 +62,7 @@
          data-save-url="{{ route('dashboard.pages.builder.data.save', $page) }}"
          data-preview-url="{{ $frontUrl }}"
          data-builder-url="{{ route('dashboard.pages.builder', $page) }}"
+         data-publish-url="{{ route('dashboard.pages.builder.publish', $page) }}"
          data-page-id="{{ $page->id }}">
 
         {{-- ===========================
@@ -126,6 +127,23 @@
                            class="text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 font-medium">
                             {{ __('Live Page') }}
                         </a>
+                            {{-- Publish button --}}
+    <button
+        id="builder-publish"
+        type="button"
+        class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+    >
+        🚀 <span>نشر الصفحة</span>
+    </button>
+        {{-- Preview link (example) --}}
+    <a
+        id="builder-preview"
+        href="{{ $frontUrl }}"
+        target="_blank"
+        class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100"
+    >
+        👁 <span>معاينة</span>
+    </a>
 
                         {{-- Reset builder content (handled in JS) --}}
                         <button id="builder-reset"
@@ -134,10 +152,15 @@
                         </button>
 
                         {{-- Save builder content --}}
-                        <button id="builder-save"
+                        <button id="pg-save-btn" type="button"
                                 class="px-5 py-1.5 text-xs font-semibold rounded-full bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow hover:shadow-md transition">
                             {{ __('Save') }}
                         </button>
+                            <span id="pg-save-status" class="text-xs text-slate-500">
+        {{ __('Saved') }}
+    </span>
+
+    
 
                         {{-- Realtime save status (Updated / Unsaved + time) --}}
                         <div id="builder-save-status"

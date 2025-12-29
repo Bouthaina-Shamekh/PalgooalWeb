@@ -9,6 +9,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\Section;
 use App\Models\SectionTranslation;
+use Illuminate\Support\Facades\Storage;
+
 
 class PageBuilderController extends Controller
 {
@@ -370,6 +372,62 @@ class PageBuilderController extends Controller
         return response()->json([
             'status'    => 'ok',
             'structure' => $builder->project,
+        ]);
+    }
+
+    /**
+     * Publish current builder snapshot for a page.
+     *
+     * This will:
+     * - Take the latest saved HTML + CSS from PageBuilderStructure
+     * - Store CSS in a public file (if not empty)
+     * - Save published_html + published_css_path + published_at
+     * - Used later in front/pages/page.blade.php (publishedHtml / publishedCss)
+     */
+    public function publish(Page $page): JsonResponse
+    {
+        $builder = $page->builderStructure;
+
+        if (! $builder || ! $builder->html) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'لا يوجد محتوى جاهز للنشر. تأكد من حفظ الصفحة أولاً في البيلدر.',
+            ], 422);
+        }
+
+        $css = (string) ($builder->css ?? '');
+        $cssPath = null;
+
+        // لو في CSS فعلي → نحفظه في ملف مستقل في disk public
+        if (trim($css) !== '') {
+            $directory = 'builder-css';
+
+            // Example: builder-css/page-5-1735400000.css
+            $fileName = 'page-' . $page->id . '-' . time() . '.css';
+            $relativePath = $directory . '/' . $fileName;
+
+            // ننشئ الدليل لو مش موجود و نحفظ الملف
+            Storage::disk('public')->put($relativePath, $css);
+
+            // هذا المسار هو اللي نستخدمه في الفرونت مع asset()
+            $cssPath = 'storage/' . $relativePath;
+        }
+
+        // لو عندنا CSS منشور قديم، ممكن تختار:
+        // - إلغاءه (تركه)
+        // - أو تحاول تحذفه من Storage
+        // هنا نتركه حالياً لتبسيط الموضوع
+
+        $builder->published_html     = $builder->html;
+        $builder->published_css_path = $cssPath;
+        $builder->published_at       = now();
+        $builder->save();
+
+        return response()->json([
+            'status'        => 'ok',
+            'message'       => 'تم نشر الصفحة بنجاح.',
+            'published_at'  => $builder->published_at?->toDateTimeString(),
+            'css_url'       => $cssPath ? asset($cssPath) : null,
         ]);
     }
 }

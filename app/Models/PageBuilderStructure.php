@@ -4,48 +4,30 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Arr;
-use App\Models\Service;
 
 class PageBuilderStructure extends Model
 {
-    /**
-     * Table for visual page builder structures.
-     *
-     * We are in a transition from older "structure" JSON column
-     * to a cleaner schema:
-     *  - project : full GrapesJS projectData (array)
-     *  - html    : compiled HTML for frontend rendering
-     *  - css     : compiled CSS for frontend rendering
-     *
-     * For backward compatibility:
-     *  - normalizedSections() will read from project if available,
-     *    otherwise falls back to "structure".
-     */
     protected $table = 'page_builder_structures';
 
     protected $fillable = [
         'page_id',
-
-        // New recommended fields
         'project',
+        'structure',          // legacy support
         'html',
         'css',
-
-        // Legacy field (still used until old data is migrated)
-        'structure',
+        'published_html',
+        'published_css_path',
+        'published_at',
     ];
 
     protected $casts = [
-        // New preferred storage for GrapesJS project data
-        'project'   => 'array',
-
-        // Legacy storage (older code may still use it)
-        'structure' => 'array',
+        'project'      => 'array',
+        'structure'    => 'array',
+        'published_at' => 'datetime',
     ];
 
     /**
-     * Relationship: owning page.
+     * Relation: each builder structure belongs to a Page.
      */
     public function page(): BelongsTo
     {
@@ -53,12 +35,13 @@ class PageBuilderStructure extends Model
     }
 
     /**
-     * Helper to get current builder project array in a unified way.
-     *
-     * Prefer $this->project (new schema), but fall back to $this->structure
-     * so old rows continue to work until fully migrated.
+     * ------------------------------------------------------------------
+     * Get current project array
+     * ------------------------------------------------------------------
+     * We support both `project` (new field) and `structure` (legacy).
+     * GrapesJS getProjectData() is expected to be stored in `project`.
      */
-    public function getCurrentProject(): array
+    public function getCurrentProject(): ?array
     {
         if (is_array($this->project) && ! empty($this->project)) {
             return $this->project;
@@ -68,254 +51,324 @@ class PageBuilderStructure extends Model
             return $this->structure;
         }
 
-        return [];
+        return null;
     }
 
     /**
-     * Convert the stored GrapesJS project structure into a
-     * simple list of sections consumable by Blade components.
+     * ------------------------------------------------------------------
+     * Normalized sections for frontend rendering
+     * ------------------------------------------------------------------
+     * This method:
+     *  - reads the GrapesJS project
+     *  - scans all components
+     *  - extracts components that are marked as "page sections"
+     *    via attributes: data-pg-section="hero|features|..."
+     *  - maps each section into:
      *
-     * @return array<int, array{type:string,data:array}>
+     *    [
+     *      'type' => 'features',
+     *      'data' => [ ... ]  // structure that matches Blade component
+     *    ]
+     *
+     * These are later consumed in front/pages/page.blade.php
+     * by the $builderSections loop.
      */
     public function normalizedSections(): array
     {
-        // ✅ استخدام project الجديد، أو structure القديم كـ fallback
-        $structure = $this->getCurrentProject();
+        $project = $this->getCurrentProject();
 
-        // Lite builder format: { mode: 'lite-builder', blocks: [...] }
-        if (Arr::get($structure, 'mode') === 'lite-builder' && is_array(Arr::get($structure, 'blocks'))) {
-            return $this->mapLiteBlocks(Arr::get($structure, 'blocks', []));
+        if (! is_array($project)) {
+            return [];
         }
 
-        $components = Arr::get($structure, 'pages.0.frames.0.component.components', []);
+        $pages = $project['pages'] ?? [];
 
-        return collect($components)
-            ->map(fn(array $component) => $this->mapComponentToSection($component))
-            ->filter()
-            ->values()
-            ->all();
+        if (! is_array($pages) || empty($pages)) {
+            return [];
+        }
+
+        $sections = [];
+
+        foreach ($pages as $page) {
+            $frames = $page['frames'] ?? [];
+
+            foreach ($frames as $frame) {
+                $root = $frame['component'] ?? null;
+
+                if (! is_array($root)) {
+                    continue;
+                }
+
+                $sections = array_merge($sections, $this->collectSectionsFromComponent($root));
+            }
+        }
+
+        // ترتيب السكاشن حسب ترتيب ظهورها
+        return array_values($sections);
     }
 
     /**
-     * Map a single GrapesJS component to a Blade section payload.
+     * Recursively walk a GrapesJS component tree and collect
+     * high-level sections marked with data-pg-section / data-pg-type.
+     *
+     * Expected markup from GrapesJS (example):
+     *  <section data-pg-section="features"> ... </section>
      */
-    protected function mapComponentToSection(array $component): ?array
+    protected function collectSectionsFromComponent(array $component): array
     {
-        $type = Arr::get($component, 'attributes.data-section-type')
-            ?: Arr::get($component, 'type');
+        $sections = [];
+
+        $attrs = $component['attributes'] ?? [];
+        $pgType = $attrs['data-pg-section']
+            ?? $attrs['data-pg-type']
+            ?? null;
+
+        if (is_string($pgType) && $pgType !== '') {
+            $normalized = $this->mapComponentToSection($pgType, $component);
+
+            if (is_array($normalized)) {
+                $sections[] = $normalized;
+            }
+        }
+
+        // Traverse children for nested sections
+        $children = $component['components'] ?? [];
+
+        if (is_array($children)) {
+            foreach ($children as $child) {
+                if (! is_array($child)) {
+                    continue;
+                }
+
+                $sections = array_merge($sections, $this->collectSectionsFromComponent($child));
+            }
+        }
+
+        return $sections;
+    }
+
+    /**
+     * Map a section-type & GrapesJS component into our normalized
+     * array structure compatible with Blade components.
+     *
+     * e.g.:
+     *  - hero     => template.sections.hero
+     *  - features => template.sections.features
+     */
+    protected function mapComponentToSection(string $type, array $component): ?array
+    {
+        $type = trim(strtolower($type));
 
         return match ($type) {
-            'hero' => [
-                'type' => 'hero',
-                'data' => [
-                    'title'          => $this->extractText($component, 'title', 'Hero title'),
-                    'subtitle'       => $this->extractText($component, 'subtitle', ''),
-                    'button_text-1'  => $this->extractText($component, 'primary-button', 'Get Started'),
-                    'button_url-1'   => $this->extractAttribute($component, 'primary-button', 'href', '#'),
-                    'button_text-2'  => $this->extractText($component, 'secondary-button', 'View templates'),
-                    'button_url-2'   => $this->extractAttribute($component, 'secondary-button', 'href', '#'),
-                    'image'          => $this->extractAttribute($component, 'image', 'src'),
-                    'alignment'      => Arr::get($component, 'attributes.data-alignment', 'left'),
-                    'background'     => Arr::get($component, 'attributes.data-background'),
-                ],
-            ],
-
-            'features' => [
-                'type' => 'features',
-                'data' => [
-                    'title'    => $this->extractText($component, 'title', 'Features'),
-                    'subtitle' => $this->extractText($component, 'subtitle', ''),
-                    'features' => $this->extractFeatureItems($component),
-                ],
-            ],
-
-            default => null,
+            'hero', 'hero_default'   => $this->mapHeroSection($component),
+            'features', 'features-1' => $this->mapFeaturesSection($component),
+            default                  => null,
         };
     }
 
     /**
-     * Map simplified blocks (lite builder) to sections.
+     * ------------------------------------------------------------------
+     * HERO mapping
+     * ------------------------------------------------------------------
+     * Expected that the GrapesJS section has attributes like:
+     *  - data-pg-heading
+     *  - data-pg-subtitle
+     *  - data-pg-badge
+     *  - data-pg-primary-text / data-pg-primary-url
+     *  - data-pg-secondary-text / data-pg-secondary-url
+     *  - data-pg-image (optional hero image)
      *
-     * @param array<int, array{type:string,data:array}> $blocks
+     * These attributes can be set from Traits or manually from
+     * the block definition in page-builder.js.
      */
-    protected function mapLiteBlocks(array $blocks): array
+    protected function mapHeroSection(array $component): ?array
     {
-        return collect($blocks)
-            ->map(function ($block) {
-                $type = $block['type'] ?? '';
-                $data = $block['data'] ?? [];
+        $attrs = $component['attributes'] ?? [];
 
-                return match ($type) {
-                    'text' => [
-                        'type' => 'text',
-                        'data' => [
-                            'title' => Arr::get($data, 'title', ''),
-                            'body'  => Arr::get($data, 'body', ''),
-                            'align' => Arr::get($data, 'align', 'left'),
-                        ],
-                    ],
-                    'image' => [
-                        'type' => 'image',
-                        'data' => [
-                            'url'   => Arr::get($data, 'url', ''),
-                            'alt'   => Arr::get($data, 'alt', ''),
-                            'width' => Arr::get($data, 'width', '100%'),
-                            'align' => Arr::get($data, 'align', 'center'),
-                        ],
-                    ],
-                    'button' => [
-                        'type' => 'button',
-                        'data' => [
-                            'text'  => Arr::get($data, 'text', ''),
-                            'url'   => Arr::get($data, 'url', '#'),
-                            'style' => Arr::get($data, 'style', 'primary'),
-                            'align' => Arr::get($data, 'align', 'center'),
-                        ],
-                    ],
-                    'features' => [
-                        'type' => 'features',
-                        'data' => [
-                            'title'    => Arr::get($data, 'title', ''),
-                            'subtitle' => Arr::get($data, 'subtitle', ''),
-                            'features' => is_array(Arr::get($data, 'features'))
-                                ? Arr::get($data, 'features')
-                                : [],
-                        ],
-                    ],
-                    'section' => [
-                        'type' => 'section',
-                        'data' => [
-                            'title'   => Arr::get($data, 'title', ''),
-                            'body'    => Arr::get($data, 'body', ''),
-                            'bg'      => Arr::get($data, 'bg', '#ffffff'),
-                            'padding' => Arr::get($data, 'padding', '24'),
-                            'align'   => Arr::get($data, 'align', 'left'),
-                        ],
-                    ],
-                    'hero-template' => [
-                        'type' => 'hero-template',
-                        'data' => [
-                            'heading'       => Arr::get($data, 'heading', ''),
-                            'subtitle'      => Arr::get($data, 'subtitle', ''),
-                            'primary_text'  => Arr::get($data, 'primaryText', ''),
-                            'primary_url'   => Arr::get($data, 'primaryUrl', '#'),
-                            'secondary_text' => Arr::get($data, 'secondaryText', ''),
-                            'secondary_url' => Arr::get($data, 'secondaryUrl', '#'),
-                            'bg'            => Arr::get($data, 'bg', ''),
-                        ],
-                    ],
-                    'support-hero' => [
-                        'type' => 'support-hero',
-                        'data' => [
-                            'heading'    => Arr::get($data, 'heading', ''),
-                            'body'       => Arr::get($data, 'body', ''),
-                            'light_img'  => Arr::get($data, 'lightImg', ''),
-                            'dark_img'   => Arr::get($data, 'darkImg', ''),
-                            'color_from' => Arr::get($data, 'colorFrom', '#ff4694'),
-                            'color_to'   => Arr::get($data, 'colorTo', '#776fff'),
-                        ],
-                    ],
-                    'services' => [
-                        'type' => 'services',
-                        'data' => [
-                            'badge'    => Arr::get($data, 'badge', ''),
-                            'title'    => Arr::get($data, 'title', ''),
-                            'subtitle' => Arr::get($data, 'subtitle', ''),
-                            'bg'       => Arr::get($data, 'bg', ''),
-                            // Always fetch current services from DB so front matches dashboard content.
-                            'services' => Service::with('translations')->orderBy('order')->get(),
-                        ],
-                    ],
-                    default => null,
-                };
-            })
-            ->filter()
-            ->values()
-            ->all();
-    }
+        $heading   = $attrs['data-pg-heading'] ?? null;
+        $subtitle  = $attrs['data-pg-subtitle'] ?? null;
+        $badge     = $attrs['data-pg-badge'] ?? null;
 
-    /**
-     * Extract text content from a child component with data-field=$field.
-     */
-    protected function extractText(array $component, string $field, string $default = ''): string
-    {
-        $child = $this->findChildByField($component, $field);
-        $content = is_array($child) ? ($child['content'] ?? '') : '';
+        $primaryText = $attrs['data-pg-primary-text'] ?? null;
+        $primaryUrl  = $attrs['data-pg-primary-url'] ?? null;
 
-        if (is_string($content) && $content !== '') {
-            return trim($content);
+        $secondaryText = $attrs['data-pg-secondary-text'] ?? null;
+        $secondaryUrl  = $attrs['data-pg-secondary-url'] ?? null;
+
+        $imageUrl = $attrs['data-pg-image'] ?? null;
+
+        // If everything is empty, skip mapping
+        if (! $heading && ! $subtitle && ! $imageUrl && ! $primaryText && ! $secondaryText) {
+            return null;
         }
 
-        // If the text component has nested children, prefer their content
-        $nested = Arr::get($child, 'components.0.content');
-
-        return is_string($nested) && $nested !== ''
-            ? trim($nested)
-            : $default;
+        return [
+            'type' => 'hero',
+            'data' => [
+                'heading'         => $heading,
+                'subtitle'        => $subtitle,
+                'badge'           => $badge,
+                'primary_text'    => $primaryText,
+                'primary_url'     => $primaryUrl,
+                'secondary_text'  => $secondaryText,
+                'secondary_url'   => $secondaryUrl,
+                'bg'              => $imageUrl,
+            ],
+        ];
     }
 
     /**
-     * Extract an attribute from a child component with data-field=$field.
-     */
-    protected function extractAttribute(array $component, string $field, string $attribute, ?string $default = null): ?string
-    {
-        $child = $this->findChildByField($component, $field);
-        $value = is_array($child)
-            ? Arr::get($child, "attributes.{$attribute}")
-            : null;
-
-        return is_string($value) && $value !== ''
-            ? $value
-            : $default;
-    }
-
-    /**
-     * Build features list from feature-item children.
+     * ------------------------------------------------------------------
+     * FEATURES mapping
+     * ------------------------------------------------------------------
+     * This method transforms a GrapesJS "features" section into the
+     * structure expected by:
      *
-     * Each feature item can optionally define:
-     * - data-icon (HTML string or icon name)
-     * - item-title / item-description as data-field tags
+     * resources/views/components/template/sections/features.blade.php
+     *
+     * which expects:
+     *   $data['title']
+     *   $data['subtitle']
+     *   $data['features'] = [
+     *      [
+     *          'icon'        => '<svg ...>',
+     *          'title'       => 'Feature title',
+     *          'description' => 'Feature description',
+     *      ],
+     *      ...
+     *   ]
+     *
+     * Expected builder markup:
+     *  - Root section: <section data-pg-section="features" ...>
+     *      attributes:
+     *        data-pg-title
+     *        data-pg-subtitle
+     *
+     *  - Each item inside: can be marked with data-pg-feature="item"
+     *    and attributes:
+     *        data-pg-feature-title
+     *        data-pg-feature-description
+     *    and first child could be icon (SVG) or an <i> element.
+     */
+    protected function mapFeaturesSection(array $component): ?array
+    {
+        $attrs = $component['attributes'] ?? [];
+
+        $title    = $attrs['data-pg-title'] ?? null;
+        $subtitle = $attrs['data-pg-subtitle'] ?? null;
+
+        $featureItems = $this->extractFeatureItems($component);
+
+        if (! $title && ! $subtitle && empty($featureItems)) {
+            return null;
+        }
+
+        return [
+            'type' => 'features',
+            'data' => [
+                'title'    => $title ?: __('مميزات منصتنا'),
+                'subtitle' => $subtitle ?: '',
+                'features' => $featureItems,
+            ],
+        ];
+    }
+
+    /**
+     * Extract feature items from a GrapesJS component tree.
+     *
+     * We look for components having attribute data-pg-feature="item"
+     * and then:
+     *  - data-pg-feature-title        => title
+     *  - data-pg-feature-description  => description
+     *  - SVG / icon HTML from first child, if exists.
      */
     protected function extractFeatureItems(array $component): array
     {
-        return collect(Arr::get($component, 'components', []))
-            ->filter(fn($child) => Arr::get($child, 'attributes.data-field') === 'feature-item')
-            ->map(function ($item) {
-                return [
-                    'icon'        => Arr::get($item, 'attributes.data-icon') ?? '<i class="ti ti-check"></i>',
-                    'title'       => $this->extractText($item, 'item-title', 'Feature title'),
-                    'description' => $this->extractText($item, 'item-description', 'Feature description'),
-                ];
-            })
-            ->values()
-            ->all();
+        $items = [];
+
+        $this->walkComponents($component, function (array $cmp) use (&$items) {
+            $attrs = $cmp['attributes'] ?? [];
+
+            if (($attrs['data-pg-feature'] ?? null) !== 'item') {
+                return;
+            }
+
+            $title       = trim((string) ($attrs['data-pg-feature-title'] ?? ''));
+            $description = trim((string) ($attrs['data-pg-feature-description'] ?? ''));
+
+            // Try to capture SVG/icon HTML from first child
+            $iconHtml = $this->extractIconHtmlFromComponent($cmp);
+
+            if ($title === '' && $description === '' && $iconHtml === '') {
+                return;
+            }
+
+            $items[] = [
+                'icon'        => $iconHtml,
+                'title'       => $title,
+                'description' => $description,
+            ];
+        });
+
+        return $items;
     }
 
     /**
-     * Helper to locate a child component by its data-field attribute.
+     * Helper to walk the components tree.
      */
-    protected function findChildByField(array $component, string $field): ?array
+    protected function walkComponents(array $component, callable $callback): void
     {
-        // 🔹 نبحث بشكل Recursively في كل الـ components
-        $children = Arr::get($component, 'components', []);
+        $callback($component);
+
+        $children = $component['components'] ?? [];
+
+        if (! is_array($children)) {
+            return;
+        }
 
         foreach ($children as $child) {
             if (! is_array($child)) {
                 continue;
             }
+            $this->walkComponents($child, $callback);
+        }
+    }
 
-            // لو هذا العنصر عنده data-field يطابق المطلوب → رجّعه
-            if (Arr::get($child, 'attributes.data-field') === $field) {
-                return $child;
-            }
+    /**
+     * Try to extract SVG/icon markup from first child of the item.
+     */
+    protected function extractIconHtmlFromComponent(array $component): string
+    {
+        $children = $component['components'] ?? [];
 
-            // غير هيك، نكمّل البحث جواته
-            $found = $this->findChildByField($child, $field);
-            if ($found) {
-                return $found;
+        if (! is_array($children) || empty($children)) {
+            return '';
+        }
+
+        $first = $children[0];
+
+        // إذا GrapesJS خزن الـ icon كـ raw HTML في 'content'
+        if (! empty($first['content']) && is_string($first['content'])) {
+            return $first['content'];
+        }
+
+        // أو ممكن يكون له مزيد من الأطفال بداخل wrapper
+        if (! empty($first['components']) && is_array($first['components'])) {
+            foreach ($first['components'] as $child) {
+                if (! empty($child['content']) && is_string($child['content'])) {
+                    return $child['content'];
+                }
             }
         }
 
-        return null;
+        return '';
+    }
+
+    /**
+     * Helper indicating if this builder has a published snapshot.
+     */
+    public function hasPublishedSnapshot(): bool
+    {
+        return ! empty($this->published_html);
     }
 }

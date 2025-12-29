@@ -156,6 +156,8 @@ Route::group([
             Route::get('/{page}/builder', [PageBuilderController::class, 'edit'])->name('builder');
             Route::get('/{page}/builder/data', [PageBuilderController::class, 'loadData'])->name('builder.data');
             Route::post('/{page}/builder/data', [PageBuilderController::class, 'saveData'])->name('builder.data.save');
+            Route::post('/{page}/builder/publish', [PageBuilderController::class, 'publish'])
+                ->name('builder.publish');
         });
 
     // -------------------------------------------------------------------------
