@@ -847,63 +847,71 @@ if (root) {
          * ------------------------------------------------------------------
          */
         bm.add('pg-features-section', {
+            id: 'pg-features-section',
             label: 'Features Section',
-            category: {
-                id: 'pg-content-sections',
-                label: isRtl ? 'سكاشن المحتوى' : 'Content Sections',
-                open: true,
-            },
-            attributes: { title: isRtl ? 'مميزات المنصة' : 'Platform Features' },
+            category: 'Sections',
+            attributes: { class: 'gjs-fonts gjs-f-b1' },
             content: `
-      <section data-pg-section="features" class="pg-features-section py-20 px-4 sm:px-8 lg:px-24 bg-background">
-        <div class="max-w-7xl mx-auto">
-          <div class="text-center mb-12">
-            <h2 class="pg-features-title text-3xl sm:text-4xl font-extrabold text-primary mb-4 tracking-tight">
-              ${isRtl ? 'خدمات رقمية متكاملة تدعم نجاحك' : 'All-in-one digital services for your success'}
+      <section class="py-24 px-4 sm:px-8 lg:px-20 bg-[#F9F6FB]" data-gjs-type="pg-features-section">
+        <div class="max-w-6xl mx-auto">
+          <!-- Head -->
+          <div class="text-center mb-14">
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-primary mb-3 tracking-tight">
+              خدمات رقمية متكاملة تدعم نجاحك
             </h2>
-            <p class="pg-features-subtitle text-tertiary text-suptitle/9 sm:text-suptitle/9 max-w-2xl mx-auto">
-              ${isRtl
-                    ? 'منصة واحدة تجمع بين الاستضافة، القوالب الجاهزة، وربط الدومين خلال دقائق.'
-                    : 'One platform that brings hosting, templates and domain connection in minutes.'
-                }
+            <p class="text-tertiary text-base sm:text-lg max-w-2xl mx-auto">
+              خدمات قيمة متكاملة تساعدك على إطلاق مشروعك بثقة، واستضافة سريعة، وقوالب احترافية.
             </p>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8" data-gjs-name="Features Grid">
-            <div data-pg-feature="item" class="pg-feature-item flex flex-col items-center sm:items-start gap-4 rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
-              <div class="pg-feature-icon w-12 h-12 flex items-center justify-center rounded-lg bg-primary/10 text-primary text-xl">★</div>
-              <div class="pg-feature-title text-base font-semibold text-slate-900">${isRtl ? 'إطلاق سريع' : 'Fast launch'
-                }</div>
-              <div class="pg-feature-desc text-sm text-slate-600 leading-relaxed">${isRtl
-                    ? 'امتلك موقعك الجاهز خلال دقائق مع إعداد تلقائي كامل.'
-                    : 'Get your website live in minutes with full automatic setup.'
-                }</div>
-            </div>
+          <!-- Features Grid (المهم: data-pg-features-grid) -->
+          <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-3" data-pg-features-grid="1">
+            
+            <!-- Feature item 1 -->
+            <article class="pg-feature-card flex flex-col h-full rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow duration-200 px-6 py-6 border border-slate-100">
+              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-primary/10 text-primary mb-4">
+                <span class="text-lg font-bold">★</span>
+              </div>
+              <h3 class="text-lg font-semibold text-slate-900 mb-2">
+                إطلاق سريع
+              </h3>
+              <p class="text-sm text-slate-600 leading-relaxed">
+                امتلك موقعك الجاهز خلال دقائق مع إعداد تلقائي كامل.
+              </p>
+            </article>
 
-            <div data-pg-feature="item" class="pg-feature-item flex flex-col items-center sm:items-start gap-4 rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
-              <div class="pg-feature-icon w-12 h-12 flex items-center justify-center rounded-lg bg-primary/10 text-primary text-xl">★</div>
-              <div class="pg-feature-title text-base font-semibold text-slate-900">${isRtl ? 'تصاميم احترافية' : 'Professional designs'
-                }</div>
-              <div class="pg-feature-desc text-sm text-slate-600 leading-relaxed">${isRtl
-                    ? 'قوالب مصممة بعناية لتناسب مختلف الأنشطة والمتاجر.'
-                    : 'Carefully crafted templates for different niches and stores.'
-                }</div>
-            </div>
+            <!-- Feature item 2 -->
+            <article class="pg-feature-card flex flex-col h-full rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow duration-200 px-6 py-6 border border-slate-100">
+              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-primary/10 text-primary mb-4">
+                <span class="text-lg font-bold">★</span>
+              </div>
+              <h3 class="text-lg font-semibold text-slate-900 mb-2">
+                تصاميم احترافية
+              </h3>
+              <p class="text-sm text-slate-600 leading-relaxed">
+                قوالب مصممة بعناية لتناسب مختلف الأنشطة والمتاجر.
+              </p>
+            </article>
 
-            <div data-pg-feature="item" class="pg-feature-item flex flex-col items-center sm:items-start gap-4 rounded-2xl bg-white p-5 shadow-sm border border-slate-100">
-              <div class="pg-feature-icon w-12 h-12 flex items-center justify-center rounded-lg bg-primary/10 text-primary text-xl">★</div>
-              <div class="pg-feature-title text-base font-semibold text-slate-900">${isRtl ? 'دعم فني مستمر' : 'Ongoing support'
-                }</div>
-              <div class="pg-feature-desc text-sm text-slate-600 leading-relaxed">${isRtl
-                    ? 'فريق مختص لمساعدتك في أي وقت خلال رحلتك الرقمية.'
-                    : 'A dedicated team ready to help you anytime in your digital journey.'
-                }</div>
-            </div>
+            <!-- Feature item 3 -->
+            <article class="pg-feature-card flex flex-col h-full rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow duration-200 px-6 py-6 border border-slate-100">
+              <div class="flex items-center justify-center w-11 h-11 rounded-full bg-primary/10 text-primary mb-4">
+                <span class="text-lg font-bold">★</span>
+              </div>
+              <h3 class="text-lg font-semibold text-slate-900 mb-2">
+                دعم فني مستمر
+              </h3>
+              <p class="text-sm text-slate-600 leading-relaxed">
+                فريق مختص لمساعدتك في أي وقت خلال رحلتك الرقمية.
+              </p>
+            </article>
+
           </div>
         </div>
       </section>
     `,
         });
+
     }
 
 
@@ -1127,26 +1135,61 @@ if (root) {
      * Selection toolbar
      * ---------------------------------------------------------
      */
-    editor.on('component:selected', (cmp) => {
-        const el = cmp?.view?.el;
-        if (!el) return;
+    editor.on('component:selected', cmp => {
+        if (!cmp || cmp.get('type') !== 'pg-features-section') return;
 
-        const tag = (cmp.get('tagName') || '').toLowerCase();
-        const type = cmp.get('type') || '';
+        const traitsEl = editor.TraitManager.getTraitsViewer().el;
+        if (!traitsEl) return;
 
-        if (tag === 'body' || type === 'wrapper') return;
+        const addBtn = traitsEl.querySelector('[data-pg-feature-add]');
+        if (!addBtn || addBtn.dataset.pgBound === '1') return;
 
-        cmp.set({
-            toolbar: [
-                { attributes: { title: 'Move' }, command: 'tlb-move' },
-                { attributes: { title: 'Copy' }, command: 'tlb-clone' },
-                {
-                    attributes: { title: 'Delete', class: 'text-red-600' },
-                    command: 'tlb-delete',
-                },
-            ],
+        addBtn.dataset.pgBound = '1';
+
+        addBtn.addEventListener('click', evt => {
+            evt.preventDefault();
+
+            const section = editor.getSelected();
+            if (!section) return;
+
+            // نجيب شبكة المميزات
+            const gridCmp = section.find('[data-pg-features-grid="1"]')[0] || section;
+            const children = gridCmp.components();
+
+            // ننسخ آخر كرت أو ننشئ جديد لو ما في
+            let sourceCard = children.length ? children.at(children.length - 1) : null;
+
+            if (!sourceCard) {
+                sourceCard = gridCmp.append({
+                    tagName: 'article',
+                    attributes: { class: 'pg-feature-card flex flex-col h-full rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow duration-200 px-6 py-6 border border-slate-100' },
+                    components: [
+                        {
+                            tagName: 'div',
+                            attributes: { class: 'flex items-center justify-center w-11 h-11 rounded-full bg-primary/10 text-primary mb-4' },
+                            components: [{ type: 'text', content: '★' }],
+                        },
+                        {
+                            tagName: 'h3',
+                            attributes: { class: 'text-lg font-semibold text-slate-900 mb-2' },
+                            components: [{ type: 'text', content: 'عنوان الميزة' }],
+                        },
+                        {
+                            tagName: 'p',
+                            attributes: { class: 'text-sm text-slate-600 leading-relaxed' },
+                            components: [{ type: 'text', content: 'وصف مختصر للميزة يوضح فائدتها للمستخدم.' }],
+                        },
+                    ],
+                });
+            } else {
+                const clone = sourceCard.clone();
+                gridCmp.append(clone);
+            }
+
+            editor.trigger('change:canvasOffset');
         });
     });
+
 
     editor.on('component:deselected', (cmp) => {
         const el = cmp?.view?.el;
