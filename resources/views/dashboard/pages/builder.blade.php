@@ -119,9 +119,15 @@
         .pg-sidebar-tab-content[data-active="false"] {
             display: none;
         }
+
         /* Sidebar Panels (Widgets <-> Element Settings) */
-.pg-sidebar-panel[data-active="false"] { display: none; }
-.pg-sidebar-panel[data-active="true"] { display: block; }
+        .pg-sidebar-panel[data-active="false"] {
+            display: none;
+        }
+
+        .pg-sidebar-panel[data-active="true"] {
+            display: block;
+        }
 
         /* =========================================================
             Search
@@ -631,30 +637,6 @@
                             العناصر
                         </h2>
                     </div>
-
-                    {{-- Top tabs (Yoast SEO / Globals / Widgets) --}}
-                    {{-- <div class="px-3 border-b border-slate-200">
-                        <nav class="flex items-end justify-center gap-6 pt-2" dir="ltr">
-                            <button type="button"
-                                class="pg-sidebar-tab-btn relative pb-2 text-[13px] font-extrabold text-slate-500 hover:text-[#240B36] transition"
-                                data-tab="widgets" data-active="true">
-                                Widgets
-                            </button>
-
-                            <button type="button"
-                                class="pg-sidebar-tab-btn relative pb-2 text-[13px] font-extrabold text-slate-500 hover:text-[#240B36] transition"
-                                data-tab="element" data-active="false">
-                                إعدادات العنصر
-                            </button>
-                        </nav>
-
-
-                        <!-- خط خفيف تحت التابات -->
-                        <div class="mt-2 h-px bg-slate-200/70"></div>
-                    </div> --}}
-
-
-
                     {{-- Search bar (for widgets tab) --}}
                     <div class="px-4 py-3 border-b border-slate-200 pg-widgets-search-wrap">
 
