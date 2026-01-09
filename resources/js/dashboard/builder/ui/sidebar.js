@@ -61,6 +61,17 @@ export function bindEditorSidebarTabs(editor) {
     };
 
     editor.on('component:selected', (cmp) => {
+        if (cmp?.is?.('text')) {
+            const parent = cmp.parent && cmp.parent();
+            if (parent) {
+                const pType = parent.get?.('type');
+                // لو الأب Heading مخصص عندنا
+                if (pType === 'pg-heading') {
+                    editor.select(parent);
+                    return;
+                }
+            }
+        }
         if (isWrapper(cmp)) {
             setPanel('widgets');
             setSelectedLabel('لا يوجد تحديد');
