@@ -8,6 +8,8 @@ import { registerBlocks } from './grapes/blocks';
 import { registerFeaturesSection } from './grapes/features';
 import { createProjectStorage } from './storage/project';
 import { resetPage } from './actions/reset';
+import { registerStyleManager } from './grapes/style-manager';
+
 
 function initPageBuilder() {
     const root = document.getElementById('page-builder-root');
@@ -62,12 +64,19 @@ function initPageBuilder() {
         blockManager: elBlocks ? { appendTo: '#gjs-blocks' } : {},
         layerManager: elLayers ? { appendTo: '#gjs-layers' } : {},
         traitManager: elTraits ? { appendTo: '#gjs-traits' } : {},
-        styleManager: elStyles ? { appendTo: '#gjs-styles', sectors: [] } : {},
+        styleManager: elStyles
+            ? {
+                appendTo: '#gjs-styles',
+                // لا تضع sectors هنا (سنقوم بتسجيلها بعد init)
+            }
+            : {},
+
 
         selectorManager: { componentFirst: true },
         canvas: { styles: canvasStyles },
     });
 
+    registerStyleManager(editor, { isRtl });
     bindEditorSidebarTabs(editor);
 
     // Canvas init (dir + inject css)

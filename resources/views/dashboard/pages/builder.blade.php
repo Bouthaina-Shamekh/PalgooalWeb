@@ -480,6 +480,37 @@
         .gjs-one-bg {
             background-color: transparent;
         }
+        /* ===== Elementor-like radio buttons inside StyleManager ===== */
+#gjs-styles .gjs-sm-property__radio {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+}
+
+#gjs-styles .gjs-radio-item {
+    border: 1px solid rgba(36, 11, 54, .12);
+    border-radius: 12px;
+    background: rgba(36, 11, 54, .03);
+    padding: 8px 0;
+    font-weight: 900;
+    text-align: center;
+}
+
+#gjs-styles .gjs-radio-item input:checked + .gjs-radio-item-label {
+    color: var(--pg-primary);
+}
+
+#gjs-styles .gjs-radio-item:has(input:checked) {
+    background: #fff;
+    border-color: rgba(174, 16, 40, .35);
+    box-shadow: 0 0 0 3px var(--pg-ring);
+}
+
+/* titles inside sectors */
+#gjs-styles .gjs-sm-sector-title {
+    cursor: pointer;
+}
+
     </style>
 
     <head>
@@ -732,7 +763,7 @@
                                             data-active="true">محتوى</button>
                                         <button type="button" class="pg-props-tab-btn" data-prop-tab="styles"
                                             data-active="false">تنسيق</button>
-                                        <button type="button" class="pg-props-tab-btn" data-prop-tab="layers"
+                                        <button type="button" class="pg-props-tab-btn" data-prop-tab="advanced"
                                             data-active="false">متقدم</button>
                                     </div>
                                 </div>
@@ -743,10 +774,10 @@
                                     </div>
 
                                     <div class="pg-props-tab-content" data-prop-content="styles" data-active="false">
-                                        <div id="gjs-styles"></div>
+                                        <div id="gjs-styles" ></div>
                                     </div>
 
-                                    <div class="pg-props-tab-content" data-prop-content="layers" data-active="false">
+                                    <div class="pg-props-tab-content" data-prop-content="advanced" data-active="false">
                                         <div id="gjs-layers"></div>
                                     </div>
                                 </div>

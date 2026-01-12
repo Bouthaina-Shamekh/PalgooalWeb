@@ -35,6 +35,46 @@ function setSelectedLabel(text) {
     if (el) el.textContent = text || 'لا يوجد تحديد';
 }
 
+function traitNameFromRow(row) {
+    const field =
+        row.querySelector('input[name]') ||
+        row.querySelector('select[name]') ||
+        row.querySelector('textarea[name]');
+    return field?.getAttribute('name') || '';
+}
+
+function pickBucketByTraitName(name) {
+    // ✅ Advanced traits
+    if (name.startsWith('pgAdv') || name.startsWith('pgHide')) return 'advanced';
+
+    // ✅ default => Content
+    return 'traits';
+}
+
+function distributeTraits() {
+    const src = q('#gjs-traits');
+    const contentHost = q('#pg-el-content-fields');
+    const advancedHost = q('#pg-el-advanced-fields');
+
+    if (!src || !contentHost || !advancedHost) return;
+
+    // ✅ اجمع rows من src (قبل نقلها)
+    const rows = qa('#gjs-traits .gjs-trt-trait');
+    contentHost.innerHTML = '';
+    advancedHost.innerHTML = '';
+
+    if (!rows.length) return;
+
+    rows.forEach((row) => {
+        const name = traitNameFromRow(row);
+        const bucket = pickBucketByTraitName(name);
+        if (bucket === 'advanced') advancedHost.appendChild(row);
+        else contentHost.appendChild(row);
+    });
+}
+
+
+
 export function initSidebarTabs() {
     // Element inner tabs only
     qa('.pg-props-tab-btn').forEach((btn) => {
@@ -60,28 +100,30 @@ export function bindEditorSidebarTabs(editor) {
         return !cmp || cmp === wrapper || cmp.get?.('type') === 'wrapper';
     };
 
+    const refresh = () => requestAnimationFrame(() => distributeTraits());
+
+    // ✅ سجّل مرة واحدة فقط
+    editor.on('component:toggled', refresh);
+    editor.on('component:update', refresh);
+    editor.on('trait:update', refresh);
+
     editor.on('component:selected', (cmp) => {
+        // لو ضغط على Text داخل heading -> اختار الأب
         if (cmp?.is?.('text')) {
             const parent = cmp.parent && cmp.parent();
-            if (parent) {
-                const pType = parent.get?.('type');
-                // لو الأب Heading مخصص عندنا
-                if (pType === 'pg-heading') {
-                    editor.select(parent);
-                    return;
-                }
+            if (parent && parent.get?.('type') === 'pg-heading') {
+                editor.select(parent);
+                return;
             }
         }
+
         if (isWrapper(cmp)) {
             setPanel('widgets');
             setSelectedLabel('لا يوجد تحديد');
             return;
         }
 
-        // افتح لوحة العنصر
         setPanel('element');
-
-        // افتراضي: محتوى
         setElementTab('traits');
 
         const name =
@@ -91,6 +133,9 @@ export function bindEditorSidebarTabs(editor) {
             'Element';
 
         setSelectedLabel(name);
+
+        // ✅ بعد ما Grapes يرسم traits
+        setTimeout(refresh, 0);
     });
 
     editor.on('component:deselected', () => {
@@ -98,6 +143,7 @@ export function bindEditorSidebarTabs(editor) {
         setSelectedLabel('لا يوجد تحديد');
     });
 }
+
 
 /* Widgets toggle */
 export function initWidgetsToggle() {
