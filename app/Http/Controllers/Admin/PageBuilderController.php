@@ -34,7 +34,13 @@ class PageBuilderController extends Controller
      */
     public function loadData(Page $page): JsonResponse
     {
-        $builder = $page->builderStructure;
+        $locale = $this->requestLocale(request());
+
+        $builder = PageBuilderStructure::query()
+            ->where('page_id', $page->id)
+            ->where('locale', $locale)
+            ->first();
+
 
         if ($builder) {
             // getCurrentProject() ميثود في الموديل يرجّع project أو structure القديم
@@ -49,8 +55,6 @@ class PageBuilderController extends Controller
             }
         }
 
-        // لو ما فيش بيانات محفوظة → نبني هيكل افتراضي من سكشن hero_default
-        $locale = app()->getLocale();
 
         $heroSection = Section::with(['translations' => function ($q) use ($locale) {
             $q->where('locale', $locale);
@@ -334,8 +338,11 @@ class PageBuilderController extends Controller
         $css     = $validated['css'] ?? null;
 
         // 1) نخزن الـ project + html + css في جدول page_builder_structures
+        $locale = $this->requestLocale($request);
+
         $builder = PageBuilderStructure::updateOrCreate(
-            ['page_id' => $page->id],
+            ['page_id' => $page->id, 'locale' => $locale],
+
             [
                 'project'   => $project,
                 'html'      => $html,
@@ -350,8 +357,7 @@ class PageBuilderController extends Controller
         $heroContent = $this->extractHeroContentFromStructure($project);
 
         if ($heroContent) {
-            $locale = app()->getLocale();
-
+            
             $section = Section::where('page_id', $page->id)
                 ->where('type', 'hero_default')
                 ->first();
@@ -386,12 +392,17 @@ class PageBuilderController extends Controller
      */
     public function publish(Page $page): JsonResponse
     {
-        $builder = $page->builderStructure;
+        $locale = $this->requestLocale(request());
+
+        $builder = PageBuilderStructure::query()
+            ->where('page_id', $page->id)
+            ->where('locale', $locale)
+            ->first();
 
         if (! $builder || ! $builder->html) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'لا يوجد محتوى جاهز للنشر. تأكد من حفظ الصفحة أولاً في البيلدر.',
+                'message' => 'لا يوجد محتوى جاهز للنشر لهذه اللغة. تأكد من حفظ الصفحة أولاً في البيلدر.',
             ], 422);
         }
 
@@ -402,9 +413,9 @@ class PageBuilderController extends Controller
         if (trim($css) !== '') {
             $directory = 'builder-css';
 
-            // Example: builder-css/page-5-1735400000.css
-            $fileName = 'page-' . $page->id . '-' . time() . '.css';
-            $relativePath = $directory . '/' . $fileName;
+                // Example: builder-css/page-5-1735400000.css
+                $fileName = 'page-' . $page->id . '-' . $locale . '-' . time() . '.css';
+                $relativePath = $directory . '/' . $fileName;
 
             // ننشئ الدليل لو مش موجود و نحفظ الملف
             Storage::disk('public')->put($relativePath, $css);
@@ -429,5 +440,18 @@ class PageBuilderController extends Controller
             'published_at'  => $builder->published_at?->toDateTimeString(),
             'css_url'       => $cssPath ? asset($cssPath) : null,
         ]);
+    }
+    
+    protected function requestLocale(Request $request): string
+    {
+        $locale = $request->query('locale') ?: $request->input('locale') ?: app()->getLocale();
+
+        // حماية بسيطة من قيم غريبة
+        $allowed = config('app.supported_locales', ['ar', 'en']); // عدّلها حسب مشروعك
+        if (is_array($allowed) && !in_array($locale, $allowed, true)) {
+            $locale = config('app.fallback_locale', 'ar');
+        }
+
+        return $locale;
     }
 }

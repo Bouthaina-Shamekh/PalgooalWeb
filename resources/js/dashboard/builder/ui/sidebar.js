@@ -34,6 +34,133 @@ function setSelectedLabel(text) {
     const el = q('#pg-props-selected');
     if (el) el.textContent = text || 'لا يوجد تحديد';
 }
+function ensureAdvancedUI() {
+    const host = q('#pg-advanced');
+    if (!host) return;
+
+    if (host.dataset.ready === '1') return;
+    host.dataset.ready = '1';
+
+    host.innerHTML = `
+      <div class="pg-gjs-box">
+        <div class="text-xs font-extrabold text-slate-700 mb-2">المسافات</div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <label class="text-[11px] font-bold text-slate-600">
+            Margin
+            <input id="pg-adv-margin" type="text" placeholder="مثال: 0 0 16px 0"
+              class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"/>
+          </label>
+
+          <label class="text-[11px] font-bold text-slate-600">
+            Padding
+            <input id="pg-adv-padding" type="text" placeholder="مثال: 12px 16px"
+              class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"/>
+          </label>
+        </div>
+      </div>
+
+      <div class="pg-gjs-box">
+        <div class="text-xs font-extrabold text-slate-700 mb-2">الترتيب</div>
+
+        <label class="text-[11px] font-bold text-slate-600">
+          Z-index
+          <input id="pg-adv-z" type="number" placeholder="0"
+            class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"/>
+        </label>
+      </div>
+
+      <div class="pg-gjs-box">
+        <div class="text-xs font-extrabold text-slate-700 mb-2">Responsive</div>
+
+        <div class="grid grid-cols-3 gap-2">
+          <label class="flex items-center gap-2 text-[11px] font-bold text-slate-700">
+            <input id="pg-hide-desktop" type="checkbox" class="rounded border-slate-300"/>
+            Desktop
+          </label>
+          <label class="flex items-center gap-2 text-[11px] font-bold text-slate-700">
+            <input id="pg-hide-tablet" type="checkbox" class="rounded border-slate-300"/>
+            Tablet
+          </label>
+          <label class="flex items-center gap-2 text-[11px] font-bold text-slate-700">
+            <input id="pg-hide-mobile" type="checkbox" class="rounded border-slate-300"/>
+            Mobile
+          </label>
+        </div>
+      </div>
+
+      <div class="pg-gjs-box">
+        <div class="text-xs font-extrabold text-slate-700 mb-2">Custom</div>
+
+        <label class="text-[11px] font-bold text-slate-600">
+          Custom classes
+          <input id="pg-adv-classes" type="text" placeholder="مثال: text-red-500 font-bold"
+            class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"/>
+        </label>
+      </div>
+    `;
+}
+
+function bindAdvancedToComponent(editor, cmp) {
+    const host = q('#pg-advanced');
+    if (!host || !editor || !cmp) return;
+
+    ensureAdvancedUI();
+
+    const getStyle = (k) => (cmp.getStyle?.()[k] ?? '');
+    const setStyle = (k, v) => {
+        const next = { ...(cmp.getStyle?.() || {}) };
+        if (v === '' || v == null) delete next[k];
+        else next[k] = String(v);
+        cmp.setStyle(next);
+    };
+
+    const getAttr = (k) => (cmp.getAttributes?.()[k] ?? '');
+    const setAttr = (k, v) => {
+        const attrs = { ...(cmp.getAttributes?.() || {}) };
+        if (v === '' || v == null) delete attrs[k];
+        else attrs[k] = v;
+        cmp.setAttributes(attrs);
+    };
+
+    // Fill current values
+    const marginEl = q('#pg-adv-margin', host);
+    const paddingEl = q('#pg-adv-padding', host);
+    const zEl = q('#pg-adv-z', host);
+    const clsEl = q('#pg-adv-classes', host);
+
+    const hd = q('#pg-hide-desktop', host);
+    const ht = q('#pg-hide-tablet', host);
+    const hm = q('#pg-hide-mobile', host);
+
+    if (marginEl) marginEl.value = getStyle('margin') || '';
+    if (paddingEl) paddingEl.value = getStyle('padding') || '';
+    if (zEl) zEl.value = getStyle('z-index') || '';
+    if (clsEl) clsEl.value = getAttr('class') || '';
+
+    // hide flags stored as data attrs
+    if (hd) hd.checked = getAttr('data-pg-hide-desktop') === '1';
+    if (ht) ht.checked = getAttr('data-pg-hide-tablet') === '1';
+    if (hm) hm.checked = getAttr('data-pg-hide-mobile') === '1';
+
+    // Apply handlers
+    marginEl?.addEventListener('input', () => setStyle('margin', marginEl.value.trim()));
+    paddingEl?.addEventListener('input', () => setStyle('padding', paddingEl.value.trim()));
+    zEl?.addEventListener('input', () => setStyle('z-index', zEl.value));
+
+    clsEl?.addEventListener('input', () => setAttr('class', clsEl.value.trim()));
+
+    const syncHide = () => {
+        setAttr('data-pg-hide-desktop', hd?.checked ? '1' : '');
+        setAttr('data-pg-hide-tablet', ht?.checked ? '1' : '');
+        setAttr('data-pg-hide-mobile', hm?.checked ? '1' : '');
+    };
+
+    hd?.addEventListener('change', syncHide);
+    ht?.addEventListener('change', syncHide);
+    hm?.addEventListener('change', syncHide);
+}
+
 
 function traitNameFromRow(row) {
     const field =
@@ -133,6 +260,8 @@ export function bindEditorSidebarTabs(editor) {
             'Element';
 
         setSelectedLabel(name);
+        bindAdvancedToComponent(editor, cmp);
+
 
         // ✅ بعد ما Grapes يرسم traits
         setTimeout(refresh, 0);

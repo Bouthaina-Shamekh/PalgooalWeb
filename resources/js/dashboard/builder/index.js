@@ -9,15 +9,28 @@ import { registerFeaturesSection } from './grapes/features';
 import { createProjectStorage } from './storage/project';
 import { resetPage } from './actions/reset';
 import { registerStyleManager } from './grapes/style-manager';
+import { fetchJson } from './helpers/http';
+
 
 
 function initPageBuilder() {
     const root = document.getElementById('page-builder-root');
+    const locale = root.dataset.locale || document.documentElement.lang || 'ar';
+    const withLocale = (url) => {
+        if (!url) return url;
+        const u = new URL(url, window.location.origin);
+        u.searchParams.set('locale', locale);
+        return u.toString();
+    };
+
+
     if (!root) return;
 
     // 👇 ضع كل كودك الحالي هنا
-    const loadUrl = root.dataset.loadUrl;
-    const saveUrl = root.dataset.saveUrl;
+    const loadUrl = withLocale(root.dataset.loadUrl);
+    const saveUrl = withLocale(root.dataset.saveUrl);
+    const publishUrl = withLocale(root.dataset.publishUrl);
+    const publishBtn = q('#builder-publish');
 
     const appDir = document.documentElement.getAttribute('dir') || 'ltr';
     const isRtl = appDir === 'rtl';
@@ -102,6 +115,23 @@ function initPageBuilder() {
             const input = q('#pg-widgets-search');
             if (input) input.dispatchEvent(new Event('input'));
         };
+        editor.addStyle(`
+  /* Desktop: >= 993px */
+  @media (min-width: 993px){
+    [data-pg-hide-desktop="1"]{ display:none !important; }
+  }
+
+  /* Tablet: 481px - 992px */
+  @media (min-width: 481px) and (max-width: 992px){
+    [data-pg-hide-tablet="1"]{ display:none !important; }
+  }
+
+  /* Mobile: <= 480px */
+  @media (max-width: 480px){
+    [data-pg-hide-mobile="1"]{ display:none !important; }
+  }
+`);
+
 
         initWidgetsSearch();   // bind مرة واحدة
         refreshWidgets();      // تجهيز أول مرة
@@ -135,6 +165,23 @@ function initPageBuilder() {
 
     // Start
     storage.loadProject();
+
+    publishBtn?.addEventListener('click', async (e) => {
+        e.preventDefault();
+
+        try {
+            // 1) احفظ آخر تغييرات
+            await storage.saveProject(false);
+
+            // 2) انشر (خلّي السيرفر ينقل المسودة إلى published)
+            await fetchJson(publishUrl, { method: 'POST' });
+
+            console.log('[Builder] published');
+        } catch (err) {
+            console.error('[Builder] publish failed:', err);
+        }
+    });
+
 }
 
 initPageBuilder();

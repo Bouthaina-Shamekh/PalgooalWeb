@@ -480,44 +480,62 @@
         .gjs-one-bg {
             background-color: transparent;
         }
+
         /* ===== Elementor-like radio buttons inside StyleManager ===== */
-#gjs-styles .gjs-sm-property__radio {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-}
+        #gjs-styles .gjs-sm-property__radio {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 6px;
+        }
 
-#gjs-styles .gjs-radio-item {
-    border: 1px solid rgba(36, 11, 54, .12);
-    border-radius: 12px;
-    background: rgba(36, 11, 54, .03);
-    padding: 8px 0;
-    font-weight: 900;
-    text-align: center;
-}
+        #gjs-styles .gjs-radio-item {
+            border: 1px solid rgba(36, 11, 54, .12);
+            border-radius: 12px;
+            background: rgba(36, 11, 54, .03);
+            padding: 8px 0;
+            font-weight: 900;
+            text-align: center;
+        }
 
-#gjs-styles .gjs-radio-item input:checked + .gjs-radio-item-label {
-    color: var(--pg-primary);
-}
+        #gjs-styles .gjs-radio-item input:checked+.gjs-radio-item-label {
+            color: var(--pg-primary);
+        }
 
-#gjs-styles .gjs-radio-item:has(input:checked) {
-    background: #fff;
-    border-color: rgba(174, 16, 40, .35);
-    box-shadow: 0 0 0 3px var(--pg-ring);
-}
+        #gjs-styles .gjs-radio-item:has(input:checked) {
+            background: #fff;
+            border-color: rgba(174, 16, 40, .35);
+            box-shadow: 0 0 0 3px var(--pg-ring);
+        }
 
-/* titles inside sectors */
-#gjs-styles .gjs-sm-sector-title {
-    cursor: pointer;
-}
+        /* titles inside sectors */
+        #gjs-styles .gjs-sm-sector-title {
+            cursor: pointer;
+        }
 
+        @media (min-width: 1024px) {
+            [data-pg-hide-desktop="1"] {
+                display: none !important;
+            }
+        }
+
+        @media (min-width: 768px) and (max-width: 1023px) {
+            [data-pg-hide-tablet="1"] {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 767px) {
+            [data-pg-hide-mobile="1"] {
+                display: none !important;
+            }
+        }
     </style>
 
     <head>
 
     <body class="h-full bg-slate-50 text-slate-900">
         {{-- Root builder wrapper (used by page-builder.js via data-* attributes) --}}
-        <div id="page-builder-root" class="min-h-screen flex flex-col"
+        <div id="page-builder-root" data-locale="{{ app()->getLocale() }}" class="min-h-screen flex flex-col"
             data-load-url="{{ route('dashboard.pages.builder.data', $page) }}"
             data-save-url="{{ route('dashboard.pages.builder.data.save', $page) }}"
             data-preview-url="{{ $frontUrl }}" data-builder-url="{{ route('dashboard.pages.builder', $page) }}"
@@ -774,11 +792,12 @@
                                     </div>
 
                                     <div class="pg-props-tab-content" data-prop-content="styles" data-active="false">
-                                        <div id="gjs-styles" ></div>
+                                        <div id="gjs-styles"></div>
                                     </div>
 
-                                    <div class="pg-props-tab-content" data-prop-content="advanced" data-active="false">
-                                        <div id="gjs-layers"></div>
+                                    <div class="pg-props-tab-content" data-prop-content="advanced"
+                                        data-active="false">
+                                        <div id="pg-advanced" class="space-y-4"></div>
                                     </div>
                                 </div>
                             </div>
