@@ -11,6 +11,7 @@ class PageBuilderStructure extends Model
 
     protected $fillable = [
         'page_id',
+        'locale', // ✅ NEW
         'project',
         'structure',          // legacy support
         'html',
@@ -34,6 +35,12 @@ class PageBuilderStructure extends Model
         return $this->belongsTo(Page::class);
     }
 
+    // ✅ Helpful query scope
+    public function scopeForLocale($query, string $locale)
+    {
+        return $query->where('locale', $locale);
+    }
+
     /**
      * ------------------------------------------------------------------
      * Get current project array
@@ -43,14 +50,8 @@ class PageBuilderStructure extends Model
      */
     public function getCurrentProject(): ?array
     {
-        if (is_array($this->project) && ! empty($this->project)) {
-            return $this->project;
-        }
-
-        if (is_array($this->structure) && ! empty($this->structure)) {
-            return $this->structure;
-        }
-
+        if (is_array($this->project) && ! empty($this->project)) return $this->project;
+        if (is_array($this->structure) && ! empty($this->structure)) return $this->structure;
         return null;
     }
 

@@ -9,7 +9,7 @@
 
     // Locales available for this page (used for language switch)
     $availableLocales = $page->translations->pluck('locale')->filter()->unique();
-    $currentLocale = app()->getLocale();
+    $currentLocale = request('locale', app()->getLocale());
     $hasMultipleLocales = $availableLocales->count() > 1;
 @endphp
 
@@ -531,7 +531,7 @@
         }
     </style>
 
-    <head>
+</head>
 
     <body class="h-full bg-slate-50 text-slate-900">
         {{-- Root builder wrapper (used by page-builder.js via data-* attributes) --}}

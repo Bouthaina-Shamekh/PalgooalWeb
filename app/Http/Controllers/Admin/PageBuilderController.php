@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Language;
 use App\Models\Page;
 use App\Models\PageBuilderStructure;
 use Illuminate\Http\JsonResponse;
@@ -441,14 +442,21 @@ class PageBuilderController extends Controller
             'css_url'       => $cssPath ? asset($cssPath) : null,
         ]);
     }
-    
+
     protected function requestLocale(Request $request): string
     {
-        $locale = $request->query('locale') ?: $request->input('locale') ?: app()->getLocale();
+        $locale = $request->query('locale')
+            ?: $request->input('locale')
+            ?: app()->getLocale();
 
-        // حماية بسيطة من قيم غريبة
-        $allowed = config('app.supported_locales', ['ar', 'en']); // عدّلها حسب مشروعك
-        if (is_array($allowed) && !in_array($locale, $allowed, true)) {
+        $locale = strtolower(trim($locale));
+
+        $isActive = Language::query()
+            ->where('code', $locale)
+            ->where('is_active', true)
+            ->exists();
+
+        if (! $isActive) {
             $locale = config('app.fallback_locale', 'ar');
         }
 

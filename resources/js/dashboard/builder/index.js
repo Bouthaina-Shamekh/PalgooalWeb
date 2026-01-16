@@ -15,21 +15,13 @@ import { fetchJson } from './helpers/http';
 
 function initPageBuilder() {
     const root = document.getElementById('page-builder-root');
-    const locale = root.dataset.locale || document.documentElement.lang || 'ar';
-    const withLocale = (url) => {
-        if (!url) return url;
-        const u = new URL(url, window.location.origin);
-        u.searchParams.set('locale', locale);
-        return u.toString();
-    };
-
-
     if (!root) return;
 
-    // 👇 ضع كل كودك الحالي هنا
-    const loadUrl = withLocale(root.dataset.loadUrl);
-    const saveUrl = withLocale(root.dataset.saveUrl);
-    const publishUrl = withLocale(root.dataset.publishUrl);
+    const locale = (root.dataset.locale || document.documentElement.lang || 'ar').trim().toLowerCase();
+
+    const loadUrl = root.dataset.loadUrl;
+    const saveUrl = root.dataset.saveUrl;
+    const publishUrl = root.dataset.publishUrl;
     const publishBtn = q('#builder-publish');
 
     const appDir = document.documentElement.getAttribute('dir') || 'ltr';
@@ -141,7 +133,7 @@ function initPageBuilder() {
 
 
     // Storage (load/save/autosave)
-    const storage = createProjectStorage(editor, { loadUrl, saveUrl, emptyHint });
+    const storage = createProjectStorage(editor, { loadUrl, saveUrl, emptyHint, locale });
 
     // Dirty events
     editor.on('component:add', storage.markDirty);
@@ -174,7 +166,7 @@ function initPageBuilder() {
             await storage.saveProject(false);
 
             // 2) انشر (خلّي السيرفر ينقل المسودة إلى published)
-            await fetchJson(publishUrl, { method: 'POST' });
+            await fetchJson(publishUrl, { method: 'POST', body: { locale } });
 
             console.log('[Builder] published');
         } catch (err) {

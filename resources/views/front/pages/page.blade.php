@@ -187,7 +187,12 @@
      * - $builderSections: normalized sections array from project JSON
      * ------------------------------------------------------------------
      */
-    $builder       = $page->builderStructure;
+    $builder = \App\Models\PageBuilderStructure::query()
+    ->where('page_id', $page->id)
+    ->whereIn('locale', [app()->getLocale(), config('app.fallback_locale', 'ar')])
+    ->orderByRaw("FIELD(locale, ?, ?)", [app()->getLocale(), config('app.fallback_locale', 'ar')])
+    ->first();
+
     $publishedHtml = $builder?->published_html;
     $publishedCss  = $builder?->published_css_path;
 
