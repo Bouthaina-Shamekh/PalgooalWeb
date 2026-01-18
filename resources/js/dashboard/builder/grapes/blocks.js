@@ -1,4 +1,5 @@
 import { registerHeadingElement } from './elements/heading';
+import { registerServicesSection } from './sections/services';
 
 const ensureClass = (cls) => (cls ? String(cls).trim() : '');
 const splitClasses = (cls) => ensureClass(cls).split(/\s+/).filter(Boolean);
@@ -57,6 +58,7 @@ function applyRowLayoutClasses(model) {
 
 export function registerBlocks(editor) {
     registerHeadingElement(editor);
+    registerServicesSection(editor);
 
     const bm = editor.BlockManager;
 

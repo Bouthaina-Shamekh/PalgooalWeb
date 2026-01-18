@@ -15,7 +15,7 @@
       <!-- Slider -->
       <div class="swiper mySwiper" aria-label="{{ $data['title'] ?? 'عنوان غير متوفر' }}" role="region">
         <div class="swiper-wrapper">
-          @foreach($data['services'] as $service)
+          @foreach(($data['services'] ?? collect()) as $service)
             @php
               $translation = $service->translations->firstWhere('locale', app()->getLocale()) ?? $service->translations->first();
             @endphp

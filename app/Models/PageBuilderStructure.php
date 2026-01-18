@@ -163,6 +163,8 @@ class PageBuilderStructure extends Model
         return match ($type) {
             'hero', 'hero_default'   => $this->mapHeroSection($component),
             'features', 'features-1' => $this->mapFeaturesSection($component),
+            'services' => $this->mapServicesSection($component),
+
             default                  => null,
         };
     }
@@ -270,6 +272,48 @@ class PageBuilderStructure extends Model
                 'title'    => $title ?: __('مميزات منصتنا'),
                 'subtitle' => $subtitle ?: '',
                 'features' => $featureItems,
+            ],
+        ];
+    }
+
+    /**
+     * ------------------------------------------------------------------
+     * SERVICES mapping
+     * ------------------------------------------------------------------
+     * Reads builder attributes from the section root:
+     *  - data-pg-title
+     *  - data-pg-subtitle
+     *  - data-pg-limit
+     *  - data-pg-category-id
+     *  - data-pg-order (order|latest)
+     *
+     * Important:
+     * - Do NOT return null just because title/subtitle are empty.
+     *   Because services is a dynamic section and can still be rendered.
+     */
+    protected function mapServicesSection(array $component): ?array
+    {
+        $attrs = $component['attributes'] ?? [];
+
+        $title    = $attrs['data-pg-title'] ?? null;
+        $subtitle = $attrs['data-pg-subtitle'] ?? null;
+
+        $limit = $attrs['data-pg-limit'] ?? null;
+        $order = $attrs['data-pg-order'] ?? null;
+
+        $limit = is_numeric($limit) ? (int) $limit : null;
+        if ($limit !== null && $limit <= 0) $limit = null;
+
+        $order = is_string($order) ? strtolower(trim($order)) : null;
+        if (!in_array($order, ['order', 'latest'], true)) $order = 'order';
+
+        return [
+            'type' => 'services',
+            'data' => [
+                'title'    => $title,
+                'subtitle' => $subtitle,
+                'limit'    => $limit,
+                'order'    => $order,
             ],
         ];
     }

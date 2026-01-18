@@ -533,7 +533,7 @@
 
 </head>
 
-    <body class="h-full bg-slate-50 text-slate-900">
+    <body class="h-full bg-slate-50 text-slate-900 ">
         {{-- Root builder wrapper (used by page-builder.js via data-* attributes) --}}
         <div id="page-builder-root" data-locale="{{ app()->getLocale() }}" class="min-h-screen flex flex-col"
             data-load-url="{{ route('dashboard.pages.builder.data', $page) }}"
