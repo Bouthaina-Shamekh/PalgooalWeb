@@ -25,6 +25,7 @@
 
     {{-- Main Tailwind / Palgoals stylesheet used in the builder shell --}}
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}" id="palgoals-app-css">
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 
     {{-- GrapesJS + custom builder JS entry --}}
     @vite('resources/js/dashboard/builder/index.js')
@@ -529,6 +530,14 @@
                 display: none !important;
             }
         }
+        .pg-trait-wysiwyg .tox-tinymce {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+}
+.pg-trait-wysiwyg textarea {
+  width: 100%;
+}
     </style>
 
 </head>
