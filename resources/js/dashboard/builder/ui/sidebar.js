@@ -162,19 +162,29 @@ function bindAdvancedToComponent(editor, cmp) {
 }
 
 
+// ابحث عن هذه الدالة في sidebar.js واستبدلها بهذا الكود
 function traitNameFromRow(row) {
+    // محاولة الحصول على الاسم من موديل GrapesJS مباشرة (للحقول المخصصة)
+    try {
+        if (row.model && typeof row.model.get === 'function') {
+            return row.model.get('name');
+        }
+    } catch (e) { }
+
     const field =
         row.querySelector('input[name]') ||
         row.querySelector('select[name]') ||
-        row.querySelector('textarea[name]');
-    return field?.getAttribute('name') || '';
+        row.querySelector('textarea[name]') ||
+        row.querySelector('[data-name]'); // دعم إضافي
+
+    return field?.getAttribute('name') || field?.dataset.name || '';
 }
 
 function pickBucketByTraitName(name) {
-    // ✅ Advanced traits
+    // أي خاصية تبدأ بـ pgAdv تذهب للمتقدم
     if (name.startsWith('pgAdv') || name.startsWith('pgHide')) return 'advanced';
 
-    // ✅ default => Content
+    // أي شيء آخر (بما في ذلك الصور) يذهب لتبويب المحتوى (traits)
     return 'traits';
 }
 

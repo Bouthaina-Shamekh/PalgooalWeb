@@ -25,7 +25,7 @@
 
     {{-- Main Tailwind / Palgoals stylesheet used in the builder shell --}}
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}" id="palgoals-app-css">
-    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="{{ asset('vendor/tinymce/tinymce.min.js') }}"></script>
 
     {{-- GrapesJS + custom builder JS entry --}}
     @vite('resources/js/dashboard/builder/index.js')
@@ -538,6 +538,24 @@
 .pg-trait-wysiwyg textarea {
   width: 100%;
 }
+.pg-media-btn {
+    width: 100%;
+    padding: 8px 12px;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 11px;
+    color: #475569;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pg-media-btn:hover {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
     </style>
 
 </head>
@@ -827,6 +845,51 @@
                 </aside>
             </main>
         </div>
+        {{-- زر مخفي لفتح مكتبة الوسائط من خلال GrapesJS Media Trait --}}
+{{-- منطقة مخفية لربط مكتبة الوسائط مع GrapesJS --}}
+<div id="pg-gjs-media-wrapper" class="hidden">
+    <x-dashboard.media-picker 
+        id="gjs_media_picker" 
+        name="gjs_media_picker" 
+        label="مكتبة الوسائط" 
+        value="" 
+        button-text="اختر من المكتبة"
+    />
+</div>
+<script>
+    function openPalgoalsMediaPicker(options = { multiple: false }) {
+        const wrapper = document.getElementById('pg-gjs-media-wrapper');
+        const pickerButton = wrapper.querySelector('button'); // الزر الفعلي داخل المكون
+        
+        if (pickerButton) {
+            // نقوم بمحاكاة النقر لفتح المودال الخاص بـ Laravel
+            pickerButton.click();
+
+            // الاستماع لتغيير القيمة في المكون (اعتماداً على نظامك، قد يكون حدث 'change' أو حدث مخصص)
+            // ملاحظة: معظم Media Pickers في Laravel تطلق حدثاً عند اختيار الملفات
+            window.addEventListener('media-picker:selected', function handler(e) {
+                // استخراج روابط الصور المختارة
+                const files = e.detail.files || []; 
+                const urls = files.map(f => f.url);
+
+                // إرسال البيانات إلى ملف media.js
+                window.dispatchEvent(new CustomEvent('media-picker-confirmed', { 
+                    detail: { items: files } 
+                }));
+
+                // إزالة المستمع بعد التنفيذ لمرة واحدة
+                window.removeEventListener('media-picker:selected', handler);
+            }, { once: true });
+        }
+    }
+
+    // ربط الحدث الذي يطلبه ملف media.js بالوظيفة أعلاه
+    window.addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-open-gjs-media')) {
+            openPalgoalsMediaPicker();
+        }
+    });
+</script>
     </body>
 
 </html>

@@ -416,5 +416,20 @@ export function registerBlocks(editor) {
         content: { type: 'pg-services-section' },
     });
 
+    // bm.add('pg-slider', {
+    //     label: 'slider',
+    //     category: 'Sections',
+    //     content: { type: 'pg-slider-section' },
+    // });
+    bm.add('pg-slider', {
+        label: 'Slider',
+        category: 'Sections',
+        content: {
+            type: 'pg-slider-section',
+            // تأكد من إضافة الكلاس هنا أيضاً لضمان التعرف عليه فور الإسقاط
+            classes: ['pg-slider-wrapper']
+        },
+    });
+
 }
 

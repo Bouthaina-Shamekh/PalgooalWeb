@@ -471,6 +471,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 previewContainer.appendChild(wrapper);
             });
         }
+        // داخل دالة applySelection في ملف media-picker.js
+        const applySelection = () => {
+            // ... كودك الحالي (targetInput, ids, previewContainer) ...
+
+            const items = Array.from(selectedItems.values());
+
+            // --- الإضافة لـ GrapesJS ---
+            // إرسال حدث مخصص يحتوي على مصفوفة العناصر المختارة كاملة
+            const event = new CustomEvent('media-picker-confirmed', {
+                detail: {
+                    items: items, // مصفوفة كائنات تحتوي على url, id, name الخ
+                    targetInputId: currentTargetInputId
+                }
+            });
+            window.dispatchEvent(event);
+            // -------------------------
+
+            closePicker();
+        };
 
         closePicker();
     };

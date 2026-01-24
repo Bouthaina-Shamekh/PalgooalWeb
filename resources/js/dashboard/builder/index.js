@@ -1,3 +1,19 @@
+let TinyPromise;
+const loadTiny = () => {
+    if (!TinyPromise) {
+        TinyPromise = import('tinymce/tinymce').then(async (m) => {
+            await import('tinymce/icons/default');
+            await import('tinymce/themes/silver');
+            await import('tinymce/models/dom');
+            await import('tinymce/plugins/link');
+            await import('tinymce/plugins/lists');
+            await import('tinymce/plugins/code');
+            return m.default;
+        });
+    }
+    return TinyPromise;
+};
+
 import grapesjs from 'grapesjs';
 import 'grapesjs/dist/css/grapes.min.css';
 
@@ -78,8 +94,75 @@ function initPageBuilder() {
 
 
         selectorManager: { componentFirst: true },
-        canvas: { styles: canvasStyles },
+        canvas: { 
+            styles: [
+                canvasStyles,
+                'https://unpkg.com/swiper/swiper-bundle.min.css'
+            ],
+            scripts: [
+                'https://unpkg.com/swiper/swiper-bundle.min.js'
+            ]
+        },
     });
+    editor.setCustomRte({
+        enable(el, rteInst = {}) {
+            el.contentEditable = true;
+            if (!window.tinymce) return rteInst;
+
+            // ✅ ID ثابت
+            const id = el.id || `pg-rte-${Date.now()}`;
+            el.id = id;
+
+            // ✅ remove old editor
+            const old = tinymce.get(id);
+            if (old) old.remove();
+
+            const isRtl = document.documentElement.getAttribute('dir') === 'rtl';
+            const lang = document.documentElement.lang?.startsWith('ar') ? 'ar' : 'en';
+
+            tinymce.init({
+                target: el,
+                inline: true,
+                menubar: false,
+                branding: false,
+                license_key: 'gpl',
+
+                plugins: 'link lists code',
+                toolbar:
+                    'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | code',
+
+                directionality: isRtl ? 'rtl' : 'ltr',
+                language: lang,
+
+                setup: (ed) => {
+                    rteInst.tiny = ed;
+
+                    // ✅ محاذاة افتراضية حسب اتجاه الصفحة
+                    ed.on('init', () => {
+                        ed.formatter.apply(isRtl ? 'alignright' : 'alignleft');
+                    });
+
+                    ed.on('change keyup blur', () => editor.trigger('change:changesCount'));
+                },
+            });
+
+            return rteInst;
+        }
+
+
+        // disable(el, rte) {
+        //     el.contentEditable = false;
+
+        //     const inst = rte?.tiny;
+        //     if (inst) {
+        //         inst.remove();
+        //         rte.tiny = null;
+        //     }
+        // },
+    });
+
+
+
 
     registerStyleManager(editor, { isRtl });
     bindEditorSidebarTabs(editor);
