@@ -91,110 +91,133 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    function toggleRtl(langId, isChecked) {
-        fetch('admin/languages/' + langId + '/toggle-rtl', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({
-                is_rtl: isChecked ? 1 : 0
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.success){
-                showSuccessToast('✅ RTL updated successfully');
-            } else {
-                showErrorToast('❌ Error updating RTL');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showErrorToast('❌ Error occurred');
-        });
-    }
+    // دالة موحدة لإظهار التنبيهات (Toasts)
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 2000,
+    timerProgressBar: true
+});
 
-    function toggleStatus(langId, isChecked) {
-        fetch('admin/languages/' + langId + '/toggle-status', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({
-                is_active: isChecked ? 1 : 0
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.success){
-                showSuccessToast('✅ Status updated successfully');
-            } else {
-                showErrorToast('❌ Error updating Status');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showErrorToast('❌ Error occurred');
-        });
-    }
+function toggleRtl(langId, isChecked) {
+    updateStatus(`/admin/languages/${langId}/toggle-rtl`, { is_rtl: isChecked ? 1 : 0 }, 'RTL');
+}
 
-    // ✅ Toast functions:
-    function showSuccessToast(message) {
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'success',
-            title: message,
-            showConfirmButton: false,
-            timer: 1500,
-            timerProgressBar: true
-        });
-    }
+function toggleStatus(langId, isChecked) {
+    updateStatus(`/admin/languages/${langId}/toggle-status`, { is_active: isChecked ? 1 : 0 }, 'Status');
+}
 
-    function showErrorToast(message) {
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'error',
-            title: message,
-            showConfirmButton: false,
-            timer: 2000,
-            timerProgressBar: true
-        });
-    }
-</script>
-<script>
-    function deleteLanguage(langId) {
-        if (confirm('Are you sure you want to delete this language?')) {
-            fetch('admin/languages/' + langId + '/delete', {
+// دالة عامة لتحديث الحالات (Toggle)
+function updateStatus(url, data, label) {
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.success) {
+            Toast.fire({ icon: 'success', title: `✅ ${label} updated successfully` });
+        } else {
+            Toast.fire({ icon: 'error', title: `❌ Error updating ${label}` });
+        }
+    })
+    .catch(() => Toast.fire({ icon: 'error', title: '❌ Connection error' }));
+}
+
+// دالة الحذف باستخدام SweetAlert2
+function deleteLanguage(langId) {
+    Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: "لن تتمكن من التراجع عن هذا الإجراء!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'نعم، احذف!',
+        cancelButtonText: 'إلغاء'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/admin/languages/${langId}`, { // المسار الصحيح للـ Resource Delete
                 method: 'DELETE',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
                 }
             })
             .then(response => response.json())
             .then(data => {
-                console.log(data);
-                if(data.success){
-                    showSuccessToast('✅ Language deleted successfully');
-                    // Optionally, reload the page:
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
+                if(data.success) {
+                    Swal.fire('تم الحذف!', 'تمت إزالة اللغة بنجاح.', 'success');
+                    setTimeout(() => location.reload(), 1000); // إعادة تحميل الصفحة لرؤية التغيير
                 } else {
-                    showErrorToast('❌ Error deleting language');
+                    Swal.fire('خطأ!', data.error || 'حدث خطأ أثناء الحذف.', 'error');
+                }
+            })
+            .catch(() => Swal.fire('خطأ!', 'فشل الاتصال بالخادم.', 'error'));
+        }
+    });
+}
+</script>
+<script>
+function deleteLanguage(langId) {
+    Swal.fire({
+        title: 'هل أنت متأكد؟',
+        text: "سيتم حذف اللغة نهائياً مع كافة الترجمات التابعة لها من قاعدة البيانات والذاكرة المؤقتة!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'نعم، احذف الآن',
+        cancelButtonText: 'تراجع',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // إظهار حالة التحميل
+            Swal.fire({
+                title: 'جاري الحذف...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            fetch('/admin/languages/' + langId, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Network error occurred');
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'تم الحذف!',
+                        text: 'تم تنظيف قاعدة البيانات وتحديث النظام.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        location.reload(); // إعادة التحميل بعد رسالة النجاح
+                    });
+                } else {
+                    throw new Error(data.error || 'حدث خطأ ما');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                showErrorToast('❌ Error occurred');
+                Swal.fire('خطأ!', error.message, 'error');
             });
         }
-    }
+    });
+}
 </script>
 
 </x-dashboard-layout>    

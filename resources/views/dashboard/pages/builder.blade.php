@@ -20,6 +20,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="pg-debug-view" content="CONTENT_EDITOR_V1">
+
 
     <title>{{ $pageTitle }} - {{ __('Visual Builder') }}</title>
 
@@ -530,366 +532,415 @@
                 display: none !important;
             }
         }
+
         .pg-trait-wysiwyg .tox-tinymce {
-  border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid rgba(148, 163, 184, 0.6);
-}
-.pg-trait-wysiwyg textarea {
-  width: 100%;
-}
-.pg-media-btn {
-    width: 100%;
-    padding: 8px 12px;
-    background-color: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 11px;
-    color: #475569;
-    font-weight: bold;
-    cursor: pointer;
-    transition: all 0.2s;
-}
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.6);
+        }
 
-.pg-media-btn:hover {
-    background-color: #f1f5f9;
-    border-color: #cbd5e1;
-}
+        .pg-trait-wysiwyg textarea {
+            width: 100%;
+        }
 
+        .pg-media-btn {
+            width: 100%;
+            padding: 8px 12px;
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 11px;
+            color: #475569;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pg-media-btn:hover {
+            background-color: #f1f5f9;
+            border-color: #cbd5e1;
+        }
     </style>
 
 </head>
 
-    <body class="h-full bg-slate-50 text-slate-900 ">
-        {{-- Root builder wrapper (used by page-builder.js via data-* attributes) --}}
-        <div id="page-builder-root" data-locale="{{ app()->getLocale() }}" class="min-h-screen flex flex-col"
-            data-load-url="{{ route('dashboard.pages.builder.data', $page) }}"
-            data-save-url="{{ route('dashboard.pages.builder.data.save', $page) }}"
-            data-preview-url="{{ $frontUrl }}" data-builder-url="{{ route('dashboard.pages.builder', $page) }}"
-            data-publish-url="{{ route('dashboard.pages.builder.publish', $page) }}"
-            data-page-id="{{ $page->id }}">
+<body class="h-full bg-slate-50 text-slate-900 ">
+    <div id="PG_DEBUG_MARK_CONTENT_EDITOR_V1" style="display:none"></div>
 
-            {{-- ===========================
+    {{-- Root builder wrapper (used by page-builder.js via data-* attributes) --}}
+    <div id="page-builder-root" 
+     data-locale="{{ app()->getLocale() }}"
+     class="min-h-screen flex flex-col"
+     data-load-url="{{ route('dashboard.pages.builder.data', $page) }}"
+     data-save-url="{{ route('dashboard.pages.builder.data.save', $page) }}"
+     data-preview-url="{{ $frontUrl }}"
+     data-builder-url="{{ route('dashboard.pages.builder', $page) }}"
+     data-publish-url="{{ route('dashboard.pages.builder.publish', $page) }}"
+     data-page-id="{{ $page->id }}">
+
+        {{-- ===========================
              TOP APP BAR / BUILDER HEADER
              ============================ --}}
-            <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
-                <div class="w-full px-4 py-2 lg:px-6">
-                    <div class="flex items-center justify-between gap-4 rtl:flex-row-reverse">
+        <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
+            <div class="w-full px-4 py-2 lg:px-6">
+                <div class="flex items-center justify-between gap-4 rtl:flex-row-reverse">
 
-                        {{-- LEFT GROUP: Back, Page title, Language switch --}}
-                        <div class="flex items-center gap-3 rtl:flex-row-reverse">
+                    {{-- LEFT GROUP: Back, Page title, Language switch --}}
+                    <div class="flex items-center gap-3 rtl:flex-row-reverse">
 
-                            {{-- Back to pages index --}}
-                            <a href="{{ route('dashboard.pages.index') }}"
-                                class="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-medium transition">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 rtl:rotate-180" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                        d="M10.5 19.5L3 12l7.5-7.5M3 12h18" />
-                                </svg>
-                                <span>{{ __('Back') }}</span>
-                            </a>
+                        {{-- Back to pages index --}}
+                        <a href="{{ route('dashboard.pages.index') }}"
+                            class="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-medium transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 rtl:rotate-180" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M10.5 19.5L3 12l7.5-7.5M3 12h18" />
+                            </svg>
+                            <span>{{ __('Back') }}</span>
+                        </a>
 
-                            {{-- Current page title chip --}}
-                            <div class="px-4 py-1 rounded-full text-[13px] font-semibold bg-slate-100 text-slate-800">
-                                {{ $pageTitle }}
-                            </div>
-
-                            {{-- Language switcher (dynamic, from DB) --}}
-                            @if ($hasMultipleLocales)
-                                <x-lang.language-switcher variant="builder" />
-                            @endif
+                        {{-- Current page title chip --}}
+                        <div class="px-4 py-1 rounded-full text-[13px] font-semibold bg-slate-100 text-slate-800">
+                            {{ $pageTitle }}
                         </div>
 
-                        {{-- CENTER GROUP: Device preview toggles (Desktop / Tablet / Mobile) --}}
-                        <div class="hidden sm:flex items-center gap-1 bg-slate-100 rounded-full p-[3px]">
-                            {{-- Buttons are wired in page-builder.js via .builder-preview-btn + data-preview attr --}}
-                            <button class="px-4 py-1.5 text-xs rounded-full font-medium builder-preview-btn active"
-                                data-preview="desktop">
-                                Desktop
-                            </button>
-                            <button class="px-4 py-1.5 text-xs rounded-full font-medium builder-preview-btn"
-                                data-preview="tablet">
-                                Tablet
-                            </button>
-                            <button class="px-4 py-1.5 text-xs rounded-full font-medium builder-preview-btn"
-                                data-preview="mobile">
-                                Mobile
-                            </button>
-                        </div>
-
-                        {{-- RIGHT GROUP: Live page, Reset, Save, and status --}}
-                        <div class="flex items-center gap-2 rtl:flex-row-reverse">
-
-                            {{-- Open current page on frontend --}}
-                            <a href="{{ $frontUrl }}" target="_blank"
-                                class="text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 font-medium">
-                                {{ __('Live Page') }}
-                            </a>
-
-                            {{-- Publish button --}}
-                            <button id="builder-publish" type="button"
-                                class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700">
-                                🚀 <span>نشر الصفحة</span>
-                            </button>
-
-                            {{-- Preview link --}}
-                            <a id="builder-preview" href="{{ $frontUrl }}" target="_blank"
-                                class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-                                👁 <span>معاينة</span>
-                            </a>
-
-                            {{-- Reset builder content --}}
-                            <button id="builder-reset"
-                                class="px-3 py-1.5 text-xs font-semibold rounded-full border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition">
-                                {{ __('Reset Page') }}
-                            </button>
-
-                            {{-- Save builder content --}}
-                            <button id="pg-save-btn" type="button"
-                                class="px-5 py-1.5 text-xs font-semibold rounded-full bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow hover:shadow-md transition">
-                                {{ __('Save') }}
-                            </button>
-
-                            <span id="pg-save-status" class="text-xs text-slate-500">
-                                {{ __('Saved') }}
-                            </span>
-
-                            {{-- Realtime save status --}}
-                            <div id="builder-save-status"
-                                class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200 text-[11px] text-slate-600">
-                                <span data-status-dot class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                                <span data-status-text>{{ __('Unsaved') }}</span>
-                                <span class="text-slate-400">•</span>
-                                <span data-status-time>--:--</span>
-                            </div>
-                        </div>
-
+                        {{-- Language switcher (dynamic, from DB) --}}
+                        @if ($hasMultipleLocales)
+                            <x-lang.language-switcher variant="builder" />
+                        @endif
                     </div>
-                </div>
-            </header>
 
-            {{-- ===========================
+                    {{-- CENTER GROUP: Device preview toggles (Desktop / Tablet / Mobile) --}}
+                    <div class="hidden sm:flex items-center gap-1 bg-slate-100 rounded-full p-[3px]">
+                        {{-- Buttons are wired in page-builder.js via .builder-preview-btn + data-preview attr --}}
+                        <button class="px-4 py-1.5 text-xs rounded-full font-medium builder-preview-btn active"
+                            data-preview="desktop">
+                            Desktop
+                        </button>
+                        <button class="px-4 py-1.5 text-xs rounded-full font-medium builder-preview-btn"
+                            data-preview="tablet">
+                            Tablet
+                        </button>
+                        <button class="px-4 py-1.5 text-xs rounded-full font-medium builder-preview-btn"
+                            data-preview="mobile">
+                            Mobile
+                        </button>
+                    </div>
+
+                    {{-- RIGHT GROUP: Live page, Reset, Save, and status --}}
+                    <div class="flex items-center gap-2 rtl:flex-row-reverse">
+
+                        {{-- Open current page on frontend --}}
+                        <a href="{{ $frontUrl }}" target="_blank"
+                            class="text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 font-medium">
+                            {{ __('Live Page') }}
+                        </a>
+
+                        {{-- Publish button --}}
+                        <button id="builder-publish" type="button"
+                            class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700">
+                            🚀 <span>نشر الصفحة</span>
+                        </button>
+
+                        {{-- Preview link --}}
+                        <a id="builder-preview" href="{{ $frontUrl }}" target="_blank"
+                            class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                            👁 <span>معاينة</span>
+                        </a>
+
+                        {{-- Reset builder content --}}
+                        <button id="builder-reset"
+                            class="px-3 py-1.5 text-xs font-semibold rounded-full border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition">
+                            {{ __('Reset Page') }}
+                        </button>
+
+                        {{-- Save builder content --}}
+                        <button id="pg-save-btn" type="button"
+                            class="px-5 py-1.5 text-xs font-semibold rounded-full bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow hover:shadow-md transition">
+                            {{ __('Save') }}
+                        </button>
+
+                        <span id="pg-save-status" class="text-xs text-slate-500">
+                            {{ __('Saved') }}
+                        </span>
+
+                        {{-- Realtime save status --}}
+                        <div id="builder-save-status"
+                            class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200 text-[11px] text-slate-600">
+                            <span data-status-dot class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                            <span data-status-text>{{ __('Unsaved') }}</span>
+                            <span class="text-slate-400">•</span>
+                            <span data-status-time>--:--</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </header>
+
+        {{-- ===========================
              MAIN LAYOUT (Canvas + Sidebar)
              ============================ --}}
-            <main class="flex-1 flex bg-slate-50">
+        <main class="flex-1 flex bg-slate-50">
 
-                {{-- ===== CANVAS AREA (GrapesJS iframe / content) ===== --}}
-                <section class="flex-1 order-2">
-                    <div class="h-full rounded-2xl border border-slate-200 bg-white shadow-sm builder-canvas">
-                        <div class="h-full overflow-auto p-0">
+            {{-- ===== CANVAS AREA (GrapesJS iframe / content) ===== --}}
+            <section class="flex-1 order-2">
+                <div class="h-full rounded-2xl border border-slate-200 bg-white shadow-sm builder-canvas">
+                    <div class="h-full overflow-auto p-0">
 
-                            {{-- Empty state – shown before GrapesJS is fully initialised --}}
-                            <div id="builder-empty-state"
-                                class="min-h-[420px] flex items-center justify-center text-center">
-                                <div class="max-w-md space-y-6">
-                                    <p class="text-sm font-semibold text-slate-700">
-                                        {{ __('Drag blocks to start building') }}
-                                    </p>
-                                    <p class="text-xs text-slate-500">
-                                        {{ __('Use the Blocks panel to drag elements and reorder them on the canvas.') }}
-                                    </p>
-                                    <div
-                                        class="inline-flex items-center gap-2 text-xs text-slate-500 bg-white/80 border border-slate-200 rounded-full px-3 py-1 shadow-sm">
-                                        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                                        <span>{{ __('Ready for content') }}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- GrapesJS mount point (editor renders here) --}}
-                            <div id="gjs" class="min-h-[620px]"></div>
-                        </div>
-                    </div>
-                </section>
-
-                {{-- ===== SIDEBAR: Elementor-like Widgets Panel ===== --}}
-                <aside
-                    class="relative order-1 w-[360px] min-w-[360px] max-w-[360px]  md:w-80 xl:w-72 border border-slate-200/80 bg-white shadow-xl shadow-slate-200/60 flex flex-col h-[calc(100vh-3.5rem)]">
-
-                    {{-- Header title --}}
-                    <div class="px-4 pt-4 pb-3 border-b border-slate-200">
-                        <h2 class="text-base font-semibold text-slate-900 text-center">
-                            العناصر
-                        </h2>
-                    </div>
-                    {{-- Search bar (for widgets tab) --}}
-                    <div class="px-4 py-3 border-b border-slate-200 pg-widgets-search-wrap">
-
-                        <div class="relative">
-                            <input type="text" id="pg-widgets-search" data-role="widgets-search"
-                                class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400"
-                                placeholder="... ابحث في الودجات" dir="auto" />
-                            <span
-                                class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400 text-xs">
-                                🔍
-                            </span>
-                        </div>
-                    </div>
-
-                    {{-- TAB CONTENTS --}}
-                    <div class="flex-1 overflow-y-auto">
-                        {{-- Widgets tab (main) --}}
-                        <section class="px-4 py-4 space-y-6 pg-sidebar-panel pg-widgets-panel" data-panel="widgets"
-                            data-active="true">
-                            {{-- Layout group (التنسيق) --}}
-                            <div class="space-y-3">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs font-semibold text-slate-700">
-                                        التنسيق
-                                    </span>
-                                    <button type="button" id="pg-widgets-toggle"
-                                        class="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-1">
-                                        <span>إخفاء / إظهار</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 20 20"
-                                            fill="currentColor">
-                                            <path fill-rule="evenodd"
-                                                d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
-                                </div>
-
-                                {{-- هنا سيقوم GrapesJS بملء البلوكات، نعرضها كشبكة تشبه Elementor --}}
-                                <div id="pg-widgets-wrap">
-                                    <div id="gjs-blocks" class="p-0"></div>
-                                </div>
-                            </div>
-
-                            {{-- Basic group (أساسي) – يمكن لاحقاً تقسيم البلوكات حسب الكاتيجوري من خلال JS --}}
-                            <div class="pt-4 border-t border-slate-200 space-y-3">
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs font-semibold text-slate-700">
-                                        أساسي
-                                    </span>
-                                    <button type="button"
-                                        class="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-1">
-                                        <span>إخفاء / إظهار</span>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 20 20"
-                                            fill="currentColor">
-                                            <path fill-rule="evenodd"
-                                                d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
-                                </div>
-
-                                {{-- يمكنك لاحقاً عمل كونتينر ثاني مثلاً #gjs-blocks-basic من خلال JS
-                                 حالياً نضع Placeholder فقط حتى لا نغيّر منطق JS الموجود --}}
+                        {{-- Empty state – shown before GrapesJS is fully initialised --}}
+                        <div id="builder-empty-state"
+                            class="min-h-[420px] flex items-center justify-center text-center">
+                            <div class="max-w-md space-y-6">
+                                <p class="text-sm font-semibold text-slate-700">
+                                    {{ __('Drag blocks to start building') }}
+                                </p>
+                                <p class="text-xs text-slate-500">
+                                    {{ __('Use the Blocks panel to drag elements and reorder them on the canvas.') }}
+                                </p>
                                 <div
-                                    class="grid grid-cols-2 gap-3 text-[11px] text-slate-400 border border-dashed border-slate-200 rounded-xl py-6 px-3 text-center">
-                                    <span>
-                                        سيتم تقسيم العناصر إلى مجموعات (Basic / Layout / Media ...)
-                                        من خلال إعدادات BlockManager في JavaScript لاحقاً.
-                                    </span>
+                                    class="inline-flex items-center gap-2 text-xs text-slate-500 bg-white/80 border border-slate-200 rounded-full px-3 py-1 shadow-sm">
+                                    <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                                    <span>{{ __('Ready for content') }}</span>
                                 </div>
                             </div>
-                        </section>
+                        </div>
 
-                        {{-- Globals tab (Properties Panel) --}}
-                        <section class="px-4 py-4 space-y-4 pg-sidebar-panel" data-panel="element"
-                            data-active="false">
-
-                            <div class="pg-props-tabs-wrap">
-                                <div class="px-3 pt-3 pb-2 border-b border-slate-200/70">
-                                    <div class="flex items-center justify-between">
-                                        <div class="text-[11px] font-semibold tracking-[0.10em] text-slate-500">
-                                            إعدادات العنصر
-                                        </div>
-
-                                        <div id="pg-props-selected"
-                                            class="text-xs font-semibold text-slate-700 truncate max-w-[60%]">
-                                            لا يوجد تحديد
-                                        </div>
-                                    </div>
-
-                                    <div class="mt-3 grid grid-cols-3 gap-2">
-                                        <button type="button" class="pg-props-tab-btn" data-prop-tab="traits"
-                                            data-active="true">محتوى</button>
-                                        <button type="button" class="pg-props-tab-btn" data-prop-tab="styles"
-                                            data-active="false">تنسيق</button>
-                                        <button type="button" class="pg-props-tab-btn" data-prop-tab="advanced"
-                                            data-active="false">متقدم</button>
-                                    </div>
-                                </div>
-
-                                <div class="p-3">
-                                    <div class="pg-props-tab-content" data-prop-content="traits" data-active="true">
-                                        <div id="gjs-traits"></div>
-                                    </div>
-
-                                    <div class="pg-props-tab-content" data-prop-content="styles" data-active="false">
-                                        <div id="gjs-styles"></div>
-                                    </div>
-
-                                    <div class="pg-props-tab-content" data-prop-content="advanced"
-                                        data-active="false">
-                                        <div id="pg-advanced" class="space-y-4"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-
-
-
-                        {{-- Yoast SEO tab (Placeholder حالياً) --}}
-                        <section class="px-4 py-4 space-y-3 pg-sidebar-tab-content" data-tab-content="yoast"
-                            data-active="false">
-                            <p class="text-xs text-slate-500">
-                                هنا يمكن لاحقاً إضافة حقول السيو الخاصة بالصفحة (العنوان، الوصف، الـ OG image...)
-                                أو ربط إضافات خارجية.
-                            </p>
-                        </section>
+                        {{-- GrapesJS mount point (editor renders here) --}}
+                        <div id="gjs" class="min-h-[620px]"></div>
                     </div>
-                </aside>
-            </main>
+                </div>
+            </section>
+
+            {{-- ===== SIDEBAR: Elementor-like Widgets Panel ===== --}}
+            <aside
+                class="relative order-1 w-[360px] min-w-[360px] max-w-[360px]  md:w-80 xl:w-72 border border-slate-200/80 bg-white shadow-xl shadow-slate-200/60 flex flex-col h-[calc(100vh-3.5rem)]">
+
+                {{-- Header title --}}
+                <div class="px-4 pt-4 pb-3 border-b border-slate-200">
+                    <h2 class="text-base font-semibold text-slate-900 text-center">
+                        العناصر
+                    </h2>
+                </div>
+                {{-- Search bar (for widgets tab) --}}
+                <div class="px-4 py-3 border-b border-slate-200 pg-widgets-search-wrap">
+
+                    <div class="relative">
+                        <input type="text" id="pg-widgets-search" data-role="widgets-search"
+                            class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400"
+                            placeholder="... ابحث في الودجات" dir="auto" />
+                        <span
+                            class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400 text-xs">
+                            🔍
+                        </span>
+                    </div>
+                </div>
+
+                {{-- TAB CONTENTS --}}
+                <div class="flex-1 overflow-y-auto">
+                    {{-- Widgets tab (main) --}}
+                    <section class="px-4 py-4 space-y-6 pg-sidebar-panel pg-widgets-panel" data-panel="widgets"
+                        data-active="true">
+                        {{-- Layout group (التنسيق) --}}
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-semibold text-slate-700">
+                                    التنسيق
+                                </span>
+                                <button type="button" id="pg-widgets-toggle"
+                                    class="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-1">
+                                    <span>إخفاء / إظهار</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 20 20"
+                                        fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {{-- هنا سيقوم GrapesJS بملء البلوكات، نعرضها كشبكة تشبه Elementor --}}
+                            <div id="pg-widgets-wrap">
+                                <div id="gjs-blocks" class="p-0"></div>
+                            </div>
+                        </div>
+
+                        {{-- Basic group (أساسي) – يمكن لاحقاً تقسيم البلوكات حسب الكاتيجوري من خلال JS --}}
+                        <div class="pt-4 border-t border-slate-200 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-semibold text-slate-700">
+                                    أساسي
+                                </span>
+                                <button type="button"
+                                    class="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-1">
+                                    <span>إخفاء / إظهار</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 20 20"
+                                        fill="currentColor">
+                                        <path fill-rule="evenodd"
+                                            d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {{-- يمكنك لاحقاً عمل كونتينر ثاني مثلاً #gjs-blocks-basic من خلال JS
+                                 حالياً نضع Placeholder فقط حتى لا نغيّر منطق JS الموجود --}}
+                            <div
+                                class="grid grid-cols-2 gap-3 text-[11px] text-slate-400 border border-dashed border-slate-200 rounded-xl py-6 px-3 text-center">
+                                <span>
+                                    سيتم تقسيم العناصر إلى مجموعات (Basic / Layout / Media ...)
+                                    من خلال إعدادات BlockManager في JavaScript لاحقاً.
+                                </span>
+                            </div>
+                        </div>
+                    </section>
+
+                    {{-- Globals tab (Properties Panel) --}}
+                    <section class="px-4 py-4 space-y-4 pg-sidebar-panel" data-panel="element" data-active="false">
+
+                        <div class="pg-props-tabs-wrap">
+                            <div class="px-3 pt-3 pb-2 border-b border-slate-200/70">
+                                <div class="flex items-center justify-between">
+                                    <div class="text-[11px] font-semibold tracking-[0.10em] text-slate-500">
+                                        إعدادات العنصر
+                                    </div>
+
+                                    <div id="pg-props-selected"
+                                        class="text-xs font-semibold text-slate-700 truncate max-w-[60%]">
+                                        لا يوجد تحديد
+                                    </div>
+                                </div>
+
+                                <div class="mt-3 grid grid-cols-3 gap-2">
+                                    <button type="button" class="pg-props-tab-btn" data-prop-tab="traits"
+                                        data-active="true">محتوى</button>
+                                    <button type="button" class="pg-props-tab-btn" data-prop-tab="styles"
+                                        data-active="false">تنسيق</button>
+                                    <button type="button" class="pg-props-tab-btn" data-prop-tab="advanced"
+                                        data-active="false">متقدم</button>
+                                </div>
+                            </div>
+
+                            <div class="p-3">
+<div class="pg-props-tab-content space-y-4" data-prop-content="traits" data-active="true">
+
+    {{-- ✅ Marker واضح للتأكد من ظهور المحتوى --}}
+    <div id="PG_DEBUG_MARK_CONTENT_EDITOR_V1" class="hidden">PG_DEBUG_MARK: CONTENT_EDITOR_V1</div>
+
+    {{-- ✅ صندوق “محرر محتوى النص” --}}
+    <div class="pg-gjs-box space-y-2">
+        <div class="text-[11px] font-extrabold text-slate-700">المحتوى</div>
+
+        {{-- تظهر عندما لا يكون هناك عنصر Text --}}
+        <div id="pg-content-empty"
+             class="text-[11px] text-slate-500 bg-slate-50 border border-dashed border-slate-200 rounded-xl px-3 py-3">
+            اختر عنصر نصي (Text) لتعديل المحتوى
         </div>
-        {{-- زر مخفي لفتح مكتبة الوسائط من خلال GrapesJS Media Trait --}}
-{{-- منطقة مخفية لربط مكتبة الوسائط مع GrapesJS --}}
-<div id="pg-gjs-media-wrapper" class="hidden">
-    <x-dashboard.media-picker 
-        id="gjs_media_picker" 
-        name="gjs_media_picker" 
-        label="مكتبة الوسائط" 
-        value="" 
-        button-text="اختر من المكتبة"
-    />
+
+        {{-- تظهر عندما تختار عنصر Text --}}
+        <div id="pg-content-editor" class="hidden space-y-2">
+            <textarea id="pg-content-text"
+                      dir="auto"
+                      rows="6"
+                      class="w-full rounded-xl border border-slate-300 px-3 py-2 text-[12px] leading-relaxed"></textarea>
+
+            <div class="text-[10px] text-slate-500">
+                * إذا كان TinyMCE مفعّل داخل الـ canvas، هذا textarea يكون fallback فقط.
+            </div>
+        </div>
+    </div>
+
+    {{-- ✅ توزيع Traits إلى (محتوى / متقدم) حسب sidebar.js --}}
+    <div class="pg-gjs-box space-y-2">
+        <div class="text-[11px] font-extrabold text-slate-700">خصائص المحتوى</div>
+        <div id="pg-el-content-fields" class="space-y-2"></div>
+    </div>
+
+    <div class="pg-gjs-box space-y-2">
+        <div class="text-[11px] font-extrabold text-slate-700">خصائص متقدمة</div>
+        <div id="pg-el-advanced-fields" class="space-y-2"></div>
+    </div>
+
+    {{-- ✅ مهم جداً: هذا هو المصدر الذي يرسم فيه GrapesJS traits قبل ما ننقلها --}}
+    <div id="gjs-traits" class="hidden"></div>
+
 </div>
-<script>
-    function openPalgoalsMediaPicker(options = { multiple: false }) {
-        const wrapper = document.getElementById('pg-gjs-media-wrapper');
-        const pickerButton = wrapper.querySelector('button'); // الزر الفعلي داخل المكون
-        
-        if (pickerButton) {
-            // نقوم بمحاكاة النقر لفتح المودال الخاص بـ Laravel
-            pickerButton.click();
 
-            // الاستماع لتغيير القيمة في المكون (اعتماداً على نظامك، قد يكون حدث 'change' أو حدث مخصص)
-            // ملاحظة: معظم Media Pickers في Laravel تطلق حدثاً عند اختيار الملفات
-            window.addEventListener('media-picker:selected', function handler(e) {
-                // استخراج روابط الصور المختارة
-                const files = e.detail.files || []; 
-                const urls = files.map(f => f.url);
 
-                // إرسال البيانات إلى ملف media.js
-                window.dispatchEvent(new CustomEvent('media-picker-confirmed', { 
-                    detail: { items: files } 
-                }));
 
-                // إزالة المستمع بعد التنفيذ لمرة واحدة
-                window.removeEventListener('media-picker:selected', handler);
-            }, { once: true });
+
+                                <div class="pg-props-tab-content" data-prop-content="styles" data-active="false">
+                                    <div id="gjs-styles"></div>
+                                </div>
+
+                                <div class="pg-props-tab-content" data-prop-content="advanced" data-active="false">
+                                    <div id="pg-advanced" class="space-y-4"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+
+
+
+                    {{-- Yoast SEO tab (Placeholder حالياً) --}}
+                    <section class="px-4 py-4 space-y-3 pg-sidebar-tab-content" data-tab-content="yoast"
+                        data-active="false">
+                        <p class="text-xs text-slate-500">
+                            هنا يمكن لاحقاً إضافة حقول السيو الخاصة بالصفحة (العنوان، الوصف، الـ OG image...)
+                            أو ربط إضافات خارجية.
+                        </p>
+                    </section>
+                </div>
+            </aside>
+        </main>
+    </div>
+    {{-- زر مخفي لفتح مكتبة الوسائط من خلال GrapesJS Media Trait --}}
+    {{-- منطقة مخفية لربط مكتبة الوسائط مع GrapesJS --}}
+    <div id="pg-gjs-media-wrapper" class="hidden">
+        <x-dashboard.media-picker id="gjs_media_picker" name="gjs_media_picker" label="مكتبة الوسائط" value=""
+            button-text="اختر من المكتبة" />
+    </div>
+    <script>
+        function openPalgoalsMediaPicker(options = {
+            multiple: false
+        }) {
+            const wrapper = document.getElementById('pg-gjs-media-wrapper');
+            const pickerButton = wrapper.querySelector('button'); // الزر الفعلي داخل المكون
+
+            if (pickerButton) {
+                // نقوم بمحاكاة النقر لفتح المودال الخاص بـ Laravel
+                pickerButton.click();
+
+                // الاستماع لتغيير القيمة في المكون (اعتماداً على نظامك، قد يكون حدث 'change' أو حدث مخصص)
+                // ملاحظة: معظم Media Pickers في Laravel تطلق حدثاً عند اختيار الملفات
+                window.addEventListener('media-picker:selected', function handler(e) {
+                    // استخراج روابط الصور المختارة
+                    const files = e.detail.files || [];
+                    const urls = files.map(f => f.url);
+
+                    // إرسال البيانات إلى ملف media.js
+                    window.dispatchEvent(new CustomEvent('media-picker-confirmed', {
+                        detail: {
+                            items: files
+                        }
+                    }));
+
+                    // إزالة المستمع بعد التنفيذ لمرة واحدة
+                    window.removeEventListener('media-picker:selected', handler);
+                }, {
+                    once: true
+                });
+            }
         }
-    }
 
-    // ربط الحدث الذي يطلبه ملف media.js بالوظيفة أعلاه
-    window.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-open-gjs-media')) {
-            openPalgoalsMediaPicker();
-        }
-    });
-</script>
-    </body>
+        // ربط الحدث الذي يطلبه ملف media.js بالوظيفة أعلاه
+        window.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-open-gjs-media')) {
+                openPalgoalsMediaPicker();
+            }
+        });
+    </script>
+</body>
 
 </html>

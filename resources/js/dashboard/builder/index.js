@@ -107,20 +107,22 @@ function initPageBuilder() {
     editor.setCustomRte({
         enable(el, rteInst = {}) {
             el.contentEditable = true;
+
+            // لازم tinymce يكون موجود (أنت محمّله من blade)
             if (!window.tinymce) return rteInst;
 
-            // ✅ ID ثابت
             const id = el.id || `pg-rte-${Date.now()}`;
             el.id = id;
 
-            // ✅ remove old editor
-            const old = tinymce.get(id);
+            // remove old editor if exists
+            const old = window.tinymce.get(id);
             if (old) old.remove();
 
             const isRtl = document.documentElement.getAttribute('dir') === 'rtl';
-            const lang = document.documentElement.lang?.startsWith('ar') ? 'ar' : 'en';
+            const docLang = (document.documentElement.lang || 'en').toLowerCase();
+            const lang = docLang.startsWith('ar') ? 'ar' : 'en';
 
-            tinymce.init({
+            window.tinymce.init({
                 target: el,
                 inline: true,
                 menubar: false,
@@ -128,38 +130,46 @@ function initPageBuilder() {
                 license_key: 'gpl',
 
                 plugins: 'link lists code',
-                toolbar:
-                    'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | code',
+                toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | code',
 
                 directionality: isRtl ? 'rtl' : 'ltr',
-                language: lang,
+
+                // ✅ لا تضع language إلا إذا كان عندك ملف اللغة فعلياً
+                ...(lang === 'ar' ? {} : {}),
 
                 setup: (ed) => {
                     rteInst.tiny = ed;
 
-                    // ✅ محاذاة افتراضية حسب اتجاه الصفحة
                     ed.on('init', () => {
                         ed.formatter.apply(isRtl ? 'alignright' : 'alignleft');
                     });
 
-                    ed.on('change keyup blur', () => editor.trigger('change:changesCount'));
+                    ed.on('change keyup blur', () => {
+                        // هذه أفضل من trigger change:changesCount لأنها بتسجّل تعديل حقيقي
+                        editor.trigger('change');
+                    });
                 },
             });
 
             return rteInst;
-        }
+        },
 
+        disable(el, rteInst = {}) {
+            // ✅ هذا يمنع crash
+            el.contentEditable = false;
 
-        // disable(el, rte) {
-        //     el.contentEditable = false;
+            try {
+                const inst = rteInst?.tiny || (el.id ? window.tinymce?.get(el.id) : null);
+                if (inst) inst.remove();
+            } catch (e) {
+                // ignore
+            }
 
-        //     const inst = rte?.tiny;
-        //     if (inst) {
-        //         inst.remove();
-        //         rte.tiny = null;
-        //     }
-        // },
+            rteInst.tiny = null;
+            return rteInst;
+        },
     });
+
 
 
 

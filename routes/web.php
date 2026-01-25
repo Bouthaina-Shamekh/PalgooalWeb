@@ -23,6 +23,8 @@ use App\Models\Tenancy\SubscriptionPage;
 
 Route::middleware(['setLocale'])->group(function () {
 
+
+
     /*
     |--------------------------------------------------------------------------
     | Marketing Home Page
@@ -158,7 +160,7 @@ Route::middleware(['setLocale'])->group(function () {
     Route::get('/{slug}', [FrontPageController::class, 'show'])
         ->where(
             'slug',
-            '^(?!(client|admin|dashboard|api|storage|change-locale|checkout|portfolio|invoices|bulk|tenant-preview)(/|$)).*$'
+        '^(?!(client|admin|dashboard|api|storage|change-locale|checkout|portfolio|invoices|bulk|tenant-preview|__pg_debug_builder)(/|$)).*$'
         )
         ->name('frontend.page.show');
 

@@ -3,6 +3,83 @@ import { q, qa } from '../helpers/dom';
 
 let lastElementTab = 'traits'; // محتوى افتراضي
 
+/**
+ * -------------------------------------------------------------
+ * Content Tab: pg-text helpers (GLOBAL SCOPE)
+ * -------------------------------------------------------------
+ */
+function isPgText(cmp) {
+    return cmp?.get?.('type') === 'pg-text';
+}
+
+function getPgTextContent(cmp) {
+    const child = cmp.components?.().at(0);
+    return child?.get?.('content') ?? '';
+}
+
+function setPgTextContent(cmp, value) {
+    const child = cmp.components?.().at(0);
+    if (!child) return;
+
+    child.set('content', value);
+    child.view?.render?.();
+}
+
+/**
+ * -------------------------------------------------------------
+ * Content Tab binder (GLOBAL SCOPE)
+ * -------------------------------------------------------------
+ */
+function bindContentTab(editor) {
+    const textarea = q('#pg-content-text');
+    const empty = q('#pg-content-empty');
+    const editorWrap = q('#pg-content-editor');
+
+    // لو ما في عناصر UI في Blade لا تعمل شيء
+    if (!editor || !textarea) return;
+
+    let syncing = false;
+
+    editor.on('component:selected', (cmp) => {
+        if (isPgText(cmp)) {
+            setElementTab('traits');
+        }
+        if (!isPgText(cmp)) {
+            empty?.classList.remove('hidden');
+            editorWrap?.classList.add('hidden');
+            textarea.value = '';
+            return;
+        }
+
+        empty?.classList.add('hidden');
+        editorWrap?.classList.remove('hidden');
+
+        syncing = true;
+        textarea.value = getPgTextContent(cmp);
+        syncing = false;
+    });
+
+    // لو تغيّر النص من أي مكان آخر، خلي textarea يتزامن (اختياري لكنه مفيد)
+    editor.on('component:update', (cmp) => {
+        const selected = editor.getSelected?.();
+        if (!selected || selected !== cmp) return;
+        if (!isPgText(cmp)) return;
+
+        syncing = true;
+        textarea.value = getPgTextContent(cmp);
+        syncing = false;
+    });
+
+    textarea.addEventListener('input', () => {
+        if (syncing) return;
+
+        const cmp = editor.getSelected?.();
+        if (!isPgText(cmp)) return;
+
+        setPgTextContent(cmp, textarea.value);
+    });
+}
+
 function setPanel(panelName) {
     const panels = qa('.pg-sidebar-panel');
     panels.forEach((p) => {
@@ -34,6 +111,7 @@ function setSelectedLabel(text) {
     const el = q('#pg-props-selected');
     if (el) el.textContent = text || 'لا يوجد تحديد';
 }
+
 function ensureAdvancedUI() {
     const host = q('#pg-advanced');
     if (!host) return;
@@ -161,7 +239,6 @@ function bindAdvancedToComponent(editor, cmp) {
     hm?.addEventListener('change', syncHide);
 }
 
-
 // ابحث عن هذه الدالة في sidebar.js واستبدلها بهذا الكود
 function traitNameFromRow(row) {
     // محاولة الحصول على الاسم من موديل GrapesJS مباشرة (للحقول المخصصة)
@@ -210,8 +287,6 @@ function distributeTraits() {
     });
 }
 
-
-
 export function initSidebarTabs() {
     // Element inner tabs only
     qa('.pg-props-tab-btn').forEach((btn) => {
@@ -248,7 +323,10 @@ export function bindEditorSidebarTabs(editor) {
         // لو ضغط على Text داخل heading -> اختار الأب
         if (cmp?.is?.('text')) {
             const parent = cmp.parent && cmp.parent();
-            if (parent && parent.get?.('type') === 'pg-heading') {
+            const pType = parent?.get?.('type');
+
+            // ✅ لو النص داخل heading أو text -> نختار العنصر الأب
+            if (parent && (pType === 'pg-heading' || pType === 'pg-text')) {
                 editor.select(parent);
                 return;
             }
@@ -272,7 +350,6 @@ export function bindEditorSidebarTabs(editor) {
         setSelectedLabel(name);
         bindAdvancedToComponent(editor, cmp);
 
-
         // ✅ بعد ما Grapes يرسم traits
         setTimeout(refresh, 0);
     });
@@ -281,8 +358,10 @@ export function bindEditorSidebarTabs(editor) {
         setPanel('widgets');
         setSelectedLabel('لا يوجد تحديد');
     });
-}
 
+    // ✅ ربط Tab المحتوى مرة واحدة فقط
+    bindContentTab(editor);
+}
 
 /* Widgets toggle */
 export function initWidgetsToggle() {
