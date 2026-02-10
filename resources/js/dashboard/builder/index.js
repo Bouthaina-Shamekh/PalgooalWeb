@@ -16,11 +16,13 @@ const loadTiny = () => {
 
 import grapesjs from 'grapesjs';
 import 'grapesjs/dist/css/grapes.min.css';
+import './builder'
 
 import { q, qa } from './helpers/dom';
-import { initSidebarTabs, initWidgetsToggle, initWidgetsSearch, simplifyBlocksPalette, bindEditorSidebarTabs } from './ui/sidebar';
+import { initSidebarTabs, initWidgetsToggle, initWidgetsSearch, simplifyBlocksPalette, bindEditorSidebarTabs, initBoxSpacingInputs } from './ui/sidebar';
 import { initCanvas } from './grapes/canvas';
-import { registerBlocks } from './grapes/blocks';
+import { initPreviewDropdown } from './actions/devices';
+import { registerBlocks, registerBlocksInBox } from './grapes/blocks';
 import { registerFeaturesSection } from './grapes/features';
 import { createProjectStorage } from './storage/project';
 import { resetPage } from './actions/reset';
@@ -61,7 +63,7 @@ function initPageBuilder() {
 
     // Init UI
     initSidebarTabs();
-    
+
 
     // Grapes init
     const editor = grapesjs.init({
@@ -82,7 +84,8 @@ function initPageBuilder() {
 
         panels: { defaults: [] },
 
-        blockManager: elBlocks ? { appendTo: '#gjs-blocks' } : {},
+        // blockManager: elBlocks ? { appendTo: '#gjs-blocks', custom: true } : { custom: true },
+        blockManager: { custom: true },
         layerManager: elLayers ? { appendTo: '#gjs-layers' } : {},
         traitManager: elTraits ? { appendTo: '#gjs-traits' } : {},
         styleManager: elStyles
@@ -94,7 +97,7 @@ function initPageBuilder() {
 
 
         selectorManager: { componentFirst: true },
-        canvas: { 
+        canvas: {
             styles: [
                 canvasStyles,
                 'https://unpkg.com/swiper/swiper-bundle.min.css'
@@ -176,6 +179,7 @@ function initPageBuilder() {
 
     registerStyleManager(editor, { isRtl });
     bindEditorSidebarTabs(editor);
+    initBoxSpacingInputs();
 
     // Canvas init (dir + inject css)
     initCanvas(editor, {
@@ -184,8 +188,55 @@ function initPageBuilder() {
         cssUrl: '/assets/tamplate/css/app.css',
     });
 
+    const btn = document.getElementById('btnSidebar');
+
+    btn.addEventListener('click', () => {
+        corePreview(editor)
+    });
+
+    function corePreview(editor) {
+        const isActive = editor.Commands.isActive('core:preview');
+        if (isActive) {
+            editor.stopCommand('core:preview');
+            toggleCanvasInteraction(true);
+        } else {
+            editor.runCommand('core:preview');
+            toggleCanvasInteraction(false);
+        }
+    }
+    function toggleCanvasInteraction(enable) {
+        const frame = editor.Canvas.getFrameEl();
+        if (!frame) return;
+
+        const doc = frame.contentDocument;
+        if (!doc) return;
+
+        doc.body.style.pointerEvents = enable ? 'auto' : 'none';
+    }
+
+
+    editor.on('load', () => {
+        // استرجاع الحالة
+        let saved_collapsed = localStorage.getItem('pg_sidebar_collapsed');
+        if (saved_collapsed == '1') {
+            setTimeout(() => {
+                corePreview(editor);
+            }, 2000);
+        };
+    });
+
+
+    // منع الخروج من preview عند الضغط داخل canvas
+    editor.on('component:selected', component => {
+        if (editor.Commands.isActive('core:preview')) {
+            editor.select(null);
+        }
+    });
+
     // Register grapes features
     registerBlocks(editor);
+    registerBlocksInBox(editor);
+    initPreviewDropdown(editor);
     registerFeaturesSection(editor);
 
     // Sidebar widgets
@@ -201,21 +252,21 @@ function initPageBuilder() {
             if (input) input.dispatchEvent(new Event('input'));
         };
         editor.addStyle(`
-  /* Desktop: >= 993px */
-  @media (min-width: 993px){
-    [data-pg-hide-desktop="1"]{ display:none !important; }
-  }
+            /* Desktop: >= 993px */
+            @media (min-width: 993px){
+                [data-pg-hide-desktop="1"]{ display:none !important; }
+            }
 
-  /* Tablet: 481px - 992px */
-  @media (min-width: 481px) and (max-width: 992px){
-    [data-pg-hide-tablet="1"]{ display:none !important; }
-  }
+            /* Tablet: 481px - 992px */
+            @media (min-width: 481px) and (max-width: 992px){
+                [data-pg-hide-tablet="1"]{ display:none !important; }
+            }
 
-  /* Mobile: <= 480px */
-  @media (max-width: 480px){
-    [data-pg-hide-mobile="1"]{ display:none !important; }
-  }
-`);
+            /* Mobile: <= 480px */
+            @media (max-width: 480px){
+                [data-pg-hide-mobile="1"]{ display:none !important; }
+            }
+            `);
 
 
         initWidgetsSearch();   // bind مرة واحدة

@@ -3,83 +3,6 @@ import { q, qa } from '../helpers/dom';
 
 let lastElementTab = 'traits'; // محتوى افتراضي
 
-/**
- * -------------------------------------------------------------
- * Content Tab: pg-text helpers (GLOBAL SCOPE)
- * -------------------------------------------------------------
- */
-function isPgText(cmp) {
-    return cmp?.get?.('type') === 'pg-text';
-}
-
-function getPgTextContent(cmp) {
-    const child = cmp.components?.().at(0);
-    return child?.get?.('content') ?? '';
-}
-
-function setPgTextContent(cmp, value) {
-    const child = cmp.components?.().at(0);
-    if (!child) return;
-
-    child.set('content', value);
-    child.view?.render?.();
-}
-
-/**
- * -------------------------------------------------------------
- * Content Tab binder (GLOBAL SCOPE)
- * -------------------------------------------------------------
- */
-function bindContentTab(editor) {
-    const textarea = q('#pg-content-text');
-    const empty = q('#pg-content-empty');
-    const editorWrap = q('#pg-content-editor');
-
-    // لو ما في عناصر UI في Blade لا تعمل شيء
-    if (!editor || !textarea) return;
-
-    let syncing = false;
-
-    editor.on('component:selected', (cmp) => {
-        if (isPgText(cmp)) {
-            setElementTab('traits');
-        }
-        if (!isPgText(cmp)) {
-            empty?.classList.remove('hidden');
-            editorWrap?.classList.add('hidden');
-            textarea.value = '';
-            return;
-        }
-
-        empty?.classList.add('hidden');
-        editorWrap?.classList.remove('hidden');
-
-        syncing = true;
-        textarea.value = getPgTextContent(cmp);
-        syncing = false;
-    });
-
-    // لو تغيّر النص من أي مكان آخر، خلي textarea يتزامن (اختياري لكنه مفيد)
-    editor.on('component:update', (cmp) => {
-        const selected = editor.getSelected?.();
-        if (!selected || selected !== cmp) return;
-        if (!isPgText(cmp)) return;
-
-        syncing = true;
-        textarea.value = getPgTextContent(cmp);
-        syncing = false;
-    });
-
-    textarea.addEventListener('input', () => {
-        if (syncing) return;
-
-        const cmp = editor.getSelected?.();
-        if (!isPgText(cmp)) return;
-
-        setPgTextContent(cmp, textarea.value);
-    });
-}
-
 function setPanel(panelName) {
     const panels = qa('.pg-sidebar-panel');
     panels.forEach((p) => {
@@ -91,9 +14,7 @@ function setPanel(panelName) {
     const wrap = q('.pg-widgets-search-wrap');
     if (wrap) {
         const on = panelName === 'widgets';
-        wrap.style.visibility = on ? 'visible' : 'hidden';
-        wrap.style.pointerEvents = on ? 'auto' : 'none';
-        wrap.style.opacity = on ? '1' : '0';
+        wrap.style.display = on ? 'block' : 'none';
     }
 }
 
@@ -111,7 +32,6 @@ function setSelectedLabel(text) {
     const el = q('#pg-props-selected');
     if (el) el.textContent = text || 'لا يوجد تحديد';
 }
-
 function ensureAdvancedUI() {
     const host = q('#pg-advanced');
     if (!host) return;
@@ -123,18 +43,53 @@ function ensureAdvancedUI() {
       <div class="pg-gjs-box">
         <div class="text-xs font-extrabold text-slate-700 mb-2">المسافات</div>
 
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-1 gap-3">
+
+          <!-- Margin -->
           <label class="text-[11px] font-bold text-slate-600">
             Margin
-            <input id="pg-adv-margin" type="text" placeholder="مثال: 0 0 16px 0"
-              class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"/>
+
+            <!-- input الأصلي مخفي -->
+            <input id="pg-adv-margin" type="text"
+              placeholder="0 0 16px 0"
+              class="hidden"/>
+
+            <!-- الحقول الجديدة -->
+            <div class="flex gap-2 mt-1">
+              <input data-box="margin" data-side="top" placeholder="T"
+                class="pg-box-input flex-1"/>
+              <input data-box="margin" data-side="right" placeholder="R"
+                class="pg-box-input flex-1"/>
+              <input data-box="margin" data-side="bottom" placeholder="B"
+                class="pg-box-input flex-1"/>
+              <input data-box="margin" data-side="left" placeholder="L"
+                class="pg-box-input flex-1"/>
+            </div>
+
           </label>
 
+          <!-- Padding -->
           <label class="text-[11px] font-bold text-slate-600">
             Padding
-            <input id="pg-adv-padding" type="text" placeholder="مثال: 12px 16px"
-              class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"/>
+
+            <!-- input الأصلي مخفي -->
+            <input id="pg-adv-padding" type="text"
+              placeholder="12px 16px"
+              class="hidden"/>
+
+            <!-- الحقول الجديدة -->
+            <div class="flex gap-2 mt-1">
+              <input data-box="padding" data-side="top" placeholder="T"
+                class="pg-box-input flex-1"/>
+              <input data-box="padding" data-side="right" placeholder="R"
+                class="pg-box-input flex-1"/>
+              <input data-box="padding" data-side="bottom" placeholder="B"
+                class="pg-box-input flex-1"/>
+              <input data-box="padding" data-side="left" placeholder="L"
+                class="pg-box-input flex-1"/>
+            </div>
           </label>
+
         </div>
       </div>
 
@@ -239,29 +194,20 @@ function bindAdvancedToComponent(editor, cmp) {
     hm?.addEventListener('change', syncHide);
 }
 
-// ابحث عن هذه الدالة في sidebar.js واستبدلها بهذا الكود
-function traitNameFromRow(row) {
-    // محاولة الحصول على الاسم من موديل GrapesJS مباشرة (للحقول المخصصة)
-    try {
-        if (row.model && typeof row.model.get === 'function') {
-            return row.model.get('name');
-        }
-    } catch (e) { }
 
+function traitNameFromRow(row) {
     const field =
         row.querySelector('input[name]') ||
         row.querySelector('select[name]') ||
-        row.querySelector('textarea[name]') ||
-        row.querySelector('[data-name]'); // دعم إضافي
-
-    return field?.getAttribute('name') || field?.dataset.name || '';
+        row.querySelector('textarea[name]');
+    return field?.getAttribute('name') || '';
 }
 
 function pickBucketByTraitName(name) {
-    // أي خاصية تبدأ بـ pgAdv تذهب للمتقدم
+    // ✅ Advanced traits
     if (name.startsWith('pgAdv') || name.startsWith('pgHide')) return 'advanced';
 
-    // أي شيء آخر (بما في ذلك الصور) يذهب لتبويب المحتوى (traits)
+    // ✅ default => Content
     return 'traits';
 }
 
@@ -286,6 +232,8 @@ function distributeTraits() {
         else contentHost.appendChild(row);
     });
 }
+
+
 
 export function initSidebarTabs() {
     // Element inner tabs only
@@ -323,10 +271,7 @@ export function bindEditorSidebarTabs(editor) {
         // لو ضغط على Text داخل heading -> اختار الأب
         if (cmp?.is?.('text')) {
             const parent = cmp.parent && cmp.parent();
-            const pType = parent?.get?.('type');
-
-            // ✅ لو النص داخل heading أو text -> نختار العنصر الأب
-            if (parent && (pType === 'pg-heading' || pType === 'pg-text')) {
+            if (parent && parent.get?.('type') === 'pg-heading') {
                 editor.select(parent);
                 return;
             }
@@ -341,6 +286,7 @@ export function bindEditorSidebarTabs(editor) {
         setPanel('element');
         setElementTab('traits');
 
+
         const name =
             cmp?.getAttributes?.()?.['data-gjs-name'] ||
             cmp?.get?.('name') ||
@@ -349,6 +295,7 @@ export function bindEditorSidebarTabs(editor) {
 
         setSelectedLabel(name);
         bindAdvancedToComponent(editor, cmp);
+
 
         // ✅ بعد ما Grapes يرسم traits
         setTimeout(refresh, 0);
@@ -359,35 +306,117 @@ export function bindEditorSidebarTabs(editor) {
         setSelectedLabel('لا يوجد تحديد');
     });
 
-    // ✅ ربط Tab المحتوى مرة واحدة فقط
-    bindContentTab(editor);
+    document.getElementById('btn-open-layout')
+        .addEventListener('click', () => {
+            setPanel('widgets');
+            setSelectedLabel('لا يوجد تحديد');
+        });
+
 }
+
 
 /* Widgets toggle */
 export function initWidgetsToggle() {
-    const btn = q('#pg-widgets-toggle');
-    const wrap = q('#pg-widgets-wrap');
-    if (!btn || !wrap) return;
+    const STORAGE_KEY = 'pg_widgets_state';
 
-    btn.addEventListener('click', () => {
-        wrap.classList.toggle('is-collapsed');
+    const getState = () => {
+        try {
+            return JSON.parse(sessionStorage.getItem(STORAGE_KEY)) || {};
+        } catch {
+            return {};
+        }
+    };
+
+    const saveState = (state) => {
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    };
+
+    const state = getState();
+    const wraps = document.querySelectorAll('.pg-widgets-wrap');
+
+    // === استرجاع الحالة عند التحميل ===
+    wraps.forEach((wrap, idx) => {
+        const index = wrap.dataset.index;
+
+        if (state[index] === undefined) {
+            // الافتراضي: أول واحد مفتوح
+            if (idx === 0) wrap.classList.remove('is-collapsed');
+            else wrap.classList.add('is-collapsed');
+        } else {
+            wrap.classList.toggle('is-collapsed', !state[index]);
+        }
+    });
+
+    // === زر التبديل ===
+    document.querySelectorAll('.pg-widgets-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const index = btn.dataset.target;
+            const wrap = document.querySelector(
+                `.pg-widgets-wrap[data-index="${index}"]`
+            );
+
+            if (!wrap) return;
+
+            wrap.classList.toggle('is-collapsed');
+
+            const isOpen = !wrap.classList.contains('is-collapsed');
+            state[index] = isOpen;
+            saveState(state);
+        });
     });
 }
+
 
 /* Widgets search */
 export function initWidgetsSearch() {
     const input = q('#pg-widgets-search');
     if (!input) return;
 
+    const STORAGE_KEY = 'pg_widgets_state';
+
+    const getState = () => {
+        try {
+            return JSON.parse(sessionStorage.getItem(STORAGE_KEY)) || {};
+        } catch {
+            return {};
+        }
+    };
+
     input.addEventListener('input', () => {
         const term = (input.value || '').trim().toLowerCase();
         const items = qa('[data-widget-item]');
+        const wraps = qa('.pg-widgets-wrap');
+
+        // === فلترة العناصر ===
         items.forEach((el) => {
             const name = (el.dataset.widgetName || el.textContent || '').toLowerCase();
             el.classList.toggle('is-hidden', !!term && !name.includes(term));
         });
+
+        // === فتح كل الأقسام أثناء البحث ===
+        if (term) {
+            wraps.forEach(wrap => {
+                wrap.classList.remove('is-collapsed');
+            });
+        }
+        // === إعادة الحالة المحفوظة بعد مسح البحث ===
+        else {
+            const state = getState();
+
+            wraps.forEach((wrap, idx) => {
+                const index = wrap.dataset.index;
+
+                if (state[index] === undefined) {
+                    if (idx === 0) wrap.classList.remove('is-collapsed');
+                    else wrap.classList.add('is-collapsed');
+                } else {
+                    wrap.classList.toggle('is-collapsed', !state[index]);
+                }
+            });
+        }
     });
 }
+
 
 export function simplifyBlocksPalette() {
     const host = q('#gjs-blocks');
@@ -431,5 +460,140 @@ export function simplifyBlocksPalette() {
         }
 
         if (block.parentElement !== grid) grid.appendChild(block);
+    });
+}
+
+export function initBoxSpacingInputs() {
+    const IDS = {
+        margin: 'pg-adv-margin',
+        padding: 'pg-adv-padding',
+    };
+
+    function isPureNumber(v) {
+        return /^-?(?:\d+|\d*\.\d+)$/.test(v);
+    }
+
+    function normalizeUnit(v) {
+        const val = (v ?? '').trim();
+        if (!val) return '0';
+        if (isPureNumber(val)) return `${val}px`;
+        return val;
+    }
+
+    function getHidden(box) {
+        return document.getElementById(IDS[box]);
+    }
+
+    function getSideInput(box, side) {
+        return document.querySelector(`[data-box="${box}"][data-side="${side}"]`);
+    }
+
+    function expandCssShorthand(parts) {
+        // 1 -> T R B L = a a a a
+        // 2 -> a b a b
+        // 3 -> a b c b
+        // 4 -> a b c d
+        const p = parts.filter(Boolean);
+        if (!p.length) return ['0', '0', '0', '0'];
+        if (p.length === 1) return [p[0], p[0], p[0], p[0]];
+        if (p.length === 2) return [p[0], p[1], p[0], p[1]];
+        if (p.length === 3) return [p[0], p[1], p[2], p[1]];
+        return [p[0], p[1], p[2], p[3]];
+    }
+
+    function fillInputsFromHidden(box) {
+        const hidden = getHidden(box);
+        if (!hidden) return;
+
+        const raw = (hidden.value || '').trim();
+        if (!raw) return;
+
+        const parts = raw.split(/\s+/);
+        const [t, r, b, l] = expandCssShorthand(parts);
+
+        const map = { top: t, right: r, bottom: b, left: l };
+
+        Object.entries(map).forEach(([side, val]) => {
+            const input = getSideInput(box, side);
+            if (!input) return;
+
+            // إذا px اعرض الرقم فقط، غير ذلك اعرض النص كما هو
+            input.value = val.endsWith('px') ? val.slice(0, -2) : val;
+        });
+    }
+
+    function updateHiddenFromInputs(box) {
+        const hidden = getHidden(box);
+        if (!hidden) return;
+
+        const top = normalizeUnit(getSideInput(box, 'top')?.value);
+        const right = normalizeUnit(getSideInput(box, 'right')?.value);
+        const bottom = normalizeUnit(getSideInput(box, 'bottom')?.value);
+        const left = normalizeUnit(getSideInput(box, 'left')?.value);
+
+        hidden.value = `${top} ${right} ${bottom} ${left}`;
+        hidden.dispatchEvent(new Event('input', { bubbles: true }));
+        hidden.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function hasAllInputs(box) {
+        return (
+            !!getHidden(box) &&
+            !!getSideInput(box, 'top') &&
+            !!getSideInput(box, 'right') &&
+            !!getSideInput(box, 'bottom') &&
+            !!getSideInput(box, 'left')
+        );
+    }
+
+    // ✅ فتح/تعبئة عند توفر العناصر (لأن DOM يتأخر)
+    function syncWhenReady() {
+        if (hasAllInputs('margin')) fillInputsFromHidden('margin');
+        if (hasAllInputs('padding')) fillInputsFromHidden('padding');
+    }
+
+    // 1) Delegation للكتابة (يشتغل حتى لو DOM اتغير)
+    document.addEventListener(
+        'input',
+        (e) => {
+            const el = e.target;
+            if (!(el instanceof HTMLElement)) return;
+
+            const field = el.closest('[data-box][data-side]');
+            if (!field) return;
+
+            const box = field.getAttribute('data-box');
+            if (box !== 'margin' && box !== 'padding') return;
+
+            updateHiddenFromInputs(box);
+        },
+        true
+    );
+
+    // 2) Observer: لو GrapesJS أعاد بناء البانل/الحقول… نعبّي من المخزن فورًا
+    const obs = new MutationObserver(() => {
+        syncWhenReady();
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+
+    // 3) حاول تزامن أولي (مرتين) لأن بعض الأحيان القيم تنحط بعد load مباشرة
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            syncWhenReady();
+            setTimeout(syncWhenReady, 0);
+            setTimeout(syncWhenReady, 50);
+        });
+    } else {
+        syncWhenReady();
+        setTimeout(syncWhenReady, 0);
+        setTimeout(syncWhenReady, 50);
+    }
+
+    // 4) إذا القيم الأصلية تغيرت (مثلاً تغيير عنصر محدد/تحميل تخزين) رجّع عبّي
+    ['margin', 'padding'].forEach((box) => {
+        const hidden = getHidden(box);
+        if (!hidden) return;
+        hidden.addEventListener('input', () => fillInputsFromHidden(box));
+        hidden.addEventListener('change', () => fillInputsFromHidden(box));
     });
 }

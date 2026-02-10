@@ -20,672 +20,217 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="pg-debug-view" content="CONTENT_EDITOR_V1">
-
 
     <title>{{ $pageTitle }} - {{ __('Visual Builder') }}</title>
 
     {{-- Main Tailwind / Palgoals stylesheet used in the builder shell --}}
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}" id="palgoals-app-css">
-    <script src="{{ asset('vendor/tinymce/tinymce.min.js') }}"></script>
+    <script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 
     {{-- GrapesJS + custom builder JS entry --}}
     @vite('resources/js/dashboard/builder/index.js')
-
-    <style>
-        /* =========================================================
-            Palgoals Builder Sidebar - Clean Style (Single Source of Truth)
-            ========================================================= */
-        /* 1) Tokens */
-        :root {
-            --pg-primary: #240B36;
-            --pg-secondary: #AE1028;
-
-            --pg-bg: #ffffff;
-            --pg-panel: #f8f7fb;
-            --pg-muted: rgba(36, 11, 54, .04);
-
-            --pg-border: rgba(36, 11, 54, .12);
-            --pg-border-soft: rgba(36, 11, 54, .08);
-
-            --pg-text: #0f172a;
-            --pg-sub: #64748b;
-
-            --pg-radius: 14px;
-            --pg-tile-radius: 12px;
-
-            --pg-focus: rgba(174, 16, 40, .14);
-            --pg-shadow: 0 14px 26px rgba(36, 11, 54, .10);
-
-            --pg-ring: rgba(174, 16, 40, .14);
-            --pg-soft: rgba(36, 11, 54, .03);
-        }
-
-        /* 2) GrapesJS safety */
-        .gjs-cv-canvas {
-            top: 0;
-            width: 100%;
-            height: 100%;
-        }
-
-        .gjs-selected .gjs-toolbar {
-            display: flex !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            z-index: 99999;
-        }
-
-        /* =========================================================
-            Sidebar Shell
-        ========================================================= */
-        main>aside {
-            background: linear-gradient(180deg, rgba(36, 11, 54, .03) 0%, rgba(174, 16, 40, .012) 100%);
-            border-color: rgba(36, 11, 54, .10) !important;
-        }
-
-        /* Title "العناصر" */
-        main>aside>div:first-child h2 {
-            color: var(--pg-primary);
-            font-weight: 900;
-            letter-spacing: .2px;
-        }
-
-        /* =========================================================
-            Tabs (Pill Style) - works with data-active
-        ========================================================= */
-        .pg-sidebar-tab-btn {
-            position: relative;
-            color: var(--pg-sub);
-            background: transparent;
-            border: 0;
-            outline: none;
-            transition: background .15s ease, color .15s ease, box-shadow .15s ease;
-        }
-
-        .pg-sidebar-tab-btn:hover {
-            color: var(--pg-primary);
-        }
-
-        .pg-sidebar-tab-btn[data-active="true"] {
-            background: var(--pg-bg);
-            color: var(--pg-primary);
-            box-shadow: 0 10px 22px rgba(36, 11, 54, .08);
-        }
-
-        .pg-sidebar-tab-btn:focus,
-        .pg-sidebar-tab-btn:focus-visible {
-            outline: none !important;
-            box-shadow: 0 0 0 3px var(--pg-focus), 0 10px 22px rgba(36, 11, 54, .08);
-        }
-
-        /* Hide inactive content */
-        .pg-sidebar-tab-content[data-active="false"] {
-            display: none;
-        }
-
-        /* Sidebar Panels (Widgets <-> Element Settings) */
-        .pg-sidebar-panel[data-active="false"] {
-            display: none;
-        }
-
-        .pg-sidebar-panel[data-active="true"] {
-            display: block;
-        }
-
-        /* =========================================================
-            Search
-        ========================================================= */
-        main>aside input[type="text"],
-        main>aside input[type="search"] {
-            background: rgba(36, 11, 54, .04) !important;
-            border: 1px solid rgba(36, 11, 54, .12) !important;
-            color: var(--pg-text) !important;
-        }
-
-        main>aside input[type="text"]::placeholder,
-        main>aside input[type="search"]::placeholder {
-            color: rgba(100, 116, 139, .9);
-        }
-
-        main>aside input[type="text"]:focus,
-        main>aside input[type="search"]:focus {
-            outline: none !important;
-            border-color: rgba(174, 16, 40, .45) !important;
-            box-shadow: 0 0 0 3px var(--pg-focus) !important;
-        }
-
-        /* =========================================================
-            Section headers inside widgets (التنسيق / أساسي ...)
-        ========================================================= */
-        .pg-widgets-panel .pg-section-title {
-            color: var(--pg-primary);
-            font-weight: 900;
-        }
-
-        .pg-widgets-panel .pg-section-sub {
-            color: rgba(100, 116, 139, .85);
-            font-weight: 700;
-        }
-
-        /* Button: Hide/Show */
-        #pg-widgets-toggle {
-            color: rgba(100, 116, 139, .85);
-            font-weight: 800;
-            font-size: 11px;
-            border: 0;
-            background: transparent;
-            padding: 0;
-            cursor: pointer;
-        }
-
-        #pg-widgets-toggle:hover {
-            color: var(--pg-primary);
-        }
-
-        /* Collapse wrapper (if used) */
-        #pg-widgets-wrap.is-collapsed {
-            display: none;
-        }
-
-        /* =========================================================
-            Widgets Container
-        ========================================================= */
-
-        /* IMPORTANT: do NOT make #gjs-blocks grid here (avoid conflicts) */
-        .pg-widgets-panel #gjs-blocks {
-            position: relative;
-        }
-
-        /* Grid (created by simplifyBlocksPalette) */
-        .pg-widgets-panel #gjs-blocks .pg-blocks-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-            padding: 0 !important;
-            /* keep spacing controlled by outer padding (p-3) */
-            margin-top: 8px;
-        }
-
-        /* Remove Grapes category chrome */
-        .pg-widgets-panel #gjs-blocks .gjs-block-category {
-            background: transparent !important;
-            border: 0 !important;
-            box-shadow: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-
-        .pg-widgets-panel #gjs-blocks .gjs-title {
-            display: none !important;
-        }
-
-        /* =========================================================
-            Widget Tile (square-ish, clean, Palgoals brand)
-        ========================================================= */
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile {
-            background: var(--pg-bg);
-            border: 1px solid rgba(36, 11, 54, .12) !important;
-            border-radius: var(--pg-tile-radius);
-            min-height: 118px;
-            /* gives square feel */
-            padding: 14px 10px;
-            margin: 0 !important;
-
-            width: 100%;
-            text-align: center;
-            cursor: pointer;
-
-            display: flex !important;
-            align-items: center;
-            justify-content: center;
-
-            transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
-            box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
-        }
-
-        /* hide media previews */
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile .gjs-block-media,
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile .gjs-block__media,
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile img {
-            display: none !important;
-        }
-
-        /* label wrapper */
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile .gjs-block-label {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* inner card */
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile .pg-block-card {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* icon box */
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile .pg-block-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-
-            background: rgba(36, 11, 54, .07);
-            color: var(--pg-primary);
-            position: relative;
-        }
-
-        /* brand dot */
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile .pg-block-icon::after {
-            content: "";
-            position: absolute;
-            right: 8px;
-            top: 8px;
-            width: 6px;
-            height: 6px;
-            border-radius: 999px;
-            background: rgba(174, 16, 40, .85);
-            box-shadow: 0 0 0 3px rgba(174, 16, 40, .10);
-        }
-
-        /* svg size */
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile .pg-block-icon svg {
-            width: 30px;
-            height: 30px;
-            display: block;
-        }
-
-        /* title */
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile .pg-block-title {
-            font-size: 12px;
-            font-weight: 900;
-            color: var(--pg-primary);
-            line-height: 1.2;
-        }
-
-        /* hover/focus */
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile:hover {
-            border-color: rgba(174, 16, 40, .32) !important;
-            box-shadow: var(--pg-shadow);
-            transform: translateY(-1px);
-        }
-
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile:focus,
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile:focus-visible {
-            outline: none !important;
-            border-color: rgba(174, 16, 40, .45) !important;
-            box-shadow: 0 0 0 3px var(--pg-focus), var(--pg-shadow);
-        }
-
-        /* Filter hide */
-        .pg-widgets-panel #gjs-blocks .pg-widget-tile.is-hidden {
-            display: none !important;
-        }
-
-        /* Empty message */
-        .pg-widgets-empty {
-            margin-top: 10px;
-            padding: 12px;
-            border: 1px dashed rgba(36, 11, 54, .18);
-            border-radius: 12px;
-            background: rgba(36, 11, 54, .03);
-            color: #64748b;
-            font-size: 12px;
-            text-align: center;
-        }
-
-        /* =========================================================
-            Scrollbar (Sidebar only)
-        ========================================================= */
-        main>aside ::-webkit-scrollbar {
-            width: 10px;
-        }
-
-        main>aside ::-webkit-scrollbar-track {
-            background: rgba(36, 11, 54, .03);
-            border-radius: 999px;
-        }
-
-        main>aside ::-webkit-scrollbar-thumb {
-            background: rgba(36, 11, 54, .22);
-            border-radius: 999px;
-            border: 2px solid rgba(255, 255, 255, .75);
-        }
-
-        main>aside ::-webkit-scrollbar-thumb:hover {
-            background: rgba(174, 16, 40, .30);
-        }
-
-        main>aside {
-            scrollbar-color: rgba(36, 11, 54, .22) rgba(36, 11, 54, .04);
-            scrollbar-width: thin;
-        }
-
-        /* =========================================================
-   Properties Panel (Globals) – Inner Tabs
-   ========================================================= */
-        .pg-props-tab-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 36px;
-            border-radius: 12px;
-            border: 1px solid rgba(36, 11, 54, .12);
-            background: rgba(36, 11, 54, .03);
-            color: #475569;
-            font-size: 12px;
-            font-weight: 800;
-            transition: all .15s ease;
-        }
-
-        .pg-props-tab-btn[data-active="true"] {
-            background: #fff;
-            border-color: rgba(174, 16, 40, .35);
-            box-shadow: 0 0 0 3px var(--pg-ring);
-            color: var(--pg-primary);
-        }
-
-        .pg-props-tab-content[data-active="false"] {
-            display: none;
-        }
-
-        .pg-gjs-box {
-            border: 1px solid rgba(36, 11, 54, .10);
-            border-radius: 14px;
-            background: #fff;
-            padding: 10px;
-            font-size: 12px;
-        }
-
-        /* =========================================================
-   GrapesJS UI inside Traits/Styles/Layers
-   (نظافة + تقليل ضغط + شكل أقرب للوحة تحكم حديثة)
-   ========================================================= */
-
-        /* Titles/Rows spacing */
-        #gjs-traits .gjs-trt-trait,
-        #gjs-styles .gjs-sm-property,
-        #gjs-layers .gjs-layer {
-            margin: 0 !important;
-            padding: 8px 6px !important;
-            border-radius: 12px;
-        }
-
-        #gjs-traits .gjs-trt-trait:hover,
-        #gjs-styles .gjs-sm-property:hover {
-            background: var(--pg-soft);
-        }
-
-        /* Labels */
-        #gjs-traits .gjs-trt-trait__label,
-        #gjs-styles .gjs-sm-label {
-            color: #334155;
-            font-weight: 800;
-            font-size: 12px;
-        }
-
-        /* Inputs */
-        #gjs-traits input,
-        #gjs-traits select,
-        #gjs-traits textarea,
-        #gjs-styles input,
-        #gjs-styles select,
-        #gjs-styles textarea {
-            width: 100%;
-            border-radius: 12px !important;
-            border: 1px solid rgba(36, 11, 54, .14) !important;
-            background: #fff !important;
-            padding: 8px 10px !important;
-            outline: none !important;
-        }
-
-        #gjs-traits input:focus,
-        #gjs-traits select:focus,
-        #gjs-traits textarea:focus,
-        #gjs-styles input:focus,
-        #gjs-styles select:focus,
-        #gjs-styles textarea:focus {
-            border-color: rgba(174, 16, 40, .42) !important;
-            box-shadow: 0 0 0 3px var(--pg-ring) !important;
-        }
-
-        /* Style Manager: Sector header */
-        #gjs-styles .gjs-sm-sector {
-            border: 1px solid rgba(36, 11, 54, .10);
-            border-radius: 14px;
-            overflow: hidden;
-            margin-bottom: 10px;
-        }
-
-        #gjs-styles .gjs-sm-sector-title {
-            background: rgba(36, 11, 54, .03) !important;
-            padding: 10px 12px !important;
-            font-weight: 900 !important;
-            color: var(--pg-primary) !important;
-            border-bottom: 1px solid rgba(36, 11, 54, .08);
-        }
-
-        /* Layers */
-        #gjs-layers .gjs-layer {
-            border: 1px solid rgba(36, 11, 54, .08);
-        }
-
-        #gjs-layers .gjs-layer-title {
-            font-weight: 800;
-            color: #334155;
-        }
-
-        .gjs-one-bg {
-            background-color: transparent;
-        }
-
-        /* ===== Elementor-like radio buttons inside StyleManager ===== */
-        #gjs-styles .gjs-sm-property__radio {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 6px;
-        }
-
-        #gjs-styles .gjs-radio-item {
-            border: 1px solid rgba(36, 11, 54, .12);
-            border-radius: 12px;
-            background: rgba(36, 11, 54, .03);
-            padding: 8px 0;
-            font-weight: 900;
-            text-align: center;
-        }
-
-        #gjs-styles .gjs-radio-item input:checked+.gjs-radio-item-label {
-            color: var(--pg-primary);
-        }
-
-        #gjs-styles .gjs-radio-item:has(input:checked) {
-            background: #fff;
-            border-color: rgba(174, 16, 40, .35);
-            box-shadow: 0 0 0 3px var(--pg-ring);
-        }
-
-        /* titles inside sectors */
-        #gjs-styles .gjs-sm-sector-title {
-            cursor: pointer;
-        }
-
-        @media (min-width: 1024px) {
-            [data-pg-hide-desktop="1"] {
-                display: none !important;
-            }
-        }
-
-        @media (min-width: 768px) and (max-width: 1023px) {
-            [data-pg-hide-tablet="1"] {
-                display: none !important;
-            }
-        }
-
-        @media (max-width: 767px) {
-            [data-pg-hide-mobile="1"] {
-                display: none !important;
-            }
-        }
-
-        .pg-trait-wysiwyg .tox-tinymce {
-            border-radius: 14px;
-            overflow: hidden;
-            border: 1px solid rgba(148, 163, 184, 0.6);
-        }
-
-        .pg-trait-wysiwyg textarea {
-            width: 100%;
-        }
-
-        .pg-media-btn {
-            width: 100%;
-            padding: 8px 12px;
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 11px;
-            color: #475569;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .pg-media-btn:hover {
-            background-color: #f1f5f9;
-            border-color: #cbd5e1;
-        }
-    </style>
-
+    <link rel="stylesheet" href="{{ asset('assets/dashboard/css/builder-new.css') }}">
 </head>
 
 <body class="h-full bg-slate-50 text-slate-900 ">
-    <div id="PG_DEBUG_MARK_CONTENT_EDITOR_V1" style="display:none"></div>
-
     {{-- Root builder wrapper (used by page-builder.js via data-* attributes) --}}
-    <div id="page-builder-root" 
-     data-locale="{{ app()->getLocale() }}"
-     class="min-h-screen flex flex-col"
-     data-load-url="{{ route('dashboard.pages.builder.data', $page) }}"
-     data-save-url="{{ route('dashboard.pages.builder.data.save', $page) }}"
-     data-preview-url="{{ $frontUrl }}"
-     data-builder-url="{{ route('dashboard.pages.builder', $page) }}"
-     data-publish-url="{{ route('dashboard.pages.builder.publish', $page) }}"
-     data-page-id="{{ $page->id }}">
+    <div id="page-builder-root" data-locale="{{ app()->getLocale() }}" class="min-h-screen flex flex-col"
+        data-load-url="{{ route('dashboard.pages.builder.data', $page) }}"
+        data-save-url="{{ route('dashboard.pages.builder.data.save', $page) }}" data-preview-url="{{ $frontUrl }}"
+        data-builder-url="{{ route('dashboard.pages.builder', $page) }}"
+        data-publish-url="{{ route('dashboard.pages.builder.publish', $page) }}" data-page-id="{{ $page->id }}">
 
         {{-- ===========================
-             TOP APP BAR / BUILDER HEADER
-             ============================ --}}
+        TOP APP BAR / BUILDER HEADER
+        ============================ --}}
         <header class="sticky top-0 z-40 bg-white/95 backdrop-blur border-b border-slate-200 shadow-sm">
             <div class="w-full px-4 py-2 lg:px-6">
                 <div class="flex items-center justify-between gap-4 rtl:flex-row-reverse">
-
-                    {{-- LEFT GROUP: Back, Page title, Language switch --}}
+                    {{-- LEFT GROUP: Back, Page title, Language --}}
                     <div class="flex items-center gap-3 rtl:flex-row-reverse">
 
-                        {{-- Back to pages index --}}
+                        {{-- Back (icon only) --}}
                         <a href="{{ route('dashboard.pages.index') }}"
-                            class="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-full border border-slate-200 hover:bg-slate-50 text-xs font-medium transition">
+                            class="group flex items-center justify-center w-9 h-9 rounded-full
+               border border-slate-200 bg-white
+               hover:bg-slate-100 hover:shadow-md hover:scale-105
+               transition-all duration-200">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 rtl:rotate-180" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M10.5 19.5L3 12l7.5-7.5M3 12h18" />
                             </svg>
-                            <span>{{ __('Back') }}</span>
                         </a>
 
-                        {{-- Current page title chip --}}
-                        <div class="px-4 py-1 rounded-full text-[13px] font-semibold bg-slate-100 text-slate-800">
+                        {{-- Page title --}}
+                        <div
+                            class="px-4 py-1.5 rounded-full text-[13px] font-semibold
+               bg-slate-100 text-slate-800
+               border border-slate-200">
                             {{ $pageTitle }}
                         </div>
 
-                        {{-- Language switcher (dynamic, from DB) --}}
+                        {{-- Language switcher --}}
                         @if ($hasMultipleLocales)
-                            <x-lang.language-switcher variant="builder" />
+                            <div class="ml-1">
+                                <x-lang.language-switcher variant="builder" />
+                            </div>
                         @endif
                     </div>
 
-                    {{-- CENTER GROUP: Device preview toggles (Desktop / Tablet / Mobile) --}}
-                    <div class="hidden sm:flex items-center gap-1 bg-slate-100 rounded-full p-[3px]">
-                        {{-- Buttons are wired in page-builder.js via .builder-preview-btn + data-preview attr --}}
-                        <button class="px-4 py-1.5 text-xs rounded-full font-medium builder-preview-btn active"
-                            data-preview="desktop">
-                            Desktop
+
+                    {{-- CENTER GROUP: Device Preview Switcher --}}
+                    <div
+                        class="hidden sm:flex items-center gap-1 rounded-full bg-slate-100 p-1
+           shadow-inner">
+
+                        {{-- Desktop --}}
+                        <button data-preview="desktop" title="Desktop"
+                            class="builder-preview-btn group relative flex items-center justify-center
+               w-10 h-9 rounded-full transition-all duration-200
+               hover:bg-white hover:shadow-md hover:scale-105
+               active:scale-100 cursor-pointer
+               [&.active]:bg-white [&.active]:shadow-lg [&.active]:ring-1 [&.active]:ring-slate-300">
+
+                            <svg class="w-5 h-5 text-slate-600 group-hover:text-slate-900 transition-colors"
+                                fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v10H4z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 19h8M12 15v4" />
+                            </svg>
                         </button>
-                        <button class="px-4 py-1.5 text-xs rounded-full font-medium builder-preview-btn"
-                            data-preview="tablet">
-                            Tablet
+
+                        {{-- Tablet --}}
+                        <button data-preview="tablet" title="Tablet"
+                            class="builder-preview-btn group relative flex items-center justify-center
+               w-10 h-9 rounded-full transition-all duration-200
+               hover:bg-white hover:shadow-md hover:scale-105 cursor-pointer
+               [&.active]:bg-white [&.active]:shadow-lg [&.active]:ring-1 [&.active]:ring-slate-300">
+
+                            <svg class="w-5 h-5 text-slate-600 group-hover:text-slate-900 transition-colors"
+                                fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <rect x="6" y="2" width="12" height="20" rx="2" />
+                                <circle cx="12" cy="18" r="0.8" />
+                            </svg>
                         </button>
-                        <button class="px-4 py-1.5 text-xs rounded-full font-medium builder-preview-btn"
-                            data-preview="mobile">
-                            Mobile
+
+                        {{-- Mobile --}}
+                        <button data-preview="mobile" title="Mobile"
+                            class="builder-preview-btn group relative flex items-center justify-center
+               w-10 h-9 rounded-full transition-all duration-200
+               hover:bg-white hover:shadow-md hover:scale-105 cursor-pointer
+               [&.active]:bg-white [&.active]:shadow-lg [&.active]:ring-1 [&.active]:ring-slate-300">
+
+                            <svg class="w-4 h-5 text-slate-600 group-hover:text-slate-900 transition-colors"
+                                fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <rect x="8" y="2" width="8" height="20" rx="2" />
+                                <circle cx="12" cy="18" r="0.8" />
+                            </svg>
                         </button>
                     </div>
 
-                    {{-- RIGHT GROUP: Live page, Reset, Save, and status --}}
-                    <div class="flex items-center gap-2 rtl:flex-row-reverse">
 
-                        {{-- Open current page on frontend --}}
-                        <a href="{{ $frontUrl }}" target="_blank"
-                            class="text-xs px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 font-medium">
-                            {{ __('Live Page') }}
-                        </a>
+                    {{-- RIGHT GROUP: Actions --}}
+                    <div class="relative flex items-center gap-2 rtl:flex-row-reverse">
 
-                        {{-- Publish button --}}
-                        <button id="builder-publish" type="button"
-                            class="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700">
-                            🚀 <span>نشر الصفحة</span>
-                        </button>
-
-                        {{-- Preview link --}}
-                        <a id="builder-preview" href="{{ $frontUrl }}" target="_blank"
-                            class="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
-                            👁 <span>معاينة</span>
-                        </a>
-
-                        {{-- Reset builder content --}}
-                        <button id="builder-reset"
-                            class="px-3 py-1.5 text-xs font-semibold rounded-full border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition">
-                            {{ __('Reset Page') }}
-                        </button>
-
-                        {{-- Save builder content --}}
+                        {{-- Save --}}
                         <button id="pg-save-btn" type="button"
-                            class="px-5 py-1.5 text-xs font-semibold rounded-full bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow hover:shadow-md transition">
-                            {{ __('Save') }}
+                            class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg
+               bg-blue-600 text-white hover:bg-blue-700 transition shadow">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Save
                         </button>
 
-                        <span id="pg-save-status" class="text-xs text-slate-500">
-                            {{ __('Saved') }}
-                        </span>
+                        {{-- Preview --}}
+                        <a id="builder-preview" href="{{ $frontUrl }}" target="_blank"
+                            class="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg
+               border border-slate-300 text-slate-700 hover:bg-slate-100 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5
+                   c4.478 0 8.268 2.943 9.542 7
+                   -1.274 4.057-5.064 7-9.542 7
+                   -4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            Preview
+                        </a>
 
+                        {{-- Publish --}}
+                        <button id="builder-publish" type="button"
+                            class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg
+               bg-emerald-600 text-white hover:bg-emerald-700 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                            Publish
+                        </button>
+
+                        {{-- Settings Dropdown --}}
+                        <div class="relative">
+                            <button id="builder-settings-btn"
+                                class="flex items-center justify-center w-9 h-9 rounded-full
+                   border border-slate-300 hover:bg-slate-100 transition">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M6 12h.01M12 12h.01M18 12h.01" />
+                                </svg>
+                            </button>
+
+                            {{-- Dropdown --}}
+                            <div id="builder-settings-menu"
+                                class="hidden absolute right-0 mt-2 w-48 rounded-xl bg-white
+                   border border-slate-200 shadow-lg z-50 overflow-hidden">
+
+                                <a href="{{ $frontUrl }}" target="_blank"
+                                    class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700
+                       hover:bg-slate-50">
+                                    🌍 Live Page
+                                </a>
+
+                                <button id="builder-reset"
+                                    class="w-full text-left flex items-center gap-2 px-4 py-2
+                       text-xs text-red-600 hover:bg-red-50">
+                                    🗑 Reset Page
+                                </button>
+
+                                <div class="border-t border-slate-100"></div>
+
+                                <div class="px-4 py-2 text-[11px] text-slate-500">
+                                    Builder Settings
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Save Status
+                        <span id="pg-save-status" class="text-xs text-slate-500">
+                            Saved
+                        </span> --}}
                         {{-- Realtime save status --}}
                         <div id="builder-save-status"
                             class="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200 text-[11px] text-slate-600">
-                            <span data-status-dot class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                            <span data-status-text>{{ __('Unsaved') }}</span>
-                            <span class="text-slate-400">•</span>
+                            <span data-status-dot class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> <span
+                                data-status-text>{{ __('Unsaved') }}</span> <span class="text-slate-400">•</span>
                             <span data-status-time>--:--</span>
                         </div>
                     </div>
-
                 </div>
             </div>
         </header>
 
         {{-- ===========================
-             MAIN LAYOUT (Canvas + Sidebar)
-             ============================ --}}
+        MAIN LAYOUT (Canvas + Sidebar)
+        ============================ --}}
         <main class="flex-1 flex bg-slate-50">
 
             {{-- ===== CANVAS AREA (GrapesJS iframe / content) ===== --}}
             <section class="flex-1 order-2">
-                <div class="h-full rounded-2xl border border-slate-200 bg-white shadow-sm builder-canvas">
+                <div class="h-full builder-canvas">
                     <div class="h-full overflow-auto p-0">
 
                         {{-- Empty state – shown before GrapesJS is fully initialised --}}
@@ -713,87 +258,176 @@
             </section>
 
             {{-- ===== SIDEBAR: Elementor-like Widgets Panel ===== --}}
-            <aside
-                class="relative order-1 w-[360px] min-w-[360px] max-w-[360px]  md:w-80 xl:w-72 border border-slate-200/80 bg-white shadow-xl shadow-slate-200/60 flex flex-col h-[calc(100vh-3.5rem)]">
+            <aside id="sidebar"
+                class="transition-[width,min-width] duration-300 ease-in-out relative order-1 w-[360px] min-w-[360px] max-w-[360px] md:w-80 xl:w-72 border border-slate-200/80 bg-white shadow-xl shadow-slate-200/60 flex flex-col h-[calc(100vh-61px)]">
+                <button id="btn-open-layout"
+                    class="group flex items-center justify-center w-9 h-9 rounded-full border border-slate-200 bg-white hover:bg-slate-100 hover:shadow-md hover:scale-105 transition-all duration-200 absolute  top-2 left-4 rtl:right-4 rtl:left-auto">
+                    <svg fill="#000000" class="w-4 h-4" viewBox="0 0 256 256" id="Flat"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M228,128a12,12,0,0,1-12,12H140v76a12,12,0,0,1-24,0V140H40a12,12,0,0,1,0-24h76V40a12,12,0,0,1,24,0v76h76A12,12,0,0,1,228,128Z" />
+                    </svg>
+                </button>
+                <button id="btnSidebar"
+                    class="group flex items-center justify-center w-4.5 h-12 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 hover:shadow-md hover:scale-105 transition-all duration-200 absolute  top-1/2 -right-2.25 rtl:-left-2.25 rtl:right-auto z-1">
+                    <svg class="w-4 h-4 rtl:rotate-180" viewBox="0 0 1024 1024" class="icon"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path fill="#000000"
+                            d="M685.248 104.704a64 64 0 010 90.496L368.448 512l316.8 316.8a64 64 0 01-90.496 90.496L232.704 557.248a64 64 0 010-90.496l362.048-362.048a64 64 0 0190.496 0z" />
+                    </svg>
+                </button>
+                <div
+                    class="flex flex-col overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
 
-                {{-- Header title --}}
-                <div class="px-4 pt-4 pb-3 border-b border-slate-200">
-                    <h2 class="text-base font-semibold text-slate-900 text-center">
-                        العناصر
-                    </h2>
-                </div>
-                {{-- Search bar (for widgets tab) --}}
-                <div class="px-4 py-3 border-b border-slate-200 pg-widgets-search-wrap">
-
-                    <div class="relative">
-                        <input type="text" id="pg-widgets-search" data-role="widgets-search"
-                            class="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400"
-                            placeholder="... ابحث في الودجات" dir="auto" />
-                        <span
-                            class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400 text-xs">
-                            🔍
-                        </span>
+                    {{-- Header title --}}
+                    <div class="px-4 pt-4 pb-3 border-b border-slate-200">
+                        <h2 class="text-base font-semibold text-slate-900 text-center">
+                            العناصر
+                        </h2>
                     </div>
-                </div>
+                    {{-- Search bar (for widgets tab) --}}
+                    <div class="px-4 py-3 border-b border-slate-200 pg-widgets-search-wrap">
 
-                {{-- TAB CONTENTS --}}
-                <div class="flex-1 overflow-y-auto">
-                    {{-- Widgets tab (main) --}}
-                    <section class="px-4 py-4 space-y-6 pg-sidebar-panel pg-widgets-panel" data-panel="widgets"
-                        data-active="true">
-                        {{-- Layout group (التنسيق) --}}
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-semibold text-slate-700">
-                                    التنسيق
-                                </span>
-                                <button type="button" id="pg-widgets-toggle"
-                                    class="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-1">
-                                    <span>إخفاء / إظهار</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 20 20"
-                                        fill="currentColor">
-                                        <path fill-rule="evenodd"
-                                            d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
-                                            clip-rule="evenodd" />
-                                    </svg>
-                                </button>
-                            </div>
-
-                            {{-- هنا سيقوم GrapesJS بملء البلوكات، نعرضها كشبكة تشبه Elementor --}}
-                            <div id="pg-widgets-wrap">
-                                <div id="gjs-blocks" class="p-0"></div>
-                            </div>
+                        <div class="relative">
+                            <input type="text" id="pg-widgets-search" data-role="widgets-search"
+                                class="w-full rounded-md border text-left rtl:text-right border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-sky-400 focus:border-sky-400"
+                                placeholder="... ابحث في الودجات" dir="auto" />
+                            <span
+                                class="pointer-events-none absolute inset-y-0 right-3 rtl:left-3 rtl:right-auto flex items-center text-slate-400 text-xs">
+                                🔍
+                            </span>
                         </div>
+                    </div>
 
-                        {{-- Basic group (أساسي) – يمكن لاحقاً تقسيم البلوكات حسب الكاتيجوري من خلال JS --}}
-                        <div class="pt-4 border-t border-slate-200 space-y-3">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs font-semibold text-slate-700">
-                                    أساسي
-                                </span>
-                                <button type="button"
-                                    class="text-[10px] text-slate-400 hover:text-slate-600 flex items-center gap-1">
-                                    <span>إخفاء / إظهار</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 20 20"
-                                        fill="currentColor">
-                                        <path fill-rule="evenodd"
-                                            d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
-                                            clip-rule="evenodd" />
-                                    </svg>
-                                </button>
+                    {{-- TAB CONTENTS --}}
+                    <div class="flex-1">
+                        <div id="gjs-blocks" style="display:none;"></div>
+                        {{-- Widgets tab (main) --}}
+                        <section class="px-4 py-4 space-y-6 pg-sidebar-panel pg-widgets-panel" data-panel="widgets"
+                            data-active="true">
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-semibold text-slate-700">
+                                        الاساسيات
+                                    </span>
+                                    <button type="button" data-target="1"
+                                        class="pg-widgets-toggle group flex items-center gap-1.5 text-slate-500 hover:text-slate-800 transition-all duration-200">
+                                        <!-- Eye -->
+                                        <svg id="widgets-eye" class="w-4 h-4 transition-opacity duration-200"
+                                            fill="none" stroke="currentColor" stroke-width="1.8"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5 c4.478 0 8.268 2.943 9.542 7 -1.274 4.057-5.064 7-9.542 7 -4.477 0-8.268-2.943-9.542-7z" />
+                                            <circle cx="12" cy="12" r="3" />
+                                        </svg>
+
+                                        <!-- Arrow -->
+                                        <svg id="widgets-arrow"
+                                            class="w-3 h-3 transition-transform duration-200 rotate-0" fill="none"
+                                            stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+
+                                </div>
+
+                                {{-- هنا سيقوم GrapesJS بملء البلوكات، نعرضها كشبكة تشبه Elementor --}}
+                                <div class="pg-widgets-wrap" data-index="1">
+                                    {{-- <div id="gjs-blocks" class="p-0">
+
+                                    </div> --}}
+                                    <div class="p-0 gjs-blocks-host">
+                                        <div id="blocks-basic" class="pg-blocks-grid"></div>
+                                    </div>
+                                </div>
+
                             </div>
 
-                            {{-- يمكنك لاحقاً عمل كونتينر ثاني مثلاً #gjs-blocks-basic من خلال JS
-                                 حالياً نضع Placeholder فقط حتى لا نغيّر منطق JS الموجود --}}
-                            <div
-                                class="grid grid-cols-2 gap-3 text-[11px] text-slate-400 border border-dashed border-slate-200 rounded-xl py-6 px-3 text-center">
-                                <span>
-                                    سيتم تقسيم العناصر إلى مجموعات (Basic / Layout / Media ...)
-                                    من خلال إعدادات BlockManager في JavaScript لاحقاً.
-                                </span>
+                        </section>
+                        <section class="px-4 py-4 space-y-6 pg-sidebar-panel pg-widgets-panel" data-panel="widgets"
+                            data-active="false">
+                            {{-- Layout group (التنسيق) --}}
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-semibold text-slate-700">
+                                        التنسيق
+                                    </span>
+                                    <button type="button" data-target="2"
+                                        class="pg-widgets-toggle group flex items-center gap-1.5 text-slate-500 hover:text-slate-800 transition-all duration-200">
+                                        <!-- Eye -->
+                                        <svg id="widgets-eye" class="w-4 h-4 transition-opacity duration-200"
+                                            fill="none" stroke="currentColor" stroke-width="1.8"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5 c4.478 0 8.268 2.943 9.542 7 -1.274 4.057-5.064 7-9.542 7 -4.477 0-8.268-2.943-9.542-7z" />
+                                            <circle cx="12" cy="12" r="3" />
+                                        </svg>
+
+                                        <!-- Arrow -->
+                                        <svg id="widgets-arrow"
+                                            class="w-3 h-3 transition-transform duration-200 rotate-0" fill="none"
+                                            stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+
+                                </div>
+
+                                {{-- هنا سيقوم GrapesJS بملء البلوكات، نعرضها كشبكة تشبه Elementor --}}
+                                <div class="pg-widgets-wrap is-collapsed" data-index="2">
+                                    {{-- <div id="gjs-blocks" class="p-0">
+
+                                    </div> --}}
+                                    <div class="p-0 gjs-blocks-host">
+                                        <div id="blocks-layout" class="pg-blocks-grid"></div>
+                                    </div>
+                                </div>
+
                             </div>
-                        </div>
-                    </section>
+
+                        </section>
+                        <section class="px-4 py-4 space-y-6 pg-sidebar-panel pg-widgets-panel" data-panel="widgets"
+                            data-active="false">
+                            <div class="space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-semibold text-slate-700">
+                                        الأقسام
+                                    </span>
+                                    <button type="button" data-target="3"
+                                        class="pg-widgets-toggle group flex items-center gap-1.5 text-slate-500 hover:text-slate-800 transition-all duration-200">
+                                        <!-- Eye -->
+                                        <svg id="widgets-eye" class="w-4 h-4 transition-opacity duration-200"
+                                            fill="none" stroke="currentColor" stroke-width="1.8"
+                                            viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5 c4.478 0 8.268 2.943 9.542 7 -1.274 4.057-5.064 7-9.542 7 -4.477 0-8.268-2.943-9.542-7z" />
+                                            <circle cx="12" cy="12" r="3" />
+                                        </svg>
+
+                                        <!-- Arrow -->
+                                        <svg id="widgets-arrow"
+                                            class="w-3 h-3 transition-transform duration-200 rotate-0" fill="none"
+                                            stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+
+                                </div>
+
+                                {{-- هنا سيقوم GrapesJS بملء البلوكات، نعرضها كشبكة تشبه Elementor --}}
+                                <div class="pg-widgets-wrap" data-index="3">
+                                    {{-- <div id="gjs-blocks" class="p-0">
+
+                                    </div> --}}
+                                    <div class="p-0 gjs-blocks-host">
+                                        <div id="blocks-sections" class="pg-blocks-grid"></div>
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        </section>
+                    </div>
 
                     {{-- Globals tab (Properties Panel) --}}
                     <section class="px-4 py-4 space-y-4 pg-sidebar-panel" data-panel="element" data-active="false">
@@ -822,52 +456,9 @@
                             </div>
 
                             <div class="p-3">
-<div class="pg-props-tab-content space-y-4" data-prop-content="traits" data-active="true">
-
-    {{-- ✅ Marker واضح للتأكد من ظهور المحتوى --}}
-    <div id="PG_DEBUG_MARK_CONTENT_EDITOR_V1" class="hidden">PG_DEBUG_MARK: CONTENT_EDITOR_V1</div>
-
-    {{-- ✅ صندوق “محرر محتوى النص” --}}
-    <div class="pg-gjs-box space-y-2">
-        <div class="text-[11px] font-extrabold text-slate-700">المحتوى</div>
-
-        {{-- تظهر عندما لا يكون هناك عنصر Text --}}
-        <div id="pg-content-empty"
-             class="text-[11px] text-slate-500 bg-slate-50 border border-dashed border-slate-200 rounded-xl px-3 py-3">
-            اختر عنصر نصي (Text) لتعديل المحتوى
-        </div>
-
-        {{-- تظهر عندما تختار عنصر Text --}}
-        <div id="pg-content-editor" class="hidden space-y-2">
-            <textarea id="pg-content-text"
-                      dir="auto"
-                      rows="6"
-                      class="w-full rounded-xl border border-slate-300 px-3 py-2 text-[12px] leading-relaxed"></textarea>
-
-            <div class="text-[10px] text-slate-500">
-                * إذا كان TinyMCE مفعّل داخل الـ canvas، هذا textarea يكون fallback فقط.
-            </div>
-        </div>
-    </div>
-
-    {{-- ✅ توزيع Traits إلى (محتوى / متقدم) حسب sidebar.js --}}
-    <div class="pg-gjs-box space-y-2">
-        <div class="text-[11px] font-extrabold text-slate-700">خصائص المحتوى</div>
-        <div id="pg-el-content-fields" class="space-y-2"></div>
-    </div>
-
-    <div class="pg-gjs-box space-y-2">
-        <div class="text-[11px] font-extrabold text-slate-700">خصائص متقدمة</div>
-        <div id="pg-el-advanced-fields" class="space-y-2"></div>
-    </div>
-
-    {{-- ✅ مهم جداً: هذا هو المصدر الذي يرسم فيه GrapesJS traits قبل ما ننقلها --}}
-    <div id="gjs-traits" class="hidden"></div>
-
-</div>
-
-
-
+                                <div class="pg-props-tab-content" data-prop-content="traits" data-active="true">
+                                    <div id="gjs-traits"></div>
+                                </div>
 
                                 <div class="pg-props-tab-content" data-prop-content="styles" data-active="false">
                                     <div id="gjs-styles"></div>
@@ -880,9 +471,6 @@
                         </div>
                     </section>
 
-
-
-
                     {{-- Yoast SEO tab (Placeholder حالياً) --}}
                     <section class="px-4 py-4 space-y-3 pg-sidebar-tab-content" data-tab-content="yoast"
                         data-active="false">
@@ -892,55 +480,15 @@
                         </p>
                     </section>
                 </div>
+                <div id="sidebar-resizer"
+                    class="absolute top-0 ltr:right-0 rtl:left-0 w-1.5 h-full select-none cursor-e-resize bg-transparent hover:bg-blue-400/40">
+                </div>
             </aside>
         </main>
+
+        <span class="hidden rotate-180 rtl:-left-3 -right-3"></span>
     </div>
-    {{-- زر مخفي لفتح مكتبة الوسائط من خلال GrapesJS Media Trait --}}
-    {{-- منطقة مخفية لربط مكتبة الوسائط مع GrapesJS --}}
-    <div id="pg-gjs-media-wrapper" class="hidden">
-        <x-dashboard.media-picker id="gjs_media_picker" name="gjs_media_picker" label="مكتبة الوسائط" value=""
-            button-text="اختر من المكتبة" />
-    </div>
-    <script>
-        function openPalgoalsMediaPicker(options = {
-            multiple: false
-        }) {
-            const wrapper = document.getElementById('pg-gjs-media-wrapper');
-            const pickerButton = wrapper.querySelector('button'); // الزر الفعلي داخل المكون
 
-            if (pickerButton) {
-                // نقوم بمحاكاة النقر لفتح المودال الخاص بـ Laravel
-                pickerButton.click();
-
-                // الاستماع لتغيير القيمة في المكون (اعتماداً على نظامك، قد يكون حدث 'change' أو حدث مخصص)
-                // ملاحظة: معظم Media Pickers في Laravel تطلق حدثاً عند اختيار الملفات
-                window.addEventListener('media-picker:selected', function handler(e) {
-                    // استخراج روابط الصور المختارة
-                    const files = e.detail.files || [];
-                    const urls = files.map(f => f.url);
-
-                    // إرسال البيانات إلى ملف media.js
-                    window.dispatchEvent(new CustomEvent('media-picker-confirmed', {
-                        detail: {
-                            items: files
-                        }
-                    }));
-
-                    // إزالة المستمع بعد التنفيذ لمرة واحدة
-                    window.removeEventListener('media-picker:selected', handler);
-                }, {
-                    once: true
-                });
-            }
-        }
-
-        // ربط الحدث الذي يطلبه ملف media.js بالوظيفة أعلاه
-        window.addEventListener('click', (e) => {
-            if (e.target.classList.contains('btn-open-gjs-media')) {
-                openPalgoalsMediaPicker();
-            }
-        });
-    </script>
 </body>
 
 </html>

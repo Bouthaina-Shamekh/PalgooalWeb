@@ -1,0 +1,586 @@
+/* =========================================================
+            Palgoals Builder Sidebar - Clean Style (Single Source of Truth)
+            ========================================================= */
+/* 1) Tokens */
+:root {
+    --pg-primary: #240B36;
+    --pg-secondary: #AE1028;
+
+    --pg-bg: #ffffff;
+    --pg-panel: #f8f7fb;
+    --pg-muted: rgba(36, 11, 54, .04);
+
+    --pg-border: rgba(36, 11, 54, .12);
+    --pg-border-soft: rgba(36, 11, 54, .08);
+
+    --pg-text: #0f172a;
+    --pg-sub: #64748b;
+
+    --pg-radius: 14px;
+    --pg-tile-radius: 12px;
+
+    --pg-focus: rgba(174, 16, 40, .14);
+    --pg-shadow: 0 14px 26px rgba(36, 11, 54, .10);
+
+    --pg-ring: rgba(174, 16, 40, .14);
+    --pg-soft: rgba(36, 11, 54, .03);
+}
+
+/* 2) GrapesJS safety */
+.gjs-cv-canvas {
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.gjs-selected .gjs-toolbar {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 99999;
+}
+
+/* =========================================================
+            Sidebar Shell
+        ========================================================= */
+main>aside {
+    background: linear-gradient(180deg, rgba(36, 11, 54, .03) 0%, rgba(174, 16, 40, .012) 100%);
+    border-color: rgba(36, 11, 54, .10) !important;
+}
+
+/* Title "العناصر" */
+main>aside>div:first-child h2 {
+    color: var(--pg-primary);
+    font-weight: 900;
+    letter-spacing: .2px;
+}
+
+/* =========================================================
+            Tabs (Pill Style) - works with data-active
+        ========================================================= */
+.pg-sidebar-tab-btn {
+    position: relative;
+    color: var(--pg-sub);
+    background: transparent;
+    border: 0;
+    outline: none;
+    transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+}
+
+.pg-sidebar-tab-btn:hover {
+    color: var(--pg-primary);
+}
+
+.pg-sidebar-tab-btn[data-active="true"] {
+    background: var(--pg-bg);
+    color: var(--pg-primary);
+    box-shadow: 0 10px 22px rgba(36, 11, 54, .08);
+}
+
+.pg-sidebar-tab-btn:focus,
+.pg-sidebar-tab-btn:focus-visible {
+    outline: none !important;
+    box-shadow: 0 0 0 3px var(--pg-focus), 0 10px 22px rgba(36, 11, 54, .08);
+}
+
+/* Hide inactive content */
+.pg-sidebar-tab-content[data-active="false"] {
+    display: none;
+}
+
+/* Sidebar Panels (Widgets <-> Element Settings) */
+.pg-sidebar-panel[data-active="false"] {
+    display: none;
+}
+
+.pg-sidebar-panel[data-active="true"] {
+    display: block;
+}
+
+/* =========================================================
+            Search
+        ========================================================= */
+main>aside input[type="text"],
+main>aside input[type="search"] {
+    background: rgba(36, 11, 54, .04) !important;
+    border: 1px solid rgba(36, 11, 54, .12) !important;
+    color: var(--pg-text) !important;
+}
+
+main>aside input[type="text"]::placeholder,
+main>aside input[type="search"]::placeholder {
+    color: rgba(100, 116, 139, .9);
+}
+
+main>aside input[type="text"]:focus,
+main>aside input[type="search"]:focus {
+    outline: none !important;
+    border-color: rgba(174, 16, 40, .45) !important;
+    box-shadow: 0 0 0 3px var(--pg-focus) !important;
+}
+
+/* =========================================================
+            Section headers inside widgets (التنسيق / أساسي ...)
+        ========================================================= */
+.pg-widgets-panel .pg-section-title {
+    color: var(--pg-primary);
+    font-weight: 900;
+}
+
+.pg-widgets-panel .pg-section-sub {
+    color: rgba(100, 116, 139, .85);
+    font-weight: 700;
+}
+
+/* Button: Hide/Show */
+/* #pg-widgets-toggle {
+    color: rgba(100, 116, 139, .85);
+    font-weight: 800;
+    font-size: 11px;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+}
+
+#pg-widgets-toggle:hover {
+    color: var(--pg-primary);
+} */
+
+
+/* Collapse wrapper (if used) */
+.pg-widgets-wrap.is-collapsed {
+    display: none;
+}
+
+/* =========================================================
+            Widgets Container
+        ========================================================= */
+
+/* IMPORTANT: do NOT make .gjs-blocks-host grid here (avoid conflicts) */
+.pg-widgets-panel .gjs-blocks-host {
+    position: relative;
+}
+
+/* Grid (created by simplifyBlocksPalette) */
+.pg-widgets-panel .gjs-blocks-host .pg-blocks-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 0 !important;
+    /* keep spacing controlled by outer padding (p-3) */
+    margin-top: 8px;
+}
+
+/* Remove Grapes category chrome */
+.pg-widgets-panel .gjs-blocks-host .gjs-block-category {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.pg-widgets-panel .gjs-blocks-host .gjs-title {
+    display: none !important;
+}
+
+/* =========================================================
+            Widget Tile (square-ish, clean, Palgoals brand)
+        ========================================================= */
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile {
+    background: var(--pg-bg);
+    border: 1px solid rgba(36, 11, 54, .12) !important;
+    border-radius: var(--pg-tile-radius);
+    min-height: 118px;
+    /* gives square feel */
+    padding: 14px 10px;
+    margin: 0 !important;
+
+    width: 100%;
+    text-align: center;
+    cursor: pointer;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.06);
+}
+
+/* hide media previews */
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile .gjs-block-media,
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile .gjs-block__media,
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile img {
+    display: none !important;
+}
+
+/* label wrapper */
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile .gjs-block-label {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* inner card */
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile .pg-block-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+/* icon box */
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile .pg-block-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(36, 11, 54, .07);
+    color: var(--pg-primary);
+    position: relative;
+}
+
+/* brand dot */
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile .pg-block-icon::after {
+    content: "";
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(174, 16, 40, .85);
+    box-shadow: 0 0 0 3px rgba(174, 16, 40, .10);
+}
+
+/* svg size */
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile .pg-block-icon svg {
+    width: 30px;
+    height: 30px;
+    display: block;
+}
+
+/* title */
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile .pg-block-title {
+    font-size: 12px;
+    font-weight: 900;
+    color: var(--pg-primary);
+    line-height: 1.2;
+}
+
+/* hover/focus */
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile:hover {
+    border-color: rgba(174, 16, 40, .32) !important;
+    box-shadow: var(--pg-shadow);
+    transform: translateY(-1px);
+}
+
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile:focus,
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile:focus-visible {
+    outline: none !important;
+    border-color: rgba(174, 16, 40, .45) !important;
+    box-shadow: 0 0 0 3px var(--pg-focus), var(--pg-shadow);
+}
+
+/* Filter hide */
+.pg-widgets-panel .gjs-blocks-host .pg-widget-tile.is-hidden {
+    display: none !important;
+}
+
+/* Empty message */
+.pg-widgets-empty {
+    margin-top: 10px;
+    padding: 12px;
+    border: 1px dashed rgba(36, 11, 54, .18);
+    border-radius: 12px;
+    background: rgba(36, 11, 54, .03);
+    color: #64748b;
+    font-size: 12px;
+    text-align: center;
+}
+
+/* =========================================================
+            Scrollbar (Sidebar only)
+        ========================================================= */
+main>aside ::-webkit-scrollbar {
+    width: 10px;
+}
+
+main>aside ::-webkit-scrollbar-track {
+    background: rgba(36, 11, 54, .03);
+    border-radius: 999px;
+}
+
+main>aside ::-webkit-scrollbar-thumb {
+    background: rgba(36, 11, 54, .22);
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, .75);
+}
+
+main>aside ::-webkit-scrollbar-thumb:hover {
+    background: rgba(174, 16, 40, .30);
+}
+
+main>aside {
+    scrollbar-color: rgba(36, 11, 54, .22) rgba(36, 11, 54, .04);
+    scrollbar-width: thin;
+}
+
+/* =========================================================
+   Properties Panel (Globals) – Inner Tabs
+   ========================================================= */
+.pg-props-tab-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    border-radius: 12px;
+    border: 1px solid rgba(36, 11, 54, .12);
+    background: rgba(36, 11, 54, .03);
+    color: #475569;
+    font-size: 12px;
+    font-weight: 800;
+    transition: all .15s ease;
+}
+
+.pg-props-tab-btn[data-active="true"] {
+    background: #fff;
+    border-color: rgba(174, 16, 40, .35);
+    box-shadow: 0 0 0 3px var(--pg-ring);
+    color: var(--pg-primary);
+}
+
+.pg-props-tab-content[data-active="false"] {
+    display: none;
+}
+
+.pg-gjs-box {
+    border: 1px solid rgba(36, 11, 54, .10);
+    border-radius: 14px;
+    background: #fff;
+    padding: 10px;
+    font-size: 12px;
+}
+
+/* =========================================================
+   GrapesJS UI inside Traits/Styles/Layers
+   (نظافة + تقليل ضغط + شكل أقرب للوحة تحكم حديثة)
+   ========================================================= */
+
+/* Titles/Rows spacing */
+#gjs-traits .gjs-trt-trait,
+#gjs-styles .gjs-sm-property,
+#gjs-layers .gjs-layer {
+    margin: 0 !important;
+    padding: 8px 6px !important;
+    border-radius: 12px;
+}
+
+#gjs-traits .gjs-trt-trait:hover,
+#gjs-styles .gjs-sm-property:hover {
+    background: var(--pg-soft);
+}
+
+/* Labels */
+#gjs-traits .gjs-trt-trait__label,
+#gjs-styles .gjs-sm-label {
+    color: #334155;
+    font-weight: 800;
+    font-size: 12px;
+}
+
+/* Inputs */
+#gjs-traits input,
+#gjs-traits select,
+#gjs-traits textarea,
+#gjs-styles input,
+#gjs-styles select,
+#gjs-styles textarea {
+    width: 100%;
+    border-radius: 12px !important;
+    border: 1px solid rgba(36, 11, 54, .14) !important;
+    background: #fff !important;
+    padding: 8px 10px !important;
+    outline: none !important;
+}
+
+#gjs-traits input:focus,
+#gjs-traits select:focus,
+#gjs-traits textarea:focus,
+#gjs-styles input:focus,
+#gjs-styles select:focus,
+#gjs-styles textarea:focus {
+    border-color: rgba(174, 16, 40, .42) !important;
+    box-shadow: 0 0 0 3px var(--pg-ring) !important;
+}
+
+/* Style Manager: Sector header */
+#gjs-styles .gjs-sm-sector {
+    border: 1px solid rgba(36, 11, 54, .10);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+#gjs-styles .gjs-sm-sector-title {
+    background: rgba(36, 11, 54, .03) !important;
+    padding: 10px 12px !important;
+    font-weight: 900 !important;
+    color: var(--pg-primary) !important;
+    border-bottom: 1px solid rgba(36, 11, 54, .08);
+}
+
+/* Layers */
+#gjs-layers .gjs-layer {
+    border: 1px solid rgba(36, 11, 54, .08);
+}
+
+#gjs-layers .gjs-layer-title {
+    font-weight: 800;
+    color: #334155;
+}
+
+.gjs-one-bg {
+    background-color: transparent;
+}
+
+/* ===== Elementor-like radio buttons inside StyleManager ===== */
+#gjs-styles .gjs-sm-property__radio {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+}
+
+#gjs-styles .gjs-radio-item {
+    border: 1px solid rgba(36, 11, 54, .12);
+    border-radius: 12px;
+    background: rgba(36, 11, 54, .03);
+    padding: 8px 0;
+    font-weight: 900;
+    text-align: center;
+}
+
+#gjs-styles .gjs-radio-item input:checked+.gjs-radio-item-label {
+    color: var(--pg-primary);
+}
+
+#gjs-styles .gjs-radio-item:has(input:checked) {
+    background: #fff;
+    border-color: rgba(174, 16, 40, .35);
+    box-shadow: 0 0 0 3px var(--pg-ring);
+}
+
+/* titles inside sectors */
+#gjs-styles .gjs-sm-sector-title {
+    cursor: pointer;
+}
+
+@media (min-width: 1024px) {
+    [data-pg-hide-desktop="1"] {
+        display: none !important;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+    [data-pg-hide-tablet="1"] {
+        display: none !important;
+    }
+}
+
+@media (max-width: 767px) {
+    [data-pg-hide-mobile="1"] {
+        display: none !important;
+    }
+}
+
+.pg-trait-wysiwyg .tox-tinymce {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+}
+
+.pg-trait-wysiwyg textarea {
+    width: 100%;
+}
+
+/* ----- Alsaeyd Css ------ */
+/* .st0 {
+    fill: red;
+} */
+
+button,
+a {
+    cursor: pointer;
+}
+
+.gjs-blocks-c {
+    display: none !important;
+}
+
+.gjs-label {
+    text-align: start !important;
+    color: var(--pg-primary) !important;
+    font-weight: 400 !important;
+    line-height: normal !important;
+}
+
+.gjs-field-wrp .gjs-field {
+    background-color: transparent !important;
+}
+
+#gjs-styles .gjs-sm-label {
+    font-size: 15px !important;
+    display: flex;
+    justify-content: space-between;
+}
+
+.gjs-field-radio .gjs-radio-items {
+    gap: 8px;
+    align-items: center;
+}
+
+#gjs-styles .gjs-radio-item .gjs-radio-item-label {
+    color: var(--pg-sub);
+}
+
+.gjs-field {
+    background: transparent;
+    color: var(--pg-primary);
+}
+
+.gjs-sm-property.gjs-sm-select {
+    width: 100%;
+}
+
+[dir="rtl"] .gjs-field-units,
+[dir="rtl"] .gjs-field-colorp {
+    left: 0;
+    right: auto;
+}
+
+[data-gjs-type="wrapper"] {
+    min-height: 100% !important;
+}
+
+.pg-box-input {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 6px 8px;
+    font-size: 12px;
+    width: 100%;
+}
+
+.gjs-sm-field.gjs-sm-composite {
+    background: transparent;
+    border: none;
+}
+
+.gjs-off-prv{
+    display: none !important;
+}

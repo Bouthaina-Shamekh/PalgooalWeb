@@ -433,3 +433,62 @@ export function registerBlocks(editor) {
 
 }
 
+
+export function registerBlocksInBox(editor) {
+    editor.on('block:custom', ({ blocks, dragStart, dragStop }) => {
+        const map = {
+            Basic: document.querySelector('#blocks-basic'),
+            Layout: document.querySelector('#blocks-layout'),
+            Sections: document.querySelector('#blocks-sections'),
+        };
+
+        // تنظيف الحاويات
+        Object.values(map).forEach(el => el && (el.innerHTML = ''));
+
+        blocks.forEach(block => {
+            const cat = block.get('category');
+            const catId = cat?.id || cat || 'Basic';
+            const host = map[catId];
+            if (!host) return;
+
+            const label = block.get('label') || '';
+
+            const el = document.createElement('div');
+            el.className =
+                'gjs-block gjs-one-bg gjs-four-color-h pg-widget-tile';
+
+            el.setAttribute('title', label);
+            el.setAttribute('draggable', true);
+            el.setAttribute('tabindex', '0');
+
+            // هذه التي يعتمد عليها البحث
+            el.setAttribute('data-widget-item', '1');
+            el.setAttribute('data-widget-name', label);
+            el.setAttribute('aria-label', label);
+
+            el.innerHTML = `
+                    <div class="gjs-block-label">
+                        <div class="pg-block-card">
+                        <div class="pg-block-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M6 7h12M6 12h12M6 17h12"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="pg-block-title">${label}</div>
+                        </div>
+                    </div>
+                    `;
+
+
+            // drag & drop الرسمي
+            el.addEventListener('mousedown', () => dragStart(block));
+            el.addEventListener('mouseup', () => dragStop());
+
+            host.appendChild(el);
+        });
+    });
+
+}

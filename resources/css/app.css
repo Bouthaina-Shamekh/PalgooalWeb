@@ -17,6 +17,10 @@
     --color-background: #F9F6FB;
     --text-title-h2: 1.875rem;
     --text-title-h3: 1.5rem;
-    --text-suptitle: 1.125rem;    
+    --text-suptitle: 1.125rem;
 
+}
+
+[data-gjs-type="wrapper"] {
+    min-height: 100vh !important;
 }
