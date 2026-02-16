@@ -407,15 +407,7 @@ export function registerBlocks(editor) {
     bm.add('pg-container', {
         label: 'Container Layout',
         category: 'Layout',
-        content: `
-      <section class="pg-layout pg-container pg-content-boxed w-full px-4 sm:px-8 lg:px-24 py-12" data-gjs-name="Container">
-        <div class="pg-layout pg-container-inner w-full grid items-stretch justify-start" data-pg-grid-outline="0">
-          <div class="pg-layout min-h-12 rounded-xl border border-dashed border-slate-300 p-4 text-slate-600">
-            Container content...
-          </div>
-        </div>
-      </section>
-    `,
+        content: { type: 'pg-container' },
     });
 
     bm.add('pg-grid', {

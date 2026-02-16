@@ -192,6 +192,38 @@ function parseCssDimension(raw) {
     };
 }
 
+function getEditorDir(model) {
+    const canvasDir = model?.em?.Canvas?.getDocument?.()?.documentElement?.getAttribute?.('dir');
+    const docDir = typeof document !== 'undefined' ? document.documentElement?.getAttribute?.('dir') : '';
+    const bodyDir = typeof document !== 'undefined' ? document.body?.getAttribute?.('dir') : '';
+    const dir = String(canvasDir || docDir || bodyDir || 'ltr').toLowerCase();
+    return dir === 'rtl' ? 'rtl' : 'ltr';
+}
+
+function traitFlexDirToCssValue(flexDir, dir = 'ltr') {
+    const value = String(flexDir || 'row');
+    if (value === 'col') return 'column';
+    if (value === 'col-reverse') return 'column-reverse';
+    if (value === 'row-reverse') return dir === 'rtl' ? 'row' : 'row-reverse';
+    return dir === 'rtl' ? 'row-reverse' : 'row';
+}
+
+function cssFlexDirToTraitValue(cssFlexDir, dir = 'ltr') {
+    const value = String(cssFlexDir || '').toLowerCase();
+    if (value === 'column') return 'col';
+    if (value === 'column-reverse') return 'col-reverse';
+    if (value === 'row-reverse') return dir === 'rtl' ? 'row' : 'row-reverse';
+    if (value === 'row') return dir === 'rtl' ? 'row-reverse' : 'row';
+    return 'row';
+}
+
+function cssFlexDirToClass(cssFlexDir) {
+    if (cssFlexDir === 'column') return 'flex-col';
+    if (cssFlexDir === 'column-reverse') return 'flex-col-reverse';
+    if (cssFlexDir === 'row-reverse') return 'flex-row-reverse';
+    return 'flex-row';
+}
+
 function extractRepeatCount(templateValue) {
     const text = String(templateValue || '').trim();
     const match = text.match(/repeat\(\s*(\d+)\s*,/i);
@@ -245,6 +277,22 @@ function findInnerWrapper(model) {
     return inner;
 }
 
+const INNER_WRAPPER_PROPS = {
+    selectable: false,
+    hoverable: false,
+    draggable: false,
+    droppable: true,
+    copyable: false,
+    removable: false,
+    layerable: false,
+    highlightable: false,
+};
+
+function enforceInnerWrapperProps(inner) {
+    if (!inner?.set) return;
+    inner.set({ ...INNER_WRAPPER_PROPS }, { silent: true });
+}
+
 function ensureInnerWrapper(model) {
     const comps = model.components?.();
     if (!comps) return null;
@@ -260,11 +308,14 @@ function ensureInnerWrapper(model) {
                 type: 'default',
                 tagName: 'div',
                 attributes: { class: 'pg-layout pg-container-inner w-full' },
+                ...INNER_WRAPPER_PROPS,
                 components: previousChildren,
             },
         ]);
 
-        return comps.at(0);
+        const created = comps.at(0);
+        enforceInnerWrapperProps(created);
+        return created;
     }
 
     const outOfWrapperChildren = [];
@@ -278,6 +329,7 @@ function ensureInnerWrapper(model) {
         inner.components().add(moved);
     }
 
+    enforceInnerWrapperProps(inner);
     return inner;
 }
 
@@ -320,6 +372,7 @@ function hydrateContainerProps(model) {
     const inner = ensureInnerWrapper(model);
     const innerClasses = classListFromString(inner?.getAttributes?.()?.class);
     const innerStyles = inner?.getStyle?.() || {};
+    const editorDir = getEditorDir(model);
 
     const explicitFull = outerClasses.includes('pg-content-full');
     const explicitBoxed = outerClasses.includes('pg-content-boxed');
@@ -442,14 +495,17 @@ function hydrateContainerProps(model) {
     if (itemsClass) model.set('pgItems', itemsClass.replace('items-', ''), { silent: true });
     if (justifyClass) model.set('pgJustify', justifyClass.replace('justify-', ''), { silent: true });
 
-    if (innerClasses.includes('flex-row-reverse')) {
-        model.set('pgFlexDir', 'row-reverse', { silent: true });
+    const styleFlexDir = String(innerStyles['flex-direction'] || '').trim().toLowerCase();
+    if (styleFlexDir) {
+        model.set('pgFlexDir', cssFlexDirToTraitValue(styleFlexDir, editorDir), { silent: true });
+    } else if (innerClasses.includes('flex-row-reverse')) {
+        model.set('pgFlexDir', cssFlexDirToTraitValue('row-reverse', editorDir), { silent: true });
     } else if (innerClasses.includes('flex-col-reverse')) {
-        model.set('pgFlexDir', 'col-reverse', { silent: true });
+        model.set('pgFlexDir', cssFlexDirToTraitValue('column-reverse', editorDir), { silent: true });
     } else if (innerClasses.includes('flex-col')) {
-        model.set('pgFlexDir', 'col', { silent: true });
+        model.set('pgFlexDir', cssFlexDirToTraitValue('column', editorDir), { silent: true });
     } else {
-        model.set('pgFlexDir', 'row', { silent: true });
+        model.set('pgFlexDir', cssFlexDirToTraitValue('row', editorDir), { silent: true });
     }
 
     if (innerClasses.includes('flex-nowrap')) {
@@ -481,6 +537,8 @@ function applyContainerClasses(model) {
     const justify = model.get('pgJustify') || 'start';
     const flexDir = model.get('pgFlexDir') || 'row';
     const wrap = model.get('pgWrap') || 'wrap';
+    const editorDir = getEditorDir(model);
+    const cssFlexDirection = traitFlexDirToCssValue(flexDir, editorDir);
 
     if (gapLinked) {
         gapY = gapX;
@@ -500,13 +558,7 @@ function applyContainerClasses(model) {
 
     const innerLayoutClasses = [];
     if (layout === 'flex') {
-        const directionClassMap = {
-            row: 'flex-row',
-            'row-reverse': 'flex-row-reverse',
-            col: 'flex-col',
-            'col-reverse': 'flex-col-reverse',
-        };
-        innerLayoutClasses.push('flex', directionClassMap[flexDir] || 'flex-row');
+        innerLayoutClasses.push('flex', cssFlexDirToClass(cssFlexDirection));
         innerLayoutClasses.push(wrap === 'nowrap' ? 'flex-nowrap' : 'flex-wrap');
     } else {
         innerLayoutClasses.push('grid');
@@ -566,7 +618,9 @@ function applyContainerClasses(model) {
     if (layout === 'grid') {
         innerStyles['grid-template-columns'] = `repeat(${cols}, minmax(0, 1fr))`;
         innerStyles['grid-template-rows'] = `repeat(${rows}, minmax(0, 1fr))`;
+        delete innerStyles['flex-direction'];
     } else {
+        innerStyles['flex-direction'] = cssFlexDirection;
         delete innerStyles['grid-template-columns'];
         delete innerStyles['grid-template-rows'];
     }
@@ -612,19 +666,11 @@ export function registerContainerElement(editor) {
                     {
                         type: 'default',
                         tagName: 'div',
+                        ...INNER_WRAPPER_PROPS,
                         attributes: {
                             class: 'pg-layout pg-container-inner w-full grid grid-cols-1 items-stretch justify-start',
                         },
-                        components: [
-                            {
-                                type: 'default',
-                                tagName: 'div',
-                                attributes: {
-                                    class: 'pg-layout min-h-12 rounded-xl border border-dashed border-slate-300 p-4 text-slate-600',
-                                },
-                                components: [{ type: 'text', content: 'Container content...' }],
-                            },
-                        ],
+                        components: [],
                     },
                 ],
                 pgTag: 'section',
@@ -854,7 +900,18 @@ export function registerContainerElement(editor) {
     `);
 
     editor.on('component:selected', (component) => {
-        if (!component || component.get?.('type') !== 'pg-container') return;
+        if (!component) return;
+
+        if (componentHasClass(component, 'pg-container-inner')) {
+            const parent = component.parent?.();
+            if (parent && parent.get?.('type') === 'pg-container') {
+                editor.select(parent);
+                requestAnimationFrame(() => syncContainerTraitRows(parent));
+                return;
+            }
+        }
+
+        if (component.get?.('type') !== 'pg-container') return;
         requestAnimationFrame(() => syncContainerTraitRows(component));
     });
 }

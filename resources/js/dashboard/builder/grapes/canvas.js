@@ -68,6 +68,11 @@ export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
         html[dir="rtl"] body{text-align:right;}
         html[dir="ltr"] body{text-align:left;}
         .gjs-wrapper:empty::before{content:"${safe}";display:block;text-align:center;color:#64748b;font-weight:600;padding-top:60px;}
+        .pg-container .pg-container-inner:empty{
+          min-height:140px;
+          border:1px dashed #cbd5e1;
+          border-radius:12px;
+        }
       `;
 
             headEl.appendChild(style);
