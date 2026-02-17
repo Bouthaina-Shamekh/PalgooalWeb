@@ -14,6 +14,8 @@ const loadTiny = () => {
     return TinyPromise;
 };
 
+import 'tinymce/skins/ui/oxide/skin.min.css';
+import 'tinymce/skins/ui/oxide/content.inline.min.css';
 import grapesjs from 'grapesjs';
 import 'grapesjs/dist/css/grapes.min.css';
 import './builder'
@@ -111,70 +113,64 @@ function initPageBuilder() {
         enable(el, rteInst = {}) {
             el.contentEditable = true;
 
-            // لازم tinymce يكون موجود (أنت محمّله من blade)
-            if (!window.tinymce) return rteInst;
-
             const id = el.id || `pg-rte-${Date.now()}`;
             el.id = id;
 
-            // remove old editor if exists
-            const old = window.tinymce.get(id);
-            if (old) old.remove();
+            rteInst.__bootPromise = loadTiny()
+                .then((tiny) => {
+                    if (!el.isConnected) return;
 
-            const isRtl = document.documentElement.getAttribute('dir') === 'rtl';
-            const docLang = (document.documentElement.lang || 'en').toLowerCase();
-            const lang = docLang.startsWith('ar') ? 'ar' : 'en';
+                    const old = tiny.get(id);
+                    if (old) old.remove();
 
-            window.tinymce.init({
-                target: el,
-                inline: true,
-                menubar: false,
-                branding: false,
-                license_key: 'gpl',
+                    const isRtl = document.documentElement.getAttribute('dir') === 'rtl';
 
-                plugins: 'link lists code',
-                toolbar: 'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | code',
+                    tiny.init({
+                        target: el,
+                        inline: true,
+                        menubar: false,
+                        branding: false,
+                        skin: false,
+                        content_css: false,
+                        license_key: 'gpl',
+                        plugins: 'link lists code',
+                        toolbar:
+                            'undo redo | bold italic underline | alignleft aligncenter alignright | bullist numlist | link | code',
+                        directionality: isRtl ? 'rtl' : 'ltr',
+                        setup: (ed) => {
+                            rteInst.tiny = ed;
 
-                directionality: isRtl ? 'rtl' : 'ltr',
+                            ed.on('init', () => {
+                                ed.formatter.apply(isRtl ? 'alignright' : 'alignleft');
+                            });
 
-                // ✅ لا تضع language إلا إذا كان عندك ملف اللغة فعلياً
-                ...(lang === 'ar' ? {} : {}),
-
-                setup: (ed) => {
-                    rteInst.tiny = ed;
-
-                    ed.on('init', () => {
-                        ed.formatter.apply(isRtl ? 'alignright' : 'alignleft');
+                            ed.on('change keyup blur', () => {
+                                editor.trigger('change');
+                            });
+                        },
                     });
-
-                    ed.on('change keyup blur', () => {
-                        // هذه أفضل من trigger change:changesCount لأنها بتسجّل تعديل حقيقي
-                        editor.trigger('change');
-                    });
-                },
-            });
+                })
+                .catch((err) => {
+                    console.error('[Builder] TinyMCE init failed:', err);
+                });
 
             return rteInst;
         },
 
         disable(el, rteInst = {}) {
-            // ✅ هذا يمنع crash
             el.contentEditable = false;
 
             try {
-                const inst = rteInst?.tiny || (el.id ? window.tinymce?.get(el.id) : null);
+                const inst = rteInst?.tiny;
                 if (inst) inst.remove();
             } catch (e) {
-                // ignore
+                // noop
             }
 
             rteInst.tiny = null;
             return rteInst;
         },
     });
-
-
-
 
 
     registerStyleManager(editor, { isRtl });
@@ -321,6 +317,7 @@ function initPageBuilder() {
 }
 
 initPageBuilder();
+
 
 
 
