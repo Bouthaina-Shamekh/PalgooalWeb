@@ -1246,6 +1246,9 @@
   .min-h-16 {
     min-height: calc(var(--spacing) * 16);
   }
+  .min-h-24 {
+    min-height: calc(var(--spacing) * 24);
+  }
   .min-h-\[100px\] {
     min-height: 100px;
   }
@@ -1727,6 +1730,11 @@
   }
   .list-none {
     list-style-type: none;
+  }
+  .\[appearance\:textfield\] {
+    -webkit-appearance: textfield;
+       -moz-appearance: textfield;
+            appearance: textfield;
   }
   .appearance-none {
     -webkit-appearance: none;
@@ -3083,6 +3091,14 @@
     -o-object-fit: cover;
        object-fit: cover;
   }
+  .object-fill {
+    -o-object-fit: fill;
+       object-fit: fill;
+  }
+  .object-none {
+    -o-object-fit: none;
+       object-fit: none;
+  }
   .object-center {
     -o-object-position: center;
        object-position: center;
@@ -3794,6 +3810,9 @@
   }
   .accent-primary {
     accent-color: var(--color-primary);
+  }
+  .accent-slate-500 {
+    accent-color: var(--color-slate-500);
   }
   .accent-white {
     accent-color: var(--color-white);
@@ -5566,6 +5585,11 @@
       border-color: var(--color-sky-400);
     }
   }
+  .focus\:border-slate-400 {
+    &:focus {
+      border-color: var(--color-slate-400);
+    }
+  }
   .focus\:border-transparent {
     &:focus {
       border-color: transparent;
@@ -5734,6 +5758,14 @@
   .focus\:ring-sky-400 {
     &:focus {
       --tw-ring-color: var(--color-sky-400);
+    }
+  }
+  .focus\:ring-slate-300\/50 {
+    &:focus {
+      --tw-ring-color: color-mix(in srgb, oklch(86.9% 0.022 252.894) 50%, transparent);
+      @supports (color: color-mix(in lab, red, red)) {
+        --tw-ring-color: color-mix(in oklab, var(--color-slate-300) 50%, transparent);
+      }
     }
   }
   .focus\:ring-white\/10 {
@@ -8156,6 +8188,18 @@
   .\[\&\.active\]\:ring-slate-300 {
     &.active {
       --tw-ring-color: var(--color-slate-300);
+    }
+  }
+  .\[\&\:\:-webkit-inner-spin-button\]\:appearance-none {
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+              appearance: none;
+    }
+  }
+  .\[\&\:\:-webkit-outer-spin-button\]\:appearance-none {
+    &::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+              appearance: none;
     }
   }
   .\[\&\:\:-webkit-scrollbar\]\:hidden {

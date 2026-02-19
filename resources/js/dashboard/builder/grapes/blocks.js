@@ -403,6 +403,11 @@ export function registerBlocks(editor) {
         category: 'Basic',
         content: { type: 'pg-text' },
     });
+    bm.add('pg-image', {
+        label: 'Image',
+        category: 'Basic',
+        content: { type: 'pg-image' },
+    });
 
     bm.add('pg-container', {
         label: 'Container Layout',

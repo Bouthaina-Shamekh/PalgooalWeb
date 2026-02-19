@@ -1,10 +1,12 @@
 import { registerMediaTrait } from './traits/media.js';
+import { registerSectionHeadingTrait } from './traits/section-heading';
 import { registerGapControlTrait } from './traits/gap-control';
 import { registerIconSelectTrait } from './traits/icon-select';
 import { registerRangeTrait } from './traits/range';
 import { registerSwitchTrait } from './traits/switch';
 import { registerWysiwygTrait } from './traits/wysiwyg';
 import { registerHeadingElement } from './elements/heading';
+import { registerImageElement } from './elements/image';
 import { registerTextElement } from './elements/text';
 import { registerContainerElement } from './layout/container';
 import { registerGridElement } from './layout/grid';
@@ -15,12 +17,14 @@ import { registerSliderSection } from './sections/slider';
 
 export function registerAllComponents(editor) {
     registerMediaTrait(editor);
+    registerSectionHeadingTrait(editor);
     registerGapControlTrait(editor);
     registerIconSelectTrait(editor);
     registerRangeTrait(editor);
     registerSwitchTrait(editor);
     registerWysiwygTrait(editor);
     registerHeadingElement(editor);
+    registerImageElement(editor);
     registerTextElement(editor);
     registerContainerElement(editor);
     registerGridElement(editor);

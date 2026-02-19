@@ -30,6 +30,28 @@ function normalizeResolverListenersMap(watcher) {
     return true;
 }
 
+function sanitizeProjectForLoad(input) {
+    const walk = (value) => {
+        if (Array.isArray(value)) {
+            return value.map(walk);
+        }
+
+        if (!value || typeof value !== 'object') {
+            return value;
+        }
+
+        const out = {};
+        Object.entries(value).forEach(([key, val]) => {
+            // Broken/legacy resolver payloads can crash Grapes serialization during load.
+            if (key === 'dataValues') return;
+            out[key] = walk(val);
+        });
+        return out;
+    };
+
+    return walk(input);
+}
+
 function resetResolverListenersMap(watcher) {
     if (!watcher || typeof watcher !== 'object') return false;
     watcher.resolverListeners = Object.create(null);
@@ -138,6 +160,7 @@ export function createProjectStorage(editor, { loadUrl, saveUrl, emptyHint, loca
 {
     let isDirty = false;
     let isSaving = false;
+    let isLoading = false;
     let autosaveTimer = null;
 
     const clearAutosaveTimer = () => {
@@ -148,6 +171,8 @@ export function createProjectStorage(editor, { loadUrl, saveUrl, emptyHint, loca
     };
 
     const markDirty = () => {
+        if (isLoading) return;
+
         if (!isDirty) {
             isDirty = true;
             setStatus('Unsaved', 'dirty');
@@ -162,6 +187,7 @@ export function createProjectStorage(editor, { loadUrl, saveUrl, emptyHint, loca
 
     async function loadProject() {
         try {
+            isLoading = true;
             setStatus('Loading…', 'saving');
 
             const data = await fetchJson(loadUrl, { method: 'GET' });
@@ -178,7 +204,18 @@ export function createProjectStorage(editor, { loadUrl, saveUrl, emptyHint, loca
                 );
 
             if (isValidProject) {
-                editor.loadProjectData(structure);
+                try {
+                    editor.loadProjectData(structure);
+                } catch (loadError) {
+                    const message = String(loadError?.message || loadError || '');
+                    const isResolverToJsonError = message.includes('toJSON');
+
+                    if (!isResolverToJsonError) throw loadError;
+
+                    const sanitizedStructure = sanitizeProjectForLoad(structure);
+                    console.warn('[Builder] load fallback: stripping dataValues from stored project');
+                    editor.loadProjectData(sanitizedStructure);
+                }
             } else {
                 // فقط لو فعلاً ما في شيء داخل الـ canvas
                 const hasAnyComponents = !!editor.getWrapper()?.components()?.length;
@@ -188,11 +225,14 @@ export function createProjectStorage(editor, { loadUrl, saveUrl, emptyHint, loca
             }
 
             editor.getWrapper().set({ droppable: true });
+            clearAutosaveTimer();
             isDirty = false;
             setStatus('Loaded', 'saved');
         } catch (e) {
             console.error('[Builder] load failed:', e);
             setStatus('Load failed', 'error');
+        } finally {
+            isLoading = false;
         }
     }
 
@@ -226,7 +266,8 @@ export function createProjectStorage(editor, { loadUrl, saveUrl, emptyHint, loca
                 structure = editor.getProjectData();
             }
 
-            const html = editor.getHtml();
+            const rawHtml = editor.getHtml();
+            const html = String(rawHtml || '').trim() ? rawHtml : '<div></div>';
             const css = editor.getCss();
 
             await fetchJson(saveUrl, {
@@ -246,4 +287,5 @@ export function createProjectStorage(editor, { loadUrl, saveUrl, emptyHint, loca
 
     return { loadProject, saveProject, markDirty };
 }
+
 

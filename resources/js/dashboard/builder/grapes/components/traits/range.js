@@ -34,13 +34,20 @@ export function registerRangeTrait(editor) {
             const name = trait.get('name') || '';
 
             const el = document.createElement('div');
-            el.className = 'pg-range-trait';
+            el.className = 'flex flex-col gap-2';
             el.innerHTML = `
                 <input data-role="hidden" type="hidden" name="${name}" value="${next}">
-                ${unitLabel ? `<div style="font-size:12px;color:#64748b;margin-bottom:6px;">${unitLabel}</div>` : ''}
-                <div class="pg-range-trait-row" style="display:flex;align-items:center;gap:10px;">
-                    <input data-role="number" type="number" min="${min}" max="${max}" step="${step}" value="${next}" style="width:68px;" />
-                    <input data-role="range" type="range" min="${min}" max="${max}" step="${step}" value="${next}" style="flex:1;" />
+                ${unitLabel ? `
+                    <div class="inline-flex w-fit select-none items-center gap-1 text-xs leading-none text-slate-600">
+                        <svg class="h-2.5 w-2.5 text-slate-500" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 8l5 5 5-5"></path>
+                        </svg>
+                        <span>${unitLabel}</span>
+                    </div>
+                ` : ''}
+                <div class="flex items-center gap-2">
+                    <input data-role="number" class="h-9 w-20 rounded-md border border-slate-300 bg-white px-2 text-center text-sm font-medium text-slate-700 outline-none transition [appearance:textfield] focus:border-slate-400 focus:ring-2 focus:ring-slate-300/50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" type="number" min="${min}" max="${max}" step="${step}" value="${next}" />
+                    <input data-role="range" class="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-300 accent-slate-500" type="range" min="${min}" max="${max}" step="${step}" value="${next}" />
                 </div>
             `;
 

@@ -32,6 +32,9 @@ const TAILWIND_GAP_TO_PX = {
     12: 48,
 };
 
+const MEDIA_QUERY_TABLET = '(max-width: 992px)';
+const MEDIA_QUERY_MOBILE = '(max-width: 480px)';
+
 const FLEX_ICON_ARROW_UP = `
 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
     <path d="M12 19V5"></path>
@@ -163,6 +166,34 @@ const FLEX_ICON_NOWRAP = `
 </svg>
 `;
 
+const FLEX_DIRECTION_OPTIONS = [
+    { id: 'col-reverse', name: 'Up', icon: FLEX_ICON_ARROW_UP },
+    { id: 'row', name: 'Right', icon: FLEX_ICON_ARROW_RIGHT },
+    { id: 'col', name: 'Down', icon: FLEX_ICON_ARROW_DOWN },
+    { id: 'row-reverse', name: 'Left', icon: FLEX_ICON_ARROW_LEFT },
+];
+
+const FLEX_JUSTIFY_OPTIONS = [
+    { id: 'start', name: 'Start', icon: FLEX_ICON_JUSTIFY_START },
+    { id: 'center', name: 'Center', icon: FLEX_ICON_JUSTIFY_CENTER },
+    { id: 'end', name: 'End', icon: FLEX_ICON_JUSTIFY_END },
+    { id: 'between', name: 'Between', icon: FLEX_ICON_JUSTIFY_BETWEEN },
+    { id: 'around', name: 'Around', icon: FLEX_ICON_JUSTIFY_AROUND },
+    { id: 'evenly', name: 'Evenly', icon: FLEX_ICON_JUSTIFY_EVENLY },
+];
+
+const FLEX_ITEMS_OPTIONS = [
+    { id: 'start', name: 'Start', icon: FLEX_ICON_ALIGN_START },
+    { id: 'center', name: 'Center', icon: FLEX_ICON_ALIGN_CENTER },
+    { id: 'end', name: 'End', icon: FLEX_ICON_ALIGN_END },
+    { id: 'stretch', name: 'Stretch', icon: FLEX_ICON_ALIGN_STRETCH },
+];
+
+const FLEX_WRAP_OPTIONS = [
+    { id: 'wrap', name: 'Wrap', icon: FLEX_ICON_WRAP },
+    { id: 'nowrap', name: 'No Wrap', icon: FLEX_ICON_NOWRAP },
+];
+
 function classListFromString(value) {
     return String(value || '')
         .split(/\s+/)
@@ -190,6 +221,13 @@ function parseCssDimension(raw) {
         value: Number(match[1]),
         unit: (match[2] || 'px').toLowerCase(),
     };
+}
+
+function extractCssUrl(raw) {
+    const input = String(raw || '').trim();
+    if (!input || input === 'none') return '';
+    const match = input.match(/^url\((['"]?)(.*?)\1\)$/i);
+    return match ? String(match[2] || '').trim() : '';
 }
 
 function getEditorDir(model) {
@@ -224,6 +262,186 @@ function cssFlexDirToClass(cssFlexDir) {
     return 'flex-row';
 }
 
+function traitItemsToCssValue(value) {
+    if (value === 'start') return 'flex-start';
+    if (value === 'end') return 'flex-end';
+    if (value === 'center') return 'center';
+    if (value === 'stretch') return 'stretch';
+    return 'stretch';
+}
+
+function traitJustifyToCssValue(value) {
+    if (value === 'start') return 'flex-start';
+    if (value === 'end') return 'flex-end';
+    if (value === 'center') return 'center';
+    if (value === 'between') return 'space-between';
+    if (value === 'around') return 'space-around';
+    if (value === 'evenly') return 'space-evenly';
+    return 'flex-start';
+}
+
+function cleanStylePayload(style) {
+    const next = {};
+    Object.entries(style || {}).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') return;
+        next[key] = value;
+    });
+    return next;
+}
+
+function importantStylePayload(style) {
+    const next = {};
+    Object.entries(style || {}).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') return;
+
+        const normalized = String(value).trim();
+        if (!normalized) return;
+
+        next[key] = /\!important\s*$/i.test(normalized)
+            ? normalized
+            : `${normalized} !important`;
+    });
+    return next;
+}
+
+function ensureContainerId(model) {
+    const attrs = { ...(model.getAttributes?.() || {}) };
+    let id = String(attrs.id || '').trim();
+
+    if (!id) {
+        const cid = String(model?.cid || Date.now()).replace(/[^a-zA-Z0-9_-]/g, '');
+        id = `pg-container-${cid}`;
+        model.addAttributes({ id });
+    }
+
+    return id;
+}
+
+function setResponsiveRule(model, selector, style, mediaQuery) {
+    const em = model?.em;
+    const css = em?.Css;
+    if (!css) return;
+
+    const payload = cleanStylePayload(style);
+    const importantPayload = importantStylePayload(payload);
+    const existing = css.getRule(selector, {
+        atRuleType: 'media',
+        atRuleParams: mediaQuery,
+    });
+
+    if (!Object.keys(importantPayload).length) {
+        if (existing) css.remove(existing);
+        return;
+    }
+
+    if (existing) css.remove(existing);
+
+    css.setRule(selector, importantPayload, {
+        atRuleType: 'media',
+        atRuleParams: mediaQuery,
+        addStyles: false,
+    });
+}
+
+function normalizeColorValue(raw, fallback = '#ffffff') {
+    const value = String(raw || '').trim().toLowerCase();
+    if (!value) return fallback;
+
+    if (/^#[0-9a-f]{3}$/i.test(value)) {
+        return `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`.toLowerCase();
+    }
+
+    if (/^#[0-9a-f]{6}$/i.test(value)) {
+        return value;
+    }
+
+    const rgb = value.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})/i);
+    if (rgb) {
+        const toHex = (n) => clamp(Number(n), 0, 255).toString(16).padStart(2, '0');
+        return `#${toHex(rgb[1])}${toHex(rgb[2])}${toHex(rgb[3])}`;
+    }
+
+    return fallback;
+}
+
+function makeBackgroundStyles({ bgType, bgColor, bgImage, bgPosition, bgSize, bgRepeat }) {
+    const type = ['none', 'color', 'image'].includes(bgType) ? bgType : 'none';
+    const imageUrl = extractCssUrl(bgImage) || String(bgImage || '').trim();
+    const escapedImageUrl = imageUrl.replace(/"/g, '\\"');
+
+    if (type === 'image' && escapedImageUrl) {
+        return {
+            'background-color': 'transparent',
+            'background-image': `url("${escapedImageUrl}")`,
+            'background-position': bgPosition || 'center center',
+            'background-size': bgSize || 'cover',
+            'background-repeat': bgRepeat || 'no-repeat',
+        };
+    }
+
+    if (type === 'color') {
+        return {
+            'background-color': normalizeColorValue(bgColor, '#ffffff'),
+            'background-image': 'none',
+            'background-position': 'center center',
+            'background-size': 'auto',
+            'background-repeat': 'repeat',
+        };
+    }
+
+    return {
+        'background-color': 'transparent',
+        'background-image': 'none',
+        'background-position': 'center center',
+        'background-size': 'auto',
+        'background-repeat': 'repeat',
+    };
+}
+
+function makeResponsiveOuterStyle({ contentWidth, fullWidth, minHeight, minHeightUnit }) {
+    return {
+        width: contentWidth === 'full' ? `${fullWidth}%` : '100%',
+        'min-height': minHeight > 0 ? `${minHeight}${minHeightUnit}` : '0px',
+    };
+}
+
+function makeResponsiveInnerStyle({
+    contentWidth,
+    boxedWidth,
+    gapX,
+    gapY,
+    gapUnit,
+    layout,
+    cols,
+    rows,
+    flexDirection,
+    wrap,
+    items,
+    justify,
+}) {
+    const base = {
+        'max-width': contentWidth === 'boxed' ? `${boxedWidth}px` : 'none',
+        'column-gap': `${gapX}${gapUnit}`,
+        'row-gap': `${gapY}${gapUnit}`,
+        'align-items': traitItemsToCssValue(items),
+        'justify-content': traitJustifyToCssValue(justify),
+    };
+
+    if (layout === 'grid') {
+        return {
+            ...base,
+            'grid-template-columns': `repeat(${cols}, minmax(0, 1fr))`,
+            'grid-template-rows': `repeat(${rows}, minmax(0, 1fr))`,
+        };
+    }
+
+    return {
+        ...base,
+        'flex-direction': flexDirection,
+        'flex-wrap': wrap === 'nowrap' ? 'nowrap' : 'wrap',
+    };
+}
+
 function extractRepeatCount(templateValue) {
     const text = String(templateValue || '').trim();
     const match = text.match(/repeat\(\s*(\d+)\s*,/i);
@@ -235,7 +453,7 @@ function setTraitRowVisible(name, visible) {
     const rows = document.querySelectorAll('.gjs-trt-trait');
     rows.forEach((row) => {
         const field = row.querySelector(
-            `input[name="${name}"], select[name="${name}"], textarea[name="${name}"]`
+            `input[name="${name}"], select[name="${name}"], textarea[name="${name}"], [data-pg-trait-name="${name}"]`
         );
         if (!field) return;
         row.style.display = visible ? '' : 'none';
@@ -245,17 +463,72 @@ function setTraitRowVisible(name, visible) {
 function syncContainerTraitRows(model) {
     const contentWidth = model?.get?.('pgContentWidth') === 'full' ? 'full' : 'boxed';
     const layout = model?.get?.('pgLayout') === 'flex' ? 'flex' : 'grid';
+    const device = String(model?.get?.('pgDevice') || 'desktop');
+    const bgType = String(model?.get?.('pgBgType') || 'none');
+    const isFlex = layout === 'flex';
+    const isGrid = layout === 'grid';
+    const isTablet = device === 'tablet';
+    const isMobile = device === 'mobile';
+
+    setTraitRowVisible('pgSecLayout', true);
+    setTraitRowVisible('pgSecWidth', true);
+    setTraitRowVisible('pgSecFlexItems', isFlex);
+    setTraitRowVisible('pgSecGridItems', isGrid);
+    setTraitRowVisible('pgSecGaps', isFlex || isGrid);
+    setTraitRowVisible('pgSecContainer', true);
+    setTraitRowVisible('pgSecResponsive', true);
+    setTraitRowVisible('pgSecBackground', true);
+
+    setTraitRowVisible('pgContentWidth', true);
+    setTraitRowVisible('pgMinHeightUnit', true);
+    setTraitRowVisible('pgMinHeight', true);
+    setTraitRowVisible('pgPaddingX', true);
+    setTraitRowVisible('pgPaddingY', true);
+    setTraitRowVisible('pgTag', true);
 
     setTraitRowVisible('pgFullWidth', contentWidth === 'full');
     setTraitRowVisible('pgBoxedWidth', contentWidth === 'boxed');
-    setTraitRowVisible('pgGridOutline', layout === 'grid');
-    setTraitRowVisible('pgCols', layout === 'grid');
-    setTraitRowVisible('pgRows', layout === 'grid');
-    setTraitRowVisible('pgFlexDir', layout === 'flex');
-    setTraitRowVisible('pgWrap', layout === 'flex');
-    setTraitRowVisible('pgGapControl', layout === 'flex' || layout === 'grid');
-    setTraitRowVisible('pgJustify', layout === 'flex');
-    setTraitRowVisible('pgItems', layout === 'flex');
+    setTraitRowVisible('pgGridOutline', isGrid);
+    setTraitRowVisible('pgCols', isGrid);
+    setTraitRowVisible('pgRows', isGrid);
+    setTraitRowVisible('pgFlexDir', isFlex);
+    setTraitRowVisible('pgWrap', isFlex);
+    setTraitRowVisible('pgGapControl', isFlex || isGrid);
+    setTraitRowVisible('pgJustify', isFlex);
+    setTraitRowVisible('pgItems', isFlex);
+
+    setTraitRowVisible('pgDevice', true);
+
+    setTraitRowVisible('pgFullWidthTablet', isTablet && contentWidth === 'full');
+    setTraitRowVisible('pgBoxedWidthTablet', isTablet && contentWidth === 'boxed');
+    setTraitRowVisible('pgMinHeightTablet', isTablet);
+    setTraitRowVisible('pgColsTablet', isTablet && isGrid);
+    setTraitRowVisible('pgRowsTablet', isTablet && isGrid);
+    setTraitRowVisible('pgGapXTablet', isTablet);
+    setTraitRowVisible('pgGapYTablet', isTablet);
+    setTraitRowVisible('pgFlexDirTablet', isTablet && isFlex);
+    setTraitRowVisible('pgWrapTablet', isTablet && isFlex);
+    setTraitRowVisible('pgJustifyTablet', isTablet && isFlex);
+    setTraitRowVisible('pgItemsTablet', isTablet && isFlex);
+
+    setTraitRowVisible('pgFullWidthMobile', isMobile && contentWidth === 'full');
+    setTraitRowVisible('pgBoxedWidthMobile', isMobile && contentWidth === 'boxed');
+    setTraitRowVisible('pgMinHeightMobile', isMobile);
+    setTraitRowVisible('pgColsMobile', isMobile && isGrid);
+    setTraitRowVisible('pgRowsMobile', isMobile && isGrid);
+    setTraitRowVisible('pgGapXMobile', isMobile);
+    setTraitRowVisible('pgGapYMobile', isMobile);
+    setTraitRowVisible('pgFlexDirMobile', isMobile && isFlex);
+    setTraitRowVisible('pgWrapMobile', isMobile && isFlex);
+    setTraitRowVisible('pgJustifyMobile', isMobile && isFlex);
+    setTraitRowVisible('pgItemsMobile', isMobile && isFlex);
+
+    setTraitRowVisible('pgBgType', true);
+    setTraitRowVisible('pgBgColor', bgType === 'color');
+    setTraitRowVisible('pgBgImage', bgType === 'image');
+    setTraitRowVisible('pgBgPosition', bgType === 'image');
+    setTraitRowVisible('pgBgSize', bgType === 'image');
+    setTraitRowVisible('pgBgRepeat', bgType === 'image');
 }
 
 function componentHasClass(component, className) {
@@ -301,19 +574,29 @@ function ensureInnerWrapper(model) {
 
     if (!inner) {
         const previousChildren = [];
-        comps.each((child) => previousChildren.push(child.toJSON()));
+        comps.each((child) => previousChildren.push(child));
 
-        comps.reset([
+        comps.add(
             {
                 type: 'default',
                 tagName: 'div',
                 attributes: { class: 'pg-layout pg-container-inner w-full' },
                 ...INNER_WRAPPER_PROPS,
-                components: previousChildren,
+                components: [],
             },
-        ]);
+            { at: 0 }
+        );
 
-        const created = comps.at(0);
+        const created = findInnerWrapper(model) || comps.at(0);
+        const target = created?.components?.();
+
+        if (target) {
+            previousChildren.forEach((child, index) => {
+                if (!child || child === created || typeof child.move !== 'function') return;
+                child.move(created, { at: index, temporary: 1 });
+            });
+        }
+
         enforceInnerWrapperProps(created);
         return created;
     }
@@ -324,13 +607,91 @@ function ensureInnerWrapper(model) {
     });
 
     if (outOfWrapperChildren.length) {
-        const moved = outOfWrapperChildren.map((child) => child.toJSON());
-        outOfWrapperChildren.forEach((child) => comps.remove(child));
-        inner.components().add(moved);
+        outOfWrapperChildren.forEach((child) => {
+            if (!child || typeof child.move !== 'function') return;
+            const nextIndex = inner.components().length;
+            child.move(inner, { at: nextIndex, temporary: 1 });
+        });
     }
 
     enforceInnerWrapperProps(inner);
     return inner;
+}
+
+function isSeededGridColumn(component) {
+    const attrs = component?.getAttributes?.() || {};
+    const marker = String(attrs['data-pg-seeded-column'] || '').trim();
+    const name = String(attrs['data-gjs-name'] || '').trim().toLowerCase();
+    return marker === '1' || name === 'left column' || name === 'right column';
+}
+
+function normalizeSeededGridColumns(inner) {
+    const children = inner?.components?.();
+    if (!children?.each) return;
+
+    children.each((child) => {
+        if (!child?.addAttributes) return;
+
+        const attrs = child.getAttributes?.() || {};
+        const classes = classListFromString(attrs.class);
+        const isGridCol = classes.includes('pg-grid-column');
+        if (!isGridCol || !isSeededGridColumn(child)) return;
+
+        const cleaned = classes.filter(
+            (cls) =>
+                cls !== 'rounded-xl' &&
+                cls !== 'border' &&
+                cls !== 'border-dashed' &&
+                cls !== 'border-slate-300' &&
+                cls !== 'p-3' &&
+                cls !== 'min-h-24'
+        );
+
+        if (!cleaned.includes('pg-layout')) cleaned.push('pg-layout');
+        if (!cleaned.includes('pg-grid-column')) cleaned.push('pg-grid-column');
+        if (!cleaned.some((c) => c.startsWith('min-h-'))) cleaned.push('min-h-6');
+
+        child.addAttributes({
+            ...attrs,
+            class: Array.from(new Set(cleaned)).join(' ').trim(),
+            'data-pg-seeded-column': '1',
+        });
+    });
+}
+
+function autoSeedGridColumnsIfNeeded(model, inner, layout, cols) {
+    if (!inner?.components) return;
+    if (layout !== 'grid') return;
+    if (cols !== 2) return;
+    if (model.get('pgAutoSeedDone') === true) return;
+
+    const children = inner.components();
+    if (!children || children.length > 0) return;
+
+    children.add([
+        {
+            type: 'default',
+            tagName: 'div',
+            attributes: {
+                class: 'pg-layout pg-grid-column min-h-6',
+                'data-gjs-name': 'Left Column',
+                'data-pg-seeded-column': '1',
+            },
+            components: [],
+        },
+        {
+            type: 'default',
+            tagName: 'div',
+            attributes: {
+                class: 'pg-layout pg-grid-column min-h-6',
+                'data-gjs-name': 'Right Column',
+                'data-pg-seeded-column': '1',
+            },
+            components: [],
+        },
+    ]);
+
+    model.set('pgAutoSeedDone', true, { silent: true });
 }
 
 function cleanOuterContainerClasses(classes) {
@@ -380,6 +741,11 @@ function hydrateContainerProps(model) {
     const parsedOuterMax = parseCssDimension(outerStyles['max-width']);
     const parsedInnerMax = parseCssDimension(innerStyles['max-width']);
     const parsedMinHeight = parseCssDimension(outerStyles['min-height']);
+    const bgImageValue = extractCssUrl(outerStyles['background-image']);
+    const bgColorValue = String(outerStyles['background-color'] || '').trim();
+    const bgPositionValue = String(outerStyles['background-position'] || '').trim();
+    const bgSizeValue = String(outerStyles['background-size'] || '').trim();
+    const bgRepeatValue = String(outerStyles['background-repeat'] || '').trim();
 
     if (explicitFull) {
         model.set('pgContentWidth', 'full', { silent: true });
@@ -420,6 +786,43 @@ function hydrateContainerProps(model) {
         model.set('pgMinHeight', '0', { silent: true });
         model.set('pgMinHeightUnit', 'px', { silent: true });
     }
+
+    if (bgImageValue) {
+        model.set('pgBgType', 'image', { silent: true });
+    } else if (
+        bgColorValue &&
+        bgColorValue !== 'transparent' &&
+        bgColorValue !== 'rgba(0, 0, 0, 0)' &&
+        bgColorValue !== 'rgba(0,0,0,0)'
+    ) {
+        model.set('pgBgType', 'color', { silent: true });
+    } else {
+        model.set('pgBgType', 'none', { silent: true });
+    }
+
+    model.set('pgBgColor', normalizeColorValue(bgColorValue, '#ffffff'), { silent: true });
+    model.set('pgBgImage', bgImageValue || '', { silent: true });
+    const allowedBgPositions = [
+        'left top',
+        'left center',
+        'left bottom',
+        'center top',
+        'center center',
+        'center bottom',
+        'right top',
+        'right center',
+        'right bottom',
+    ];
+    const allowedBgSizes = ['cover', 'contain', 'auto'];
+    const allowedBgRepeats = ['no-repeat', 'repeat', 'repeat-x', 'repeat-y'];
+
+    const normalizedBgPosition = String(bgPositionValue || '').trim().toLowerCase();
+    const normalizedBgSize = String(bgSizeValue || '').trim().toLowerCase();
+    const normalizedBgRepeat = String(bgRepeatValue || '').trim().toLowerCase();
+
+    model.set('pgBgPosition', allowedBgPositions.includes(normalizedBgPosition) ? normalizedBgPosition : 'center center', { silent: true });
+    model.set('pgBgSize', allowedBgSizes.includes(normalizedBgSize) ? normalizedBgSize : 'cover', { silent: true });
+    model.set('pgBgRepeat', allowedBgRepeats.includes(normalizedBgRepeat) ? normalizedBgRepeat : 'no-repeat', { silent: true });
 
     if (outerClasses.includes('px-0')) {
         model.set('pgPaddingX', 'none', { silent: true });
@@ -513,6 +916,43 @@ function hydrateContainerProps(model) {
     } else {
         model.set('pgWrap', 'wrap', { silent: true });
     }
+
+    const baseFullWidth = clamp(Math.round(toNumber(model.get('pgFullWidth'), 100)), 10, 100);
+    const baseBoxedWidth = clamp(Math.round(toNumber(model.get('pgBoxedWidth'), 1200)), 320, 2400);
+    const baseMinHeight = clamp(Math.round(toNumber(model.get('pgMinHeight'), 0)), 0, 2000);
+    const baseCols = clamp(Math.round(toNumber(model.get('pgCols'), 3)), 1, 12);
+    const baseRows = clamp(Math.round(toNumber(model.get('pgRows'), 2)), 1, 12);
+    const baseGapX = clamp(Math.round(toNumber(model.get('pgGapX'), 20)), 0, 400);
+    const baseGapY = clamp(Math.round(toNumber(model.get('pgGapY'), 20)), 0, 400);
+    const baseFlexDir = String(model.get('pgFlexDir') || 'row');
+    const baseWrap = String(model.get('pgWrap') || 'wrap');
+    const baseJustify = String(model.get('pgJustify') || 'start');
+    const baseItems = String(model.get('pgItems') || 'stretch');
+
+    const currentDevice = String(model.get('pgDevice') || 'desktop');
+    model.set('pgDevice', ['desktop', 'tablet', 'mobile'].includes(currentDevice) ? currentDevice : 'desktop', { silent: true });
+    model.set('pgFullWidthTablet', String(clamp(Math.round(toNumber(model.get('pgFullWidthTablet'), baseFullWidth)), 10, 100)), { silent: true });
+    model.set('pgFullWidthMobile', String(clamp(Math.round(toNumber(model.get('pgFullWidthMobile'), toNumber(model.get('pgFullWidthTablet'), baseFullWidth))), 10, 100)), { silent: true });
+    model.set('pgBoxedWidthTablet', String(clamp(Math.round(toNumber(model.get('pgBoxedWidthTablet'), baseBoxedWidth)), 320, 2400)), { silent: true });
+    model.set('pgBoxedWidthMobile', String(clamp(Math.round(toNumber(model.get('pgBoxedWidthMobile'), toNumber(model.get('pgBoxedWidthTablet'), baseBoxedWidth))), 320, 2400)), { silent: true });
+    model.set('pgMinHeightTablet', String(clamp(Math.round(toNumber(model.get('pgMinHeightTablet'), baseMinHeight)), 0, 2000)), { silent: true });
+    model.set('pgMinHeightMobile', String(clamp(Math.round(toNumber(model.get('pgMinHeightMobile'), toNumber(model.get('pgMinHeightTablet'), baseMinHeight))), 0, 2000)), { silent: true });
+    model.set('pgColsTablet', String(clamp(Math.round(toNumber(model.get('pgColsTablet'), baseCols)), 1, 12)), { silent: true });
+    model.set('pgColsMobile', String(clamp(Math.round(toNumber(model.get('pgColsMobile'), toNumber(model.get('pgColsTablet'), baseCols))), 1, 12)), { silent: true });
+    model.set('pgRowsTablet', String(clamp(Math.round(toNumber(model.get('pgRowsTablet'), baseRows)), 1, 12)), { silent: true });
+    model.set('pgRowsMobile', String(clamp(Math.round(toNumber(model.get('pgRowsMobile'), toNumber(model.get('pgRowsTablet'), baseRows))), 1, 12)), { silent: true });
+    model.set('pgGapXTablet', String(clamp(Math.round(toNumber(model.get('pgGapXTablet'), baseGapX)), 0, 400)), { silent: true });
+    model.set('pgGapXMobile', String(clamp(Math.round(toNumber(model.get('pgGapXMobile'), toNumber(model.get('pgGapXTablet'), baseGapX))), 0, 400)), { silent: true });
+    model.set('pgGapYTablet', String(clamp(Math.round(toNumber(model.get('pgGapYTablet'), baseGapY)), 0, 400)), { silent: true });
+    model.set('pgGapYMobile', String(clamp(Math.round(toNumber(model.get('pgGapYMobile'), toNumber(model.get('pgGapYTablet'), baseGapY))), 0, 400)), { silent: true });
+    model.set('pgFlexDirTablet', String(model.get('pgFlexDirTablet') || baseFlexDir), { silent: true });
+    model.set('pgFlexDirMobile', String(model.get('pgFlexDirMobile') || model.get('pgFlexDirTablet') || baseFlexDir), { silent: true });
+    model.set('pgWrapTablet', String(model.get('pgWrapTablet') || baseWrap), { silent: true });
+    model.set('pgWrapMobile', String(model.get('pgWrapMobile') || model.get('pgWrapTablet') || baseWrap), { silent: true });
+    model.set('pgJustifyTablet', String(model.get('pgJustifyTablet') || baseJustify), { silent: true });
+    model.set('pgJustifyMobile', String(model.get('pgJustifyMobile') || model.get('pgJustifyTablet') || baseJustify), { silent: true });
+    model.set('pgItemsTablet', String(model.get('pgItemsTablet') || baseItems), { silent: true });
+    model.set('pgItemsMobile', String(model.get('pgItemsMobile') || model.get('pgItemsTablet') || baseItems), { silent: true });
 }
 
 function applyContainerClasses(model) {
@@ -537,8 +977,40 @@ function applyContainerClasses(model) {
     const justify = model.get('pgJustify') || 'start';
     const flexDir = model.get('pgFlexDir') || 'row';
     const wrap = model.get('pgWrap') || 'wrap';
+    const bgTypeRaw = String(model.get('pgBgType') || 'none');
+    const bgType = ['none', 'color', 'image'].includes(bgTypeRaw) ? bgTypeRaw : 'none';
+    const bgColor = String(model.get('pgBgColor') || '#ffffff');
+    const bgImage = String(model.get('pgBgImage') || '');
+    const bgPosition = String(model.get('pgBgPosition') || 'center center').toLowerCase();
+    const bgSize = String(model.get('pgBgSize') || 'cover').toLowerCase();
+    const bgRepeat = String(model.get('pgBgRepeat') || 'no-repeat').toLowerCase();
+
+    const fullWidthTablet = clamp(Math.round(toNumber(model.get('pgFullWidthTablet'), fullWidth)), 10, 100);
+    const fullWidthMobile = clamp(Math.round(toNumber(model.get('pgFullWidthMobile'), fullWidthTablet)), 10, 100);
+    const boxedWidthTablet = clamp(Math.round(toNumber(model.get('pgBoxedWidthTablet'), boxedWidth)), 320, 2400);
+    const boxedWidthMobile = clamp(Math.round(toNumber(model.get('pgBoxedWidthMobile'), boxedWidthTablet)), 320, 2400);
+    const minHeightTablet = clamp(Math.round(toNumber(model.get('pgMinHeightTablet'), minHeight)), 0, 2000);
+    const minHeightMobile = clamp(Math.round(toNumber(model.get('pgMinHeightMobile'), minHeightTablet)), 0, 2000);
+    const colsTablet = clamp(Math.round(toNumber(model.get('pgColsTablet'), cols)), 1, 12);
+    const colsMobile = clamp(Math.round(toNumber(model.get('pgColsMobile'), colsTablet)), 1, 12);
+    const rowsTablet = clamp(Math.round(toNumber(model.get('pgRowsTablet'), rows)), 1, 12);
+    const rowsMobile = clamp(Math.round(toNumber(model.get('pgRowsMobile'), rowsTablet)), 1, 12);
+    const gapXTablet = clamp(Math.round(toNumber(model.get('pgGapXTablet'), gapX)), 0, 400);
+    const gapXMobile = clamp(Math.round(toNumber(model.get('pgGapXMobile'), gapXTablet)), 0, 400);
+    const gapYTablet = clamp(Math.round(toNumber(model.get('pgGapYTablet'), gapY)), 0, 400);
+    const gapYMobile = clamp(Math.round(toNumber(model.get('pgGapYMobile'), gapYTablet)), 0, 400);
+    const flexDirTablet = String(model.get('pgFlexDirTablet') || flexDir);
+    const flexDirMobile = String(model.get('pgFlexDirMobile') || flexDirTablet || flexDir);
+    const wrapTablet = String(model.get('pgWrapTablet') || wrap);
+    const wrapMobile = String(model.get('pgWrapMobile') || wrapTablet || wrap);
+    const justifyTablet = String(model.get('pgJustifyTablet') || justify);
+    const justifyMobile = String(model.get('pgJustifyMobile') || justifyTablet || justify);
+    const itemsTablet = String(model.get('pgItemsTablet') || items);
+    const itemsMobile = String(model.get('pgItemsMobile') || itemsTablet || items);
     const editorDir = getEditorDir(model);
     const cssFlexDirection = traitFlexDirToCssValue(flexDir, editorDir);
+    const cssFlexDirectionTablet = traitFlexDirToCssValue(flexDirTablet, editorDir);
+    const cssFlexDirectionMobile = traitFlexDirToCssValue(flexDirMobile, editorDir);
 
     if (gapLinked) {
         gapY = gapX;
@@ -550,6 +1022,9 @@ function applyContainerClasses(model) {
 
     const inner = ensureInnerWrapper(model);
     if (!inner) return;
+
+    autoSeedGridColumnsIfNeeded(model, inner, layout, cols);
+    normalizeSeededGridColumns(inner);
 
     const outerCurrent = classListFromString(model.getAttributes()?.class);
     const innerCurrent = classListFromString(inner.getAttributes?.()?.class);
@@ -605,6 +1080,18 @@ function applyContainerClasses(model) {
         delete outerStyles['min-height'];
     }
 
+    Object.assign(
+        outerStyles,
+        makeBackgroundStyles({
+            bgType,
+            bgColor,
+            bgImage,
+            bgPosition,
+            bgSize,
+            bgRepeat,
+        })
+    );
+
     model.setStyle(outerStyles);
 
     const innerStyles = { ...(inner.getStyle?.() || {}) };
@@ -614,13 +1101,17 @@ function applyContainerClasses(model) {
     innerStyles['max-width'] = contentWidth === 'boxed' ? `${boxedWidth}px` : 'none';
     innerStyles['column-gap'] = `${gapX}${gapUnit}`;
     innerStyles['row-gap'] = `${gapY}${gapUnit}`;
+    innerStyles['align-items'] = traitItemsToCssValue(items);
+    innerStyles['justify-content'] = traitJustifyToCssValue(justify);
 
     if (layout === 'grid') {
         innerStyles['grid-template-columns'] = `repeat(${cols}, minmax(0, 1fr))`;
         innerStyles['grid-template-rows'] = `repeat(${rows}, minmax(0, 1fr))`;
         delete innerStyles['flex-direction'];
+        delete innerStyles['flex-wrap'];
     } else {
         innerStyles['flex-direction'] = cssFlexDirection;
+        innerStyles['flex-wrap'] = wrap === 'nowrap' ? 'nowrap' : 'wrap';
         delete innerStyles['grid-template-columns'];
         delete innerStyles['grid-template-rows'];
     }
@@ -631,6 +1122,96 @@ function applyContainerClasses(model) {
     if (gapLinked && String(model.get('pgGapY')) !== String(gapX)) {
         model.set('pgGapY', String(gapX), { silent: true });
     }
+
+    const containerId = ensureContainerId(model);
+    const outerSelector = `#${containerId}`;
+    const innerSelector = `#${containerId} > .pg-container-inner`;
+
+    const tabletOuterStyle = makeResponsiveOuterStyle({
+        contentWidth,
+        fullWidth: fullWidthTablet,
+        minHeight: minHeightTablet,
+        minHeightUnit,
+    });
+    const mobileOuterStyle = makeResponsiveOuterStyle({
+        contentWidth,
+        fullWidth: fullWidthMobile,
+        minHeight: minHeightMobile,
+        minHeightUnit,
+    });
+
+    const tabletInnerStyle = makeResponsiveInnerStyle({
+        contentWidth,
+        boxedWidth: boxedWidthTablet,
+        gapX: gapXTablet,
+        gapY: gapYTablet,
+        gapUnit,
+        layout,
+        cols: colsTablet,
+        rows: rowsTablet,
+        flexDirection: cssFlexDirectionTablet,
+        wrap: wrapTablet,
+        items: itemsTablet,
+        justify: justifyTablet,
+    });
+    const mobileInnerStyle = makeResponsiveInnerStyle({
+        contentWidth,
+        boxedWidth: boxedWidthMobile,
+        gapX: gapXMobile,
+        gapY: gapYMobile,
+        gapUnit,
+        layout,
+        cols: colsMobile,
+        rows: rowsMobile,
+        flexDirection: cssFlexDirectionMobile,
+        wrap: wrapMobile,
+        items: itemsMobile,
+        justify: justifyMobile,
+    });
+
+    setResponsiveRule(model, outerSelector, tabletOuterStyle, MEDIA_QUERY_TABLET);
+    setResponsiveRule(model, outerSelector, mobileOuterStyle, MEDIA_QUERY_MOBILE);
+    setResponsiveRule(model, innerSelector, tabletInnerStyle, MEDIA_QUERY_TABLET);
+    setResponsiveRule(model, innerSelector, mobileInnerStyle, MEDIA_QUERY_MOBILE);
+}
+
+function ensureContainerEditorStyles(editor) {
+    const STYLE_ID = 'pg-container-editor-only-style';
+    const STYLE_CONTENT = `
+        .pg-container-inner > .pg-grid-column {
+            outline: 1px dashed rgba(148, 163, 184, 0.5);
+            outline-offset: -1px;
+        }
+
+        .pg-container-inner[data-pg-grid-outline="1"] > * {
+            outline: 1px dashed rgba(192, 132, 252, 0.75);
+            outline-offset: -1px;
+        }
+
+        .pg-container-inner[data-pg-grid-outline="1"] > .pg-grid-column {
+            background: rgba(192, 132, 252, 0.08);
+        }
+    `;
+
+    const inject = () => {
+        const doc = editor?.Canvas?.getDocument?.();
+        if (!doc?.head) return;
+
+        let styleEl = doc.getElementById(STYLE_ID);
+        if (!styleEl) {
+            styleEl = doc.createElement('style');
+            styleEl.id = STYLE_ID;
+            doc.head.appendChild(styleEl);
+        }
+
+        if (styleEl.innerHTML !== STYLE_CONTENT) {
+            styleEl.innerHTML = STYLE_CONTENT;
+        }
+    };
+
+    inject();
+    editor.on('load', inject);
+    editor.on('canvas:frame:load', inject);
 }
 
 export function registerContainerElement(editor) {
@@ -694,7 +1275,43 @@ export function registerContainerElement(editor) {
                 pgJustify: 'start',
                 pgFlexDir: 'row',
                 pgWrap: 'wrap',
+                pgAutoSeedDone: false,
+                pgDevice: 'desktop',
+                pgFullWidthTablet: '100',
+                pgFullWidthMobile: '100',
+                pgBoxedWidthTablet: '1200',
+                pgBoxedWidthMobile: '1200',
+                pgMinHeightTablet: '0',
+                pgMinHeightMobile: '0',
+                pgColsTablet: '3',
+                pgColsMobile: '3',
+                pgRowsTablet: '2',
+                pgRowsMobile: '2',
+                pgGapXTablet: '20',
+                pgGapXMobile: '20',
+                pgGapYTablet: '20',
+                pgGapYMobile: '20',
+                pgFlexDirTablet: 'row',
+                pgFlexDirMobile: 'row',
+                pgWrapTablet: 'wrap',
+                pgWrapMobile: 'wrap',
+                pgJustifyTablet: 'start',
+                pgJustifyMobile: 'start',
+                pgItemsTablet: 'stretch',
+                pgItemsMobile: 'stretch',
+                pgBgType: 'none',
+                pgBgColor: '#ffffff',
+                pgBgImage: '',
+                pgBgPosition: 'center center',
+                pgBgSize: 'cover',
+                pgBgRepeat: 'no-repeat',
                 traits: [
+                    {
+                        type: 'pg-trait-heading',
+                        name: 'pgSecLayout',
+                        label: ' ',
+                        title: 'Layout',
+                    },
                     {
                         type: 'select',
                         name: 'pgLayout',
@@ -706,12 +1323,18 @@ export function registerContainerElement(editor) {
                         ],
                     },
                     {
+                        type: 'pg-trait-heading',
+                        name: 'pgSecWidth',
+                        label: ' ',
+                        title: 'Width',
+                    },
+                    {
                         type: 'select',
                         name: 'pgContentWidth',
                         label: 'Content Width',
                         changeProp: 1,
                         options: [
-                            { id: 'boxed', name: 'Inside Boxed' },
+                            { id: 'boxed', name: 'Inside Box' },
                             { id: 'full', name: 'Full Width' },
                         ],
                     },
@@ -727,7 +1350,7 @@ export function registerContainerElement(editor) {
                     {
                         type: 'pg-range',
                         name: 'pgBoxedWidth',
-                        label: 'Inner Box Width (px)',
+                        label: 'Inner Content Width (px)',
                         min: 320,
                         max: 2400,
                         step: 10,
@@ -753,39 +1376,45 @@ export function registerContainerElement(editor) {
                         changeProp: 1,
                     },
                     {
-                        type: 'select',
-                        name: 'pgTag',
-                        label: 'Tag',
-                        changeProp: 1,
-                        options: [
-                            { id: 'section', name: 'SECTION' },
-                            { id: 'div', name: 'DIV' },
-                            { id: 'main', name: 'MAIN' },
-                            { id: 'article', name: 'ARTICLE' },
-                        ],
+                        type: 'pg-trait-heading',
+                        name: 'pgSecFlexItems',
+                        label: ' ',
+                        title: 'Items (Flexbox)',
                     },
                     {
-                        type: 'select',
-                        name: 'pgPaddingX',
-                        label: 'Padding X',
+                        type: 'pg-icon-select',
+                        name: 'pgFlexDir',
+                        label: 'Direction',
                         changeProp: 1,
-                        options: [
-                            { id: 'none', name: 'None' },
-                            { id: 'compact', name: 'Compact' },
-                            { id: 'comfortable', name: 'Comfortable' },
-                        ],
+                        options: FLEX_DIRECTION_OPTIONS,
                     },
                     {
-                        type: 'select',
-                        name: 'pgPaddingY',
-                        label: 'Padding Y',
+                        type: 'pg-icon-select',
+                        name: 'pgJustify',
+                        label: 'Justify Content',
+                        options: FLEX_JUSTIFY_OPTIONS,
                         changeProp: 1,
-                        options: [
-                            { id: 'none', name: 'None' },
-                            { id: 'sm', name: 'Small' },
-                            { id: 'md', name: 'Medium' },
-                            { id: 'lg', name: 'Large' },
-                        ],
+                    },
+                    {
+                        type: 'pg-icon-select',
+                        name: 'pgItems',
+                        label: 'Align Items',
+                        options: FLEX_ITEMS_OPTIONS,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-icon-select',
+                        name: 'pgWrap',
+                        label: 'Wrap',
+                        hint: 'Items can stay in one line (No Wrap) or move to multiple lines (Wrap).',
+                        changeProp: 1,
+                        options: FLEX_WRAP_OPTIONS,
+                    },
+                    {
+                        type: 'pg-trait-heading',
+                        name: 'pgSecGridItems',
+                        label: ' ',
+                        title: 'Items (Grid)',
                     },
                     {
                         type: 'pg-switch',
@@ -814,27 +1443,10 @@ export function registerContainerElement(editor) {
                         changeProp: 1,
                     },
                     {
-                        type: 'pg-icon-select',
-                        name: 'pgFlexDir',
-                        label: 'Direction',
-                        changeProp: 1,
-                        options: [
-                            { id: 'col-reverse', name: 'Up', icon: FLEX_ICON_ARROW_UP },
-                            { id: 'row', name: 'Right', icon: FLEX_ICON_ARROW_RIGHT },
-                            { id: 'col', name: 'Down', icon: FLEX_ICON_ARROW_DOWN },
-                            { id: 'row-reverse', name: 'Left', icon: FLEX_ICON_ARROW_LEFT },
-                        ],
-                    },
-                    {
-                        type: 'pg-icon-select',
-                        name: 'pgWrap',
-                        label: 'Wrap',
-                        hint: 'Items can stay in one line (No Wrap) or move to multiple lines (Wrap).',
-                        changeProp: 1,
-                        options: [
-                            { id: 'wrap', name: 'Wrap', icon: FLEX_ICON_WRAP },
-                            { id: 'nowrap', name: 'No Wrap', icon: FLEX_ICON_NOWRAP },
-                        ],
+                        type: 'pg-trait-heading',
+                        name: 'pgSecGaps',
+                        label: ' ',
+                        title: 'Gaps',
                     },
                     {
                         type: 'pg-gap-control',
@@ -848,41 +1460,376 @@ export function registerContainerElement(editor) {
                         changeProp: 1,
                     },
                     {
-                        type: 'pg-icon-select',
-                        name: 'pgItems',
-                        label: 'Align Items',
+                        type: 'pg-trait-heading',
+                        name: 'pgSecResponsive',
+                        label: ' ',
+                        title: 'Responsive',
+                    },
+                    {
+                        type: 'select',
+                        name: 'pgDevice',
+                        label: 'Edit Device',
+                        changeProp: 1,
                         options: [
-                            { id: 'start', name: 'Start', icon: FLEX_ICON_ALIGN_START },
-                            { id: 'center', name: 'Center', icon: FLEX_ICON_ALIGN_CENTER },
-                            { id: 'end', name: 'End', icon: FLEX_ICON_ALIGN_END },
-                            { id: 'stretch', name: 'Stretch', icon: FLEX_ICON_ALIGN_STRETCH },
+                            { id: 'desktop', name: 'Desktop' },
+                            { id: 'tablet', name: 'Tablet' },
+                            { id: 'mobile', name: 'Mobile' },
                         ],
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgFullWidthTablet',
+                        label: 'Tablet Section Width (%)',
+                        min: 10,
+                        max: 100,
+                        step: 1,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgBoxedWidthTablet',
+                        label: 'Tablet Inner Width (px)',
+                        min: 320,
+                        max: 2400,
+                        step: 10,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgMinHeightTablet',
+                        label: 'Tablet Min Height',
+                        min: 0,
+                        max: 2000,
+                        step: 10,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgColsTablet',
+                        label: 'Tablet Columns',
+                        unitLabel: 'fr',
+                        min: 1,
+                        max: 12,
+                        step: 1,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgRowsTablet',
+                        label: 'Tablet Rows',
+                        unitLabel: 'fr',
+                        min: 1,
+                        max: 12,
+                        step: 1,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgGapXTablet',
+                        label: 'Tablet Gap X',
+                        min: 0,
+                        max: 400,
+                        step: 1,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgGapYTablet',
+                        label: 'Tablet Gap Y',
+                        min: 0,
+                        max: 400,
+                        step: 1,
                         changeProp: 1,
                     },
                     {
                         type: 'pg-icon-select',
-                        name: 'pgJustify',
-                        label: 'Justify Content',
+                        name: 'pgFlexDirTablet',
+                        label: 'Tablet Direction',
+                        changeProp: 1,
+                        options: FLEX_DIRECTION_OPTIONS,
+                    },
+                    {
+                        type: 'pg-icon-select',
+                        name: 'pgJustifyTablet',
+                        label: 'Tablet Justify',
+                        changeProp: 1,
+                        options: FLEX_JUSTIFY_OPTIONS,
+                    },
+                    {
+                        type: 'pg-icon-select',
+                        name: 'pgItemsTablet',
+                        label: 'Tablet Align',
+                        changeProp: 1,
+                        options: FLEX_ITEMS_OPTIONS,
+                    },
+                    {
+                        type: 'pg-icon-select',
+                        name: 'pgWrapTablet',
+                        label: 'Tablet Wrap',
+                        changeProp: 1,
+                        options: FLEX_WRAP_OPTIONS,
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgFullWidthMobile',
+                        label: 'Mobile Section Width (%)',
+                        min: 10,
+                        max: 100,
+                        step: 1,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgBoxedWidthMobile',
+                        label: 'Mobile Inner Width (px)',
+                        min: 320,
+                        max: 2400,
+                        step: 10,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgMinHeightMobile',
+                        label: 'Mobile Min Height',
+                        min: 0,
+                        max: 2000,
+                        step: 10,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgColsMobile',
+                        label: 'Mobile Columns',
+                        unitLabel: 'fr',
+                        min: 1,
+                        max: 12,
+                        step: 1,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgRowsMobile',
+                        label: 'Mobile Rows',
+                        unitLabel: 'fr',
+                        min: 1,
+                        max: 12,
+                        step: 1,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgGapXMobile',
+                        label: 'Mobile Gap X',
+                        min: 0,
+                        max: 400,
+                        step: 1,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-range',
+                        name: 'pgGapYMobile',
+                        label: 'Mobile Gap Y',
+                        min: 0,
+                        max: 400,
+                        step: 1,
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'pg-icon-select',
+                        name: 'pgFlexDirMobile',
+                        label: 'Mobile Direction',
+                        changeProp: 1,
+                        options: FLEX_DIRECTION_OPTIONS,
+                    },
+                    {
+                        type: 'pg-icon-select',
+                        name: 'pgJustifyMobile',
+                        label: 'Mobile Justify',
+                        changeProp: 1,
+                        options: FLEX_JUSTIFY_OPTIONS,
+                    },
+                    {
+                        type: 'pg-icon-select',
+                        name: 'pgItemsMobile',
+                        label: 'Mobile Align',
+                        changeProp: 1,
+                        options: FLEX_ITEMS_OPTIONS,
+                    },
+                    {
+                        type: 'pg-icon-select',
+                        name: 'pgWrapMobile',
+                        label: 'Mobile Wrap',
+                        changeProp: 1,
+                        options: FLEX_WRAP_OPTIONS,
+                    },
+                    {
+                        type: 'pg-trait-heading',
+                        name: 'pgSecBackground',
+                        label: ' ',
+                        title: 'Background',
+                    },
+                    {
+                        type: 'select',
+                        name: 'pgBgType',
+                        label: 'Background Type',
+                        changeProp: 1,
                         options: [
-                            { id: 'start', name: 'Start', icon: FLEX_ICON_JUSTIFY_START },
-                            { id: 'center', name: 'Center', icon: FLEX_ICON_JUSTIFY_CENTER },
-                            { id: 'end', name: 'End', icon: FLEX_ICON_JUSTIFY_END },
-                            { id: 'between', name: 'Between', icon: FLEX_ICON_JUSTIFY_BETWEEN },
-                            { id: 'around', name: 'Around', icon: FLEX_ICON_JUSTIFY_AROUND },
-                            { id: 'evenly', name: 'Evenly', icon: FLEX_ICON_JUSTIFY_EVENLY },
+                            { id: 'none', name: 'None' },
+                            { id: 'color', name: 'Color' },
+                            { id: 'image', name: 'Image' },
+                        ],
+                    },
+                    {
+                        type: 'color',
+                        name: 'pgBgColor',
+                        label: 'Color',
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'media-picker',
+                        name: 'pgBgImage',
+                        label: 'Image',
+                        changeProp: 1,
+                    },
+                    {
+                        type: 'select',
+                        name: 'pgBgPosition',
+                        label: 'Image Position',
+                        changeProp: 1,
+                        options: [
+                            { id: 'left top', name: 'Left Top' },
+                            { id: 'left center', name: 'Left Center' },
+                            { id: 'left bottom', name: 'Left Bottom' },
+                            { id: 'center top', name: 'Center Top' },
+                            { id: 'center center', name: 'Center' },
+                            { id: 'center bottom', name: 'Center Bottom' },
+                            { id: 'right top', name: 'Right Top' },
+                            { id: 'right center', name: 'Right Center' },
+                            { id: 'right bottom', name: 'Right Bottom' },
+                        ],
+                    },
+                    {
+                        type: 'select',
+                        name: 'pgBgSize',
+                        label: 'Image Size',
+                        changeProp: 1,
+                        options: [
+                            { id: 'cover', name: 'Cover' },
+                            { id: 'contain', name: 'Contain' },
+                            { id: 'auto', name: 'Auto' },
+                        ],
+                    },
+                    {
+                        type: 'select',
+                        name: 'pgBgRepeat',
+                        label: 'Image Repeat',
+                        changeProp: 1,
+                        options: [
+                            { id: 'no-repeat', name: 'No Repeat' },
+                            { id: 'repeat', name: 'Repeat' },
+                            { id: 'repeat-x', name: 'Repeat X' },
+                            { id: 'repeat-y', name: 'Repeat Y' },
+                        ],
+                    },
+                    {
+                        type: 'pg-trait-heading',
+                        name: 'pgSecContainer',
+                        label: ' ',
+                        title: 'Container',
+                    },
+                    {
+                        type: 'select',
+                        name: 'pgPaddingX',
+                        label: 'Padding X',
+                        options: [
+                            { id: 'none', name: 'None' },
+                            { id: 'compact', name: 'Compact' },
+                            { id: 'comfortable', name: 'Comfortable' },
                         ],
                         changeProp: 1,
+                    },
+                    {
+                        type: 'select',
+                        name: 'pgPaddingY',
+                        label: 'Padding Y',
+                        changeProp: 1,
+                        options: [
+                            { id: 'none', name: 'None' },
+                            { id: 'sm', name: 'Small' },
+                            { id: 'md', name: 'Medium' },
+                            { id: 'lg', name: 'Large' },
+                        ],
+                    },
+                    {
+                        type: 'select',
+                        name: 'pgTag',
+                        label: 'Tag',
+                        changeProp: 1,
+                        options: [
+                            { id: 'section', name: 'SECTION' },
+                            { id: 'div', name: 'DIV' },
+                            { id: 'main', name: 'MAIN' },
+                            { id: 'article', name: 'ARTICLE' },
+                        ],
                     },
                 ],
             },
 
             init() {
                 hydrateContainerProps(this);
-                this.on(
-                    'change:pgTag change:pgContentWidth change:pgFullWidth change:pgBoxedWidth change:pgMinHeight change:pgMinHeightUnit change:pgPaddingX change:pgPaddingY change:pgLayout change:pgGridOutline change:pgCols change:pgRows change:pgGapX change:pgGapY change:pgGapUnit change:pgGapLinked change:pgItems change:pgJustify change:pgFlexDir change:pgWrap',
-                    () => applyContainerClasses(this)
-                );
-                this.on('change:pgContentWidth change:pgLayout', () => {
+                const styleProps = [
+                    'pgTag',
+                    'pgContentWidth',
+                    'pgFullWidth',
+                    'pgBoxedWidth',
+                    'pgMinHeight',
+                    'pgMinHeightUnit',
+                    'pgPaddingX',
+                    'pgPaddingY',
+                    'pgLayout',
+                    'pgGridOutline',
+                    'pgCols',
+                    'pgRows',
+                    'pgGapX',
+                    'pgGapY',
+                    'pgGapUnit',
+                    'pgGapLinked',
+                    'pgItems',
+                    'pgJustify',
+                    'pgFlexDir',
+                    'pgWrap',
+                    'pgFullWidthTablet',
+                    'pgFullWidthMobile',
+                    'pgBoxedWidthTablet',
+                    'pgBoxedWidthMobile',
+                    'pgMinHeightTablet',
+                    'pgMinHeightMobile',
+                    'pgColsTablet',
+                    'pgColsMobile',
+                    'pgRowsTablet',
+                    'pgRowsMobile',
+                    'pgGapXTablet',
+                    'pgGapXMobile',
+                    'pgGapYTablet',
+                    'pgGapYMobile',
+                    'pgFlexDirTablet',
+                    'pgFlexDirMobile',
+                    'pgWrapTablet',
+                    'pgWrapMobile',
+                    'pgJustifyTablet',
+                    'pgJustifyMobile',
+                    'pgItemsTablet',
+                    'pgItemsMobile',
+                    'pgBgType',
+                    'pgBgColor',
+                    'pgBgImage',
+                    'pgBgPosition',
+                    'pgBgSize',
+                    'pgBgRepeat',
+                ];
+
+                this.on(styleProps.map((prop) => `change:${prop}`).join(' '), () => applyContainerClasses(this));
+                this.on('change:pgContentWidth change:pgLayout change:pgDevice change:pgBgType', () => {
                     requestAnimationFrame(() => syncContainerTraitRows(this));
                 });
 
@@ -892,12 +1839,7 @@ export function registerContainerElement(editor) {
         },
     });
 
-    editor.addStyle(`
-        .pg-container-inner[data-pg-grid-outline="1"] > * {
-            outline: 1px dashed rgba(192, 132, 252, 0.75);
-            outline-offset: -1px;
-        }
-    `);
+    ensureContainerEditorStyles(editor);
 
     editor.on('component:selected', (component) => {
         if (!component) return;
