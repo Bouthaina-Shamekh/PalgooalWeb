@@ -4,7 +4,10 @@ function getBridgePickerButton() {
 
 function resolveSelectedUrl(detail) {
     if (!detail || typeof detail !== 'object') return '';
+    const firstItem = Array.isArray(detail.items) ? detail.items[0] : null;
     return String(
+        firstItem?.url ||
+        firstItem?.path ||
         detail.url ||
         detail.file?.url ||
         detail.file?.path ||
@@ -60,18 +63,6 @@ export function registerMediaTrait(editor) {
                         ${hasBridge ? 'Choose From Library' : 'Library Unavailable'}
                     </button>
 
-                    <input
-                        type="url"
-                        data-role="media-url"
-                        placeholder="https://example.com/image.jpg"
-                        value="${currentValue}"
-                        class="w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-700 focus:border-slate-400 focus:ring-2 focus:ring-slate-300/50"
-                    >
-
-                    <div class="text-[10px] text-slate-500">
-                        Paste image URL manually if the media bridge is unavailable.
-                    </div>
-
                     <div class="pg-media-preview ${currentValue ? '' : 'hidden'}" data-role="media-preview">
                         <img data-role="media-preview-image" src="${currentValue}" class="w-full h-24 object-cover rounded-lg shadow-sm border border-white">
                     </div>
@@ -79,7 +70,6 @@ export function registerMediaTrait(editor) {
             `;
 
             const openButton = el.querySelector('[data-role="media-open"]');
-            const urlInput = el.querySelector('[data-role="media-url"]');
 
             const commit = (nextValue) => {
                 const normalized = String(nextValue || '').trim();
@@ -91,19 +81,24 @@ export function registerMediaTrait(editor) {
                 const bridgeButton = getBridgePickerButton();
                 if (!bridgeButton) return;
 
-                bridgeButton.click();
-
                 const handleSelection = (event) => {
+                    const detail = event?.detail || {};
+                    const eventTargetInputId = String(detail.targetInputId || '').trim();
+                    if (
+                        eventTargetInputId &&
+                        eventTargetInputId !== 'gjs_bridge_media_input'
+                    ) {
+                        return;
+                    }
+
                     const selectedUrl = resolveSelectedUrl(event?.detail);
                     if (!selectedUrl) return;
                     commit(selectedUrl);
                 };
 
+                window.addEventListener('media-picker-confirmed', handleSelection, { once: true });
                 window.addEventListener('media-selected', handleSelection, { once: true });
-            });
-
-            urlInput?.addEventListener('input', () => {
-                commit(urlInput.value);
+                bridgeButton.click();
             });
 
             paintMediaPreview(el, currentValue);
@@ -115,4 +110,3 @@ export function registerMediaTrait(editor) {
         },
     });
 }
-

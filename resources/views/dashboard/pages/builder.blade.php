@@ -488,6 +488,27 @@
         <span class="hidden rotate-180 rtl:-left-3 -right-3"></span>
     </div>
 
+    {{-- Hidden bridge for GrapesJS media trait (uses existing Media Picker library) --}}
+    <div id="gjs_bridge_picker" class="hidden" aria-hidden="true">
+        <x-dashboard.media-picker
+            id="gjs_bridge_media_input"
+            name="gjs_bridge_media_input"
+            :multiple="false"
+            :preview-urls="[]"
+            buttonText="Bridge"
+            class="!p-0"
+        />
+    </div>
+
+    {{-- Shared media picker modal + config (same library used across dashboard forms) --}}
+    @include('dashboard.partials.media-picker')
+    <script>
+        window.MEDIA_CONFIG = window.MEDIA_CONFIG || {};
+        window.MEDIA_CONFIG.baseUrl = window.MEDIA_CONFIG.baseUrl || "{{ url('admin/media') }}";
+        window.MEDIA_CONFIG.csrfToken = window.MEDIA_CONFIG.csrfToken || "{{ csrf_token() }}";
+    </script>
+    <script src="{{ asset('assets/dashboard/js/media-picker.js') }}" defer></script>
+
 </body>
 
 </html>

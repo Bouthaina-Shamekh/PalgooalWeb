@@ -447,11 +447,13 @@ document.addEventListener('DOMContentLoaded', () => {
             : null;
 
         const items = Array.from(selectedItems.values());
+        const ids = items.map((item) => item.id);
 
         // Store IDs in hidden input: "1" or "1,5,9"
-        const ids = items.map((item) => item.id);
         if (targetInput) {
             targetInput.value = ids.join(',');
+            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+            targetInput.dispatchEvent(new Event('change', { bubbles: true }));
         }
 
         // Render preview images (small thumbnails)
@@ -471,25 +473,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 previewContainer.appendChild(wrapper);
             });
         }
-        // داخل دالة applySelection في ملف media-picker.js
-        const applySelection = () => {
-            // ... كودك الحالي (targetInput, ids, previewContainer) ...
 
-            const items = Array.from(selectedItems.values());
-
-            // --- الإضافة لـ GrapesJS ---
-            // إرسال حدث مخصص يحتوي على مصفوفة العناصر المختارة كاملة
-            const event = new CustomEvent('media-picker-confirmed', {
+        // Bridge event for GrapesJS/custom integrations (full payload)
+        window.dispatchEvent(
+            new CustomEvent('media-picker-confirmed', {
                 detail: {
-                    items: items, // مصفوفة كائنات تحتوي على url, id, name الخ
-                    targetInputId: currentTargetInputId
-                }
-            });
-            window.dispatchEvent(event);
-            // -------------------------
+                    items,
+                    ids,
+                    targetInputId: currentTargetInputId,
+                },
+            })
+        );
 
-            closePicker();
-        };
+        // Backward-compatible event (single item + files list)
+        const first = items[0] || null;
+        if (first) {
+            window.dispatchEvent(
+                new CustomEvent('media-selected', {
+                    detail: {
+                        id: first.id,
+                        url: first.url || '',
+                        name: first.name || '',
+                        file: first,
+                        files: items,
+                        targetInputId: currentTargetInputId,
+                    },
+                })
+            );
+        }
 
         closePicker();
     };

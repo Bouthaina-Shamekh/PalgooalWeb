@@ -8,6 +8,7 @@ const DEFAULT_IMAGE_PLACEHOLDER = `data:image/svg+xml;charset=UTF-8,${encodeURIC
     '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600"><rect width="1200" height="600" fill="#e2e8f0"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#64748b" font-family="Arial,sans-serif" font-size="48">Image</text></svg>'
 )}`;
 const LEGACY_PLACEHOLDER_PATTERN = /^(https?:\/\/via\.placeholder\.com\/1200x600\?text=Image|1200x600\?text=Image)$/i;
+const IMAGE_LINK_TYPES = ['none', 'media', 'custom'];
 
 function cleanImageClasses(classes) {
     return classes.filter((cls) => {
@@ -41,6 +42,15 @@ function normalizeWidth(value) {
     return width === 'auto' ? 'auto' : 'full';
 }
 
+function normalizeLinkType(value) {
+    const type = String(value || '').trim().toLowerCase();
+    return IMAGE_LINK_TYPES.includes(type) ? type : 'none';
+}
+
+function normalizeCustomUrl(value) {
+    return String(value || '').trim();
+}
+
 function roundedToClass(value) {
     if (value === 'none') return 'rounded-none';
     if (value === 'md') return 'rounded-md';
@@ -48,9 +58,109 @@ function roundedToClass(value) {
     return 'rounded-xl';
 }
 
+function setModelAttributes(model, attrs) {
+    if (typeof model?.setAttributes === 'function') {
+        model.setAttributes(attrs);
+        return;
+    }
+
+    model?.addAttributes?.(attrs);
+}
+
+function findFirstImageChild(model) {
+    const children = model?.components?.();
+    if (!children?.each) return null;
+
+    let image = null;
+    children.each((child) => {
+        if (image) return;
+        const tag = String(child?.get?.('tagName') || '').toLowerCase();
+        if (tag === 'img') image = child;
+    });
+
+    return image;
+}
+
+function imageAttrsFromModel(model) {
+    const rootTag = String(model?.get?.('tagName') || '').toLowerCase();
+    if (rootTag === 'img') return model.getAttributes?.() || {};
+
+    const imageChild = findFirstImageChild(model);
+    return imageChild?.getAttributes?.() || {};
+}
+
+function ensureImageChild(model) {
+    const children = model?.components?.();
+    if (!children) return null;
+
+    let image = findFirstImageChild(model);
+    if (image) return image;
+
+    children.reset([
+        {
+            type: 'default',
+            tagName: 'img',
+            attributes: {
+                'data-gjs-name': 'Image',
+            },
+            droppable: false,
+            editable: false,
+            selectable: false,
+            draggable: false,
+            hoverable: false,
+            copyable: false,
+            removable: false,
+        },
+    ]);
+
+    image = findFirstImageChild(model);
+    return image || children.at?.(0) || null;
+}
+
+function setTraitRowVisible(name, visible) {
+    const selectorByName =
+        `input[name="${name}"], select[name="${name}"], textarea[name="${name}"], ` +
+        `[data-pg-trait-name="${name}"], [data-trait-name="${name}"]`;
+
+    const matchedRows = new Set();
+    document.querySelectorAll(selectorByName).forEach((field) => {
+        const row = field.closest('.gjs-trt-trait');
+        if (row) matchedRows.add(row);
+    });
+
+    // Fallback for current Grapes text trait rendering where name attr can be missing.
+    if (name === 'pgCustomUrl') {
+        document
+            .querySelectorAll('input[placeholder="https://example.com"]')
+            .forEach((field) => {
+                const row = field.closest('.gjs-trt-trait');
+                if (row) matchedRows.add(row);
+            });
+    }
+
+    matchedRows.forEach((row) => {
+        row.style.display = visible ? '' : 'none';
+    });
+}
+
+function syncImageTraitRows(model) {
+    const linkType = normalizeLinkType(model?.get?.('pgLinkType'));
+    const visible = linkType === 'custom';
+    const apply = () => setTraitRowVisible('pgCustomUrl', visible);
+
+    apply();
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(apply);
+    }
+    setTimeout(apply, 0);
+}
+
 function hydrateImageProps(model) {
-    const attrs = model.getAttributes?.() || {};
+    const attrs = imageAttrsFromModel(model);
     const classes = classListFromString(attrs.class);
+    const rootTag = String(model?.get?.('tagName') || '').toLowerCase();
+    const rootAttrs = model?.getAttributes?.() || {};
+    const rootHref = normalizeCustomUrl(rootAttrs.href);
 
     model.set('pgSrc', normalizeImageSrc(attrs.src), { silent: true });
     model.set('pgAlt', String(attrs.alt || 'Image'), { silent: true });
@@ -70,6 +180,20 @@ function hydrateImageProps(model) {
 
     const loading = String(attrs.loading || '').toLowerCase();
     model.set('pgLoading', loading === 'eager' ? 'eager' : 'lazy', { silent: true });
+
+    if (rootTag === 'a' && rootHref) {
+        const src = normalizeImageSrc(attrs.src);
+        if (rootHref === src) {
+            model.set('pgLinkType', 'media', { silent: true });
+            model.set('pgCustomUrl', '', { silent: true });
+        } else {
+            model.set('pgLinkType', 'custom', { silent: true });
+            model.set('pgCustomUrl', rootHref, { silent: true });
+        }
+    } else {
+        model.set('pgLinkType', 'none', { silent: true });
+        model.set('pgCustomUrl', '', { silent: true });
+    }
 }
 
 function applyImageTraits(model) {
@@ -79,13 +203,11 @@ function applyImageTraits(model) {
     const fit = normalizeFit(model.get('pgFit'));
     const rounded = normalizeRounded(model.get('pgRounded'));
     const loading = String(model.get('pgLoading') || 'lazy') === 'eager' ? 'eager' : 'lazy';
+    const linkType = normalizeLinkType(model.get('pgLinkType'));
+    const customUrl = normalizeCustomUrl(model.get('pgCustomUrl'));
 
-    if (model.get('tagName') !== 'img') {
-        model.set('tagName', 'img');
-    }
-
-    const attrs = model.getAttributes?.() || {};
-    const cleaned = cleanImageClasses(classListFromString(attrs.class));
+    const attrs = imageAttrsFromModel(model);
+    const cleaned = cleanImageClasses(classListFromString(attrs.class || ''));
     const widthClasses = width === 'auto' ? ['w-auto'] : ['w-full', 'max-w-full'];
     const nextClasses = [
         ...cleaned,
@@ -94,27 +216,93 @@ function applyImageTraits(model) {
         `object-${fit}`,
         roundedToClass(rounded),
     ];
-
-    model.addAttributes({
-        ...attrs,
+    const imageAttrs = {
         src,
         alt,
         loading,
         class: Array.from(new Set(nextClasses)).join(' ').trim(),
         'data-gjs-name': 'Image',
-    });
+    };
+    const hasLink = linkType === 'media' || (linkType === 'custom' && !!customUrl);
+
+    if (!hasLink) {
+        if (model.get('tagName') !== 'img') {
+            model.set('tagName', 'img');
+        }
+        model.set('void', true, { silent: true });
+        model.set('droppable', false, { silent: true });
+        model.set('editable', false, { silent: true });
+
+        const children = model.components?.();
+        if (children?.length) children.reset([]);
+
+        setModelAttributes(model, imageAttrs);
+        return;
+    }
+
+    const href = linkType === 'media' ? src : customUrl;
+    const rootAttrs = model.getAttributes?.() || {};
+    const rootClasses = classListFromString(rootAttrs.class).filter(
+        (cls) => cls !== 'pg-image' && cls !== 'pg-image-link'
+    );
+    const nextRootAttrs = {
+        ...rootAttrs,
+        href: href || '#',
+        class: Array.from(new Set(['pg-image-link', 'inline-block', ...rootClasses])).join(' ').trim(),
+        'data-gjs-name': 'Image',
+    };
+    delete nextRootAttrs.src;
+    delete nextRootAttrs.alt;
+    delete nextRootAttrs.loading;
+
+    if (model.get('tagName') !== 'a') {
+        model.set('tagName', 'a');
+    }
+    model.set('void', false, { silent: true });
+    model.set('droppable', false, { silent: true });
+    model.set('editable', false, { silent: true });
+    setModelAttributes(model, nextRootAttrs);
+
+    const imageChild = ensureImageChild(model);
+    if (!imageChild) return;
+
+    imageChild.set('tagName', 'img', { silent: true });
+    imageChild.set('void', true, { silent: true });
+    imageChild.set('droppable', false, { silent: true });
+    imageChild.set('editable', false, { silent: true });
+    imageChild.set('selectable', false, { silent: true });
+    imageChild.set('draggable', false, { silent: true });
+    imageChild.set('hoverable', false, { silent: true });
+    imageChild.set('copyable', false, { silent: true });
+    imageChild.set('removable', false, { silent: true });
+    setModelAttributes(imageChild, imageAttrs);
 }
 
 export function registerImageElement(editor) {
     const dc = editor.DomComponents;
 
+    editor.on('component:selected', (component) => {
+        const type = String(component?.get?.('type') || '');
+        if (type !== 'pg-image') return;
+        syncImageTraitRows(component);
+    });
+
     dc.addType('pg-image', {
         isComponent: (el) => {
             if (!el || !el.tagName) return false;
-            if (el.tagName.toLowerCase() !== 'img') return false;
-
+            const tag = el.tagName.toLowerCase();
             const name = (el.getAttribute?.('data-gjs-name') || '').toLowerCase();
-            return name === 'image' || el.classList?.contains('pg-image');
+
+            if (tag === 'img') {
+                return name === 'image' || el.classList?.contains('pg-image');
+            }
+
+            if (tag === 'a') {
+                if (name === 'image') return true;
+                return !!el.querySelector?.('img.pg-image, img[data-gjs-name="Image"]');
+            }
+
+            return false;
         },
 
         model: {
@@ -137,12 +325,32 @@ export function registerImageElement(editor) {
                 pgFit: 'cover',
                 pgRounded: 'xl',
                 pgLoading: 'lazy',
+                pgLinkType: 'none',
+                pgCustomUrl: '',
                 traits: [
                     {
                         type: 'media-picker',
                         name: 'pgSrc',
                         label: 'Image',
                         changeProp: 1,
+                    },
+                    {
+                        type: 'select',
+                        name: 'pgLinkType',
+                        label: 'رابط',
+                        changeProp: 1,
+                        options: [
+                            { id: 'none', name: 'بدون' },
+                            { id: 'media', name: 'ملف الوسائط' },
+                            { id: 'custom', name: 'رابط (URL) مخصص' },
+                        ],
+                    },
+                    {
+                        type: 'text',
+                        name: 'pgCustomUrl',
+                        label: 'رابط (URL) مخصص',
+                        changeProp: 1,
+                        placeholder: 'https://example.com',
                     },
                     {
                         type: 'text',
@@ -200,10 +408,14 @@ export function registerImageElement(editor) {
             init() {
                 hydrateImageProps(this);
                 this.on(
-                    'change:pgSrc change:pgAlt change:pgWidth change:pgFit change:pgRounded change:pgLoading',
-                    () => applyImageTraits(this)
+                    'change:pgSrc change:pgAlt change:pgWidth change:pgFit change:pgRounded change:pgLoading change:pgLinkType change:pgCustomUrl',
+                    () => {
+                        applyImageTraits(this);
+                        syncImageTraitRows(this);
+                    }
                 );
                 applyImageTraits(this);
+                syncImageTraitRows(this);
             },
         },
     });
