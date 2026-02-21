@@ -1,4 +1,6 @@
 export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
+    const GOOGLE_FONTS_URL =
+        'https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Cairo:wght@200;300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:wght@300;400;500;600;700;800;900&family=Raleway:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Lato:wght@300;400;700;900&family=Source+Sans+3:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800&family=Merriweather:wght@300;400;700;900&family=Oswald:wght@300;400;500;600;700&display=swap';
     const bindOnce = (() => {
         let bound = false;
         return (fn) => {
@@ -47,6 +49,15 @@ export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
             link.id = 'pg-app-css';
             link.rel = 'stylesheet';
             link.href = cssUrl;
+            headEl.appendChild(link);
+        }
+
+        // Load Google fonts used by Style Manager font-family presets.
+        if (headEl && !doc.getElementById('pg-google-fonts')) {
+            const link = doc.createElement('link');
+            link.id = 'pg-google-fonts';
+            link.rel = 'stylesheet';
+            link.href = GOOGLE_FONTS_URL;
             headEl.appendChild(link);
         }
 

@@ -421,11 +421,19 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
 
                 const units = Array.isArray(props?.units) && props.units.length ? props.units : ['px'];
                 const defaultUnit = units.includes(props?.unit) ? props.unit : units[0];
+                const unitLabels = props?.pgUnitLabels || {};
+                const getUnitLabel = (unit) => {
+                    if (Object.prototype.hasOwnProperty.call(unitLabels, unit)) {
+                        return String(unitLabels[unit] ?? '');
+                    }
+                    if (unit === '') return 'unitless';
+                    return String(unit || '');
+                };
 
                 el.innerHTML = `
                     <div class="pg-sm-size__unit-row">
                         <select class="pg-sm-size__unit" aria-label="${props?.name || 'Unit'}">
-                            ${units.map((unit) => `<option value="${unit}">${unit}</option>`).join('')}
+                            ${units.map((unit) => `<option value="${unit}">${getUnitLabel(unit)}</option>`).join('')}
                         </select>
                     </div>
                     <div class="pg-sm-size__control-row">
@@ -690,10 +698,21 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
     }
 
     const fontFamilies = [
-        { id: 'inherit', name: t('Default', 'ط§ظپطھط±ط§ط¶ظٹ') },
+        { id: 'inherit', name: t('Default', 'Default') },
         { id: 'Cairo, ui-sans-serif, system-ui', name: 'Cairo' },
         { id: 'Tajawal, ui-sans-serif, system-ui', name: 'Tajawal' },
         { id: 'Almarai, ui-sans-serif, system-ui', name: 'Almarai' },
+        { id: '"Poppins", ui-sans-serif, system-ui', name: 'Poppins' },
+        { id: '"Montserrat", ui-sans-serif, system-ui', name: 'Montserrat' },
+        { id: '"Nunito", ui-sans-serif, system-ui', name: 'Nunito' },
+        { id: '"Raleway", ui-sans-serif, system-ui', name: 'Raleway' },
+        { id: '"Roboto", ui-sans-serif, system-ui', name: 'Roboto' },
+        { id: '"Open Sans", ui-sans-serif, system-ui', name: 'Open Sans' },
+        { id: '"Lato", ui-sans-serif, system-ui', name: 'Lato' },
+        { id: '"Source Sans 3", ui-sans-serif, system-ui', name: 'Source Sans 3' },
+        { id: '"Playfair Display", ui-serif, Georgia, serif', name: 'Playfair Display' },
+        { id: '"Merriweather", ui-serif, Georgia, serif', name: 'Merriweather' },
+        { id: '"Oswald", ui-sans-serif, system-ui', name: 'Oswald' },
         { id: 'Inter, ui-sans-serif, system-ui', name: 'Inter' },
         { id: 'system-ui, -apple-system, Segoe UI, Roboto, Arial', name: 'System' },
     ];
@@ -996,13 +1015,18 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
                 id: 'font-size',
                 name: t('Size', 'ط§ظ„ط­ط¬ظ…'),
                 property: 'font-size',
-                type: 'slider',
+                type: 'pg-size-range',
                 units: ['px', 'rem'],
                 unit: 'px',
                 defaults: '32px',
                 min: 8,
-                max: 120,
+                max: 240,
                 step: 1,
+                full: true,
+                pgUnitRanges: {
+                    px: { min: 8, max: 240, step: 1 },
+                    rem: { min: 0.5, max: 15, step: 0.05 },
+                },
             },
             {
                 id: 'font-weight',
@@ -1024,25 +1048,39 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
                 id: 'line-height',
                 name: t('Line Height', 'ط§ط±طھظپط§ط¹ ط§ظ„ط³ط·ط±'),
                 property: 'line-height',
-                type: 'slider',
+                type: 'pg-size-range',
                 units: ['', 'px'],
                 unit: '',
                 defaults: '1.2',
-                min: 0.8,
+                min: 0.6,
                 max: 3,
                 step: 0.05,
+                full: true,
+                pgUnitLabels: {
+                    '': 'unitless',
+                    px: 'px',
+                },
+                pgUnitRanges: {
+                    '': { min: 0.6, max: 3, step: 0.05 },
+                    px: { min: 8, max: 240, step: 1 },
+                },
             },
             {
                 id: 'letter-spacing',
                 name: t('Letter Spacing', 'طھط¨ط§ط¹ط¯ ط§ظ„ط£ط­ط±ظپ'),
                 property: 'letter-spacing',
-                type: 'slider',
+                type: 'pg-size-range',
                 units: ['px', 'em'],
                 unit: 'px',
                 defaults: '0px',
-                min: -2,
-                max: 20,
-                step: 0.5,
+                min: -10,
+                max: 40,
+                step: 0.1,
+                full: true,
+                pgUnitRanges: {
+                    px: { min: -10, max: 40, step: 0.1 },
+                    em: { min: -1, max: 3, step: 0.01 },
+                },
             },
             {
                 id: 'color',
@@ -1115,5 +1153,6 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
         ],
     });
 }
+
 
 
