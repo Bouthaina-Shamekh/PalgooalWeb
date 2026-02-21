@@ -48,11 +48,6 @@ function normalizeRounded(value) {
     return ['none', 'md', 'xl', 'full'].includes(rounded) ? rounded : 'xl';
 }
 
-function normalizeWidth(value) {
-    const width = String(value || '').trim();
-    return width === 'auto' ? 'auto' : 'full';
-}
-
 function normalizeLinkType(value) {
     const type = String(value || '').trim().toLowerCase();
     return IMAGE_LINK_TYPES.includes(type) ? type : 'none';
@@ -60,6 +55,63 @@ function normalizeLinkType(value) {
 
 function normalizeCustomUrl(value) {
     return String(value || '').trim();
+}
+
+function parseCssDimension(value) {
+    const source = String(value || '').trim();
+    if (!source) return null;
+    const match = source.match(/^(-?\d*\.?\d+)([a-z%]*)$/i);
+    if (!match) return null;
+
+    const next = Number(match[1]);
+    if (!Number.isFinite(next)) return null;
+
+    return {
+        value: next,
+        unit: String(match[2] || '').toLowerCase(),
+    };
+}
+
+function sanitizeImageDimension(value, prop) {
+    const parsed = parseCssDimension(value);
+    if (!parsed) return value;
+
+    const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
+
+    const bounds =
+        prop === 'height'
+            ? {
+                  px: { min: 0, max: 2400 },
+                  vh: { min: 0, max: 100 },
+                  '%': { min: 0, max: 100 },
+              }
+            : {
+                  px: { min: 0, max: 2400 },
+                  vw: { min: 0, max: 100 },
+                  '%': { min: 0, max: 100 },
+              };
+
+    const unit = parsed.unit || (prop === 'height' ? 'px' : '%');
+    const current = bounds[unit];
+    if (!current) return value;
+
+    const next = clamp(parsed.value, current.min, current.max);
+    return `${next}${unit}`;
+}
+
+function sanitizeImageStyles(model) {
+    const current = { ...(model?.getStyle?.() || {}) };
+    const next = { ...current };
+
+    ['width', 'max-width', 'height'].forEach((prop) => {
+        const raw = current[prop];
+        if (raw == null || raw === '') return;
+        const sanitized = sanitizeImageDimension(raw, prop);
+        if (sanitized !== raw) next[prop] = sanitized;
+    });
+
+    const changed = JSON.stringify(next) !== JSON.stringify(current);
+    if (changed) model?.setStyle?.(next);
 }
 
 function roundedToClass(value) {
@@ -176,9 +228,6 @@ function hydrateImageProps(model) {
     model.set('pgSrc', normalizeImageSrc(attrs.src), { silent: true });
     model.set('pgAlt', String(attrs.alt || 'Image'), { silent: true });
 
-    if (classes.includes('w-auto')) model.set('pgWidth', 'auto', { silent: true });
-    else model.set('pgWidth', 'full', { silent: true });
-
     if (classes.includes('object-contain')) model.set('pgFit', 'contain', { silent: true });
     else if (classes.includes('object-fill')) model.set('pgFit', 'fill', { silent: true });
     else if (classes.includes('object-none')) model.set('pgFit', 'none', { silent: true });
@@ -210,7 +259,6 @@ function hydrateImageProps(model) {
 function applyImageTraits(model) {
     const src = normalizeImageSrc(model.get('pgSrc'));
     const alt = String(model.get('pgAlt') || 'Image');
-    const width = normalizeWidth(model.get('pgWidth'));
     const fit = normalizeFit(model.get('pgFit'));
     const rounded = normalizeRounded(model.get('pgRounded'));
     const loading = String(model.get('pgLoading') || 'lazy') === 'eager' ? 'eager' : 'lazy';
@@ -219,11 +267,10 @@ function applyImageTraits(model) {
 
     const attrs = imageAttrsFromModel(model);
     const cleaned = cleanImageClasses(classListFromString(attrs.class || ''));
-    const widthClasses = width === 'auto' ? ['w-auto'] : ['w-full', 'max-w-full'];
     const nextClasses = [
         ...cleaned,
         'pg-image',
-        ...widthClasses,
+        'max-w-full',
         `object-${fit}`,
         roundedToClass(rounded),
     ];
@@ -328,12 +375,11 @@ export function registerImageElement(editor) {
                     src: DEFAULT_IMAGE_PLACEHOLDER,
                     alt: 'Image',
                     loading: 'lazy',
-                    class: 'pg-image w-full max-w-full rounded-xl object-cover',
+                    class: 'pg-image max-w-full rounded-xl object-cover',
                     'data-gjs-name': 'Image',
                 },
                 pgSrc: DEFAULT_IMAGE_PLACEHOLDER,
                 pgAlt: 'Image',
-                pgWidth: 'full',
                 pgFit: 'cover',
                 pgRounded: 'xl',
                 pgLoading: 'lazy',
@@ -372,16 +418,6 @@ export function registerImageElement(editor) {
                     },
                     {
                         type: 'select',
-                        name: 'pgWidth',
-                        label: 'Width',
-                        changeProp: 1,
-                        options: [
-                            { id: 'full', name: 'Full' },
-                            { id: 'auto', name: 'Auto' },
-                        ],
-                    },
-                    {
-                        type: 'select',
                         name: 'pgFit',
                         label: 'Object Fit',
                         changeProp: 1,
@@ -407,9 +443,10 @@ export function registerImageElement(editor) {
 
             init() {
                 this.set('stylable', IMAGE_STYLABLE_PROPS, { silent: true });
+                sanitizeImageStyles(this);
                 hydrateImageProps(this);
                 this.on(
-                    'change:pgSrc change:pgAlt change:pgWidth change:pgFit change:pgRounded change:pgLoading change:pgLinkType change:pgCustomUrl',
+                    'change:pgSrc change:pgAlt change:pgFit change:pgRounded change:pgLoading change:pgLinkType change:pgCustomUrl',
                     () => {
                         applyImageTraits(this);
                         syncImageTraitRows(this);

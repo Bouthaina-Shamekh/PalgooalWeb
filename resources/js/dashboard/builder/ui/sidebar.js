@@ -43,56 +43,82 @@ function ensureAdvancedUI() {
       <div class="pg-gjs-box">
         <div class="text-xs font-extrabold text-slate-700 mb-2">المسافات</div>
 
-        <div class="grid grid-cols-1 gap-3">
-
-          <!-- Margin -->
-          <label class="text-[11px] font-bold text-slate-600">
-            Margin
-
-            <!-- input الأصلي مخفي -->
-            <input id="pg-adv-margin" type="text"
-              placeholder="0 0 16px 0"
-              class="hidden"/>
-
-            <!-- الحقول الجديدة -->
-            <div class="flex gap-2 mt-1">
-              <input data-box="margin" data-side="top" placeholder="T"
-                class="pg-box-input flex-1"/>
-              <input data-box="margin" data-side="right" placeholder="R"
-                class="pg-box-input flex-1"/>
-              <input data-box="margin" data-side="bottom" placeholder="B"
-                class="pg-box-input flex-1"/>
-              <input data-box="margin" data-side="left" placeholder="L"
-                class="pg-box-input flex-1"/>
+        <div class="pg-adv-spacing">
+          <label class="pg-adv-space-group">
+            <div class="pg-adv-space-head">
+              <select data-box-unit="margin" class="pg-adv-space-unit" aria-label="Margin Unit">
+                <option value="px">px</option>
+                <option value="%">%</option>
+                <option value="em">em</option>
+                <option value="rem">rem</option>
+              </select>
+              <span class="pg-adv-space-label">Margin</span>
             </div>
 
-          </label>
+            <input id="pg-adv-margin" type="text" placeholder="0 0 16px 0" class="hidden"/>
 
-          <!-- Padding -->
-          <label class="text-[11px] font-bold text-slate-600">
-            Padding
+            <div class="pg-adv-space-row">
+              <button type="button" data-box-link="margin" class="pg-adv-space-link is-linked" data-linked="true" aria-label="Link margin values" title="Link values">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11 4"></path>
+                  <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 1 0 7.07 7.07L13 20"></path>
+                </svg>
+              </button>
 
-            <!-- input الأصلي مخفي -->
-            <input id="pg-adv-padding" type="text"
-              placeholder="12px 16px"
-              class="hidden"/>
+              <div class="pg-adv-space-grid">
+                <input data-box="margin" data-side="left" placeholder="" class="pg-box-input pg-box-input--side"/>
+                <input data-box="margin" data-side="bottom" placeholder="" class="pg-box-input pg-box-input--side"/>
+                <input data-box="margin" data-side="right" placeholder="" class="pg-box-input pg-box-input--side"/>
+                <input data-box="margin" data-side="top" placeholder="" class="pg-box-input pg-box-input--side"/>
+              </div>
+            </div>
 
-            <!-- الحقول الجديدة -->
-            <div class="flex gap-2 mt-1">
-              <input data-box="padding" data-side="top" placeholder="T"
-                class="pg-box-input flex-1"/>
-              <input data-box="padding" data-side="right" placeholder="R"
-                class="pg-box-input flex-1"/>
-              <input data-box="padding" data-side="bottom" placeholder="B"
-                class="pg-box-input flex-1"/>
-              <input data-box="padding" data-side="left" placeholder="L"
-                class="pg-box-input flex-1"/>
+            <div class="pg-adv-space-sides">
+              <span>يسار</span>
+              <span>أسفل</span>
+              <span>يمين</span>
+              <span>أعلى</span>
             </div>
           </label>
 
+          <label class="pg-adv-space-group">
+            <div class="pg-adv-space-head">
+              <select data-box-unit="padding" class="pg-adv-space-unit" aria-label="Padding Unit">
+                <option value="px">px</option>
+                <option value="%">%</option>
+                <option value="em">em</option>
+                <option value="rem">rem</option>
+              </select>
+              <span class="pg-adv-space-label">Padding</span>
+            </div>
+
+            <input id="pg-adv-padding" type="text" placeholder="12px 16px" class="hidden"/>
+
+            <div class="pg-adv-space-row">
+              <button type="button" data-box-link="padding" class="pg-adv-space-link is-linked" data-linked="true" aria-label="Link padding values" title="Link values">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07L11 4"></path>
+                  <path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 1 0 7.07 7.07L13 20"></path>
+                </svg>
+              </button>
+
+              <div class="pg-adv-space-grid">
+                <input data-box="padding" data-side="left" placeholder="" class="pg-box-input pg-box-input--side"/>
+                <input data-box="padding" data-side="bottom" placeholder="" class="pg-box-input pg-box-input--side"/>
+                <input data-box="padding" data-side="right" placeholder="" class="pg-box-input pg-box-input--side"/>
+                <input data-box="padding" data-side="top" placeholder="" class="pg-box-input pg-box-input--side"/>
+              </div>
+            </div>
+
+            <div class="pg-adv-space-sides">
+              <span>يسار</span>
+              <span>أسفل</span>
+              <span>يمين</span>
+              <span>أعلى</span>
+            </div>
+          </label>
         </div>
       </div>
-
       <div class="pg-gjs-box">
         <div class="text-xs font-extrabold text-slate-700 mb-2">الترتيب</div>
 
@@ -469,14 +495,39 @@ export function initBoxSpacingInputs() {
         padding: 'pg-adv-padding',
     };
 
+    const SIDES = ['top', 'right', 'bottom', 'left'];
+    const SUPPORTED_UNITS = ['px', '%', 'em', 'rem', 'vw', 'vh'];
+
     function isPureNumber(v) {
         return /^-?(?:\d+|\d*\.\d+)$/.test(v);
     }
 
-    function normalizeUnit(v) {
-        const val = (v ?? '').trim();
+    function parseValueWithUnit(v) {
+        const val = String(v ?? '').trim();
+        const match = val.match(/^(-?(?:\d+|\d*\.\d+))(px|%|em|rem|vw|vh)?$/i);
+        if (!match) return null;
+
+        const next = Number(match[1]);
+        if (!Number.isFinite(next)) return null;
+
+        return {
+            number: String(match[1]),
+            unit: String(match[2] || '').toLowerCase(),
+        };
+    }
+
+    function normalizeSideValue(box, raw, unit) {
+        const val = String(raw ?? '').trim();
         if (!val) return '0';
-        if (isPureNumber(val)) return `${val}px`;
+
+        if (box === 'margin' && val.toLowerCase() === 'auto') return 'auto';
+
+        const parsed = parseValueWithUnit(val);
+        if (parsed) {
+            return parsed.unit ? `${parsed.number}${parsed.unit}` : `${parsed.number}${unit}`;
+        }
+
+        if (isPureNumber(val)) return `${val}${unit}`;
         return val;
     }
 
@@ -484,15 +535,30 @@ export function initBoxSpacingInputs() {
         return document.getElementById(IDS[box]);
     }
 
+    function getUnitSelect(box) {
+        return document.querySelector(`[data-box-unit="${box}"]`);
+    }
+
+    function getLinkButton(box) {
+        return document.querySelector(`[data-box-link="${box}"]`);
+    }
+
     function getSideInput(box, side) {
         return document.querySelector(`[data-box="${box}"][data-side="${side}"]`);
     }
 
+    function isLinked(box) {
+        return getLinkButton(box)?.dataset.linked !== 'false';
+    }
+
+    function setLinked(box, linked) {
+        const linkEl = getLinkButton(box);
+        if (!linkEl) return;
+        linkEl.dataset.linked = linked ? 'true' : 'false';
+        linkEl.classList.toggle('is-linked', linked);
+    }
+
     function expandCssShorthand(parts) {
-        // 1 -> T R B L = a a a a
-        // 2 -> a b a b
-        // 3 -> a b c b
-        // 4 -> a b c d
         const p = parts.filter(Boolean);
         if (!p.length) return ['0', '0', '0', '0'];
         if (p.length === 1) return [p[0], p[0], p[0], p[0]];
@@ -505,31 +571,61 @@ export function initBoxSpacingInputs() {
         const hidden = getHidden(box);
         if (!hidden) return;
 
-        const raw = (hidden.value || '').trim();
-        if (!raw) return;
+        const unitEl = getUnitSelect(box);
+        const raw = String(hidden.value || '').trim();
+
+        if (!raw) {
+            SIDES.forEach((side) => {
+                const input = getSideInput(box, side);
+                if (input) input.value = '';
+            });
+            if (unitEl) unitEl.value = 'px';
+            setLinked(box, true);
+            return;
+        }
 
         const parts = raw.split(/\s+/);
         const [t, r, b, l] = expandCssShorthand(parts);
-
         const map = { top: t, right: r, bottom: b, left: l };
+
+        const allValues = [t, r, b, l];
+        const parsedValues = allValues.map((value) => parseValueWithUnit(value));
+        const firstUnit = parsedValues.find((item) => item?.unit)?.unit || 'px';
+        const hasMixedUnits = parsedValues.some((item) => item?.unit && item.unit !== firstUnit);
+        const resolvedUnit = !hasMixedUnits && SUPPORTED_UNITS.includes(firstUnit)
+            ? firstUnit
+            : (unitEl?.value || 'px');
+
+        if (unitEl && SUPPORTED_UNITS.includes(resolvedUnit)) {
+            unitEl.value = resolvedUnit;
+        }
 
         Object.entries(map).forEach(([side, val]) => {
             const input = getSideInput(box, side);
             if (!input) return;
 
-            // إذا px اعرض الرقم فقط، غير ذلك اعرض النص كما هو
-            input.value = val.endsWith('px') ? val.slice(0, -2) : val;
+            const parsed = parseValueWithUnit(val);
+            if (parsed && (!parsed.unit || parsed.unit === resolvedUnit)) {
+                input.value = parsed.number;
+                return;
+            }
+
+            input.value = String(val || '');
         });
+
+        const linked = allValues.every((value) => String(value).trim() === String(allValues[0]).trim());
+        setLinked(box, linked);
     }
 
     function updateHiddenFromInputs(box) {
         const hidden = getHidden(box);
         if (!hidden) return;
 
-        const top = normalizeUnit(getSideInput(box, 'top')?.value);
-        const right = normalizeUnit(getSideInput(box, 'right')?.value);
-        const bottom = normalizeUnit(getSideInput(box, 'bottom')?.value);
-        const left = normalizeUnit(getSideInput(box, 'left')?.value);
+        const unit = getUnitSelect(box)?.value || 'px';
+        const top = normalizeSideValue(box, getSideInput(box, 'top')?.value, unit);
+        const right = normalizeSideValue(box, getSideInput(box, 'right')?.value, unit);
+        const bottom = normalizeSideValue(box, getSideInput(box, 'bottom')?.value, unit);
+        const left = normalizeSideValue(box, getSideInput(box, 'left')?.value, unit);
 
         hidden.value = `${top} ${right} ${bottom} ${left}`;
         hidden.dispatchEvent(new Event('input', { bubbles: true }));
@@ -539,6 +635,8 @@ export function initBoxSpacingInputs() {
     function hasAllInputs(box) {
         return (
             !!getHidden(box) &&
+            !!getUnitSelect(box) &&
+            !!getLinkButton(box) &&
             !!getSideInput(box, 'top') &&
             !!getSideInput(box, 'right') &&
             !!getSideInput(box, 'bottom') &&
@@ -546,37 +644,103 @@ export function initBoxSpacingInputs() {
         );
     }
 
-    // ✅ فتح/تعبئة عند توفر العناصر (لأن DOM يتأخر)
     function syncWhenReady() {
         if (hasAllInputs('margin')) fillInputsFromHidden('margin');
         if (hasAllInputs('padding')) fillInputsFromHidden('padding');
     }
 
-    // 1) Delegation للكتابة (يشتغل حتى لو DOM اتغير)
     document.addEventListener(
         'input',
         (e) => {
             const el = e.target;
             if (!(el instanceof HTMLElement)) return;
 
-            const field = el.closest('[data-box][data-side]');
-            if (!field) return;
+            const sideField = el.closest('[data-box][data-side]');
+            if (sideField) {
+                const box = sideField.getAttribute('data-box');
+                if (box !== 'margin' && box !== 'padding') return;
 
-            const box = field.getAttribute('data-box');
+                const side = sideField.getAttribute('data-side');
+                if (isLinked(box) && side) {
+                    const sourceValue = getSideInput(box, side)?.value ?? '';
+                    SIDES.forEach((nextSide) => {
+                        if (nextSide === side) return;
+                        const input = getSideInput(box, nextSide);
+                        if (input) input.value = sourceValue;
+                    });
+                }
+
+                updateHiddenFromInputs(box);
+                return;
+            }
+
+            const unitField = el.closest('[data-box-unit]');
+            if (!unitField) return;
+
+            const box = unitField.getAttribute('data-box-unit');
             if (box !== 'margin' && box !== 'padding') return;
+            updateHiddenFromInputs(box);
+        },
+        true
+    );
+
+    document.addEventListener(
+        'change',
+        (e) => {
+            const el = e.target;
+            if (!(el instanceof HTMLElement)) return;
+
+            const sideField = el.closest('[data-box][data-side]');
+            if (sideField) {
+                const box = sideField.getAttribute('data-box');
+                if (box !== 'margin' && box !== 'padding') return;
+                updateHiddenFromInputs(box);
+                return;
+            }
+
+            const unitField = el.closest('[data-box-unit]');
+            if (!unitField) return;
+
+            const box = unitField.getAttribute('data-box-unit');
+            if (box !== 'margin' && box !== 'padding') return;
+            updateHiddenFromInputs(box);
+        },
+        true
+    );
+
+    document.addEventListener(
+        'click',
+        (e) => {
+            const target = e.target;
+            if (!(target instanceof HTMLElement)) return;
+
+            const linkBtn = target.closest('[data-box-link]');
+            if (!linkBtn) return;
+
+            const box = linkBtn.getAttribute('data-box-link');
+            if (box !== 'margin' && box !== 'padding') return;
+
+            const next = !isLinked(box);
+            setLinked(box, next);
+
+            if (next) {
+                const sourceValue = getSideInput(box, 'top')?.value ?? '';
+                SIDES.forEach((side) => {
+                    const input = getSideInput(box, side);
+                    if (input) input.value = sourceValue;
+                });
+            }
 
             updateHiddenFromInputs(box);
         },
         true
     );
 
-    // 2) Observer: لو GrapesJS أعاد بناء البانل/الحقول… نعبّي من المخزن فورًا
     const obs = new MutationObserver(() => {
         syncWhenReady();
     });
     obs.observe(document.body, { childList: true, subtree: true });
 
-    // 3) حاول تزامن أولي (مرتين) لأن بعض الأحيان القيم تنحط بعد load مباشرة
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
             syncWhenReady();
@@ -589,7 +753,6 @@ export function initBoxSpacingInputs() {
         setTimeout(syncWhenReady, 50);
     }
 
-    // 4) إذا القيم الأصلية تغيرت (مثلاً تغيير عنصر محدد/تحميل تخزين) رجّع عبّي
     ['margin', 'padding'].forEach((box) => {
         const hidden = getHidden(box);
         if (!hidden) return;

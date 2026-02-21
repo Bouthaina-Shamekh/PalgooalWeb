@@ -581,6 +581,110 @@ a {
     width: 100%;
 }
 
+#pg-advanced .pg-adv-spacing {
+    display: grid;
+    gap: 16px;
+}
+
+#pg-advanced .pg-adv-space-group {
+    display: grid;
+    gap: 6px;
+}
+
+#pg-advanced .pg-adv-space-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    direction: ltr;
+}
+
+#pg-advanced .pg-adv-space-unit {
+    width: 64px;
+    min-width: 64px;
+    height: 22px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    text-align: start;
+    font-size: 12px;
+    color: #475569 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+#pg-advanced .pg-adv-space-label {
+    font-size: 14px;
+    font-weight: 800;
+    color: #334155;
+    line-height: 1;
+}
+
+#pg-advanced .pg-adv-space-row {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    border: 1px solid rgba(36, 11, 54, .14);
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
+    direction: ltr;
+}
+
+#pg-advanced .pg-adv-space-link {
+    border: 0;
+    border-right: 1px solid rgba(36, 11, 54, .14);
+    background: rgba(36, 11, 54, .04);
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+#pg-advanced .pg-adv-space-link.is-linked {
+    color: #0f172a;
+    background: rgba(36, 11, 54, .08);
+}
+
+#pg-advanced .pg-adv-space-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    min-width: 0;
+}
+
+#pg-advanced .pg-box-input--side {
+    height: 34px;
+    border: 0 !important;
+    border-left: 1px solid rgba(36, 11, 54, .14) !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 6px !important;
+    text-align: center;
+    font-weight: 600;
+    color: #334155;
+    background: #fff;
+}
+
+#pg-advanced .pg-box-input--side:first-child {
+    border-left: 0 !important;
+}
+
+#pg-advanced .pg-box-input--side::placeholder {
+    color: #94a3b8;
+    opacity: 1;
+}
+
+#pg-advanced .pg-adv-space-sides {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.2;
+    text-align: center;
+    padding: 0 2px;
+    direction: ltr;
+}
+
 .gjs-sm-field.gjs-sm-composite {
     background: transparent;
     border: none;

@@ -64,9 +64,23 @@ export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
         }
         html[dir="rtl"] [data-pg-selected]::before{right:0;left:auto;}
         html[dir="ltr"] [data-pg-selected]::before{left:0;right:auto;}
-        html,body{height:100%;}
+        html,body{height:100%;overflow-x:hidden;}
         html[dir="rtl"] body{text-align:right;}
         html[dir="ltr"] body{text-align:left;}
+        img.pg-image{
+          display:block;
+          max-width:100%;
+          height:auto;
+        }
+        a.pg-image-link{
+          display:block;
+          max-width:100%;
+        }
+        a.pg-image-link > img.pg-image{
+          display:block;
+          max-width:100%;
+          height:auto;
+        }
         .gjs-wrapper:empty::before{content:"${safe}";display:block;text-align:center;color:#64748b;font-weight:600;padding-top:60px;}
         .pg-container .pg-container-inner:empty{
           min-height:140px;
