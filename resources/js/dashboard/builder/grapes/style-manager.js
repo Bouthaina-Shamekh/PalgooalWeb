@@ -696,6 +696,104 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
             },
         });
     }
+    if (!sm.getType('pg-font-family-select')) {
+        sm.addType('pg-font-family-select', {
+            create({ props, change }) {
+                const el = document.createElement('div');
+                el.className = 'pg-sm-font';
+
+                const selectEl = document.createElement('select');
+                selectEl.className = 'pg-sm-font__select';
+                selectEl.setAttribute('aria-label', props?.name || 'Font Family');
+
+                const previewEl = document.createElement('div');
+                previewEl.className = 'pg-sm-font__preview';
+                previewEl.textContent = 'The quick brown fox jumps over the lazy dog.';
+
+                const list = Array.isArray(props?.list) ? props.list : [];
+                list.forEach((item) => {
+                    const value = String(item?.id ?? item?.value ?? '');
+                    const label = String(item?.name ?? item?.label ?? value);
+
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = label;
+                    if (value && value !== 'inherit') {
+                        option.style.fontFamily = value;
+                    }
+                    selectEl.appendChild(option);
+                });
+
+                const applyPreview = (fontValue) => {
+                    const next = String(fontValue || '').trim();
+                    previewEl.style.fontFamily =
+                        next && next !== 'inherit'
+                            ? next
+                            : 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+                };
+
+                const emitChange = (partial) => change({ partial: !!partial });
+
+                selectEl.addEventListener('input', () => {
+                    applyPreview(selectEl.value);
+                    emitChange(true);
+                });
+
+                selectEl.addEventListener('change', () => {
+                    applyPreview(selectEl.value);
+                    emitChange(false);
+                });
+
+                el.appendChild(selectEl);
+                el.appendChild(previewEl);
+
+                const defaultValue = String(props?.defaults ?? 'inherit');
+                if (defaultValue) selectEl.value = defaultValue;
+                applyPreview(selectEl.value || defaultValue);
+
+                return el;
+            },
+
+            emit({ el, props, updateStyle }, { partial } = {}) {
+                const selectEl = el.querySelector('.pg-sm-font__select');
+                const fallback = String(props?.defaults ?? 'inherit');
+                const nextValue = String(selectEl?.value || fallback || 'inherit');
+                updateStyle(nextValue, { partial: !!partial });
+            },
+
+            update({ value, props, el }) {
+                const selectEl = el.querySelector('.pg-sm-font__select');
+                const previewEl = el.querySelector('.pg-sm-font__preview');
+                if (!selectEl) return;
+
+                const fallback = String(props?.defaults ?? 'inherit');
+                const nextValue = String(value || fallback || 'inherit');
+
+                const hasOption = Array.from(selectEl.options).some(
+                    (option) => option.value === nextValue
+                );
+
+                if (!hasOption && nextValue) {
+                    const customOption = document.createElement('option');
+                    customOption.value = nextValue;
+                    customOption.textContent = nextValue;
+                    if (nextValue !== 'inherit') {
+                        customOption.style.fontFamily = nextValue;
+                    }
+                    selectEl.appendChild(customOption);
+                }
+
+                selectEl.value = nextValue;
+
+                if (previewEl) {
+                    previewEl.style.fontFamily =
+                        nextValue && nextValue !== 'inherit'
+                            ? nextValue
+                            : 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif';
+                }
+            },
+        });
+    }
 
     const fontFamilies = [
         { id: 'inherit', name: t('Default', 'Default') },
@@ -1007,7 +1105,7 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
                 id: 'font-family',
                 name: t('Font', 'ظ†ظˆط¹ ط§ظ„ط®ط·'),
                 property: 'font-family',
-                type: 'select',
+                type: 'pg-font-family-select',
                 defaults: 'inherit',
                 list: fontFamilies,
             },
@@ -1152,7 +1250,52 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
             },
         ],
     });
+
+    // Hide the Image sector when a button component is selected.
+    const imageSector = sm.getSector('pg-image-size');
+    const stylesHost = document.getElementById('gjs-styles');
+
+    const isButtonLike = (component) => {
+        let current = component;
+
+        while (current) {
+            const type = String(current.get?.('type') || '').toLowerCase();
+            if (type === 'pg-button') return true;
+
+            const attrs = current.getAttributes?.() || {};
+            const name = String(attrs['data-gjs-name'] || current.get?.('name') || '').trim().toLowerCase();
+            const tag = String(current.get?.('tagName') || '').trim().toLowerCase();
+            const classes = String(attrs.class || '');
+
+            if (name === 'button') return true;
+            if (tag === 'button') return true;
+            if (tag === 'a' && classes.includes('pg-button')) return true;
+
+            current = current.parent?.();
+        }
+
+        return false;
+    };
+
+    const syncSectorVisibility = (component) => {
+        const isButton = isButtonLike(component);
+
+        if (imageSector) {
+            imageSector.set('visible', !isButton);
+        }
+
+        if (stylesHost) {
+            stylesHost.classList.toggle('pg-hide-image-sector', isButton);
+        }
+    };
+
+    editor.on('component:selected', (component) => {
+        syncSectorVisibility(component);
+    });
+
+    editor.on('component:deselected', () => {
+        syncSectorVisibility(null);
+    });
+
+    syncSectorVisibility(editor.getSelected?.());
 }
-
-
-
