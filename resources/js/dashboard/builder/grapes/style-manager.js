@@ -120,6 +120,22 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
         em: { min: 0, max: 120, step: 0.1 },
     };
 
+    const DEFAULT_FILTER_VALUES = {
+        brightness: 100,
+        contrast: 100,
+        saturate: 100,
+        hueRotate: 0,
+        blur: 0,
+    };
+
+    const FILTER_CONTROLS = [
+        { key: 'brightness', label: 'Brightness', unit: '%', min: 0, max: 200, step: 1, default: 100 },
+        { key: 'contrast', label: 'Contrast', unit: '%', min: 0, max: 200, step: 1, default: 100 },
+        { key: 'saturate', label: 'Saturate', unit: '%', min: 0, max: 200, step: 1, default: 100 },
+        { key: 'hueRotate', label: 'Hue Rotate', unit: 'deg', min: 0, max: 360, step: 1, default: 0 },
+        { key: 'blur', label: 'Blur', unit: 'px', min: 0, max: 20, step: 1, default: 0 },
+    ];
+
     const getSizeRangeByUnit = (props, unit) => {
         const unitRanges = props?.pgUnitRanges || {};
         const fromProps = unitRanges?.[unit] || {};
@@ -133,6 +149,26 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
             min,
             max: max >= min ? max : min,
             step: step > 0 ? step : 1,
+        };
+    };
+
+    const parseCssFilterValue = (value) => {
+        const source = String(value || '').trim().toLowerCase();
+        const defaults = { ...DEFAULT_FILTER_VALUES };
+        if (!source || source === 'none') return defaults;
+
+        const read = (pattern, fallback) => {
+            const matched = source.match(pattern);
+            if (!matched) return fallback;
+            return toNumber(matched[1], fallback);
+        };
+
+        return {
+            brightness: read(/brightness\((-?\d*\.?\d+)%\)/, defaults.brightness),
+            contrast: read(/contrast\((-?\d*\.?\d+)%\)/, defaults.contrast),
+            saturate: read(/saturate\((-?\d*\.?\d+)%\)/, defaults.saturate),
+            hueRotate: read(/hue-rotate\((-?\d*\.?\d+)deg\)/, defaults.hueRotate),
+            blur: read(/blur\((-?\d*\.?\d+)px\)/, defaults.blur),
         };
     };
 
@@ -519,6 +555,140 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
         });
     }
 
+    if (!sm.getType('pg-css-filters')) {
+        sm.addType('pg-css-filters', {
+            create({ change }) {
+                const el = document.createElement('div');
+                el.className = 'pg-sm-filters';
+                el.innerHTML = `
+                    <button type="button" class="pg-sm-filters__toggle" aria-label="Edit CSS Filters" title="Edit CSS Filters">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M12 20h9"/>
+                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+                        </svg>
+                    </button>
+                    <div class="pg-sm-filters__panel" hidden>
+                        ${FILTER_CONTROLS.map((control) => `
+                            <div class="pg-sm-filters__item">
+                                <div class="pg-sm-filters__label">${control.label}</div>
+                                <div class="pg-sm-filters__control">
+                                    <input
+                                        type="number"
+                                        class="pg-sm-filters__number"
+                                        data-filter-number="${control.key}"
+                                        min="${control.min}"
+                                        max="${control.max}"
+                                        step="${control.step}"
+                                    />
+                                    <input
+                                        type="range"
+                                        class="pg-sm-filters__range"
+                                        data-filter-range="${control.key}"
+                                        min="${control.min}"
+                                        max="${control.max}"
+                                        step="${control.step}"
+                                    />
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+
+                const panelEl = el.querySelector('.pg-sm-filters__panel');
+                const toggleEl = el.querySelector('.pg-sm-filters__toggle');
+
+                const syncControl = (control, next, options = {}) => {
+                    const numberEl = el.querySelector(`[data-filter-number="${control.key}"]`);
+                    const rangeEl = el.querySelector(`[data-filter-range="${control.key}"]`);
+                    if (!numberEl || !rangeEl) return;
+
+                    const normalized = clamp(toNumber(next, control.default), control.min, control.max);
+                    numberEl.value = String(normalized);
+                    rangeEl.value = String(normalized);
+
+                    if (!options.silent) {
+                        change({ partial: !!options.partial });
+                    }
+                };
+
+                FILTER_CONTROLS.forEach((control) => {
+                    const numberEl = el.querySelector(`[data-filter-number="${control.key}"]`);
+                    const rangeEl = el.querySelector(`[data-filter-range="${control.key}"]`);
+                    if (!numberEl || !rangeEl) return;
+
+                    syncControl(control, control.default, { silent: true });
+
+                    numberEl.addEventListener('input', () => {
+                        syncControl(control, numberEl.value, { partial: true });
+                    });
+                    numberEl.addEventListener('change', () => {
+                        syncControl(control, numberEl.value, { partial: false });
+                    });
+
+                    rangeEl.addEventListener('input', () => {
+                        syncControl(control, rangeEl.value, { partial: true });
+                    });
+                    rangeEl.addEventListener('change', () => {
+                        syncControl(control, rangeEl.value, { partial: false });
+                    });
+                });
+
+                toggleEl?.addEventListener('click', () => {
+                    if (!panelEl) return;
+                    panelEl.hidden = !panelEl.hidden;
+                    toggleEl.classList.toggle('is-open', !panelEl.hidden);
+                });
+
+                return el;
+            },
+
+            emit({ el, updateStyle }, { partial } = {}) {
+                const values = {};
+
+                FILTER_CONTROLS.forEach((control) => {
+                    const numberEl = el.querySelector(`[data-filter-number="${control.key}"]`);
+                    const raw = numberEl?.value;
+                    values[control.key] = clamp(toNumber(raw, control.default), control.min, control.max);
+                });
+
+                const isDefault = FILTER_CONTROLS.every((control) => values[control.key] === control.default);
+                if (isDefault) {
+                    updateStyle('none', { partial: !!partial });
+                    return;
+                }
+
+                const filterValue = [
+                    `brightness(${values.brightness}%)`,
+                    `contrast(${values.contrast}%)`,
+                    `saturate(${values.saturate}%)`,
+                    `hue-rotate(${values.hueRotate}deg)`,
+                    `blur(${values.blur}px)`,
+                ].join(' ');
+
+                updateStyle(filterValue, { partial: !!partial });
+            },
+
+            update({ value, el }) {
+                const parsed = parseCssFilterValue(value);
+
+                FILTER_CONTROLS.forEach((control) => {
+                    const numberEl = el.querySelector(`[data-filter-number="${control.key}"]`);
+                    const rangeEl = el.querySelector(`[data-filter-range="${control.key}"]`);
+                    if (!numberEl || !rangeEl) return;
+
+                    const normalized = clamp(
+                        toNumber(parsed?.[control.key], control.default),
+                        control.min,
+                        control.max
+                    );
+
+                    numberEl.value = String(normalized);
+                    rangeEl.value = String(normalized);
+                });
+            },
+        });
+    }
+
     const fontFamilies = [
         { id: 'inherit', name: t('Default', 'ط§ظپطھط±ط§ط¶ظٹ') },
         { id: 'Cairo, ui-sans-serif, system-ui', name: 'Cairo' },
@@ -659,7 +829,7 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
     sm.addSector('pg-image-size', {
         name: t('Image', 'Image'),
         open: false,
-        buildProps: ['width', 'max-width', 'height'],
+        buildProps: ['width', 'max-width', 'height', 'opacity', 'filter'],
         properties: [
             {
                 id: 'width',
@@ -715,6 +885,25 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
                     vh: { min: 0, max: 100, step: 1 },
                     '%': { min: 0, max: 100, step: 1 },
                 },
+            },
+            {
+                id: 'image-opacity',
+                name: t('Opacity', 'Opacity'),
+                property: 'opacity',
+                type: 'slider',
+                min: 0,
+                max: 1,
+                step: 0.01,
+                defaults: 1,
+                full: true,
+            },
+            {
+                id: 'image-filter',
+                name: t('CSS Filters', 'CSS Filters'),
+                property: 'filter',
+                type: 'pg-css-filters',
+                defaults: 'none',
+                full: true,
             },
         ],
     });

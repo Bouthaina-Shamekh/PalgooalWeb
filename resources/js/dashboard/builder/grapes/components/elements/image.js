@@ -9,6 +9,17 @@ const DEFAULT_IMAGE_PLACEHOLDER = `data:image/svg+xml;charset=UTF-8,${encodeURIC
 )}`;
 const LEGACY_PLACEHOLDER_PATTERN = /^(https?:\/\/via\.placeholder\.com\/1200x600\?text=Image|1200x600\?text=Image)$/i;
 const IMAGE_LINK_TYPES = ['none', 'media', 'custom'];
+const IMAGE_STYLABLE_PROPS = [
+    'width',
+    'max-width',
+    'height',
+    'opacity',
+    'filter',
+    'border-style',
+    'border-width',
+    'border-color',
+    'border-radius',
+];
 
 function cleanImageClasses(classes) {
     return classes.filter((cls) => {
@@ -312,6 +323,7 @@ export function registerImageElement(editor) {
                 void: true,
                 droppable: false,
                 editable: false,
+                stylable: IMAGE_STYLABLE_PROPS,
                 attributes: {
                     src: DEFAULT_IMAGE_PLACEHOLDER,
                     alt: 'Image',
@@ -382,18 +394,6 @@ export function registerImageElement(editor) {
                     },
                     {
                         type: 'select',
-                        name: 'pgRounded',
-                        label: 'Radius',
-                        changeProp: 1,
-                        options: [
-                            { id: 'none', name: 'None' },
-                            { id: 'md', name: 'Medium' },
-                            { id: 'xl', name: 'Large' },
-                            { id: 'full', name: 'Full' },
-                        ],
-                    },
-                    {
-                        type: 'select',
                         name: 'pgLoading',
                         label: 'Loading',
                         changeProp: 1,
@@ -406,6 +406,7 @@ export function registerImageElement(editor) {
             },
 
             init() {
+                this.set('stylable', IMAGE_STYLABLE_PROPS, { silent: true });
                 hydrateImageProps(this);
                 this.on(
                     'change:pgSrc change:pgAlt change:pgWidth change:pgFit change:pgRounded change:pgLoading change:pgLinkType change:pgCustomUrl',
