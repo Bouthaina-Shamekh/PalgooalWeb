@@ -1,7 +1,9 @@
 // resources/js/dashboard/builder/ui/sidebar.js
 import { q, qa } from '../helpers/dom';
 
-let lastElementTab = 'traits'; // محتوى افتراضي
+let lastElementTab = 'traits'; // default content tab
+let activeAdvancedComponent = null;
+let advancedEventsBound = false;
 
 function setPanel(panelName) {
     const panels = qa('.pg-sidebar-panel');
@@ -31,6 +33,67 @@ function setElementTab(tabName) {
 function setSelectedLabel(text) {
     const el = q('#pg-props-selected');
     if (el) el.textContent = text || 'لا يوجد تحديد';
+}
+function getStyleValueFromComponent(cmp, key) {
+    return cmp?.getStyle?.()?.[key] ?? '';
+}
+
+function setStyleValueOnActiveComponent(key, value) {
+    const cmp = activeAdvancedComponent;
+    if (!cmp) return;
+
+    const next = { ...(cmp.getStyle?.() || {}) };
+    if (value === '' || value == null) delete next[key];
+    else next[key] = String(value);
+    cmp.setStyle(next);
+}
+
+function getAttrValueFromComponent(cmp, key) {
+    return cmp?.getAttributes?.()?.[key] ?? '';
+}
+
+function setAttrValueOnActiveComponent(key, value) {
+    const cmp = activeAdvancedComponent;
+    if (!cmp) return;
+
+    const attrs = { ...(cmp.getAttributes?.() || {}) };
+    if (value === '' || value == null) delete attrs[key];
+    else attrs[key] = value;
+    cmp.setAttributes(attrs);
+}
+
+function bindAdvancedEventsOnce() {
+    if (advancedEventsBound) return;
+
+    const host = q('#pg-advanced');
+    if (!host) return;
+
+    const marginEl = q('#pg-adv-margin', host);
+    const paddingEl = q('#pg-adv-padding', host);
+    const zEl = q('#pg-adv-z', host);
+    const clsEl = q('#pg-adv-classes', host);
+
+    const hd = q('#pg-hide-desktop', host);
+    const ht = q('#pg-hide-tablet', host);
+    const hm = q('#pg-hide-mobile', host);
+
+    marginEl?.addEventListener('input', () => setStyleValueOnActiveComponent('margin', marginEl.value.trim()));
+    paddingEl?.addEventListener('input', () => setStyleValueOnActiveComponent('padding', paddingEl.value.trim()));
+    zEl?.addEventListener('input', () => setStyleValueOnActiveComponent('z-index', zEl.value));
+
+    clsEl?.addEventListener('input', () => setAttrValueOnActiveComponent('class', clsEl.value.trim()));
+
+    const syncHide = () => {
+        setAttrValueOnActiveComponent('data-pg-hide-desktop', hd?.checked ? '1' : '');
+        setAttrValueOnActiveComponent('data-pg-hide-tablet', ht?.checked ? '1' : '');
+        setAttrValueOnActiveComponent('data-pg-hide-mobile', hm?.checked ? '1' : '');
+    };
+
+    hd?.addEventListener('change', syncHide);
+    ht?.addEventListener('change', syncHide);
+    hm?.addEventListener('change', syncHide);
+
+    advancedEventsBound = true;
 }
 function ensureAdvancedUI() {
     const host = q('#pg-advanced');
@@ -165,24 +228,9 @@ function bindAdvancedToComponent(editor, cmp) {
     if (!host || !editor || !cmp) return;
 
     ensureAdvancedUI();
+    bindAdvancedEventsOnce();
+    activeAdvancedComponent = cmp;
 
-    const getStyle = (k) => (cmp.getStyle?.()[k] ?? '');
-    const setStyle = (k, v) => {
-        const next = { ...(cmp.getStyle?.() || {}) };
-        if (v === '' || v == null) delete next[k];
-        else next[k] = String(v);
-        cmp.setStyle(next);
-    };
-
-    const getAttr = (k) => (cmp.getAttributes?.()[k] ?? '');
-    const setAttr = (k, v) => {
-        const attrs = { ...(cmp.getAttributes?.() || {}) };
-        if (v === '' || v == null) delete attrs[k];
-        else attrs[k] = v;
-        cmp.setAttributes(attrs);
-    };
-
-    // Fill current values
     const marginEl = q('#pg-adv-margin', host);
     const paddingEl = q('#pg-adv-padding', host);
     const zEl = q('#pg-adv-z', host);
@@ -192,34 +240,15 @@ function bindAdvancedToComponent(editor, cmp) {
     const ht = q('#pg-hide-tablet', host);
     const hm = q('#pg-hide-mobile', host);
 
-    if (marginEl) marginEl.value = getStyle('margin') || '';
-    if (paddingEl) paddingEl.value = getStyle('padding') || '';
-    if (zEl) zEl.value = getStyle('z-index') || '';
-    if (clsEl) clsEl.value = getAttr('class') || '';
+    if (marginEl) marginEl.value = getStyleValueFromComponent(cmp, 'margin') || '';
+    if (paddingEl) paddingEl.value = getStyleValueFromComponent(cmp, 'padding') || '';
+    if (zEl) zEl.value = getStyleValueFromComponent(cmp, 'z-index') || '';
+    if (clsEl) clsEl.value = getAttrValueFromComponent(cmp, 'class') || '';
 
-    // hide flags stored as data attrs
-    if (hd) hd.checked = getAttr('data-pg-hide-desktop') === '1';
-    if (ht) ht.checked = getAttr('data-pg-hide-tablet') === '1';
-    if (hm) hm.checked = getAttr('data-pg-hide-mobile') === '1';
-
-    // Apply handlers
-    marginEl?.addEventListener('input', () => setStyle('margin', marginEl.value.trim()));
-    paddingEl?.addEventListener('input', () => setStyle('padding', paddingEl.value.trim()));
-    zEl?.addEventListener('input', () => setStyle('z-index', zEl.value));
-
-    clsEl?.addEventListener('input', () => setAttr('class', clsEl.value.trim()));
-
-    const syncHide = () => {
-        setAttr('data-pg-hide-desktop', hd?.checked ? '1' : '');
-        setAttr('data-pg-hide-tablet', ht?.checked ? '1' : '');
-        setAttr('data-pg-hide-mobile', hm?.checked ? '1' : '');
-    };
-
-    hd?.addEventListener('change', syncHide);
-    ht?.addEventListener('change', syncHide);
-    hm?.addEventListener('change', syncHide);
+    if (hd) hd.checked = getAttrValueFromComponent(cmp, 'data-pg-hide-desktop') === '1';
+    if (ht) ht.checked = getAttrValueFromComponent(cmp, 'data-pg-hide-tablet') === '1';
+    if (hm) hm.checked = getAttrValueFromComponent(cmp, 'data-pg-hide-mobile') === '1';
 }
-
 
 function traitNameFromRow(row) {
     const field =
@@ -328,6 +357,7 @@ export function bindEditorSidebarTabs(editor) {
     });
 
     editor.on('component:deselected', () => {
+        activeAdvancedComponent = null;
         setPanel('widgets');
         setSelectedLabel('لا يوجد تحديد');
     });
@@ -760,3 +790,4 @@ export function initBoxSpacingInputs() {
         hidden.addEventListener('change', () => fillInputsFromHidden(box));
     });
 }
+

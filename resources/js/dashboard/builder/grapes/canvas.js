@@ -74,6 +74,7 @@ export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
         }
         a.pg-image-link{
           display:block;
+          width:fit-content;
           max-width:100%;
         }
         a.pg-image-link > img.pg-image{

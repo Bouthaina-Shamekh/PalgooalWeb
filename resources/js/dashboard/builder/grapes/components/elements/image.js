@@ -13,6 +13,8 @@ const IMAGE_STYLABLE_PROPS = [
     'width',
     'max-width',
     'height',
+    'margin',
+    'padding',
     'opacity',
     'filter',
     'border-style',
@@ -21,10 +23,42 @@ const IMAGE_STYLABLE_PROPS = [
     'border-radius',
 ];
 
+const ALIGN_ICON_LEFT = `
+<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M4 6h16"></path>
+    <path d="M4 12h10"></path>
+    <path d="M4 18h16"></path>
+</svg>
+`;
+
+const ALIGN_ICON_CENTER = `
+<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M4 6h16"></path>
+    <path d="M7 12h10"></path>
+    <path d="M4 18h16"></path>
+</svg>
+`;
+
+const ALIGN_ICON_RIGHT = `
+<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M4 6h16"></path>
+    <path d="M10 12h10"></path>
+    <path d="M4 18h16"></path>
+</svg>
+`;
+
+const IMAGE_ALIGN_OPTIONS = [
+    { id: 'left', name: 'Left', icon: ALIGN_ICON_LEFT },
+    { id: 'center', name: 'Center', icon: ALIGN_ICON_CENTER },
+    { id: 'right', name: 'Right', icon: ALIGN_ICON_RIGHT },
+];
+
 function cleanImageClasses(classes) {
     return classes.filter((cls) => {
         if (cls === 'pg-image') return false;
         if (cls === 'w-full' || cls === 'w-auto' || cls === 'max-w-full') return false;
+        if (cls === 'mx-auto' || cls === 'ml-auto' || cls === 'mr-auto') return false;
+        if (cls === 'block' || cls === 'inline-block') return false;
         if (cls === 'object-cover' || cls === 'object-contain' || cls === 'object-fill' || cls === 'object-none') return false;
         if (cls === 'rounded-none' || cls === 'rounded-md' || cls === 'rounded-xl' || cls === 'rounded-full') return false;
         return true;
@@ -46,6 +80,11 @@ function normalizeFit(value) {
 function normalizeRounded(value) {
     const rounded = String(value || '').trim();
     return ['none', 'md', 'xl', 'full'].includes(rounded) ? rounded : 'xl';
+}
+
+function normalizeAlign(value) {
+    const align = String(value || '').trim().toLowerCase();
+    return ['left', 'center', 'right'].includes(align) ? align : 'left';
 }
 
 function normalizeLinkType(value) {
@@ -238,6 +277,10 @@ function hydrateImageProps(model) {
     else if (classes.includes('rounded-full')) model.set('pgRounded', 'full', { silent: true });
     else model.set('pgRounded', 'xl', { silent: true });
 
+    if (classes.includes('mx-auto')) model.set('pgAlign', 'center', { silent: true });
+    else if (classes.includes('ml-auto')) model.set('pgAlign', 'right', { silent: true });
+    else model.set('pgAlign', 'left', { silent: true });
+
     const loading = String(attrs.loading || '').toLowerCase();
     model.set('pgLoading', loading === 'eager' ? 'eager' : 'lazy', { silent: true });
 
@@ -261,16 +304,20 @@ function applyImageTraits(model) {
     const alt = String(model.get('pgAlt') || 'Image');
     const fit = normalizeFit(model.get('pgFit'));
     const rounded = normalizeRounded(model.get('pgRounded'));
+    const align = normalizeAlign(model.get('pgAlign'));
     const loading = String(model.get('pgLoading') || 'lazy') === 'eager' ? 'eager' : 'lazy';
     const linkType = normalizeLinkType(model.get('pgLinkType'));
     const customUrl = normalizeCustomUrl(model.get('pgCustomUrl'));
 
     const attrs = imageAttrsFromModel(model);
     const cleaned = cleanImageClasses(classListFromString(attrs.class || ''));
+    const alignClass = align === 'center' ? 'mx-auto' : align === 'right' ? 'ml-auto' : 'mr-auto';
     const nextClasses = [
         ...cleaned,
         'pg-image',
+        'block',
         'max-w-full',
+        alignClass,
         `object-${fit}`,
         roundedToClass(rounded),
     ];
@@ -301,12 +348,20 @@ function applyImageTraits(model) {
     const href = linkType === 'media' ? src : customUrl;
     const rootAttrs = model.getAttributes?.() || {};
     const rootClasses = classListFromString(rootAttrs.class).filter(
-        (cls) => cls !== 'pg-image' && cls !== 'pg-image-link'
+        (cls) =>
+            cls !== 'pg-image' &&
+            cls !== 'pg-image-link' &&
+            cls !== 'inline-block' &&
+            cls !== 'block' &&
+            cls !== 'w-fit' &&
+            cls !== 'mx-auto' &&
+            cls !== 'ml-auto' &&
+            cls !== 'mr-auto'
     );
     const nextRootAttrs = {
         ...rootAttrs,
         href: href || '#',
-        class: Array.from(new Set(['pg-image-link', 'inline-block', ...rootClasses])).join(' ').trim(),
+        class: Array.from(new Set(['pg-image-link', 'block', 'w-fit', alignClass, ...rootClasses])).join(' ').trim(),
         'data-gjs-name': 'Image',
     };
     delete nextRootAttrs.src;
@@ -381,6 +436,7 @@ export function registerImageElement(editor) {
                 pgSrc: DEFAULT_IMAGE_PLACEHOLDER,
                 pgAlt: 'Image',
                 pgFit: 'cover',
+                pgAlign: 'left',
                 pgRounded: 'xl',
                 pgLoading: 'lazy',
                 pgLinkType: 'none',
@@ -429,6 +485,13 @@ export function registerImageElement(editor) {
                         ],
                     },
                     {
+                        type: 'pg-icon-select',
+                        name: 'pgAlign',
+                        label: 'Align',
+                        changeProp: 1,
+                        options: IMAGE_ALIGN_OPTIONS,
+                    },
+                    {
                         type: 'select',
                         name: 'pgLoading',
                         label: 'Loading',
@@ -446,7 +509,7 @@ export function registerImageElement(editor) {
                 sanitizeImageStyles(this);
                 hydrateImageProps(this);
                 this.on(
-                    'change:pgSrc change:pgAlt change:pgFit change:pgRounded change:pgLoading change:pgLinkType change:pgCustomUrl',
+                    'change:pgSrc change:pgAlt change:pgFit change:pgAlign change:pgRounded change:pgLoading change:pgLinkType change:pgCustomUrl',
                     () => {
                         applyImageTraits(this);
                         syncImageTraitRows(this);

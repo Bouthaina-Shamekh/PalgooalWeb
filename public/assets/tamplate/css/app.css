@@ -955,6 +955,9 @@
   .mr-3 {
     margin-right: calc(var(--spacing) * 3);
   }
+  .mr-auto {
+    margin-right: auto;
+  }
   .-mb-25 {
     margin-bottom: calc(var(--spacing) * -25);
   }

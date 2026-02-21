@@ -6,6 +6,7 @@ import { registerRangeTrait } from './traits/range';
 import { registerSwitchTrait } from './traits/switch';
 import { registerWysiwygTrait } from './traits/wysiwyg';
 import { registerHeadingElement } from './elements/heading';
+import { registerButtonElement } from './elements/button';
 import { registerImageElement } from './elements/image';
 import { registerTextElement } from './elements/text';
 import { registerContainerElement } from './layout/container';
@@ -24,6 +25,7 @@ export function registerAllComponents(editor) {
     registerSwitchTrait(editor);
     registerWysiwygTrait(editor);
     registerHeadingElement(editor);
+    registerButtonElement(editor);
     registerImageElement(editor);
     registerTextElement(editor);
     registerContainerElement(editor);
