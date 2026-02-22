@@ -323,10 +323,13 @@ export function bindEditorSidebarTabs(editor) {
     editor.on('trait:update', refresh);
 
     editor.on('component:selected', (cmp) => {
-        // لو ضغط على Text داخل heading -> اختار الأب
-        if (cmp?.is?.('text')) {
+        // If text node is selected inside known text-like components, select the parent component.
+        const cmpType = String(cmp?.get?.('type') || '').toLowerCase();
+        const isTextLikeNode = cmp?.is?.('text') || cmpType === 'textnode';
+        if (isTextLikeNode) {
             const parent = cmp.parent && cmp.parent();
-            if (parent && parent.get?.('type') === 'pg-heading') {
+            const parentType = String(parent?.get?.('type') || '');
+            if (parent && ['pg-heading', 'pg-text', 'pg-button'].includes(parentType)) {
                 editor.select(parent);
                 return;
             }

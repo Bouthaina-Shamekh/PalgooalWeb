@@ -156,6 +156,388 @@ function resetEditorResolverWatchers(editor) {
     return cleaned;
 }
 
+const HEADING_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+const TEXT_TAGS = new Set(['p', 'div', 'span']);
+const TEXT_NODE_TYPE = 'textnode';
+
+function textFromRawContent(value) {
+    const raw = String(value || '');
+    if (!raw.trim()) return '';
+
+    const withoutScripts = raw
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ');
+    const withoutTags = withoutScripts.replace(/<[^>]+>/g, ' ');
+    return withoutTags.replace(/\s+/g, ' ').trim();
+}
+
+function isRawTextNode(component) {
+    if (!component) return false;
+
+    if (component?.is?.(TEXT_NODE_TYPE)) return true;
+    const type = String(component.get?.('type') || '').toLowerCase();
+    return type === TEXT_NODE_TYPE;
+}
+
+function isAnyTextContentNode(component) {
+    if (!component) return false;
+    if (isRawTextNode(component)) return true;
+    if (component?.is?.('text')) return true;
+
+    const type = String(component.get?.('type') || '').toLowerCase();
+    return type === 'text';
+}
+
+function collectComponentText(component) {
+    if (!component) return '';
+
+    if (isAnyTextContentNode(component)) {
+        return String(component.get('content') || '');
+    }
+
+    const children = component.components?.();
+    if (!children?.length) {
+        return textFromRawContent(component?.get?.('content'));
+    }
+
+    const chunks = [];
+    children.each((child) => {
+        const next = collectComponentText(child);
+        if (next) chunks.push(next);
+    });
+
+    if (!chunks.length) {
+        const direct = textFromRawContent(component?.get?.('content'));
+        if (direct) chunks.push(direct);
+    }
+
+    return chunks.join(' ').replace(/\s+/g, ' ').trim();
+}
+
+function isValidHeadingChildren(component) {
+    const children = component?.components?.();
+    if (!children?.length) return true;
+    if (children.length !== 1) return false;
+
+    const first = children.at(0);
+    if (!first) return true;
+    if (isRawTextNode(first)) return true;
+
+    const firstTag = String(first.get?.('tagName') || '').toLowerCase();
+    if (firstTag !== 'a') return false;
+
+    const anchorChildren = first.components?.();
+    if (!anchorChildren?.length) return false;
+    if (anchorChildren.length !== 1) return false;
+
+    const anchorFirst = anchorChildren.at(0);
+    return isRawTextNode(anchorFirst);
+}
+
+function isTextLikeComponent(component) {
+    if (!component) return false;
+
+    const type = String(component.get?.('type') || '').toLowerCase();
+    if (type === 'pg-text') return true;
+
+    const tag = String(component.get?.('tagName') || '').toLowerCase();
+    if (!TEXT_TAGS.has(tag)) return false;
+
+    const attrs = component.getAttributes?.() || {};
+    const name = String(attrs['data-gjs-name'] || '').trim().toLowerCase();
+    const classes = String(attrs.class || '');
+
+    return name === 'text' || classes.includes('pg-text');
+}
+
+function isAnonymousTextWrapper(component) {
+    if (!component) return false;
+    const tag = String(component.get?.('tagName') || '').toLowerCase();
+    if (!TEXT_TAGS.has(tag)) return false;
+
+    const attrs = component.getAttributes?.() || {};
+    const name = String(attrs['data-gjs-name'] || '').trim();
+    const klass = String(attrs.class || '').trim();
+    const id = String(attrs.id || '').trim();
+    const href = String(attrs.href || '').trim();
+    const style = String(attrs.style || '').trim();
+
+    return !name && !klass && !id && !href && !style;
+}
+
+function isAnonymousEmptyTextWrapper(component) {
+    if (!isAnonymousTextWrapper(component)) return false;
+    return !collectComponentText(component).trim();
+}
+
+function isValidTextChildren(component) {
+    const children = component?.components?.();
+    if (!children?.length) return false;
+    if (children.length !== 1) return false;
+
+    const first = children.at(0);
+    if (!first) return false;
+    if (isRawTextNode(first)) return true;
+
+    const firstTag = String(first.get?.('tagName') || '').toLowerCase();
+    if (firstTag !== 'a') return false;
+
+    const anchorChildren = first.components?.();
+    if (!anchorChildren?.length || anchorChildren.length !== 1) return false;
+    const anchorFirst = anchorChildren.at(0);
+    return isRawTextNode(anchorFirst);
+}
+
+function normalizeLegacyQuotedText(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return raw;
+    if (
+        (raw.startsWith('"') && raw.endsWith('"')) ||
+        (raw.startsWith("'") && raw.endsWith("'"))
+    ) {
+        return raw.slice(1, -1).trim();
+    }
+    return raw;
+}
+
+function extractFirstTextLinkAttrs(component) {
+    let found = null;
+
+    const walk = (node) => {
+        if (!node || found) return;
+
+        const tag = String(node.get?.('tagName') || '').toLowerCase();
+        if (tag === 'a') {
+            const attrs = node.getAttributes?.() || {};
+            const href = String(attrs.href || '').trim();
+            if (href) {
+                found = { href };
+                if (attrs.target === '_blank') found.target = '_blank';
+                if (attrs.rel) found.rel = String(attrs.rel);
+                if (attrs.class) found.class = String(attrs.class);
+                return;
+            }
+        }
+
+        const children = node.components?.();
+        if (!children?.each) return;
+        children.each((child) => walk(child));
+    };
+
+    walk(component);
+    return found;
+}
+
+function extractFirstHeadingLinkAttrs(component) {
+    let found = null;
+
+    const walk = (node) => {
+        if (!node || found) return;
+
+        const tag = String(node.get?.('tagName') || '').toLowerCase();
+        if (tag === 'a') {
+            const attrs = node.getAttributes?.() || {};
+            const href = String(attrs.href || '').trim();
+            if (href) {
+                found = { href };
+                if (attrs.target === '_blank') found.target = '_blank';
+                if (attrs.rel) found.rel = String(attrs.rel);
+                if (attrs.class) found.class = String(attrs.class);
+                return;
+            }
+        }
+
+        const children = node.components?.();
+        if (!children?.each) return;
+        children.each((child) => walk(child));
+    };
+
+    walk(component);
+    return found;
+}
+
+function sanitizeHeadingComponent(component) {
+    if (!component) return 0;
+
+    const tag = String(component.get?.('tagName') || '').toLowerCase();
+    if (!HEADING_TAGS.has(tag)) return 0;
+    if (isValidHeadingChildren(component)) return 0;
+
+    const children = component.components?.();
+    if (!children) return 0;
+
+    const text = collectComponentText(component).trim();
+    if (!text) return 0;
+
+    const linkAttrs = extractFirstHeadingLinkAttrs(component);
+    if (linkAttrs?.href) {
+        children.reset([
+            {
+                type: 'default',
+                tagName: 'a',
+                attributes: linkAttrs,
+                components: [{ type: TEXT_NODE_TYPE, content: text }],
+            },
+        ]);
+    } else {
+        children.reset([{ type: TEXT_NODE_TYPE, content: text }]);
+    }
+
+    return 1;
+}
+
+function sanitizeTextComponent(component) {
+    if (!isTextLikeComponent(component)) return 0;
+
+    let normalized = 0;
+    const children = component.components?.();
+    if (!children) return 0;
+
+    let text = normalizeLegacyQuotedText(collectComponentText(component)).trim();
+    const parent = component.parent?.();
+    const siblings = parent?.components?.();
+
+    if ((!text || text === 'Write your text here') && siblings?.at && typeof siblings.indexOf === 'function') {
+        const index = siblings.indexOf(component);
+        if (index >= 0) {
+            const candidateIndexes = [index + 1, index - 1, index + 2, index - 2];
+            for (let i = 0; i < candidateIndexes.length; i += 1) {
+                const candidate = siblings.at(candidateIndexes[i]);
+                if (!candidate || !isAnonymousTextWrapper(candidate)) continue;
+                const candidateText = normalizeLegacyQuotedText(collectComponentText(candidate)).trim();
+                if (!candidateText) continue;
+                text = candidateText;
+                candidate.remove();
+                normalized += 1;
+                break;
+            }
+        }
+    }
+
+    if (!text) return normalized;
+
+    const shouldRebuild = !isValidTextChildren(component) || normalizeLegacyQuotedText(text) !== text;
+    if (shouldRebuild) {
+        const linkAttrs = extractFirstTextLinkAttrs(component);
+        if (linkAttrs?.href) {
+            children.reset([
+                {
+                    type: 'default',
+                    tagName: 'a',
+                    attributes: linkAttrs,
+                    components: [{ type: TEXT_NODE_TYPE, content: text }],
+                },
+            ]);
+        } else {
+            children.reset([{ type: TEXT_NODE_TYPE, content: text }]);
+        }
+        normalized += 1;
+    }
+
+    if (siblings?.at && typeof siblings.indexOf === 'function') {
+        let hasRemovals = true;
+        while (hasRemovals) {
+            hasRemovals = false;
+            const index = siblings.indexOf(component);
+            if (index < 0) break;
+
+            const prev = siblings.at(index - 1);
+            if (isAnonymousEmptyTextWrapper(prev)) {
+                prev.remove();
+                normalized += 1;
+                hasRemovals = true;
+            }
+
+            const next = siblings.at(index + 1);
+            if (isAnonymousEmptyTextWrapper(next)) {
+                next.remove();
+                normalized += 1;
+                hasRemovals = true;
+            }
+        }
+    }
+
+    return normalized;
+}
+
+function walkComponentTree(component, callback) {
+    if (!component) return;
+    callback(component);
+
+    const children = component.components?.();
+    if (!children?.each) return;
+
+    const snapshot = [];
+    children.each((child) => snapshot.push(child));
+    snapshot.forEach((child) => walkComponentTree(child, callback));
+}
+
+function normalizeHeadingTree(component) {
+    let normalized = 0;
+    walkComponentTree(component, (node) => {
+        normalized += sanitizeHeadingComponent(node);
+    });
+    return normalized;
+}
+
+function normalizeHeadingStructureBeforeSave(editor) {
+    let normalized = 0;
+    const wrapper = editor.getWrapper?.();
+    if (wrapper) normalized += normalizeHeadingTree(wrapper);
+
+    const pages = editor.Pages?.getAll?.();
+    if (pages?.forEach) {
+        pages.forEach((page) => {
+            const main = page?.getMainComponent?.();
+            if (main && main !== wrapper) {
+                normalized += normalizeHeadingTree(main);
+            }
+        });
+    } else if (pages?.each) {
+        pages.each((page) => {
+            const main = page?.getMainComponent?.();
+            if (main && main !== wrapper) {
+                normalized += normalizeHeadingTree(main);
+            }
+        });
+    }
+
+    return normalized;
+}
+
+function normalizeTextTree(component) {
+    let normalized = 0;
+    walkComponentTree(component, (node) => {
+        normalized += sanitizeTextComponent(node);
+    });
+    return normalized;
+}
+
+function normalizeTextStructureBeforeSave(editor) {
+    let normalized = 0;
+    const wrapper = editor.getWrapper?.();
+    if (wrapper) normalized += normalizeTextTree(wrapper);
+
+    const pages = editor.Pages?.getAll?.();
+    if (pages?.forEach) {
+        pages.forEach((page) => {
+            const main = page?.getMainComponent?.();
+            if (main && main !== wrapper) {
+                normalized += normalizeTextTree(main);
+            }
+        });
+    } else if (pages?.each) {
+        pages.each((page) => {
+            const main = page?.getMainComponent?.();
+            if (main && main !== wrapper) {
+                normalized += normalizeTextTree(main);
+            }
+        });
+    }
+
+    return normalized;
+}
+
 export function createProjectStorage(editor, { loadUrl, saveUrl, emptyHint, locale, autosaveDelay = 3000 })
 {
     let isDirty = false;
@@ -250,6 +632,16 @@ export function createProjectStorage(editor, { loadUrl, saveUrl, emptyHint, loca
             const cleanedWatchers = sanitizeEditorBeforeSave(editor);
             if (cleanedWatchers > 0) {
                 console.warn(`[Builder] sanitized ${cleanedWatchers} resolver watcher buckets before save`);
+            }
+
+            const normalizedHeadings = normalizeHeadingStructureBeforeSave(editor);
+            if (normalizedHeadings > 0) {
+                console.warn(`[Builder] normalized ${normalizedHeadings} malformed heading component(s) before save`);
+            }
+
+            const normalizedTexts = normalizeTextStructureBeforeSave(editor);
+            if (normalizedTexts > 0) {
+                console.warn(`[Builder] normalized ${normalizedTexts} malformed text component(s) before save`);
             }
 
             let structure;

@@ -101,7 +101,7 @@ function initPageBuilder() {
         selectorManager: { componentFirst: true },
         canvas: {
             styles: [
-                canvasStyles,
+                ...canvasStyles,
                 'https://unpkg.com/swiper/swiper-bundle.min.css'
             ],
             scripts: [
@@ -181,7 +181,7 @@ function initPageBuilder() {
     initCanvas(editor, {
         appDir,
         emptyHint,
-        cssUrl: '/assets/tamplate/css/app.css',
+        cssUrl: appCssLink?.href || null,
     });
 
     const btn = document.getElementById('btnSidebar');

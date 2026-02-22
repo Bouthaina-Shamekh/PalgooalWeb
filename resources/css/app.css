@@ -25,3 +25,12 @@
 [data-gjs-type="wrapper"] {
     min-height: 100vh !important;
 }
+
+.pg-has-hover-bg {
+    transition: background-color .2s ease, color .2s ease;
+}
+
+.pg-has-hover-bg:hover {
+    background-color: var(--pg-hover-bg) !important;
+    color: var(--pg-hover-color) !important;
+}

@@ -9,6 +9,8 @@ import { registerHeadingElement } from './elements/heading';
 import { registerButtonElement } from './elements/button';
 import { registerImageElement } from './elements/image';
 import { registerTextElement } from './elements/text';
+import { registerIconElement } from './elements/icon';
+import { registerSpacerElement } from './elements/spacer';
 import { registerContainerElement } from './layout/container';
 import { registerGridElement } from './layout/grid';
 import { registerRowElement } from './layout/row';
@@ -28,6 +30,8 @@ export function registerAllComponents(editor) {
     registerButtonElement(editor);
     registerImageElement(editor);
     registerTextElement(editor);
+    registerIconElement(editor);
+    registerSpacerElement(editor);
     registerContainerElement(editor);
     registerGridElement(editor);
     registerRowElement(editor);

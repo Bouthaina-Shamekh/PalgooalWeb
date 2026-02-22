@@ -8,6 +8,7 @@
 
     <!-- Tailwind CSS via CDN / compiled asset -->
     <link rel="stylesheet" href="{{ asset('assets/tamplate/css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/tabler-icons.min.css') }}">
 
     <!-- Alpine.js for UI interactivity -->
     <script src="//unpkg.com/alpinejs" defer></script>

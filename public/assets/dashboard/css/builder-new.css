@@ -491,6 +491,88 @@ main>aside {
     display: none !important;
 }
 
+/* Background state tabs (Normal / Hover) */
+#gjs-styles .gjs-sm-pg-bg-state,
+#gjs-styles .gjs-sm-property.gjs-sm-pg-bg-state {
+    width: 100% !important;
+    float: none !important;
+    clear: both !important;
+    display: block !important;
+}
+
+#gjs-styles .gjs-sm-pg-bg-state .pg-sm-state,
+#gjs-styles .gjs-sm-pg-bg-state .gjs-fields,
+#gjs-styles .gjs-sm-pg-bg-state .gjs-sm-field {
+    width: 100% !important;
+}
+
+#gjs-styles .gjs-sm-pg-bg-state .pg-sm-state {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+#gjs-styles .gjs-sm-pg-bg-state .pg-sm-state__btn {
+    height: 34px;
+    border: 1px solid rgba(36, 11, 54, .14);
+    border-radius: 8px;
+    background: rgba(36, 11, 54, .03);
+    color: #475569;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+#gjs-styles .gjs-sm-pg-bg-state .pg-sm-state__btn.is-active {
+    background: #fff;
+    color: var(--pg-primary);
+    border-color: rgba(174, 16, 40, .35);
+    box-shadow: 0 0 0 3px var(--pg-ring);
+}
+
+/* Background sector: clean/pro order */
+#gjs-styles .gjs-sm-sector.gjs-sm-sector__pg-background .gjs-sm-properties {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#gjs-styles .gjs-sm-sector.gjs-sm-sector__pg-background .gjs-sm-property {
+    width: 100% !important;
+    float: none !important;
+    clear: both !important;
+}
+
+#gjs-styles .gjs-sm-sector.gjs-sm-sector__pg-background .pg-bg-prop-state {
+    order: 1;
+}
+
+#gjs-styles .gjs-sm-sector.gjs-sm-sector__pg-background .pg-bg-prop-color {
+    order: 2;
+}
+
+#gjs-styles .gjs-sm-sector.gjs-sm-sector__pg-background .pg-bg-prop-hover-bg {
+    order: 3;
+}
+
+#gjs-styles .gjs-sm-sector.gjs-sm-sector__pg-background .pg-bg-prop-hover-text {
+    order: 4;
+}
+
+#gjs-styles .gjs-sm-sector.gjs-sm-sector__pg-background .pg-bg-prop-state>.gjs-sm-label {
+    display: none !important;
+}
+
+/* Background state-driven visibility on first open (no flash of wrong fields) */
+#gjs-styles .gjs-sm-sector.gjs-sm-sector__pg-background:has(.pg-sm-state__btn[data-state="normal"].is-active) .pg-bg-prop-hover-bg,
+#gjs-styles .gjs-sm-sector.gjs-sm-sector__pg-background:has(.pg-sm-state__btn[data-state="normal"].is-active) .pg-bg-prop-hover-text {
+    display: none !important;
+}
+
+#gjs-styles .gjs-sm-sector.gjs-sm-sector__pg-background:has(.pg-sm-state__btn[data-state="hover"].is-active) .pg-bg-prop-color {
+    display: none !important;
+}
+
 @media (min-width: 1024px) {
     [data-pg-hide-desktop="1"] {
         display: none !important;

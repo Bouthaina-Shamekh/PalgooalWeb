@@ -1,6 +1,7 @@
 export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
     const GOOGLE_FONTS_URL =
         'https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Cairo:wght@200;300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:wght@300;400;500;600;700;800;900&family=Raleway:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Lato:wght@300;400;700;900&family=Source+Sans+3:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800&family=Merriweather:wght@300;400;700;900&family=Oswald:wght@300;400;500;600;700&display=swap';
+    const TABLER_ICONS_URL = '/assets/dashboard/fonts/tabler-icons.min.css';
     const bindOnce = (() => {
         let bound = false;
         return (fn) => {
@@ -22,11 +23,10 @@ export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
 
         Object.assign(bodyEl.style, {
             background: 'transparent',
-            fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
-            color: '#0f172a',
             margin: '0',
             padding: '0',
         });
+        bodyEl.classList.add('font-Cairo', 'scroll-smooth');
 
         // ✅ مهم: خلي wrapper يقبل drop دائما
         const wrapper = editor.getWrapper();
@@ -44,7 +44,8 @@ export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
         }
 
         // Inject app.css once
-        if (headEl && cssUrl && !doc.getElementById('pg-app-css')) {
+        const hasSameHref = !!(headEl && cssUrl && headEl.querySelector(`link[rel="stylesheet"][href="${cssUrl}"]`));
+        if (headEl && cssUrl && !hasSameHref && !doc.getElementById('pg-app-css')) {
             const link = doc.createElement('link');
             link.id = 'pg-app-css';
             link.rel = 'stylesheet';
@@ -58,6 +59,15 @@ export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
             link.id = 'pg-google-fonts';
             link.rel = 'stylesheet';
             link.href = GOOGLE_FONTS_URL;
+            headEl.appendChild(link);
+        }
+
+        // Ensure icon fonts are available for icon elements (ti ti-* classes).
+        if (headEl && !doc.getElementById('pg-tabler-icons')) {
+            const link = doc.createElement('link');
+            link.id = 'pg-tabler-icons';
+            link.rel = 'stylesheet';
+            link.href = TABLER_ICONS_URL;
             headEl.appendChild(link);
         }
 
@@ -78,20 +88,12 @@ export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
         html,body{height:100%;overflow-x:hidden;}
         html[dir="rtl"] body{text-align:right;}
         html[dir="ltr"] body{text-align:left;}
-        img.pg-image{
-          display:block;
-          max-width:100%;
-          height:auto;
+        .pg-has-hover-bg{
+          transition:background-color .2s ease,color .2s ease;
         }
-        a.pg-image-link{
-          display:block;
-          width:fit-content;
-          max-width:100%;
-        }
-        a.pg-image-link > img.pg-image{
-          display:block;
-          max-width:100%;
-          height:auto;
+        .pg-has-hover-bg:hover{
+          background-color:var(--pg-hover-bg) !important;
+          color:var(--pg-hover-color) !important;
         }
         .gjs-wrapper:empty::before{content:"${safe}";display:block;text-align:center;color:#64748b;font-weight:600;padding-top:60px;}
         .pg-container .pg-container-inner:empty{

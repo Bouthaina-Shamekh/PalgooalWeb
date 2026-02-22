@@ -413,6 +413,11 @@ export function registerBlocks(editor) {
         category: 'Basic',
         content: { type: 'pg-image' },
     });
+    bm.add('pg-icon', {
+        label: 'Icon',
+        category: 'Basic',
+        content: { type: 'pg-icon' },
+    });
 
     bm.add('pg-container', {
         label: 'Container Layout',
@@ -430,6 +435,12 @@ export function registerBlocks(editor) {
         label: 'Row (Grid/Flex)',
         category: 'Layout',
         content: { type: 'pg-row' },
+    });
+
+    bm.add('pg-spacer', {
+        label: 'Spacer',
+        category: 'Layout',
+        content: { type: 'pg-spacer' },
     });
 
     bm.add('pg-services', {

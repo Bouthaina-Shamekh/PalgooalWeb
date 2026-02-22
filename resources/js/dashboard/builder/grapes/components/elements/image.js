@@ -169,6 +169,18 @@ function setModelAttributes(model, attrs) {
     model?.addAttributes?.(attrs);
 }
 
+function refreshComponentView(model) {
+    const render = model?.view?.render;
+    if (typeof render !== 'function') return;
+
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => render.call(model.view));
+        return;
+    }
+
+    render.call(model.view);
+}
+
 function findFirstImageChild(model) {
     const children = model?.components?.();
     if (!children?.each) return null;
@@ -342,6 +354,7 @@ function applyImageTraits(model) {
         if (children?.length) children.reset([]);
 
         setModelAttributes(model, imageAttrs);
+        refreshComponentView(model);
         return;
     }
 
@@ -377,7 +390,10 @@ function applyImageTraits(model) {
     setModelAttributes(model, nextRootAttrs);
 
     const imageChild = ensureImageChild(model);
-    if (!imageChild) return;
+    if (!imageChild) {
+        refreshComponentView(model);
+        return;
+    }
 
     imageChild.set('tagName', 'img', { silent: true });
     imageChild.set('void', true, { silent: true });
@@ -389,6 +405,7 @@ function applyImageTraits(model) {
     imageChild.set('copyable', false, { silent: true });
     imageChild.set('removable', false, { silent: true });
     setModelAttributes(imageChild, imageAttrs);
+    refreshComponentView(model);
 }
 
 export function registerImageElement(editor) {

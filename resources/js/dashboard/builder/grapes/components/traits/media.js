@@ -74,6 +74,14 @@ export function registerMediaTrait(editor) {
             const commit = (nextValue) => {
                 const normalized = String(nextValue || '').trim();
                 trait.setTargetValue(normalized);
+                const target = trait?.target;
+                if (typeof target?.view?.render === 'function') {
+                    if (typeof requestAnimationFrame === 'function') {
+                        requestAnimationFrame(() => target.view.render());
+                    } else {
+                        target.view.render();
+                    }
+                }
                 paintMediaPreview(el, normalized);
             };
 

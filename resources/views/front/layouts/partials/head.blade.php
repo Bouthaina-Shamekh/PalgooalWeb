@@ -57,6 +57,7 @@
         rel="stylesheet"
     >
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/tabler-icons.min.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 
     @stack('meta')

@@ -178,3 +178,12 @@
 .badge {
     @apply inline-block px-4 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary dark:bg-yellow-400/10 dark:text-yellow-400;
 }
+
+.pg-has-hover-bg {
+    transition: background-color .2s ease, color .2s ease;
+}
+
+.pg-has-hover-bg:hover {
+    background-color: var(--pg-hover-bg) !important;
+    color: var(--pg-hover-color) !important;
+}

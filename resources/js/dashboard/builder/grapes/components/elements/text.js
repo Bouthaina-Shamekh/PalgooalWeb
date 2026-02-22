@@ -1,146 +1,505 @@
+const TEXT_ALLOWED_TAGS = ['p', 'div', 'span'];
+const TEXT_LINK_TYPES = ['none', 'custom'];
+const TEXT_TARGETS = ['self', 'blank'];
+const TEXT_NODE_TYPE = 'textnode';
+const TEXT_STYLABLE_PROPS = [
+    'width',
+    'max-width',
+    'margin',
+    'padding',
+    'background-color',
+    'opacity',
+    'color',
+    'font-family',
+    'font-size',
+    'font-weight',
+    'text-transform',
+    'line-height',
+    'letter-spacing',
+    'text-align',
+    'border-style',
+    'border-width',
+    'border-color',
+    'border-radius',
+    'text-shadow',
+    '-webkit-text-stroke-width',
+    '-webkit-text-stroke-color',
+];
+
+function normalizeText(value) {
+    const raw = String(value ?? '');
+    return raw.trim() ? raw : 'Write your text here';
+}
+
+function normalizeTag(value) {
+    const tag = String(value || '')
+        .trim()
+        .toLowerCase();
+    return TEXT_ALLOWED_TAGS.includes(tag) ? tag : 'p';
+}
+
+function normalizeLinkType(value) {
+    const type = String(value || '')
+        .trim()
+        .toLowerCase();
+    return TEXT_LINK_TYPES.includes(type) ? type : 'none';
+}
+
+function normalizeTarget(value) {
+    const target = String(value || '')
+        .trim()
+        .toLowerCase();
+    return TEXT_TARGETS.includes(target) ? target : 'self';
+}
+
+function normalizeUrl(value) {
+    return String(value || '').trim();
+}
+
+function textFromRawContent(value) {
+    const raw = String(value || '');
+    if (!raw.trim()) return '';
+
+    const withoutScripts = raw
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ');
+    const withoutTags = withoutScripts.replace(/<[^>]+>/g, ' ');
+    return withoutTags.replace(/\s+/g, ' ').trim();
+}
+
+function isRawTextNode(component) {
+    if (!component) return false;
+
+    if (component?.is?.(TEXT_NODE_TYPE)) return true;
+    const type = String(component.get?.('type') || '').toLowerCase();
+    return type === TEXT_NODE_TYPE;
+}
+
+function isAnyTextContentNode(component) {
+    if (!component) return false;
+    if (isRawTextNode(component)) return true;
+    if (component?.is?.('text')) return true;
+
+    const type = String(component.get?.('type') || '').toLowerCase();
+    return type === 'text';
+}
+
+function collectTextFromComponent(component) {
+    if (!component) return '';
+
+    if (isAnyTextContentNode(component)) {
+        return String(component.get('content') || '');
+    }
+
+    const children = component.components?.();
+    if (!children?.length) {
+        return textFromRawContent(component?.get?.('content'));
+    }
+
+    const chunks = [];
+    children.each?.((child) => {
+        const next = collectTextFromComponent(child);
+        if (next) chunks.push(next);
+    });
+
+    if (!chunks.length) {
+        const direct = textFromRawContent(component?.get?.('content'));
+        if (direct) chunks.push(direct);
+    }
+
+    return chunks.join(' ').replace(/\s+/g, ' ').trim();
+}
+
+function hasIdentityAttrs(component) {
+    const attrs = component?.getAttributes?.() || {};
+    const name = String(attrs['data-gjs-name'] || '').trim();
+    const klass = String(attrs.class || '').trim();
+    const id = String(attrs.id || '').trim();
+    const href = String(attrs.href || '').trim();
+    const style = String(attrs.style || '').trim();
+    return !!name || !!klass || !!id || !!href || !!style;
+}
+
+function isAnonymousTextWrapper(component) {
+    if (!component) return false;
+    const tag = String(component.get?.('tagName') || '').toLowerCase();
+    if (!TEXT_ALLOWED_TAGS.includes(tag)) return false;
+    return !hasIdentityAttrs(component);
+}
+
+function isAnonymousEmptyTextWrapper(component) {
+    if (!isAnonymousTextWrapper(component)) return false;
+    const text = collectTextFromComponent(component).trim();
+    return !text;
+}
+
+function normalizeLegacyQuotedText(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return raw;
+    if (
+        (raw.startsWith('"') && raw.endsWith('"')) ||
+        (raw.startsWith("'") && raw.endsWith("'"))
+    ) {
+        return raw.slice(1, -1).trim();
+    }
+    return raw;
+}
+
+function setModelAttributes(model, attrs) {
+    if (typeof model?.setAttributes === 'function') {
+        model.setAttributes(attrs);
+        return;
+    }
+
+    model?.addAttributes?.(attrs);
+}
+
+function refreshComponentView(model) {
+    const render = model?.view?.render;
+    if (typeof render !== 'function') return;
+
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(() => render.call(model.view));
+        return;
+    }
+
+    render.call(model.view);
+}
+
+function setTraitRowVisible(name, visible) {
+    const selectorByName =
+        `input[name="${name}"], select[name="${name}"], textarea[name="${name}"], ` +
+        `[data-pg-trait-name="${name}"], [data-trait-name="${name}"]`;
+
+    const rows = new Set();
+    document.querySelectorAll(selectorByName).forEach((field) => {
+        const row = field.closest('.gjs-trt-trait');
+        if (row) rows.add(row);
+    });
+
+    if (name === 'pgHref') {
+        document
+            .querySelectorAll('input[placeholder="https://example.com"]')
+            .forEach((field) => {
+                const row = field.closest('.gjs-trt-trait');
+                if (row) rows.add(row);
+            });
+    }
+
+    rows.forEach((row) => {
+        row.style.display = visible ? '' : 'none';
+    });
+}
+
+function syncTextTraitRows(model) {
+    const linkType = normalizeLinkType(model?.get?.('pgLinkType'));
+    const isCustom = linkType === 'custom';
+    const apply = () => {
+        setTraitRowVisible('pgHref', isCustom);
+        setTraitRowVisible('pgTarget', isCustom);
+    };
+
+    apply();
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(apply);
+    setTimeout(apply, 0);
+}
+
+function readTextValue(model) {
+    const first = model?.components?.()?.at?.(0);
+    if (!first) return '';
+
+    if (isAnyTextContentNode(first)) {
+        return String(first.get('content') || '');
+    }
+
+    const firstTag = String(first.get?.('tagName') || '').toLowerCase();
+    if (firstTag === 'a') {
+        const textNode = first.components?.()?.at?.(0);
+        if (isAnyTextContentNode(textNode)) return String(textNode.get('content') || '');
+    }
+
+    return collectTextFromComponent(model);
+}
+
+function readTextLink(model) {
+    const first = model?.components?.()?.at?.(0);
+    if (!first) return { href: '', target: 'self' };
+
+    const firstTag = String(first.get?.('tagName') || '').toLowerCase();
+    if (firstTag !== 'a') return { href: '', target: 'self' };
+
+    const attrs = first.getAttributes?.() || {};
+    return {
+        href: normalizeUrl(attrs.href),
+        target: attrs.target === '_blank' ? 'blank' : 'self',
+    };
+}
+
+function hydrateTextProps(model) {
+    const tag = normalizeTag(model?.get?.('tagName'));
+    const text = normalizeText(normalizeLegacyQuotedText(readTextValue(model)));
+    const link = readTextLink(model);
+
+    model.set('pgTag', tag, { silent: true });
+    model.set('pgText', text, { silent: true });
+    model.set('pgHref', link.href, { silent: true });
+    model.set('pgTarget', link.target, { silent: true });
+    model.set('pgLinkType', link.href ? 'custom' : 'none', { silent: true });
+}
+
+function repairLegacySplitTextModel(model) {
+    const parent = model?.parent?.();
+    const siblings = parent?.components?.();
+    if (!siblings?.at || typeof siblings.indexOf !== 'function') return;
+
+    const currentText = collectTextFromComponent(model).trim();
+    const index = siblings.indexOf(model);
+    if (index < 0) return;
+
+    let migrated = false;
+    if (!currentText || currentText === 'Write your text here') {
+        const candidateIndexes = [index + 1, index - 1, index + 2, index - 2];
+        for (let i = 0; i < candidateIndexes.length; i += 1) {
+            const candidate = siblings.at(candidateIndexes[i]);
+            if (!candidate || !isAnonymousTextWrapper(candidate)) continue;
+
+            const migratedText = normalizeLegacyQuotedText(collectTextFromComponent(candidate)).trim();
+            if (!migratedText) continue;
+
+            model.set('pgText', migratedText, { silent: true });
+            candidate.remove();
+            migrated = true;
+            break;
+        }
+    }
+
+    // Remove adjacent anonymous empty wrappers that come from legacy RTE splits.
+    let hasRemovals = true;
+    while (hasRemovals) {
+        hasRemovals = false;
+        const currentIndex = siblings.indexOf(model);
+        if (currentIndex < 0) break;
+
+        const prev = siblings.at(currentIndex - 1);
+        if (isAnonymousEmptyTextWrapper(prev)) {
+            prev.remove();
+            hasRemovals = true;
+        }
+
+        const next = siblings.at(currentIndex + 1);
+        if (isAnonymousEmptyTextWrapper(next)) {
+            next.remove();
+            hasRemovals = true;
+        }
+    }
+
+    if (migrated) {
+        // Ensure pgText has a clean value without wrapping quotes.
+        model.set('pgText', normalizeLegacyQuotedText(model.get('pgText')).trim(), { silent: true });
+    }
+}
+
+function ensureTextNode(parent, text) {
+    const children = parent?.components?.();
+    if (!children) return;
+
+    const first = children.at?.(0);
+    if (isRawTextNode(first)) {
+        first.set('content', text);
+        return;
+    }
+
+    children.reset([{ type: TEXT_NODE_TYPE, content: text }]);
+}
+
+function applyTextTraits(model) {
+    const text = normalizeText(model.get('pgText'));
+    const tag = normalizeTag(model.get('pgTag'));
+    const linkType = normalizeLinkType(model.get('pgLinkType'));
+    const href = normalizeUrl(model.get('pgHref'));
+    const target = normalizeTarget(model.get('pgTarget'));
+    const hasCustomLink = linkType === 'custom' && !!href;
+
+    if (model.get('tagName') !== tag) {
+        model.set('tagName', tag);
+    }
+
+    const comps = model.components?.();
+    if (!comps) return;
+
+    const first = comps.at?.(0);
+    const firstTag = String(first?.get?.('tagName') || '').toLowerCase();
+
+    if (hasCustomLink) {
+        if (!first || firstTag !== 'a') {
+            const linkAttrs = {
+                href,
+                class: 'hover:underline underline-offset-2',
+            };
+            if (target === 'blank') {
+                linkAttrs.target = '_blank';
+                linkAttrs.rel = 'noopener noreferrer';
+            }
+
+            comps.reset([
+                {
+                    type: 'default',
+                    tagName: 'a',
+                    attributes: linkAttrs,
+                    components: [{ type: TEXT_NODE_TYPE, content: text }],
+                },
+            ]);
+            refreshComponentView(model);
+            return;
+        }
+
+        const currentAttrs = first.getAttributes?.() || {};
+        const nextAttrs = { ...currentAttrs, href };
+        if (target === 'blank') {
+            nextAttrs.target = '_blank';
+            nextAttrs.rel = 'noopener noreferrer';
+        } else {
+            delete nextAttrs.target;
+            delete nextAttrs.rel;
+        }
+
+        setModelAttributes(first, nextAttrs);
+        ensureTextNode(first, text);
+        refreshComponentView(model);
+        return;
+    }
+
+    if (first && firstTag === 'a') {
+        comps.reset([{ type: TEXT_NODE_TYPE, content: text }]);
+        refreshComponentView(model);
+        return;
+    }
+
+    ensureTextNode(model, text);
+    refreshComponentView(model);
+}
+
 export function registerTextElement(editor) {
     const dc = editor.DomComponents;
+
+    editor.on('component:selected', (component) => {
+        const type = String(component?.get?.('type') || '');
+        if (type !== 'pg-text') return;
+        syncTextTraitRows(component);
+    });
 
     dc.addType('pg-text', {
         isComponent: (el) => {
             if (!el || !el.tagName) return false;
+
             const tag = el.tagName.toLowerCase();
+            if (!TEXT_ALLOWED_TAGS.includes(tag)) return false;
 
-            const name = (el.getAttribute?.("data-gjs-name") || "").toLowerCase();
-            const isMarked = el.classList?.contains("pg-text") || name === "text";
-
-            // ✅ p فقط
-            return tag === 'p' && (isMarked || name === 'text' || name === 'Text');
+            const name = (el.getAttribute?.('data-gjs-name') || '').toLowerCase();
+            const marked = name === 'text' || el.classList?.contains('pg-text');
+            return marked;
         },
 
         model: {
             defaults: {
-                tagName: "p",
-                name: "Text",
+                tagName: 'p',
+                name: 'Text',
+                droppable: false,
+                editable: false,
                 attributes: {
-                    class: "pg-text text-slate-700 leading-relaxed text-right text-base font-normal",
-                    "data-gjs-name": "Text",
+                    class: 'pg-text text-slate-700 leading-relaxed',
+                    'data-gjs-name': 'Text',
                 },
+                stylable: TEXT_STYLABLE_PROPS,
+                components: [{ type: TEXT_NODE_TYPE, content: 'Write your text here' }],
 
-                // ✅ محتوى افتراضي (سيتم تعديله عبر TinyMCE داخل الـ canvas)
-                components: [{ type: "text", content: "اكتب النص هنا…" }],
-
-                // ✅ props للتحكم بالستايل فقط
-                pgAlign: "right",
-                pgSize: "base",
-                pgWeight: "normal",
+                pgText: 'Write your text here',
+                pgTag: 'p',
+                pgLinkType: 'none',
+                pgHref: '',
+                pgTarget: 'self',
 
                 traits: [
                     {
-                        type: "select",
-                        name: "pgAlign",
-                        label: "المحاذاة",
+                        type: 'pg-trait-heading',
+                        name: 'pgTextMain',
+                        label: 'Text',
+                    },
+                    {
+                        type: 'textarea',
+                        name: 'pgText',
+                        label: 'Content',
+                        changeProp: 1,
+                        placeholder: 'Write your text here',
+                    },
+                    {
+                        type: 'select',
+                        name: 'pgTag',
+                        label: 'HTML Tag',
                         changeProp: 1,
                         options: [
-                            { id: "right", name: "يمين" },
-                            { id: "center", name: "وسط" },
-                            { id: "left", name: "يسار" },
+                            { id: 'p', name: 'P' },
+                            { id: 'div', name: 'DIV' },
+                            { id: 'span', name: 'SPAN' },
                         ],
                     },
                     {
-                        type: "select",
-                        name: "pgSize",
-                        label: "الحجم",
+                        type: 'pg-trait-heading',
+                        name: 'pgTextLink',
+                        label: 'Link',
+                    },
+                    {
+                        type: 'select',
+                        name: 'pgLinkType',
+                        label: 'Link Type',
                         changeProp: 1,
                         options: [
-                            { id: "sm", name: "Small" },
-                            { id: "base", name: "Base" },
-                            { id: "lg", name: "Large" },
-                            { id: "xl", name: "XL" },
+                            { id: 'none', name: 'None' },
+                            { id: 'custom', name: 'Custom URL' },
                         ],
                     },
                     {
-                        type: "select",
-                        name: "pgWeight",
-                        label: "الوزن",
+                        type: 'text',
+                        name: 'pgHref',
+                        label: 'Custom URL',
+                        changeProp: 1,
+                        placeholder: 'https://example.com',
+                    },
+                    {
+                        type: 'select',
+                        name: 'pgTarget',
+                        label: 'Open In',
                         changeProp: 1,
                         options: [
-                            { id: "normal", name: "Normal" },
-                            { id: "medium", name: "Medium" },
-                            { id: "bold", name: "Bold" },
+                            { id: 'self', name: 'Same Tab' },
+                            { id: 'blank', name: 'New Tab' },
                         ],
                     },
                 ],
             },
 
             init() {
-                // ✅ عند التحميل اقرأ الكلاسات الحالية (إذا كان العنصر جاي من HTML)
-                hydratePropsFromClasses(this);
+                this.set('stylable', TEXT_STYLABLE_PROPS, { silent: true });
+                repairLegacySplitTextModel(this);
+                hydrateTextProps(this);
+                this.on(
+                    'change:pgText change:pgTag change:pgLinkType change:pgHref change:pgTarget',
+                    () => {
+                        applyTextTraits(this);
+                        syncTextTraitRows(this);
+                    }
+                );
+                applyTextTraits(this);
+                syncTextTraitRows(this);
 
-                const apply = () => applyTextTraits(this);
-
-                this.on("change:pgAlign change:pgSize change:pgWeight", apply);
-
-                // أول تطبيق
-                apply();
+                // Run once after mount to catch cases where parent/siblings are not ready in early init.
+                setTimeout(() => {
+                    repairLegacySplitTextModel(this);
+                    hydrateTextProps(this);
+                    applyTextTraits(this);
+                    syncTextTraitRows(this);
+                }, 0);
             },
         },
     });
-
-    function hydratePropsFromClasses(model) {
-        const attrs = model.getAttributes() || {};
-        const cls = String(attrs.class || "")
-            .split(/\s+/)
-            .filter(Boolean);
-
-        // align
-        if (cls.includes("text-left")) model.set("pgAlign", "left", { silent: true });
-        else if (cls.includes("text-center")) model.set("pgAlign", "center", { silent: true });
-        else model.set("pgAlign", "right", { silent: true });
-
-        // size
-        if (cls.includes("text-sm")) model.set("pgSize", "sm", { silent: true });
-        else if (cls.includes("text-lg")) model.set("pgSize", "lg", { silent: true });
-        else if (cls.includes("text-xl")) model.set("pgSize", "xl", { silent: true });
-        else model.set("pgSize", "base", { silent: true });
-
-        // weight
-        if (cls.includes("font-bold")) model.set("pgWeight", "bold", { silent: true });
-        else if (cls.includes("font-medium")) model.set("pgWeight", "medium", { silent: true });
-        else model.set("pgWeight", "normal", { silent: true });
-    }
-
-    function applyTextTraits(model) {
-        const align = model.get("pgAlign") ?? "right";
-        const size = model.get("pgSize") ?? "base";
-        const weight = model.get("pgWeight") ?? "normal";
-
-        const attrs = model.getAttributes() || {};
-        const cls = String(attrs.class || "")
-            .split(/\s+/)
-            .filter(Boolean);
-
-        // ✅ تنظيف فقط الكلاسات التي نتحكم بها
-        const cleaned = cls.filter((c) => {
-            if (c === "text-left" || c === "text-center" || c === "text-right") return false;
-            if (c === "text-sm" || c === "text-base" || c === "text-lg" || c === "text-xl") return false;
-            if (c === "font-normal" || c === "font-medium" || c === "font-bold") return false;
-            return true;
-        });
-
-        const sizeClass =
-            size === "sm" ? "text-sm" :
-                size === "lg" ? "text-lg" :
-                    size === "xl" ? "text-xl" :
-                        "text-base";
-
-        const weightClass =
-            weight === "bold" ? "font-bold" :
-                weight === "medium" ? "font-medium" :
-                    "font-normal";
-
-        const alignClass =
-            align === "left" ? "text-left" :
-                align === "center" ? "text-center" :
-                    "text-right";
-
-        model.addAttributes({
-            class: [...cleaned, sizeClass, weightClass, alignClass].join(" ").trim(),
-        });
-    }
 }

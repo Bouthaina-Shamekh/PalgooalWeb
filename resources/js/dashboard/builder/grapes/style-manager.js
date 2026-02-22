@@ -136,6 +136,30 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
         { key: 'blur', label: 'Blur', unit: 'px', min: 0, max: 20, step: 1, default: 0 },
     ];
 
+    const stylePanelState = {
+        backgroundState: 'normal',
+    };
+
+    const splitClasses = (value) =>
+        String(value || '')
+            .split(/\s+/)
+            .filter(Boolean);
+
+    const normalizeHoverBgColor = (value) => {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+
+        const lowered = raw.toLowerCase().replace(/\s+/g, '');
+        if (['transparent', 'inherit', 'initial', 'unset', 'none', '#0000'].includes(lowered)) {
+            return '';
+        }
+        if (['rgba(0,0,0,0)', 'hsla(0,0%,0%,0)'].includes(lowered)) {
+            return '';
+        }
+
+        return raw;
+    };
+
     const getSizeRangeByUnit = (props, unit) => {
         const unitRanges = props?.pgUnitRanges || {};
         const fromProps = unitRanges?.[unit] || {};
@@ -563,6 +587,65 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
         });
     }
 
+    if (!sm.getType('pg-bg-state')) {
+        sm.addType('pg-bg-state', {
+            create({ props, change }) {
+                const el = document.createElement('div');
+                el.className = 'pg-sm-state';
+                el.innerHTML = `
+                    <button type="button" class="pg-sm-state__btn" data-state="normal">Normal</button>
+                    <button type="button" class="pg-sm-state__btn" data-state="hover">Hover</button>
+                `;
+
+                const buttons = Array.from(el.querySelectorAll('.pg-sm-state__btn'));
+
+                const setState = (value, { triggerChange = true } = {}) => {
+                    const state = value === 'hover' ? 'hover' : 'normal';
+                    el.dataset.state = state;
+
+                    buttons.forEach((button) => {
+                        const isActive = button.getAttribute('data-state') === state;
+                        button.classList.toggle('is-active', isActive);
+                        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                    });
+
+                    stylePanelState.backgroundState = state;
+                    if (typeof syncBackgroundPanelState === 'function') {
+                        syncBackgroundPanelState();
+                    } else {
+                        applyBackgroundState(state);
+                    }
+
+                    if (triggerChange) {
+                        change({ partial: false });
+                    }
+                };
+
+                buttons.forEach((button) => {
+                    button.addEventListener('click', () => {
+                        setState(button.getAttribute('data-state'));
+                    });
+                });
+
+                const initialState = stylePanelState.backgroundState || props?.defaults || 'normal';
+                setState(initialState, { triggerChange: false });
+
+                el.__setState = setState;
+                return el;
+            },
+
+            emit() {},
+
+            update({ props, el }) {
+                const setState = el?.__setState;
+                if (typeof setState !== 'function') return;
+
+                const state = stylePanelState.backgroundState || props?.defaults || 'normal';
+                setState(state, { triggerChange: false });
+            },
+        });
+    }
+
     if (!sm.getType('pg-css-filters')) {
         sm.addType('pg-css-filters', {
             create({ change }) {
@@ -816,126 +899,153 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
     ];
 
     const fontWeights = [
-        { id: '300', name: t('Light', 'ط®ظپظٹظپ') },
-        { id: '400', name: t('Regular', 'ط¹ط§ط¯ظٹ') },
-        { id: '500', name: t('Medium', 'ظ…طھظˆط³ط·') },
-        { id: '600', name: t('SemiBold', 'ط´ط¨ظ‡ ط¹ط±ظٹط¶') },
-        { id: '700', name: t('Bold', 'ط¹ط±ظٹط¶') },
-        { id: '800', name: t('ExtraBold', 'ط«ظ‚ظٹظ„') },
-        { id: '900', name: t('Black', 'ط£ط³ظˆط¯') },
+        { id: '300', name: t('Light', 'ط·آ®ط¸ظ¾ط¸ظ¹ط¸ظ¾') },
+        { id: '400', name: t('Regular', 'ط·آ¹ط·آ§ط·آ¯ط¸ظ¹') },
+        { id: '500', name: t('Medium', 'ط¸â€¦ط·ع¾ط¸ث†ط·آ³ط·آ·') },
+        { id: '600', name: t('SemiBold', 'ط·آ´ط·آ¨ط¸â€، ط·آ¹ط·آ±ط¸ظ¹ط·آ¶') },
+        { id: '700', name: t('Bold', 'ط·آ¹ط·آ±ط¸ظ¹ط·آ¶') },
+        { id: '800', name: t('ExtraBold', 'ط·آ«ط¸â€ڑط¸ظ¹ط¸â€‍') },
+        { id: '900', name: t('Black', 'ط·آ£ط·آ³ط¸ث†ط·آ¯') },
     ];
 
     const textTransforms = [
-        { id: 'none', name: t('None', 'ط¨ط¯ظˆظ†') },
-        { id: 'uppercase', name: t('Uppercase', 'ط£ط­ط±ظپ ظƒط¨ظٹط±ط©') },
-        { id: 'lowercase', name: t('Lowercase', 'ط£ط­ط±ظپ طµط؛ظٹط±ط©') },
-        { id: 'capitalize', name: t('Capitalize', 'ط£ظˆظ„ ط­ط±ظپ ظƒط¨ظٹط±') },
+        { id: 'none', name: t('None', 'ط·آ¨ط·آ¯ط¸ث†ط¸â€ ') },
+        { id: 'uppercase', name: t('Uppercase', 'ط·آ£ط·آ­ط·آ±ط¸ظ¾ ط¸ئ’ط·آ¨ط¸ظ¹ط·آ±ط·آ©') },
+        { id: 'lowercase', name: t('Lowercase', 'ط·آ£ط·آ­ط·آ±ط¸ظ¾ ط·آµط·ط›ط¸ظ¹ط·آ±ط·آ©') },
+        { id: 'capitalize', name: t('Capitalize', 'ط·آ£ط¸ث†ط¸â€‍ ط·آ­ط·آ±ط¸ظ¾ ط¸ئ’ط·آ¨ط¸ظ¹ط·آ±') },
     ];
 
     const backgroundSizes = [
-        { id: 'auto', name: t('Auto', 'طھظ„ظ‚ط§ط¦ظٹ') },
-        { id: 'cover', name: t('Cover', 'طھط؛ط·ظٹط©') },
-        { id: 'contain', name: t('Contain', 'ط§ط­طھظˆط§ط،') },
+        { id: 'auto', name: t('Auto', 'ط·ع¾ط¸â€‍ط¸â€ڑط·آ§ط·آ¦ط¸ظ¹') },
+        { id: 'cover', name: t('Cover', 'ط·ع¾ط·ط›ط·آ·ط¸ظ¹ط·آ©') },
+        { id: 'contain', name: t('Contain', 'ط·آ§ط·آ­ط·ع¾ط¸ث†ط·آ§ط·طŒ') },
     ];
 
     const backgroundRepeats = [
-        { id: 'no-repeat', name: t('No Repeat', 'ط¨ط¯ظˆظ† طھظƒط±ط§ط±') },
-        { id: 'repeat', name: t('Repeat', 'طھظƒط±ط§ط±') },
-        { id: 'repeat-x', name: t('Repeat X', 'طھظƒط±ط§ط± ط£ظپظ‚ظٹ') },
-        { id: 'repeat-y', name: t('Repeat Y', 'طھظƒط±ط§ط± ط¹ظ…ظˆط¯ظٹ') },
+        { id: 'no-repeat', name: t('No Repeat', 'ط·آ¨ط·آ¯ط¸ث†ط¸â€  ط·ع¾ط¸ئ’ط·آ±ط·آ§ط·آ±') },
+        { id: 'repeat', name: t('Repeat', 'ط·ع¾ط¸ئ’ط·آ±ط·آ§ط·آ±') },
+        { id: 'repeat-x', name: t('Repeat X', 'ط·ع¾ط¸ئ’ط·آ±ط·آ§ط·آ± ط·آ£ط¸ظ¾ط¸â€ڑط¸ظ¹') },
+        { id: 'repeat-y', name: t('Repeat Y', 'ط·ع¾ط¸ئ’ط·آ±ط·آ§ط·آ± ط·آ¹ط¸â€¦ط¸ث†ط·آ¯ط¸ظ¹') },
     ];
 
     const backgroundPositions = [
-        { id: 'left top', name: t('Left Top', 'ط£ط¹ظ„ظ‰ ظٹط³ط§ط±') },
-        { id: 'center top', name: t('Center Top', 'ط£ط¹ظ„ظ‰ ظˆط³ط·') },
-        { id: 'right top', name: t('Right Top', 'ط£ط¹ظ„ظ‰ ظٹظ…ظٹظ†') },
-        { id: 'left center', name: t('Left Center', 'ظˆط³ط· ظٹط³ط§ط±') },
-        { id: 'center center', name: t('Center', 'ظˆط³ط·') },
-        { id: 'right center', name: t('Right Center', 'ظˆط³ط· ظٹظ…ظٹظ†') },
-        { id: 'left bottom', name: t('Left Bottom', 'ط£ط³ظپظ„ ظٹط³ط§ط±') },
-        { id: 'center bottom', name: t('Center Bottom', 'ط£ط³ظپظ„ ظˆط³ط·') },
-        { id: 'right bottom', name: t('Right Bottom', 'ط£ط³ظپظ„ ظٹظ…ظٹظ†') },
+        { id: 'left top', name: t('Left Top', 'ط·آ£ط·آ¹ط¸â€‍ط¸â€° ط¸ظ¹ط·آ³ط·آ§ط·آ±') },
+        { id: 'center top', name: t('Center Top', 'ط·آ£ط·آ¹ط¸â€‍ط¸â€° ط¸ث†ط·آ³ط·آ·') },
+        { id: 'right top', name: t('Right Top', 'ط·آ£ط·آ¹ط¸â€‍ط¸â€° ط¸ظ¹ط¸â€¦ط¸ظ¹ط¸â€ ') },
+        { id: 'left center', name: t('Left Center', 'ط¸ث†ط·آ³ط·آ· ط¸ظ¹ط·آ³ط·آ§ط·آ±') },
+        { id: 'center center', name: t('Center', 'ط¸ث†ط·آ³ط·آ·') },
+        { id: 'right center', name: t('Right Center', 'ط¸ث†ط·آ³ط·آ· ط¸ظ¹ط¸â€¦ط¸ظ¹ط¸â€ ') },
+        { id: 'left bottom', name: t('Left Bottom', 'ط·آ£ط·آ³ط¸ظ¾ط¸â€‍ ط¸ظ¹ط·آ³ط·آ§ط·آ±') },
+        { id: 'center bottom', name: t('Center Bottom', 'ط·آ£ط·آ³ط¸ظ¾ط¸â€‍ ط¸ث†ط·آ³ط·آ·') },
+        { id: 'right bottom', name: t('Right Bottom', 'ط·آ£ط·آ³ط¸ظ¾ط¸â€‍ ط¸ظ¹ط¸â€¦ط¸ظ¹ط¸â€ ') },
     ];
 
     const backgroundAttachments = [
-        { id: 'scroll', name: t('Scroll', 'طھظ…ط±ظٹط±') },
-        { id: 'fixed', name: t('Fixed', 'ط«ط§ط¨طھ') },
-        { id: 'local', name: t('Local', 'ظ…ط­ظ„ظٹ') },
+        { id: 'scroll', name: t('Scroll', 'ط·ع¾ط¸â€¦ط·آ±ط¸ظ¹ط·آ±') },
+        { id: 'fixed', name: t('Fixed', 'ط·آ«ط·آ§ط·آ¨ط·ع¾') },
+        { id: 'local', name: t('Local', 'ط¸â€¦ط·آ­ط¸â€‍ط¸ظ¹') },
     ];
+    const applyBackgroundState = (value) => {
+        const state = value === 'hover' ? 'hover' : 'normal';
+        stylePanelState.backgroundState = state;
+
+        const sector = sm.getSector('pg-background');
+        if (!sector) return;
+
+        const hoverProps = new Set([
+            'pg-hover-bg-color',
+            'pg-hover-text-color',
+            '--pg-hover-bg',
+            '--pg-hover-color',
+        ]);
+
+        sector.getProperties().forEach((propertyModel) => {
+            const id = String(propertyModel.get?.('id') || '').trim();
+            const prop = String(propertyModel.get?.('property') || '').trim();
+            const key = id || prop;
+
+            if (id === 'pg-bg-state' || prop === 'pg-bg-state') {
+                propertyModel.set('visible', true);
+                return;
+            }
+
+            const isHoverProp = hoverProps.has(key) || hoverProps.has(id) || hoverProps.has(prop);
+            propertyModel.set('visible', state === 'hover' ? isHoverProp : !isHoverProp);
+        });
+    };
+
+    const reorderBackgroundRows = () => {
+        const root = document.getElementById('gjs-styles');
+        const propsEl = root?.querySelector('.gjs-sm-sector.gjs-sm-sector__pg-background .gjs-sm-properties');
+        if (!propsEl) return;
+
+        const stateRow = propsEl.querySelector('.pg-bg-prop-state');
+        if (stateRow && propsEl.firstElementChild !== stateRow) {
+            propsEl.prepend(stateRow);
+        }
+    };
+
+    const syncBackgroundPanelState = () => {
+        const state = stylePanelState.backgroundState;
+        applyBackgroundState(state);
+        reorderBackgroundRows();
+
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(() => {
+                applyBackgroundState(state);
+                reorderBackgroundRows();
+            });
+        }
+    };
 
     // =========================================================
-    // 1) Background (Color / Image)
+    // 1) Background (Color)
     // =========================================================
     sm.addSector('pg-background', {
-        name: t('Background', 'ط§ظ„ط®ظ„ظپظٹط©'),
+        name: t('Background', 'ط·آ§ط¸â€‍ط·آ®ط¸â€‍ط¸ظ¾ط¸ظ¹ط·آ©'),
         open: true,
         buildProps: [
+            'pg-bg-state',
             'background-color',
-            'background-image',
-            'background-position',
-            'background-size',
-            'background-repeat',
-            'background-attachment',
-            'opacity',
+            '--pg-hover-bg',
+            '--pg-hover-color',
         ],
         properties: [
             {
+                id: 'pg-bg-state',
+                name: t('State', 'State'),
+                property: 'pg-bg-state',
+                type: 'pg-bg-state',
+                defaults: 'normal',
+                full: true,
+                className: 'pg-bg-prop-state',
+            },
+            {
                 id: 'background-color',
-                name: t('Color', 'ظ„ظˆظ†'),
+                name: t('Color', 'Color'),
                 property: 'background-color',
                 type: 'color',
                 defaults: 'transparent',
-            },
-            {
-                id: 'background-image',
-                name: t('Image', 'طµظˆط±ط©'),
-                property: 'background-image',
-                type: 'file',
-                functionName: 'url',
                 full: true,
+                className: 'pg-bg-prop-color',
+            },
+            {
+                id: 'pg-hover-bg-color',
+                name: t('Hover Color', 'Hover Color'),
+                property: '--pg-hover-bg',
+                type: 'color',
                 defaults: '',
+                full: true,
+                className: 'pg-bg-prop-hover-bg',
             },
             {
-                id: 'background-position',
-                name: t('Position', 'ظ…ظˆط¶ط¹ ط§ظ„طµظˆط±ط©'),
-                property: 'background-position',
-                type: 'select',
-                defaults: 'center center',
-                list: backgroundPositions,
-            },
-            {
-                id: 'background-size',
-                name: t('Size', 'ط­ط¬ظ… ط§ظ„طµظˆط±ط©'),
-                property: 'background-size',
-                type: 'select',
-                defaults: 'cover',
-                list: backgroundSizes,
-            },
-            {
-                id: 'background-repeat',
-                name: t('Repeat', 'طھظƒط±ط§ط± ط§ظ„طµظˆط±ط©'),
-                property: 'background-repeat',
-                type: 'select',
-                defaults: 'no-repeat',
-                list: backgroundRepeats,
-            },
-            {
-                id: 'background-attachment',
-                name: t('Attachment', 'ط«ط¨ط§طھ ط§ظ„طµظˆط±ط©'),
-                property: 'background-attachment',
-                type: 'select',
-                defaults: 'scroll',
-                list: backgroundAttachments,
-            },
-            {
-                id: 'opacity',
-                name: t('Opacity', 'ط§ظ„ط´ظپط§ظپظٹط©'),
-                property: 'opacity',
-                type: 'slider',
-                min: 0,
-                max: 1,
-                step: 0.01,
-                defaults: 1,
+                id: 'pg-hover-text-color',
+                name: t('Hover Text Color', 'Hover Text Color'),
+                property: '--pg-hover-color',
+                type: 'color',
+                defaults: '',
+                full: true,
+                className: 'pg-bg-prop-hover-text',
             },
         ],
     });
@@ -1075,7 +1185,7 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
     // 2) Typography
     // =========================================================
     sm.addSector('pg-typography', {
-        name: t('Typography', 'ط§ظ„ط®ط·ظˆط·'),
+        name: t('Typography', 'ط·آ§ط¸â€‍ط·آ®ط·آ·ط¸ث†ط·آ·'),
         open: false,
         buildProps: [
             'text-align',
@@ -1090,7 +1200,7 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
         properties: [
             {
                 id: 'text-align',
-                name: t('Align', 'ط§ظ„ظ…ط­ط§ط°ط§ط©'),
+                name: t('Align', 'ط·آ§ط¸â€‍ط¸â€¦ط·آ­ط·آ§ط·آ°ط·آ§ط·آ©'),
                 property: 'text-align',
                 type: 'radio',
                 defaults: isRtl ? 'right' : 'left',
@@ -1103,7 +1213,7 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
             },
             {
                 id: 'font-family',
-                name: t('Font', 'ظ†ظˆط¹ ط§ظ„ط®ط·'),
+                name: t('Font', 'ط¸â€ ط¸ث†ط·آ¹ ط·آ§ط¸â€‍ط·آ®ط·آ·'),
                 property: 'font-family',
                 type: 'pg-font-family-select',
                 defaults: 'inherit',
@@ -1111,7 +1221,7 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
             },
             {
                 id: 'font-size',
-                name: t('Size', 'ط§ظ„ط­ط¬ظ…'),
+                name: t('Size', 'ط·آ§ط¸â€‍ط·آ­ط·آ¬ط¸â€¦'),
                 property: 'font-size',
                 type: 'pg-size-range',
                 units: ['px', 'rem'],
@@ -1128,7 +1238,7 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
             },
             {
                 id: 'font-weight',
-                name: t('Weight', 'ط§ظ„ط³ظڈظ…ظƒ'),
+                name: t('Weight', 'ط·آ§ط¸â€‍ط·آ³ط¸عˆط¸â€¦ط¸ئ’'),
                 property: 'font-weight',
                 type: 'select',
                 defaults: '800',
@@ -1136,7 +1246,7 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
             },
             {
                 id: 'text-transform',
-                name: t('Transform', 'طھط­ظˆظٹظ„'),
+                name: t('Transform', 'ط·ع¾ط·آ­ط¸ث†ط¸ظ¹ط¸â€‍'),
                 property: 'text-transform',
                 type: 'select',
                 defaults: 'none',
@@ -1144,7 +1254,7 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
             },
             {
                 id: 'line-height',
-                name: t('Line Height', 'ط§ط±طھظپط§ط¹ ط§ظ„ط³ط·ط±'),
+                name: t('Line Height', 'ط·آ§ط·آ±ط·ع¾ط¸ظ¾ط·آ§ط·آ¹ ط·آ§ط¸â€‍ط·آ³ط·آ·ط·آ±'),
                 property: 'line-height',
                 type: 'pg-size-range',
                 units: ['', 'px'],
@@ -1165,7 +1275,7 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
             },
             {
                 id: 'letter-spacing',
-                name: t('Letter Spacing', 'طھط¨ط§ط¹ط¯ ط§ظ„ط£ط­ط±ظپ'),
+                name: t('Letter Spacing', 'ط·ع¾ط·آ¨ط·آ§ط·آ¹ط·آ¯ ط·آ§ط¸â€‍ط·آ£ط·آ­ط·آ±ط¸ظ¾'),
                 property: 'letter-spacing',
                 type: 'pg-size-range',
                 units: ['px', 'em'],
@@ -1182,7 +1292,7 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
             },
             {
                 id: 'color',
-                name: t('Text Color', 'ظ„ظˆظ† ط§ظ„ظ†طµ'),
+                name: t('Text Color', 'ط¸â€‍ط¸ث†ط¸â€  ط·آ§ط¸â€‍ط¸â€ ط·آµ'),
                 property: 'color',
                 type: 'color',
                 defaults: '#240B36',
@@ -1194,20 +1304,20 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
     // 3) Text Shadow
     // =========================================================
     sm.addSector('pg-text-shadow', {
-        name: t('Text Shadow', 'ط¸ظ„ ط§ظ„ظ†طµ'),
+        name: t('Text Shadow', 'ط·آ¸ط¸â€‍ ط·آ§ط¸â€‍ط¸â€ ط·آµ'),
         open: false,
         buildProps: ['text-shadow'],
         properties: [
             {
                 id: 'text-shadow',
-                name: t('Shadow', 'ط§ظ„ط¸ظ„'),
+                name: t('Shadow', 'ط·آ§ط¸â€‍ط·آ¸ط¸â€‍'),
                 property: 'text-shadow',
                 type: 'composite',
                 properties: [
                     { name: 'X', property: 'text-shadow-h', type: 'integer', units: ['px'], unit: 'px', defaults: 0 },
                     { name: 'Y', property: 'text-shadow-v', type: 'integer', units: ['px'], unit: 'px', defaults: 0 },
-                    { name: t('Blur', 'ط§ظ„طھظ…ظˆظٹظ‡'), property: 'text-shadow-blur', type: 'integer', units: ['px'], unit: 'px', defaults: 0 },
-                    { name: t('Color', 'ط§ظ„ظ„ظˆظ†'), property: 'text-shadow-color', type: 'color', defaults: 'rgba(0,0,0,0.35)' },
+                    { name: t('Blur', 'ط·آ§ط¸â€‍ط·ع¾ط¸â€¦ط¸ث†ط¸ظ¹ط¸â€،'), property: 'text-shadow-blur', type: 'integer', units: ['px'], unit: 'px', defaults: 0 },
+                    { name: t('Color', 'ط·آ§ط¸â€‍ط¸â€‍ط¸ث†ط¸â€ '), property: 'text-shadow-color', type: 'color', defaults: 'rgba(0,0,0,0.35)' },
                 ],
                 toStyle(values) {
                     const h = values['text-shadow-h'] ?? 0;
@@ -1225,13 +1335,13 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
     // 4) Text Stroke
     // =========================================================
     sm.addSector('pg-text-stroke', {
-        name: t('Text Stroke', 'ط­ط¯ظˆط¯ ط§ظ„ظ†طµ'),
+        name: t('Text Stroke', 'ط·آ­ط·آ¯ط¸ث†ط·آ¯ ط·آ§ط¸â€‍ط¸â€ ط·آµ'),
         open: false,
         buildProps: ['-webkit-text-stroke-width', '-webkit-text-stroke-color'],
         properties: [
             {
                 id: 'stroke-width',
-                name: t('Width', 'ط§ظ„ط³ظڈظ…ظƒ'),
+                name: t('Width', 'ط·آ§ط¸â€‍ط·آ³ط¸عˆط¸â€¦ط¸ئ’'),
                 property: '-webkit-text-stroke-width',
                 type: 'slider',
                 units: ['px'],
@@ -1243,7 +1353,7 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
             },
             {
                 id: 'stroke-color',
-                name: t('Color', 'ط§ظ„ظ„ظˆظ†'),
+                name: t('Color', 'ط·آ§ط¸â€‍ط¸â€‍ط¸ث†ط¸â€ '),
                 property: '-webkit-text-stroke-color',
                 type: 'color',
                 defaults: '#000000',
@@ -1251,25 +1361,63 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
         ],
     });
 
-    // Hide the Image sector when a button component is selected.
+    const syncHoverBgClass = (component) => {
+        if (!component?.getStyle || !component?.getAttributes) return;
+
+        const styles = component.getStyle() || {};
+        const hoverBgColor = normalizeHoverBgColor(styles['--pg-hover-bg']);
+        const hoverTextColor = normalizeHoverBgColor(styles['--pg-hover-color']);
+        const attrs = component.getAttributes() || {};
+        const classes = splitClasses(attrs.class);
+        const hasClass = classes.includes('pg-has-hover-bg');
+
+        const hasHoverState = !!hoverBgColor || !!hoverTextColor;
+        const nextClasses = hasHoverState
+            ? hasClass
+                ? classes
+                : [...classes, 'pg-has-hover-bg']
+            : classes.filter((cls) => cls !== 'pg-has-hover-bg');
+
+        if (nextClasses.length === classes.length && nextClasses.join(' ') === classes.join(' ')) {
+            return;
+        }
+
+        const nextAttrs = { ...attrs, class: nextClasses.join(' ').trim() };
+        if (typeof component.setAttributes === 'function') {
+            component.setAttributes(nextAttrs);
+        } else {
+            component.addAttributes?.(nextAttrs);
+        }
+    };
+
+    const syncHoverBgClassInTree = () => {
+        const wrapper = editor.getWrapper?.();
+        if (!wrapper) return;
+
+        syncHoverBgClass(wrapper);
+        const all = wrapper.find?.('*') || [];
+        all.forEach((component) => syncHoverBgClass(component));
+    };
+
+    // Show the Image sector only for image components.
     const imageSector = sm.getSector('pg-image-size');
     const stylesHost = document.getElementById('gjs-styles');
 
-    const isButtonLike = (component) => {
+    const isImageLike = (component) => {
         let current = component;
 
         while (current) {
             const type = String(current.get?.('type') || '').toLowerCase();
-            if (type === 'pg-button') return true;
+            if (type === 'pg-image') return true;
 
             const attrs = current.getAttributes?.() || {};
             const name = String(attrs['data-gjs-name'] || current.get?.('name') || '').trim().toLowerCase();
             const tag = String(current.get?.('tagName') || '').trim().toLowerCase();
             const classes = String(attrs.class || '');
 
-            if (name === 'button') return true;
-            if (tag === 'button') return true;
-            if (tag === 'a' && classes.includes('pg-button')) return true;
+            if (name === 'image' && (tag === 'img' || tag === 'a')) return true;
+            if (tag === 'img') return true;
+            if (tag === 'a' && (classes.includes('pg-image-link') || classes.includes('pg-image'))) return true;
 
             current = current.parent?.();
         }
@@ -1278,24 +1426,43 @@ export function registerStyleManager(editor, { isRtl = false } = {}) {
     };
 
     const syncSectorVisibility = (component) => {
-        const isButton = isButtonLike(component);
+        const isImage = isImageLike(component);
 
         if (imageSector) {
-            imageSector.set('visible', !isButton);
+            imageSector.set('visible', isImage);
         }
 
         if (stylesHost) {
-            stylesHost.classList.toggle('pg-hide-image-sector', isButton);
+            stylesHost.classList.toggle('pg-hide-image-sector', !isImage);
         }
     };
 
+    editor.on('component:styleUpdate', (component) => {
+        syncHoverBgClass(component);
+    });
+
+    editor.on('component:add', (component) => {
+        syncHoverBgClass(component);
+    });
+
     editor.on('component:selected', (component) => {
+        syncBackgroundPanelState();
+        syncHoverBgClass(component);
         syncSectorVisibility(component);
     });
 
     editor.on('component:deselected', () => {
+        syncBackgroundPanelState();
         syncSectorVisibility(null);
     });
 
+    editor.on('load', () => {
+        syncBackgroundPanelState();
+        syncHoverBgClassInTree();
+        syncSectorVisibility(editor.getSelected?.());
+    });
+
+    syncBackgroundPanelState();
     syncSectorVisibility(editor.getSelected?.());
 }
+
