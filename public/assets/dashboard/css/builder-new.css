@@ -27,17 +27,18 @@
 }
 
 /* 2) GrapesJS safety */
+.gjs-editor {
+    --gjs-canvas-top: 0px;
+    --gjs-left-width: 0px;
+}
+
 .gjs-cv-canvas {
-    top: 0;
     width: 100%;
     height: 100%;
 }
 
-.gjs-selected .gjs-toolbar {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    z-index: 99999;
+.gjs-toolbar {
+    z-index: 30;
 }
 
 /* =========================================================

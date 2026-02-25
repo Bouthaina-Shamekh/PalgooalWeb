@@ -194,6 +194,11 @@ const FLEX_WRAP_OPTIONS = [
     { id: 'nowrap', name: 'No Wrap', icon: FLEX_ICON_NOWRAP },
 ];
 
+const FLEX_ALLOWED_DIRECTIONS = ['row', 'row-reverse', 'col', 'col-reverse'];
+const FLEX_ALLOWED_WRAPS = ['wrap', 'nowrap'];
+const FLEX_ALLOWED_ITEMS = ['start', 'center', 'end', 'stretch'];
+const FLEX_ALLOWED_JUSTIFY = ['start', 'center', 'end', 'between', 'around', 'evenly'];
+
 function classListFromString(value) {
     return String(value || '')
         .split(/\s+/)
@@ -230,28 +235,40 @@ function extractCssUrl(raw) {
     return match ? String(match[2] || '').trim() : '';
 }
 
-function getEditorDir(model) {
-    const canvasDir = model?.em?.Canvas?.getDocument?.()?.documentElement?.getAttribute?.('dir');
-    const docDir = typeof document !== 'undefined' ? document.documentElement?.getAttribute?.('dir') : '';
-    const bodyDir = typeof document !== 'undefined' ? document.body?.getAttribute?.('dir') : '';
-    const dir = String(canvasDir || docDir || bodyDir || 'ltr').toLowerCase();
-    return dir === 'rtl' ? 'rtl' : 'ltr';
+function normalizeFlexDirectionTrait(value) {
+    const next = String(value || '').trim().toLowerCase();
+    return FLEX_ALLOWED_DIRECTIONS.includes(next) ? next : 'row';
 }
 
-function traitFlexDirToCssValue(flexDir, dir = 'ltr') {
-    const value = String(flexDir || 'row');
+function normalizeFlexWrapTrait(value) {
+    const next = String(value || '').trim().toLowerCase();
+    return FLEX_ALLOWED_WRAPS.includes(next) ? next : 'wrap';
+}
+
+function normalizeFlexItemsTrait(value) {
+    const next = String(value || '').trim().toLowerCase();
+    return FLEX_ALLOWED_ITEMS.includes(next) ? next : 'stretch';
+}
+
+function normalizeFlexJustifyTrait(value) {
+    const next = String(value || '').trim().toLowerCase();
+    return FLEX_ALLOWED_JUSTIFY.includes(next) ? next : 'start';
+}
+
+function traitFlexDirToCssValue(flexDir) {
+    const value = normalizeFlexDirectionTrait(flexDir);
     if (value === 'col') return 'column';
     if (value === 'col-reverse') return 'column-reverse';
-    if (value === 'row-reverse') return dir === 'rtl' ? 'row' : 'row-reverse';
-    return dir === 'rtl' ? 'row-reverse' : 'row';
+    if (value === 'row-reverse') return 'row-reverse';
+    return 'row';
 }
 
-function cssFlexDirToTraitValue(cssFlexDir, dir = 'ltr') {
+function cssFlexDirToTraitValue(cssFlexDir) {
     const value = String(cssFlexDir || '').toLowerCase();
     if (value === 'column') return 'col';
     if (value === 'column-reverse') return 'col-reverse';
-    if (value === 'row-reverse') return dir === 'rtl' ? 'row' : 'row-reverse';
-    if (value === 'row') return dir === 'rtl' ? 'row-reverse' : 'row';
+    if (value === 'row-reverse') return 'row-reverse';
+    if (value === 'row') return 'row';
     return 'row';
 }
 
@@ -263,21 +280,43 @@ function cssFlexDirToClass(cssFlexDir) {
 }
 
 function traitItemsToCssValue(value) {
-    if (value === 'start') return 'flex-start';
-    if (value === 'end') return 'flex-end';
-    if (value === 'center') return 'center';
-    if (value === 'stretch') return 'stretch';
+    const next = normalizeFlexItemsTrait(value);
+    if (next === 'start') return 'flex-start';
+    if (next === 'end') return 'flex-end';
+    if (next === 'center') return 'center';
+    if (next === 'stretch') return 'stretch';
     return 'stretch';
 }
 
 function traitJustifyToCssValue(value) {
-    if (value === 'start') return 'flex-start';
-    if (value === 'end') return 'flex-end';
-    if (value === 'center') return 'center';
-    if (value === 'between') return 'space-between';
-    if (value === 'around') return 'space-around';
-    if (value === 'evenly') return 'space-evenly';
+    const next = normalizeFlexJustifyTrait(value);
+    if (next === 'start') return 'flex-start';
+    if (next === 'end') return 'flex-end';
+    if (next === 'center') return 'center';
+    if (next === 'between') return 'space-between';
+    if (next === 'around') return 'space-around';
+    if (next === 'evenly') return 'space-evenly';
     return 'flex-start';
+}
+
+function cssAlignItemsToTraitValue(value) {
+    const next = String(value || '').trim().toLowerCase();
+    if (next === 'flex-start' || next === 'start') return 'start';
+    if (next === 'center') return 'center';
+    if (next === 'flex-end' || next === 'end') return 'end';
+    if (next === 'stretch') return 'stretch';
+    return 'stretch';
+}
+
+function cssJustifyContentToTraitValue(value) {
+    const next = String(value || '').trim().toLowerCase();
+    if (next === 'flex-start' || next === 'start') return 'start';
+    if (next === 'center') return 'center';
+    if (next === 'flex-end' || next === 'end') return 'end';
+    if (next === 'space-between') return 'between';
+    if (next === 'space-around') return 'around';
+    if (next === 'space-evenly') return 'evenly';
+    return 'start';
 }
 
 function cleanStylePayload(style) {
@@ -733,7 +772,6 @@ function hydrateContainerProps(model) {
     const inner = ensureInnerWrapper(model);
     const innerClasses = classListFromString(inner?.getAttributes?.()?.class);
     const innerStyles = inner?.getStyle?.() || {};
-    const editorDir = getEditorDir(model);
 
     const explicitFull = outerClasses.includes('pg-content-full');
     const explicitBoxed = outerClasses.includes('pg-content-boxed');
@@ -842,9 +880,11 @@ function hydrateContainerProps(model) {
         model.set('pgPaddingY', 'md', { silent: true });
     }
 
-    if (innerClasses.includes('flex')) {
+    const innerDisplay = String(innerStyles.display || '').trim().toLowerCase();
+
+    if (innerDisplay === 'flex' || innerClasses.includes('flex')) {
         model.set('pgLayout', 'flex', { silent: true });
-    } else if (innerClasses.includes('grid')) {
+    } else if (innerDisplay === 'grid' || innerClasses.includes('grid')) {
         model.set('pgLayout', 'grid', { silent: true });
     } else {
         model.set('pgLayout', 'grid', { silent: true });
@@ -895,27 +935,39 @@ function hydrateContainerProps(model) {
     model.set('pgGapLinked', nextGapX === nextGapY, { silent: true });
     model.set('pgGridOutline', inner?.getAttributes?.()?.['data-pg-grid-outline'] === '1', { silent: true });
 
-    if (itemsClass) model.set('pgItems', itemsClass.replace('items-', ''), { silent: true });
-    if (justifyClass) model.set('pgJustify', justifyClass.replace('justify-', ''), { silent: true });
+    const styleItems = String(innerStyles['align-items'] || '').trim().toLowerCase();
+    const styleJustify = String(innerStyles['justify-content'] || '').trim().toLowerCase();
+    const hydratedItems = itemsClass
+        ? itemsClass.replace('items-', '')
+        : cssAlignItemsToTraitValue(styleItems);
+    const hydratedJustify = justifyClass
+        ? justifyClass.replace('justify-', '')
+        : cssJustifyContentToTraitValue(styleJustify);
+
+    model.set('pgItems', normalizeFlexItemsTrait(hydratedItems), { silent: true });
+    model.set('pgJustify', normalizeFlexJustifyTrait(hydratedJustify), { silent: true });
 
     const styleFlexDir = String(innerStyles['flex-direction'] || '').trim().toLowerCase();
+    let nextFlexDir = 'row';
     if (styleFlexDir) {
-        model.set('pgFlexDir', cssFlexDirToTraitValue(styleFlexDir, editorDir), { silent: true });
+        nextFlexDir = cssFlexDirToTraitValue(styleFlexDir);
     } else if (innerClasses.includes('flex-row-reverse')) {
-        model.set('pgFlexDir', cssFlexDirToTraitValue('row-reverse', editorDir), { silent: true });
+        nextFlexDir = cssFlexDirToTraitValue('row-reverse');
     } else if (innerClasses.includes('flex-col-reverse')) {
-        model.set('pgFlexDir', cssFlexDirToTraitValue('column-reverse', editorDir), { silent: true });
+        nextFlexDir = cssFlexDirToTraitValue('column-reverse');
     } else if (innerClasses.includes('flex-col')) {
-        model.set('pgFlexDir', cssFlexDirToTraitValue('column', editorDir), { silent: true });
+        nextFlexDir = cssFlexDirToTraitValue('column');
     } else {
-        model.set('pgFlexDir', cssFlexDirToTraitValue('row', editorDir), { silent: true });
+        nextFlexDir = cssFlexDirToTraitValue('row');
     }
+    model.set('pgFlexDir', normalizeFlexDirectionTrait(nextFlexDir), { silent: true });
 
-    if (innerClasses.includes('flex-nowrap')) {
-        model.set('pgWrap', 'nowrap', { silent: true });
-    } else {
-        model.set('pgWrap', 'wrap', { silent: true });
-    }
+    const styleWrap = String(innerStyles['flex-wrap'] || '').trim().toLowerCase();
+    const nextWrap =
+        styleWrap === 'nowrap' || innerClasses.includes('flex-nowrap')
+            ? 'nowrap'
+            : 'wrap';
+    model.set('pgWrap', normalizeFlexWrapTrait(nextWrap), { silent: true });
 
     const baseFullWidth = clamp(Math.round(toNumber(model.get('pgFullWidth'), 100)), 10, 100);
     const baseBoxedWidth = clamp(Math.round(toNumber(model.get('pgBoxedWidth'), 1200)), 320, 2400);
@@ -924,10 +976,10 @@ function hydrateContainerProps(model) {
     const baseRows = clamp(Math.round(toNumber(model.get('pgRows'), 2)), 1, 12);
     const baseGapX = clamp(Math.round(toNumber(model.get('pgGapX'), 20)), 0, 400);
     const baseGapY = clamp(Math.round(toNumber(model.get('pgGapY'), 20)), 0, 400);
-    const baseFlexDir = String(model.get('pgFlexDir') || 'row');
-    const baseWrap = String(model.get('pgWrap') || 'wrap');
-    const baseJustify = String(model.get('pgJustify') || 'start');
-    const baseItems = String(model.get('pgItems') || 'stretch');
+    const baseFlexDir = normalizeFlexDirectionTrait(model.get('pgFlexDir'));
+    const baseWrap = normalizeFlexWrapTrait(model.get('pgWrap'));
+    const baseJustify = normalizeFlexJustifyTrait(model.get('pgJustify'));
+    const baseItems = normalizeFlexItemsTrait(model.get('pgItems'));
 
     const currentDevice = String(model.get('pgDevice') || 'desktop');
     model.set('pgDevice', ['desktop', 'tablet', 'mobile'].includes(currentDevice) ? currentDevice : 'desktop', { silent: true });
@@ -945,14 +997,38 @@ function hydrateContainerProps(model) {
     model.set('pgGapXMobile', String(clamp(Math.round(toNumber(model.get('pgGapXMobile'), toNumber(model.get('pgGapXTablet'), baseGapX))), 0, 400)), { silent: true });
     model.set('pgGapYTablet', String(clamp(Math.round(toNumber(model.get('pgGapYTablet'), baseGapY)), 0, 400)), { silent: true });
     model.set('pgGapYMobile', String(clamp(Math.round(toNumber(model.get('pgGapYMobile'), toNumber(model.get('pgGapYTablet'), baseGapY))), 0, 400)), { silent: true });
-    model.set('pgFlexDirTablet', String(model.get('pgFlexDirTablet') || baseFlexDir), { silent: true });
-    model.set('pgFlexDirMobile', String(model.get('pgFlexDirMobile') || model.get('pgFlexDirTablet') || baseFlexDir), { silent: true });
-    model.set('pgWrapTablet', String(model.get('pgWrapTablet') || baseWrap), { silent: true });
-    model.set('pgWrapMobile', String(model.get('pgWrapMobile') || model.get('pgWrapTablet') || baseWrap), { silent: true });
-    model.set('pgJustifyTablet', String(model.get('pgJustifyTablet') || baseJustify), { silent: true });
-    model.set('pgJustifyMobile', String(model.get('pgJustifyMobile') || model.get('pgJustifyTablet') || baseJustify), { silent: true });
-    model.set('pgItemsTablet', String(model.get('pgItemsTablet') || baseItems), { silent: true });
-    model.set('pgItemsMobile', String(model.get('pgItemsMobile') || model.get('pgItemsTablet') || baseItems), { silent: true });
+    model.set('pgFlexDirTablet', normalizeFlexDirectionTrait(model.get('pgFlexDirTablet') || baseFlexDir), { silent: true });
+    model.set(
+        'pgFlexDirMobile',
+        normalizeFlexDirectionTrait(model.get('pgFlexDirMobile') || model.get('pgFlexDirTablet') || baseFlexDir),
+        { silent: true }
+    );
+    model.set('pgWrapTablet', normalizeFlexWrapTrait(model.get('pgWrapTablet') || baseWrap), { silent: true });
+    model.set(
+        'pgWrapMobile',
+        normalizeFlexWrapTrait(model.get('pgWrapMobile') || model.get('pgWrapTablet') || baseWrap),
+        { silent: true }
+    );
+    model.set(
+        'pgJustifyTablet',
+        normalizeFlexJustifyTrait(model.get('pgJustifyTablet') || baseJustify),
+        { silent: true }
+    );
+    model.set(
+        'pgJustifyMobile',
+        normalizeFlexJustifyTrait(model.get('pgJustifyMobile') || model.get('pgJustifyTablet') || baseJustify),
+        { silent: true }
+    );
+    model.set(
+        'pgItemsTablet',
+        normalizeFlexItemsTrait(model.get('pgItemsTablet') || baseItems),
+        { silent: true }
+    );
+    model.set(
+        'pgItemsMobile',
+        normalizeFlexItemsTrait(model.get('pgItemsMobile') || model.get('pgItemsTablet') || baseItems),
+        { silent: true }
+    );
 }
 
 function applyContainerClasses(model) {
@@ -973,10 +1049,10 @@ function applyContainerClasses(model) {
     const gapLinked = model.get('pgGapLinked') !== false;
     let gapX = clamp(Math.round(toNumber(model.get('pgGapX'), 20)), 0, 400);
     let gapY = clamp(Math.round(toNumber(model.get('pgGapY'), 20)), 0, 400);
-    const items = model.get('pgItems') || 'stretch';
-    const justify = model.get('pgJustify') || 'start';
-    const flexDir = model.get('pgFlexDir') || 'row';
-    const wrap = model.get('pgWrap') || 'wrap';
+    const items = normalizeFlexItemsTrait(model.get('pgItems'));
+    const justify = normalizeFlexJustifyTrait(model.get('pgJustify'));
+    const flexDir = normalizeFlexDirectionTrait(model.get('pgFlexDir'));
+    const wrap = normalizeFlexWrapTrait(model.get('pgWrap'));
     const bgTypeRaw = String(model.get('pgBgType') || 'none');
     const bgType = ['none', 'color', 'image'].includes(bgTypeRaw) ? bgTypeRaw : 'none';
     const bgColor = String(model.get('pgBgColor') || '#ffffff');
@@ -999,18 +1075,17 @@ function applyContainerClasses(model) {
     const gapXMobile = clamp(Math.round(toNumber(model.get('pgGapXMobile'), gapXTablet)), 0, 400);
     const gapYTablet = clamp(Math.round(toNumber(model.get('pgGapYTablet'), gapY)), 0, 400);
     const gapYMobile = clamp(Math.round(toNumber(model.get('pgGapYMobile'), gapYTablet)), 0, 400);
-    const flexDirTablet = String(model.get('pgFlexDirTablet') || flexDir);
-    const flexDirMobile = String(model.get('pgFlexDirMobile') || flexDirTablet || flexDir);
-    const wrapTablet = String(model.get('pgWrapTablet') || wrap);
-    const wrapMobile = String(model.get('pgWrapMobile') || wrapTablet || wrap);
-    const justifyTablet = String(model.get('pgJustifyTablet') || justify);
-    const justifyMobile = String(model.get('pgJustifyMobile') || justifyTablet || justify);
-    const itemsTablet = String(model.get('pgItemsTablet') || items);
-    const itemsMobile = String(model.get('pgItemsMobile') || itemsTablet || items);
-    const editorDir = getEditorDir(model);
-    const cssFlexDirection = traitFlexDirToCssValue(flexDir, editorDir);
-    const cssFlexDirectionTablet = traitFlexDirToCssValue(flexDirTablet, editorDir);
-    const cssFlexDirectionMobile = traitFlexDirToCssValue(flexDirMobile, editorDir);
+    const flexDirTablet = normalizeFlexDirectionTrait(model.get('pgFlexDirTablet') || flexDir);
+    const flexDirMobile = normalizeFlexDirectionTrait(model.get('pgFlexDirMobile') || flexDirTablet || flexDir);
+    const wrapTablet = normalizeFlexWrapTrait(model.get('pgWrapTablet') || wrap);
+    const wrapMobile = normalizeFlexWrapTrait(model.get('pgWrapMobile') || wrapTablet || wrap);
+    const justifyTablet = normalizeFlexJustifyTrait(model.get('pgJustifyTablet') || justify);
+    const justifyMobile = normalizeFlexJustifyTrait(model.get('pgJustifyMobile') || justifyTablet || justify);
+    const itemsTablet = normalizeFlexItemsTrait(model.get('pgItemsTablet') || items);
+    const itemsMobile = normalizeFlexItemsTrait(model.get('pgItemsMobile') || itemsTablet || items);
+    const cssFlexDirection = traitFlexDirToCssValue(flexDir);
+    const cssFlexDirectionTablet = traitFlexDirToCssValue(flexDirTablet);
+    const cssFlexDirectionMobile = traitFlexDirToCssValue(flexDirMobile);
 
     if (gapLinked) {
         gapY = gapX;
@@ -1066,6 +1141,7 @@ function applyContainerClasses(model) {
     inner.addAttributes({
         class: Array.from(new Set(innerNextClasses)).join(' ').trim(),
         'data-pg-grid-outline': layout === 'grid' && gridOutline ? '1' : '0',
+        'data-pg-layout': layout,
     });
 
     const outerStyles = { ...(model.getStyle?.() || {}) };
@@ -1178,17 +1254,17 @@ function applyContainerClasses(model) {
 function ensureContainerEditorStyles(editor) {
     const STYLE_ID = 'pg-container-editor-only-style';
     const STYLE_CONTENT = `
-        .pg-container-inner > .pg-grid-column {
+        .pg-container-inner[data-pg-layout="grid"] > .pg-grid-column {
             outline: 1px dashed rgba(148, 163, 184, 0.5);
             outline-offset: -1px;
         }
 
-        .pg-container-inner[data-pg-grid-outline="1"] > * {
+        .pg-container-inner[data-pg-layout="grid"][data-pg-grid-outline="1"] > * {
             outline: 1px dashed rgba(192, 132, 252, 0.75);
             outline-offset: -1px;
         }
 
-        .pg-container-inner[data-pg-grid-outline="1"] > .pg-grid-column {
+        .pg-container-inner[data-pg-layout="grid"][data-pg-grid-outline="1"] > .pg-grid-column {
             background: rgba(192, 132, 252, 0.08);
         }
     `;

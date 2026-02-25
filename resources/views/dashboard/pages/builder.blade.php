@@ -33,7 +33,7 @@
 
 <body class="h-full bg-slate-50 text-slate-900 ">
     {{-- Root builder wrapper (used by page-builder.js via data-* attributes) --}}
-    <div id="page-builder-root" data-locale="{{ app()->getLocale() }}" class="min-h-screen flex flex-col"
+    <div id="page-builder-root" data-locale="{{ app()->getLocale() }}" class="h-screen overflow-hidden flex flex-col"
         data-load-url="{{ route('dashboard.pages.builder.data', $page) }}"
         data-save-url="{{ route('dashboard.pages.builder.data.save', $page) }}" data-preview-url="{{ $frontUrl }}"
         data-builder-url="{{ route('dashboard.pages.builder', $page) }}"
@@ -225,12 +225,12 @@
         {{-- ===========================
         MAIN LAYOUT (Canvas + Sidebar)
         ============================ --}}
-        <main class="flex-1 flex bg-slate-50">
+        <main class="flex-1 min-h-0 flex bg-slate-50">
 
             {{-- ===== CANVAS AREA (GrapesJS iframe / content) ===== --}}
-            <section class="flex-1 order-2">
-                <div class="h-full builder-canvas">
-                    <div class="h-full overflow-auto p-0">
+            <section class="flex-1 min-h-0 order-2">
+                <div class="h-full min-h-0 builder-canvas">
+                    <div id="builder-canvas-scroll" class="h-full min-h-0 overflow-auto p-0">
 
                         {{-- Empty state – shown before GrapesJS is fully initialised --}}
                         <div id="builder-empty-state"

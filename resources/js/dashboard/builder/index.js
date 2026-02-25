@@ -109,6 +109,53 @@ function initPageBuilder() {
             ]
         },
     });
+
+    // Keep Grapes selection tools/badges in sync with any active scroll container.
+    const canvasScrollHost = q('#builder-canvas-scroll');
+    let rafId = 0;
+    const removeSyncListeners = [];
+    const syncCanvasTools = () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+            try {
+                editor.Canvas?.refresh?.({ tools: true });
+            } catch (_) {
+                // noop
+            }
+            editor.refresh({ tools: true });
+        });
+    };
+
+    const bindScrollSync = (target, eventName = 'scroll', capture = false) => {
+        if (!target?.addEventListener) return;
+        target.addEventListener(eventName, syncCanvasTools, capture);
+        removeSyncListeners.push(() => target.removeEventListener(eventName, syncCanvasTools, capture));
+    };
+
+    const bindFrameScrollSync = () => {
+        const frameEl = editor.Canvas.getFrameEl();
+        if (!frameEl) return;
+        bindScrollSync(frameEl.contentWindow, 'scroll', false);
+        bindScrollSync(frameEl.contentWindow, 'resize', false);
+        bindScrollSync(frameEl.contentDocument, 'scroll', true);
+        syncCanvasTools();
+    };
+
+    bindScrollSync(window, 'resize', false);
+    bindScrollSync(canvasScrollHost, 'scroll', false);
+
+    editor.on('load', bindFrameScrollSync);
+    editor.on('canvas:frame:load', bindFrameScrollSync);
+    editor.on('component:selected', syncCanvasTools);
+
+    editor.on('destroy', () => {
+        removeSyncListeners.forEach((unbind) => unbind());
+        if (rafId) cancelAnimationFrame(rafId);
+        editor.off('load', bindFrameScrollSync);
+        editor.off('canvas:frame:load', bindFrameScrollSync);
+        editor.off('component:selected', syncCanvasTools);
+    });
+
     editor.setCustomRte({
         enable(el, rteInst = {}) {
             el.contentEditable = true;
