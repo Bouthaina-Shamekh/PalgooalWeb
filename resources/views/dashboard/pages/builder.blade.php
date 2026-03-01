@@ -444,13 +444,15 @@
                                     </div>
                                 </div>
 
-                                <div class="mt-3 grid grid-cols-3 gap-2">
+                                <div class="mt-3 grid grid-cols-4 gap-2">
                                     <button type="button" class="pg-props-tab-btn" data-prop-tab="traits"
                                         data-active="true">محتوى</button>
                                     <button type="button" class="pg-props-tab-btn" data-prop-tab="styles"
                                         data-active="false">تنسيق</button>
                                     <button type="button" class="pg-props-tab-btn" data-prop-tab="advanced"
                                         data-active="false">متقدم</button>
+                                    <button type="button" class="pg-props-tab-btn" data-prop-tab="layers"
+                                        data-active="false">طبقات</button>
                                 </div>
                             </div>
 
@@ -465,6 +467,11 @@
 
                                 <div class="pg-props-tab-content" data-prop-content="advanced" data-active="false">
                                     <div id="pg-advanced" class="space-y-4"></div>
+                                </div>
+
+                                <div class="pg-props-tab-content" data-prop-content="layers" data-active="false">
+                                    <div class="text-[11px] text-slate-500 mb-2">اسحب لإعادة ترتيب السكشنات والطبقات.</div>
+                                    <div id="gjs-layers"></div>
                                 </div>
                             </div>
                         </div>

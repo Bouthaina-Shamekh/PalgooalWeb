@@ -443,6 +443,17 @@ main>aside {
 }
 
 /* Layers */
+#gjs-layers {
+    max-height: 52vh;
+    overflow: auto;
+    padding-inline-end: 2px;
+}
+
+#gjs-layers .gjs-layer {
+    background: #fff;
+    margin-bottom: 6px !important;
+}
+
 #gjs-layers .gjs-layer {
     border: 1px solid rgba(36, 11, 54, .08);
 }

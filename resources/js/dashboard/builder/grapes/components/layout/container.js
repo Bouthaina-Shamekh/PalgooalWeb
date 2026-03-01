@@ -596,7 +596,7 @@ const INNER_WRAPPER_PROPS = {
     droppable: true,
     copyable: false,
     removable: false,
-    layerable: false,
+    layerable: true,
     highlightable: false,
 };
 

@@ -309,6 +309,7 @@ export function initSidebarTabs() {
  */
 export function bindEditorSidebarTabs(editor) {
     if (!editor) return;
+    const validElementTabs = new Set(['traits', 'styles', 'advanced', 'layers']);
 
     const isWrapper = (cmp) => {
         const wrapper = editor.getWrapper?.();
@@ -342,7 +343,8 @@ export function bindEditorSidebarTabs(editor) {
         }
 
         setPanel('element');
-        setElementTab('traits');
+        const desiredTab = validElementTabs.has(lastElementTab) ? lastElementTab : 'traits';
+        setElementTab(desiredTab);
 
 
         const name =
@@ -361,6 +363,11 @@ export function bindEditorSidebarTabs(editor) {
 
     editor.on('component:deselected', () => {
         activeAdvancedComponent = null;
+        if (lastElementTab === 'layers') {
+            setPanel('element');
+            setSelectedLabel('الطبقات');
+            return;
+        }
         setPanel('widgets');
         setSelectedLabel('لا يوجد تحديد');
     });

@@ -88,7 +88,14 @@ function initPageBuilder() {
 
         // blockManager: elBlocks ? { appendTo: '#gjs-blocks', custom: true } : { custom: true },
         blockManager: { custom: true },
-        layerManager: elLayers ? { appendTo: '#gjs-layers' } : {},
+        layerManager: elLayers
+            ? {
+                appendTo: '#gjs-layers',
+                showWrapper: false,
+                scrollCanvas: { behavior: 'auto', block: 'nearest' },
+                scrollLayers: { behavior: 'auto', block: 'nearest' },
+            }
+            : {},
         traitManager: elTraits ? { appendTo: '#gjs-traits' } : {},
         styleManager: elStyles
             ? {
@@ -155,6 +162,54 @@ function initPageBuilder() {
         editor.off('canvas:frame:load', bindFrameScrollSync);
         editor.off('component:selected', syncCanvasTools);
     });
+
+    const hasClass = (component, className) => {
+        const classAttr = String(component?.getAttributes?.()?.class || '');
+        return classAttr.split(/\s+/).includes(className);
+    };
+
+    const getContainerInner = (containerComponent) => {
+        const children = containerComponent?.components?.();
+        if (!children) return null;
+        let inner = null;
+        children.each((child) => {
+            if (!inner && hasClass(child, 'pg-container-inner')) inner = child;
+        });
+        return inner;
+    };
+
+    const getClosestContainer = (component) => {
+        let current = component;
+        while (current) {
+            if (current.get?.('type') === 'pg-container') return current;
+            current = current.parent?.();
+        }
+        return null;
+    };
+
+    const syncLayersRootToSelection = (component = null) => {
+        const layers = editor?.Layers;
+        const wrapper = editor?.getWrapper?.();
+        if (!layers?.setRoot || !wrapper) return;
+
+        const selectedContainer =
+            component?.get?.('type') === 'pg-container'
+                ? component
+                : getClosestContainer(component);
+
+        const nextRoot = selectedContainer
+            ? getContainerInner(selectedContainer) || selectedContainer
+            : wrapper;
+
+        const currentRoot = layers.getRoot?.();
+        if (currentRoot !== nextRoot) {
+            layers.setRoot(nextRoot);
+        }
+    };
+
+    editor.on('component:selected', (component) => syncLayersRootToSelection(component));
+    editor.on('component:deselected', () => syncLayersRootToSelection(null));
+    editor.on('load', () => syncLayersRootToSelection(editor.getSelected?.() || null));
 
     editor.setCustomRte({
         enable(el, rteInst = {}) {
