@@ -55,8 +55,21 @@ function initPageBuilder() {
 
     const elBlocks = q('#gjs-blocks');
     const elLayers = q('#gjs-layers');
+    const elLayersSidebarSlot = q('#gjs-layers-sidebar-slot');
+    const elLayersModalSlot = q('#gjs-layers-modal-slot');
     const elTraits = q('#gjs-traits');
     const elStyles = q('#gjs-styles');
+    const layersToggleBtn = q('#builder-layers-toggle');
+    const layersWindow = q('#builder-layers-window');
+    const layersPanel = q('#builder-layers-panel');
+    const layersDragHandle = q('#builder-layers-drag-handle');
+    const layersCloseBtn = q('#builder-layers-close');
+    let isLayersWindowOpen = false;
+    const layersDragState = {
+        active: false,
+        offsetX: 0,
+        offsetY: 0,
+    };
 
     // Canvas styles from blade link
     const canvasStyles = [];
@@ -117,6 +130,82 @@ function initPageBuilder() {
         },
     });
 
+    const moveLayersHost = (slot) => {
+        if (!elLayers || !slot || elLayers.parentElement === slot) return;
+        slot.appendChild(elLayers);
+    };
+
+    const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
+    const setLayersPanelPosition = (left, top) => {
+        if (!layersPanel) return;
+        const width = layersPanel.offsetWidth || 0;
+        const height = layersPanel.offsetHeight || 0;
+        const minLeft = 12;
+        const minTop = 72;
+        const maxLeft = Math.max(minLeft, window.innerWidth - width - 12);
+        const maxTop = Math.max(minTop, window.innerHeight - height - 12);
+
+        layersPanel.style.left = `${clamp(left, minLeft, maxLeft)}px`;
+        layersPanel.style.top = `${clamp(top, minTop, maxTop)}px`;
+        layersPanel.style.right = 'auto';
+    };
+
+    const stopLayersDrag = () => {
+        layersDragState.active = false;
+        if (layersPanel) layersPanel.dataset.dragging = 'false';
+        document.removeEventListener('mousemove', handleLayersWindowDrag);
+        document.removeEventListener('mouseup', stopLayersDrag);
+    };
+
+    function handleLayersWindowDrag(event) {
+        if (!layersDragState.active || !layersPanel) return;
+        setLayersPanelPosition(
+            event.clientX - layersDragState.offsetX,
+            event.clientY - layersDragState.offsetY,
+        );
+    }
+
+    const startLayersDrag = (event) => {
+        if (!layersPanel || event.button !== 0) return;
+        if (event.target.closest('button, a, input, textarea, select, label')) return;
+
+        const rect = layersPanel.getBoundingClientRect();
+        setLayersPanelPosition(rect.left, rect.top);
+
+        layersDragState.active = true;
+        layersDragState.offsetX = event.clientX - rect.left;
+        layersDragState.offsetY = event.clientY - rect.top;
+        layersPanel.dataset.dragging = 'true';
+
+        document.addEventListener('mousemove', handleLayersWindowDrag);
+        document.addEventListener('mouseup', stopLayersDrag);
+    };
+
+    const clampLayersWindowToViewport = () => {
+        if (!layersPanel) return;
+        const rect = layersPanel.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        setLayersPanelPosition(rect.left, rect.top);
+    };
+
+    const setLayersWindowState = (open) => {
+        isLayersWindowOpen = !!open;
+
+        if (layersWindow) {
+            layersWindow.hidden = !open;
+            layersWindow.dataset.open = open ? 'true' : 'false';
+            layersWindow.setAttribute('aria-hidden', open ? 'false' : 'true');
+        }
+
+        if (layersToggleBtn) {
+            layersToggleBtn.dataset.active = open ? 'true' : 'false';
+            layersToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+
+        document.body.classList.toggle('pg-layers-window-open', open);
+    };
+
     // Keep Grapes selection tools/badges in sync with any active scroll container.
     const canvasScrollHost = q('#builder-canvas-scroll');
     let rafId = 0;
@@ -158,6 +247,10 @@ function initPageBuilder() {
     editor.on('destroy', () => {
         removeSyncListeners.forEach((unbind) => unbind());
         if (rafId) cancelAnimationFrame(rafId);
+        stopLayersDrag();
+        window.removeEventListener('resize', clampLayersWindowToViewport);
+        document.removeEventListener('keydown', handleLayersWindowKeydown);
+        document.body.classList.remove('pg-layers-window-open');
         editor.off('load', bindFrameScrollSync);
         editor.off('canvas:frame:load', bindFrameScrollSync);
         editor.off('component:selected', syncCanvasTools);
@@ -197,15 +290,55 @@ function initPageBuilder() {
                 ? component
                 : getClosestContainer(component);
 
-        const nextRoot = selectedContainer
-            ? getContainerInner(selectedContainer) || selectedContainer
-            : wrapper;
+        const nextRoot = isLayersWindowOpen
+            ? wrapper
+            : selectedContainer
+                ? getContainerInner(selectedContainer) || selectedContainer
+                : wrapper;
 
         const currentRoot = layers.getRoot?.();
         if (currentRoot !== nextRoot) {
             layers.setRoot(nextRoot);
         }
     };
+
+    const openLayersWindow = () => {
+        if (!layersWindow || !elLayersModalSlot) return;
+        moveLayersHost(elLayersModalSlot);
+        setLayersWindowState(true);
+        clampLayersWindowToViewport();
+        syncLayersRootToSelection(editor.getSelected?.() || null);
+    };
+
+    const closeLayersWindow = () => {
+        if (!elLayersSidebarSlot) return;
+        stopLayersDrag();
+        moveLayersHost(elLayersSidebarSlot);
+        setLayersWindowState(false);
+        syncLayersRootToSelection(editor.getSelected?.() || null);
+    };
+
+    const handleLayersWindowKeydown = (event) => {
+        if (event.key === 'Escape' && isLayersWindowOpen) {
+            closeLayersWindow();
+        }
+    };
+
+    if (layersToggleBtn && layersWindow && elLayersSidebarSlot && elLayersModalSlot) {
+        layersToggleBtn.addEventListener('click', () => {
+            if (isLayersWindowOpen) {
+                closeLayersWindow();
+            } else {
+                openLayersWindow();
+            }
+        });
+
+        layersCloseBtn?.addEventListener('click', closeLayersWindow);
+        layersDragHandle?.addEventListener('mousedown', startLayersDrag);
+        document.addEventListener('keydown', handleLayersWindowKeydown);
+        window.addEventListener('resize', clampLayersWindowToViewport);
+        setLayersWindowState(false);
+    }
 
     editor.on('component:selected', (component) => syncLayersRootToSelection(component));
     editor.on('component:deselected', () => syncLayersRootToSelection(null));

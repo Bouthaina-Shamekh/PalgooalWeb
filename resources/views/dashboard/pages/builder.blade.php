@@ -158,6 +158,19 @@
                             Preview
                         </a>
 
+                        {{-- Layers --}}
+                        <button id="builder-layers-toggle" type="button" aria-expanded="false"
+                            class="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg
+               border border-slate-300 text-slate-700 hover:bg-slate-100 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M4 6h16M4 12h16M4 18h16" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 4v4M16 10v4M12 16v4" />
+                            </svg>
+                            الطبقات
+                        </button>
+
                         {{-- Publish --}}
                         <button id="builder-publish" type="button"
                             class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg
@@ -471,7 +484,9 @@
 
                                 <div class="pg-props-tab-content" data-prop-content="layers" data-active="false">
                                     <div class="text-[11px] text-slate-500 mb-2">اسحب لإعادة ترتيب السكشنات والطبقات.</div>
-                                    <div id="gjs-layers"></div>
+                                    <div id="gjs-layers-sidebar-slot">
+                                        <div id="gjs-layers"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -493,6 +508,29 @@
         </main>
 
         <span class="hidden rotate-180 rtl:-left-3 -right-3"></span>
+    </div>
+
+    <div id="builder-layers-window" class="pg-layers-window" hidden data-open="false" aria-hidden="true">
+        <div id="builder-layers-panel" class="pg-layers-window-panel">
+            <div id="builder-layers-drag-handle" class="pg-layers-window-header">
+                <div>
+                    <div class="pg-layers-window-title">الطبقات</div>
+                    <div class="pg-layers-window-subtitle">تحكم بترتيب السكشنات والعناصر من نافذة مستقلة.</div>
+                </div>
+
+                <button type="button" id="builder-layers-close" class="pg-layers-window-close"
+                    aria-label="إغلاق نافذة الطبقات">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="pg-layers-window-body">
+                <div class="text-[11px] text-slate-500 mb-3">اسحب لإعادة ترتيب الطبقات داخل الصفحة.</div>
+                <div id="gjs-layers-modal-slot"></div>
+            </div>
+        </div>
     </div>
 
     {{-- Hidden bridge for GrapesJS media trait (uses existing Media Picker library) --}}
