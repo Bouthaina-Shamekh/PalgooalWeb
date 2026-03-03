@@ -462,8 +462,6 @@ function makeResponsiveInnerStyle({
         'max-width': contentWidth === 'boxed' ? `${boxedWidth}px` : 'none',
         'column-gap': `${gapX}${gapUnit}`,
         'row-gap': `${gapY}${gapUnit}`,
-        'align-items': traitItemsToCssValue(items),
-        'justify-content': traitJustifyToCssValue(justify),
     };
 
     if (layout === 'grid') {
@@ -476,6 +474,8 @@ function makeResponsiveInnerStyle({
 
     return {
         ...base,
+        'align-items': traitItemsToCssValue(items),
+        'justify-content': traitJustifyToCssValue(justify),
         'flex-direction': flexDirection,
         'flex-wrap': wrap === 'nowrap' ? 'nowrap' : 'wrap',
     };
@@ -489,12 +489,17 @@ function extractRepeatCount(templateValue) {
 }
 
 function setTraitRowVisible(name, visible) {
-    const rows = document.querySelectorAll('.gjs-trt-trait');
+    const selectorByName =
+        `input[name="${name}"], select[name="${name}"], textarea[name="${name}"], ` +
+        `[data-pg-trait-name="${name}"], [data-trait-name="${name}"]`;
+
+    const rows = new Set();
+    document.querySelectorAll(selectorByName).forEach((field) => {
+        const row = field.closest('.gjs-trt-trait');
+        if (row) rows.add(row);
+    });
+
     rows.forEach((row) => {
-        const field = row.querySelector(
-            `input[name="${name}"], select[name="${name}"], textarea[name="${name}"], [data-pg-trait-name="${name}"]`
-        );
-        if (!field) return;
         row.style.display = visible ? '' : 'none';
     });
 }
@@ -543,8 +548,8 @@ function syncContainerTraitRows(model) {
     setTraitRowVisible('pgMinHeightTablet', isTablet);
     setTraitRowVisible('pgColsTablet', isTablet && isGrid);
     setTraitRowVisible('pgRowsTablet', isTablet && isGrid);
-    setTraitRowVisible('pgGapXTablet', isTablet);
-    setTraitRowVisible('pgGapYTablet', isTablet);
+    setTraitRowVisible('pgGapXTablet', isTablet && isGrid);
+    setTraitRowVisible('pgGapYTablet', isTablet && isGrid);
     setTraitRowVisible('pgFlexDirTablet', isTablet && isFlex);
     setTraitRowVisible('pgWrapTablet', isTablet && isFlex);
     setTraitRowVisible('pgJustifyTablet', isTablet && isFlex);
@@ -555,8 +560,8 @@ function syncContainerTraitRows(model) {
     setTraitRowVisible('pgMinHeightMobile', isMobile);
     setTraitRowVisible('pgColsMobile', isMobile && isGrid);
     setTraitRowVisible('pgRowsMobile', isMobile && isGrid);
-    setTraitRowVisible('pgGapXMobile', isMobile);
-    setTraitRowVisible('pgGapYMobile', isMobile);
+    setTraitRowVisible('pgGapXMobile', isMobile && isGrid);
+    setTraitRowVisible('pgGapYMobile', isMobile && isGrid);
     setTraitRowVisible('pgFlexDirMobile', isMobile && isFlex);
     setTraitRowVisible('pgWrapMobile', isMobile && isFlex);
     setTraitRowVisible('pgJustifyMobile', isMobile && isFlex);
@@ -767,12 +772,45 @@ function cleanInnerContainerClasses(classes) {
 }
 
 function hydrateContainerProps(model) {
-    const outerClasses = classListFromString(model.getAttributes()?.class);
+    const outerAttributes = model.getAttributes?.() || {};
+    const outerClasses = classListFromString(outerAttributes.class);
     const outerStyles = model.getStyle?.() || {};
     const inner = ensureInnerWrapper(model);
     const innerClasses = classListFromString(inner?.getAttributes?.()?.class);
     const innerStyles = inner?.getStyle?.() || {};
+    const allowedGapUnits = ['px', 'rem', 'em', '%', 'vh', 'vw'];
+    const existingContentWidth = model.get('pgContentWidth') === 'full' ? 'full' : 'boxed';
+    const existingFullWidth = clamp(Math.round(toNumber(model.get('pgFullWidth'), 100)), 10, 100);
+    const existingBoxedWidth = clamp(Math.round(toNumber(model.get('pgBoxedWidth'), 1200)), 320, 2400);
+    const existingMinHeight = clamp(Math.round(toNumber(model.get('pgMinHeight'), 0)), 0, 2000);
+    const existingMinHeightUnit = model.get('pgMinHeightUnit') === 'vh' ? 'vh' : 'px';
+    const existingPaddingX = PADDING_X_CLASS_MAP[model.get('pgPaddingX')] ? model.get('pgPaddingX') : 'comfortable';
+    const existingPaddingY = PADDING_Y_CLASS_MAP[model.get('pgPaddingY')] ? model.get('pgPaddingY') : 'md';
+    const existingLayout = model.get('pgLayout') === 'flex' ? 'flex' : 'grid';
+    const existingCols = clamp(Math.round(toNumber(model.get('pgCols'), 3)), 1, 12);
+    const existingRows = clamp(Math.round(toNumber(model.get('pgRows'), 2)), 1, 12);
+    const existingGapX = clamp(Math.round(toNumber(model.get('pgGapX'), 20)), 0, 400);
+    const existingGapY = clamp(Math.round(toNumber(model.get('pgGapY'), 20)), 0, 400);
+    const existingGapUnit = allowedGapUnits.includes(model.get('pgGapUnit')) ? model.get('pgGapUnit') : 'px';
+    const existingGapLinked = model.get('pgGapLinked') === true || model.get('pgGapLinked') === 'true' || model.get('pgGapLinked') === 1;
+    const existingGridOutline =
+        model.get('pgGridOutline') === true || model.get('pgGridOutline') === 'true' || model.get('pgGridOutline') === 1;
+    const existingItems = normalizeFlexItemsTrait(model.get('pgItems'));
+    const existingJustify = normalizeFlexJustifyTrait(model.get('pgJustify'));
+    const existingFlexDir = normalizeFlexDirectionTrait(model.get('pgFlexDir'));
+    const existingWrap = normalizeFlexWrapTrait(model.get('pgWrap'));
+    const existingBgType = ['none', 'color', 'image'].includes(String(model.get('pgBgType') || '').trim().toLowerCase())
+        ? String(model.get('pgBgType') || '').trim().toLowerCase()
+        : 'none';
+    const existingBgColor = String(model.get('pgBgColor') || '#ffffff').trim() || '#ffffff';
+    const existingBgImage = String(model.get('pgBgImage') || '').trim();
+    const existingBgPosition = String(model.get('pgBgPosition') || 'center center').trim().toLowerCase() || 'center center';
+    const existingBgSize = String(model.get('pgBgSize') || 'cover').trim().toLowerCase() || 'cover';
+    const existingBgRepeat = String(model.get('pgBgRepeat') || 'no-repeat').trim().toLowerCase() || 'no-repeat';
 
+    const declaredContentWidth = String(outerAttributes['data-pg-content-width'] || '')
+        .trim()
+        .toLowerCase();
     const explicitFull = outerClasses.includes('pg-content-full');
     const explicitBoxed = outerClasses.includes('pg-content-boxed');
     const parsedOuterWidth = parseCssDimension(outerStyles.width);
@@ -785,7 +823,11 @@ function hydrateContainerProps(model) {
     const bgSizeValue = String(outerStyles['background-size'] || '').trim();
     const bgRepeatValue = String(outerStyles['background-repeat'] || '').trim();
 
-    if (explicitFull) {
+    if (declaredContentWidth === 'full') {
+        model.set('pgContentWidth', 'full', { silent: true });
+    } else if (declaredContentWidth === 'boxed') {
+        model.set('pgContentWidth', 'boxed', { silent: true });
+    } else if (explicitFull) {
         model.set('pgContentWidth', 'full', { silent: true });
     } else if (explicitBoxed) {
         model.set('pgContentWidth', 'boxed', { silent: true });
@@ -793,14 +835,16 @@ function hydrateContainerProps(model) {
         model.set('pgContentWidth', 'boxed', { silent: true });
     } else if (parsedOuterMax && outerStyles['max-width'] !== 'none') {
         model.set('pgContentWidth', 'boxed', { silent: true });
+    } else if (!parsedInnerMax && (!parsedOuterMax || outerStyles['max-width'] === 'none')) {
+        model.set('pgContentWidth', existingContentWidth, { silent: true });
     } else {
-        model.set('pgContentWidth', 'boxed', { silent: true });
+        model.set('pgContentWidth', existingContentWidth, { silent: true });
     }
 
     if (parsedOuterWidth && parsedOuterWidth.unit === '%') {
         model.set('pgFullWidth', String(clamp(Math.round(parsedOuterWidth.value), 10, 100)), { silent: true });
     } else {
-        model.set('pgFullWidth', '100', { silent: true });
+        model.set('pgFullWidth', String(existingFullWidth), { silent: true });
     }
 
     if (parsedInnerMax && parsedInnerMax.unit === 'px') {
@@ -814,15 +858,15 @@ function hydrateContainerProps(model) {
     } else if (outerClasses.includes('max-w-7xl')) {
         model.set('pgBoxedWidth', '1280', { silent: true });
     } else {
-        model.set('pgBoxedWidth', '1200', { silent: true });
+        model.set('pgBoxedWidth', String(existingBoxedWidth), { silent: true });
     }
 
     if (parsedMinHeight) {
         model.set('pgMinHeight', String(clamp(Math.round(parsedMinHeight.value), 0, 2000)), { silent: true });
         model.set('pgMinHeightUnit', parsedMinHeight.unit === 'vh' ? 'vh' : 'px', { silent: true });
     } else {
-        model.set('pgMinHeight', '0', { silent: true });
-        model.set('pgMinHeightUnit', 'px', { silent: true });
+        model.set('pgMinHeight', String(existingMinHeight), { silent: true });
+        model.set('pgMinHeightUnit', existingMinHeightUnit, { silent: true });
     }
 
     if (bgImageValue) {
@@ -835,11 +879,20 @@ function hydrateContainerProps(model) {
     ) {
         model.set('pgBgType', 'color', { silent: true });
     } else {
-        model.set('pgBgType', 'none', { silent: true });
+        model.set('pgBgType', existingBgType, { silent: true });
     }
 
-    model.set('pgBgColor', normalizeColorValue(bgColorValue, '#ffffff'), { silent: true });
-    model.set('pgBgImage', bgImageValue || '', { silent: true });
+    model.set(
+        'pgBgColor',
+        bgColorValue &&
+            bgColorValue !== 'transparent' &&
+            bgColorValue !== 'rgba(0, 0, 0, 0)' &&
+            bgColorValue !== 'rgba(0,0,0,0)'
+            ? normalizeColorValue(bgColorValue, existingBgColor)
+            : existingBgColor,
+        { silent: true }
+    );
+    model.set('pgBgImage', bgImageValue || existingBgImage, { silent: true });
     const allowedBgPositions = [
         'left top',
         'left center',
@@ -858,16 +911,28 @@ function hydrateContainerProps(model) {
     const normalizedBgSize = String(bgSizeValue || '').trim().toLowerCase();
     const normalizedBgRepeat = String(bgRepeatValue || '').trim().toLowerCase();
 
-    model.set('pgBgPosition', allowedBgPositions.includes(normalizedBgPosition) ? normalizedBgPosition : 'center center', { silent: true });
-    model.set('pgBgSize', allowedBgSizes.includes(normalizedBgSize) ? normalizedBgSize : 'cover', { silent: true });
-    model.set('pgBgRepeat', allowedBgRepeats.includes(normalizedBgRepeat) ? normalizedBgRepeat : 'no-repeat', { silent: true });
+    model.set(
+        'pgBgPosition',
+        allowedBgPositions.includes(normalizedBgPosition) ? normalizedBgPosition : existingBgPosition,
+        { silent: true }
+    );
+    model.set(
+        'pgBgSize',
+        allowedBgSizes.includes(normalizedBgSize) ? normalizedBgSize : existingBgSize,
+        { silent: true }
+    );
+    model.set(
+        'pgBgRepeat',
+        allowedBgRepeats.includes(normalizedBgRepeat) ? normalizedBgRepeat : existingBgRepeat,
+        { silent: true }
+    );
 
     if (outerClasses.includes('px-0')) {
         model.set('pgPaddingX', 'none', { silent: true });
     } else if (outerClasses.includes('sm:px-6') || outerClasses.includes('lg:px-8')) {
         model.set('pgPaddingX', 'compact', { silent: true });
     } else {
-        model.set('pgPaddingX', 'comfortable', { silent: true });
+        model.set('pgPaddingX', existingPaddingX, { silent: true });
     }
 
     if (outerClasses.includes('py-0')) {
@@ -877,7 +942,7 @@ function hydrateContainerProps(model) {
     } else if (outerClasses.includes('py-16')) {
         model.set('pgPaddingY', 'lg', { silent: true });
     } else {
-        model.set('pgPaddingY', 'md', { silent: true });
+        model.set('pgPaddingY', existingPaddingY, { silent: true });
     }
 
     const innerDisplay = String(innerStyles.display || '').trim().toLowerCase();
@@ -887,7 +952,7 @@ function hydrateContainerProps(model) {
     } else if (innerDisplay === 'grid' || innerClasses.includes('grid')) {
         model.set('pgLayout', 'grid', { silent: true });
     } else {
-        model.set('pgLayout', 'grid', { silent: true });
+        model.set('pgLayout', existingLayout, { silent: true });
     }
 
     const colsClass = innerClasses.find((c) => c.startsWith('grid-cols-'));
@@ -904,15 +969,16 @@ function hydrateContainerProps(model) {
 
     if (styleCols) model.set('pgCols', String(clamp(styleCols, 1, 12)), { silent: true });
     else if (colsClass) model.set('pgCols', colsClass.replace('grid-cols-', ''), { silent: true });
-    else model.set('pgCols', '3', { silent: true });
+    else model.set('pgCols', String(existingCols), { silent: true });
 
     if (styleRows) model.set('pgRows', String(clamp(styleRows, 1, 12)), { silent: true });
     else if (rowsClass) model.set('pgRows', rowsClass.replace('grid-rows-', ''), { silent: true });
-    else model.set('pgRows', '2', { silent: true });
+    else model.set('pgRows', String(existingRows), { silent: true });
 
-    let nextGapX = 20;
-    let nextGapY = 20;
-    let nextGapUnit = 'px';
+    let nextGapX = existingGapX;
+    let nextGapY = existingGapY;
+    let nextGapUnit = existingGapUnit;
+    const hasExplicitGapFromDom = !!(parsedColGap || parsedRowGap || gapXClass || gapYClass || gapClass);
 
     if (parsedColGap && parsedRowGap) {
         nextGapX = clamp(Math.round(parsedColGap.value), 0, 400);
@@ -932,17 +998,29 @@ function hydrateContainerProps(model) {
     model.set('pgGapX', String(nextGapX), { silent: true });
     model.set('pgGapY', String(nextGapY), { silent: true });
     model.set('pgGapUnit', nextGapUnit, { silent: true });
-    model.set('pgGapLinked', nextGapX === nextGapY, { silent: true });
-    model.set('pgGridOutline', inner?.getAttributes?.()?.['data-pg-grid-outline'] === '1', { silent: true });
+    model.set('pgGapLinked', hasExplicitGapFromDom ? nextGapX === nextGapY : existingGapLinked, { silent: true });
+
+    const outlineAttr = inner?.getAttributes?.()?.['data-pg-grid-outline'];
+    if (outlineAttr === '1') {
+        model.set('pgGridOutline', true, { silent: true });
+    } else if (outlineAttr === '0') {
+        model.set('pgGridOutline', false, { silent: true });
+    } else {
+        model.set('pgGridOutline', existingGridOutline, { silent: true });
+    }
 
     const styleItems = String(innerStyles['align-items'] || '').trim().toLowerCase();
     const styleJustify = String(innerStyles['justify-content'] || '').trim().toLowerCase();
     const hydratedItems = itemsClass
         ? itemsClass.replace('items-', '')
-        : cssAlignItemsToTraitValue(styleItems);
+        : styleItems
+          ? cssAlignItemsToTraitValue(styleItems)
+          : existingItems;
     const hydratedJustify = justifyClass
         ? justifyClass.replace('justify-', '')
-        : cssJustifyContentToTraitValue(styleJustify);
+        : styleJustify
+          ? cssJustifyContentToTraitValue(styleJustify)
+          : existingJustify;
 
     model.set('pgItems', normalizeFlexItemsTrait(hydratedItems), { silent: true });
     model.set('pgJustify', normalizeFlexJustifyTrait(hydratedJustify), { silent: true });
@@ -958,7 +1036,7 @@ function hydrateContainerProps(model) {
     } else if (innerClasses.includes('flex-col')) {
         nextFlexDir = cssFlexDirToTraitValue('column');
     } else {
-        nextFlexDir = cssFlexDirToTraitValue('row');
+        nextFlexDir = existingFlexDir;
     }
     model.set('pgFlexDir', normalizeFlexDirectionTrait(nextFlexDir), { silent: true });
 
@@ -966,7 +1044,9 @@ function hydrateContainerProps(model) {
     const nextWrap =
         styleWrap === 'nowrap' || innerClasses.includes('flex-nowrap')
             ? 'nowrap'
-            : 'wrap';
+            : styleWrap === 'wrap' || innerClasses.includes('flex-wrap')
+              ? 'wrap'
+              : existingWrap;
     model.set('pgWrap', normalizeFlexWrapTrait(nextWrap), { silent: true });
 
     const baseFullWidth = clamp(Math.round(toNumber(model.get('pgFullWidth'), 100)), 10, 100);
@@ -1136,6 +1216,7 @@ function applyContainerClasses(model) {
     model.addAttributes({
         class: Array.from(new Set(outerNextClasses)).join(' ').trim(),
         'data-gjs-name': 'Container',
+        'data-pg-content-width': contentWidth,
     });
 
     inner.addAttributes({
@@ -1245,6 +1326,7 @@ function applyContainerClasses(model) {
         justify: justifyMobile,
     });
 
+    // Responsive rules are always refreshed after base outer/inner styles are written.
     setResponsiveRule(model, outerSelector, tabletOuterStyle, MEDIA_QUERY_TABLET);
     setResponsiveRule(model, outerSelector, mobileOuterStyle, MEDIA_QUERY_MOBILE);
     setResponsiveRule(model, innerSelector, tabletInnerStyle, MEDIA_QUERY_TABLET);
@@ -1316,8 +1398,9 @@ export function registerContainerElement(editor) {
                 draggable: true,
                 droppable: true,
                 attributes: {
-                    class: 'pg-layout pg-container pg-content-boxed w-full px-4 sm:px-8 lg:px-24 py-12',
+                    class: 'pg-layout pg-container pg-content-full w-full px-4 sm:px-8 lg:px-24 py-12',
                     'data-gjs-name': 'Container',
+                    'data-pg-content-width': 'full',
                 },
                 components: [
                     {
@@ -1331,7 +1414,7 @@ export function registerContainerElement(editor) {
                     },
                 ],
                 pgTag: 'section',
-                pgContentWidth: 'boxed',
+                pgContentWidth: 'full',
                 pgFullWidth: '100',
                 pgBoxedWidth: '1200',
                 pgMinHeight: '0',
@@ -1933,3 +2016,16 @@ export function registerContainerElement(editor) {
         requestAnimationFrame(() => syncContainerTraitRows(component));
     });
 }
+
+// change summary:
+// - Refreshed the responsive Grid layer inside `applyContainerClasses` so tablet/mobile CSS rules are always rewritten after base styles.
+// - Kept responsive Grid rules on Css Composer via `setResponsiveRule` and `makeResponsiveOuterStyle` / `makeResponsiveInnerStyle`.
+// - Limited tablet/mobile Grid gap traits visibility to the selected device and Grid layout only.
+
+// regression checklist:
+// - [ ] Grid desktop output stays unchanged.
+// - [ ] Tablet and Mobile change Grid columns inside the canvas through Css Composer rules.
+// - [ ] Tablet and Mobile gaps change visually through responsive CSS rules.
+// - [ ] Boxed/full widths and min-height change visually on tablet/mobile.
+// - [ ] No extra normalize passes, event loops, or drag/drop churn were introduced.
+// - [ ] `npm run build:vite` succeeds without errors.

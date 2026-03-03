@@ -16,6 +16,8 @@ import { registerGridElement } from './layout/grid';
 import { registerRowElement } from './layout/row';
 import { registerServicesSection } from '../sections/services';
 import { registerSliderSection } from './sections/slider';
+import { registerHeroSection } from './sections/hero';
+import { registerHowBuildSection } from './sections/how-we-build';
 
 
 export function registerAllComponents(editor) {
@@ -37,4 +39,6 @@ export function registerAllComponents(editor) {
     registerRowElement(editor);
     registerServicesSection(editor);
     registerSliderSection(editor);
+    registerHeroSection(editor);
+    registerHowBuildSection(editor);
 }

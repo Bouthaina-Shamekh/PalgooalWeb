@@ -1,4 +1,6 @@
 import { registerAllComponents } from './components';
+import { createHeroBlockContent } from './components/sections/hero';
+import { createHowBuildBlockContent } from './components/sections/how-we-build';
 
 const ensureClass = (cls) => (cls ? String(cls).trim() : '');
 const splitClasses = (cls) => ensureClass(cls).split(/\s+/).filter(Boolean);
@@ -447,6 +449,18 @@ export function registerBlocks(editor) {
         label: 'الخدمات (Swiper)',
         category: 'Sections',
         content: { type: 'pg-services-section' },
+    });
+
+    bm.add('pg-hero', {
+        label: 'Hero Launch',
+        category: 'Sections',
+        content: createHeroBlockContent(),
+    });
+
+    bm.add('pg-how-build', {
+        label: 'How We Build',
+        category: 'Sections',
+        content: createHowBuildBlockContent(),
     });
 
     // bm.add('pg-slider', {

@@ -204,13 +204,15 @@ function hydrateIconProps(model) {
     const fromData = normalizeSpaces(attrs['data-pg-icon-class']);
     const iconClass = fromData || DEFAULT_ICON_CLASS;
     const preset = resolvePresetByClass(iconClass);
+    const existingAlign = normalizeAlign(model?.get?.('pgAlign'));
 
     model.set('pgIconPreset', preset, { silent: true });
     model.set('pgIconClass', preset === 'custom' ? iconClass : '', { silent: true });
 
     if (classes.includes('mx-auto')) model.set('pgAlign', 'center', { silent: true });
     else if (classes.includes('ml-auto')) model.set('pgAlign', 'right', { silent: true });
-    else model.set('pgAlign', 'left', { silent: true });
+    else if (classes.includes('mr-auto')) model.set('pgAlign', 'left', { silent: true });
+    else model.set('pgAlign', existingAlign, { silent: true });
 
     const href = normalizeUrl(attrs.href);
     if (tag === 'a' && href) {
