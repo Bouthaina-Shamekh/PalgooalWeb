@@ -88,3 +88,51 @@ langSwitch?.addEventListener('click', () => {
 
     menu.classList.toggle('hidden');
   };
+
+  // Purple topbar header variant mobile drawer
+  const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+  const mobileMenu = document.getElementById('mobile-menu');
+  const mobileMenuContainer = document.getElementById('mobile-menu-container');
+
+  function openMobileMenu() {
+    if (!mobileMenu || !mobileMenuContainer) return;
+
+    mobileMenu.classList.remove('invisible', 'opacity-0');
+    mobileMenu.classList.add('opacity-100');
+
+    mobileMenuContainer.classList.remove('ltr:translate-x-full', 'rtl:-translate-x-full');
+    mobileMenuContainer.classList.add('translate-x-0');
+  }
+
+  function closeMobileMenu() {
+    if (!mobileMenu || !mobileMenuContainer) return;
+
+    mobileMenu.classList.remove('opacity-100');
+    mobileMenu.classList.add('opacity-0');
+
+    mobileMenuContainer.classList.remove('translate-x-0');
+    mobileMenuContainer.classList.add('ltr:translate-x-full', 'rtl:-translate-x-full');
+
+    setTimeout(() => {
+      mobileMenu.classList.add('invisible');
+    }, 500);
+  }
+
+  mobileMenuToggle?.addEventListener('click', () => {
+    if (mobileMenu?.classList.contains('invisible')) {
+      openMobileMenu();
+      return;
+    }
+
+    closeMobileMenu();
+  });
+
+  mobileMenu?.addEventListener('click', (event) => {
+    if (event.target === mobileMenu) {
+      closeMobileMenu();
+    }
+  });
+
+  mobileMenuContainer?.querySelectorAll('a[href]').forEach((link) => {
+    link.addEventListener('click', closeMobileMenu);
+  });

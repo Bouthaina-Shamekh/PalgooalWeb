@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\PortfolioController;
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\PageBuilderController;
 use App\Http\Controllers\Admin\SectionController;
+use App\Http\Controllers\Admin\AppearanceController;
 
 // -----------------------------------------------------------------------------
 // Management Controllers (Hosting / Billing / Domains / Plans)
@@ -57,6 +58,17 @@ Route::group([
     // -------------------------------------------------------------------------
     Route::get('/home', [HomeController::class, 'index'])->name('home');
     Route::get('/general_settings', [HomeController::class, 'general_settings'])->name('general_settings');
+    Route::get('/appearance/header', [AppearanceController::class, 'header'])->name('appearance.header');
+    Route::post('/appearance/header/variant', [AppearanceController::class, 'updateHeaderVariant'])
+        ->name('appearance.header.variant');
+    Route::post('/appearance/header/settings', [AppearanceController::class, 'updateHeaderSettings'])
+        ->name('appearance.header.settings');
+
+    Route::get('/appearance/footer', [AppearanceController::class, 'footer'])->name('appearance.footer');
+    Route::post('/appearance/footer/variant', [AppearanceController::class, 'updateFooterVariant'])
+        ->name('appearance.footer.variant');
+    Route::post('/appearance/footer/settings', [AppearanceController::class, 'updateFooterSettings'])
+        ->name('appearance.footer.settings');
 
     // -------------------------------------------------------------------------
     // Users Management

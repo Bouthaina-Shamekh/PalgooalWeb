@@ -9,6 +9,7 @@ use Illuminate\Http\UploadedFile;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class GeneralSettingPage extends Component
 {
@@ -53,6 +54,8 @@ class GeneralSettingPage extends Component
         'favicon' => '',
         'favicon_url' => '',
         'default_language' => '',
+        'active_header_variant' => 'default',
+        'active_footer_variant' => 'default',
         'contact_info' => [
             'phone' => '',
             'email' => '',
@@ -72,30 +75,34 @@ class GeneralSettingPage extends Component
     {
         $generalSetting = GeneralSetting::first();
         $this->generalSetting = [
-            'site_title' => $generalSetting->site_title,
-            'site_discretion' => $generalSetting->site_discretion,
+            'site_title' => $generalSetting?->site_title ?? '',
+            'site_discretion' => $generalSetting?->site_discretion ?? '',
             'logo' => '',
-            'logo_url' => $generalSetting->logo,
+            'logo_url' => $generalSetting?->logo ?? '',
             'dark_logo' => '',
-            'dark_logo_url' => $generalSetting->dark_logo,
+            'dark_logo_url' => $generalSetting?->dark_logo ?? '',
             'sticky_logo' => '',
-            'sticky_logo_url' => $generalSetting->sticky_logo,
+            'sticky_logo_url' => $generalSetting?->sticky_logo ?? '',
             'dark_sticky_logo' => '',
-            'dark_sticky_logo_url' => $generalSetting->dark_sticky_logo,
+            'dark_sticky_logo_url' => $generalSetting?->dark_sticky_logo ?? '',
             'admin_logo' => '',
-            'admin_logo_url' => $generalSetting->admin_logo,
+            'admin_logo_url' => $generalSetting?->admin_logo ?? '',
             'admin_dark_logo' => '',
-            'admin_dark_logo_url' => $generalSetting->admin_dark_logo,
+            'admin_dark_logo_url' => $generalSetting?->admin_dark_logo ?? '',
             'favicon' => '',
-            'favicon_url' => $generalSetting->favicon,
-            'default_language' => $generalSetting->default_language,
-            'contact_info' => $generalSetting->contact_info ?? [
+            'favicon_url' => $generalSetting?->favicon ?? '',
+            'default_language' => $generalSetting?->default_language ?? '',
+            'active_header_variant' => $generalSetting?->active_header_variant
+                ?? config('front_layouts.defaults.header', 'default'),
+            'active_footer_variant' => $generalSetting?->active_footer_variant
+                ?? config('front_layouts.defaults.footer', 'default'),
+            'contact_info' => $generalSetting?->contact_info ?? [
                 'phone' => '',
                 'email' => '',
                 'address' => '',
             ],
 
-            'social_links' => $generalSetting->social_links ?? [
+            'social_links' => $generalSetting?->social_links ?? [
                 'facebook' => '',
                 'twitter' => '',
                 'linkedin' => '',
@@ -125,6 +132,8 @@ class GeneralSettingPage extends Component
             'favicon' => '',
             'favicon_url' => '',
             'default_language' => '',
+            'active_header_variant' => config('front_layouts.defaults.header', 'default'),
+            'active_footer_variant' => config('front_layouts.defaults.footer', 'default'),
             'contact_info' => [
                 'phone' => '',
                 'email' => '',
@@ -153,6 +162,16 @@ class GeneralSettingPage extends Component
             'generalSetting.admin_dark_logo' => 'nullable|image',
             'generalSetting.favicon' => 'nullable|image',
             'generalSetting.default_language' => 'required',
+            'generalSetting.active_header_variant' => [
+                'required',
+                'string',
+                Rule::in(array_keys(config('front_layouts.headers', []))),
+            ],
+            'generalSetting.active_footer_variant' => [
+                'required',
+                'string',
+                Rule::in(array_keys(config('front_layouts.footers', []))),
+            ],
             'generalSetting.contact_info.phone' => 'nullable|string',
             'generalSetting.contact_info.email' => 'nullable|email',
             'generalSetting.contact_info.address' => 'nullable|string',
@@ -167,62 +186,44 @@ class GeneralSettingPage extends Component
         $generalSettingValidated = $validated['generalSetting'];
 
         $generalSetting = GeneralSetting::first();
-        if ($generalSetting) {
-            $fields = [
-                'logo',
-                'dark_logo',
-                'sticky_logo',
-                'dark_sticky_logo',
-                'admin_logo',
-                'admin_dark_logo',
-                'favicon',
-            ];
+        $fields = [
+            'logo',
+            'dark_logo',
+            'sticky_logo',
+            'dark_sticky_logo',
+            'admin_logo',
+            'admin_dark_logo',
+            'favicon',
+        ];
 
-            foreach ($fields as $field) {
-                $file = $this->generalSetting[$field] ?? null;
-                if ($file instanceof UploadedFile) {
-                    if (!empty($generalSetting->$field) && Storage::disk('public')->exists($generalSetting->$field)) {
-                        Storage::disk('public')->delete($generalSetting->$field);
-                    }
-
-                    $generalSettingValidated[$field] = $file->store('general_settings', 'public');
-                } else {
-                    $generalSettingValidated[$field] = $generalSetting->$field;
+        foreach ($fields as $field) {
+            $file = $this->generalSetting[$field] ?? null;
+            if ($file instanceof UploadedFile) {
+                if ($generalSetting && !empty($generalSetting->$field) && Storage::disk('public')->exists($generalSetting->$field)) {
+                    Storage::disk('public')->delete($generalSetting->$field);
                 }
-            }
 
+                $generalSettingValidated[$field] = $file->store('general_settings', 'public');
+            } else {
+                $generalSettingValidated[$field] = $generalSetting?->$field;
+            }
+        }
+
+        if ($generalSetting) {
             $generalSetting->update($generalSettingValidated);
             $this->showAlert('General setting updated successfully.', 'success');
         } else {
-            $fields = [
-                'logo',
-                'dark_logo',
-                'sticky_logo',
-                'dark_sticky_logo',
-                'admin_logo',
-                'admin_dark_logo',
-                'favicon',
-            ];
-            foreach ($fields as $field) {
-                $file = $this->generalSetting[$field] ?? null;
-                if ($file instanceof UploadedFile) {
-                    if (!empty($generalSetting->$field) && Storage::disk('public')->exists($generalSetting->$field)) {
-                        Storage::disk('public')->delete($generalSetting->$field);
-                    }
-
-                    $generalSettingValidated[$field] = $file->store('general_settings', 'public');
-                } else {
-                    $generalSettingValidated[$field] = $generalSetting->$field;
-                }
-            }
-
-
             GeneralSetting::create($generalSettingValidated);
             $this->showAlert('General setting added successfully.', 'success');
         }
 
         // $this->resetForm();
         $this->resetPage();
+        $this->mode = 'index';
+    }
+
+    public function showIndex()
+    {
         $this->mode = 'index';
     }
 

@@ -276,7 +276,7 @@
                         </a>
                     </li>
                 @endcan
-                @can('view', 'App\\Models\\Header')
+                @if(auth()->user()?->can('view', 'App\\Models\\Header') || auth()->user()?->can('view', 'App\\Models\\GeneralSetting'))
                     <li class="pc-item pc-hasmenu">
                         <a href="#!" class="pc-link">
                             <span class="pc-micon">
@@ -289,13 +289,17 @@
                             <span class="pc-arrow"><i data-feather="chevron-right" class="rtl:rotate-180"></i></span>
                         </a>
                         <ul class="pc-submenu">
+                            <li class="pc-item"><a class="pc-link" href="{{ route('dashboard.appearance.header') }}"
+                                    data-i18n="Header Layout">{{ t('dashboard.Header_Layout', 'Header Layout') }}</a></li>
+                            <li class="pc-item"><a class="pc-link" href="{{ route('dashboard.appearance.footer') }}"
+                                    data-i18n="Footer Layout">{{ t('dashboard.Footer_Layout', 'Footer Layout') }}</a></li>
                             <li class="pc-item"><a class="pc-link" href="{{ route('dashboard.headers') }}"
                                     data-i18n="Menus">{{ t('dashboard.Menus', 'Menus') }}</a></li>
                             <li class="pc-item"><a class="pc-link" href="{{ route('dashboard.languages.index') }}"
                                     data-i18n="Menus">{{ t('dashboard.languages', 'languages') }}</a></li>
                         </ul>
                     </li>
-                @endcan
+                @endif
                 @can('view', 'App\\Models\\User')
                     <li class="pc-item pc-hasmenu">
                         <a href="#!" class="pc-link">

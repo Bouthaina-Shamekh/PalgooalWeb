@@ -7,7 +7,7 @@
                 aria-label="إغلاق القائمة">&times;</button>
         </div>
         <div class="flex-1 overflow-y-auto p-4 space-y-2">
-            @forelse ($header->items ?? [] as $item)
+            @forelse ($header?->items ?? [] as $item)
                 @if ($item->type === 'link' || $item->type === 'page')
                     <a href="{{ $item->url }}"
                         class="block text-lg hover:text-secondary dark:hover:text-yellow-400">{{ $item->label }}</a>

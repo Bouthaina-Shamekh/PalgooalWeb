@@ -1,7 +1,7 @@
 <!-- Desktop Navigation -->
 <nav role="navigation" aria-label="القائمة الرئيسية">
     <ul class="hidden md:flex items-center gap-7 font-semibold text-primary dark:text-white text-base">
-        @forelse ($header->items ?? [] as $item)
+        @forelse ($header?->items ?? [] as $item)
             @if ($item->type === 'link' || $item->type === 'page')
                 <li><a href="{{ $item->url }}"
                         class="hover:text-secondary dark:hover:text-yellow-400 transition">{{ $item->label }}</a></li>

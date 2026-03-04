@@ -18,12 +18,22 @@ class GeneralSetting extends Model
         'admin_dark_logo',
         'favicon',
         'default_language',
+        'active_header_variant',
+        'active_footer_variant',
+        'header_show_promo_bar',
+        'header_is_sticky',
+        'footer_show_contact_banner',
+        'footer_show_payment_methods',
         'contact_info',    // جديد
         'social_links',    // جديد
     ];
 
 
     protected $casts = [
+        'header_show_promo_bar' => 'boolean',
+        'header_is_sticky' => 'boolean',
+        'footer_show_contact_banner' => 'boolean',
+        'footer_show_payment_methods' => 'boolean',
         'contact_info' => 'array',
         'social_links' => 'array',
     ];
