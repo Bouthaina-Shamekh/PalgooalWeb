@@ -58,6 +58,14 @@ Route::group([
     // -------------------------------------------------------------------------
     Route::get('/home', [HomeController::class, 'index'])->name('home');
     Route::get('/general_settings', [HomeController::class, 'general_settings'])->name('general_settings');
+    Route::post('/general_settings/update', [HomeController::class, 'updateGeneralSettings'])
+        ->name('general_settings.update');
+    Route::post('/general_settings/autosave', [HomeController::class, 'autoSaveGeneralSettings'])
+        ->name('general_settings.autosave');
+    Route::get('/general_settings/export', [HomeController::class, 'exportGeneralSettings'])
+        ->name('general_settings.export');
+    Route::post('/general_settings/import', [HomeController::class, 'importGeneralSettings'])
+        ->name('general_settings.import');
     Route::get('/appearance/header', [AppearanceController::class, 'header'])->name('appearance.header');
     Route::post('/appearance/header/variant', [AppearanceController::class, 'updateHeaderVariant'])
         ->name('appearance.header.variant');

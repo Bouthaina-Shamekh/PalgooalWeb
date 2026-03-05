@@ -1,3 +1,3 @@
 <x-dashboard-layout>
-    <livewire:admin.general-setting-page />
+    @include('dashboard.general-setting-page')
 </x-dashboard-layout>

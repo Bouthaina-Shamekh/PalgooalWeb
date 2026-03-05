@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentTargetInputId = null;
     let currentPreviewContainerId = null;
     let isMultiple = false;
+    let currentStoreValue = 'id';
 
     /**
      * Map of selected media items
@@ -160,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentTargetInputId = config.targetInputId;
         currentPreviewContainerId = config.previewContainerId;
         isMultiple = config.multiple;
+        currentStoreValue = config.storeValue || 'id';
 
         // Reset state for fresh view every time the picker opens
         currentPage = 1;
@@ -352,6 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         selectedItems.set(item.id, {
                             id: item.id,
                             url: imageUrl,
+                            path: item.file_path || '',
                             name,
                             file_type: item.file_type,
                             mime_type: item.mime_type,
@@ -370,6 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectedItems.set(item.id, {
                         id: item.id,
                         url: imageUrl,
+                        path: item.file_path || '',
                         name,
                         file_type: item.file_type,
                         mime_type: item.mime_type,
@@ -432,7 +436,7 @@ document.addEventListener('DOMContentLoaded', () => {
      *  Applying the Selection back to the Form
      * ----------------------------------------------------------------------
      * Called when the user confirms their selection.
-     * - Writes the selected IDs into the hidden input (comma-separated)
+     * - Writes the selected values into the hidden input (comma-separated)
      * - Renders thumbnails in the preview container (if provided)
      */
     const applySelection = () => {
@@ -448,10 +452,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const items = Array.from(selectedItems.values());
         const ids = items.map((item) => item.id);
+        const values = items
+            .map((item) => {
+                if (currentStoreValue === 'url') return item.url || '';
+                if (currentStoreValue === 'path') return item.path || '';
+                return item.id;
+            })
+            .filter((value) => value !== null && value !== undefined && String(value).trim() !== '');
 
-        // Store IDs in hidden input: "1" or "1,5,9"
+        // Store selected values in hidden input:
+        // - id mode   => "1" or "1,5,9"
+        // - path mode => "media/2026/03/file.png"
+        // - url mode  => "https://..."
         if (targetInput) {
-            targetInput.value = ids.join(',');
+            targetInput.value = isMultiple ? values.join(',') : (values[0] ?? '');
             targetInput.dispatchEvent(new Event('input', { bubbles: true }));
             targetInput.dispatchEvent(new Event('change', { bubbles: true }));
         }
@@ -480,6 +494,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 detail: {
                     items,
                     ids,
+                    values,
+                    storeValue: currentStoreValue,
                     targetInputId: currentTargetInputId,
                 },
             })
@@ -493,9 +509,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     detail: {
                         id: first.id,
                         url: first.url || '',
+                        path: first.path || '',
                         name: first.name || '',
                         file: first,
                         files: items,
+                        values,
+                        storeValue: currentStoreValue,
                         targetInputId: currentTargetInputId,
                     },
                 })
@@ -568,6 +587,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectedItems.set(item.id, {
                         id: item.id,
                         url: imageUrl,
+                        path: item.file_path || '',
                         name,
                         file_type: item.file_type,
                         mime_type: item.mime_type,
@@ -605,6 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const targetInputId = btn.dataset.targetInput;
             const previewContainerId = btn.dataset.targetPreview || null;
             const multiple = btn.dataset.multiple === 'true';
+            const storeValue = btn.dataset.storeValue || 'id';
 
             if (!targetInputId) {
                 console.warn(
@@ -618,6 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 targetInputId,
                 previewContainerId,
                 multiple,
+                storeValue,
             });
         });
     });

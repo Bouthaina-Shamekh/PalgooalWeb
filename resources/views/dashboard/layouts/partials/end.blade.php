@@ -44,7 +44,9 @@
 </script>
 @stack('scripts')
 @stack('modals')
-@livewireScripts
+@unless (request()->routeIs('dashboard.general_settings'))
+    @livewireScripts
+@endunless
 {{-- <script src="{{asset('assets/dashboard/Sortable.min.js')}}"></script> --}}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
@@ -53,7 +55,7 @@
     window.MEDIA_CONFIG.csrfToken = window.MEDIA_CONFIG.csrfToken || "{{ csrf_token() }}";
 </script>
 
-<script src="{{ asset('assets/dashboard/js/media-picker.js') }}" defer></script>
+<script src="{{ asset('assets/dashboard/js/media-picker.js') }}?v={{ filemtime(public_path('assets/dashboard/js/media-picker.js')) }}" defer></script>
 
 @include('dashboard.partials.media-picker')
 </body>
