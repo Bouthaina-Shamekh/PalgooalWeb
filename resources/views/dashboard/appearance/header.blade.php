@@ -9,6 +9,45 @@
         $sortedHeaderVariants = collect($headerVariants)->sortByDesc(
             fn (array $variant, string $key) => $key === $activeHeaderKey
         );
+
+        $activeHeaderSettings = is_array($activeHeaderSettings ?? null) ? $activeHeaderSettings : [];
+
+        $purpleDefaults = [
+            'announcement_text' => 'Launch your own website in 5 minutes at minimal cost',
+            'show_social_icons' => true,
+            'show_login_button' => true,
+            'login_label' => 'Login',
+            'login_url' => '/client/login',
+            'show_language_switcher' => true,
+            'language_label' => 'Language',
+            'contact_button_label' => 'Contact us',
+            'contact_button_url' => '#contact',
+            'logo_override' => null,
+        ];
+
+        $purpleTopbarSettings = array_replace($purpleDefaults, $activeHeaderSettings);
+        $purpleLogoPath = old('pv_logo_override', $purpleTopbarSettings['logo_override'] ?? '');
+        $purpleLogoPreview = '';
+        if (!empty($purpleLogoPath)) {
+            $purpleLogoPreview = \Illuminate\Support\Str::startsWith($purpleLogoPath, ['http://', 'https://', '//'])
+                ? $purpleLogoPath
+                : asset('storage/' . ltrim($purpleLogoPath, '/'));
+        }
+
+        $headerSettingsBaseline = [
+            'header_show_promo_bar' => (bool) $settings->header_show_promo_bar,
+            'header_is_sticky' => (bool) $settings->header_is_sticky,
+            'pv_announcement_text' => (string) ($purpleTopbarSettings['announcement_text'] ?? ''),
+            'pv_show_social_icons' => (bool) ($purpleTopbarSettings['show_social_icons'] ?? true),
+            'pv_show_login_button' => (bool) ($purpleTopbarSettings['show_login_button'] ?? true),
+            'pv_login_label' => (string) ($purpleTopbarSettings['login_label'] ?? ''),
+            'pv_login_url' => (string) ($purpleTopbarSettings['login_url'] ?? ''),
+            'pv_show_language_switcher' => (bool) ($purpleTopbarSettings['show_language_switcher'] ?? true),
+            'pv_language_label' => (string) ($purpleTopbarSettings['language_label'] ?? ''),
+            'pv_contact_button_label' => (string) ($purpleTopbarSettings['contact_button_label'] ?? ''),
+            'pv_contact_button_url' => (string) ($purpleTopbarSettings['contact_button_url'] ?? ''),
+            'pv_logo_override' => (string) ($purpleLogoPath ?? ''),
+        ];
     @endphp
 
     <div class="space-y-6">
@@ -187,6 +226,7 @@
                     <div class="card-body">
                         <form id="header-settings-form" action="{{ route('dashboard.appearance.header.settings') }}" method="POST" class="space-y-4">
                             @csrf
+                            <input type="hidden" name="active_header_variant" value="{{ $activeHeaderKey }}">
 
                             <div class="rounded-xl border border-gray-200 p-3">
                                 <div class="form-check">
@@ -221,6 +261,164 @@
                                 </div>
                                 <p class="text-xs text-muted mb-0 mt-2 ps-6">{{ t('dashboard.Sticky_Header_Help', 'Keep the main navigation visible while scrolling.') }}</p>
                             </div>
+
+                            @if ($activeHeaderKey === 'purple_topbar')
+                                <div class="rounded-xl border border-gray-200 p-3 space-y-4">
+                                    <div>
+                                        <h6 class="mb-1">{{ t('dashboard.Purple_Topbar_Settings', 'Purple Topbar Settings') }}</h6>
+                                        <p class="text-xs text-muted mb-0">
+                                            {{ t('dashboard.Purple_Topbar_Settings_Help', 'These options customize this header only. Missing values will fallback to General Setting when possible.') }}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label for="pv_announcement_text" class="form-label mb-1">{{ t('dashboard.Announcement_Text', 'Announcement Text') }}</label>
+                                        <input
+                                            id="pv_announcement_text"
+                                            name="pv_announcement_text"
+                                            type="text"
+                                            class="form-control"
+                                            value="{{ old('pv_announcement_text', $purpleTopbarSettings['announcement_text']) }}"
+                                            placeholder="Launch your own website in 5 minutes at minimal cost"
+                                        >
+                                    </div>
+
+                                    <div>
+                                        <label class="form-label mb-1">{{ t('dashboard.Header_Logo_Override', 'Header Logo Override') }}</label>
+                                        <input id="pv_logo_override" name="pv_logo_override" type="hidden" value="{{ $purpleLogoPath }}">
+                                        <button
+                                            type="button"
+                                            class="btn btn-outline-primary btn-sm btn-open-media-picker"
+                                            data-target-input="pv_logo_override"
+                                            data-target-preview="pv_logo_override_preview"
+                                            data-multiple="false"
+                                            data-store-value="path"
+                                        >
+                                            {{ t('dashboard.Choose_From_Media', 'Choose From Media Library') }}
+                                        </button>
+                                        <div id="pv_logo_override_preview" class="mt-2 flex items-center gap-2 min-h-[48px]">
+                                            @if (!empty($purpleLogoPreview))
+                                                <div class="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                                                    <img src="{{ $purpleLogoPreview }}" alt="Header Logo Override" class="w-full h-full object-cover">
+                                                </div>
+                                            @else
+                                                <span class="text-xs text-muted">{{ t('dashboard.Fallback_To_General_Logo', 'Fallback to General Setting logo') }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 gap-3">
+                                        <div class="form-check">
+                                            <input
+                                                id="pv_show_social_icons"
+                                                type="checkbox"
+                                                class="form-check-input"
+                                                name="pv_show_social_icons"
+                                                value="1"
+                                                @checked(old('pv_show_social_icons', $purpleTopbarSettings['show_social_icons']))
+                                            >
+                                            <label class="form-check-label" for="pv_show_social_icons">
+                                                {{ t('dashboard.Show_Social_Icons', 'Show social icons') }}
+                                            </label>
+                                        </div>
+                                        <p class="text-xs text-muted mb-0 ps-6">{{ t('dashboard.Social_Icons_Fallback_Help', 'Links are automatically taken from General Setting > Social Links.') }}</p>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 gap-3">
+                                        <div class="form-check">
+                                            <input
+                                                id="pv_show_login_button"
+                                                type="checkbox"
+                                                class="form-check-input"
+                                                name="pv_show_login_button"
+                                                value="1"
+                                                @checked(old('pv_show_login_button', $purpleTopbarSettings['show_login_button']))
+                                            >
+                                            <label class="form-check-label" for="pv_show_login_button">
+                                                {{ t('dashboard.Show_Login_Button', 'Show login button') }}
+                                            </label>
+                                        </div>
+
+                                        <div>
+                                            <label for="pv_login_label" class="form-label mb-1">{{ t('dashboard.Login_Label', 'Login Label') }}</label>
+                                            <input
+                                                id="pv_login_label"
+                                                name="pv_login_label"
+                                                type="text"
+                                                class="form-control"
+                                                value="{{ old('pv_login_label', $purpleTopbarSettings['login_label']) }}"
+                                                placeholder="Login"
+                                            >
+                                        </div>
+
+                                        <div>
+                                            <label for="pv_login_url" class="form-label mb-1">{{ t('dashboard.Login_URL', 'Login URL') }}</label>
+                                            <input
+                                                id="pv_login_url"
+                                                name="pv_login_url"
+                                                type="text"
+                                                class="form-control"
+                                                value="{{ old('pv_login_url', $purpleTopbarSettings['login_url']) }}"
+                                                placeholder="/client/login"
+                                            >
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 gap-3">
+                                        <div class="form-check">
+                                            <input
+                                                id="pv_show_language_switcher"
+                                                type="checkbox"
+                                                class="form-check-input"
+                                                name="pv_show_language_switcher"
+                                                value="1"
+                                                @checked(old('pv_show_language_switcher', $purpleTopbarSettings['show_language_switcher']))
+                                            >
+                                            <label class="form-check-label" for="pv_show_language_switcher">
+                                                {{ t('dashboard.Show_Language_Switcher', 'Show language switcher') }}
+                                            </label>
+                                        </div>
+
+                                        <div>
+                                            <label for="pv_language_label" class="form-label mb-1">{{ t('dashboard.Language_Label', 'Language Label') }}</label>
+                                            <input
+                                                id="pv_language_label"
+                                                name="pv_language_label"
+                                                type="text"
+                                                class="form-control"
+                                                value="{{ old('pv_language_label', $purpleTopbarSettings['language_label']) }}"
+                                                placeholder="Language"
+                                            >
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 gap-3">
+                                        <div>
+                                            <label for="pv_contact_button_label" class="form-label mb-1">{{ t('dashboard.Contact_Button_Label', 'Contact Button Label') }}</label>
+                                            <input
+                                                id="pv_contact_button_label"
+                                                name="pv_contact_button_label"
+                                                type="text"
+                                                class="form-control"
+                                                value="{{ old('pv_contact_button_label', $purpleTopbarSettings['contact_button_label']) }}"
+                                                placeholder="Contact us"
+                                            >
+                                        </div>
+
+                                        <div>
+                                            <label for="pv_contact_button_url" class="form-label mb-1">{{ t('dashboard.Contact_Button_URL', 'Contact Button URL') }}</label>
+                                            <input
+                                                id="pv_contact_button_url"
+                                                name="pv_contact_button_url"
+                                                type="text"
+                                                class="form-control"
+                                                value="{{ old('pv_contact_button_url', $purpleTopbarSettings['contact_button_url']) }}"
+                                                placeholder="#contact"
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
 
                             <div id="header-settings-savehint" class="hidden alert alert-warning py-2 mb-0">
                                 {{ t('dashboard.Unsaved_Changes', 'You have unsaved changes.') }}
@@ -313,6 +511,11 @@
                 const settingsForm = document.getElementById('header-settings-form');
                 const saveHint = document.getElementById('header-settings-savehint');
                 const resetButton = document.getElementById('header-settings-reset');
+                const logoOverrideInput = document.getElementById('pv_logo_override');
+                const logoOverridePreview = document.getElementById('pv_logo_override_preview');
+                const fallbackLogoText = @json(t('dashboard.Fallback_To_General_Logo', 'Fallback to General Setting logo'));
+                const storageBaseUrl = @json(asset('storage'));
+                const baselineValues = @json($headerSettingsBaseline);
 
                 if (!settingsForm) {
                     return;
@@ -329,7 +532,7 @@
                     return JSON.stringify(values);
                 };
 
-                const initialState = serialize(new FormData(settingsForm));
+                let initialState = serialize(new FormData(settingsForm));
 
                 function updateSaveHint() {
                     const currentState = serialize(new FormData(settingsForm));
@@ -337,13 +540,83 @@
                     saveHint?.classList.toggle('hidden', !isDirty);
                 }
 
+                function setFieldValue(name, value) {
+                    const field = settingsForm.querySelector(`[name="${name}"]`);
+                    if (!field) return;
+
+                    if (field.type === 'checkbox') {
+                        field.checked = !!value;
+                        return;
+                    }
+
+                    if (field.type === 'radio') {
+                        const radio = settingsForm.querySelector(`[name="${name}"][value="${String(value)}"]`);
+                        if (radio) radio.checked = true;
+                        return;
+                    }
+
+                    field.value = value ?? '';
+                }
+
+                function applyBaselineValues() {
+                    setFieldValue('header_show_promo_bar', baselineValues.header_show_promo_bar);
+                    setFieldValue('header_is_sticky', baselineValues.header_is_sticky);
+
+                    setFieldValue('pv_announcement_text', baselineValues.pv_announcement_text);
+                    setFieldValue('pv_show_social_icons', baselineValues.pv_show_social_icons);
+                    setFieldValue('pv_show_login_button', baselineValues.pv_show_login_button);
+                    setFieldValue('pv_login_label', baselineValues.pv_login_label);
+                    setFieldValue('pv_login_url', baselineValues.pv_login_url);
+                    setFieldValue('pv_show_language_switcher', baselineValues.pv_show_language_switcher);
+                    setFieldValue('pv_language_label', baselineValues.pv_language_label);
+                    setFieldValue('pv_contact_button_label', baselineValues.pv_contact_button_label);
+                    setFieldValue('pv_contact_button_url', baselineValues.pv_contact_button_url);
+                    setFieldValue('pv_logo_override', baselineValues.pv_logo_override);
+                }
+
+                function renderLogoOverridePreview(path) {
+                    if (!logoOverridePreview) return;
+
+                    const normalizedPath = (path || '').trim();
+                    if (!normalizedPath) {
+                        logoOverridePreview.innerHTML = `<span class="text-xs text-muted">${fallbackLogoText}</span>`;
+                        return;
+                    }
+
+                    const previewUrl = /^(https?:)?\/\//i.test(normalizedPath)
+                        ? normalizedPath
+                        : `${storageBaseUrl}/${normalizedPath.replace(/^\/+/, '').replace(/^storage\//, '')}`;
+
+                    logoOverridePreview.innerHTML = `
+                        <div class="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+                            <img src="${previewUrl}" alt="Header Logo Override" class="w-full h-full object-cover">
+                        </div>
+                    `;
+                }
+
                 settingsForm.addEventListener('change', updateSaveHint);
                 settingsForm.addEventListener('input', updateSaveHint);
 
+                logoOverrideInput?.addEventListener('input', function () {
+                    renderLogoOverridePreview(this.value);
+                });
+
+                logoOverrideInput?.addEventListener('change', function () {
+                    renderLogoOverridePreview(this.value);
+                });
+
                 resetButton?.addEventListener('click', function () {
-                    settingsForm.reset();
+                    applyBaselineValues();
+                    if (logoOverrideInput) {
+                        renderLogoOverridePreview(logoOverrideInput.value);
+                    }
+                    initialState = serialize(new FormData(settingsForm));
                     updateSaveHint();
                 });
+
+                if (logoOverrideInput) {
+                    renderLogoOverridePreview(logoOverrideInput.value);
+                }
 
                 updateSaveHint();
             });

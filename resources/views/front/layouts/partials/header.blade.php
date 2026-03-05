@@ -13,6 +13,13 @@
     }
 
     $header = \App\Models\Header::with(['items.translations', 'items.page.translations'])->first();
+    $headerVariantSettings = is_array($settings?->header_variant_settings ?? null)
+        ? ($settings->header_variant_settings[$headerVariant] ?? [])
+        : [];
+
+    if (!is_array($headerVariantSettings)) {
+        $headerVariantSettings = [];
+    }
 @endphp
 
-@include($headerView, ['header' => $header])
+@include($headerView, ['header' => $header, 'headerVariantSettings' => $headerVariantSettings])

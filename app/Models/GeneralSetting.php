@@ -22,6 +22,7 @@ class GeneralSetting extends Model
         'active_footer_variant',
         'header_show_promo_bar',
         'header_is_sticky',
+        'header_variant_settings',
         'footer_show_contact_banner',
         'footer_show_payment_methods',
         'contact_info',    // جديد
@@ -32,6 +33,7 @@ class GeneralSetting extends Model
     protected $casts = [
         'header_show_promo_bar' => 'boolean',
         'header_is_sticky' => 'boolean',
+        'header_variant_settings' => 'array',
         'footer_show_contact_banner' => 'boolean',
         'footer_show_payment_methods' => 'boolean',
         'contact_info' => 'array',

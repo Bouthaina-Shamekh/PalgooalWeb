@@ -108,6 +108,7 @@ class HomeController extends Controller
                 'active_footer_variant' => $setting?->active_footer_variant ?? config('front_layouts.defaults.footer', 'default'),
                 'header_show_promo_bar' => $setting?->header_show_promo_bar,
                 'header_is_sticky' => $setting?->header_is_sticky,
+                'header_variant_settings' => $setting?->header_variant_settings ?? [],
                 'footer_show_contact_banner' => $setting?->footer_show_contact_banner,
                 'footer_show_payment_methods' => $setting?->footer_show_payment_methods,
                 'contact_info' => $setting?->contact_info ?? [],
@@ -174,6 +175,7 @@ class HomeController extends Controller
             ],
             'header_show_promo_bar' => ['nullable', 'boolean'],
             'header_is_sticky' => ['nullable', 'boolean'],
+            'header_variant_settings' => ['nullable', 'array'],
             'footer_show_contact_banner' => ['nullable', 'boolean'],
             'footer_show_payment_methods' => ['nullable', 'boolean'],
             'contact_info' => ['nullable', 'array'],
@@ -221,6 +223,10 @@ class HomeController extends Controller
             ],
             (array) ($validated['social_links'] ?? [])
         );
+
+        $validated['header_variant_settings'] = is_array($validated['header_variant_settings'] ?? null)
+            ? $validated['header_variant_settings']
+            : [];
 
         $setting = GeneralSetting::first();
         if ($setting) {
