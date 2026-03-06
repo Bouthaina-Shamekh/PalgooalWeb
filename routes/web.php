@@ -8,6 +8,7 @@ use App\Http\Controllers\Front\CartController;
 use App\Http\Controllers\Front\CheckoutController;
 use App\Http\Controllers\Front\TemplateController as FrontTemplateController;
 use App\Http\Controllers\Front\TemplateReviewController;
+use App\Http\Controllers\Front\ThemeCssController;
 use App\Http\Controllers\Front\TestimonialSubmissionController;
 use App\Http\Controllers\Front\PageController as FrontPageController;
 
@@ -138,6 +139,10 @@ Route::middleware(['setLocale'])->group(function () {
     Route::get('/api/domains/check', [DomainSearchController::class, 'check'])
         ->middleware(['throttle:30,1'])
         ->name('domains.check');
+
+    // Dynamic stylesheet for manual purple topbar colors (no inline styles).
+    Route::get('/assets/theme/purple-topbar.css', [ThemeCssController::class, 'purpleTopbar'])
+        ->name('frontend.assets.purple_topbar_css');
 
     /*
     |--------------------------------------------------------------------------

@@ -11,6 +11,8 @@
         );
 
         $activeHeaderSettings = is_array($activeHeaderSettings ?? null) ? $activeHeaderSettings : [];
+        $headerSettingsLanguages = $headerSettingsLanguages
+            ?? ($languages instanceof \Illuminate\Support\Collection ? $languages : collect($languages ?? []));
 
         $purpleDefaults = [
             'announcement_text' => 'Launch your own website in 5 minutes at minimal cost',
@@ -19,13 +21,132 @@
             'login_label' => 'Login',
             'login_url' => '/client/login',
             'show_language_switcher' => true,
-            'language_label' => 'Language',
             'contact_button_label' => 'Contact us',
             'contact_button_url' => '#contact',
             'logo_override' => null,
         ];
 
+        $purpleColorThemesConfig = config('front_layouts.color_libraries.purple_topbar.themes', []);
+        if (!is_array($purpleColorThemesConfig)) {
+            $purpleColorThemesConfig = [];
+        }
+
+        $extractThemeClass = static function ($classList, array $prefixes, string $fallback): string {
+            $tokens = preg_split('/\s+/', trim((string) $classList)) ?: [];
+            foreach ($tokens as $token) {
+                $candidate = trim((string) $token);
+                if ($candidate === '') {
+                    continue;
+                }
+
+                if (str_contains($candidate, ':')) {
+                    $segments = explode(':', $candidate);
+                    $candidate = (string) end($segments);
+                }
+
+                foreach ($prefixes as $prefix) {
+                    if (str_starts_with($candidate, (string) $prefix)) {
+                        return $candidate;
+                    }
+                }
+            }
+
+            return $fallback;
+        };
+
+        $purpleColorThemeOptions = [];
+        foreach ($purpleColorThemesConfig as $themeKey => $themeConfig) {
+            $normalizedThemeKey = strtolower(trim((string) $themeKey));
+            if ($normalizedThemeKey === '') {
+                continue;
+            }
+
+            $themeLabel = is_array($themeConfig)
+                ? trim((string) ($themeConfig['label'] ?? ''))
+                : '';
+
+            if ($themeLabel === '') {
+                $themeLabel = ucwords(str_replace(['_', '-'], ' ', $normalizedThemeKey));
+            }
+
+            $themeClasses = is_array($themeConfig)
+                ? (is_array($themeConfig['classes'] ?? null) ? $themeConfig['classes'] : $themeConfig)
+                : [];
+
+            $previewPromo = $extractThemeClass($themeClasses['promo_bar'] ?? '', ['bg-'], 'bg-purple-brand');
+            $previewNav = $extractThemeClass($themeClasses['nav_shell'] ?? '', ['bg-'], 'bg-white');
+            $previewAccent = $extractThemeClass($themeClasses['hamburger_bar'] ?? '', ['bg-'], 'bg-red-brand');
+
+            $purpleColorThemeOptions[$normalizedThemeKey] = [
+                'label' => $themeLabel,
+                'preview' => [
+                    'promo' => $previewPromo,
+                    'nav' => $previewNav,
+                    'accent' => $previewAccent,
+                ],
+            ];
+        }
+
+        if ($purpleColorThemeOptions === []) {
+            $purpleColorThemeOptions = [
+                'classic' => [
+                    'label' => 'Classic Purple',
+                    'preview' => [
+                        'promo' => 'bg-purple-brand',
+                        'nav' => 'bg-white',
+                        'accent' => 'bg-red-brand',
+                    ],
+                ],
+            ];
+        }
+
+        $purpleDefaultColorTheme = strtolower((string) config('front_layouts.color_libraries.purple_topbar.default', 'classic'));
+        if (!array_key_exists($purpleDefaultColorTheme, $purpleColorThemeOptions)) {
+            $purpleDefaultColorTheme = (string) (array_key_first($purpleColorThemeOptions) ?? 'classic');
+        }
+
+        $purpleCustomColorDefaults = [
+            'promo_bg' => '#240A37',
+            'promo_text' => '#FFFFFF',
+            'nav_bg' => '#FFFFFF',
+            'nav_text' => '#111827',
+            'accent' => '#BA112C',
+            'social_icon' => '#7F6F8A',
+            'border' => '#E5E7EB',
+            'dropdown_hover_bg' => '#F3F4F6',
+            'subtext' => '#626262',
+        ];
+        $purpleCustomColorLabels = [
+            'promo_bg' => t('dashboard.Promo_Background', 'Promo Background'),
+            'promo_text' => t('dashboard.Promo_Text_Color', 'Promo Text Color'),
+            'nav_bg' => t('dashboard.Nav_Background', 'Navigation Background'),
+            'nav_text' => t('dashboard.Nav_Text_Color', 'Navigation Text Color'),
+            'accent' => t('dashboard.Accent_Color', 'Accent Color'),
+            'social_icon' => t('dashboard.Social_Icons_Color', 'Social Icons Color'),
+            'border' => t('dashboard.Border_Color', 'Border Color'),
+            'dropdown_hover_bg' => t('dashboard.Dropdown_Hover_Background', 'Dropdown Hover Background'),
+            'subtext' => t('dashboard.Subtext_Color', 'Subtext Color'),
+        ];
+        $purpleHexPattern = '/^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/';
+
+        $purpleDefaults['color_theme'] = $purpleDefaultColorTheme;
+        $purpleDefaults['custom_colors'] = $purpleCustomColorDefaults;
         $purpleTopbarSettings = array_replace($purpleDefaults, $activeHeaderSettings);
+        $purpleSelectedColorTheme = strtolower((string) old('pv_color_theme', $purpleTopbarSettings['color_theme'] ?? $purpleDefaultColorTheme));
+        if (!array_key_exists($purpleSelectedColorTheme, $purpleColorThemeOptions)) {
+            $purpleSelectedColorTheme = $purpleDefaultColorTheme;
+        }
+        $purpleStoredCustomColors = is_array($purpleTopbarSettings['custom_colors'] ?? null)
+            ? $purpleTopbarSettings['custom_colors']
+            : [];
+        $purpleCustomColorInputs = [];
+        foreach ($purpleCustomColorDefaults as $colorKey => $defaultValue) {
+            $candidate = trim((string) old("pv_custom_colors.$colorKey", $purpleStoredCustomColors[$colorKey] ?? $defaultValue));
+            if (preg_match($purpleHexPattern, $candidate) !== 1) {
+                $candidate = (string) $defaultValue;
+            }
+            $purpleCustomColorInputs[$colorKey] = strtoupper($candidate);
+        }
         $purpleLogoPath = old('pv_logo_override', $purpleTopbarSettings['logo_override'] ?? '');
         $purpleLogoPreview = '';
         if (!empty($purpleLogoPath)) {
@@ -34,20 +155,114 @@
                 : asset('storage/' . ltrim($purpleLogoPath, '/'));
         }
 
+        $defaultLocaleCode = strtolower((string) (
+            optional($headerSettingsLanguages->firstWhere('id', $settings->default_language))->code
+            ?? config('app.locale', 'en')
+        ));
+        $fallbackLocaleCode = strtolower((string) config('app.fallback_locale', 'en'));
+
+        $resolveLocalizedSettingForForm = static function ($value, string $locale) use ($defaultLocaleCode, $fallbackLocaleCode): string {
+            $locale = strtolower($locale);
+
+            if (is_array($value)) {
+                $normalizedValues = [];
+                foreach ($value as $langKey => $langValue) {
+                    $normalizedValues[strtolower((string) $langKey)] = $langValue;
+                }
+
+                $localizedValue = trim((string) (
+                    $normalizedValues[$locale]
+                    ?? $normalizedValues[$defaultLocaleCode]
+                    ?? $normalizedValues[$fallbackLocaleCode]
+                    ?? ''
+                ));
+
+                if ($localizedValue !== '') {
+                    return $localizedValue;
+                }
+
+                foreach ($normalizedValues as $candidate) {
+                    $candidate = trim((string) $candidate);
+                    if ($candidate !== '') {
+                        return $candidate;
+                    }
+                }
+
+                return '';
+            }
+
+            $scalar = trim((string) $value);
+            if ($scalar === '') {
+                return '';
+            }
+
+            return $locale === $defaultLocaleCode ? $scalar : '';
+        };
+
+        $purpleLocalizedTextInputs = [];
+        foreach ($headerSettingsLanguages as $language) {
+            $code = strtolower((string) ($language->code ?? ''));
+            if ($code === '') {
+                continue;
+            }
+
+            $purpleLocalizedTextInputs[$code] = [
+                'announcement_text' => (string) old(
+                    "pv_texts.$code.announcement_text",
+                    $resolveLocalizedSettingForForm($purpleTopbarSettings['announcement_text'] ?? '', $code),
+                ),
+                'login_label' => (string) old(
+                    "pv_texts.$code.login_label",
+                    $resolveLocalizedSettingForForm($purpleTopbarSettings['login_label'] ?? '', $code),
+                ),
+                'contact_button_label' => (string) old(
+                    "pv_texts.$code.contact_button_label",
+                    $resolveLocalizedSettingForForm($purpleTopbarSettings['contact_button_label'] ?? '', $code),
+                ),
+            ];
+        }
+
+        $headerSettingsLocalizedBaseline = [];
+        foreach ($purpleLocalizedTextInputs as $code => $fields) {
+            $headerSettingsLocalizedBaseline["pv_texts[$code][announcement_text]"] = (string) ($fields['announcement_text'] ?? '');
+            $headerSettingsLocalizedBaseline["pv_texts[$code][login_label]"] = (string) ($fields['login_label'] ?? '');
+            $headerSettingsLocalizedBaseline["pv_texts[$code][contact_button_label]"] = (string) ($fields['contact_button_label'] ?? '');
+        }
+
+        $purpleFirstErrorLang = null;
+        foreach ($headerSettingsLanguages as $language) {
+            $code = strtolower((string) ($language->code ?? ''));
+            if ($code === '') {
+                continue;
+            }
+
+            if (
+                $errors->has("pv_texts.$code.announcement_text")
+                || $errors->has("pv_texts.$code.login_label")
+                || $errors->has("pv_texts.$code.contact_button_label")
+            ) {
+                $purpleFirstErrorLang = $code;
+                break;
+            }
+        }
+
+        $purpleInitialLangCode = $purpleFirstErrorLang
+            ?? strtolower((string) ($headerSettingsLanguages->first()?->code ?? ''));
+
         $headerSettingsBaseline = [
             'header_show_promo_bar' => (bool) $settings->header_show_promo_bar,
             'header_is_sticky' => (bool) $settings->header_is_sticky,
-            'pv_announcement_text' => (string) ($purpleTopbarSettings['announcement_text'] ?? ''),
             'pv_show_social_icons' => (bool) ($purpleTopbarSettings['show_social_icons'] ?? true),
             'pv_show_login_button' => (bool) ($purpleTopbarSettings['show_login_button'] ?? true),
-            'pv_login_label' => (string) ($purpleTopbarSettings['login_label'] ?? ''),
             'pv_login_url' => (string) ($purpleTopbarSettings['login_url'] ?? ''),
             'pv_show_language_switcher' => (bool) ($purpleTopbarSettings['show_language_switcher'] ?? true),
-            'pv_language_label' => (string) ($purpleTopbarSettings['language_label'] ?? ''),
-            'pv_contact_button_label' => (string) ($purpleTopbarSettings['contact_button_label'] ?? ''),
             'pv_contact_button_url' => (string) ($purpleTopbarSettings['contact_button_url'] ?? ''),
             'pv_logo_override' => (string) ($purpleLogoPath ?? ''),
+            'pv_color_theme' => (string) ($purpleTopbarSettings['color_theme'] ?? $purpleDefaultColorTheme),
         ];
+        foreach ($purpleCustomColorInputs as $colorKey => $colorValue) {
+            $headerSettingsBaseline["pv_custom_colors[$colorKey]"] = $colorValue;
+        }
     @endphp
 
     <div class="space-y-6">
@@ -83,7 +298,7 @@
                 <div class="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
                     <div class="flex items-start gap-4">
                         <img
-                            src="{{ asset($activeVariant['preview'] ?? 'assets/front-layouts/previews/headers/default.svg') }}"
+                            src="{{ asset($activeVariant['preview'] ?? 'assets/front-layouts/previews/headers/Classic.png') }}"
                             alt="{{ $activeVariant['label'] ?? t('dashboard.Header_Layout', 'Header Layout') }}"
                             class="w-28 h-20 object-cover rounded-xl border border-gray-200 bg-slate-100 shrink-0"
                         />
@@ -165,7 +380,7 @@
                                         $isActive = $activeHeaderKey === $key;
                                         $variantLabel = $variant['label'] ?? $key;
                                         $variantDescription = $variant['description'] ?? '';
-                                        $variantPreview = $variant['preview'] ?? 'assets/front-layouts/previews/headers/default.svg';
+                                        $variantPreview = $variant['preview'] ?? 'assets/front-layouts/previews/headers/Classic.png';
                                     @endphp
 
                                     <div
@@ -271,31 +486,119 @@
                                         </p>
                                     </div>
 
-                                    <div>
-                                        <label for="pv_announcement_text" class="form-label mb-1">{{ t('dashboard.Announcement_Text', 'Announcement Text') }}</label>
-                                        <input
-                                            id="pv_announcement_text"
-                                            name="pv_announcement_text"
-                                            type="text"
-                                            class="form-control"
-                                            value="{{ old('pv_announcement_text', $purpleTopbarSettings['announcement_text']) }}"
-                                            placeholder="Launch your own website in 5 minutes at minimal cost"
-                                        >
+                                    <div class="rounded-xl border border-gray-200 p-3 bg-gray-50/50">
+                                        <label class="form-label mb-2">{{ t('dashboard.Multilingual_Texts', 'Multilingual Texts') }}</label>
+
+                                        @if ($headerSettingsLanguages->isNotEmpty())
+                                            <div class="flex flex-wrap gap-2 mb-3">
+                                                @foreach ($headerSettingsLanguages as $index => $language)
+                                                    @php
+                                                        $langCode = strtolower((string) ($language->code ?? ''));
+                                                    @endphp
+                                                    @continue($langCode === '')
+
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-sm {{ $purpleInitialLangCode === $langCode ? 'btn-primary' : 'btn-outline-secondary' }}"
+                                                        data-pv-lang-tab="{{ $langCode }}"
+                                                    >
+                                                        {{ $language->native ?? ($language->name ?? strtoupper($langCode)) }}
+                                                    </button>
+                                                @endforeach
+                                            </div>
+
+                                            @foreach ($headerSettingsLanguages as $index => $language)
+                                                @php
+                                                    $langCode = strtolower((string) ($language->code ?? ''));
+                                                    $langValues = $purpleLocalizedTextInputs[$langCode] ?? [];
+                                                @endphp
+                                                @continue($langCode === '')
+
+                                                <div
+                                                    data-pv-lang-panel="{{ $langCode }}"
+                                                    class="space-y-3 {{ $purpleInitialLangCode === $langCode ? '' : 'hidden' }}"
+                                                >
+                                                    <div>
+                                                        <label for="pv_announcement_text_{{ $langCode }}" class="form-label mb-1">
+                                                            {{ t('dashboard.Announcement_Text', 'Announcement Text') }}
+                                                        </label>
+                                                        <input
+                                                            id="pv_announcement_text_{{ $langCode }}"
+                                                            name="pv_texts[{{ $langCode }}][announcement_text]"
+                                                            type="text"
+                                                            class="form-control"
+                                                            value="{{ $langValues['announcement_text'] ?? '' }}"
+                                                            placeholder="Launch your own website in 5 minutes at minimal cost"
+                                                        >
+                                                        @error('pv_texts.' . $langCode . '.announcement_text')
+                                                            <p class="text-xs text-danger mt-1 mb-0">{{ $message }}</p>
+                                                        @enderror
+                                                    </div>
+
+                                                    <div>
+                                                        <label for="pv_login_label_{{ $langCode }}" class="form-label mb-1">
+                                                            {{ t('dashboard.Login_Label', 'Login Label') }}
+                                                        </label>
+                                                        <input
+                                                            id="pv_login_label_{{ $langCode }}"
+                                                            name="pv_texts[{{ $langCode }}][login_label]"
+                                                            type="text"
+                                                            class="form-control"
+                                                            value="{{ $langValues['login_label'] ?? '' }}"
+                                                            placeholder="Login"
+                                                        >
+                                                        @error('pv_texts.' . $langCode . '.login_label')
+                                                            <p class="text-xs text-danger mt-1 mb-0">{{ $message }}</p>
+                                                        @enderror
+                                                    </div>
+
+                                                    <div>
+                                                        <label for="pv_contact_button_label_{{ $langCode }}" class="form-label mb-1">
+                                                            {{ t('dashboard.Contact_Button_Label', 'Contact Button Label') }}
+                                                        </label>
+                                                        <input
+                                                            id="pv_contact_button_label_{{ $langCode }}"
+                                                            name="pv_texts[{{ $langCode }}][contact_button_label]"
+                                                            type="text"
+                                                            class="form-control"
+                                                            value="{{ $langValues['contact_button_label'] ?? '' }}"
+                                                            placeholder="Contact us"
+                                                        >
+                                                        @error('pv_texts.' . $langCode . '.contact_button_label')
+                                                            <p class="text-xs text-danger mt-1 mb-0">{{ $message }}</p>
+                                                        @enderror
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        @else
+                                            <p class="text-xs text-muted mb-0">
+                                                {{ t('dashboard.No_Languages_Found', 'No languages found.') }}
+                                            </p>
+                                        @endif
                                     </div>
 
                                     <div>
                                         <label class="form-label mb-1">{{ t('dashboard.Header_Logo_Override', 'Header Logo Override') }}</label>
                                         <input id="pv_logo_override" name="pv_logo_override" type="hidden" value="{{ $purpleLogoPath }}">
-                                        <button
-                                            type="button"
-                                            class="btn btn-outline-primary btn-sm btn-open-media-picker"
-                                            data-target-input="pv_logo_override"
-                                            data-target-preview="pv_logo_override_preview"
-                                            data-multiple="false"
-                                            data-store-value="path"
-                                        >
-                                            {{ t('dashboard.Choose_From_Media', 'Choose From Media Library') }}
-                                        </button>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <button
+                                                type="button"
+                                                class="btn btn-outline-primary btn-sm btn-open-media-picker"
+                                                data-target-input="pv_logo_override"
+                                                data-target-preview="pv_logo_override_preview"
+                                                data-multiple="false"
+                                                data-store-value="path"
+                                            >
+                                                {{ t('dashboard.Choose_From_Media', 'Choose From Media Library') }}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                id="pv_logo_override_clear"
+                                                class="btn btn-outline-secondary btn-sm"
+                                            >
+                                                {{ t('dashboard.Clear_Override', 'Clear override') }}
+                                            </button>
+                                        </div>
                                         <div id="pv_logo_override_preview" class="mt-2 flex items-center gap-2 min-h-[48px]">
                                             @if (!empty($purpleLogoPreview))
                                                 <div class="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
@@ -304,6 +607,107 @@
                                             @else
                                                 <span class="text-xs text-muted">{{ t('dashboard.Fallback_To_General_Logo', 'Fallback to General Setting logo') }}</span>
                                             @endif
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 gap-2">
+                                        <div>
+                                            <label class="form-label mb-2">{{ t('dashboard.Topbar_Color_Theme', 'Topbar Color Theme') }}</label>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                @foreach ($purpleColorThemeOptions as $themeKey => $themeOption)
+                                                    @php
+                                                        $themeLabel = (string) ($themeOption['label'] ?? ucwords(str_replace(['_', '-'], ' ', (string) $themeKey)));
+                                                        $themePreview = is_array($themeOption['preview'] ?? null) ? $themeOption['preview'] : [];
+                                                        $previewPromo = (string) ($themePreview['promo'] ?? 'bg-purple-brand');
+                                                        $previewNav = (string) ($themePreview['nav'] ?? 'bg-white');
+                                                        $previewAccent = (string) ($themePreview['accent'] ?? 'bg-red-brand');
+                                                        $themeInputId = 'pv_color_theme_' . preg_replace('/[^a-z0-9_-]/i', '_', (string) $themeKey);
+                                                    @endphp
+
+                                                    <div>
+                                                        <input
+                                                            id="{{ $themeInputId }}"
+                                                            type="radio"
+                                                            name="pv_color_theme"
+                                                            value="{{ $themeKey }}"
+                                                            class="peer sr-only topbar-theme-input"
+                                                            @checked($purpleSelectedColorTheme === $themeKey)
+                                                        >
+                                                        <label
+                                                            for="{{ $themeInputId }}"
+                                                            class="topbar-theme-label group relative block rounded-xl border border-gray-200 bg-white p-3 cursor-pointer transition-all duration-200"
+                                                        >
+                                                            <span class="topbar-theme-dot absolute bottom-3 ltr:right-3 rtl:left-3 h-2.5 w-2.5 rounded-full bg-primary opacity-0 scale-50 transition-all duration-200"></span>
+                                                            <span class="topbar-theme-check absolute top-3 ltr:right-3 rtl:left-3 inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white text-[11px] opacity-0 scale-75 transition-all duration-200">
+                                                                &#10003;
+                                                            </span>
+                                                            <div class="text-sm font-semibold text-slate-800 mb-2">{{ $themeLabel }}</div>
+                                                            <div class="flex items-center gap-1.5">
+                                                                <span class="topbar-theme-swatch h-3 w-9 rounded transition-transform duration-200 {{ $previewPromo }}"></span>
+                                                                <span class="topbar-theme-swatch h-3 w-9 rounded border border-gray-200 transition-transform duration-200 {{ $previewNav }}"></span>
+                                                                <span class="topbar-theme-swatch h-3 w-9 rounded transition-transform duration-200 {{ $previewAccent }}"></span>
+                                                            </div>
+                                                        </label>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                            <p class="text-xs text-muted mb-0 mt-2">
+                                                {{ t('dashboard.Topbar_Color_Theme_Help', 'Applies a predefined color palette to the purple topbar header.') }}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        id="pv-custom-colors-panel"
+                                        class="rounded-xl border border-gray-200 p-3 bg-gray-50/40 space-y-3 {{ $purpleSelectedColorTheme === 'custom' ? '' : 'hidden' }}"
+                                    >
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <label class="form-label mb-0">{{ t('dashboard.Custom_Theme_Colors', 'Custom Theme Colors') }}</label>
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span class="text-xs text-muted">{{ t('dashboard.Custom_Theme_Colors_Help', 'Used when Color Theme = Custom (Manual).') }}</span>
+                                                <button
+                                                    type="button"
+                                                    id="pv_custom_colors_reset"
+                                                    class="btn btn-outline-secondary btn-sm"
+                                                >
+                                                    {{ t('dashboard.Reset_Custom_Colors', 'Reset custom colors') }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            @foreach ($purpleCustomColorInputs as $colorKey => $colorValue)
+                                                @php
+                                                    $colorInputId = 'pv_custom_color_' . preg_replace('/[^a-z0-9_-]/i', '_', (string) $colorKey);
+                                                @endphp
+                                                <div>
+                                                    <label for="{{ $colorInputId }}" class="form-label mb-1">
+                                                        {{ $purpleCustomColorLabels[$colorKey] ?? ucwords(str_replace('_', ' ', (string) $colorKey)) }}
+                                                    </label>
+                                                    <div class="flex items-center gap-2">
+                                                        <input
+                                                            id="{{ $colorInputId }}"
+                                                            type="color"
+                                                            class="form-control form-control-color p-1 h-10 w-14"
+                                                            value="{{ $colorValue }}"
+                                                            data-pv-custom-picker="{{ $colorKey }}"
+                                                        >
+                                                        <input
+                                                            id="{{ $colorInputId }}_hex"
+                                                            name="pv_custom_colors[{{ $colorKey }}]"
+                                                            type="text"
+                                                            class="form-control font-mono uppercase"
+                                                            value="{{ $colorValue }}"
+                                                            pattern="^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$"
+                                                            maxlength="7"
+                                                            placeholder="#000000"
+                                                            data-pv-custom-hex-input="{{ $colorKey }}"
+                                                        >
+                                                    </div>
+                                                    @error('pv_custom_colors.' . $colorKey)
+                                                        <p class="text-xs text-danger mt-1 mb-0">{{ $message }}</p>
+                                                    @enderror
+                                                </div>
+                                            @endforeach
                                         </div>
                                     </div>
 
@@ -340,18 +744,6 @@
                                         </div>
 
                                         <div>
-                                            <label for="pv_login_label" class="form-label mb-1">{{ t('dashboard.Login_Label', 'Login Label') }}</label>
-                                            <input
-                                                id="pv_login_label"
-                                                name="pv_login_label"
-                                                type="text"
-                                                class="form-control"
-                                                value="{{ old('pv_login_label', $purpleTopbarSettings['login_label']) }}"
-                                                placeholder="Login"
-                                            >
-                                        </div>
-
-                                        <div>
                                             <label for="pv_login_url" class="form-label mb-1">{{ t('dashboard.Login_URL', 'Login URL') }}</label>
                                             <input
                                                 id="pv_login_url"
@@ -378,33 +770,9 @@
                                                 {{ t('dashboard.Show_Language_Switcher', 'Show language switcher') }}
                                             </label>
                                         </div>
-
-                                        <div>
-                                            <label for="pv_language_label" class="form-label mb-1">{{ t('dashboard.Language_Label', 'Language Label') }}</label>
-                                            <input
-                                                id="pv_language_label"
-                                                name="pv_language_label"
-                                                type="text"
-                                                class="form-control"
-                                                value="{{ old('pv_language_label', $purpleTopbarSettings['language_label']) }}"
-                                                placeholder="Language"
-                                            >
-                                        </div>
                                     </div>
 
                                     <div class="grid grid-cols-1 gap-3">
-                                        <div>
-                                            <label for="pv_contact_button_label" class="form-label mb-1">{{ t('dashboard.Contact_Button_Label', 'Contact Button Label') }}</label>
-                                            <input
-                                                id="pv_contact_button_label"
-                                                name="pv_contact_button_label"
-                                                type="text"
-                                                class="form-control"
-                                                value="{{ old('pv_contact_button_label', $purpleTopbarSettings['contact_button_label']) }}"
-                                                placeholder="Contact us"
-                                            >
-                                        </div>
-
                                         <div>
                                             <label for="pv_contact_button_url" class="form-label mb-1">{{ t('dashboard.Contact_Button_URL', 'Contact Button URL') }}</label>
                                             <input
@@ -512,14 +880,30 @@
                 const saveHint = document.getElementById('header-settings-savehint');
                 const resetButton = document.getElementById('header-settings-reset');
                 const logoOverrideInput = document.getElementById('pv_logo_override');
+                const logoOverrideClearButton = document.getElementById('pv_logo_override_clear');
                 const logoOverridePreview = document.getElementById('pv_logo_override_preview');
+                const customColorsPanel = document.getElementById('pv-custom-colors-panel');
+                const customColorsResetButton = document.getElementById('pv_custom_colors_reset');
                 const fallbackLogoText = @json(t('dashboard.Fallback_To_General_Logo', 'Fallback to General Setting logo'));
                 const storageBaseUrl = @json(asset('storage'));
                 const baselineValues = @json($headerSettingsBaseline);
+                const localizedBaselineValues = @json($headerSettingsLocalizedBaseline);
+                const purpleInitialLangCode = @json($purpleInitialLangCode);
+                const customColorFallbacks = @json($purpleCustomColorDefaults);
 
                 if (!settingsForm) {
                     return;
                 }
+
+                const customHexByKey = new Map();
+                const customPickerByKey = new Map();
+                settingsForm.querySelectorAll('[data-pv-custom-hex-input]').forEach((input) => {
+                    customHexByKey.set(input.getAttribute('data-pv-custom-hex-input'), input);
+                });
+                settingsForm.querySelectorAll('[data-pv-custom-picker]').forEach((input) => {
+                    customPickerByKey.set(input.getAttribute('data-pv-custom-picker'), input);
+                });
+                const colorThemeInputs = settingsForm.querySelectorAll('input[name="pv_color_theme"]');
 
                 const serialize = (formData) => {
                     const values = {};
@@ -541,8 +925,16 @@
                 }
 
                 function setFieldValue(name, value) {
-                    const field = settingsForm.querySelector(`[name="${name}"]`);
+                    const field = settingsForm.elements.namedItem(name)
+                        || settingsForm.querySelector(`[name="${name}"]`);
                     if (!field) return;
+
+                    if (typeof RadioNodeList !== 'undefined' && field instanceof RadioNodeList) {
+                        field.forEach((radio) => {
+                            radio.checked = radio.value === String(value ?? '');
+                        });
+                        return;
+                    }
 
                     if (field.type === 'checkbox') {
                         field.checked = !!value;
@@ -558,20 +950,89 @@
                     field.value = value ?? '';
                 }
 
+                function normalizeHexColor(value, fallback = '#000000') {
+                    const candidate = String(value || '').trim().toUpperCase();
+                    if (/^#([A-F0-9]{3}|[A-F0-9]{6})$/.test(candidate)) {
+                        return candidate;
+                    }
+
+                    return String(fallback || '#000000').trim().toUpperCase();
+                }
+
+                function syncCustomColorControls(colorKey, value) {
+                    const fallback = customColorFallbacks[colorKey] || '#000000';
+                    const normalized = normalizeHexColor(value, fallback);
+
+                    const hexInput = customHexByKey.get(colorKey);
+                    if (hexInput) {
+                        hexInput.value = normalized;
+                    }
+
+                    const pickerInput = customPickerByKey.get(colorKey);
+                    if (pickerInput) {
+                        pickerInput.value = normalized;
+                    }
+                }
+
+                function syncAllCustomColorControlsFromInputs() {
+                    customHexByKey.forEach((hexInput, colorKey) => {
+                        syncCustomColorControls(colorKey, hexInput?.value);
+                    });
+                }
+
+                function selectedColorTheme() {
+                    const checked = settingsForm.querySelector('input[name="pv_color_theme"]:checked');
+                    return checked ? String(checked.value || '') : '';
+                }
+
+                function toggleCustomColorsPanel() {
+                    if (!customColorsPanel) return;
+                    customColorsPanel.classList.toggle('hidden', selectedColorTheme() !== 'custom');
+                }
+
                 function applyBaselineValues() {
                     setFieldValue('header_show_promo_bar', baselineValues.header_show_promo_bar);
                     setFieldValue('header_is_sticky', baselineValues.header_is_sticky);
 
-                    setFieldValue('pv_announcement_text', baselineValues.pv_announcement_text);
                     setFieldValue('pv_show_social_icons', baselineValues.pv_show_social_icons);
                     setFieldValue('pv_show_login_button', baselineValues.pv_show_login_button);
-                    setFieldValue('pv_login_label', baselineValues.pv_login_label);
                     setFieldValue('pv_login_url', baselineValues.pv_login_url);
                     setFieldValue('pv_show_language_switcher', baselineValues.pv_show_language_switcher);
-                    setFieldValue('pv_language_label', baselineValues.pv_language_label);
-                    setFieldValue('pv_contact_button_label', baselineValues.pv_contact_button_label);
                     setFieldValue('pv_contact_button_url', baselineValues.pv_contact_button_url);
                     setFieldValue('pv_logo_override', baselineValues.pv_logo_override);
+                    setFieldValue('pv_color_theme', baselineValues.pv_color_theme);
+
+                    Object.entries(localizedBaselineValues).forEach(([name, fieldValue]) => {
+                        setFieldValue(name, fieldValue);
+                    });
+
+                    Object.entries(baselineValues).forEach(([name, fieldValue]) => {
+                        if (name.startsWith('pv_custom_colors[')) {
+                            setFieldValue(name, fieldValue);
+                        }
+                    });
+
+                    syncAllCustomColorControlsFromInputs();
+                    toggleCustomColorsPanel();
+                }
+
+                function activatePurpleTopbarLanguage(langCode) {
+                    if (!langCode) return;
+
+                    const tabButtons = settingsForm.querySelectorAll('[data-pv-lang-tab]');
+                    const panels = settingsForm.querySelectorAll('[data-pv-lang-panel]');
+
+                    tabButtons.forEach((button) => {
+                        const currentCode = button.getAttribute('data-pv-lang-tab');
+                        const isActive = currentCode === langCode;
+                        button.classList.toggle('btn-primary', isActive);
+                        button.classList.toggle('btn-outline-secondary', !isActive);
+                    });
+
+                    panels.forEach((panel) => {
+                        const currentCode = panel.getAttribute('data-pv-lang-panel');
+                        panel.classList.toggle('hidden', currentCode !== langCode);
+                    });
                 }
 
                 function renderLogoOverridePreview(path) {
@@ -597,6 +1058,44 @@
                 settingsForm.addEventListener('change', updateSaveHint);
                 settingsForm.addEventListener('input', updateSaveHint);
 
+                settingsForm.querySelectorAll('[data-pv-lang-tab]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        activatePurpleTopbarLanguage(button.getAttribute('data-pv-lang-tab'));
+                    });
+                });
+
+                customPickerByKey.forEach((pickerInput, colorKey) => {
+                    pickerInput.addEventListener('input', () => {
+                        syncCustomColorControls(colorKey, pickerInput.value);
+                    });
+                    pickerInput.addEventListener('change', () => {
+                        syncCustomColorControls(colorKey, pickerInput.value);
+                    });
+                });
+
+                customHexByKey.forEach((hexInput, colorKey) => {
+                    hexInput.addEventListener('input', () => {
+                        hexInput.value = String(hexInput.value || '').toUpperCase();
+                        if (/^#([A-F0-9]{3}|[A-F0-9]{6})$/.test(hexInput.value)) {
+                            syncCustomColorControls(colorKey, hexInput.value);
+                        }
+                    });
+                    hexInput.addEventListener('blur', () => {
+                        syncCustomColorControls(colorKey, hexInput.value);
+                    });
+                });
+
+                colorThemeInputs.forEach((input) => {
+                    input.addEventListener('change', toggleCustomColorsPanel);
+                });
+
+                customColorsResetButton?.addEventListener('click', function () {
+                    Object.entries(customColorFallbacks).forEach(([colorKey, colorValue]) => {
+                        syncCustomColorControls(colorKey, colorValue);
+                    });
+                    updateSaveHint();
+                });
+
                 logoOverrideInput?.addEventListener('input', function () {
                     renderLogoOverridePreview(this.value);
                 });
@@ -605,8 +1104,16 @@
                     renderLogoOverridePreview(this.value);
                 });
 
+                logoOverrideClearButton?.addEventListener('click', function () {
+                    if (!logoOverrideInput) return;
+                    logoOverrideInput.value = '';
+                    renderLogoOverridePreview('');
+                    updateSaveHint();
+                });
+
                 resetButton?.addEventListener('click', function () {
                     applyBaselineValues();
+                    activatePurpleTopbarLanguage(purpleInitialLangCode);
                     if (logoOverrideInput) {
                         renderLogoOverridePreview(logoOverrideInput.value);
                     }
@@ -617,9 +1124,14 @@
                 if (logoOverrideInput) {
                     renderLogoOverridePreview(logoOverrideInput.value);
                 }
+                syncAllCustomColorControlsFromInputs();
+                toggleCustomColorsPanel();
+
+                activatePurpleTopbarLanguage(purpleInitialLangCode);
 
                 updateSaveHint();
             });
         </script>
     @endpush
 </x-dashboard-layout>
+

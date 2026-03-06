@@ -143,6 +143,59 @@
         background-color: rgb(31 41 55);
         color: rgb(243 244 246);
     }
+
+    /* Purple topbar color-theme cards in Header settings */
+    .topbar-theme-label {
+        border-color: rgb(229 231 235);
+        background-color: rgb(255 255 255);
+    }
+
+    .topbar-theme-label:hover {
+        border-color: var(--color-primary);
+        background-color: rgba(36, 11, 54, 0.06);
+        box-shadow: 0 0 0 2px rgba(36, 11, 54, 0.2), 0 8px 18px -12px rgba(15, 23, 42, 0.45);
+        transform: translateY(-2px);
+    }
+
+    .topbar-theme-input:focus-visible + .topbar-theme-label {
+        border-color: var(--color-primary);
+        box-shadow: 0 0 0 2px rgba(36, 11, 54, 0.24);
+    }
+
+    .topbar-theme-input:checked + .topbar-theme-label {
+        border-color: var(--color-primary);
+        background-color: rgba(36, 11, 54, 0.1);
+        box-shadow: 0 0 0 2px rgba(36, 11, 54, 0.28), 0 8px 16px -10px rgba(15, 23, 42, 0.35);
+    }
+
+    .topbar-theme-label:hover .topbar-theme-dot,
+    .topbar-theme-input:checked + .topbar-theme-label .topbar-theme-dot {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    .topbar-theme-input:checked + .topbar-theme-label .topbar-theme-check {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    .topbar-theme-label:hover .topbar-theme-swatch,
+    .topbar-theme-input:checked + .topbar-theme-label .topbar-theme-swatch {
+        transform: scale(1.08);
+    }
+
+    .dark .topbar-theme-label {
+        border-color: rgb(75 85 99);
+        background-color: rgb(31 41 55);
+    }
+
+    .dark .topbar-theme-label:hover {
+        background-color: rgba(36, 11, 54, 0.22);
+    }
+
+    .dark .topbar-theme-input:checked + .topbar-theme-label {
+        background-color: rgba(36, 11, 54, 0.28);
+    }
 }
 
 /* Custom utilities for dashboard */

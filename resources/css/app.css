@@ -28,12 +28,13 @@
 
 @layer base {
     body, * {
-        @apply font-almarai;
+        font-family: "Almarai", sans-serif;
     }
 
     a,
     button {
-        @apply cursor-pointer font-almarai;
+        cursor: pointer;
+        font-family: "Almarai", sans-serif;
     }
 
 }
@@ -65,4 +66,71 @@
 .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
+}
+
+/* Purple topbar custom theme classes (driven by /assets/theme/purple-topbar.css variables) */
+.pv-topbar-custom-promo {
+    background-color: var(--pv-topbar-promo-bg);
+    color: var(--pv-topbar-promo-text);
+}
+
+.pv-topbar-custom-hover:hover {
+    color: var(--pv-topbar-accent);
+}
+
+.pv-topbar-custom-social {
+    fill: var(--pv-topbar-social-icon);
+}
+
+.pv-topbar-custom-social:hover {
+    fill: var(--pv-topbar-accent);
+}
+
+.pv-topbar-custom-nav {
+    background-color: var(--pv-topbar-nav-bg);
+    border-color: var(--pv-topbar-border);
+}
+
+.pv-topbar-custom-nav-text {
+    color: var(--pv-topbar-nav-text);
+}
+
+.pv-topbar-custom-dropdown {
+    background-color: var(--pv-topbar-nav-bg);
+    border-color: var(--pv-topbar-border);
+}
+
+.pv-topbar-custom-dropdown-item {
+    color: var(--pv-topbar-nav-text);
+}
+
+.pv-topbar-custom-dropdown-item:hover {
+    background-color: var(--pv-topbar-dropdown-hover-bg);
+    color: var(--pv-topbar-accent);
+}
+
+.pv-topbar-custom-contact {
+    color: var(--pv-topbar-accent);
+    border-color: var(--pv-topbar-accent);
+}
+
+.pv-topbar-custom-contact:hover {
+    background-color: var(--pv-topbar-accent);
+    color: #ffffff;
+}
+
+.pv-topbar-custom-accent-bg {
+    background-color: var(--pv-topbar-accent);
+}
+
+.pv-topbar-custom-mobile-panel {
+    background-color: var(--pv-topbar-nav-bg);
+}
+
+.pv-topbar-custom-border {
+    border-color: var(--pv-topbar-border);
+}
+
+.pv-topbar-custom-subtext {
+    color: var(--pv-topbar-subtext);
 }
