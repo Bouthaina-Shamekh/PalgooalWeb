@@ -16,9 +16,25 @@
     --color-secondary: #AE1028;
     --color-tertiary: #5F4A72;
     --color-background: #F9F6FB;
+    --color-purple-brand: #240a37;
+    --color-red-brand: #ba112c;
+    --color-gray-light: #f2f2f2;
+    --color-gray-dark: #626262;
     --text-title-h2: 1.875rem;
     --text-title-h3: 1.5rem;
     --text-suptitle: 1.125rem;
+
+}
+
+@layer base {
+    body, * {
+        @apply font-almarai;
+    }
+
+    a,
+    button {
+        @apply cursor-pointer font-almarai;
+    }
 
 }
 
@@ -33,4 +49,20 @@
 .pg-has-hover-bg:hover {
     background-color: var(--pg-hover-bg) !important;
     color: var(--pg-hover-color) !important;
+}
+
+@media (width >= 96rem) {
+    .container {
+        max-width: 82rem;
+    }
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }

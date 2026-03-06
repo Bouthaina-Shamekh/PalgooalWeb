@@ -112,14 +112,6 @@
            text-slate-700 uppercase;
   }
 }
-
-
-
-
-
-
-
-
 @theme {
     --font-Almarai: "Almarai";
     --font-Cairo: "Cairo";
@@ -127,7 +119,10 @@
     --color-secondary: #AE1028;
     --color-tertiary: #5F4A72;
     --color-background: #F9F6FB;
-    --color-hazem: #000000;
+    --color-purple-brand: #240a37;
+    --color-red-brand: #ba112c;
+    --color-gray-light: #f2f2f2;
+    --color-gray-dark: #626262;
     --text-title-h2: 1.875rem;
     --text-title-h3: 1.5rem;
     --text-suptitle: 1.125rem;

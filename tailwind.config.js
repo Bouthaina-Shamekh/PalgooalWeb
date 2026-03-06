@@ -22,7 +22,11 @@ export default {
         secondary: 'var(--color-secondary)', 
         tertiary: 'var(--color-tertiary)',
         background: 'var(--color-background)',
-        hazem: 'var(--color-hazem)',
+        purplebrand: 'var(--color-purple-brand)',
+        redbrand: 'var(--color-red-brand)',
+        graylight : 'var(--color-gray-light)',
+        graydark : 'var(--color-gray-dark)',
+
         primary1: {
           50: '#eff6ff',
           100: '#dbeafe', 

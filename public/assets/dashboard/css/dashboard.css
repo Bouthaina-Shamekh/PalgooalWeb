@@ -371,7 +371,7 @@
     --color-secondary: #AE1028;
     --color-tertiary: #5F4A72;
     --color-background: #F9F6FB;
-    --color-hazem: #000000;
+    --color-purple-brand: #240a37;
     --text-title-h2: 1.875rem;
     --text-title-h3: 1.5rem;
     --text-suptitle: 1.125rem;
@@ -1554,6 +1554,9 @@
   .min-w-\[100px\] {
     min-width: 100px;
   }
+  .min-w-\[140px\] {
+    min-width: 140px;
+  }
   .min-w-\[180px\] {
     min-width: 180px;
   }
@@ -2061,6 +2064,9 @@
   }
   .overflow-x-auto {
     overflow-x: auto;
+  }
+  .overflow-x-hidden {
+    overflow-x: hidden;
   }
   .overflow-y-auto {
     overflow-y: auto;
@@ -2735,6 +2741,9 @@
   }
   .bg-purple-600 {
     background-color: var(--color-purple-600);
+  }
+  .bg-purple-brand {
+    background-color: var(--color-purple-brand);
   }
   .bg-red-50 {
     background-color: var(--color-red-50);
@@ -3802,6 +3811,9 @@
   }
   .text-purple-800 {
     color: var(--color-purple-800);
+  }
+  .text-purple-brand {
+    color: var(--color-purple-brand);
   }
   .text-red-400 {
     color: var(--color-red-400);
@@ -5487,6 +5499,13 @@
     &:hover {
       @media (hover: hover) {
         color: var(--color-purple-600);
+      }
+    }
+  }
+  .hover\:text-purple-brand {
+    &:hover {
+      @media (hover: hover) {
+        color: var(--color-purple-brand);
       }
     }
   }
