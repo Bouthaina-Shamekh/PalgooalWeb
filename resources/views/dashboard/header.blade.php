@@ -12,6 +12,12 @@
         }
 
         $isEditing = $editingItem !== null;
+        $openMenuManagement = $errors->has('menu_name')
+            || $errors->has('menu_location')
+            || $errors->has('menu_title')
+            || $errors->has('menu_slug')
+            || $errors->has('menu_is_active')
+            || $errors->has('menu_delete');
 
         $pageLabelMap = [];
         foreach ($pages as $page) {
@@ -63,126 +69,181 @@
             </div>
         @endif
 
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">{{ t('dashboard.Menu_Management', 'Menu Management') }}</h5>
-            </div>
-            <div class="card-body space-y-4">
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 items-end">
-                    <div class="lg:col-span-2">
-                        <form method="GET" action="{{ route('dashboard.menus') }}">
-                            <label for="selected_menu" class="form-label mb-1">{{ t('dashboard.Select_Menu', 'Select Menu') }}</label>
-                            <select id="selected_menu" name="menu" class="form-select">
-                                @foreach ($menus as $menu)
-                                    <option value="{{ $menu->id }}" @selected((int) ($selectedMenu?->id ?? 0) === (int) $menu->id)>
-                                        {{ $menu->name }}
-                                        @if (! empty($menu->location_key))
-                                            - {{ $menuLocations[$menu->location_key]['label'] ?? $menu->location_key }}
-                                        @endif
-                                    </option>
-                                @endforeach
-                            </select>
-                        </form>
+        <details class="card" @if($openMenuManagement) open @endif>
+            <summary class="card-header cursor-pointer">
+                <div class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h5 class="mb-0">{{ t('dashboard.Menu_Management', 'Menu Management') }}</h5>
+                        <p class="text-muted mb-0 text-sm">
+                            {{ t('dashboard.Menu_Management_Description', 'Manage menu collections, then assign items and order.') }}
+                        </p>
                     </div>
-                    <div class="flex items-center gap-2">
-                        @if ($selectedMenu)
-                            <form method="POST" action="{{ route('dashboard.menus.duplicate', $selectedMenu) }}" class="w-full">
-                                @csrf
-                                <button type="submit" class="btn btn-outline-secondary w-full">
-                                    {{ t('dashboard.Duplicate', 'Duplicate') }}
-                                </button>
-                            </form>
-
-                            <form method="POST" action="{{ route('dashboard.menus.destroy', $selectedMenu) }}" class="w-full"
-                                data-confirm="{{ t('dashboard.Delete_Menu_Confirm', 'Delete this menu?') }}">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-outline-danger w-full">
-                                    {{ t('dashboard.Delete', 'Delete') }}
-                                </button>
-                            </form>
-                        @endif
+                    <div class="text-muted text-sm">
+                        {{ t('dashboard.Current_Selected_Menu', 'Current menu') }}:
+                        <span class="fw-semibold text-dark">{{ $selectedMenu?->name ?? '-' }}</span>
+                    </div>
+                </div>
+            </summary>
+            <div class="card-body space-y-4">
+                <div class="row g-2">
+                    <div class="col-12 col-md-4">
+                        <div class="border rounded-xl px-3 py-2 bg-light d-flex align-items-center justify-content-between">
+                            <div class="text-muted small">{{ t('dashboard.Total_Menus', 'Total Menus') }}</div>
+                            <div class="fs-5 fw-semibold">{{ $menus->count() }}</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="border rounded-xl px-3 py-2 bg-light d-flex align-items-center justify-content-between">
+                            <div class="text-muted small">{{ t('dashboard.Items_In_Selected_Menu', 'Items In Selected Menu') }}</div>
+                            <div class="fs-5 fw-semibold">{{ $selectedMenu?->items?->count() ?? 0 }}</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="border rounded-xl px-3 py-2 bg-light d-flex align-items-center justify-content-between">
+                            <div class="text-muted small">{{ t('dashboard.Active_Languages', 'Active Languages') }}</div>
+                            <div class="fs-5 fw-semibold">{{ $languages->count() }}</div>
+                        </div>
                     </div>
                 </div>
 
-                <form method="POST" action="{{ route('dashboard.menus.store') }}"
-                    class="grid grid-cols-1 lg:grid-cols-3 gap-3 items-end border rounded-xl p-3 bg-light">
-                    @csrf
-                    <div>
-                        <label for="new_menu_name" class="form-label mb-1">{{ t('dashboard.New_Menu_Name', 'New Menu Name') }}</label>
-                        <input id="new_menu_name" name="menu_name" type="text" class="form-control"
-                            value="{{ old('menu_name') }}"
-                            placeholder="{{ t('dashboard.Example_Main_Menu', 'Example: Main Menu') }}">
-                    </div>
-                    <div>
-                        <label for="new_menu_location" class="form-label mb-1">{{ t('dashboard.Menu_Location', 'Menu Location') }}</label>
-                        <select id="new_menu_location" name="menu_location" class="form-select">
-                            @foreach ($menuLocations as $locationKey => $location)
-                                <option value="{{ $locationKey }}"
-                                    @selected(old('menu_location', array_key_first($menuLocations)) === $locationKey)>
-                                    {{ $location['label'] ?? $locationKey }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <button type="submit" class="btn btn-primary w-full">
-                            {{ t('dashboard.Create_Menu', 'Create Menu') }}
-                        </button>
-                    </div>
-                </form>
+                <div class="border rounded-xl p-3">
+                    @if ($selectedMenu)
+                        <form method="POST" action="{{ route('dashboard.menus.update', $selectedMenu) }}"
+                            class="grid grid-cols-1 lg:grid-cols-2 gap-3 items-end">
+                            @csrf
+                            @method('PATCH')
 
-                @if ($selectedMenu)
-                    <form method="POST" action="{{ route('dashboard.menus.update', $selectedMenu) }}"
-                        class="grid grid-cols-1 lg:grid-cols-4 gap-3 items-end border rounded-xl p-3">
+                            <div class="lg:col-span-2">
+                                <h6 class="mb-1">{{ t('dashboard.Menu_Settings', 'Menu Settings') }}</h6>
+                                <p class="text-muted text-sm mb-0">
+                                    {{ t('dashboard.Menu_Settings_Description', 'Edit menu identity and where this menu appears.') }}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label for="menu_title" class="form-label mb-1">{{ t('dashboard.Menu_Title', 'Menu Title') }}</label>
+                                <input id="menu_title" name="menu_title" type="text" class="form-control"
+                                    value="{{ old('menu_title', $itemForm['title'] ?? '') }}">
+                            </div>
+                            <div>
+                                <label for="menu_slug" class="form-label mb-1">{{ t('dashboard.Menu_Slug', 'Menu Slug') }}</label>
+                                <input id="menu_slug" name="menu_slug" type="text" class="form-control" placeholder="main-menu"
+                                    value="{{ old('menu_slug', $itemForm['slug'] ?? '') }}">
+                            </div>
+                            <div>
+                                <label for="menu_location" class="form-label mb-1">{{ t('dashboard.Menu_Location', 'Menu Location') }}</label>
+                                <select id="menu_location" name="menu_location" class="form-select">
+                                    @foreach ($menuLocations as $locationKey => $location)
+                                        <option value="{{ $locationKey }}"
+                                            @selected(old('menu_location', $itemForm['location'] ?? '') === $locationKey)>
+                                            {{ $location['label'] ?? $locationKey }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="flex items-center justify-between gap-3">
+                                <label class="form-check mb-0">
+                                    <input type="hidden" name="menu_is_active" value="0">
+                                    <input type="checkbox" class="form-check-input" name="menu_is_active" value="1"
+                                        @checked((int) old('menu_is_active', (int) ($itemForm['is_active'] ?? true)) === 1)>
+                                    <span class="form-check-label">{{ t('dashboard.Active', 'Active') }}</span>
+                                </label>
+                                <button type="submit" class="btn btn-success">
+                                    {{ t('dashboard.Save_Menu', 'Save Menu') }}
+                                </button>
+                            </div>
+                        </form>
+                    @endif
+                </div>
+
+                <details class="border rounded-xl p-3 bg-light"
+                    @if ($errors->has('menu_name') || $errors->has('menu_location')) open @endif>
+                    <summary class="cursor-pointer fw-semibold">
+                        {{ t('dashboard.Create_New_Menu', 'Create New Menu') }}
+                    </summary>
+                    <form method="POST" action="{{ route('dashboard.menus.store') }}"
+                        class="grid grid-cols-1 lg:grid-cols-3 gap-3 items-end pt-3">
                         @csrf
-                        @method('PATCH')
-
                         <div>
-                            <label for="menu_title" class="form-label mb-1">{{ t('dashboard.Menu_Title', 'Menu Title') }}</label>
-                            <input id="menu_title" name="menu_title" type="text" class="form-control"
-                                value="{{ old('menu_title', $itemForm['title'] ?? '') }}">
+                            <label for="new_menu_name" class="form-label mb-1">{{ t('dashboard.New_Menu_Name', 'New Menu Name') }}</label>
+                            <input id="new_menu_name" name="menu_name" type="text" class="form-control"
+                                value="{{ old('menu_name') }}"
+                                placeholder="{{ t('dashboard.Example_Main_Menu', 'Example: Main Menu') }}">
                         </div>
                         <div>
-                            <label for="menu_slug" class="form-label mb-1">{{ t('dashboard.Menu_Slug', 'Menu Slug') }}</label>
-                            <input id="menu_slug" name="menu_slug" type="text" class="form-control" placeholder="main-menu"
-                                value="{{ old('menu_slug', $itemForm['slug'] ?? '') }}">
-                        </div>
-                        <div>
-                            <label for="menu_location" class="form-label mb-1">{{ t('dashboard.Menu_Location', 'Menu Location') }}</label>
-                            <select id="menu_location" name="menu_location" class="form-select">
+                            <label for="new_menu_location" class="form-label mb-1">{{ t('dashboard.Menu_Location', 'Menu Location') }}</label>
+                            <select id="new_menu_location" name="menu_location" class="form-select">
                                 @foreach ($menuLocations as $locationKey => $location)
                                     <option value="{{ $locationKey }}"
-                                        @selected(old('menu_location', $itemForm['location'] ?? '') === $locationKey)>
+                                        @selected(old('menu_location', array_key_first($menuLocations)) === $locationKey)>
                                         {{ $location['label'] ?? $locationKey }}
                                     </option>
                                 @endforeach
                             </select>
                         </div>
-                        <div class="flex items-center justify-between gap-3">
-                            <label class="form-check mb-0">
-                                <input type="hidden" name="menu_is_active" value="0">
-                                <input type="checkbox" class="form-check-input" name="menu_is_active" value="1"
-                                    @checked((int) old('menu_is_active', (int) ($itemForm['is_active'] ?? true)) === 1)>
-                                <span class="form-check-label">{{ t('dashboard.Active', 'Active') }}</span>
-                            </label>
-                            <button type="submit" class="btn btn-success">
-                                {{ t('dashboard.Save_Menu', 'Save Menu') }}
+                        <div>
+                            <button type="submit" class="btn btn-primary w-full">
+                                {{ t('dashboard.Create_Menu', 'Create Menu') }}
                             </button>
                         </div>
                     </form>
-                @endif
+                </details>
             </div>
-        </div>
+        </details>
 
         @if ($selectedMenu)
             <div class="grid grid-cols-12 gap-6">
                 <div class="col-span-12 xl:col-span-6">
                     <div class="card">
                         <div class="card-header">
+                            <h5 class="mb-0">{{ t('dashboard.Menu_Library', 'Menu Library') }}</h5>
+                            <p class="text-muted text-sm mb-0 mt-1">
+                                {{ t('dashboard.Menu_Library_Description', 'Switch between menus or duplicate/delete current one.') }}
+                            </p>
+                        </div>
+                        <div class="card-body space-y-3">
+                            <form method="GET" action="{{ route('dashboard.menus') }}">
+                                <label for="selected_menu" class="form-label mb-1">{{ t('dashboard.Select_Menu', 'Select Menu') }}</label>
+                                <select id="selected_menu" name="menu" class="form-select">
+                                    @foreach ($menus as $menu)
+                                        <option value="{{ $menu->id }}" @selected((int) ($selectedMenu?->id ?? 0) === (int) $menu->id)>
+                                            {{ $menu->name }}
+                                            @if (! empty($menu->location_key))
+                                                - {{ $menuLocations[$menu->location_key]['label'] ?? $menu->location_key }}
+                                            @endif
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </form>
+
+                            <div class="flex items-center gap-2">
+                                <form method="POST" action="{{ route('dashboard.menus.duplicate', $selectedMenu) }}" class="w-full">
+                                    @csrf
+                                    <button type="submit" class="btn btn-outline-secondary w-full">
+                                        {{ t('dashboard.Duplicate', 'Duplicate') }}
+                                    </button>
+                                </form>
+
+                                <form method="POST" action="{{ route('dashboard.menus.destroy', $selectedMenu) }}" class="w-full"
+                                    data-confirm="{{ t('dashboard.Delete_Menu_Confirm', 'Delete this menu?') }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-outline-danger w-full">
+                                        {{ t('dashboard.Delete', 'Delete') }}
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
                             <h5 class="mb-0">
                                 {{ $isEditing ? t('dashboard.Edit_Menu_Item', 'Edit Menu Item') : t('dashboard.Add_Menu_Item', 'Add Menu Item') }}
                             </h5>
+                            <p class="text-muted text-sm mb-0 mt-1">
+                                {{ t('dashboard.Menu_Item_Form_Description', 'Fill one language, then switch tabs to complete other translations.') }}
+                            </p>
                         </div>
                         <div class="card-body space-y-4">
                             <form id="menu-item-form"
@@ -519,7 +580,7 @@
                                                     ? ($pageTranslation?->title ?? t('dashboard.Untitled', 'Untitled'))
                                                     : ($itemTranslation?->label ?? t('dashboard.Untitled', 'Untitled'));
                                         @endphp
-                                        <div class="card border border-gray-200 menu-item-card" data-id="{{ $item->id }}">
+                                        <div class="card border border-gray-200 menu-item-card transition-all hover:shadow-sm" data-id="{{ $item->id }}">
                                             <div class="card-body p-3">
                                                 <div class="flex items-start justify-between gap-3">
                                                     <div class="flex items-start gap-3 flex-grow-1">
