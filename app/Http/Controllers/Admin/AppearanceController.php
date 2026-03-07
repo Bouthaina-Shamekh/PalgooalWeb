@@ -180,9 +180,22 @@ class AppearanceController extends Controller
 
     public function footer(): View
     {
+        $settings = $this->settings();
+
+        $activeFooterKey = $settings->active_footer_variant;
+        $availableFooters = config('front_layouts.footers', []);
+        if (!array_key_exists($activeFooterKey, $availableFooters)) {
+            $activeFooterKey = config('front_layouts.defaults.footer', 'default');
+        }
+
         return view('dashboard.appearance.footer', [
-            'settings' => $this->settings(),
-            'footerVariants' => config('front_layouts.footers', []),
+            'settings' => $settings,
+            'footerVariants' => $availableFooters,
+            'activeFooterSettings' => $this->resolvedFooterVariantSettings($settings, $activeFooterKey),
+            'footerSettingsLanguages' => Language::query()
+                ->where('is_active', true)
+                ->orderBy('id')
+                ->get(),
         ]);
     }
 
@@ -204,10 +217,180 @@ class AppearanceController extends Controller
     public function updateFooterSettings(Request $request): RedirectResponse
     {
         $settings = $this->settings();
+        $activeVariant = $settings->active_footer_variant;
+        $hexColorRule = ['nullable', 'string', 'regex:/^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'];
+
+        $validated = $request->validate([
+            'footer_show_contact_banner' => ['nullable', 'boolean'],
+            'footer_show_payment_methods' => ['nullable', 'boolean'],
+            'fm_texts' => ['nullable', 'array'],
+            'fm_texts.*' => ['nullable', 'array'],
+            'fm_texts.*.description_text' => ['nullable', 'string', 'max:2000'],
+            'fm_texts.*.pages_title' => ['nullable', 'string', 'max:80'],
+            'fm_texts.*.payment_title' => ['nullable', 'string', 'max:80'],
+            'fm_texts.*.help_title' => ['nullable', 'string', 'max:80'],
+            'fm_texts.*.follow_us_label' => ['nullable', 'string', 'max:80'],
+            'fm_texts.*.copyright_text' => ['nullable', 'string', 'max:255'],
+            'fm_description_text' => ['nullable', 'string', 'max:2000'],
+            'fm_pages_title' => ['nullable', 'string', 'max:80'],
+            'fm_payment_title' => ['nullable', 'string', 'max:80'],
+            'fm_help_title' => ['nullable', 'string', 'max:80'],
+            'fm_follow_us_label' => ['nullable', 'string', 'max:80'],
+            'fm_copyright_text' => ['nullable', 'string', 'max:255'],
+            'fm_show_social_icons' => ['nullable', 'boolean'],
+            'fm_logo_override' => ['nullable', 'string', 'max:2048'],
+            'fm_payment_logos' => ['nullable', 'string', 'max:10000'],
+            'fm_logo_width' => ['nullable', 'integer', 'min:40', 'max:480'],
+            'fm_logo_height' => ['nullable', 'integer', 'min:40', 'max:240'],
+            'fm_payment_logo_width' => ['nullable', 'integer', 'min:32', 'max:220'],
+            'fm_payment_logo_height' => ['nullable', 'integer', 'min:24', 'max:160'],
+            'fm_color_theme' => ['nullable', 'string', Rule::in($this->palgoalsMarketingColorThemeKeys())],
+            'fm_custom_colors' => ['nullable', 'array'],
+            'fm_custom_colors.shell_bg' => $hexColorRule,
+            'fm_custom_colors.body_text' => $hexColorRule,
+            'fm_custom_colors.heading_text' => $hexColorRule,
+            'fm_custom_colors.accent' => $hexColorRule,
+            'fm_custom_colors.border' => $hexColorRule,
+            'fm_custom_colors.payment_card_bg' => $hexColorRule,
+        ]);
+
+        $footerVariantSettings = is_array($settings->footer_variant_settings ?? null)
+            ? $settings->footer_variant_settings
+            : [];
+
+        if ($activeVariant === 'palgoals_marketing') {
+            $defaults = $this->footerVariantDefaults($settings, 'palgoals_marketing');
+            $allowedColorThemes = $this->palgoalsMarketingColorThemeKeys();
+            $languageCodes = Language::query()
+                ->where('is_active', true)
+                ->pluck('code')
+                ->map(fn ($code) => strtolower((string) $code))
+                ->filter()
+                ->values()
+                ->all();
+
+            $defaultLocale = strtolower((string) (
+                Language::query()->find($settings->default_language)?->code
+                ?? config('app.locale', 'en')
+            ));
+
+            $localizedTexts = is_array($request->input('fm_texts')) ? $request->input('fm_texts') : [];
+
+            $descriptionText = $this->normalizeLocalizedTextField(
+                $localizedTexts,
+                'description_text',
+                $languageCodes,
+                $defaultLocale,
+                trim((string) ($validated['fm_description_text'] ?? '')),
+            );
+
+            $pagesTitle = $this->normalizeLocalizedTextField(
+                $localizedTexts,
+                'pages_title',
+                $languageCodes,
+                $defaultLocale,
+                trim((string) ($validated['fm_pages_title'] ?? '')),
+            );
+
+            $paymentTitle = $this->normalizeLocalizedTextField(
+                $localizedTexts,
+                'payment_title',
+                $languageCodes,
+                $defaultLocale,
+                trim((string) ($validated['fm_payment_title'] ?? '')),
+            );
+
+            $helpTitle = $this->normalizeLocalizedTextField(
+                $localizedTexts,
+                'help_title',
+                $languageCodes,
+                $defaultLocale,
+                trim((string) ($validated['fm_help_title'] ?? '')),
+            );
+
+            $followUsLabel = $this->normalizeLocalizedTextField(
+                $localizedTexts,
+                'follow_us_label',
+                $languageCodes,
+                $defaultLocale,
+                trim((string) ($validated['fm_follow_us_label'] ?? '')),
+            );
+
+            $copyrightText = $this->normalizeLocalizedTextField(
+                $localizedTexts,
+                'copyright_text',
+                $languageCodes,
+                $defaultLocale,
+                trim((string) ($validated['fm_copyright_text'] ?? '')),
+            );
+
+            $selectedColorTheme = strtolower(trim((string) ($validated['fm_color_theme'] ?? '')));
+            if (!in_array($selectedColorTheme, $allowedColorThemes, true)) {
+                $selectedColorTheme = (string) ($defaults['color_theme'] ?? 'classic');
+            }
+
+            $normalizedCustomColors = $this->normalizePalgoalsMarketingCustomColors(
+                is_array($request->input('fm_custom_colors')) ? $request->input('fm_custom_colors') : [],
+                is_array($defaults['custom_colors'] ?? null)
+                    ? $defaults['custom_colors']
+                    : $this->palgoalsMarketingDefaultCustomColors(),
+            );
+
+            $footerVariantSettings['palgoals_marketing'] = array_replace($defaults, [
+                'description_text' => $descriptionText !== []
+                    ? $descriptionText
+                    : trim((string) ($validated['fm_description_text'] ?? '')),
+                'pages_title' => $pagesTitle !== []
+                    ? $pagesTitle
+                    : trim((string) ($validated['fm_pages_title'] ?? '')),
+                'payment_title' => $paymentTitle !== []
+                    ? $paymentTitle
+                    : trim((string) ($validated['fm_payment_title'] ?? '')),
+                'help_title' => $helpTitle !== []
+                    ? $helpTitle
+                    : trim((string) ($validated['fm_help_title'] ?? '')),
+                'follow_us_label' => $followUsLabel !== []
+                    ? $followUsLabel
+                    : trim((string) ($validated['fm_follow_us_label'] ?? '')),
+                'copyright_text' => $copyrightText !== []
+                    ? $copyrightText
+                    : trim((string) ($validated['fm_copyright_text'] ?? '')),
+                'show_social_icons' => $request->boolean('fm_show_social_icons'),
+                'logo_override' => $this->normalizeMediaPath($validated['fm_logo_override'] ?? null),
+                'payment_logos' => $this->normalizeMediaPathList($request->input('fm_payment_logos')),
+                'logo_width' => $this->normalizeDimensionValue(
+                    $validated['fm_logo_width'] ?? null,
+                    (int) ($defaults['logo_width'] ?? 220),
+                    40,
+                    480,
+                ),
+                'logo_height' => $this->normalizeDimensionValue(
+                    $validated['fm_logo_height'] ?? null,
+                    (int) ($defaults['logo_height'] ?? 72),
+                    40,
+                    240,
+                ),
+                'payment_logo_width' => $this->normalizeDimensionValue(
+                    $validated['fm_payment_logo_width'] ?? null,
+                    (int) ($defaults['payment_logo_width'] ?? 64),
+                    32,
+                    220,
+                ),
+                'payment_logo_height' => $this->normalizeDimensionValue(
+                    $validated['fm_payment_logo_height'] ?? null,
+                    (int) ($defaults['payment_logo_height'] ?? 40),
+                    24,
+                    160,
+                ),
+                'color_theme' => $selectedColorTheme,
+                'custom_colors' => $normalizedCustomColors,
+            ]);
+        }
 
         $settings->update([
             'footer_show_contact_banner' => $request->boolean('footer_show_contact_banner'),
             'footer_show_payment_methods' => $request->boolean('footer_show_payment_methods'),
+            'footer_variant_settings' => $footerVariantSettings,
         ]);
 
         return back()->with('success', 'Footer settings saved successfully.');
@@ -221,6 +404,7 @@ class AppearanceController extends Controller
             'header_show_promo_bar' => true,
             'header_is_sticky' => true,
             'header_variant_settings' => [],
+            'footer_variant_settings' => [],
             'footer_show_contact_banner' => true,
             'footer_show_payment_methods' => true,
         ]);
@@ -235,6 +419,24 @@ class AppearanceController extends Controller
 
         $storedSettings = is_array($settings->header_variant_settings ?? null)
             ? ($settings->header_variant_settings[$variant] ?? [])
+            : [];
+
+        if (!is_array($storedSettings)) {
+            $storedSettings = [];
+        }
+
+        return array_replace($defaults, $storedSettings);
+    }
+
+    protected function resolvedFooterVariantSettings(GeneralSetting $settings, string $variant): array
+    {
+        $defaults = $this->footerVariantDefaults($settings, $variant);
+        if ($defaults === []) {
+            return [];
+        }
+
+        $storedSettings = is_array($settings->footer_variant_settings ?? null)
+            ? ($settings->footer_variant_settings[$variant] ?? [])
             : [];
 
         if (!is_array($storedSettings)) {
@@ -265,6 +467,31 @@ class AppearanceController extends Controller
         ];
     }
 
+    protected function footerVariantDefaults(GeneralSetting $settings, string $variant): array
+    {
+        if ($variant !== 'palgoals_marketing') {
+            return [];
+        }
+
+        return [
+            'description_text' => 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum.',
+            'pages_title' => 'PAGES',
+            'payment_title' => 'PAYMENT',
+            'help_title' => 'NEED HELP?',
+            'follow_us_label' => 'FOLLOW US:',
+            'copyright_text' => 'All rights reserved to PalGoals company © 2025',
+            'show_social_icons' => true,
+            'logo_override' => null,
+            'payment_logos' => [],
+            'logo_width' => 220,
+            'logo_height' => 72,
+            'payment_logo_width' => 64,
+            'payment_logo_height' => 40,
+            'color_theme' => $this->palgoalsMarketingDefaultColorThemeKey(),
+            'custom_colors' => $this->palgoalsMarketingDefaultCustomColors(),
+        ];
+    }
+
     protected function purpleTopbarDefaultCustomColors(): array
     {
         return [
@@ -277,6 +504,18 @@ class AppearanceController extends Controller
             'border' => '#E5E7EB',
             'dropdown_hover_bg' => '#F3F4F6',
             'subtext' => '#626262',
+        ];
+    }
+
+    protected function palgoalsMarketingDefaultCustomColors(): array
+    {
+        return [
+            'shell_bg' => '#F3F4F6',
+            'body_text' => '#8E8E8E',
+            'heading_text' => '#111827',
+            'accent' => '#240A37',
+            'border' => '#D1D5DB',
+            'payment_card_bg' => '#FFFFFF',
         ];
     }
 
@@ -300,15 +539,57 @@ class AppearanceController extends Controller
         return $normalizedThemes;
     }
 
+    protected function palgoalsMarketingColorThemes(): array
+    {
+        $configuredThemes = config('front_layouts.color_libraries.palgoals_marketing.themes', []);
+        if (!is_array($configuredThemes)) {
+            return [];
+        }
+
+        $normalizedThemes = [];
+        foreach ($configuredThemes as $key => $theme) {
+            $normalizedKey = strtolower(trim((string) $key));
+            if ($normalizedKey === '' || !is_array($theme)) {
+                continue;
+            }
+
+            $normalizedThemes[$normalizedKey] = $theme;
+        }
+
+        return $normalizedThemes;
+    }
+
     protected function purpleTopbarColorThemeKeys(): array
     {
         return array_keys($this->purpleTopbarColorThemes());
+    }
+
+    protected function palgoalsMarketingColorThemeKeys(): array
+    {
+        return array_keys($this->palgoalsMarketingColorThemes());
     }
 
     protected function purpleTopbarDefaultColorThemeKey(): string
     {
         $themes = $this->purpleTopbarColorThemes();
         $configuredDefault = strtolower(trim((string) config('front_layouts.color_libraries.purple_topbar.default', 'classic')));
+
+        if ($configuredDefault !== '' && array_key_exists($configuredDefault, $themes)) {
+            return $configuredDefault;
+        }
+
+        $firstKey = array_key_first($themes);
+        if (is_string($firstKey) && $firstKey !== '') {
+            return $firstKey;
+        }
+
+        return 'classic';
+    }
+
+    protected function palgoalsMarketingDefaultColorThemeKey(): string
+    {
+        $themes = $this->palgoalsMarketingColorThemes();
+        $configuredDefault = strtolower(trim((string) config('front_layouts.color_libraries.palgoals_marketing.default', 'classic')));
 
         if ($configuredDefault !== '' && array_key_exists($configuredDefault, $themes)) {
             return $configuredDefault;
@@ -370,6 +651,27 @@ class AppearanceController extends Controller
         return $normalized;
     }
 
+    protected function normalizeMediaPathList($value): array
+    {
+        if (is_string($value)) {
+            $value = array_filter(array_map('trim', explode(',', $value)));
+        }
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($value as $item) {
+            $path = $this->normalizeMediaPath($item);
+            if ($path !== null && $path !== '') {
+                $normalized[] = $path;
+            }
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
     protected function normalizeLocalizedTextField(
         array $localizedTexts,
         string $field,
@@ -415,6 +717,18 @@ class AppearanceController extends Controller
         return $normalized;
     }
 
+    protected function normalizePalgoalsMarketingCustomColors(array $inputColors, array $fallbackColors): array
+    {
+        $defaults = array_replace($this->palgoalsMarketingDefaultCustomColors(), $fallbackColors);
+        $normalized = [];
+
+        foreach ($defaults as $key => $fallbackValue) {
+            $normalized[$key] = $this->normalizeHexColorValue($inputColors[$key] ?? null, (string) $fallbackValue);
+        }
+
+        return $normalized;
+    }
+
     protected function normalizeHexColorValue($value, string $fallback): string
     {
         $candidate = strtoupper(trim((string) $value));
@@ -423,5 +737,19 @@ class AppearanceController extends Controller
         }
 
         return $candidate;
+    }
+
+    protected function normalizeDimensionValue($value, int $fallback, int $min, int $max): int
+    {
+        if (!is_numeric($value)) {
+            return $fallback;
+        }
+
+        $normalized = (int) $value;
+        if ($normalized < $min || $normalized > $max) {
+            return $fallback;
+        }
+
+        return $normalized;
     }
 }

@@ -59,6 +59,7 @@
     {{-- <link rel="stylesheet" href="{{ mix('assets/tamplate/css/tailwind.css') }}"> --}}
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}">
     <link rel="stylesheet" href="{{ route('frontend.assets.purple_topbar_css') }}">
+    <link rel="stylesheet" href="{{ route('frontend.assets.palgoals_marketing_footer_css') }}">
     <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/tabler-icons.min.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
 

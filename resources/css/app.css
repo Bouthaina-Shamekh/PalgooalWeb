@@ -134,3 +134,48 @@
 .pv-topbar-custom-subtext {
     color: var(--pv-topbar-subtext);
 }
+
+/* PalGoals marketing footer custom theme classes (driven by /assets/theme/palgoals-marketing-footer.css variables) */
+.pf-marketing-custom-shell {
+    background-color: var(--pf-marketing-shell-bg);
+}
+
+.pf-marketing-custom-muted {
+    color: var(--pf-marketing-body-text);
+}
+
+.pf-marketing-custom-heading {
+    color: var(--pf-marketing-heading-text);
+}
+
+.pf-marketing-custom-hover:hover {
+    color: var(--pf-marketing-accent);
+}
+
+.pf-marketing-custom-payment-card {
+    background-color: var(--pf-marketing-payment-card-bg);
+}
+
+.pf-marketing-custom-border {
+    border-color: var(--pf-marketing-border);
+}
+
+.pf-marketing-custom-follow {
+    color: var(--pf-marketing-body-text);
+}
+
+.pf-marketing-logo-frame {
+    width: var(--pf-marketing-logo-width);
+    height: var(--pf-marketing-logo-height);
+}
+
+.pf-marketing-logo-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.pf-marketing-payment-card-size {
+    width: var(--pf-marketing-payment-logo-width);
+    height: var(--pf-marketing-payment-logo-height);
+}

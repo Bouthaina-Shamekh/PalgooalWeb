@@ -144,6 +144,10 @@ Route::middleware(['setLocale'])->group(function () {
     Route::get('/assets/theme/purple-topbar.css', [ThemeCssController::class, 'purpleTopbar'])
         ->name('frontend.assets.purple_topbar_css');
 
+    // Dynamic stylesheet for manual PalGoals marketing footer colors (no inline styles).
+    Route::get('/assets/theme/palgoals-marketing-footer.css', [ThemeCssController::class, 'palgoalsMarketingFooter'])
+        ->name('frontend.assets.palgoals_marketing_footer_css');
+
     /*
     |--------------------------------------------------------------------------
     | Dynamic CMS Pages by slug (must stay after specific routes)

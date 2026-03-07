@@ -152,6 +152,71 @@ return [
                 ],
             ],
         ],
+        'palgoals_marketing' => [
+            'default' => 'classic',
+            'themes' => [
+                'classic' => [
+                    'label' => 'Classic Purple',
+                    'classes' => [
+                        'shell' => 'bg-gray-100',
+                        'muted_text' => 'text-gray-500',
+                        'heading_text' => 'text-black',
+                        'hover_text' => 'hover:text-purple-brand',
+                        'payment_card' => 'bg-white',
+                        'top_border' => 'border-gray-300',
+                        'follow_label' => 'text-gray-500',
+                    ],
+                ],
+                'slate' => [
+                    'label' => 'Slate Cyan',
+                    'classes' => [
+                        'shell' => 'bg-slate-900',
+                        'muted_text' => 'text-slate-300',
+                        'heading_text' => 'text-slate-50',
+                        'hover_text' => 'hover:text-cyan-300',
+                        'payment_card' => 'bg-slate-800',
+                        'top_border' => 'border-slate-700',
+                        'follow_label' => 'text-slate-300',
+                    ],
+                ],
+                'emerald' => [
+                    'label' => 'Emerald Lime',
+                    'classes' => [
+                        'shell' => 'bg-emerald-50',
+                        'muted_text' => 'text-emerald-700',
+                        'heading_text' => 'text-emerald-900',
+                        'hover_text' => 'hover:text-lime-700',
+                        'payment_card' => 'bg-white',
+                        'top_border' => 'border-emerald-200',
+                        'follow_label' => 'text-emerald-700',
+                    ],
+                ],
+                'sunset' => [
+                    'label' => 'Sunset Coral',
+                    'classes' => [
+                        'shell' => 'bg-amber-50',
+                        'muted_text' => 'text-rose-700',
+                        'heading_text' => 'text-rose-900',
+                        'hover_text' => 'hover:text-rose-500',
+                        'payment_card' => 'bg-white',
+                        'top_border' => 'border-amber-200',
+                        'follow_label' => 'text-rose-700',
+                    ],
+                ],
+                'custom' => [
+                    'label' => 'Custom (Manual)',
+                    'classes' => [
+                        'shell' => 'pf-marketing-custom-shell',
+                        'muted_text' => 'pf-marketing-custom-muted',
+                        'heading_text' => 'pf-marketing-custom-heading',
+                        'hover_text' => 'pf-marketing-custom-hover',
+                        'payment_card' => 'pf-marketing-custom-payment-card',
+                        'top_border' => 'pf-marketing-custom-border',
+                        'follow_label' => 'pf-marketing-custom-follow',
+                    ],
+                ],
+            ],
+        ],
     ],
 
     'footers' => [
@@ -176,7 +241,7 @@ return [
         'palgoals_marketing' => [
             'label' => 'PalGoals Marketing',
             'description' => 'Three-column gray footer with pages links, payments, and social follow bar.',
-            'preview' => 'assets/front-layouts/previews/footers/palgoals_marketing.svg',
+            'preview' => 'assets/front-layouts/previews/footers/palgoals_marketing.png',
             'menu_location' => 'footer_primary',
         ],
     ],
