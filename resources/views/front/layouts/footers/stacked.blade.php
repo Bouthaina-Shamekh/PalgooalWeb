@@ -2,7 +2,7 @@
     $logoSrc = $settings?->logo
         ? asset('storage/' . $settings->logo)
         : asset('assets/tamplate/images/logo.svg');
-    $contact = $settings?->contact_info ?? [];
+    $contact = $settings?->resolved_contact_info ?? [];
     $showContactBanner = (bool) ($settings?->footer_show_contact_banner ?? true);
 @endphp
 
@@ -13,7 +13,7 @@
                 <p class="text-sm uppercase tracking-[0.3em] text-white/70">{{ t('frontend.Need_Help', 'Need Help?') }}</p>
                 <h2 class="text-3xl sm:text-4xl font-extrabold">{{ t('frontend.Contact_Us', 'Contact Us') }}</h2>
                 <p class="text-white/80 max-w-2xl mx-auto">
-                    {{ $settings?->site_discretion ?? t('frontend.Site_Description', 'Build a flexible footer system now, then extend it into full customer themes later.') }}
+                    {{ $settings?->resolved_site_discretion ?? t('frontend.Site_Description', 'Build a flexible footer system now, then extend it into full customer themes later.') }}
                 </p>
                 <div class="flex flex-wrap justify-center gap-4">
                     @if (! empty($contact['phone'] ?? null))
@@ -38,7 +38,7 @@
 <footer class="bg-white dark:bg-[#171717] text-slate-700 dark:text-slate-200 px-4 sm:px-8 lg:px-24 pt-10 pb-8">
     <div class="max-w-5xl mx-auto text-center space-y-6">
         <a href="{{ url('/') }}" class="inline-flex items-center justify-center group">
-            <img src="{{ $logoSrc }}" alt="{{ $settings?->site_title ?? config('app.name', 'Palgoals') }}"
+            <img src="{{ $logoSrc }}" alt="{{ $settings?->resolved_site_title ?? config('app.name', 'Palgoals') }}"
                 class="h-12 w-auto transition-transform group-hover:scale-105" loading="lazy" />
         </a>
 
@@ -67,7 +67,7 @@
         </div>
 
         <div class="border-t border-slate-200 dark:border-white/10 pt-6 text-xs text-slate-500 dark:text-slate-400">
-            &copy; {{ now()->year }} {{ $settings?->site_title ?? 'Palgoals' }}. {{ t('frontend.All_Rights_Reserved', 'All rights reserved.') }}
+            &copy; {{ now()->year }} {{ $settings?->resolved_site_title ?? 'Palgoals' }}. {{ t('frontend.All_Rights_Reserved', 'All rights reserved.') }}
         </div>
     </div>
 </footer>

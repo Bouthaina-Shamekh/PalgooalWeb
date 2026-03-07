@@ -14,13 +14,14 @@
         $seoMeta = SeoMeta::make($seo);
     } else {
         // ديفولت عام للموقع
-        $defaultTitle = $settings->site_title
+        $defaultTitle = $settings->resolved_site_title
             ?? config('seo.default_title')
             ?? config('app.name', 'Palgoals');
 
         $seoMeta = SeoMeta::make([
             'title'       => $defaultTitle,
-            'description' => config('seo.default_description'),
+            'description' => $settings->resolved_site_discretion
+                ?? config('seo.default_description'),
             'keywords'    => config('seo.default_keywords', []),
             'image'       => asset(config('seo.default_image', 'assets/images/default-og.jpg')),
             'canonical'   => url()->current(),

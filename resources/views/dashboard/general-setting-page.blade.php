@@ -1,5 +1,108 @@
 @php
-    $currentLanguage = collect($languages)->firstWhere('id', $generalSetting['default_language'] ?? null);
+    $languages = collect($languages ?? []);
+    $selectedDefaultLanguageId = old('default_language', $generalSetting['default_language'] ?? null);
+    $contentLanguages = collect($contentLanguages ?? [])->filter(fn ($language) => filled($language->code ?? null))->values();
+    if ($contentLanguages->isEmpty()) {
+        $contentLanguages = $languages->filter(fn ($language) => filled($language->code ?? null))->values();
+    }
+
+    $selectedDefaultLanguage = $languages->firstWhere('id', $selectedDefaultLanguageId);
+    if ($selectedDefaultLanguage && $contentLanguages->doesntContain(fn ($language) => (int) $language->id === (int) $selectedDefaultLanguage->id)) {
+        $contentLanguages->prepend($selectedDefaultLanguage);
+    }
+
+    $currentLanguage = $selectedDefaultLanguage;
+    $defaultLocaleCode = strtolower((string) ($currentLanguage->code ?? config('app.locale', 'en')));
+    $fallbackLocaleCode = strtolower((string) config('app.fallback_locale', 'en'));
+    $storedLocalizedContent = is_array($generalSetting['localized_content'] ?? null)
+        ? $generalSetting['localized_content']
+        : [];
+    $resolveLocalizedSettingForForm = static function ($value, string $locale) use ($defaultLocaleCode, $fallbackLocaleCode): string {
+        $locale = strtolower($locale);
+
+        if (is_array($value)) {
+            $normalizedValues = [];
+            foreach ($value as $langKey => $langValue) {
+                $normalizedValues[strtolower((string) $langKey)] = $langValue;
+            }
+
+            $localizedValue = trim((string) (
+                $normalizedValues[$locale]
+                ?? $normalizedValues[$defaultLocaleCode]
+                ?? $normalizedValues[$fallbackLocaleCode]
+                ?? ''
+            ));
+
+            if ($localizedValue !== '') {
+                return $localizedValue;
+            }
+
+            foreach ($normalizedValues as $candidate) {
+                $candidate = trim((string) $candidate);
+                if ($candidate !== '') {
+                    return $candidate;
+                }
+            }
+        }
+
+        return trim((string) $value);
+    };
+    $generalLocalizedTextInputs = [];
+    foreach ($contentLanguages as $language) {
+        $code = strtolower((string) ($language->code ?? ''));
+        if ($code === '') {
+            continue;
+        }
+
+        $generalLocalizedTextInputs[$code] = [
+            'site_title' => (string) old(
+                "gs_texts.$code.site_title",
+                $resolveLocalizedSettingForForm($storedLocalizedContent['site_title'] ?? [], $code),
+            ),
+            'site_discretion' => (string) old(
+                "gs_texts.$code.site_discretion",
+                $resolveLocalizedSettingForForm($storedLocalizedContent['site_discretion'] ?? [], $code),
+            ),
+            'contact_address' => (string) old(
+                "gs_texts.$code.contact_address",
+                $resolveLocalizedSettingForForm($storedLocalizedContent['contact_address'] ?? [], $code),
+            ),
+        ];
+    }
+    $generalSettingsLocalizedBaseline = [];
+    foreach ($generalLocalizedTextInputs as $code => $fields) {
+        $generalSettingsLocalizedBaseline["gs_texts[$code][site_title]"] = (string) ($fields['site_title'] ?? '');
+        $generalSettingsLocalizedBaseline["gs_texts[$code][site_discretion]"] = (string) ($fields['site_discretion'] ?? '');
+        $generalSettingsLocalizedBaseline["gs_texts[$code][contact_address]"] = (string) ($fields['contact_address'] ?? '');
+    }
+    $generalFirstErrorLang = null;
+    foreach ($contentLanguages as $language) {
+        $code = strtolower((string) ($language->code ?? ''));
+        if ($code === '') {
+            continue;
+        }
+
+        if (
+            $errors->has("gs_texts.$code.site_title")
+            || $errors->has("gs_texts.$code.site_discretion")
+            || $errors->has("gs_texts.$code.contact_address")
+        ) {
+            $generalFirstErrorLang = $code;
+            break;
+        }
+    }
+
+    $firstContentLocale = (string) (array_key_first($generalLocalizedTextInputs) ?? $defaultLocaleCode);
+    $initialContentLocale = $generalFirstErrorLang
+        ?: (array_key_exists($defaultLocaleCode, $generalLocalizedTextInputs) ? $defaultLocaleCode : $firstContentLocale);
+    $initialPreviewTitle = trim((string) ($generalLocalizedTextInputs[$initialContentLocale]['site_title'] ?? ''));
+    if ($initialPreviewTitle === '') {
+        $initialPreviewTitle = trim((string) ($generalSetting['site_title'] ?? ''));
+    }
+    $initialPreviewDescription = trim((string) ($generalLocalizedTextInputs[$initialContentLocale]['site_discretion'] ?? ''));
+    if ($initialPreviewDescription === '') {
+        $initialPreviewDescription = trim((string) ($generalSetting['site_discretion'] ?? ''));
+    }
     $logoPath = $generalSetting['logo_url'] ?? '';
     $previewLogo = asset('assets/tamplate/images/logo.svg');
     if (!empty($logoPath)) {
@@ -121,27 +224,77 @@
                     <input type="hidden" name="active_header_variant" value="{{ old('active_header_variant', $generalSetting['active_header_variant'] ?? 'default') }}">
                     <input type="hidden" name="active_footer_variant" value="{{ old('active_footer_variant', $generalSetting['active_footer_variant'] ?? 'default') }}">
 
+                    @if ($contentLanguages->isNotEmpty())
+                        <div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <h6 class="mb-1">{{ t('dashboard.Content_Language', 'Content Language') }}</h6>
+                                    <p class="text-sm text-muted mb-0">{{ t('dashboard.Content_Language_Help', 'Switch language to edit translated site title, description, and address.') }}</p>
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach ($contentLanguages as $language)
+                                        @php
+                                            $langCode = strtolower((string) ($language->code ?? ''));
+                                            $isActiveLang = $langCode === $initialContentLocale;
+                                        @endphp
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm {{ $isActiveLang ? 'btn-primary' : 'btn-light' }}"
+                                            data-general-lang-btn="{{ $langCode }}"
+                                            data-general-lang-label="{{ $language->name ?? strtoupper($langCode) }}"
+                                            aria-pressed="{{ $isActiveLang ? 'true' : 'false' }}"
+                                        >
+                                            {{ $language->name ?? strtoupper($langCode) }}
+                                        </button>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+
                     <section data-section-panel="identity" class="grid grid-cols-12 gap-4">
                         <div class="col-span-12">
                             <h6 class="mb-1">{{ t('dashboard.Identity', 'Identity') }}</h6>
                             <p class="text-sm text-muted mb-0">{{ t('dashboard.Identity_Section_Help', 'These fields appear in key frontend and SEO areas.') }}</p>
                         </div>
 
-                        <div class="col-span-12 md:col-span-6">
-                            <label for="site_title" class="form-label">{{ t('dashboard.Site_Title', 'Site Title') }}</label>
-                            <input id="site_title" name="site_title" type="text" value="{{ old('site_title', $generalSetting['site_title'] ?? '') }}" class="form-control" placeholder="Enter site title">
-                            @error('site_title')
-                                <span class="text-red-600">{{ $message }}</span>
-                            @enderror
-                        </div>
+                        @foreach ($contentLanguages as $language)
+                            @php
+                                $langCode = strtolower((string) ($language->code ?? ''));
+                                $langFields = $generalLocalizedTextInputs[$langCode] ?? [];
+                            @endphp
+                            <div data-general-lang-panel="{{ $langCode }}" class="col-span-12 grid grid-cols-12 gap-4 {{ $langCode === $initialContentLocale ? '' : 'hidden' }}">
+                                <div class="col-span-12 md:col-span-6">
+                                    <label for="gs_texts_{{ $langCode }}_site_title" class="form-label">{{ t('dashboard.Site_Title', 'Site Title') }}</label>
+                                    <input
+                                        id="gs_texts_{{ $langCode }}_site_title"
+                                        name="gs_texts[{{ $langCode }}][site_title]"
+                                        type="text"
+                                        value="{{ $langFields['site_title'] ?? '' }}"
+                                        class="form-control"
+                                        placeholder="Enter site title"
+                                    >
+                                    @error('gs_texts.' . $langCode . '.site_title')
+                                        <span class="text-red-600">{{ $message }}</span>
+                                    @enderror
+                                </div>
 
-                        <div class="col-span-12 md:col-span-6">
-                            <label for="site_discretion" class="form-label">{{ t('dashboard.Site_Discretion', 'Site Description') }}</label>
-                            <input id="site_discretion" name="site_discretion" type="text" value="{{ old('site_discretion', $generalSetting['site_discretion'] ?? '') }}" class="form-control" placeholder="Enter site description">
-                            @error('site_discretion')
-                                <span class="text-red-600">{{ $message }}</span>
-                            @enderror
-                        </div>
+                                <div class="col-span-12 md:col-span-6">
+                                    <label for="gs_texts_{{ $langCode }}_site_discretion" class="form-label">{{ t('dashboard.Site_Discretion', 'Site Description') }}</label>
+                                    <input
+                                        id="gs_texts_{{ $langCode }}_site_discretion"
+                                        name="gs_texts[{{ $langCode }}][site_discretion]"
+                                        type="text"
+                                        value="{{ $langFields['site_discretion'] ?? '' }}"
+                                        class="form-control"
+                                        placeholder="Enter site description"
+                                    >
+                                    @error('gs_texts.' . $langCode . '.site_discretion')
+                                        <span class="text-red-600">{{ $message }}</span>
+                                    @enderror
+                                </div>
+                            </div>
+                        @endforeach
 
                         <div class="col-span-12 md:col-span-6">
                             <label for="default_language" class="form-label">{{ t('dashboard.Default_Language', 'Default Language') }}</label>
@@ -150,7 +303,7 @@
                             @endphp
                             <select id="default_language" name="default_language" class="form-control">
                                 <option value="">{{ t('dashboard.Select_Language', 'Select Language') }}</option>
-                                @foreach ($languages as $language)
+                                @foreach ($contentLanguages as $language)
                                     <option value="{{ $language['id'] }}" {{ (string) $selectedLanguage === (string) $language['id'] ? 'selected' : '' }}>
                                         {{ $language['name'] . ' - ' . $language['native'] }}
                                     </option>
@@ -271,12 +424,29 @@
                         </div>
 
                         <div class="col-span-12">
-                            <label for="contact_address" class="form-label">{{ t('dashboard.Address', 'Address') }}</label>
-                            <input id="contact_address" name="contact_info[address]" type="text" value="{{ old('contact_info.address', $generalSetting['contact_info']['address'] ?? '') }}" class="form-control" placeholder="Enter address">
-                            @error('contact_info.address')
-                                <span class="text-red-600">{{ $message }}</span>
-                            @enderror
+                            <p class="text-sm text-muted mb-3">{{ t('dashboard.Address_Language_Help', 'Address follows the selected content language above.') }}</p>
                         </div>
+
+                        @foreach ($contentLanguages as $language)
+                            @php
+                                $langCode = strtolower((string) ($language->code ?? ''));
+                                $langFields = $generalLocalizedTextInputs[$langCode] ?? [];
+                            @endphp
+                            <div data-general-lang-panel="{{ $langCode }}" class="col-span-12 {{ $langCode === $initialContentLocale ? '' : 'hidden' }}">
+                                <label for="gs_texts_{{ $langCode }}_contact_address" class="form-label">{{ t('dashboard.Address', 'Address') }}</label>
+                                <input
+                                    id="gs_texts_{{ $langCode }}_contact_address"
+                                    name="gs_texts[{{ $langCode }}][contact_address]"
+                                    type="text"
+                                    value="{{ $langFields['contact_address'] ?? '' }}"
+                                    class="form-control"
+                                    placeholder="Enter address"
+                                >
+                                @error('gs_texts.' . $langCode . '.contact_address')
+                                    <span class="text-red-600">{{ $message }}</span>
+                                @enderror
+                            </div>
+                        @endforeach
                     </section>
 
                     <section data-section-panel="social" class="grid grid-cols-12 gap-4 hidden">
@@ -338,9 +508,14 @@
                 <div class="card-body">
                     <div class="rounded-lg border p-4 space-y-3">
                         <img id="preview-logo" src="{{ $previewLogo }}" data-default-src="{{ $previewLogo }}" alt="Preview Logo" class="h-12 object-contain">
-                        <h6 id="preview-site-title" class="mb-0">{{ $generalSetting['site_title'] ?: 'Site Title' }}</h6>
+                        <div class="flex items-center justify-between gap-3">
+                            <h6 id="preview-site-title" class="mb-0">{{ $initialPreviewTitle !== '' ? $initialPreviewTitle : 'Site Title' }}</h6>
+                            <span id="preview-content-language" class="badge bg-light-primary text-primary">
+                                {{ optional($contentLanguages->first(fn ($language) => strtolower((string) ($language->code ?? '')) === $initialContentLocale))->name ?? strtoupper($initialContentLocale) }}
+                            </span>
+                        </div>
                         <p id="preview-site-description" class="text-sm text-muted mb-0">
-                            {{ $generalSetting['site_discretion'] ?: 'Site description will appear here.' }}
+                            {{ $initialPreviewDescription !== '' ? $initialPreviewDescription : 'Site description will appear here.' }}
                         </p>
                         <div class="text-xs text-muted border-t pt-2">
                             <div>{{ t('dashboard.Default_Language', 'Default Language') }}:
@@ -399,11 +574,17 @@
                 const sectionButtons = Array.from(page.querySelectorAll('[data-section-btn]'));
                 const sectionPanels = Array.from(page.querySelectorAll('[data-section-panel]'));
                 const statusBadges = Array.from(page.querySelectorAll('[data-section-status]'));
+                const languageButtons = Array.from(page.querySelectorAll('[data-general-lang-btn]'));
+                const languagePanels = Array.from(page.querySelectorAll('[data-general-lang-panel]'));
+                const previewContentLanguage = document.getElementById('preview-content-language');
 
                 if (!form) return;
 
                 const autosaveUrl = @json(route('dashboard.general_settings.autosave'));
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                const localizedBaselineValues = @json($generalSettingsLocalizedBaseline);
+                const localizedLanguageCodes = @json(array_values(array_keys($generalLocalizedTextInputs)));
+                let activeContentLanguage = @json($initialContentLocale);
 
                 const elementValue = (el) => {
                     if (el.type === 'file') {
@@ -447,9 +628,31 @@
                     });
                 };
 
+                const activateContentLanguage = (languageCode) => {
+                    activeContentLanguage = languageCode;
+
+                    languageButtons.forEach((button) => {
+                        const active = button.dataset.generalLangBtn === languageCode;
+                        button.classList.toggle('btn-primary', active);
+                        button.classList.toggle('btn-light', !active);
+                        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+                    });
+
+                    languagePanels.forEach((panel) => {
+                        panel.classList.toggle('hidden', panel.dataset.generalLangPanel !== languageCode);
+                    });
+
+                    if (previewContentLanguage) {
+                        const activeButton = languageButtons.find((button) => button.dataset.generalLangBtn === languageCode);
+                        previewContentLanguage.textContent = activeButton?.dataset.generalLangLabel || languageCode.toUpperCase();
+                    }
+
+                    updatePreview();
+                };
+
                 const updatePreview = () => {
-                    const siteTitleInput = document.getElementById('site_title');
-                    const siteDescriptionInput = document.getElementById('site_discretion');
+                    const siteTitleInput = fieldByName(`gs_texts[${activeContentLanguage}][site_title]`);
+                    const siteDescriptionInput = fieldByName(`gs_texts[${activeContentLanguage}][site_discretion]`);
                     const logoPathInput = document.getElementById('media_logo_url');
                     const previewTitle = document.getElementById('preview-site-title');
                     const previewDescription = document.getElementById('preview-site-description');
@@ -529,10 +732,17 @@
 
                 const buildAutosavePayload = () => {
                     const defaultLanguageRaw = fieldByName('default_language')?.value || '';
+                    const localizedPayload = {};
+
+                    localizedLanguageCodes.forEach((languageCode) => {
+                        localizedPayload[languageCode] = {
+                            site_title: fieldByName(`gs_texts[${languageCode}][site_title]`)?.value || '',
+                            site_discretion: fieldByName(`gs_texts[${languageCode}][site_discretion]`)?.value || '',
+                            contact_address: fieldByName(`gs_texts[${languageCode}][contact_address]`)?.value || '',
+                        };
+                    });
 
                     return {
-                        site_title: fieldByName('site_title')?.value || '',
-                        site_discretion: fieldByName('site_discretion')?.value || '',
                         logo_url: fieldById('media_logo_url')?.value || '',
                         dark_logo_url: fieldById('media_dark_logo_url')?.value || '',
                         sticky_logo_url: fieldById('media_sticky_logo_url')?.value || '',
@@ -546,7 +756,6 @@
                         contact_info: {
                             phone: fieldByName('contact_info[phone]')?.value || '',
                             email: fieldByName('contact_info[email]')?.value || '',
-                            address: fieldByName('contact_info[address]')?.value || '',
                         },
                         social_links: {
                             facebook: fieldByName('social_links[facebook]')?.value || '',
@@ -555,6 +764,7 @@
                             instagram: fieldByName('social_links[instagram]')?.value || '',
                             whatsapp: fieldByName('social_links[whatsapp]')?.value || '',
                         },
+                        gs_texts: localizedPayload,
                     };
                 };
 
@@ -617,6 +827,10 @@
                     btn.addEventListener('click', () => activateSection(btn.dataset.sectionBtn));
                 });
 
+                languageButtons.forEach((button) => {
+                    button.addEventListener('click', () => activateContentLanguage(button.dataset.generalLangBtn));
+                });
+
                 form.addEventListener('input', () => {
                     updatePreview();
                     updateDirtyState();
@@ -650,6 +864,15 @@
                 });
 
                 activateSection('identity');
+                Object.entries(localizedBaselineValues).forEach(([name, fieldValue]) => {
+                    const field = fieldByName(name);
+                    if (field) {
+                        field.dataset.initialValue = fieldValue;
+                    }
+                });
+                if (languageButtons.length > 0) {
+                    activateContentLanguage(activeContentLanguage);
+                }
                 captureInitial();
                 updatePreview();
                 updateDirtyState();

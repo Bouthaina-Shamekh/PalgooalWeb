@@ -4,7 +4,7 @@
     $logoSrc = $settings?->logo
         ? asset('storage/' . $settings->logo)
         : asset('assets/tamplate/images/logo.svg');
-    $logoAlt = $settings?->site_title ?: config('app.name', 'Palgoals');
+    $logoAlt = $settings?->resolved_site_title ?: config('app.name', 'Palgoals');
 @endphp
 
 <a href="{{ url('/') }}" class="{{ $wrapperClass }}">

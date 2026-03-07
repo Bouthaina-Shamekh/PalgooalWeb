@@ -4,7 +4,7 @@
         : asset('assets/tamplate/images/logo.svg');
     $showContactBanner = (bool) ($settings?->footer_show_contact_banner ?? true);
     $showPaymentMethods = (bool) ($settings?->footer_show_payment_methods ?? true);
-    $contactInfo = $settings?->contact_info ?? [];
+    $contactInfo = $settings?->resolved_contact_info ?? [];
 @endphp
 
 @if ($showContactBanner)
@@ -15,7 +15,7 @@
                     <p class="text-sm uppercase tracking-[0.25em] text-primary/70">{{ t('frontend.Need_Help', 'Need Help?') }}</p>
                     <h2 class="text-3xl font-extrabold text-primary dark:text-white">{{ t('frontend.Contact_Us', 'Contact Us') }}</h2>
                     <p class="text-slate-600 dark:text-slate-300 max-w-2xl">
-                        {{ $settings?->site_discretion ?? t('frontend.Site_Description', 'Use this section as the final conversion band before the footer content starts.') }}
+                        {{ $settings?->resolved_site_discretion ?? t('frontend.Site_Description', 'Use this section as the final conversion band before the footer content starts.') }}
                     </p>
                 </div>
                 <div class="flex flex-wrap justify-center gap-4">
@@ -42,11 +42,11 @@
     <div class="max-w-7xl mx-auto grid gap-10 lg:grid-cols-[1.2fr_1fr_1fr]">
         <div class="space-y-5 text-center lg:text-start">
             <a href="{{ url('/') }}" class="inline-flex items-center justify-center lg:justify-start group">
-                <img src="{{ $logoSrc }}" alt="{{ $settings?->site_title ?? config('app.name', 'Palgoals') }}"
+                <img src="{{ $logoSrc }}" alt="{{ $settings?->resolved_site_title ?? config('app.name', 'Palgoals') }}"
                     class="h-12 w-auto transition-transform group-hover:scale-105" loading="lazy" />
             </a>
             <p class="text-white/80 max-w-sm mx-auto lg:mx-0 leading-7">
-                {{ $settings?->site_discretion ?? config('app.name', 'Palgoals') }}
+                {{ $settings?->resolved_site_discretion ?? config('app.name', 'Palgoals') }}
             </p>
             <div class="flex justify-center lg:justify-start">
                 @include('front.layouts.partials.footer.social-links', [
@@ -89,6 +89,6 @@
     @endif
 
     <div class="max-w-7xl mx-auto border-t border-white/20 mt-8 pt-6 text-center text-xs text-white/70">
-        &copy; {{ now()->year }} {{ $settings?->site_title ?? 'Palgoals' }}. {{ t('frontend.All_Rights_Reserved', 'All rights reserved.') }}
+        &copy; {{ now()->year }} {{ $settings?->resolved_site_title ?? 'Palgoals' }}. {{ t('frontend.All_Rights_Reserved', 'All rights reserved.') }}
     </div>
 </footer>

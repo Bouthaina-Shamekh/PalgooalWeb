@@ -1,5 +1,5 @@
 @php
-    $contact = $settings?->contact_info ?? [];
+    $contact = $settings?->resolved_contact_info ?? [];
     $listClass = $listClass ?? 'space-y-3 text-sm';
     $itemClass = $itemClass ?? 'flex items-center gap-2';
     $linkClass = $linkClass ?? 'hover:opacity-80 transition-opacity duration-200';

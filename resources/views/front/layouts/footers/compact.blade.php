@@ -10,11 +10,11 @@
         <div class="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr] items-start">
             <div class="space-y-5">
                 <a href="{{ url('/') }}" class="inline-flex items-center group">
-                    <img src="{{ $logoSrc }}" alt="{{ $settings?->site_title ?? config('app.name', 'Palgoals') }}"
+                    <img src="{{ $logoSrc }}" alt="{{ $settings?->resolved_site_title ?? config('app.name', 'Palgoals') }}"
                         class="h-12 w-auto transition-transform group-hover:scale-105" loading="lazy" />
                 </a>
                 <p class="max-w-md text-slate-300 leading-7">
-                    {{ $settings?->site_discretion ?? config('app.name', 'Palgoals') }}
+                    {{ $settings?->resolved_site_discretion ?? config('app.name', 'Palgoals') }}
                 </p>
                 @include('front.layouts.partials.footer.social-links', [
                     'wrapperClass' => 'flex flex-wrap gap-3 text-slate-100',
@@ -55,7 +55,7 @@
         @endif
 
         <div class="mt-6 text-xs text-slate-500">
-            &copy; {{ now()->year }} {{ $settings?->site_title ?? 'Palgoals' }}. {{ t('frontend.All_Rights_Reserved', 'All rights reserved.') }}
+            &copy; {{ now()->year }} {{ $settings?->resolved_site_title ?? 'Palgoals' }}. {{ t('frontend.All_Rights_Reserved', 'All rights reserved.') }}
         </div>
     </div>
 </footer>

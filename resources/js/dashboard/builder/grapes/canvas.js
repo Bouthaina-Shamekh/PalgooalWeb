@@ -1,7 +1,9 @@
-export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
+export function initCanvas(editor, { appDir, emptyHint, canvasStyles = [] }) {
     const GOOGLE_FONTS_URL =
         'https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Cairo:wght@200;300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:wght@300;400;500;600;700;800;900&family=Raleway:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Lato:wght@300;400;700;900&family=Source+Sans+3:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700;800&family=Merriweather:wght@300;400;700;900&family=Oswald:wght@300;400;500;600;700&display=swap';
     const TABLER_ICONS_URL = '/assets/dashboard/fonts/tabler-icons.min.css';
+    const PREVIEW_HEADER_TEMPLATE_ID = 'builder-canvas-header-template';
+    const PREVIEW_FOOTER_TEMPLATE_ID = 'builder-canvas-footer-template';
     const bindOnce = (() => {
         let bound = false;
         return (fn) => {
@@ -10,6 +12,102 @@ export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
             fn();
         };
     })();
+
+    function injectCanvasStyles(headEl, doc) {
+        if (!headEl || !Array.isArray(canvasStyles)) return;
+
+        canvasStyles
+            .filter((href) => typeof href === 'string' && href.trim())
+            .forEach((href, index) => {
+                if (headEl.querySelector(`link[rel="stylesheet"][href="${href}"]`)) return;
+
+                const link = doc.createElement('link');
+                link.id = `pg-canvas-css-${index + 1}`;
+                link.rel = 'stylesheet';
+                link.href = href;
+                link.setAttribute('data-pg-canvas-css', 'true');
+                headEl.appendChild(link);
+            });
+    }
+
+    function getTemplateHtml(templateId) {
+        const templateEl = document.getElementById(templateId);
+        return (templateEl?.innerHTML || '').trim();
+    }
+
+    function upsertPreviewShell(doc, bodyEl, wrapperEl, position, templateId) {
+        if (!doc || !bodyEl || !wrapperEl) return null;
+
+        const shellId = position === 'header'
+            ? 'pg-builder-preview-header'
+            : 'pg-builder-preview-footer';
+        const html = getTemplateHtml(templateId);
+        const existing = doc.getElementById(shellId);
+
+        if (!html) {
+            existing?.remove();
+            return null;
+        }
+
+        const shellEl = existing || doc.createElement('div');
+        shellEl.id = shellId;
+        shellEl.setAttribute('data-pg-preview-shell', position);
+        shellEl.setAttribute('contenteditable', 'false');
+        shellEl.setAttribute('aria-hidden', 'true');
+        shellEl.innerHTML = html;
+
+        if (position === 'header') {
+            if (shellEl.parentNode !== bodyEl || shellEl.nextSibling !== wrapperEl) {
+                bodyEl.insertBefore(shellEl, wrapperEl);
+            }
+        } else if (shellEl.parentNode !== bodyEl || wrapperEl.nextSibling !== shellEl) {
+            if (wrapperEl.nextSibling) {
+                bodyEl.insertBefore(shellEl, wrapperEl.nextSibling);
+            } else {
+                bodyEl.appendChild(shellEl);
+            }
+        }
+
+        return shellEl;
+    }
+
+    function mountPreviewShell() {
+        const doc = editor.Canvas.getDocument();
+        const frameEl = editor.Canvas.getFrameEl();
+        const frameWin = frameEl?.contentWindow;
+        const bodyEl = editor.Canvas.getBody();
+        const wrapperEl = editor.getWrapper()?.getEl?.();
+
+        if (!doc || !frameWin || !bodyEl || !wrapperEl) return;
+
+        const headerEl = upsertPreviewShell(
+            doc,
+            bodyEl,
+            wrapperEl,
+            'header',
+            PREVIEW_HEADER_TEMPLATE_ID,
+        );
+        const footerEl = upsertPreviewShell(
+            doc,
+            bodyEl,
+            wrapperEl,
+            'footer',
+            PREVIEW_FOOTER_TEMPLATE_ID,
+        );
+
+        const syncPreviewMetrics = () => {
+            const headerHeight = headerEl?.offsetHeight || 0;
+            const footerHeight = footerEl?.offsetHeight || 0;
+            const minHeight = Math.max(320, (frameWin.innerHeight || 0) - headerHeight - footerHeight);
+
+            wrapperEl.style.minHeight = `${minHeight}px`;
+            bodyEl.style.setProperty('--pg-builder-shell-offset', `${headerHeight + footerHeight}px`);
+        };
+
+        syncPreviewMetrics();
+        frameWin.requestAnimationFrame(syncPreviewMetrics);
+        frameWin.setTimeout(syncPreviewMetrics, 120);
+    }
 
     function setupFrameBasics() {
         const doc = editor.Canvas.getDocument();
@@ -43,15 +141,7 @@ export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
             });
         }
 
-        // Inject app.css once
-        const hasSameHref = !!(headEl && cssUrl && headEl.querySelector(`link[rel="stylesheet"][href="${cssUrl}"]`));
-        if (headEl && cssUrl && !hasSameHref && !doc.getElementById('pg-app-css')) {
-            const link = doc.createElement('link');
-            link.id = 'pg-app-css';
-            link.rel = 'stylesheet';
-            link.href = cssUrl;
-            headEl.appendChild(link);
-        }
+        injectCanvasStyles(headEl, doc);
 
         // Load Google fonts used by Style Manager font-family presets.
         if (headEl && !doc.getElementById('pg-google-fonts')) {
@@ -94,6 +184,20 @@ export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
         .pg-has-hover-bg:hover{
           background-color:var(--pg-hover-bg) !important;
           color:var(--pg-hover-color) !important;
+        }
+        [data-pg-preview-shell]{
+          position:relative;
+          z-index:1;
+          pointer-events:none;
+          user-select:none;
+        }
+        [data-pg-preview-shell] *{
+          pointer-events:none !important;
+          user-select:none;
+        }
+        .gjs-wrapper{
+          position:relative;
+          z-index:2;
         }
         .gjs-wrapper:empty::before{content:"${safe}";display:block;text-align:center;color:#64748b;font-weight:600;padding-top:60px;}
         .pg-container .pg-container-inner:empty{
@@ -176,6 +280,17 @@ export function initCanvas(editor, { appDir, emptyHint, cssUrl }) {
 
     editor.on('load', () => {
         setupFrameBasics();
+        mountPreviewShell();
         setupSwiperInFrame();
+    });
+
+    editor.on('canvas:frame:load', () => {
+        setupFrameBasics();
+        mountPreviewShell();
+    });
+
+    editor.on('change:device', () => {
+        const frameEl = editor.Canvas.getFrameEl();
+        frameEl?.contentWindow?.requestAnimationFrame(() => mountPreviewShell());
     });
 }

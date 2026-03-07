@@ -28,6 +28,13 @@ class HomeController extends Controller
     public function general_settings()
     {
         $generalSettingModel = GeneralSetting::first();
+        $languages = Language::query()->orderBy('id')->get();
+        $contentLanguages = $this->generalSettingContentLanguages($languages, $generalSettingModel?->default_language);
+        $defaultLocaleCode = $this->resolveDefaultLanguageCode($languages, $generalSettingModel?->default_language);
+        $contactInfo = array_merge(
+            $this->baseContactInfo(),
+            (array) ($generalSettingModel?->contact_info ?? [])
+        );
 
         $generalSetting = [
             'site_title' => $generalSettingModel?->site_title ?? '',
@@ -44,23 +51,25 @@ class HomeController extends Controller
                 ?? config('front_layouts.defaults.header', 'default'),
             'active_footer_variant' => $generalSettingModel?->active_footer_variant
                 ?? config('front_layouts.defaults.footer', 'default'),
-            'contact_info' => $generalSettingModel?->contact_info ?? [
-                'phone' => '',
-                'email' => '',
-                'address' => '',
-            ],
-            'social_links' => $generalSettingModel?->social_links ?? [
-                'facebook' => '',
-                'twitter' => '',
-                'linkedin' => '',
-                'instagram' => '',
-                'whatsapp' => '',
-            ],
+            'contact_info' => $contactInfo,
+            'social_links' => array_merge(
+                $this->baseSocialLinks(),
+                (array) ($generalSettingModel?->social_links ?? [])
+            ),
+            'localized_content' => $this->normalizeStoredLocalizedContent(
+                is_array($generalSettingModel?->localized_content ?? null)
+                    ? $generalSettingModel->localized_content
+                    : [],
+                $defaultLocaleCode,
+                [
+                    'site_title' => $generalSettingModel?->site_title,
+                    'site_discretion' => $generalSettingModel?->site_discretion,
+                    'contact_address' => $contactInfo['address'] ?? '',
+                ],
+            ),
         ];
 
-        $languages = Language::all();
-
-        return view('dashboard.general-setting', compact('generalSetting', 'languages'));
+        return view('dashboard.general-setting', compact('generalSetting', 'languages', 'contentLanguages'));
     }
 
     public function clients()
@@ -89,7 +98,7 @@ class HomeController extends Controller
 
         $payload = [
             'meta' => [
-                'schema_version' => 1,
+                'schema_version' => 2,
                 'exported_at' => now()->toIso8601String(),
                 'app_url' => config('app.url'),
             ],
@@ -113,6 +122,7 @@ class HomeController extends Controller
                 'footer_show_payment_methods' => $setting?->footer_show_payment_methods,
                 'contact_info' => $setting?->contact_info ?? [],
                 'social_links' => $setting?->social_links ?? [],
+                'localized_content' => $setting?->localized_content ?? [],
             ],
         ];
 
@@ -188,6 +198,13 @@ class HomeController extends Controller
             'social_links.linkedin' => ['nullable', 'url', 'max:255'],
             'social_links.instagram' => ['nullable', 'url', 'max:255'],
             'social_links.whatsapp' => ['nullable', 'url', 'max:255'],
+            'localized_content' => ['nullable', 'array'],
+            'localized_content.site_title' => ['nullable', 'array'],
+            'localized_content.site_title.*' => ['nullable', 'string', 'max:255'],
+            'localized_content.site_discretion' => ['nullable', 'array'],
+            'localized_content.site_discretion.*' => ['nullable', 'string', 'max:500'],
+            'localized_content.contact_address' => ['nullable', 'array'],
+            'localized_content.contact_address.*' => ['nullable', 'string', 'max:1000'],
         ]);
 
         if ($validator->fails()) {
@@ -204,29 +221,48 @@ class HomeController extends Controller
         $validated['active_footer_variant'] = $validated['active_footer_variant']
             ?? config('front_layouts.defaults.footer', 'default');
 
+        $languages = Language::query()->orderBy('id')->get();
+        $defaultLocaleCode = $this->resolveDefaultLanguageCode($languages, $validated['default_language'] ?? null);
+
         $validated['contact_info'] = array_merge(
-            [
-                'phone' => '',
-                'email' => '',
-                'address' => '',
-            ],
+            $this->baseContactInfo(),
             (array) ($validated['contact_info'] ?? [])
         );
 
         $validated['social_links'] = array_merge(
-            [
-                'facebook' => '',
-                'twitter' => '',
-                'linkedin' => '',
-                'instagram' => '',
-                'whatsapp' => '',
-            ],
+            $this->baseSocialLinks(),
             (array) ($validated['social_links'] ?? [])
         );
 
         $validated['header_variant_settings'] = is_array($validated['header_variant_settings'] ?? null)
             ? $validated['header_variant_settings']
             : [];
+
+        $validated['localized_content'] = $this->normalizeStoredLocalizedContent(
+            is_array($validated['localized_content'] ?? null) ? $validated['localized_content'] : [],
+            $defaultLocaleCode,
+            [
+                'site_title' => $validated['site_title'] ?? null,
+                'site_discretion' => $validated['site_discretion'] ?? null,
+                'contact_address' => $validated['contact_info']['address'] ?? null,
+            ],
+        );
+
+        $validated['site_title'] = $this->extractPrimaryLocalizedValue(
+            $validated['localized_content']['site_title'] ?? [],
+            $defaultLocaleCode,
+            (string) ($validated['site_title'] ?? ''),
+        );
+        $validated['site_discretion'] = $this->extractPrimaryLocalizedValue(
+            $validated['localized_content']['site_discretion'] ?? [],
+            $defaultLocaleCode,
+            (string) ($validated['site_discretion'] ?? ''),
+        );
+        $validated['contact_info']['address'] = $this->extractPrimaryLocalizedValue(
+            $validated['localized_content']['contact_address'] ?? [],
+            $defaultLocaleCode,
+            (string) ($validated['contact_info']['address'] ?? ''),
+        );
 
         $setting = GeneralSetting::first();
         if ($setting) {
@@ -242,9 +278,7 @@ class HomeController extends Controller
 
     public function updateGeneralSettings(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'site_title' => ['required', 'string', 'max:255'],
-            'site_discretion' => ['required', 'string', 'max:500'],
+        $validator = Validator::make($request->all(), [
             'logo_url' => ['nullable', 'string', 'max:2048'],
             'dark_logo_url' => ['nullable', 'string', 'max:2048'],
             'sticky_logo_url' => ['nullable', 'string', 'max:2048'],
@@ -266,19 +300,95 @@ class HomeController extends Controller
             'contact_info' => ['nullable', 'array'],
             'contact_info.phone' => ['nullable', 'string', 'max:255'],
             'contact_info.email' => ['nullable', 'email', 'max:255'],
-            'contact_info.address' => ['nullable', 'string', 'max:1000'],
             'social_links' => ['nullable', 'array'],
             'social_links.facebook' => ['nullable', 'url', 'max:255'],
             'social_links.twitter' => ['nullable', 'url', 'max:255'],
             'social_links.linkedin' => ['nullable', 'url', 'max:255'],
             'social_links.instagram' => ['nullable', 'url', 'max:255'],
             'social_links.whatsapp' => ['nullable', 'url', 'max:255'],
+            'gs_texts' => ['nullable', 'array'],
+            'gs_texts.*' => ['nullable', 'array'],
+            'gs_texts.*.site_title' => ['nullable', 'string', 'max:255'],
+            'gs_texts.*.site_discretion' => ['nullable', 'string', 'max:500'],
+            'gs_texts.*.contact_address' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $setting = GeneralSetting::first() ?? new GeneralSetting();
+        $validator->after(function ($validator) use ($request) {
+            $languages = Language::query()->orderBy('id')->get();
+            $defaultLocaleCode = $this->resolveDefaultLanguageCode(
+                $languages,
+                (int) $request->input('default_language')
+            );
+            $languageCodes = $this->generalSettingContentLanguages($languages, (int) $request->input('default_language'))
+                ->pluck('code')
+                ->map(fn ($code) => strtolower((string) $code))
+                ->filter()
+                ->values()
+                ->all();
 
-        $setting->site_title = $validated['site_title'];
-        $setting->site_discretion = $validated['site_discretion'];
+            $localizedContent = $this->normalizeLocalizedContentFromRequest(
+                is_array($request->input('gs_texts')) ? $request->input('gs_texts') : [],
+                $languageCodes,
+                $defaultLocaleCode,
+            );
+
+            if (($localizedContent['site_title'] ?? []) === []) {
+                $validator->errors()->add(
+                    "gs_texts.$defaultLocaleCode.site_title",
+                    'Site title is required for at least one language.'
+                );
+            }
+
+            if (($localizedContent['site_discretion'] ?? []) === []) {
+                $validator->errors()->add(
+                    "gs_texts.$defaultLocaleCode.site_discretion",
+                    'Site description is required for at least one language.'
+                );
+            }
+        });
+
+        $validated = $validator->validate();
+
+        $setting = GeneralSetting::first() ?? new GeneralSetting();
+        $languages = Language::query()->orderBy('id')->get();
+        $defaultLocaleCode = $this->resolveDefaultLanguageCode($languages, $validated['default_language']);
+        $languageCodes = $this->generalSettingContentLanguages($languages, $validated['default_language'])
+            ->pluck('code')
+            ->map(fn ($code) => strtolower((string) $code))
+            ->filter()
+            ->values()
+            ->all();
+        $existingLocalizedContent = $this->normalizeStoredLocalizedContent(
+            is_array($setting->localized_content ?? null) ? $setting->localized_content : [],
+            $defaultLocaleCode,
+            [
+                'site_title' => $setting->getRawOriginal('site_title'),
+                'site_discretion' => $setting->getRawOriginal('site_discretion'),
+                'contact_address' => data_get($setting->contact_info, 'address'),
+            ],
+        );
+        $localizedContent = $this->normalizeLocalizedContentFromRequest(
+            is_array($validated['gs_texts'] ?? null) ? $validated['gs_texts'] : [],
+            $languageCodes,
+            $defaultLocaleCode,
+            [
+                'site_title' => $setting->getRawOriginal('site_title'),
+                'site_discretion' => $setting->getRawOriginal('site_discretion'),
+                'contact_address' => data_get($setting->contact_info, 'address'),
+            ],
+            $existingLocalizedContent,
+        );
+
+        $setting->site_title = $this->extractPrimaryLocalizedValue(
+            $localizedContent['site_title'] ?? [],
+            $defaultLocaleCode,
+            (string) $setting->getRawOriginal('site_title'),
+        );
+        $setting->site_discretion = $this->extractPrimaryLocalizedValue(
+            $localizedContent['site_discretion'] ?? [],
+            $defaultLocaleCode,
+            (string) $setting->getRawOriginal('site_discretion'),
+        );
         $setting->default_language = $validated['default_language'];
         $setting->active_header_variant = $validated['active_header_variant'];
         $setting->active_footer_variant = $validated['active_footer_variant'];
@@ -292,24 +402,20 @@ class HomeController extends Controller
         $setting->favicon = $this->normalizeMediaPath($validated['favicon_url'] ?? null);
 
         $setting->contact_info = array_merge(
-            [
-                'phone' => '',
-                'email' => '',
-                'address' => '',
-            ],
+            $this->baseContactInfo(),
             (array) ($validated['contact_info'] ?? [])
+        );
+        $setting->contact_info['address'] = $this->extractPrimaryLocalizedValue(
+            $localizedContent['contact_address'] ?? [],
+            $defaultLocaleCode,
+            (string) ($setting->contact_info['address'] ?? ''),
         );
 
         $setting->social_links = array_merge(
-            [
-                'facebook' => '',
-                'twitter' => '',
-                'linkedin' => '',
-                'instagram' => '',
-                'whatsapp' => '',
-            ],
+            $this->baseSocialLinks(),
             (array) ($validated['social_links'] ?? [])
         );
+        $setting->localized_content = $localizedContent;
 
         $setting->save();
 
@@ -321,8 +427,6 @@ class HomeController extends Controller
     public function autoSaveGeneralSettings(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'site_title' => ['nullable', 'string', 'max:255'],
-            'site_discretion' => ['nullable', 'string', 'max:500'],
             'logo_url' => ['nullable', 'string', 'max:2048'],
             'dark_logo_url' => ['nullable', 'string', 'max:2048'],
             'sticky_logo_url' => ['nullable', 'string', 'max:2048'],
@@ -344,13 +448,17 @@ class HomeController extends Controller
             'contact_info' => ['nullable', 'array'],
             'contact_info.phone' => ['nullable', 'string', 'max:255'],
             'contact_info.email' => ['nullable', 'email', 'max:255'],
-            'contact_info.address' => ['nullable', 'string', 'max:1000'],
             'social_links' => ['nullable', 'array'],
             'social_links.facebook' => ['nullable', 'url', 'max:255'],
             'social_links.twitter' => ['nullable', 'url', 'max:255'],
             'social_links.linkedin' => ['nullable', 'url', 'max:255'],
             'social_links.instagram' => ['nullable', 'url', 'max:255'],
             'social_links.whatsapp' => ['nullable', 'url', 'max:255'],
+            'gs_texts' => ['nullable', 'array'],
+            'gs_texts.*' => ['nullable', 'array'],
+            'gs_texts.*.site_title' => ['nullable', 'string', 'max:255'],
+            'gs_texts.*.site_discretion' => ['nullable', 'string', 'max:500'],
+            'gs_texts.*.contact_address' => ['nullable', 'string', 'max:1000'],
         ]);
 
         if ($validator->fails()) {
@@ -362,14 +470,6 @@ class HomeController extends Controller
 
         $validated = $validator->validated();
         $setting = GeneralSetting::first() ?? new GeneralSetting();
-
-        if (array_key_exists('site_title', $validated)) {
-            $setting->site_title = $validated['site_title'];
-        }
-
-        if (array_key_exists('site_discretion', $validated)) {
-            $setting->site_discretion = $validated['site_discretion'];
-        }
 
         if (array_key_exists('default_language', $validated)) {
             $setting->default_language = $validated['default_language'];
@@ -401,28 +501,75 @@ class HomeController extends Controller
             }
         }
 
+        $defaultLocaleCode = $this->resolveDefaultLanguageCode(
+            Language::query()->orderBy('id')->get(),
+            $setting->default_language
+        );
+        $languageCodes = $this->generalSettingContentLanguages(
+            Language::query()->orderBy('id')->get(),
+            $setting->default_language
+        )
+            ->pluck('code')
+            ->map(fn ($code) => strtolower((string) $code))
+            ->filter()
+            ->values()
+            ->all();
+        $existingLocalizedContent = $this->normalizeStoredLocalizedContent(
+            is_array($setting->localized_content ?? null) ? $setting->localized_content : [],
+            $defaultLocaleCode,
+            [
+                'site_title' => $setting->getRawOriginal('site_title'),
+                'site_discretion' => $setting->getRawOriginal('site_discretion'),
+                'contact_address' => data_get($setting->contact_info, 'address'),
+            ],
+        );
+
         if (array_key_exists('contact_info', $validated)) {
             $setting->contact_info = array_merge(
-                [
-                    'phone' => '',
-                    'email' => '',
-                    'address' => '',
-                ],
+                $this->baseContactInfo(),
                 (array) $validated['contact_info']
             );
         }
 
         if (array_key_exists('social_links', $validated)) {
             $setting->social_links = array_merge(
-                [
-                    'facebook' => '',
-                    'twitter' => '',
-                    'linkedin' => '',
-                    'instagram' => '',
-                    'whatsapp' => '',
-                ],
+                $this->baseSocialLinks(),
                 (array) $validated['social_links']
             );
+        }
+
+        if (array_key_exists('gs_texts', $validated) || $setting->exists) {
+            $localizedContent = $this->normalizeLocalizedContentFromRequest(
+                is_array($validated['gs_texts'] ?? null) ? $validated['gs_texts'] : [],
+                $languageCodes,
+                $defaultLocaleCode,
+                [
+                    'site_title' => $setting->getRawOriginal('site_title'),
+                    'site_discretion' => $setting->getRawOriginal('site_discretion'),
+                    'contact_address' => data_get($setting->contact_info, 'address'),
+                ],
+                $existingLocalizedContent,
+            );
+
+            $setting->localized_content = $localizedContent;
+            $setting->site_title = $this->extractPrimaryLocalizedValue(
+                $localizedContent['site_title'] ?? [],
+                $defaultLocaleCode,
+                (string) $setting->getRawOriginal('site_title'),
+            );
+            $setting->site_discretion = $this->extractPrimaryLocalizedValue(
+                $localizedContent['site_discretion'] ?? [],
+                $defaultLocaleCode,
+                (string) $setting->getRawOriginal('site_discretion'),
+            );
+
+            $contactInfo = array_merge($this->baseContactInfo(), (array) ($setting->contact_info ?? []));
+            $contactInfo['address'] = $this->extractPrimaryLocalizedValue(
+                $localizedContent['contact_address'] ?? [],
+                $defaultLocaleCode,
+                (string) ($contactInfo['address'] ?? ''),
+            );
+            $setting->contact_info = $contactInfo;
         }
 
         $setting->save();
@@ -431,6 +578,193 @@ class HomeController extends Controller
             'saved' => true,
             'saved_at' => now()->format('H:i:s'),
         ]);
+    }
+
+    private function baseContactInfo(): array
+    {
+        return [
+            'phone' => '',
+            'email' => '',
+            'address' => '',
+        ];
+    }
+
+    private function baseSocialLinks(): array
+    {
+        return [
+            'facebook' => '',
+            'twitter' => '',
+            'linkedin' => '',
+            'instagram' => '',
+            'whatsapp' => '',
+        ];
+    }
+
+    private function generalSettingContentLanguages($languages, $defaultLanguageId = null)
+    {
+        $languages = $languages instanceof \Illuminate\Support\Collection
+            ? $languages
+            : collect($languages);
+
+        $activeLanguages = $languages
+            ->filter(fn ($language) => (bool) ($language->is_active ?? false))
+            ->values();
+
+        $defaultLanguage = $languages->firstWhere('id', $defaultLanguageId);
+        if ($defaultLanguage && $activeLanguages->doesntContain(fn ($language) => (int) $language->id === (int) $defaultLanguage->id)) {
+            $activeLanguages->prepend($defaultLanguage);
+        }
+
+        return $activeLanguages->isNotEmpty()
+            ? $activeLanguages->values()
+            : $languages->values();
+    }
+
+    private function resolveDefaultLanguageCode($languages, $defaultLanguageId = null): string
+    {
+        $languages = $languages instanceof \Illuminate\Support\Collection
+            ? $languages
+            : collect($languages);
+
+        $defaultLanguage = $languages->firstWhere('id', $defaultLanguageId);
+        $defaultCode = strtolower(trim((string) ($defaultLanguage->code ?? '')));
+
+        return $defaultCode !== ''
+            ? $defaultCode
+            : strtolower((string) config('app.locale', 'en'));
+    }
+
+    private function normalizeLocalizedContentFromRequest(
+        array $localizedTexts,
+        array $languageCodes,
+        string $defaultLocale,
+        array $legacyValues = [],
+        array $existingValues = [],
+    ): array {
+        $fields = ['site_title', 'site_discretion', 'contact_address'];
+        $normalized = [];
+
+        foreach ($fields as $field) {
+            $normalized[$field] = $this->normalizeLocalizedTextField(
+                $localizedTexts,
+                $field,
+                $languageCodes,
+                $defaultLocale,
+                $legacyValues[$field] ?? null,
+                is_array($existingValues[$field] ?? null) ? $existingValues[$field] : [],
+            );
+        }
+
+        return $normalized;
+    }
+
+    private function normalizeStoredLocalizedContent(
+        array $localizedContent,
+        string $defaultLocale,
+        array $legacyValues = [],
+    ): array {
+        $fields = ['site_title', 'site_discretion', 'contact_address'];
+        $normalized = [];
+
+        foreach ($fields as $field) {
+            $fieldValues = is_array($localizedContent[$field] ?? null)
+                ? $localizedContent[$field]
+                : [];
+
+            $normalizedFieldValues = [];
+            foreach ($fieldValues as $languageCode => $value) {
+                $code = strtolower(trim((string) $languageCode));
+                $normalizedValue = trim((string) $value);
+
+                if ($code === '' || $normalizedValue === '') {
+                    continue;
+                }
+
+                $normalizedFieldValues[$code] = $normalizedValue;
+            }
+
+            $legacyValue = trim((string) ($legacyValues[$field] ?? ''));
+            if ($normalizedFieldValues === [] && $legacyValue !== '') {
+                $fallbackCode = $defaultLocale !== ''
+                    ? strtolower($defaultLocale)
+                    : strtolower((string) config('app.locale', 'en'));
+
+                $normalizedFieldValues[$fallbackCode] = $legacyValue;
+            }
+
+            $normalized[$field] = $normalizedFieldValues;
+        }
+
+        return $normalized;
+    }
+
+    private function normalizeLocalizedTextField(
+        array $localizedTexts,
+        string $field,
+        array $languageCodes,
+        string $defaultLocale,
+        ?string $legacyValue = null,
+        array $existingValues = [],
+    ): array {
+        $normalized = [];
+        $visibleLanguageCodes = collect($languageCodes)
+            ->map(fn ($code) => strtolower(trim((string) $code)))
+            ->filter()
+            ->values()
+            ->all();
+
+        foreach ($existingValues as $languageCode => $value) {
+            $code = strtolower(trim((string) $languageCode));
+            $normalizedValue = trim((string) $value);
+            if ($code === '' || $normalizedValue === '' || in_array($code, $visibleLanguageCodes, true)) {
+                continue;
+            }
+
+            $normalized[$code] = $normalizedValue;
+        }
+
+        foreach ($visibleLanguageCodes as $languageCode) {
+            $value = trim((string) data_get($localizedTexts, "{$languageCode}.{$field}", ''));
+            if ($value !== '') {
+                $normalized[$languageCode] = $value;
+            } elseif (array_key_exists($languageCode, $normalized)) {
+                unset($normalized[$languageCode]);
+            }
+        }
+
+        $legacyValue = trim((string) $legacyValue);
+        if ($normalized === [] && $legacyValue !== '') {
+            $fallbackCode = $defaultLocale !== ''
+                ? strtolower($defaultLocale)
+                : strtolower((string) config('app.locale', 'en'));
+
+            $normalized[$fallbackCode] = $legacyValue;
+        }
+
+        return $normalized;
+    }
+
+    private function extractPrimaryLocalizedValue(array $localizedValues, string $defaultLocale, string $fallback = ''): string
+    {
+        $defaultLocale = strtolower(trim($defaultLocale));
+        $fallbackLocale = strtolower((string) config('app.fallback_locale', 'en'));
+
+        if ($defaultLocale !== '' && trim((string) ($localizedValues[$defaultLocale] ?? '')) !== '') {
+            return trim((string) $localizedValues[$defaultLocale]);
+        }
+
+        if (trim((string) ($localizedValues[$fallbackLocale] ?? '')) !== '') {
+            return trim((string) $localizedValues[$fallbackLocale]);
+        }
+
+        foreach ($localizedValues as $value) {
+            $candidate = trim((string) $value);
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        return trim($fallback);
     }
 
     private function extractStoragePathFromUrl(string $value): ?string

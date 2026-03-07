@@ -71,10 +71,24 @@ function initPageBuilder() {
         offsetY: 0,
     };
 
-    // Canvas styles from blade link
+    // Canvas styles are resolved in Blade and injected only into the builder iframe.
     const canvasStyles = [];
+    const canvasCssUrlsEl = document.getElementById('builder-canvas-css-urls');
     const appCssLink = document.getElementById('palgoals-app-css');
-    if (appCssLink?.href) canvasStyles.push(appCssLink.href);
+    if (canvasCssUrlsEl?.textContent) {
+        try {
+            const parsedUrls = JSON.parse(canvasCssUrlsEl.textContent);
+            if (Array.isArray(parsedUrls)) {
+                parsedUrls
+                    .filter((url) => typeof url === 'string' && url.trim())
+                    .forEach((url) => canvasStyles.push(url));
+            }
+        } catch (_) {
+            // Ignore invalid JSON and fall back to app.css.
+        }
+    }
+    if (appCssLink?.href && !canvasStyles.includes(appCssLink.href)) canvasStyles.unshift(appCssLink.href);
+    const uniqueCanvasStyles = [...new Set(canvasStyles)];
 
     // Init UI
     initSidebarTabs();
@@ -121,7 +135,7 @@ function initPageBuilder() {
         selectorManager: { componentFirst: true },
         canvas: {
             styles: [
-                ...canvasStyles,
+                ...uniqueCanvasStyles,
                 'https://unpkg.com/swiper/swiper-bundle.min.css'
             ],
             scripts: [
@@ -416,7 +430,7 @@ function initPageBuilder() {
     initCanvas(editor, {
         appDir,
         emptyHint,
-        cssUrl: appCssLink?.href || null,
+        canvasStyles: uniqueCanvasStyles,
     });
 
     const btn = document.getElementById('btnSidebar');
@@ -552,7 +566,6 @@ function initPageBuilder() {
 }
 
 initPageBuilder();
-
 
 
 

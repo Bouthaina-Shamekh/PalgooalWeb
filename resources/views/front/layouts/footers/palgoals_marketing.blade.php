@@ -7,7 +7,7 @@
         ? $footerVariantSettings['palgoals_marketing']
         : [];
     $socialLinks = is_array($settings?->social_links ?? null) ? $settings->social_links : [];
-    $contactInfo = is_array($settings?->contact_info ?? null) ? $settings->contact_info : [];
+    $contactInfo = is_array($settings?->resolved_contact_info ?? null) ? $settings->resolved_contact_info : [];
 
     $currentLocale = strtolower((string) app()->getLocale());
     $fallbackLocale = strtolower((string) config('app.fallback_locale', 'en'));
@@ -56,6 +56,7 @@
         'All rights reserved to PalGoals company © 2025',
     );
     $showSocialIcons = (bool) ($variantSettings['show_social_icons'] ?? true);
+    $followLabelAlignment = current_dir() === 'rtl' ? 'text-right' : 'text-left';
 
     $colorThemeKey = strtolower(trim((string) ($variantSettings['color_theme'] ?? '')));
 
@@ -184,7 +185,7 @@
             <div>
                 <div class="flex items-center justify-start gap-4 mb-6">
                     <div class="pf-marketing-logo-frame shrink-0">
-                        <img src="{{ $logoSrc }}" alt="{{ $settings?->site_title ?? 'PalGoals' }}" class="pf-marketing-logo-image">
+                        <img src="{{ $logoSrc }}" alt="{{ $settings?->resolved_site_title ?? 'PalGoals' }}" class="pf-marketing-logo-image">
                     </div>
                 </div>
                 <p class="text-base leading-relaxed max-w-sm {{ $theme['muted_text'] }}">
@@ -288,8 +289,8 @@
             </div>
 
             @if ($showSocialIcons)
-                <div class="items-center justify-center gap-4 ltr:flex-row rtl:flex-row-reverse flex md:hidden">
-                    <span class="text-base uppercase {{ $theme['follow_label'] }}">{{ $followUsLabel }}</span>
+                <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 md:hidden">
+                    <span class="text-base uppercase {{ $followLabelAlignment }} {{ $theme['follow_label'] }}">{{ $followUsLabel }}</span>
                     <div class="flex items-center gap-5">
                         <a href="{{ $socialLinks['facebook'] ?? '#' }}" class="{{ $theme['muted_text'] }} {{ $theme['hover_text'] }} hover:-translate-y-1 transition-all duration-300">
                             <img src="{{ asset('assets/imgs/icons/icon-awesome-facebook-f.svg') }}" class="w-5 h-5 opacity-60 hover:opacity-100" alt="Facebook">
@@ -319,8 +320,8 @@
             </p>
 
             @if ($showSocialIcons)
-                <div class="items-center gap-4 ltr:flex-row rtl:flex-row-reverse hidden md:flex">
-                    <span class="text-base uppercase {{ $theme['follow_label'] }}">{{ $followUsLabel }}</span>
+                <div class="hidden md:flex flex-wrap items-center gap-x-4 gap-y-3">
+                    <span class="text-base uppercase {{ $followLabelAlignment }} {{ $theme['follow_label'] }}">{{ $followUsLabel }}</span>
                     <div class="flex items-center gap-5">
                         <a href="{{ $socialLinks['facebook'] ?? '#' }}" class="{{ $theme['muted_text'] }} {{ $theme['hover_text'] }} hover:-translate-y-1 transition-all duration-300">
                             <img src="{{ asset('assets/imgs/icons/icon-awesome-facebook-f.svg') }}" class="w-5 h-5 opacity-60 hover:opacity-100" alt="Facebook">

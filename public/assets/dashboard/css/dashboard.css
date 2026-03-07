@@ -7331,6 +7331,11 @@
       text-align: left;
     }
   }
+  .ltr\:text-right {
+    &:where(:dir(ltr), [dir="ltr"], [dir="ltr"] *) {
+      text-align: right;
+    }
+  }
   .rtl\:right-0 {
     &:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
       right: calc(var(--spacing) * 0);
@@ -7433,6 +7438,11 @@
       :where(& > :not(:last-child)) {
         --tw-space-x-reverse: 1;
       }
+    }
+  }
+  .rtl\:text-left {
+    &:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
+      text-align: left;
     }
   }
   .rtl\:text-right {

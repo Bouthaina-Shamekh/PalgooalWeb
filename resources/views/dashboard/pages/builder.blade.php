@@ -11,6 +11,11 @@
     $availableLocales = $page->translations->pluck('locale')->filter()->unique();
     $currentLocale = request('locale', app()->getLocale());
     $hasMultipleLocales = $availableLocales->count() > 1;
+    $builderCanvasCssUrls = [
+        mix('assets/tamplate/css/app.css'),
+        route('frontend.assets.purple_topbar_css'),
+        route('frontend.assets.palgoals_marketing_footer_css'),
+    ];
 @endphp
 
 <!doctype html>
@@ -25,6 +30,7 @@
 
     {{-- Main Tailwind / Palgoals stylesheet used in the builder shell --}}
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}" id="palgoals-app-css">
+    <script id="builder-canvas-css-urls" type="application/json">@json($builderCanvasCssUrls)</script>
 
     {{-- GrapesJS + custom builder JS entry --}}
     @vite('resources/js/dashboard/builder/index.js')
@@ -509,6 +515,14 @@
 
         <span class="hidden rotate-180 rtl:-left-3 -right-3"></span>
     </div>
+
+    <template id="builder-canvas-header-template">
+        @include('front.layouts.partials.header')
+    </template>
+
+    <template id="builder-canvas-footer-template">
+        @include('front.layouts.partials.footer')
+    </template>
 
     <div id="builder-layers-window" class="pg-layers-window" hidden data-open="false" aria-hidden="true">
         <div id="builder-layers-panel" class="pg-layers-window-panel">

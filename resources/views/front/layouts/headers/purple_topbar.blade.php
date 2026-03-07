@@ -193,7 +193,7 @@
     <div class="container mx-auto flex justify-between items-center gap-4">
         <!-- Logo -->
         <div class="flex items-center gap-2 ltr:flex-row rtl:flex-row-reverse">
-            <img src="{{ $logoSrc }}" alt="{{ $settings?->site_title ?? 'Palgoals' }}" class="h-14 w-auto">
+            <img src="{{ $logoSrc }}" alt="{{ $settings?->resolved_site_title ?? 'Palgoals' }}" class="h-14 w-auto">
         </div>
         <!-- Desktop Navigation -->
         <div class="hidden lg:flex justify-between items-center gap-8 lg:gap-10 font-bold {{ $theme['nav_text'] }}">
@@ -276,7 +276,7 @@
                         {{ $contactButtonLabel }}
                     </a>
                     <div class="flex justify-center items-center gap-6">
-                        <img src="{{ $logoSrc }}" alt="{{ $settings?->site_title ?? 'Palgoals' }}"
+                        <img src="{{ $logoSrc }}" alt="{{ $settings?->resolved_site_title ?? 'Palgoals' }}"
                             class="h-12 w-auto">
                     </div>
                 </div>
