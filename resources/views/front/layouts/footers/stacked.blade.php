@@ -43,10 +43,12 @@
         </a>
 
         <nav class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm font-medium">
-            <a href="{{ route('frontend.home') }}" class="hover:text-primary transition-colors duration-200">{{ t('frontend.Home', 'Home') }}</a>
-            <a href="{{ route('domains.page') }}" class="hover:text-primary transition-colors duration-200">{{ t('frontend.Domain', 'Domains') }}</a>
-            <a href="{{ route('cart') }}" class="hover:text-primary transition-colors duration-200">{{ t('frontend.Cart', 'Cart') }}</a>
-            <a href="{{ route('testimonials.submit') }}" class="hover:text-primary transition-colors duration-200">{{ t('frontend.Contact_Us', 'Contact Us') }}</a>
+            <ul class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+                @include('front.layouts.partials.footer.menu-links', [
+                    'footerMenu' => $footerMenu ?? null,
+                    'linkClass' => 'hover:text-primary transition-colors duration-200',
+                ])
+            </ul>
         </nav>
 
         <div class="flex justify-center text-primary dark:text-white">

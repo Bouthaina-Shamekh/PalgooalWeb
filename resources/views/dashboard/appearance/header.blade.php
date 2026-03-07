@@ -328,7 +328,7 @@
                         <a href="{{ route('frontend.home') }}" target="_blank" class="btn btn-outline-primary btn-sm">
                             {{ t('dashboard.Preview_Homepage', 'Preview Homepage') }}
                         </a>
-                        <a href="{{ route('dashboard.headers') }}" class="btn btn-primary btn-sm">
+                        <a href="{{ route('dashboard.menus') }}" class="btn btn-primary btn-sm">
                             {{ t('dashboard.Manage_Menus', 'Manage Menus') }}
                         </a>
                     </div>
@@ -810,7 +810,7 @@
                     </div>
                     <div class="card-body space-y-3 text-sm text-muted">
                         <p class="mb-0">{{ t('dashboard.Header_Note_Desc', 'Click any card to activate a header layout. Menu items and structure remain managed from the Menus page.') }}</p>
-                        <a href="{{ route('dashboard.headers') }}" class="btn btn-outline-primary w-full">
+                        <a href="{{ route('dashboard.menus') }}" class="btn btn-outline-primary w-full">
                             {{ t('dashboard.Manage_Menus', 'Manage Menus') }}
                         </a>
                     </div>
@@ -1134,4 +1134,3 @@
         </script>
     @endpush
 </x-dashboard-layout>
-

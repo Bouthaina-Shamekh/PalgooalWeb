@@ -880,6 +880,9 @@
   .my-8 {
     margin-block: calc(var(--spacing) * 8);
   }
+  .ms-1 {
+    margin-inline-start: calc(var(--spacing) * 1);
+  }
   .ms-2 {
     margin-inline-start: calc(var(--spacing) * 2);
   }

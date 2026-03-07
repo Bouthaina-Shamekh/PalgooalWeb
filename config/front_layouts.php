@@ -11,21 +11,48 @@ return [
             'label' => 'Classic',
             'description' => 'Logo on the left, menu in the middle, actions on the right.',
             'preview' => 'assets/front-layouts/previews/headers/Classic.png',
+            'menu_location' => 'header_primary',
         ],
         'centered' => [
             'label' => 'Centered',
             'description' => 'Brand and actions on top, centered navigation underneath.',
             'preview' => 'assets/front-layouts/previews/headers/Centered.png',
+            'menu_location' => 'header_primary',
         ],
         'split' => [
             'label' => 'Split Brand',
             'description' => 'Desktop menu on the left, brand centered, actions on the right.',
             'preview' => 'assets/front-layouts/previews/headers/split.png',
+            'menu_location' => 'header_primary',
         ],
         'purple_topbar' => [
             'label' => 'Purple Topbar',
             'description' => 'Announcement strip with social icons and a two-level navigation.',
             'preview' => 'assets/front-layouts/previews/headers/Purple-Topbar.png',
+            'menu_location' => 'header_primary',
+        ],
+    ],
+
+    'menu_locations' => [
+        'header_primary' => [
+            'label' => 'Header Primary',
+            'scope' => 'header',
+        ],
+        'header_topbar' => [
+            'label' => 'Header Topbar',
+            'scope' => 'header',
+        ],
+        'footer_primary' => [
+            'label' => 'Footer Primary',
+            'scope' => 'footer',
+        ],
+        'footer_secondary' => [
+            'label' => 'Footer Secondary',
+            'scope' => 'footer',
+        ],
+        'footer_bottom' => [
+            'label' => 'Footer Bottom / Legal',
+            'scope' => 'footer',
         ],
     ],
 
@@ -132,21 +159,25 @@ return [
             'label' => 'Classic',
             'description' => 'Large marketing footer with CTA band, columns, and payments.',
             'preview' => 'assets/front-layouts/previews/footers/default.svg',
+            'menu_location' => 'footer_primary',
         ],
         'compact' => [
             'label' => 'Compact',
             'description' => 'Dense three-column footer focused on essentials.',
             'preview' => 'assets/front-layouts/previews/footers/compact.svg',
+            'menu_location' => 'footer_primary',
         ],
         'stacked' => [
             'label' => 'Stacked',
             'description' => 'Contact banner on top followed by a centered minimal footer.',
             'preview' => 'assets/front-layouts/previews/footers/stacked.svg',
+            'menu_location' => 'footer_primary',
         ],
         'palgoals_marketing' => [
             'label' => 'PalGoals Marketing',
             'description' => 'Three-column gray footer with pages links, payments, and social follow bar.',
             'preview' => 'assets/front-layouts/previews/footers/palgoals_marketing.svg',
+            'menu_location' => 'footer_primary',
         ],
     ],
 ];

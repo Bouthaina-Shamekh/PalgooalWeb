@@ -42,7 +42,7 @@
     <!-- [Dashboard Custom CSS] -->
     <link rel="stylesheet" href="{{ mix('assets/dashboard/css/dashboard.css') }}" />
     @stack('styles')
-    @unless (request()->routeIs('dashboard.general_settings'))
+    @unless (request()->routeIs('dashboard.general_settings', 'dashboard.menus', 'dashboard.headers'))
         @livewireStyles
     @endunless
 </head>

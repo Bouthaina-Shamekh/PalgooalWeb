@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\PageBuilderController;
 use App\Http\Controllers\Admin\SectionController;
 use App\Http\Controllers\Admin\AppearanceController;
+use App\Http\Controllers\Admin\MenuController;
 
 // -----------------------------------------------------------------------------
 // Management Controllers (Hosting / Billing / Domains / Plans)
@@ -141,8 +142,18 @@ Route::group([
         return view('dashboard.clients');
     })->name('clients');
 
-    Route::get('menus', function () {
-        return view('dashboard.header');
+    Route::get('menus', [MenuController::class, 'index'])->name('menus');
+    Route::post('menus', [MenuController::class, 'store'])->name('menus.store');
+    Route::patch('menus/{menu}', [MenuController::class, 'update'])->name('menus.update');
+    Route::delete('menus/{menu}', [MenuController::class, 'destroy'])->name('menus.destroy');
+    Route::post('menus/{menu}/duplicate', [MenuController::class, 'duplicate'])->name('menus.duplicate');
+    Route::post('menus/{menu}/items', [MenuController::class, 'storeItem'])->name('menus.items.store');
+    Route::patch('menus/{menu}/items/{item}', [MenuController::class, 'updateItem'])->name('menus.items.update');
+    Route::delete('menus/{menu}/items/{item}', [MenuController::class, 'destroyItem'])->name('menus.items.destroy');
+    Route::post('menus/{menu}/items/reorder', [MenuController::class, 'reorderItems'])->name('menus.items.reorder');
+
+    Route::get('headers', function () {
+        return redirect()->route('dashboard.menus');
     })->name('headers');
 
     // -------------------------------------------------------------------------

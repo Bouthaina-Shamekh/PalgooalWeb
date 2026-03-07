@@ -42,13 +42,13 @@
 <script>
     main_layout_change('vertical');
 </script>
-@stack('scripts')
-@stack('modals')
-@unless (request()->routeIs('dashboard.general_settings'))
-    @livewireScripts
-@endunless
 {{-- <script src="{{asset('assets/dashboard/Sortable.min.js')}}"></script> --}}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+@stack('scripts')
+@stack('modals')
+@unless (request()->routeIs('dashboard.general_settings', 'dashboard.menus', 'dashboard.headers'))
+    @livewireScripts
+@endunless
 <script>
     window.MEDIA_CONFIG = window.MEDIA_CONFIG || {};
     window.MEDIA_CONFIG.baseUrl = window.MEDIA_CONFIG.baseUrl || "{{ url('admin/media') }}";

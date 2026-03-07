@@ -1,5 +1,34 @@
 ﻿@php
     $showPaymentMethods = (bool) ($settings?->footer_show_payment_methods ?? true);
+    $footerMenuLinks = collect();
+
+    if (!empty($footerMenu?->items)) {
+        foreach ($footerMenu->items as $item) {
+            if (in_array($item->type, ['link', 'page'], true)) {
+                $footerMenuLinks->push([
+                    'label' => (string) $item->label,
+                    'url' => (string) $item->url,
+                ]);
+            }
+
+            if ($item->type === 'dropdown') {
+                foreach ($item->processedChildren as $child) {
+                    $footerMenuLinks->push([
+                        'label' => (string) ($child['current_label'] ?? ''),
+                        'url' => (string) ($child['current_url'] ?? '#'),
+                    ]);
+                }
+            }
+        }
+    }
+
+    $footerMenuLinks = $footerMenuLinks
+        ->filter(fn (array $link) => trim((string) ($link['label'] ?? '')) !== '')
+        ->values();
+
+    $footerMenuColumns = $footerMenuLinks->isNotEmpty()
+        ? $footerMenuLinks->chunk((int) ceil($footerMenuLinks->count() / 2))
+        : collect();
 @endphp
 
 <style>
@@ -39,29 +68,29 @@
             <div>
                 <h3 class="font-bold text-2xl md:text-3xl text-black mb-2 uppercase tracking-wide">PAGES</h3>
                 <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-                    <ul class="space-y-3">
-                        <li><a href="#" class="text-gray-dark hover:text-purple-brand transition text-base">Customer
-                                reviews</a></li>
-                        <li><a href="#" class="text-gray-dark hover:text-purple-brand transition text-base">Privacy
-                                Policy</a></li>
-                        <li><a href="#" class="text-gray-dark hover:text-purple-brand transition text-base">Terms
-                                and
-                                Conditions</a></li>
-                        <li><a href="#" class="text-gray-dark hover:text-purple-brand transition text-base">Refund
-                                and
-                                Returns Policy</a></li>
-                    </ul>
-                    <ul class="space-y-3">
-                        <li><a href="#" class="text-gray-dark hover:text-purple-brand transition text-base">Customer
-                                Service</a></li>
-                        <li><a href="#"
-                                class="text-gray-dark hover:text-purple-brand transition text-base">Returns/Exchange</a>
-                        </li>
-                        <li><a href="#" class="text-gray-dark hover:text-purple-brand transition text-base">FAQs</a>
-                        </li>
-                        <li><a href="#" class="text-gray-dark hover:text-purple-brand transition text-base">Help
-                                Center</a></li>
-                    </ul>
+                    @if ($footerMenuColumns->isNotEmpty())
+                        @foreach ([0, 1] as $columnIndex)
+                            <ul class="space-y-3">
+                                @foreach ($footerMenuColumns->get($columnIndex, collect()) as $menuLink)
+                                    <li>
+                                        <a href="{{ $menuLink['url'] ?: '#' }}"
+                                            class="text-gray-dark hover:text-purple-brand transition text-base">
+                                            {{ $menuLink['label'] }}
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endforeach
+                    @else
+                        <ul class="space-y-3">
+                            <li><a href="{{ route('frontend.home') }}" class="text-gray-dark hover:text-purple-brand transition text-base">{{ t('frontend.Home', 'Home') }}</a></li>
+                            <li><a href="{{ route('domains.page') }}" class="text-gray-dark hover:text-purple-brand transition text-base">{{ t('frontend.Domain', 'Domains') }}</a></li>
+                        </ul>
+                        <ul class="space-y-3">
+                            <li><a href="{{ route('cart') }}" class="text-gray-dark hover:text-purple-brand transition text-base">{{ t('frontend.Cart', 'Cart') }}</a></li>
+                            <li><a href="{{ route('testimonials.submit') }}" class="text-gray-dark hover:text-purple-brand transition text-base">{{ t('frontend.Contact_Us', 'Contact Us') }}</a></li>
+                        </ul>
+                    @endif
                 </div>
             </div>
 

@@ -7,7 +7,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Header extends Model
 {
-    protected $fillable = ['name'];
+    protected $fillable = [
+        'name',
+        'slug',
+        'location_key',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
 
     public function items(): HasMany
     {

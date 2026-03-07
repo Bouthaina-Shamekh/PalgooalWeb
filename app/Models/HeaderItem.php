@@ -108,14 +108,53 @@ class HeaderItem extends Model
                 }
             } else {
                 // للروابط العادية، جلب الترجمة الحالية
-                $locale = app()->getLocale();
-                $childData['current_label'] = $child['labels'][$locale]['label'] ??
-                    $child['labels']['ar']['label'] ??
+                $locale = strtolower((string) app()->getLocale());
+                $fallbackLocale = strtolower((string) config('app.fallback_locale', 'en'));
+
+                $labels = [];
+                if (is_array($child['labels'] ?? null)) {
+                    foreach ($child['labels'] as $langKey => $langValue) {
+                        $labels[strtolower((string) $langKey)] = is_array($langValue) ? $langValue : [];
+                    }
+                }
+
+                $currentLabel = trim((string) (
+                    $labels[$locale]['label'] ??
+                    $labels[$fallbackLocale]['label'] ??
                     $child['label'][$locale] ??
-                    $child['label']['ar'] ?? '-';
-                $childData['current_url'] = $child['labels'][$locale]['url'] ??
-                    $child['labels']['ar']['url'] ??
-                    $child['url'] ?? '#';
+                    $child['label'][$fallbackLocale] ??
+                    ''
+                ));
+
+                if ($currentLabel === '') {
+                    foreach ($labels as $candidate) {
+                        $candidateLabel = trim((string) ($candidate['label'] ?? ''));
+                        if ($candidateLabel !== '') {
+                            $currentLabel = $candidateLabel;
+                            break;
+                        }
+                    }
+                }
+
+                $currentUrl = trim((string) (
+                    $labels[$locale]['url'] ??
+                    $labels[$fallbackLocale]['url'] ??
+                    $child['url'] ??
+                    ''
+                ));
+
+                if ($currentUrl === '') {
+                    foreach ($labels as $candidate) {
+                        $candidateUrl = trim((string) ($candidate['url'] ?? ''));
+                        if ($candidateUrl !== '') {
+                            $currentUrl = $candidateUrl;
+                            break;
+                        }
+                    }
+                }
+
+                $childData['current_label'] = $currentLabel !== '' ? $currentLabel : '-';
+                $childData['current_url'] = $currentUrl !== '' ? $currentUrl : '#';
             }
 
             $processedChildren[] = $childData;

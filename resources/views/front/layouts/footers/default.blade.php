@@ -59,10 +59,10 @@
         <div class="text-center lg:text-start">
             <h4 class="font-extrabold text-lg mb-4">{{ t('frontend.Quick_Links', 'Quick Links') }}</h4>
             <ul class="space-y-3 text-white/85 text-sm">
-                <li><a href="{{ route('frontend.home') }}" class="hover:text-white transition-colors duration-200">{{ t('frontend.Home', 'Home') }}</a></li>
-                <li><a href="{{ route('domains.page') }}" class="hover:text-white transition-colors duration-200">{{ t('frontend.Domain', 'Domains') }}</a></li>
-                <li><a href="{{ route('cart') }}" class="hover:text-white transition-colors duration-200">{{ t('frontend.Cart', 'Cart') }}</a></li>
-                <li><a href="{{ route('testimonials.submit') }}" class="hover:text-white transition-colors duration-200">{{ t('frontend.Contact_Us', 'Contact Us') }}</a></li>
+                @include('front.layouts.partials.footer.menu-links', [
+                    'footerMenu' => $footerMenu ?? null,
+                    'linkClass' => 'hover:text-white transition-colors duration-200',
+                ])
             </ul>
         </div>
 
