@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\PageBuilderController;
 use App\Http\Controllers\Admin\SectionController;
 use App\Http\Controllers\Admin\AppearanceController;
 use App\Http\Controllers\Admin\MenuController;
+use App\Http\Controllers\Admin\ClientController as AdminClientController;
 
 // -----------------------------------------------------------------------------
 // Management Controllers (Hosting / Billing / Domains / Plans)
@@ -138,9 +139,18 @@ Route::group([
     // -------------------------------------------------------------------------
     // Static internal dashboard pages (Livewire/Vue mounts, etc.)
     // -------------------------------------------------------------------------
-    Route::get('clients', function () {
-        return view('dashboard.clients');
-    })->name('clients');
+    Route::get('clients', [AdminClientController::class, 'index'])->name('clients');
+    Route::get('clients/create', [AdminClientController::class, 'create'])->name('clients.create');
+    Route::post('clients', [AdminClientController::class, 'store'])->name('clients.store');
+    Route::get('clients/{client}/edit', [AdminClientController::class, 'edit'])->name('clients.edit');
+    Route::put('clients/{client}', [AdminClientController::class, 'update'])->name('clients.update');
+    Route::delete('clients/{client}', [AdminClientController::class, 'destroy'])->name('clients.destroy');
+    Route::match(['GET', 'POST'], 'clients/{client}/impersonate', [AdminClientController::class, 'impersonate'])->name('clients.impersonate');
+    Route::post('clients/{client}/contacts', [AdminClientController::class, 'storeContact'])->name('clients.contacts.store');
+    Route::delete('clients/{client}/contacts/{contact}', [AdminClientController::class, 'destroyContact'])->name('clients.contacts.destroy');
+    Route::post('clients/{client}/notes', [AdminClientController::class, 'storeNote'])->name('clients.notes.store');
+    Route::delete('clients/{client}/notes/{note}', [AdminClientController::class, 'destroyNote'])->name('clients.notes.destroy');
+    Route::get('clients/{client}', [AdminClientController::class, 'show'])->name('clients.show');
 
     Route::get('menus', [MenuController::class, 'index'])->name('menus');
     Route::post('menus', [MenuController::class, 'store'])->name('menus.store');

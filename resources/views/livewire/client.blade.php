@@ -8,12 +8,12 @@
         </button>
     </div>
     @if ($mode === 'index')
-        @include('livewire.dashboard.client.index')
+        @include('livewire.admin.client.index')
     @elseif ($mode === 'add')
-        @include('livewire.dashboard.client.add')
+        @include('livewire.admin.client.add')
     @elseif ($mode === 'edit')
-        @include('livewire.dashboard.client.edit')
+        @include('livewire.admin.client.edit')
     @elseif ($mode === 'show')
-        @include('livewire.dashboard.client.show')
+        @include('livewire.admin.client.show')
     @endif
 </div>
