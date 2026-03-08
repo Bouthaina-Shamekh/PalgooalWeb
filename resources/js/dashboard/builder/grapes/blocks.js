@@ -1,6 +1,7 @@
 import { registerAllComponents } from './components';
 import { createHeroBlockContent } from './components/sections/hero';
 import { createHowBuildBlockContent } from './components/sections/how-we-build';
+import { createTechnologyStackBlockContent } from './components/sections/technology-stack';
 
 const ensureClass = (cls) => (cls ? String(cls).trim() : '');
 const splitClasses = (cls) => ensureClass(cls).split(/\s+/).filter(Boolean);
@@ -461,6 +462,12 @@ export function registerBlocks(editor) {
         label: 'How We Build',
         category: 'Sections',
         content: createHowBuildBlockContent(),
+    });
+
+    bm.add('pg-technology-stack', {
+        label: 'Technology Stack',
+        category: 'Sections',
+        content: createTechnologyStackBlockContent(),
     });
 
     // bm.add('pg-slider', {

@@ -2,6 +2,7 @@
 <script src="{{ asset('assets/tamplate/js/header.js') }}" defer></script>
 <script src="{{ asset('assets/tamplate/js/custoum-script.js') }}" defer></script>
 <script src="{{ asset('assets/tamplate/js/slider.js') }}" defer></script>
+<script src="{{ asset('assets/tamplate/js/tech-stack-drag.js') }}" defer></script>
 <script src="{{ asset('assets/tamplate/js/lang.js') }}"></script>
 
 <!-- Swiper JS -->

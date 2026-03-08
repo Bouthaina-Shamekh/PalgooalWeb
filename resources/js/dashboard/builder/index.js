@@ -139,7 +139,8 @@ function initPageBuilder() {
                 'https://unpkg.com/swiper/swiper-bundle.min.css'
             ],
             scripts: [
-                'https://unpkg.com/swiper/swiper-bundle.min.js'
+                'https://unpkg.com/swiper/swiper-bundle.min.js',
+                '/assets/tamplate/js/tech-stack-drag.js'
             ]
         },
     });
@@ -566,6 +567,5 @@ function initPageBuilder() {
 }
 
 initPageBuilder();
-
 
 
