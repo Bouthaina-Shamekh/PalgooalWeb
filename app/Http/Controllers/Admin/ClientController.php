@@ -165,17 +165,15 @@ class ClientController extends Controller
             ->with('success', 'Client deleted successfully.');
     }
 
-    public function impersonate(Client $client): RedirectResponse
+    public function impersonate(Request $request, Client $client): RedirectResponse
     {
         $this->authorize('login', Client::class);
 
-        if (!$client->can_login) {
-            return redirect()
-                ->back()
-                ->with('warning', 'Client login is disabled.');
-        }
-
         $admin = Auth::user();
+        $request->session()->put([
+            'client_impersonated_by_admin' => true,
+            'client_impersonator_admin_id' => $admin?->id,
+        ]);
         Auth::guard('client')->login($client);
 
         ActivityLog::create([

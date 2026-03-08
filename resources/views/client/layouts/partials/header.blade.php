@@ -1,3 +1,8 @@
+@php
+    $clientUser = Auth::guard('client')->user();
+    $clientName = trim(($clientUser->first_name ?? '') . ' ' . ($clientUser->last_name ?? '')) ?: 'Client';
+@endphp
+
 <header class="pc-header" id="header">
 
     <div class="header-wrapper flex max-sm:px-[15px] px-[25px] grow"><!-- [Mobile Media Block] start -->
@@ -121,7 +126,7 @@
                     <a class="pc-head-link dropdown-toggle arrow-none me-0" data-pc-toggle="dropdown" href="#"
                         role="button" aria-haspopup="false" data-pc-auto-close="outside" aria-expanded="false">
 
-                        <x-dashboard.avatar :name="Auth::user()->name" size="40" class="user-avtar w-10 h-10" />
+                        <x-dashboard.avatar :name="$clientName" size="40" class="user-avtar w-10 h-10" />
 
                     </a>
 
@@ -142,15 +147,15 @@
 
                                     <div class="shrink-0">
 
-                                        <x-dashboard.avatar :name="Auth::user()->name" size="40" class="w-10" />
+                                        <x-dashboard.avatar :name="$clientName" size="40" class="w-10" />
 
                                     </div>
 
                                     <div class="grow ms-3">
 
-                                        <h6 class="mb-1">{{ Auth::user()->name }}</h6>
+                                        <h6 class="mb-1">{{ $clientName }}</h6>
 
-                                        <span>{{ Auth::user()->email }}</span>
+                                        <span>{{ $clientUser->email ?? '' }}</span>
 
                                     </div>
 

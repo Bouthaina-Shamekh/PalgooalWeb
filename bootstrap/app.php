@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\EnsureClientDashboardImpersonation;
+use App\Http\Middleware\EnsureClientCanLogin;
 use App\Http\Middleware\ServeTenantSite;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Foundation\Application;
@@ -15,10 +17,12 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'setLocale' => SetLocale::class,
+            'client.dashboard.impersonation' => EnsureClientDashboardImpersonation::class,
             'tenant.frontend' => ServeTenantSite::class,
         ]);
 
         $middleware->prependToGroup('web', ServeTenantSite::class);
+        $middleware->appendToGroup('web', EnsureClientCanLogin::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

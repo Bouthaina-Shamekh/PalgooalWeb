@@ -1,4 +1,4 @@
-<input type="hidden" name="client_id" value="{{ Auth::user()->client_id }}">
+<input type="hidden" name="client_id" value="{{ Auth::guard('client')->id() }}">
 <div class="col-span-12 md:col-span-6">
     <div class="mb-3">
         <x-form.input label="Domain Name" :value="$domain->domain_name" name="domain_name" type="text"

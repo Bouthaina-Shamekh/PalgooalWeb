@@ -1,7 +1,12 @@
+@php
+    $clientUser = Auth::guard('client')->user();
+    $clientName = trim(($clientUser->first_name ?? '') . ' ' . ($clientUser->last_name ?? '')) ?: 'Client';
+@endphp
+
 <nav class="pc-sidebar">
     <div class="navbar-wrapper">
         <div class="m-header flex items-center py-4 px-6 h-header-height">
-            <a href="{{ route('dashboard.home') }}" class="b-brand flex items-center gap-3">
+            <a href="{{ route('client.home') }}" class="b-brand flex items-center gap-3">
                 <!-- ========   Change your logo from here   ============ -->
                 <img src="{{ asset('assets/dashboard/images/logo1.svg') }}" class="img-fluid logo-lg" alt="logo"
                     style="display: none" />
@@ -15,10 +20,10 @@
             <div class="card pc-user-card mx-[15px] mb-[15px] bg-theme-sidebaruserbg dark:bg-themedark-sidebaruserbg">
                 <div class="card-body !p-5">
                     <div class="flex items-center">
-                        <x-dashboard.avatar :name="Auth::user()->first_name . ' ' . Auth::user()->last_name" size="45"
+                        <x-dashboard.avatar :name="$clientName" size="45"
                             class="shrink-0 w-[45px] h-[45px]" />
                         <div class="ml-4 mr-2 grow">
-                            <h6 class="mb-0">{{ Auth::user()->first_name . ' ' . Auth::user()->last_name }}</h6>
+                            <h6 class="mb-0">{{ $clientName }}</h6>
                             <small>Role</small>
                         </div>
                         <a class="shrink-0 btn btn-icon inline-flex btn-link-secondary" data-pc-toggle="collapse"

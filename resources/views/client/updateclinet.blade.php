@@ -57,22 +57,6 @@
                                 value="{{ old('phone', $client->phone) }}" required>
                         </div>
 
-                        <div class="col-span-12 md:col-span-3">
-                            <label for="status" class="form-label">Client Status</label>
-                            <select id="status" name="status" class="form-select" required>
-                                <option value="active" @selected(old('status', $client->status ?? 'active') === 'active')>Active</option>
-                                <option value="inactive" @selected(old('status', $client->status ?? 'active') === 'inactive')>Inactive</option>
-                            </select>
-                        </div>
-
-                        <div class="col-span-12 md:col-span-3">
-                            <label for="can_login" class="form-label">Login Access</label>
-                            <select id="can_login" name="can_login" class="form-select" required>
-                                <option value="1" @selected((string) old('can_login', (int) $client->can_login) === '1')>Can Login</option>
-                                <option value="0" @selected((string) old('can_login', (int) $client->can_login) === '0')>No Login Access</option>
-                            </select>
-                        </div>
-
                         <div class="col-span-12 mt-6">
                             <h4 class="text-lg font-semibold mb-4 flex items-center">
                                 <i class="ti ti-map-pin mr-2"></i>Address Information

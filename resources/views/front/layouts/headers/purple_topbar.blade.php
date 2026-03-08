@@ -43,6 +43,18 @@
     $showLoginButton = (bool) ($variantSettings['show_login_button'] ?? true);
     $loginLabel = $resolveLocalizedText($variantSettings['login_label'] ?? null, 'Login');
     $loginUrl = trim((string) ($variantSettings['login_url'] ?? '/client/login'));
+    $usesClientDashboardLogin = trim($loginUrl, '/') === 'client/login';
+    $canAccessClientDashboard = auth('client')->check()
+        && session('client_impersonated_by_admin')
+        && auth('web')->check()
+        && (int) session('client_impersonator_admin_id') === (int) auth('web')->id();
+    $resolvedLoginUrl = $usesClientDashboardLogin && $canAccessClientDashboard
+        ? route('client.home')
+        : $loginUrl;
+    $resolvedLoginLabel = $usesClientDashboardLogin && $canAccessClientDashboard
+        ? t('frontend.Client_Area', 'Client Area')
+        : $loginLabel;
+    $shouldRenderLoginButton = $showLoginButton && (!$usesClientDashboardLogin || $canAccessClientDashboard);
     $showLanguageSwitcher = (bool) ($variantSettings['show_language_switcher'] ?? true);
     $contactButtonLabel = $resolveLocalizedText($variantSettings['contact_button_label'] ?? null, 'Contact us');
     $contactButtonUrl = trim((string) ($variantSettings['contact_button_url'] ?? '#contact'));
@@ -162,8 +174,8 @@
 
             <!-- Right Side: Social Icons + Login + Language -->
             <div class="flex items-center gap-4 md:gap-6">
-                @if ($showLoginButton)
-                    <a href="{{ $loginUrl }}"
+                @if ($shouldRenderLoginButton)
+                    <a href="{{ $resolvedLoginUrl }}"
                         class="flex items-center gap-2 transition-all duration-300 text-sm md:text-base {{ $theme['promo_hover'] }}">
                         <svg class="h-4" viewBox="0 0 21 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <g opacity="0.6">
@@ -176,7 +188,7 @@
                                     stroke-linejoin="round" />
                             </g>
                         </svg>
-                        <span>{{ $loginLabel }}</span>
+                        <span>{{ $resolvedLoginLabel }}</span>
                     </a>
                 @endif
 

@@ -156,8 +156,8 @@
 
                                                 @can('login', 'App\\Models\\Client')
                                                     <a href="{{ route('dashboard.clients.impersonate', $client) }}"
-                                                        class="w-8 h-8 rounded-lg inline-flex items-center justify-center btn-link-secondary hover:bg-purple-50 hover:text-purple-600 transition-colors {{ !$client->can_login ? 'pointer-events-none opacity-50' : '' }}"
-                                                        title="Login as Client" @if (!$client->can_login) aria-disabled="true" @endif>
+                                                        class="w-8 h-8 rounded-lg inline-flex items-center justify-center btn-link-secondary hover:bg-purple-50 hover:text-purple-600 transition-colors"
+                                                        title="Login as Client">
                                                         <i class="ti ti-login text-lg leading-none"></i>
                                                     </a>
                                                 @endcan

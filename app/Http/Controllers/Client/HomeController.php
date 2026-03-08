@@ -16,7 +16,29 @@ class HomeController extends Controller
 {
     public function index()
     {
-        return view('client.index');
+        $client = Client::query()
+            ->withCount(['domains', 'subscriptions'])
+            ->findOrFail(Auth::guard('client')->id());
+
+        $invoiceCount = Invoice::where('client_id', $client->id)->count();
+        $unpaidInvoiceCount = Invoice::unpaid()->where('client_id', $client->id)->count();
+        $recentSubscriptions = Subscription::with('plan')
+            ->where('client_id', $client->id)
+            ->latest()
+            ->limit(5)
+            ->get();
+        $recentInvoices = Invoice::where('client_id', $client->id)
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        return view('client.index', compact(
+            'client',
+            'invoiceCount',
+            'unpaidInvoiceCount',
+            'recentSubscriptions',
+            'recentInvoices',
+        ));
     }
 
     public function updateClient()
@@ -40,9 +62,7 @@ class HomeController extends Controller
                 'email' => ['required', 'email', 'max:255', Rule::unique('clients', 'email')->ignore($client->id)],
                 'company_name' => ['nullable', 'string', 'max:255'],
                 'phone' => ['required', 'string', 'max:255'],
-                'can_login' => ['required', 'boolean'],
                 'avatar' => ['nullable', 'image', 'max:2048'],
-                'status' => ['required', Rule::in(['active', 'inactive'])],
                 'country' => ['nullable', 'string', 'max:2'],
                 'city' => ['nullable', 'string', 'max:255'],
                 'address' => ['nullable', 'string'],
@@ -71,8 +91,6 @@ class HomeController extends Controller
             'email' => trim((string) $validated['email']),
             'company_name' => trim((string) ($validated['company_name'] ?? '')),
             'phone' => trim((string) $validated['phone']),
-            'can_login' => (bool) $validated['can_login'],
-            'status' => $validated['status'],
             'country' => $this->nullableString($validated['country'] ?? null),
             'city' => $this->nullableString($validated['city'] ?? null),
             'address' => $this->nullableString($validated['address'] ?? null),
