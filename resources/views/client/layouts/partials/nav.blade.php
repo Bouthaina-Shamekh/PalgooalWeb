@@ -3,10 +3,10 @@
         <div class="m-header flex items-center py-4 px-6 h-header-height">
             <a href="{{ route('dashboard.home') }}" class="b-brand flex items-center gap-3">
                 <!-- ========   Change your logo from here   ============ -->
-                <img src="{{ asset('assets/dashboard/images/logo-dark.svg') }}" class="img-fluid logo-lg" alt="logo"
+                <img src="{{ asset('assets/dashboard/images/logo1.svg') }}" class="img-fluid logo-lg" alt="logo"
                     style="display: none" />
                 <div style="width: 232px;">
-                    <img src="{{ asset('assets/dashboard/images/logo-dark.svg') }}" class="img-fluid logo-lg"
+                    <img src="{{ asset('assets/dashboard/images/logo1.svg') }}" class="img-fluid logo-lg"
                         alt="logo" />
                 </div>
             </a>

@@ -35,9 +35,7 @@
                         <img width="20" src="" alt="">
                     </a>
                 </li>
-                <li class="dropdown nav-item">
-                    <x-lang.language-switcher-dashboard />
-                </li>
+                <x-lang.language-switcher-dashboard />
                 <li class="dropdown pc-h-item">
                     <a class="pc-head-link dropdown-toggle me-0" data-pc-toggle="dropdown" href="#" role="button"
                         aria-haspopup="false" aria-expanded="false">
@@ -66,22 +64,7 @@
                         </a>
                     </div>
                 </li>
-                <li class="dropdown pc-h-item">
-                    <a class="pc-head-link dropdown-toggle me-0" data-pc-toggle="dropdown" href="#" role="button"
-                        aria-haspopup="false" aria-expanded="false">
-                        <svg class="pc-icon">
-                            <use xlink:href="#custom-setting-2"></use>
-                        </svg>
-                    </a>
-                    <div class="dropdown-menu dropdown-menu-end pc-h-dropdown">
-                        @foreach(available_locales() as $lang)
-                        <a href="{{ route('change_locale', ['locale' => $lang->code]) }}" class="dropdown-item" data-value="false" onclick="layout_rtl_change('false');">
-                            <img src="{{asset('assets-dashboard/images/customizer/ltr.svg')}}" alt="img" class="img-fluid" width="30px" />
-                            {{ $lang->native }}
-                        </a>
-                        @endforeach
-                    </div>
-                </li>
+
                 <li class="dropdown pc-h-item">
                     <a class="pc-head-link dropdown-toggle me-0 relative" data-pc-toggle="dropdown" href="#" role="button"
                         aria-haspopup="false" aria-expanded="false">

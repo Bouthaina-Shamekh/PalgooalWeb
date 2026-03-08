@@ -43,7 +43,6 @@
                         </i>
 
                         <input type="search" class="form-control px-2.5 pr-3 pl-10 w-[198px] leading-none"
-
                             placeholder="Ctrl + K" />
 
                     </form>
@@ -63,7 +62,6 @@
                 <li class="dropdown pc-h-item">
 
                     <a class="pc-head-link dropdown-toggle me-0" data-pc-toggle="dropdown" href="#" role="button"
-
                         aria-haspopup="false" aria-expanded="false">
 
                         <svg class="pc-icon">
@@ -116,53 +114,14 @@
 
                 </li>
 
-                <li class="dropdown pc-h-item">
-
-                    <a class="pc-head-link dropdown-toggle me-0" data-pc-toggle="dropdown" href="#" role="button"
-
-                        aria-haspopup="false" aria-expanded="false">
-
-                        <svg class="pc-icon">
-
-                            <use xlink:href="#custom-setting-2"></use>
-
-                        </svg>
-
-                    </a>
-
-                    <div class="dropdown-menu dropdown-menu-end pc-h-dropdown">
-
-                        <button class="dropdown-item" data-value="false" onclick="layout_rtl_change('false');">
-
-                            <img src="{{asset('assets/dashboard/images/customizer/ltr.svg')}}" alt="img" class="img-fluid" width="30px" />
-
-                            <span>ltr</span>
-
-                        </button>
-
-                        <button class="dropdown-item" data-value="true" onclick="layout_rtl_change('true');">
-
-                            <img src="{{asset('assets/dashboard/images/customizer/rtl.svg')}}" alt="img" class="img-fluid" width="30px" />
-
-
-
-                            <span>rtl</span>
-
-                        </button>
-
-                    </div>
-
-                </li>
+                <x-lang.language-switcher-dashboard />
 
                 <li class="dropdown pc-h-item header-user-profile">
 
                     <a class="pc-head-link dropdown-toggle arrow-none me-0" data-pc-toggle="dropdown" href="#"
-
                         role="button" aria-haspopup="false" data-pc-auto-close="outside" aria-expanded="false">
 
-                        <x-dashboard.avatar :name="Auth::user()->name" size="40"
-
-                            class="user-avtar w-10 h-10" />
+                        <x-dashboard.avatar :name="Auth::user()->name" size="40" class="user-avtar w-10 h-10" />
 
                     </a>
 
@@ -177,7 +136,6 @@
                         <div class="dropdown-body py-4 px-5">
 
                             <div class="profile-notification-scroll position-relative"
-
                                 style="max-height: calc(100vh - 225px)">
 
                                 <div class="flex mb-1 items-center">
@@ -223,7 +181,6 @@
                                                 <input type="checkbox" value="" class="sr-only peer" />
 
                                                 <div
-
                                                     class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
 
                                                 </div>
@@ -327,4 +284,3 @@
     </div>
 
 </header>
-

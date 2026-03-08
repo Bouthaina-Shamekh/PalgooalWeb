@@ -37,8 +37,24 @@
 </script>
 @endif
 <script>
-    preset_change('preset-1');
+    preset_change('preset-brand');
 </script>
+<style>
+    html.preset-brand {
+        --colors-primary-50: 237 235 239;
+        --colors-primary-100: 216 211 219;
+        --colors-primary-200: 185 177 191;
+        --colors-primary-300: 146 132 155;
+        --colors-primary-400: 97 79 111;
+        --colors-primary-500: 36 10 55;
+        --colors-primary-600: 32 9 48;
+        --colors-primary-700: 27 8 42;
+        --colors-primary-800: 22 6 33;
+        --colors-primary-900: 15 4 23;
+        --colors-primary-950: 10 3 15;
+        --colors-primary: 36 10 55;
+    }
+</style>
 <script>
     main_layout_change('vertical');
 </script>
@@ -49,9 +65,17 @@
 @unless (request()->routeIs('dashboard.general_settings', 'dashboard.menus', 'dashboard.headers'))
     @livewireScripts
 @endunless
-    <script>
-      localStorage.setItem('layout', 'vertical');
-    </script>
+  <script>
+    function changebrand(presetColor) {
+      const bodyElement = document.querySelector('body');
+      removeClassByPrefix(bodyElement, 'bg-');
+      removeClassByPrefix(bodyElement, 'from-');
+      removeClassByPrefix(bodyElement, 'to-');
+      console.log(presetColor);
+      bodyElement.setAttribute('class',presetColor);
+    }
+    localStorage.setItem('layout', 'color-header');
+  </script>
 <script>
     window.MEDIA_CONFIG = window.MEDIA_CONFIG || {};
     window.MEDIA_CONFIG.baseUrl = window.MEDIA_CONFIG.baseUrl || "{{ url('admin/media') }}";

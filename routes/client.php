@@ -18,6 +18,7 @@ Route::group([
 ], function () {
     Route::get('/home', [HomeController::class, 'index'])->name('home');
     Route::get('/update_account_clinet', [HomeController::class, 'updateClient'])->name('update_account');
+    Route::post('/update_account_clinet', [HomeController::class, 'saveUpdateClient'])->name('update_account.save');
 
     Route::get('/search', [DomainController::class, 'search'])->name('domains.search');
     Route::post('/search', [DomainController::class, 'processSearch'])->name('domains.search.process');

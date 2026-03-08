@@ -1,24 +1,49 @@
-<a class="pc-head-link dropdown-toggle me-0" data-pc-toggle="dropdown" href="#" role="button" aria-haspopup="false"
-    aria-expanded="false">
+<li class="dropdown pc-h-item">
+    <a
+        class="pc-head-link dropdown-toggle me-0"
+        data-pc-toggle="dropdown"
+        href="#"
+        role="button"
+        aria-haspopup="false"
+        aria-expanded="false"
+        title="{{ $currentLanguage?->native ?? strtoupper($currentLocale) }}"
+    >
+        <i class="ti ti-language text-[18px] leading-none"></i>
+    </a>
 
-    @if($currentLanguage?->flag)
-        <img src="{{ asset($currentLanguage->flag) }}" alt="{{ $currentLanguage->native }}" class="inline w-4 h-4 mr-1">
-    @else
-        🌐
-    @endif
-    {{ $currentLanguage?->native ?? $currentLocale }}
-</a>
-<div class="dropdown-menu dropdown-menu-end pc-h-dropdown">
+    <div class="dropdown-menu dropdown-menu-end pc-h-dropdown lng-dropdown">
+        @foreach ($languages as $lang)
+            @php
+                $isCurrent = $lang->code === $currentLocale;
+                $label = $lang->native ?: $lang->name ?: strtoupper($lang->code);
+                $meta = $lang->name && $lang->name !== $label ? $lang->name : strtoupper($lang->code);
+            @endphp
 
-    @foreach($languages as $lang)
-        <a href="{{ $lang->code !== $currentLocale ? route('change_locale', ['locale' => $lang->code]) : '#' }}"
-            class="dropdown-item {{ $lang->code === $currentLocale ? 'aria-current=page' : '' }}">
+            <a
+                href="{{ $isCurrent ? '#' : route('change_locale', ['locale' => $lang->code]) }}"
+                class="dropdown-item {{ $isCurrent ? 'active pointer-events-none' : '' }}"
+                data-lng="{{ $lang->code }}"
+                @if ($isCurrent) aria-current="page" @endif
+            >
+                <span class="flex items-center gap-3">
+                    @if ($lang->flag)
+                        <img
+                            src="{{ asset($lang->flag) }}"
+                            alt="{{ $label }}"
+                            class="w-5 h-5 rounded-full object-cover border border-secondary-200"
+                        >
+                    @else
+                        <span class="w-5 h-5 rounded-full bg-light-primary text-primary text-[10px] font-semibold inline-flex items-center justify-center">
+                            {{ strtoupper(substr($lang->code, 0, 2)) }}
+                        </span>
+                    @endif
 
-            @if($lang->flag)
-                <img src="{{ asset($lang->flag) }}" alt="{{ $lang->native }}" class="inline w-4 h-4 mr-1">
-            @endif
-
-            {{ $lang->native }}
-        </a>
-    @endforeach
-</div>
+                    <span class="flex flex-col leading-tight">
+                        <span class="font-medium">{{ $label }}</span>
+                        <small class="text-muted">{{ $meta }}</small>
+                    </span>
+                </span>
+            </a>
+        @endforeach
+    </div>
+</li>
