@@ -201,29 +201,55 @@
             ?? config('app.locale', 'en')
         ));
         $fallbackLocaleCode = strtolower((string) config('app.fallback_locale', 'en'));
+        $normalizeLocalizedScalar = static function ($value): string {
+            if (is_array($value)) {
+                $normalized = '';
 
-        $resolveLocalizedSettingForForm = static function ($value, string $locale) use ($defaultLocaleCode, $fallbackLocaleCode): string {
+                array_walk_recursive($value, static function ($item) use (&$normalized): void {
+                    if ($normalized !== '') {
+                        return;
+                    }
+
+                    if (is_scalar($item) || $item instanceof \Stringable) {
+                        $candidate = trim((string) $item);
+                        if ($candidate !== '') {
+                            $normalized = $candidate;
+                        }
+                    }
+                });
+
+                return $normalized;
+            }
+
+            if (is_scalar($value) || $value instanceof \Stringable) {
+                return trim((string) $value);
+            }
+
+            return '';
+        };
+
+        $resolveLocalizedSettingForForm = static function ($value, string $locale) use ($defaultLocaleCode, $fallbackLocaleCode, $normalizeLocalizedScalar): string {
             $locale = strtolower($locale);
 
             if (is_array($value)) {
                 $normalizedValues = [];
                 foreach ($value as $langKey => $langValue) {
-                    $normalizedValues[strtolower((string) $langKey)] = $langValue;
+                    $normalizedValues[strtolower((string) $langKey)] = $normalizeLocalizedScalar($langValue);
                 }
 
-                $localizedValue = trim((string) (
+                $localizedValue = $normalizeLocalizedScalar(
                     $normalizedValues[$locale]
                     ?? $normalizedValues[$defaultLocaleCode]
                     ?? $normalizedValues[$fallbackLocaleCode]
                     ?? ''
-                ));
+                );
 
                 if ($localizedValue !== '') {
                     return $localizedValue;
                 }
 
                 foreach ($normalizedValues as $candidate) {
-                    $candidate = trim((string) $candidate);
+                    $candidate = $normalizeLocalizedScalar($candidate);
                     if ($candidate !== '') {
                         return $candidate;
                     }
@@ -232,7 +258,7 @@
                 return '';
             }
 
-            $scalar = trim((string) $value);
+            $scalar = $normalizeLocalizedScalar($value);
             if ($scalar === '') {
                 return '';
             }

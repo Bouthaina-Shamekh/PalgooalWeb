@@ -110,15 +110,15 @@ class GeneralSetting extends Model
         if (is_array($value)) {
             $normalizedValues = [];
             foreach ($value as $langKey => $langValue) {
-                $normalizedValues[strtolower((string) $langKey)] = trim((string) $langValue);
+                $normalizedValues[strtolower((string) $langKey)] = $this->normalizeScalarLocalizedValue($langValue);
             }
 
-            $localizedValue = trim((string) (
+            $localizedValue = $this->normalizeScalarLocalizedValue(
                 $normalizedValues[$currentLocale]
                 ?? ($defaultLanguageCode !== '' ? ($normalizedValues[$defaultLanguageCode] ?? null) : null)
                 ?? $normalizedValues[$fallbackLocale]
                 ?? ''
-            ));
+            );
 
             if ($localizedValue !== '') {
                 return $localizedValue;
@@ -131,11 +131,39 @@ class GeneralSetting extends Model
             }
         }
 
-        $scalar = trim((string) $value);
+        $scalar = $this->normalizeScalarLocalizedValue($value);
         if ($scalar !== '') {
             return $scalar;
         }
 
-        return trim($default);
+        return $this->normalizeScalarLocalizedValue($default);
+    }
+
+    protected function normalizeScalarLocalizedValue($value): string
+    {
+        if (is_array($value)) {
+            $normalized = '';
+
+            array_walk_recursive($value, static function ($item) use (&$normalized): void {
+                if ($normalized !== '') {
+                    return;
+                }
+
+                if (is_scalar($item) || $item instanceof \Stringable) {
+                    $candidate = trim((string) $item);
+                    if ($candidate !== '') {
+                        $normalized = $candidate;
+                    }
+                }
+            });
+
+            return $normalized;
+        }
+
+        if (is_scalar($value) || $value instanceof \Stringable) {
+            return trim((string) $value);
+        }
+
+        return '';
     }
 }

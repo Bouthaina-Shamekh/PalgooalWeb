@@ -674,7 +674,7 @@ class HomeController extends Controller
             $normalizedFieldValues = [];
             foreach ($fieldValues as $languageCode => $value) {
                 $code = strtolower(trim((string) $languageCode));
-                $normalizedValue = trim((string) $value);
+                $normalizedValue = $this->normalizeScalarValue($value);
 
                 if ($code === '' || $normalizedValue === '') {
                     continue;
@@ -683,7 +683,7 @@ class HomeController extends Controller
                 $normalizedFieldValues[$code] = $normalizedValue;
             }
 
-            $legacyValue = trim((string) ($legacyValues[$field] ?? ''));
+            $legacyValue = $this->normalizeScalarValue($legacyValues[$field] ?? '');
             if ($normalizedFieldValues === [] && $legacyValue !== '') {
                 $fallbackCode = $defaultLocale !== ''
                     ? strtolower($defaultLocale)
@@ -703,7 +703,7 @@ class HomeController extends Controller
         string $field,
         array $languageCodes,
         string $defaultLocale,
-        ?string $legacyValue = null,
+        $legacyValue = null,
         array $existingValues = [],
     ): array {
         $normalized = [];
@@ -715,7 +715,7 @@ class HomeController extends Controller
 
         foreach ($existingValues as $languageCode => $value) {
             $code = strtolower(trim((string) $languageCode));
-            $normalizedValue = trim((string) $value);
+            $normalizedValue = $this->normalizeScalarValue($value);
             if ($code === '' || $normalizedValue === '' || in_array($code, $visibleLanguageCodes, true)) {
                 continue;
             }
@@ -724,7 +724,7 @@ class HomeController extends Controller
         }
 
         foreach ($visibleLanguageCodes as $languageCode) {
-            $value = trim((string) data_get($localizedTexts, "{$languageCode}.{$field}", ''));
+            $value = $this->normalizeScalarValue(data_get($localizedTexts, "{$languageCode}.{$field}", ''));
             if ($value !== '') {
                 $normalized[$languageCode] = $value;
             } elseif (array_key_exists($languageCode, $normalized)) {
@@ -732,7 +732,7 @@ class HomeController extends Controller
             }
         }
 
-        $legacyValue = trim((string) $legacyValue);
+        $legacyValue = $this->normalizeScalarValue($legacyValue);
         if ($normalized === [] && $legacyValue !== '') {
             $fallbackCode = $defaultLocale !== ''
                 ? strtolower($defaultLocale)
@@ -749,22 +749,54 @@ class HomeController extends Controller
         $defaultLocale = strtolower(trim($defaultLocale));
         $fallbackLocale = strtolower((string) config('app.fallback_locale', 'en'));
 
-        if ($defaultLocale !== '' && trim((string) ($localizedValues[$defaultLocale] ?? '')) !== '') {
-            return trim((string) $localizedValues[$defaultLocale]);
+        if ($defaultLocale !== '') {
+            $defaultValue = $this->normalizeScalarValue($localizedValues[$defaultLocale] ?? '');
+            if ($defaultValue !== '') {
+                return $defaultValue;
+            }
         }
 
-        if (trim((string) ($localizedValues[$fallbackLocale] ?? '')) !== '') {
-            return trim((string) $localizedValues[$fallbackLocale]);
+        $fallbackLocaleValue = $this->normalizeScalarValue($localizedValues[$fallbackLocale] ?? '');
+        if ($fallbackLocaleValue !== '') {
+            return $fallbackLocaleValue;
         }
 
         foreach ($localizedValues as $value) {
-            $candidate = trim((string) $value);
+            $candidate = $this->normalizeScalarValue($value);
             if ($candidate !== '') {
                 return $candidate;
             }
         }
 
-        return trim($fallback);
+        return $this->normalizeScalarValue($fallback);
+    }
+
+    private function normalizeScalarValue($value): string
+    {
+        if (is_array($value)) {
+            $normalized = '';
+
+            array_walk_recursive($value, static function ($item) use (&$normalized): void {
+                if ($normalized !== '') {
+                    return;
+                }
+
+                if (is_scalar($item) || $item instanceof \Stringable) {
+                    $candidate = trim((string) $item);
+                    if ($candidate !== '') {
+                        $normalized = $candidate;
+                    }
+                }
+            });
+
+            return $normalized;
+        }
+
+        if (is_scalar($value) || $value instanceof \Stringable) {
+            return trim((string) $value);
+        }
+
+        return '';
     }
 
     private function extractStoragePathFromUrl(string $value): ?string
