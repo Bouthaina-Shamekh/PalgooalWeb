@@ -1,8 +1,6 @@
 {{-- Required Js --}}
 <script src="{{asset('assets/dashboard/js/plugins/simplebar.min.js')}}"></script>
 <script src="{{asset('assets/dashboard/js/plugins/popper.min.js')}}"></script>
-<script src="{{asset('assets/dashboard/js/plugins/i18next.min.js')}}"></script>
-<script src="{{asset('assets/dashboard/js/plugins/i18nextHttpBackend.min.js')}}"></script>
 <script src="{{asset('assets/dashboard/js/icon/custom-icon.js')}}"></script>
 <script src="{{asset('assets/dashboard/js/plugins/feather.min.js')}}"></script>
 <script src="{{asset('assets/dashboard/js/component.js')}}"></script>
