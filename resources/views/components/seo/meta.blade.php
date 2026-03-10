@@ -103,8 +103,10 @@
 
 {{-- Hreflang alternates --}}
 @foreach ($alternates as $alternate)
-    @php($hrefLang = $alternate['locale'] ?? null)
-    @php($href = $alternate['url'] ?? null)
+    @php
+        $hrefLang = $alternate['locale'] ?? null;
+        $href = $alternate['url'] ?? null;
+    @endphp
     @if ($hrefLang && $href)
         <link rel="alternate" hreflang="{{ $hrefLang }}" href="{{ $href }}" />
     @endif
@@ -112,9 +114,11 @@
 
 {{-- Extra meta/link entries --}}
 @foreach ($extraMeta as $entry)
-    @php($name = $entry['name'] ?? null)
-    @php($property = $entry['property'] ?? null)
-    @php($content = $entry['content'] ?? null)
+    @php
+        $name = $entry['name'] ?? null;
+        $property = $entry['property'] ?? null;
+        $content = $entry['content'] ?? null;
+    @endphp
     @if ($content !== null)
         @if ($property)
             <meta property="{{ $property }}" content="{{ $content }}" />
@@ -125,9 +129,11 @@
 @endforeach
 
 @foreach ($extraLinks as $entry)
-    @php($rel = $entry['rel'] ?? null)
-    @php($href = $entry['href'] ?? null)
-    @php($typeAttr = $entry['type'] ?? null)
+    @php
+        $rel = $entry['rel'] ?? null;
+        $href = $entry['href'] ?? null;
+        $typeAttr = $entry['type'] ?? null;
+    @endphp
     @if ($rel && $href)
         <link rel="{{ $rel }}" href="{{ $href }}"
             @if ($typeAttr) type="{{ $typeAttr }}" @endif />

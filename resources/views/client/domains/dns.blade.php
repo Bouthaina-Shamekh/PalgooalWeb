@@ -27,7 +27,6 @@
         $formSubtitleText = str_replace(':max', (string) $maxSlots, t('frontend.client_domains.dns.form_subtitle', 'Provide at least two nameservers. You can add up to :max nameservers.'));
         $validationMinText = str_replace(':n', (string) $requiredCount, t('frontend.client_domains.dns.validation_min', 'Please provide at least :n nameservers.'));
         $validationMaxText = str_replace(':n', (string) $maxSlots, t('frontend.client_domains.dns.validation_max', 'You can add up to :n nameservers.'));
-        $domainName = strtolower(trim($domain->domain_name));
     @endphp
 
     <div class="page-header">
@@ -172,9 +171,22 @@
                 </div>
 
                 <div class="card-body space-y-6">
+                    <div class="rounded-2xl border border-info-200 bg-info-50 p-4 text-sm text-info-800">
+                        <div class="font-medium mb-1">{{ t('frontend.client_domains.dns.quick_guide_title', 'Quick Guide') }}</div>
+                        <p class="mb-1">
+                            {{ t('frontend.client_domains.dns.quick_guide_nameservers', 'If your hosting company gave you ready-made nameservers, enter Nameserver 1 and Nameserver 2 only.') }}
+                        </p>
+                        <p class="mb-0">
+                            {{ t('frontend.client_domains.dns.quick_guide_personal_dns', 'Use "Personal DNS (Optional)" only when you are creating branded nameservers such as ns1.yourdomain.com and the registrar asks for an IP address.') }}
+                        </p>
+                    </div>
+
                     <div id="nameserver-fields" class="grid grid-cols-1 gap-4 md:grid-cols-2" data-min="{{ $requiredCount }}" data-max="{{ $maxSlots }}" data-fixed-count="{{ $requiredCount }}">
                         @foreach ($oldNs as $index => $nameserver)
-                            @php $isFixed = $index < $requiredCount; @endphp
+                            @php
+                                $isFixed = $index < $requiredCount;
+                                $showPersonalDns = filled($oldIps[$index] ?? '');
+                            @endphp
                             <div class="space-y-2 ns-item" data-fixed="{{ $isFixed ? 'true' : 'false' }}">
                                 <label for="nameserver_{{ $index }}" class="flex items-center gap-2 text-sm font-medium text-body">
                                     <span class="ns-label-text">{{ t('frontend.client_domains.dns.nameserver_label', 'Nameserver') }} {{ $index + 1 }}</span>
@@ -205,9 +217,12 @@
                                     </button>
                                 </div>
                                 <p class="mb-0 text-xs text-muted">{{ t('frontend.client_domains.dns.example', 'Example: ns1.example.com') }}</p>
-                                <div class="glue-ip-wrap">
+                                <button type="button" class="toggle-glue btn btn-link p-0 text-start text-xs text-primary">
+                                    {{ $showPersonalDns ? t('frontend.client_domains.dns.hide_personal_dns', 'Hide Personal DNS') : t('frontend.client_domains.dns.show_personal_dns', 'Use Personal DNS (Optional)') }}
+                                </button>
+                                <div class="glue-ip-wrap {{ $showPersonalDns ? '' : 'hidden' }}">
                                     <label for="nameserver_ip_{{ $index }}" class="text-xs font-medium text-body">
-                                        {{ t('frontend.client_domains.dns.glue_ip', 'Personal DNS / Glue IP') }}
+                                        {{ t('frontend.client_domains.dns.glue_ip', 'Personal DNS IP') }}
                                     </label>
                                     <input
                                         type="text"
@@ -220,7 +235,7 @@
                                         placeholder="192.0.2.10"
                                     />
                                     <p class="mb-0 mt-2 text-xs text-warning-600">
-                                        {{ t('frontend.client_domains.dns.glue_help', 'Fill this only for Personal DNS / child nameservers such as ns1.all-in1.net or ns1.yourdomain.com.') }}
+                                        {{ t('frontend.client_domains.dns.glue_help', 'Only fill this if the registrar asked you to create Personal DNS / branded nameservers such as ns1.all-in1.net.') }}
                                     </p>
                                 </div>
                             </div>
@@ -275,10 +290,11 @@
                 </button>
             </div>
             <p class="mb-0 text-xs text-muted">{{ t('frontend.client_domains.dns.example', 'Example: ns1.example.com') }}</p>
-            <div class="glue-ip-wrap">
-                <label class="text-xs font-medium text-body">{{ t('frontend.client_domains.dns.glue_ip', 'Personal DNS / Glue IP') }}</label>
+            <button type="button" class="toggle-glue btn btn-link p-0 text-start text-xs text-primary">{{ t('frontend.client_domains.dns.show_personal_dns', 'Use Personal DNS (Optional)') }}</button>
+            <div class="glue-ip-wrap hidden">
+                <label class="text-xs font-medium text-body">{{ t('frontend.client_domains.dns.glue_ip', 'Personal DNS IP') }}</label>
                 <input type="text" class="form-control mt-2 glue-ip-input" inputmode="decimal" dir="ltr" placeholder="192.0.2.10" />
-                <p class="mb-0 mt-2 text-xs text-warning-600">{{ t('frontend.client_domains.dns.glue_help', 'Fill this only for Personal DNS / child nameservers such as ns1.all-in1.net or ns1.yourdomain.com.') }}</p>
+                <p class="mb-0 mt-2 text-xs text-warning-600">{{ t('frontend.client_domains.dns.glue_help', 'Only fill this if the registrar asked you to create Personal DNS / branded nameservers such as ns1.all-in1.net.') }}</p>
             </div>
         </div>
     </template>
@@ -303,16 +319,11 @@
             const minMessage = @json($validationMinText);
             const maxMessage = @json($validationMaxText);
             const fixMessage = @json(t('frontend.client_domains.dns.validation_fix', 'Please fix the highlighted fields.'));
-            const glueMessage = @json(t('frontend.client_domains.dns.validation_glue_ip', 'Provide a Personal DNS / Glue IP for each child nameserver you want the registrar to manage automatically.'));
+            const glueMessage = @json(t('frontend.client_domains.dns.validation_glue_ip', 'If you enabled Personal DNS for a nameserver, enter a valid IP address for it.'));
+            const showPersonalDnsText = @json(t('frontend.client_domains.dns.show_personal_dns', 'Use Personal DNS (Optional)'));
+            const hidePersonalDnsText = @json(t('frontend.client_domains.dns.hide_personal_dns', 'Hide Personal DNS'));
             const hostRegex = /^([a-z0-9-]+\.)+[a-z]{2,}$/i;
             const ipRegex = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
-            const domainName = @json($domainName);
-
-            const needsGlueIp = (host) => {
-                const normalized = String(host || '').trim().toLowerCase();
-                const parts = normalized.split('.').filter(Boolean);
-                return parts.length >= 3 && /^ns\d*$/i.test(parts[0]);
-            };
 
             const showError = (message) => {
                 if (!message) {
@@ -323,6 +334,24 @@
 
                 errorsBox.textContent = message;
                 errorsBox.classList.remove('hidden');
+            };
+
+            const syncGlueToggle = (item) => {
+                const glueWrap = item.querySelector('.glue-ip-wrap');
+                const toggleButton = item.querySelector('.toggle-glue');
+                const glueInput = item.querySelector('.glue-ip-input') || glueWrap?.querySelector('input');
+
+                if (!glueWrap || !toggleButton) {
+                    return;
+                }
+
+                const expanded = !glueWrap.classList.contains('hidden');
+                toggleButton.textContent = expanded ? hidePersonalDnsText : showPersonalDnsText;
+
+                if (!expanded && glueInput && glueInput.value.trim() === '') {
+                    glueInput.setAttribute('aria-invalid', 'false');
+                    glueInput.classList.remove('border-danger-500');
+                }
             };
 
             const updateLabels = () => {
@@ -370,14 +399,7 @@
                         removeButton.classList.toggle('pointer-events-none', isFixed);
                     }
 
-                    if (glueWrap && glueInput && input) {
-                        const suggested = needsGlueIp(input.value);
-                        glueWrap.classList.toggle('opacity-80', !suggested);
-                        if (!suggested && !glueInput.value.trim()) {
-                            glueInput.setAttribute('aria-invalid', 'false');
-                            glueInput.classList.remove('border-danger-500');
-                        }
-                    }
+                    syncGlueToggle(item);
                 });
 
                 counterEl.textContent = `${items.length}/${maxCount}`;
@@ -441,6 +463,20 @@
                 });
             };
 
+            const bindGlueToggle = (button) => {
+                button.addEventListener('click', (event) => {
+                    const item = event.currentTarget.closest('.ns-item');
+                    const glueWrap = item?.querySelector('.glue-ip-wrap');
+
+                    if (!item || !glueWrap) {
+                        return;
+                    }
+
+                    glueWrap.classList.toggle('hidden');
+                    syncGlueToggle(item);
+                });
+            };
+
             const addField = (value = '') => {
                 const count = fieldsContainer.querySelectorAll('.ns-item').length;
 
@@ -453,12 +489,16 @@
                 const input = node.querySelector('input');
                 const removeButton = node.querySelector('.remove-ns');
                 const glueInput = node.querySelector('.glue-ip-input');
+                const toggleButton = node.querySelector('.toggle-glue');
 
                 input.value = value;
                 if (glueInput) {
                     glueInput.value = '';
                 }
                 bindRemoveAction(removeButton);
+                if (toggleButton) {
+                    bindGlueToggle(toggleButton);
+                }
                 fieldsContainer.appendChild(node);
 
                 updateLabels();
@@ -467,6 +507,7 @@
             };
 
             fieldsContainer.querySelectorAll('.remove-ns').forEach(bindRemoveAction);
+            fieldsContainer.querySelectorAll('.toggle-glue').forEach(bindGlueToggle);
 
             addButton?.addEventListener('click', () => addField(''));
 
