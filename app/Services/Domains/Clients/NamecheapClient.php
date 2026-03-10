@@ -224,6 +224,51 @@ class NamecheapClient
         return $this->request($payload);
     }
 
+    public function getNameserverInfo(string $sld, string $tld, string $nameserver): array
+    {
+        $response = $this->request([
+            'Command' => 'namecheap.domains.ns.getInfo',
+            'SLD' => strtolower(trim($sld)),
+            'TLD' => strtolower(trim($tld)),
+            'Nameserver' => strtolower(trim($nameserver)),
+        ]);
+
+        if (($response['ok'] ?? false) === false) {
+            return $response;
+        }
+
+        $xml = $response['xml'];
+        $resultNode = $xml->xpath('//*[local-name()="DomainNSInfoResult"]')[0] ?? null;
+        $attrs = $resultNode?->attributes();
+
+        return [
+            'ok' => true,
+            'ip' => isset($attrs['IP']) ? trim((string) $attrs['IP']) : null,
+            'xml' => $xml,
+        ];
+    }
+
+    public function createNameserver(string $sld, string $tld, string $nameserver, string $ip): array
+    {
+        return $this->callGeneric('namecheap.domains.ns.create', [
+            'SLD' => strtolower(trim($sld)),
+            'TLD' => strtolower(trim($tld)),
+            'Nameserver' => strtolower(trim($nameserver)),
+            'IP' => trim($ip),
+        ]);
+    }
+
+    public function updateNameserver(string $sld, string $tld, string $nameserver, string $oldIp, string $newIp): array
+    {
+        return $this->callGeneric('namecheap.domains.ns.update', [
+            'SLD' => strtolower(trim($sld)),
+            'TLD' => strtolower(trim($tld)),
+            'Nameserver' => strtolower(trim($nameserver)),
+            'OldIP' => trim($oldIp),
+            'IP' => trim($newIp),
+        ]);
+    }
+
     public function renewDomain(string $fqdn, int $years = 1): array
     {
         return $this->callGeneric('namecheap.domains.renew', [

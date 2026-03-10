@@ -205,9 +205,9 @@
                                     </button>
                                 </div>
                                 <p class="mb-0 text-xs text-muted">{{ t('frontend.client_domains.dns.example', 'Example: ns1.example.com') }}</p>
-                                <div class="glue-ip-wrap {{ (filled($nameserver) && strtolower(trim($nameserver)) !== $domainName && str_ends_with(strtolower(trim($nameserver)), '.' . $domainName)) ? '' : 'hidden' }}">
+                                <div class="glue-ip-wrap">
                                     <label for="nameserver_ip_{{ $index }}" class="text-xs font-medium text-body">
-                                        {{ t('frontend.client_domains.dns.glue_ip', 'Glue Record IP') }}
+                                        {{ t('frontend.client_domains.dns.glue_ip', 'Personal DNS / Glue IP') }}
                                     </label>
                                     <input
                                         type="text"
@@ -220,7 +220,7 @@
                                         placeholder="192.0.2.10"
                                     />
                                     <p class="mb-0 mt-2 text-xs text-warning-600">
-                                        {{ t('frontend.client_domains.dns.glue_help', 'Required when the nameserver belongs to the same domain, such as ns1.yourdomain.com.') }}
+                                        {{ t('frontend.client_domains.dns.glue_help', 'Fill this only for Personal DNS / child nameservers such as ns1.all-in1.net or ns1.yourdomain.com.') }}
                                     </p>
                                 </div>
                             </div>
@@ -275,10 +275,10 @@
                 </button>
             </div>
             <p class="mb-0 text-xs text-muted">{{ t('frontend.client_domains.dns.example', 'Example: ns1.example.com') }}</p>
-            <div class="glue-ip-wrap hidden">
-                <label class="text-xs font-medium text-body">{{ t('frontend.client_domains.dns.glue_ip', 'Glue Record IP') }}</label>
+            <div class="glue-ip-wrap">
+                <label class="text-xs font-medium text-body">{{ t('frontend.client_domains.dns.glue_ip', 'Personal DNS / Glue IP') }}</label>
                 <input type="text" class="form-control mt-2 glue-ip-input" inputmode="decimal" dir="ltr" placeholder="192.0.2.10" />
-                <p class="mb-0 mt-2 text-xs text-warning-600">{{ t('frontend.client_domains.dns.glue_help', 'Required when the nameserver belongs to the same domain, such as ns1.yourdomain.com.') }}</p>
+                <p class="mb-0 mt-2 text-xs text-warning-600">{{ t('frontend.client_domains.dns.glue_help', 'Fill this only for Personal DNS / child nameservers such as ns1.all-in1.net or ns1.yourdomain.com.') }}</p>
             </div>
         </div>
     </template>
@@ -303,14 +303,15 @@
             const minMessage = @json($validationMinText);
             const maxMessage = @json($validationMaxText);
             const fixMessage = @json(t('frontend.client_domains.dns.validation_fix', 'Please fix the highlighted fields.'));
-            const glueMessage = @json(t('frontend.client_domains.dns.validation_glue_ip', 'Provide a glue record IP for each nameserver that belongs to the same domain.'));
+            const glueMessage = @json(t('frontend.client_domains.dns.validation_glue_ip', 'Provide a Personal DNS / Glue IP for each child nameserver you want the registrar to manage automatically.'));
             const hostRegex = /^([a-z0-9-]+\.)+[a-z]{2,}$/i;
             const ipRegex = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
             const domainName = @json($domainName);
 
             const needsGlueIp = (host) => {
                 const normalized = String(host || '').trim().toLowerCase();
-                return normalized !== '' && normalized !== domainName && normalized.endsWith(`.${domainName}`);
+                const parts = normalized.split('.').filter(Boolean);
+                return parts.length >= 3 && /^ns\d*$/i.test(parts[0]);
             };
 
             const showError = (message) => {
@@ -370,10 +371,9 @@
                     }
 
                     if (glueWrap && glueInput && input) {
-                        const required = needsGlueIp(input.value);
-                        glueWrap.classList.toggle('hidden', !required);
-                        if (!required) {
-                            glueInput.value = '';
+                        const suggested = needsGlueIp(input.value);
+                        glueWrap.classList.toggle('opacity-80', !suggested);
+                        if (!suggested && !glueInput.value.trim()) {
                             glueInput.setAttribute('aria-invalid', 'false');
                             glueInput.classList.remove('border-danger-500');
                         }
@@ -409,7 +409,7 @@
                         valid = false;
                     }
 
-                    if (glueInput && needsGlueIp(input.value)) {
+                    if (glueInput && glueInput.value.trim() !== '') {
                         const glueValid = ipRegex.test(glueInput.value.trim());
                         glueInput.setAttribute('aria-invalid', glueValid ? 'false' : 'true');
                         glueInput.classList.toggle('border-danger-500', !glueValid);

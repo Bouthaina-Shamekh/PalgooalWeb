@@ -4,6 +4,7 @@ namespace App\Services\Domains;
 
 use App\Models\Domain;
 use App\Models\DomainProvider;
+use App\Models\DomainTld;
 use App\Services\Domains\Clients\EnomClient;
 use App\Services\Domains\Clients\NamecheapClient;
 use Illuminate\Support\Facades\Log;
@@ -91,6 +92,13 @@ class DomainDnsService
         if (!($syncResult['ok'] ?? false)) {
             $message = $syncResult['message'] ?? 'Unable to update nameservers with the registrar.';
 
+            if (
+                strtolower((string) $provider->type) === 'namecheap'
+                && str_contains(strtolower($message), 'subordinated hosts')
+            ) {
+                $message = 'Namecheap rejected one of the custom nameservers because it is a Personal DNS / child nameserver. Add its IP in the "Personal DNS / Glue IP" field first, then try again. Original error: ' . $message;
+            }
+
             if (!empty($syncResult['cid'])) {
                 $message .= ' (cid: ' . $syncResult['cid'] . ')';
             }
@@ -154,16 +162,32 @@ class DomainDnsService
             $host = strtolower(trim((string) $nameserver));
 
             if (!$this->isSubordinateHost($host, $domainName)) {
-                continue;
+                if (strtolower((string) $provider->type) !== 'namecheap') {
+                    continue;
+                }
             }
 
             $requestedIp = trim((string) ($nameserverIps[$index] ?? ''));
 
-            if ($requestedIp === '') {
+            if ($requestedIp === '' && strtolower((string) $provider->type) === 'enom' && $this->isSubordinateHost($host, $domainName)) {
                 return [
                     'ok' => false,
                     'message' => 'The nameserver ' . $host . ' belongs to the same domain and requires a glue record IP before it can be assigned.',
                 ];
+            }
+
+            if (strtolower((string) $provider->type) === 'namecheap') {
+                $result = $this->ensureNamecheapPersonalNameserver($provider, $host, $requestedIp);
+
+                if (!($result['ok'] ?? false)) {
+                    return $result;
+                }
+
+                continue;
+            }
+
+            if ($requestedIp === '') {
+                continue;
             }
 
             $status = $client->checkNameserverStatus($provider, $host);
@@ -308,6 +332,112 @@ class DomainDnsService
     protected function isSubordinateHost(string $host, string $domainName): bool
     {
         return $host !== $domainName && str_ends_with($host, '.' . $domainName);
+    }
+
+    protected function ensureNamecheapPersonalNameserver(DomainProvider $provider, string $host, string $requestedIp): array
+    {
+        if ($requestedIp === '') {
+            return ['ok' => true];
+        }
+
+        $baseDomain = $this->extractBaseDomainForHost($host);
+        if (!$baseDomain) {
+            return [
+                'ok' => false,
+                'message' => 'Unable to determine the base domain for personal nameserver ' . $host . '.',
+            ];
+        }
+
+        $client = new NamecheapClient($provider);
+        $info = $client->getNameserverInfo($baseDomain['sld'], $baseDomain['tld'], $host);
+
+        if ($info['ok'] ?? false) {
+            $currentIp = trim((string) ($info['ip'] ?? ''));
+
+            if ($currentIp !== '' && $currentIp !== $requestedIp) {
+                $update = $client->updateNameserver($baseDomain['sld'], $baseDomain['tld'], $host, $currentIp, $requestedIp);
+
+                if (!($update['ok'] ?? false)) {
+                    return [
+                        'ok' => false,
+                        'message' => $update['message'] ?? ('Unable to update the Personal DNS IP for ' . $host . '.'),
+                    ];
+                }
+            }
+
+            return ['ok' => true];
+        }
+
+        $message = strtolower((string) ($info['message'] ?? ''));
+
+        if (str_contains($message, 'not associated with your account') || str_contains($message, 'domain not found')) {
+            return [
+                'ok' => false,
+                'message' => 'The base domain for ' . $host . ' is not available in the current Namecheap account, so the Personal DNS record cannot be managed automatically.',
+            ];
+        }
+
+        $create = $client->createNameserver($baseDomain['sld'], $baseDomain['tld'], $host, $requestedIp);
+
+        if (!($create['ok'] ?? false)) {
+            return [
+                'ok' => false,
+                'message' => $create['message'] ?? ('Unable to create the Personal DNS record for ' . $host . '.'),
+            ];
+        }
+
+        return ['ok' => true];
+    }
+
+    protected function extractBaseDomainForHost(string $host): ?array
+    {
+        $normalized = $this->normalizeDomain($host);
+        $labels = array_values(array_filter(explode('.', $normalized)));
+
+        if (count($labels) < 3) {
+            return null;
+        }
+
+        $knownTlds = DomainTld::query()
+            ->pluck('tld')
+            ->map(fn ($value) => ltrim(strtolower((string) $value), '.'))
+            ->filter()
+            ->unique()
+            ->sortByDesc(fn ($value) => substr_count($value, '.'))
+            ->values()
+            ->all();
+
+        foreach ($knownTlds as $tld) {
+            $tldLabels = explode('.', $tld);
+            $tldLength = count($tldLabels);
+
+            if (count($labels) <= $tldLength + 1) {
+                continue;
+            }
+
+            $hostSuffix = implode('.', array_slice($labels, -$tldLength));
+            if ($hostSuffix !== $tld) {
+                continue;
+            }
+
+            $sld = $labels[count($labels) - $tldLength - 1] ?? null;
+
+            if (!$sld) {
+                continue;
+            }
+
+            return [
+                'sld' => $sld,
+                'tld' => $tld,
+                'domain' => $sld . '.' . $tld,
+            ];
+        }
+
+        return [
+            'sld' => $labels[count($labels) - 2],
+            'tld' => $labels[count($labels) - 1],
+            'domain' => $labels[count($labels) - 2] . '.' . $labels[count($labels) - 1],
+        ];
     }
 
     protected function normalizeNameservers(array $nameservers): array
