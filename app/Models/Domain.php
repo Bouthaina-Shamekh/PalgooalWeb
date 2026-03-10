@@ -9,6 +9,7 @@ class Domain extends Model
 {
     protected $fillable = [
         'client_id',
+        'template_id',
         'domain_name',
         'registrar',
         'registration_date',
@@ -28,6 +29,11 @@ class Domain extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(Template::class)->withDefault();
     }
 
     public function invoiceItems()

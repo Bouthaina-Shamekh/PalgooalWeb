@@ -25,8 +25,22 @@ class DomainController extends Controller
      */
     public function index()
     {
-        $domains = Domain::where('client_id', Auth::guard('client')->user()->id)->latest()->paginate(10);
-        return view('client.domains.index', compact('domains'));
+        $clientId = Auth::guard('client')->id();
+        $domainsQuery = Domain::query()->where('client_id', $clientId);
+
+        $domainStats = [
+            'total' => (clone $domainsQuery)->count(),
+            'active' => (clone $domainsQuery)->where('status', 'active')->count(),
+            'pending' => (clone $domainsQuery)->where('status', 'pending')->count(),
+            'expired' => (clone $domainsQuery)->where('status', 'expired')->count(),
+        ];
+
+        $domains = (clone $domainsQuery)
+            ->with('template')
+            ->latest()
+            ->paginate(10);
+
+        return view('client.domains.index', compact('domains', 'domainStats'));
     }
 
     /**
