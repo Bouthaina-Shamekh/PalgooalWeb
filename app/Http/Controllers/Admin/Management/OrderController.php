@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Management;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\Domains\RegistrarProvisioningService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -94,8 +95,12 @@ class OrderController extends Controller
     /**
      * Process order activation: update invoices, create/update subscription and sync with provider
      */
-    public function processActivation(\App\Models\Order $order)
+    public function processActivation(\App\Models\Order $order, ?string $paymentMethod = null): array
     {
+        $result = [
+            'domain_registration' => null,
+        ];
+
         // فعّل الفواتير المرتبطة (اجعل status = unpaid)
         foreach ($order->invoices as $invoice) {
             if ($invoice->status === 'draft') {
@@ -108,27 +113,17 @@ class OrderController extends Controller
         $domainName   = $domain['domain_name'];
         $domainOption = $domain['domain_option'];
 
-        // إذا كان الطلب يتعلق بدومين للـ "register" فقط، أنشئ أو حدّث سجل الدومين في جدول domains
-        if (!empty($domainName) && strtolower($domainOption) === 'register') {
+        // إذا كان الطلب يتعلق بدومين للـ "register" فقط، قم بالتسجيل مع المزود الافتراضي أولاً.
+        if (!empty($domainName) && in_array(strtolower((string) $domainOption), ['register', 'renew'], true)) {
             try {
-                $existingDomain = \App\Models\Domain::where('domain_name', $domainName)->first();
-                if ($existingDomain) {
-                    // حدّث حالة وربط العميل إن لزم
-                    $existingDomain->update([
-                        'client_id' => $order->client_id ?? $existingDomain->client_id,
-                        'status' => 'active',
-                    ]);
-                } else {
-                    \App\Models\Domain::create([
-                        'client_id' => $order->client_id,
-                        'domain_name' => $domainName,
-                        'registrar' => 'order-' . $order->id,
-                        'registration_date' => now()->toDateString(),
-                        'status' => 'active',
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Log::error('Failed to create/update domain for order ' . $order->id . ': ' . $e->getMessage());
+                $result['domain_registration'] = app(RegistrarProvisioningService::class)
+                    ->provisionOrderDomain($order, $paymentMethod);
+            } catch (\Throwable $e) {
+                Log::error('Failed to provision registrar domain for order ' . $order->id . ': ' . $e->getMessage());
+                $result['domain_registration'] = [
+                    'ok' => false,
+                    'message' => $e->getMessage(),
+                ];
             }
         }
 
@@ -141,10 +136,14 @@ class OrderController extends Controller
                 $templateId = $firstItem->reference_id;
             }
         }
-        if (!$templateId) return;
+        if (!$templateId) {
+            return $result;
+        }
 
         $template = \App\Models\Template::find($templateId);
-        if (!($template && $template->plan_id)) return;
+        if (!($template && $template->plan_id)) {
+            return $result;
+        }
 
         // حساب مدة الاشتراك حسب الخطة (شهرية أو سنوية)
         $duration = 'month';
@@ -162,35 +161,6 @@ class OrderController extends Controller
             $serverId = $template->plan->server_id;
         } elseif (isset($order->server_id)) {
             $serverId = $order->server_id;
-        }
-
-        // استخرج بيانات الدومين من البنود
-        $domain = $this->extractDomainData($order);
-        $domainName   = $domain['domain_name'];
-        $domainOption = $domain['domain_option'];
-
-        // إذا كان الطلب يتعلق بدومين للـ "register" فقط، أنشئ أو حدّث سجل الدومين في جدول domains
-        if (!empty($domainName) && strtolower($domainOption) === 'register') {
-            try {
-                $existingDomain = \App\Models\Domain::where('domain_name', $domainName)->first();
-                if ($existingDomain) {
-                    // حدّث حالة وربط العميل إن لزم
-                    $existingDomain->update([
-                        'client_id' => $order->client_id ?? $existingDomain->client_id,
-                        'status' => 'active',
-                    ]);
-                } else {
-                    \App\Models\Domain::create([
-                        'client_id' => $order->client_id,
-                        'domain_name' => $domainName,
-                        'registrar' => 'order-' . $order->id,
-                        'registration_date' => now()->toDateString(),
-                        'status' => 'active',
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Log::error('Failed to create/update domain for order ' . $order->id . ': ' . $e->getMessage());
-            }
         }
 
         // تحقق من وجود اشتراك مسبق لنفس العميل والخطة وربما نفس الدومين
@@ -283,6 +253,8 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to dispatch sync job for order ' . $order->id . ': ' . $e->getMessage());
         }
+
+        return $result;
     }
 
     public function show($id)

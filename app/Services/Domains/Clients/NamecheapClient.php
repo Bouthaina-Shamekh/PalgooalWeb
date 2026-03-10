@@ -224,6 +224,14 @@ class NamecheapClient
         return $this->request($payload);
     }
 
+    public function renewDomain(string $fqdn, int $years = 1): array
+    {
+        return $this->callGeneric('namecheap.domains.renew', [
+            'DomainName' => strtolower(trim($fqdn)),
+            'Years' => max(1, $years),
+        ]);
+    }
+
     public function getNameservers(string $fqdn): array
     {
         [$sld, $tld] = $this->splitDomainParts($fqdn);

@@ -33,6 +33,11 @@ class Invoice extends Model
         return $this->belongsTo(Client::class);
     }
 
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
+    }
+
     // الفاتورة تحتوي على عدة بنود
     public function items(): HasMany
     {

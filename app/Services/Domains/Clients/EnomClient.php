@@ -270,6 +270,69 @@ class EnomClient
         return $this->request($p, $payload);
     }
 
+    public function renewDomain(DomainProvider $p, string $fqdn, int $years = 1): array
+    {
+        [$sld, $tld] = $this->splitDomainParts($fqdn);
+
+        if (!$sld || !$tld) {
+            return [
+                'ok' => false,
+                'reason' => 'invalid_domain',
+                'message' => 'Unable to split domain into SLD/TLD for renewal.',
+            ];
+        }
+
+        return $this->request($p, [
+            'command' => 'Extend',
+            'SLD' => $sld,
+            'TLD' => $tld,
+            'NumYears' => max(1, $years),
+        ]);
+    }
+
+    public function checkNameserverStatus(DomainProvider $p, string $nameserver): array
+    {
+        $response = $this->request($p, [
+            'command' => 'CheckNSStatus',
+            'CheckNSName' => strtolower(trim($nameserver)),
+        ]);
+
+        if (!($response['ok'] ?? false)) {
+            return $response;
+        }
+
+        $xml = $response['xml'];
+        $success = (int) ($xml->NsCheckSuccess ?? 0) === 1;
+        $currentIp = isset($xml->CheckNsStatus->ipaddress) ? trim((string) $xml->CheckNsStatus->ipaddress) : null;
+
+        return [
+            'ok' => true,
+            'exists' => $success,
+            'ip' => $currentIp ?: null,
+            'xml' => $xml,
+        ];
+    }
+
+    public function registerNameserver(DomainProvider $p, string $nameserver, string $ip): array
+    {
+        return $this->request($p, [
+            'command' => 'RegisterNameServer',
+            'Add' => 'true',
+            'NSName' => strtolower(trim($nameserver)),
+            'IP' => trim($ip),
+        ]);
+    }
+
+    public function updateNameserverIp(DomainProvider $p, string $nameserver, string $oldIp, string $newIp): array
+    {
+        return $this->request($p, [
+            'command' => 'UpdateNameServer',
+            'NS' => strtolower(trim($nameserver)),
+            'OldIP' => trim($oldIp),
+            'NewIP' => trim($newIp),
+        ]);
+    }
+
     public function updateNameservers(DomainProvider $p, string $fqdn, array $nameservers): array
     {
         [$sld, $tld] = $this->splitDomainParts($fqdn);
@@ -293,7 +356,6 @@ class EnomClient
         foreach (array_slice(array_values($nameservers), 0, 12) as $index => $nameserver) {
             $position = $index + 1;
             $payload['NS' . $position] = $nameserver;
-            $payload['HostName' . $position] = $nameserver;
         }
 
         return $this->request($p, $payload);
@@ -395,5 +457,3 @@ class EnomClient
         return [$sld ?: null, $tld ?: null];
     }
 }
-
-

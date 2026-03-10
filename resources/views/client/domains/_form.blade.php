@@ -7,12 +7,10 @@
 </div>
 <div class="col-span-12 md:col-span-6">
     <div class="mb-3">
-        <label for="registrar" class="form-label">Registrar Domain</label>
-        <select id="registrar" name="registrar" class="form-select">
-            <option value="" @selected($domain->registrar == '')>-- Select Registrar Domain --</option>
-            <option value="enom" @selected($domain->registrar == 'enom')>enom</option>
-            <option value="namcheap" @selected($domain->registrar == 'namcheap')>namcheap</option>
-        </select>
+        <label class="form-label">Registration Processing</label>
+        <div class="form-control bg-gray-50 text-muted">
+            Registration handling is managed automatically.
+        </div>
     </div>
 </div>
 <div class="col-span-12 md:col-span-6">
@@ -31,7 +29,7 @@
     <div class="mb-3">
         <label for="status" class="form-label">Status</label>
         <select id="status" name="status" class="form-select">
-            <option value="">-- Select Registrar Domain --</option>
+            <option value="">-- Select Status --</option>
             <option value="active" @selected($domain->status == 'active')>active</option>
             <option value="expired" @selected($domain->status == 'expired')>expired</option>
             <option value="pending" @selected($domain->status == 'pending')>pending</option>

@@ -14,6 +14,7 @@ class Domain extends Model
         'registrar',
         'registration_date',
         'renewal_date',
+        'auto_renew',
         'status',
         'payment_method',
         'nameservers',
@@ -22,6 +23,7 @@ class Domain extends Model
     ];
 
     protected $casts = [
+        'auto_renew' => 'boolean',
         'nameservers' => 'array',
         'dns_last_synced_at' => 'datetime',
     ];

@@ -1,7 +1,10 @@
 <?php
 
 use App\Http\Controllers\Client\DomainController;
+use App\Http\Controllers\Client\DomainDnsController;
+use App\Http\Controllers\Client\DomainRenewalController;
 use App\Http\Controllers\Client\HomeController;
+use App\Http\Controllers\Client\InvoiceCheckoutController;
 use App\Http\Controllers\Client\SubscriptionController;
 use App\Models\Client;
 use Illuminate\Http\Request;
@@ -25,6 +28,10 @@ Route::group([
     Route::post('/search', [DomainController::class, 'processSearch'])->name('domains.search.process');
     Route::get('/buy', [DomainController::class, 'buy'])->name('domains.buy');
     Route::post('/purchase', [DomainController::class, 'purchase'])->name('domains.purchase');
+    Route::patch('domains/{domain}/auto-renew', [DomainController::class, 'toggleAutoRenew'])->name('domains.auto-renew');
+    Route::post('domains/{domain}/renew', [DomainRenewalController::class, 'store'])->name('domains.renew');
+    Route::get('domains/{domain}/dns', [DomainDnsController::class, 'edit'])->name('domains.dns.edit');
+    Route::put('domains/{domain}/dns', [DomainDnsController::class, 'update'])->name('domains.dns.update');
 
     Route::resource('domains', DomainController::class)->names('domains');
 
@@ -40,6 +47,8 @@ Route::group([
         ->name('subscriptions.pages.sections.add');
     Route::post('subscriptions/{subscription}/sections/{section}/update', [\App\Http\Controllers\Client\PageBuilderController::class, 'updateSection'])
         ->name('client.subscriptions.sections.update');
+    Route::get('invoices/{invoice}/checkout', [InvoiceCheckoutController::class, 'show'])->name('invoices.checkout');
+    Route::post('invoices/{invoice}/checkout', [InvoiceCheckoutController::class, 'process'])->name('invoices.checkout.process');
     Route::get('invoices', [HomeController::class, 'invoices'])->name('invoices');
 });
 

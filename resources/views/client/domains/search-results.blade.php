@@ -41,7 +41,7 @@
                             <form method="GET" action="{{ route('client.domains.buy') }}">
                                 <input type="hidden" name="domain" value="{{ $domain }}">
                                 <button type="submit" class="btn btn-success">
-                                    Buy Now - ${{ $domain_extensions[$domain_extension] ?? 10 }}
+                                    Review Order - ${{ $domain_extensions[$domain_extension] ?? 10 }}
                                 </button>
                             </form>
                         </div>
@@ -79,7 +79,7 @@
                                         <div class="mt-2">
                                             <form method="GET" action="{{ route('client.domains.buy') }}">
                                                 <input type="hidden" name="domain" value="{{ $alt['domain'] }}">
-                                                <button type="submit" class="btn btn-primary btn-sm">Buy</button>
+                                                <button type="submit" class="btn btn-primary btn-sm">Review Order</button>
                                             </form>
                                         </div>
                                     </div>

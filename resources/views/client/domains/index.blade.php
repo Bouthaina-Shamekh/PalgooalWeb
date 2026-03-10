@@ -126,9 +126,9 @@
                             <thead>
                                 <tr>
                                     <th>{{ t('frontend.client_domains.index.domain_name', 'Domain Name') }}</th>
-                                    <th>{{ t('frontend.client_domains.index.registrar', 'Registrar') }}</th>
                                     <th>{{ t('frontend.client_domains.index.registration_date', 'Registered At') }}</th>
                                     <th>{{ t('frontend.client_domains.index.renewal_date', 'Renewal Date') }}</th>
+                                    <th>{{ t('frontend.client_domains.index.auto_renew', 'Auto-Renew') }}</th>
                                     <th>{{ t('frontend.client_domains.index.status', 'Status') }}</th>
                                     <th>{{ t('frontend.client_domains.index.template', 'Template') }}</th>
                                     <th class="text-end">{{ t('frontend.client_domains.index.actions', 'Actions') }}</th>
@@ -149,13 +149,22 @@
                                                 </span>
                                             </div>
                                         </td>
-                                        <td>
-                                            <span class="badge bg-light-secondary text-secondary px-3 py-2">
-                                                {{ $domain->registrar ?: '-' }}
-                                            </span>
-                                        </td>
                                         <td>{{ $domain->registration_date ? \Illuminate\Support\Carbon::parse($domain->registration_date)->format('Y-m-d') : '-' }}</td>
                                         <td>{{ $domain->renewal_date ? \Illuminate\Support\Carbon::parse($domain->renewal_date)->format('Y-m-d') : '-' }}</td>
+                                        <td>
+                                            <div class="flex flex-col gap-2">
+                                                <span class="badge {{ $domain->auto_renew ? 'bg-success-500/10 text-success-600' : 'bg-secondary-500/10 text-secondary-600' }}">
+                                                    {{ $domain->auto_renew ? t('frontend.client_domains.index.auto_renew_on', 'On') : t('frontend.client_domains.index.auto_renew_off', 'Off') }}
+                                                </span>
+                                                <form action="{{ route('client.domains.auto-renew', $domain->id) }}" method="POST">
+                                                    @csrf
+                                                    @method('PATCH')
+                                                    <button type="submit" class="btn btn-sm {{ $domain->auto_renew ? 'btn-light-danger' : 'btn-light-success' }}">
+                                                        {{ $domain->auto_renew ? t('frontend.client_domains.index.disable_auto_renew', 'Disable') : t('frontend.client_domains.index.enable_auto_renew', 'Enable') }}
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
                                         <td>
                                             <span class="badge rounded-full px-3 py-2 {{ $statusClass }}">
                                                 {{ ucfirst($statusKey ?: 'unknown') }}
@@ -163,7 +172,22 @@
                                         </td>
                                         <td>{{ $domain->template?->name ?: t('frontend.client_domains.index.no_template', 'No template assigned') }}</td>
                                         <td class="text-end">
-                                            <div class="inline-flex items-center gap-2">
+                                            <div class="flex flex-wrap justify-end gap-2">
+                                                <a href="{{ route('client.domains.dns.edit', $domain->id) }}"
+                                                    class="btn btn-sm btn-light-info"
+                                                    title="{{ t('frontend.client_domains.index.change_dns', 'Change DNS') }}">
+                                                    <i class="ti ti-world me-1 text-base leading-none"></i>
+                                                    {{ t('frontend.client_domains.index.change_dns', 'Change DNS') }}
+                                                </a>
+                                                <form action="{{ route('client.domains.renew', $domain->id) }}" method="POST">
+                                                    @csrf
+                                                    <button type="submit"
+                                                        class="btn btn-sm btn-light-warning"
+                                                        title="{{ t('frontend.client_domains.index.renew', 'Renew') }}">
+                                                        <i class="ti ti-refresh me-1 text-base leading-none"></i>
+                                                        {{ t('frontend.client_domains.index.renew', 'Renew') }}
+                                                    </button>
+                                                </form>
                                                 <a href="{{ route('client.domains.edit', $domain->id) }}"
                                                     class="w-9 h-9 rounded-xl inline-flex items-center justify-center btn-light-primary"
                                                     title="{{ t('frontend.client_domains.index.edit', 'Edit') }}">
