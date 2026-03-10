@@ -56,7 +56,11 @@ class LocaleController extends Controller
             }
         }
 
-        return redirect()->back();
+        if ($this->isUnsafePreviousPath($path)) {
+            return redirect()->to(url('/'));
+        }
+
+        return redirect()->to($previousUrl ?: url('/'));
     }
 
     // Return all translations as JSON (for Frontend, SPA or JS)
@@ -65,6 +69,21 @@ class LocaleController extends Controller
         $translations = TranslationValue::where('locale', $locale)->pluck('value', 'key');
 
         return response()->json($translations);
+    }
+
+    private function isUnsafePreviousPath(string $path): bool
+    {
+        $normalizedPath = ltrim(strtolower(trim($path)), '/');
+
+        if ($normalizedPath === '') {
+            return false;
+        }
+
+        if (str_starts_with($normalizedPath, 'assets/') || str_starts_with($normalizedPath, 'storage/')) {
+            return true;
+        }
+
+        return preg_match('/\.(?:css|js|map|png|jpe?g|svg|gif|webp|ico|woff2?|ttf|eot)$/', $normalizedPath) === 1;
     }
 }
 

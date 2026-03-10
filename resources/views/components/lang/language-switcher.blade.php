@@ -2,10 +2,17 @@
 @php
     use Illuminate\Support\Facades\View;
 
+    $request = request();
     $currentRoute = request()->route()?->getName();
     $slug = request()->route('slug');
     $currentLocale = app()->getLocale();
     $sharedPage = View::shared('currentPage', null);
+    $currentUrl = $request->fullUrlWithoutQuery(['change-locale']);
+    $buildLocaleUrl = static function (string $url, string $locale): string {
+        $separator = str_contains($url, '?') ? '&' : '?';
+
+        return $url . $separator . 'change-locale=' . urlencode($locale);
+    };
 
     $buttonClass = match ($variant) {
         'builder'
@@ -79,11 +86,11 @@
                     $translatedSlug = $translatedPage?->slug;
 
                     if ($sharedPage->is_home) {
-                        $redirectUrl = url('/') . '?change-locale=' . $lang->code;
+                        $redirectUrl = $buildLocaleUrl(url('/'), $lang->code);
                     } elseif ($translatedSlug) {
-                        $redirectUrl = url($translatedSlug) . '?change-locale=' . $lang->code;
+                        $redirectUrl = $buildLocaleUrl(url($translatedSlug), $lang->code);
                     } else {
-                        $redirectUrl = route('change_locale', ['locale' => $lang->code]);
+                        $redirectUrl = $buildLocaleUrl($currentUrl ?: url('/'), $lang->code);
                     }
                 } elseif ($currentRoute === 'template.show' && $slug && $lang->code !== $currentLocale) {
                     $template = \App\Models\Template::with('translations')
@@ -95,11 +102,23 @@
                     $translatedSlug = $template?->translations->firstWhere('locale', $lang->code)?->slug;
 
                     if ($translatedSlug) {
-                        $redirectUrl =
-                            route('template.show', ['slug' => $translatedSlug]) . '?change-locale=' . $lang->code;
+                        $redirectUrl = $buildLocaleUrl(route('template.show', ['slug' => $translatedSlug]), $lang->code);
+                    }
+                } elseif ($currentRoute === 'portfolio.show' && $slug && $lang->code !== $currentLocale) {
+                    $portfolio = \App\Models\Portfolio::with('translations')
+                        ->whereHas('translations', function ($q) use ($slug) {
+                            $q->where('slug', $slug);
+                        })
+                        ->orWhere('slug', $slug)
+                        ->first();
+
+                    $translatedSlug = $portfolio?->translations->firstWhere('locale', $lang->code)?->slug;
+
+                    if ($translatedSlug) {
+                        $redirectUrl = $buildLocaleUrl(route('portfolio.show', ['slug' => $translatedSlug]), $lang->code);
                     }
                 } elseif ($lang->code !== $currentLocale) {
-                    $redirectUrl = route('change_locale', ['locale' => $lang->code]);
+                    $redirectUrl = $buildLocaleUrl($currentUrl ?: url('/'), $lang->code);
                 }
             @endphp
 
