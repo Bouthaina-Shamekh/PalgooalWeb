@@ -1,4 +1,14 @@
 <li class="dropdown pc-h-item">
+    @php
+        $request = request();
+        $currentUrl = $request->fullUrlWithoutQuery(['change-locale']);
+        $buildLocaleUrl = static function (string $url, string $locale): string {
+            $separator = str_contains($url, '?') ? '&' : '?';
+
+            return $url . $separator . 'change-locale=' . urlencode($locale);
+        };
+    @endphp
+
     <a
         class="pc-head-link dropdown-toggle me-0"
         data-pc-toggle="dropdown"
@@ -20,7 +30,7 @@
             @endphp
 
             <a
-                href="{{ $isCurrent ? '#' : route('change_locale', ['locale' => $lang->code]) }}"
+                href="{{ $isCurrent ? '#' : $buildLocaleUrl($currentUrl ?: url('/admin/home'), $lang->code) }}"
                 class="dropdown-item {{ $isCurrent ? 'active pointer-events-none' : '' }}"
                 data-lng="{{ $lang->code }}"
                 @if ($isCurrent) aria-current="page" @endif
