@@ -454,16 +454,30 @@ class PageBuilderController extends Controller
                 'structure' => $builder->getCurrentProject() ?? $project,
             ]);
         } catch (Throwable $e) {
+            $message = $e->getMessage();
+
             Log::error('Page builder save failed', [
                 'page_id' => $page->id,
                 'locale' => $request->input('locale'),
-                'message' => $e->getMessage(),
+                'message' => $message,
             ]);
+
+            $status = 500;
+            $clientMessage = 'Page builder save failed on the server. Ensure the latest page_builder_structures migrations are applied.';
+
+            if (
+                str_contains($message, 'page_builder_structures.project') ||
+                str_contains($message, 'page_builder_structures.structure') ||
+                str_contains($message, 'JSON_VALID')
+            ) {
+                $status = 422;
+                $clientMessage = 'The builder storage columns still use a MariaDB JSON constraint. Run the latest migration to convert project/structure to LONGTEXT.';
+            }
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Page builder save failed on the server. Ensure the latest page_builder_structures migrations are applied.',
-            ], 500);
+                'message' => $clientMessage,
+            ], $status);
         }
     }
 
