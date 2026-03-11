@@ -44,17 +44,14 @@
     $loginLabel = $resolveLocalizedText($variantSettings['login_label'] ?? null, 'Login');
     $loginUrl = trim((string) ($variantSettings['login_url'] ?? '/client/login'));
     $usesClientDashboardLogin = trim($loginUrl, '/') === 'client/login';
-    $canAccessClientDashboard = auth('client')->check()
-        && session('client_impersonated_by_admin')
-        && auth('web')->check()
-        && (int) session('client_impersonator_admin_id') === (int) auth('web')->id();
+    $canAccessClientDashboard = auth('client')->check();
     $resolvedLoginUrl = $usesClientDashboardLogin && $canAccessClientDashboard
         ? route('client.home')
         : $loginUrl;
     $resolvedLoginLabel = $usesClientDashboardLogin && $canAccessClientDashboard
         ? t('frontend.Client_Area', 'Client Area')
         : $loginLabel;
-    $shouldRenderLoginButton = $showLoginButton && (!$usesClientDashboardLogin || $canAccessClientDashboard);
+    $shouldRenderLoginButton = $showLoginButton;
     $showLanguageSwitcher = (bool) ($variantSettings['show_language_switcher'] ?? true);
     $contactButtonLabel = $resolveLocalizedText($variantSettings['contact_button_label'] ?? null, 'Contact us');
     $contactButtonUrl = trim((string) ($variantSettings['contact_button_url'] ?? '#contact'));
