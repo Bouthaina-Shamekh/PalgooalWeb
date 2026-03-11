@@ -33,7 +33,7 @@ export function registerServicesSection(editor) {
                                         attributes: { class: 'text-center mb-16' },
                                         components: [
                                             {
-                                                type: 'Heading',
+                                                type: 'pg-heading',
                                                 tagName: 'h2',
                                                 attributes: {
                                                     class:

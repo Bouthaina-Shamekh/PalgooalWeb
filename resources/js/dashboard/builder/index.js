@@ -327,6 +327,11 @@ function initPageBuilder() {
 
     const closeLayersWindow = () => {
         if (!elLayersSidebarSlot) return;
+
+        if (layersWindow?.contains(document.activeElement)) {
+            layersToggleBtn?.focus?.({ preventScroll: true });
+        }
+
         stopLayersDrag();
         moveLayersHost(elLayersSidebarSlot);
         setLayersWindowState(false);
@@ -567,5 +572,4 @@ function initPageBuilder() {
 }
 
 initPageBuilder();
-
 

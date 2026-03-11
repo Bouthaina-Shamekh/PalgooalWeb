@@ -10,11 +10,89 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Models\Section;
 use App\Models\SectionTranslation;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 
 class PageBuilderController extends Controller
 {
+    protected function builderTableExists(): bool
+    {
+        static $exists = null;
+
+        if ($exists === null) {
+            $exists = Schema::hasTable((new PageBuilderStructure())->getTable());
+        }
+
+        return $exists;
+    }
+
+    protected function builderTableHasColumn(string $column): bool
+    {
+        static $columns = null;
+
+        if (! $this->builderTableExists()) {
+            return false;
+        }
+
+        if ($columns === null) {
+            $columns = Schema::getColumnListing((new PageBuilderStructure())->getTable());
+        }
+
+        return in_array($column, $columns, true);
+    }
+
+    protected function findBuilderRecord(Page $page, string $locale): ?PageBuilderStructure
+    {
+        if (! $this->builderTableExists()) {
+            return null;
+        }
+
+        $query = PageBuilderStructure::query()->where('page_id', $page->id);
+
+        if ($this->builderTableHasColumn('locale')) {
+            $query->where('locale', $locale);
+        }
+
+        return $query->first();
+    }
+
+    protected function builderLookupAttributes(Page $page, string $locale): array
+    {
+        $lookup = ['page_id' => $page->id];
+
+        if ($this->builderTableHasColumn('locale')) {
+            $lookup['locale'] = $locale;
+        }
+
+        return $lookup;
+    }
+
+    protected function builderPersistableAttributes(array $project, string $html, ?string $css): array
+    {
+        $payload = [];
+
+        if ($this->builderTableHasColumn('project')) {
+            $payload['project'] = $project;
+        }
+
+        if ($this->builderTableHasColumn('html')) {
+            $payload['html'] = $html;
+        }
+
+        if ($this->builderTableHasColumn('css')) {
+            $payload['css'] = $css;
+        }
+
+        if ($this->builderTableHasColumn('structure')) {
+            $payload['structure'] = $project;
+        }
+
+        return $payload;
+    }
+
     /**
      * Render the GrapesJS builder view for a given page.
      */
@@ -37,10 +115,7 @@ class PageBuilderController extends Controller
     {
         $locale = $this->requestLocale(request());
 
-        $builder = PageBuilderStructure::query()
-            ->where('page_id', $page->id)
-            ->where('locale', $locale)
-            ->first();
+        $builder = $this->findBuilderRecord($page, $locale);
 
 
         if ($builder) {
@@ -328,58 +403,68 @@ class PageBuilderController extends Controller
      */
     public function saveData(Request $request, Page $page): JsonResponse
     {
-        $validated = $request->validate([
-            'structure' => 'required|array',   // projectData من GrapesJS
-            'html'      => 'required|string', // HTML النهائي للفرونت
-            'css'       => 'nullable|string', // CSS النهائي للفرونت
-        ]);
+        try {
+            $validated = $request->validate([
+                'structure' => 'required|array',   // projectData من GrapesJS
+                'html'      => 'required|string', // HTML النهائي للفرونت
+                'css'       => 'nullable|string', // CSS النهائي للفرونت
+            ]);
 
-        $project = $validated['structure'];
-        $html    = $validated['html'];
-        $css     = $validated['css'] ?? null;
+            $project = $validated['structure'];
+            $html    = $validated['html'];
+            $css     = $validated['css'] ?? null;
+            $locale  = $this->requestLocale($request);
 
-        // 1) نخزن الـ project + html + css في جدول page_builder_structures
-        $locale = $this->requestLocale($request);
+            $payload = $this->builderPersistableAttributes($project, $html, $css);
 
-        $builder = PageBuilderStructure::updateOrCreate(
-            ['page_id' => $page->id, 'locale' => $locale],
-
-            [
-                'project'   => $project,
-                'html'      => $html,
-                'css'       => $css,
-
-                // اختياري: نخزّن كمان في structure عشان التوافق الرجعي
-                'structure' => $project,
-            ]
-        );
-
-        // 2) نحاول نحدّث hero_default section من نفس الـ project (نفس منطقك القديم)
-        $heroContent = $this->extractHeroContentFromStructure($project);
-
-        if ($heroContent) {
-            
-            $section = Section::where('page_id', $page->id)
-                ->where('type', 'hero_default')
-                ->first();
-
-            if ($section) {
-                $translation = SectionTranslation::firstOrNew([
-                    'section_id' => $section->id,
-                    'locale'     => $locale,
-                ]);
-
-                $oldContent = is_array($translation->content) ? $translation->content : [];
-
-                $translation->content = array_merge($oldContent, $heroContent);
-                $translation->save();
+            if ($payload === []) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Builder storage columns are missing on the server. Run the latest migrations for page_builder_structures.',
+                ], 422);
             }
-        }
 
-        return response()->json([
-            'status'    => 'ok',
-            'structure' => $builder->project,
-        ]);
+            $builder = PageBuilderStructure::updateOrCreate(
+                $this->builderLookupAttributes($page, $locale),
+                $payload
+            );
+
+            $heroContent = $this->extractHeroContentFromStructure($project);
+
+            if ($heroContent) {
+                $section = Section::where('page_id', $page->id)
+                    ->where('type', 'hero_default')
+                    ->first();
+
+                if ($section) {
+                    $translation = SectionTranslation::firstOrNew([
+                        'section_id' => $section->id,
+                        'locale'     => $locale,
+                    ]);
+
+                    $oldContent = is_array($translation->content) ? $translation->content : [];
+
+                    $translation->content = array_merge($oldContent, $heroContent);
+                    $translation->save();
+                }
+            }
+
+            return response()->json([
+                'status'    => 'ok',
+                'structure' => $builder->getCurrentProject() ?? $project,
+            ]);
+        } catch (Throwable $e) {
+            Log::error('Page builder save failed', [
+                'page_id' => $page->id,
+                'locale' => $request->input('locale'),
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Page builder save failed on the server. Ensure the latest page_builder_structures migrations are applied.',
+            ], 500);
+        }
     }
 
     /**
@@ -395,10 +480,19 @@ class PageBuilderController extends Controller
     {
         $locale = $this->requestLocale(request());
 
-        $builder = PageBuilderStructure::query()
-            ->where('page_id', $page->id)
-            ->where('locale', $locale)
-            ->first();
+        if (
+            ! $this->builderTableHasColumn('html') ||
+            ! $this->builderTableHasColumn('published_html') ||
+            ! $this->builderTableHasColumn('published_css_path') ||
+            ! $this->builderTableHasColumn('published_at')
+        ) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Builder publish columns are missing on the server. Run the latest migrations for page_builder_structures.',
+            ], 422);
+        }
+
+        $builder = $this->findBuilderRecord($page, $locale);
 
         if (! $builder || ! $builder->html) {
             return response()->json([

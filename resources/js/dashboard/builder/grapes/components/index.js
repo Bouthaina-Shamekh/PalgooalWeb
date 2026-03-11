@@ -19,6 +19,7 @@ import { registerSliderSection } from './sections/slider';
 import { registerHeroSection } from './sections/hero';
 import { registerHowBuildSection } from './sections/how-we-build';
 import { registerTechnologyStackSection } from './sections/technology-stack';
+import { registerLegacyComponentAliases } from './legacy-aliases';
 
 
 export function registerAllComponents(editor) {
@@ -43,4 +44,5 @@ export function registerAllComponents(editor) {
     registerHeroSection(editor);
     registerHowBuildSection(editor);
     registerTechnologyStackSection(editor);
+    registerLegacyComponentAliases(editor);
 }
