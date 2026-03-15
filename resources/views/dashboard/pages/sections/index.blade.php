@@ -3,15 +3,14 @@
     $pageTitle = $pageTranslation?->title ?? $page->slug ?? ('#' . $page->id);
     $frontUrl = $page->is_home ? url('/') : (($pageTranslation?->slug ?? null) ? url($pageTranslation->slug) : url('/'));
     $currentLocale = app()->getLocale();
-    $activeLocaleCodes = collect($languages ?? [])->pluck('code')->filter()->values();
-    $activeCount = $sections->where('is_active', true)->count();
-    $inactiveCount = $sections->count() - $activeCount;
-    $needsTranslationCount = $sections->filter(fn ($section) => $activeLocaleCodes->diff($section->translations->pluck('locale'))->isNotEmpty())->count();
-    $groupedTypes = collect($sectionTypes ?? [])->groupBy(fn ($meta) => $meta['category'] ?? 'other');
+    $groupedTypes = collect($sectionTypes ?? [])->groupBy(fn ($meta) => $meta['category'] ?? 'other', true);
     $highlightSectionId = (int) request('highlight');
+    $selectedSectionId = $highlightSectionId > 0 ? $highlightSectionId : (int) ($sections->first()->id ?? 0);
     $pageBuilderMode = in_array($page->builder_mode, ['visual', 'sections'], true) ? $page->builder_mode : 'sections';
     $isRtl = current_dir() === 'rtl';
     $drawerClosedTranslateClass = $isRtl ? '-translate-x-full' : 'translate-x-full';
+    $previewBaseUrl = route('dashboard.pages.sections.preview', $page);
+    $previewUrl = $previewBaseUrl . ($selectedSectionId ? ('?highlight=' . $selectedSectionId) : '');
 @endphp
 
 @extends('dashboard.pages.sections.layouts.workspace')
@@ -38,6 +37,64 @@
         .sections-drag-handle:active {
             cursor: grabbing;
         }
+
+        .sections-outline-item {
+            cursor: pointer;
+        }
+
+        .sections-outline-item.is-selected {
+            border-color: rgba(15, 23, 42, 0.18);
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+        }
+
+        .sections-preview-stage {
+            overflow: auto;
+            min-height: calc(100vh - 11rem);
+            background:
+                radial-gradient(circle at top, rgba(148, 163, 184, 0.16), transparent 42%),
+                linear-gradient(180deg, #eef4fa 0%, #f8fbff 100%);
+        }
+
+        .sections-preview-viewport {
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 0;
+            transition: max-width 200ms ease;
+        }
+
+        .sections-preview-viewport[data-device="tablet"] {
+            max-width: 920px;
+            padding: 1.25rem 0;
+        }
+
+        .sections-preview-viewport[data-device="mobile"] {
+            max-width: 440px;
+            padding: 1.25rem 0;
+        }
+
+        .sections-preview-frame {
+            display: block;
+            width: 100%;
+            height: calc(100vh - 11rem);
+            min-height: 52rem;
+            border: 0;
+            background: #ffffff;
+            box-shadow: none;
+        }
+
+        .sections-preview-viewport[data-device="tablet"] .sections-preview-frame,
+        .sections-preview-viewport[data-device="mobile"] .sections-preview-frame {
+            border-radius: 2rem;
+            box-shadow: 0 28px 60px -36px rgba(15, 23, 42, 0.35);
+        }
+
+        .preview-device-button.is-active {
+            background: #0f172a;
+            color: #ffffff;
+            box-shadow: 0 10px 24px -18px rgba(15, 23, 42, 0.55);
+        }
     </style>
 @endpush
 
@@ -45,6 +102,20 @@
     <button type="button" data-open-section-library class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
         {{ __('Add Section') }}
     </button>
+@endsection
+
+@section('workspace-header-toolbar')
+    <div class="flex flex-wrap items-center gap-2 rtl:flex-row-reverse xl:flex-nowrap">
+        <div class="flex items-center gap-1 rounded-full bg-slate-100/90 p-1 shadow-inner rtl:flex-row-reverse">
+            <button type="button" data-preview-device="desktop" class="preview-device-button is-active inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900">{{ __('Desktop') }}</button>
+            <button type="button" data-preview-device="tablet" class="preview-device-button inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900">{{ __('Tablet') }}</button>
+            <button type="button" data-preview-device="mobile" class="preview-device-button inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900">{{ __('Mobile') }}</button>
+        </div>
+
+        <button type="button" data-refresh-sections-preview class="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-200">
+            {{ __('Refresh Preview') }}
+        </button>
+    </div>
 @endsection
 
 @section('workspace-main')
@@ -56,93 +127,31 @@
         <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ session('error') }}</div>
     @endif
 
-    <div class="rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-5 py-4 lg:px-6">
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                    <h2 class="text-xl font-semibold text-slate-900">{{ __('Sections Workspace') }}</h2>
-                    <p class="mt-1 text-sm text-slate-500">{{ __('Manage order, visibility, duplication, and translations from one screen.') }}</p>
+    <div class="-mx-4 lg:-mx-6">
+        @if ($sections->isEmpty())
+            <div class="mx-4 rounded-[2rem] border border-dashed border-slate-300 bg-white/80 px-6 py-16 text-center lg:mx-6">
+                <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                 </div>
-                <div class="flex flex-wrap items-center gap-2 rtl:flex-row-reverse">
-                    <a href="{{ route('dashboard.pages.index') }}" class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">{{ __('Back to Pages') }}</a>
-                    <a href="{{ route('dashboard.pages.builder', $page) }}" class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">{{ __('Open Visual Builder') }}</a>
-                    <a href="{{ $frontUrl }}" target="_blank" class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">{{ __('Preview Frontend') }}</a>
+                <h3 class="mt-4 text-lg font-semibold text-slate-900">{{ __('Start by adding your first section') }}</h3>
+                <p class="mx-auto mt-2 max-w-2xl text-sm text-slate-500">{{ __('Use the section library to create a ready-to-edit block instantly, then fine-tune it in the editor.') }}</p>
+                <div class="mt-6 flex flex-wrap items-center justify-center gap-3 rtl:flex-row-reverse">
+                    <button type="button" data-open-section-library class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">{{ __('Open Section Library') }}</button>
                 </div>
             </div>
-        </div>
-
-        <div class="p-5 lg:p-6">
-            @if ($sections->isEmpty())
-                <div class="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-6 py-14 text-center">
-                    <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-slate-500 shadow-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                    </div>
-                    <h3 class="mt-4 text-lg font-semibold text-slate-900">{{ __('Start by adding your first section') }}</h3>
-                    <p class="mx-auto mt-2 max-w-2xl text-sm text-slate-500">{{ __('Use the section library to create a ready-to-edit block instantly, then fine-tune it in the editor.') }}</p>
-                    <div class="mt-6 flex flex-wrap items-center justify-center gap-3 rtl:flex-row-reverse">
-                        <button type="button" data-open-section-library class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">{{ __('Open Section Library') }}</button>
-                    </div>
+        @else
+            <div class="sections-preview-stage">
+                <div id="sections-preview-viewport" class="sections-preview-viewport" data-device="desktop">
+                    <iframe
+                        id="sections-preview-frame"
+                        class="sections-preview-frame"
+                        src="{{ $previewUrl }}"
+                        data-base-url="{{ $previewBaseUrl }}"
+                        title="{{ __('Live sections preview') }}"
+                    ></iframe>
                 </div>
-            @else
-                <div id="sections-workspace-list" class="space-y-4">
-                    @foreach ($sections as $section)
-                        @php
-                            $translation = method_exists($section, 'translation') ? $section->translation($currentLocale) : null;
-                            $fallbackTranslation = $translation ?? $section->translations->first();
-                            $typeMeta = $sectionTypes[$section->type] ?? null;
-                            $typeLabel = $typeMeta['label'] ?? \Illuminate\Support\Str::headline(str_replace(['_', '-'], ' ', $section->type));
-                            $content = is_array($fallbackTranslation?->content ?? null) ? $fallbackTranslation->content : [];
-                            $sectionTitle = $fallbackTranslation?->title ?? ($content['title'] ?? $typeLabel);
-                            $sectionSummary = trim((string) ($content['subtitle'] ?? ''));
-                            $sectionSummary = $sectionSummary !== '' ? $sectionSummary : ($typeMeta['description'] ?? __('No content summary yet.'));
-                            $existingLocales = $section->translations->pluck('locale')->filter()->values();
-                            $missingLocales = $activeLocaleCodes->diff($existingLocales)->values();
-                            $isComplete = $missingLocales->isEmpty();
-                        @endphp
-
-                        <article data-section-id="{{ $section->id }}" class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition {{ $highlightSectionId === $section->id ? 'ring-2 ring-slate-900/10 border-slate-900/20' : 'hover:border-slate-300' }}">
-                            <div class="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-                                <div class="flex items-start gap-4 rtl:flex-row-reverse">
-                                    <div class="min-w-[92px] rounded-3xl bg-slate-100 px-3 py-4 text-center">
-                                        <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">{{ __('Order') }}</p>
-                                        <p data-section-order class="mt-1 text-2xl font-semibold text-slate-900">{{ $section->order ?? $loop->iteration }}</p>
-                                        <p class="mt-3 text-[11px] font-medium text-slate-500">{{ __('Reorder from sidebar') }}</p>
-                                    </div>
-
-                                    <div class="min-w-0 flex-1">
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <span class="rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-white">{{ $typeLabel }}</span>
-                                            @if ($section->variant)
-                                                <span class="rounded-full bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700">{{ $section->variant }}</span>
-                                            @endif
-                                            <span class="rounded-full px-3 py-1 text-xs font-medium {{ $section->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' }}">{{ $section->is_active ? __('Active') : __('Hidden') }}</span>
-                                            <span class="rounded-full px-3 py-1 text-xs font-medium {{ $isComplete ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700' }}">{{ $isComplete ? __('Translations complete') : __('Missing translations') }}</span>
-                                        </div>
-                                        <h3 class="mt-3 truncate text-xl font-semibold text-slate-900">{{ $sectionTitle }}</h3>
-                                        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">{{ \Illuminate\Support\Str::limit($sectionSummary, 180) }}</p>
-                                        <div class="mt-4 flex flex-wrap items-center gap-2">
-                                            @foreach ($existingLocales as $locale)
-                                                <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700">{{ strtoupper($locale) }}</span>
-                                            @endforeach
-                                            @foreach ($missingLocales as $locale)
-                                                <span class="rounded-full border border-dashed border-amber-300 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">{{ strtoupper($locale) }} {{ __('missing') }}</span>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="flex flex-wrap items-center gap-2 rtl:flex-row-reverse xl:max-w-[18rem] xl:justify-end">
-                                    <form action="{{ route('dashboard.pages.sections.toggle-active', [$page, $section]) }}" method="POST">@csrf<button type="submit" class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">{{ $section->is_active ? __('Hide') : __('Show') }}</button></form>
-                                    <form action="{{ route('dashboard.pages.sections.duplicate', [$page, $section]) }}" method="POST">@csrf<button type="submit" class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">{{ __('Duplicate') }}</button></form>
-                                    <a href="{{ route('dashboard.pages.sections.edit', [$page, $section]) }}" class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">{{ __('Edit Content') }}</a>
-                                    <form action="{{ route('dashboard.pages.sections.destroy', [$page, $section]) }}" method="POST" onsubmit="return confirm('{{ __('Are you sure you want to delete this section? This action cannot be undone.') }}')">@csrf @method('DELETE')<button type="submit" class="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100">{{ __('Delete') }}</button></form>
-                                </div>
-                            </div>
-                        </article>
-                    @endforeach
-                </div>
-            @endif
-        </div>
+            </div>
+        @endif
     </div>
 
     <div id="section-library-overlay" class="fixed inset-0 z-[60] hidden bg-slate-950/55"></div>
@@ -176,12 +185,25 @@
                         </div>
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             @foreach ($items as $type => $meta)
+                                @php
+                                    $previewAsset = ! empty($meta['preview']) && file_exists(public_path($meta['preview']))
+                                        ? asset($meta['preview'])
+                                        : null;
+                                @endphp
                                 <form action="{{ route('dashboard.pages.sections.quick-store', $page) }}" method="POST" data-library-item data-library-text="{{ \Illuminate\Support\Str::lower($meta['label'] . ' ' . ($meta['description'] ?? '') . ' ' . $category) }}">
                                     @csrf
                                     <input type="hidden" name="type" value="{{ $type }}">
                                     <button type="submit" class="group flex h-full w-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md ltr:text-left rtl:text-right">
-                                        @if (! empty($meta['preview']))
-                                            <div class="aspect-[16/10] overflow-hidden bg-slate-100"><img src="{{ asset($meta['preview']) }}" alt="{{ $meta['label'] }}" class="h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]" loading="lazy"></div>
+                                        @if ($previewAsset)
+                                            <div class="aspect-[16/10] overflow-hidden bg-slate-100"><img src="{{ $previewAsset }}" alt="{{ $meta['label'] }}" class="h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]" loading="lazy"></div>
+                                        @else
+                                            <div class="flex aspect-[16/10] items-center justify-center bg-slate-100 text-slate-400">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 7.5A2.25 2.25 0 0 1 6 5.25h12A2.25 2.25 0 0 1 20.25 7.5v9A2.25 2.25 0 0 1 18 18.75H6A2.25 2.25 0 0 1 3.75 16.5v-9Z" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m3.75 15 4.72-4.72a1.5 1.5 0 0 1 2.12 0L15 14.69l1.28-1.28a1.5 1.5 0 0 1 2.12 0l1.85 1.84" />
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.25 8.25h.008v.008h-.008V8.25Z" />
+                                                </svg>
+                                            </div>
                                         @endif
                                         <div class="flex flex-1 flex-col p-4">
                                             <div class="flex items-start justify-between gap-3 rtl:flex-row-reverse">
@@ -191,7 +213,7 @@
                                                 </div>
                                                 <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">{{ \Illuminate\Support\Str::headline($category) }}</span>
                                             </div>
-                                            <div class="mt-4 flex items-center justify-between text-xs text-slate-500"><span>{{ __('Creates a draft instantly') }}</span><span class="font-semibold text-slate-900">{{ __('Add') }}</span></div>
+                                            <div class="mt-4 flex items-center justify-between text-xs text-slate-500"><span>{{ __('Creates a draft instantly') }}</span><span class="js-library-submit-label font-semibold text-slate-900">{{ __('Add') }}</span></div>
                                         </div>
                                     </button>
                                 </form>
@@ -252,7 +274,7 @@
                         $sidebarTitle = $sidebarFallbackTranslation?->title ?: $sidebarTypeLabel;
                     @endphp
 
-                    <article data-section-id="{{ $section->id }}" class="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 transition {{ $highlightSectionId === $section->id ? 'border-slate-900/20 ring-2 ring-slate-900/10' : 'hover:border-slate-300' }}">
+                    <article data-section-id="{{ $section->id }}" class="sections-outline-item rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 transition hover:border-slate-300 {{ $selectedSectionId === $section->id ? 'is-selected' : '' }}">
                         <div class="flex items-center justify-between gap-3">
                             <div class="min-w-0 flex-1 ltr:text-left rtl:text-right">
                                     <p class="truncate text-sm font-semibold text-slate-900">{{ $sidebarTitle }}</p>
@@ -386,14 +408,82 @@
             const searchInput = document.getElementById('section-library-search');
             const libraryItems = Array.from(document.querySelectorAll('[data-library-item]'));
             const libraryGroups = Array.from(document.querySelectorAll('[data-library-group]'));
+            const libraryForms = Array.from(document.querySelectorAll('form[data-library-item]'));
             const mainSortableList = document.getElementById('sections-workspace-list');
             const sidebarSortableList = document.querySelector('[data-sections-sortable-sidebar]');
+            const sidebarSectionItems = Array.from(document.querySelectorAll('#sections-outline-list [data-section-id]'));
             const sectionMenuButtons = Array.from(document.querySelectorAll('[data-section-menu-button]'));
             const renameToggleButtons = Array.from(document.querySelectorAll('[data-rename-toggle]'));
             const renameCancelButtons = Array.from(document.querySelectorAll('[data-rename-cancel]'));
+            const previewFrame = document.getElementById('sections-preview-frame');
+            const previewViewport = document.getElementById('sections-preview-viewport');
+            const previewDeviceButtons = Array.from(document.querySelectorAll('[data-preview-device]'));
+            const previewRefreshButtons = Array.from(document.querySelectorAll('[data-refresh-sections-preview]'));
             const reorderUrl = sidebarSortableList?.dataset.reorderUrl || '';
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
             const reorderFailedMessage = @json(__('Section order could not be updated. Please try again.'));
+            const quickAddFailedMessage = @json(__('Section could not be added. Please try again.'));
+            const quickAddLoadingLabel = @json(__('Adding...'));
+            const frameBaseUrl = previewFrame?.dataset.baseUrl || '';
+            let currentSelectedSectionId = Number(@json($selectedSectionId));
+
+            const applySidebarSelection = (sectionId) => {
+                sidebarSectionItems.forEach((item) => {
+                    item.classList.toggle('is-selected', Number(item.dataset.sectionId || 0) === sectionId);
+                });
+            };
+
+            const postPreviewHighlight = (sectionId) => {
+                if (!previewFrame?.contentWindow || !sectionId) {
+                    return;
+                }
+
+                previewFrame.contentWindow.postMessage({
+                    type: 'sections-preview:highlight',
+                    sectionId: sectionId,
+                }, window.location.origin);
+            };
+
+            const refreshPreviewFrame = () => {
+                if (!previewFrame || !frameBaseUrl) {
+                    return;
+                }
+
+                const url = new URL(frameBaseUrl, window.location.origin);
+                if (currentSelectedSectionId) {
+                    url.searchParams.set('highlight', String(currentSelectedSectionId));
+                }
+
+                previewFrame.src = url.toString();
+            };
+
+            const focusSectionPreview = (sectionId, shouldReload = false) => {
+                if (!sectionId) {
+                    return;
+                }
+
+                currentSelectedSectionId = Number(sectionId);
+                applySidebarSelection(currentSelectedSectionId);
+
+                if (shouldReload) {
+                    refreshPreviewFrame();
+                    return;
+                }
+
+                postPreviewHighlight(currentSelectedSectionId);
+            };
+
+            const applyPreviewDevice = (device) => {
+                if (!previewViewport) {
+                    return;
+                }
+
+                previewViewport.dataset.device = device;
+
+                previewDeviceButtons.forEach((button) => {
+                    button.classList.toggle('is-active', button.dataset.previewDevice === device);
+                });
+            };
 
             const closeAllSectionMenus = () => {
                 document.querySelectorAll('[data-section-menu]').forEach((menu) => {
@@ -497,6 +587,59 @@
                 });
             });
 
+            sidebarSectionItems.forEach((item) => {
+                item.addEventListener('click', function (event) {
+                    if (event.target.closest('a, button, form, input, textarea, select, [data-section-menu], [data-rename-panel]')) {
+                        return;
+                    }
+
+                    focusSectionPreview(Number(item.dataset.sectionId || 0));
+                });
+            });
+
+            previewRefreshButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    refreshPreviewFrame();
+                });
+            });
+
+            previewDeviceButtons.forEach((button) => {
+                button.addEventListener('click', function () {
+                    applyPreviewDevice(button.dataset.previewDevice || 'desktop');
+                });
+            });
+
+            if (previewFrame) {
+                previewFrame.addEventListener('load', function () {
+                    if (currentSelectedSectionId) {
+                        window.setTimeout(() => postPreviewHighlight(currentSelectedSectionId), 120);
+                    }
+                });
+            }
+
+            window.addEventListener('message', function (event) {
+                if (event.origin !== window.location.origin) {
+                    return;
+                }
+
+                const payload = event.data || {};
+                if (payload.type === 'sections-preview:selected') {
+                    const sectionId = Number(payload.sectionId || 0);
+                    if (!sectionId) {
+                        return;
+                    }
+
+                    currentSelectedSectionId = sectionId;
+                    applySidebarSelection(sectionId);
+
+                    const selectedSidebarItem = document.querySelector(`#sections-outline-list [data-section-id="${sectionId}"]`);
+                    selectedSidebarItem?.scrollIntoView({
+                        block: 'nearest',
+                        behavior: 'smooth',
+                    });
+                }
+            });
+
             document.addEventListener('click', function (event) {
                 if (!event.target.closest('[data-section-menu-button]') && !event.target.closest('[data-section-menu]')) {
                     closeAllSectionMenus();
@@ -516,6 +659,57 @@
                     });
                 });
             }
+
+            libraryForms.forEach((form) => {
+                form.addEventListener('submit', async function (event) {
+                    event.preventDefault();
+
+                    const submitButton = form.querySelector('button[type="submit"]');
+                    const submitLabel = submitButton?.querySelector('.js-library-submit-label');
+                    const originalButtonHtml = submitButton?.innerHTML || '';
+
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.classList.add('opacity-70', 'pointer-events-none');
+                    }
+
+                    if (submitLabel) {
+                        submitLabel.textContent = quickAddLoadingLabel;
+                    } else if (submitButton) {
+                        submitButton.innerHTML = quickAddLoadingLabel;
+                    }
+
+                    try {
+                        const response = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                            body: new FormData(form),
+                        });
+
+                        const payload = await response.json().catch(() => ({}));
+
+                        if (!response.ok || !payload.redirect_url) {
+                            throw new Error(payload.message || 'quick_add_failed');
+                        }
+
+                        window.location.assign(payload.redirect_url);
+                    } catch (error) {
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.classList.remove('opacity-70', 'pointer-events-none');
+                            submitButton.innerHTML = originalButtonHtml;
+                        }
+
+                        window.alert(error?.message && error.message !== 'quick_add_failed'
+                            ? error.message
+                            : quickAddFailedMessage);
+                    }
+                });
+            });
 
             if (typeof Sortable !== 'undefined' && reorderUrl) {
                 const collectIds = (list) => Array.from(list.querySelectorAll('[data-section-id]'))
@@ -566,6 +760,7 @@
                     try {
                         await persistReorder(ids);
                         committedOrder = ids;
+                        refreshPreviewFrame();
                     } catch (error) {
                         syncListOrder(mainSortableList, committedOrder);
                         syncListOrder(sidebarSortableList, committedOrder);
@@ -587,6 +782,9 @@
                     Sortable.create(sidebarSortableList, sortableOptions(sidebarSortableList));
                 }
             }
+
+            applySidebarSelection(currentSelectedSectionId);
+            applyPreviewDevice('desktop');
         });
     </script>
 @endpush

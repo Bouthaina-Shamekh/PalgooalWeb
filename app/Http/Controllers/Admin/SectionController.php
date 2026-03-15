@@ -7,6 +7,7 @@ use App\Models\Language;
 use App\Models\Page;
 use App\Models\Section;
 use App\Models\SectionTranslation;
+use App\Models\Template;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -36,6 +37,38 @@ class SectionController extends Controller
             'sections'     => $sections,
             'languages'    => $languages,
             'sectionTypes' => $this->availableSectionTypes(),
+        ]);
+    }
+
+    /**
+     * Render a front-like preview for the sections workspace iframe.
+     */
+    public function preview(Request $request, Page $page)
+    {
+        $page->loadMissing('translations');
+
+        $sections = Section::with('translations')
+            ->where('page_id', $page->id)
+            ->orderBy('order')
+            ->orderBy('id')
+            ->get();
+
+        $previewTemplates = Template::query()
+            ->with([
+                'translations',
+                'categoryTemplate.translation',
+                'categoryTemplate.translations',
+            ])
+            ->latest('id')
+            ->limit(8)
+            ->get();
+
+        return view('dashboard.pages.sections.preview', [
+            'page' => $page,
+            'sections' => $sections,
+            'sectionTypes' => $this->availableSectionTypes(),
+            'previewTemplates' => $previewTemplates,
+            'highlightSectionId' => $request->integer('highlight'),
         ]);
     }
 
@@ -128,8 +161,19 @@ class SectionController extends Controller
             );
         });
 
+        $redirectUrl = route('dashboard.pages.sections.edit', [$page, $createdSection]);
+
+        if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'ok' => true,
+                'redirect_url' => $redirectUrl,
+                'section_id' => $createdSection->id,
+                'message' => 'Section added. Continue customizing it in the editor.',
+            ]);
+        }
+
         return redirect()
-            ->route('dashboard.pages.sections.edit', [$page, $createdSection])
+            ->to($redirectUrl)
             ->with('success', 'Section added. Continue customizing it in the editor.');
     }
 

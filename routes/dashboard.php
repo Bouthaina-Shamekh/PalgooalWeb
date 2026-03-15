@@ -218,6 +218,7 @@ Route::group([
 
             // List sections for a specific page
             Route::get('sections', [SectionController::class, 'index'])->name('index');
+            Route::get('sections/preview', [SectionController::class, 'preview'])->name('preview');
 
             // Show form to create a new section for this page
             Route::get('sections/create', [SectionController::class, 'create'])->name('create');

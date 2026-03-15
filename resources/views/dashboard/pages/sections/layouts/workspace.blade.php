@@ -167,8 +167,8 @@
 <body class="h-full bg-slate-100 text-slate-900">
     <div id="sections-workspace-shell" class="sections-workspace-shell flex h-screen flex-col overflow-hidden">
         <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur shadow-sm">
-            <div class="px-4 py-2.5 lg:px-6">
-                <div class="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
+            <div class="px-4 py-2 lg:px-6">
+                <div class="flex flex-wrap items-center justify-between gap-2 xl:flex-nowrap">
                     <div class="flex min-w-0 items-center gap-3 rtl:flex-row-reverse">
                         <a
                             href="{{ route('dashboard.pages.index') }}"
@@ -204,7 +204,11 @@
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2 rtl:flex-row-reverse xl:justify-end">
+                    <div class="flex flex-wrap items-center gap-2 rtl:flex-row-reverse xl:flex-nowrap xl:justify-end">
+                        @hasSection('workspace-header-toolbar')
+                            @yield('workspace-header-toolbar')
+                        @endif
+
                         <div class="sections-header-cluster flex flex-wrap items-center gap-2 rounded-[1.75rem] border border-slate-200 bg-slate-100/90 p-1 shadow-inner rtl:flex-row-reverse">
                             <a
                                 href="{{ $frontUrl }}"

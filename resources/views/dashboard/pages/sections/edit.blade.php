@@ -129,6 +129,9 @@
                         $code = $language->code;
                         $translation = $section->translations->firstWhere('locale', $code);
                         $content = $translation?->content ?? [];
+                        $stringifyValue = static fn ($value) => is_scalar($value) ? (string) $value : '';
+                        $primaryButton = is_array($content['primary_button'] ?? null) ? $content['primary_button'] : [];
+                        $secondaryButton = is_array($content['secondary_button'] ?? null) ? $content['secondary_button'] : [];
 
                         $featuresTextarea = old("translations.$code.content.features_textarea");
 
@@ -140,6 +143,15 @@
                             }
                         }
 
+                        $sectionTitleValue = $stringifyValue(old("translations.$code.title", $translation->title ?? ''));
+                        $eyebrowValue = $stringifyValue(old("translations.$code.content.eyebrow", $content['eyebrow'] ?? ''));
+                        $heroTitleValue = $stringifyValue(old("translations.$code.content.title", $content['title'] ?? ''));
+                        $subtitleValue = $stringifyValue(old("translations.$code.content.subtitle", $content['subtitle'] ?? ''));
+                        $primaryButtonLabelValue = $stringifyValue(old("translations.$code.content.primary_button.label", $primaryButton['label'] ?? ''));
+                        $primaryButtonUrlValue = $stringifyValue(old("translations.$code.content.primary_button.url", $primaryButton['url'] ?? ''));
+                        $secondaryButtonLabelValue = $stringifyValue(old("translations.$code.content.secondary_button.label", $secondaryButton['label'] ?? ''));
+                        $secondaryButtonUrlValue = $stringifyValue(old("translations.$code.content.secondary_button.url", $secondaryButton['url'] ?? ''));
+                        $mediaUrlValue = $stringifyValue(old("translations.$code.content.media_url", $content['media_url'] ?? ''));
                         $mediaTypeOld = old("translations.$code.content.media_type", $content['media_type'] ?? 'image');
                     @endphp
 
@@ -152,7 +164,7 @@
                                 <input
                                     type="text"
                                     name="translations[{{ $code }}][title]"
-                                    value="{{ old("translations.$code.title", $translation->title ?? '') }}"
+                                    value="{{ $sectionTitleValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >
                             </div>
@@ -162,7 +174,7 @@
                                 <input
                                     type="text"
                                     name="translations[{{ $code }}][content][eyebrow]"
-                                    value="{{ old("translations.$code.content.eyebrow", $content['eyebrow'] ?? '') }}"
+                                    value="{{ $eyebrowValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >
                             </div>
@@ -172,7 +184,7 @@
                                 <input
                                     type="text"
                                     name="translations[{{ $code }}][content][title]"
-                                    value="{{ old("translations.$code.content.title", $content['title'] ?? '') }}"
+                                    value="{{ $heroTitleValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >
                             </div>
@@ -183,7 +195,7 @@
                                     name="translations[{{ $code }}][content][subtitle]"
                                     rows="4"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                >{{ old("translations.$code.content.subtitle", $content['subtitle'] ?? '') }}</textarea>
+                                >{{ $subtitleValue }}</textarea>
                             </div>
 
                             <div>
@@ -191,7 +203,7 @@
                                 <input
                                     type="text"
                                     name="translations[{{ $code }}][content][primary_button][label]"
-                                    value="{{ old("translations.$code.content.primary_button.label", $content['primary_button']['label'] ?? '') }}"
+                                    value="{{ $primaryButtonLabelValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >
                             </div>
@@ -201,7 +213,7 @@
                                 <input
                                     type="text"
                                     name="translations[{{ $code }}][content][primary_button][url]"
-                                    value="{{ old("translations.$code.content.primary_button.url", $content['primary_button']['url'] ?? '') }}"
+                                    value="{{ $primaryButtonUrlValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >
                             </div>
@@ -211,7 +223,7 @@
                                 <input
                                     type="text"
                                     name="translations[{{ $code }}][content][secondary_button][label]"
-                                    value="{{ old("translations.$code.content.secondary_button.label", $content['secondary_button']['label'] ?? '') }}"
+                                    value="{{ $secondaryButtonLabelValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >
                             </div>
@@ -221,7 +233,7 @@
                                 <input
                                     type="text"
                                     name="translations[{{ $code }}][content][secondary_button][url]"
-                                    value="{{ old("translations.$code.content.secondary_button.url", $content['secondary_button']['url'] ?? '') }}"
+                                    value="{{ $secondaryButtonUrlValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >
                             </div>
@@ -252,7 +264,7 @@
                                 <input
                                     type="text"
                                     name="translations[{{ $code }}][content][media_url]"
-                                    value="{{ old("translations.$code.content.media_url", $content['media_url'] ?? '') }}"
+                                    value="{{ $mediaUrlValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >
                             </div>
