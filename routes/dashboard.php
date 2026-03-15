@@ -224,6 +224,7 @@ Route::group([
 
             // Store a new section
             Route::post('sections', [SectionController::class, 'store'])->name('store');
+            Route::post('sections/quick-store', [SectionController::class, 'quickStore'])->name('quick-store');
 
             // Edit an existing section
             Route::get('sections/{section}/edit', [SectionController::class, 'edit'])->name('edit');
@@ -231,6 +232,13 @@ Route::group([
             // Update section
             Route::match(['put', 'patch'], 'sections/{section}', [SectionController::class, 'update'])
                 ->name('update');
+
+            // Quick actions from the sections workspace
+            Route::post('sections/{section}/toggle-active', [SectionController::class, 'toggleActive'])
+                ->name('toggle-active');
+            Route::post('sections/{section}/move', [SectionController::class, 'move'])->name('move');
+            Route::post('sections/{section}/duplicate', [SectionController::class, 'duplicate'])
+                ->name('duplicate');
 
             // Delete section
             Route::delete('sections/{section}', [SectionController::class, 'destroy'])->name('destroy');

@@ -1,136 +1,135 @@
-<x-dashboard-layout>
-    <div class="min-h-screen bg-gray-50 dark:bg-gray-950 px-4 py-6">
-        {{-- Header --}}
-        <header class="mb-6">
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-                {{ __('Edit Section') }}: {{ $page->translation()?->title ?? $page->slug }}
-            </h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-                Page Builder v2 – Hero Default section (multi-language JSON content)
-            </p>
-        </header>
+@php
+    $pageTitle = $page->translation()?->title ?? $page->slug;
+    $sectionTypeMeta = $sectionTypes[old('type', $section->type)] ?? ($sectionTypes[$section->type] ?? null);
+    $sectionTypeLabel = $sectionTypeMeta['label'] ?? old('type', $section->type);
+@endphp
 
-        <form method="POST"
-              action="{{ route('dashboard.pages.sections.update', [$page, $section]) }}"
-              class="space-y-8">
-            @csrf
-            @method('PUT')
+@extends('dashboard.pages.sections.layouts.workspace')
 
-            {{-- --------------------------------------------------
-                 Basic settings
-               -------------------------------------------------- --}}
-            <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 space-y-4">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
-                    {{ __('Basic Settings') }}
-                </h2>
+@section('workspace-header-actions')
+    <a
+        href="{{ route('dashboard.pages.sections.index', $page) }}"
+        class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:shadow-sm"
+    >
+        {{ __('Back to Sections') }}
+    </a>
 
-                {{-- Section type --}}
+    <button
+        type="submit"
+        form="section-edit-form"
+        class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+    >
+        {{ __('Update Section') }}
+    </button>
+@endsection
+
+@section('workspace-main')
+    @if ($errors->any())
+        <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <ul class="space-y-1">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    <form
+        id="section-edit-form"
+        method="POST"
+        action="{{ route('dashboard.pages.sections.update', [$page, $section]) }}"
+        class="space-y-6"
+    >
+        @csrf
+        @method('PUT')
+
+        <div class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-200 px-5 py-4 lg:px-6">
+                <h2 class="text-xl font-semibold text-slate-900">{{ __('Section Settings') }}</h2>
+                <p class="mt-1 text-sm text-slate-500">{{ __('Update the type, order, variant, and visibility for this section.') }}</p>
+            </div>
+
+            <div class="grid grid-cols-1 gap-5 p-5 lg:grid-cols-2 lg:p-6">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                        {{ __('Section Type') }}
-                    </label>
-                    <select name="type"
-                            class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
+                    <label class="block text-sm font-medium text-slate-700">{{ __('Section Type') }}</label>
+                    <select
+                        name="type"
+                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                    >
                         @foreach($sectionTypes as $value => $meta)
-                            <option value="{{ $value }}"
-                                {{ old('type', $section->type) === $value ? 'selected' : '' }}>
+                            <option value="{{ $value }}" {{ old('type', $section->type) === $value ? 'selected' : '' }}>
                                 {{ $meta['label'] ?? $value }}
                             </option>
                         @endforeach
                     </select>
-                    @error('type')
-                        <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                    @enderror
                 </div>
 
-                {{-- Admin-only label (optional) --}}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                        {{ __('Section Title (Admin / Optional)') }}
-                    </label>
-                    <input type="text"
-                           name="admin_title"
-                           value="{{ old('admin_title') }}"
-                           class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
+                    <label class="block text-sm font-medium text-slate-700">{{ __('Variant') }}</label>
+                    <input
+                        type="text"
+                        name="variant"
+                        value="{{ old('variant', $section->variant) }}"
+                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                        placeholder="default / minimal / v2"
+                    >
                 </div>
 
-                {{-- Order & Active --}}
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                            {{ __('Display Order') }}
-                        </label>
-                        <input type="number"
-                               name="order"
-                               value="{{ old('order', $section->order ?? 1) }}"
-                               class="mt-1 block w-full  border p-2  mb-1 rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
-                        @error('order')
-                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700">{{ __('Display Order') }}</label>
+                    <input
+                        type="number"
+                        name="order"
+                        value="{{ old('order', $section->order ?? 1) }}"
+                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                    >
+                </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                            {{ __('Variant (optional)') }}
-                        </label>
-                        <input type="text"
-                               name="variant"
-                               value="{{ old('variant', $section->variant) }}"
-                               class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
-                        @error('variant')
-                            <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div class="flex items-end">
-                        <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                            <input type="checkbox"
-                                   name="is_active"
-                                   value="1"
-                                   class="rounded border-gray-300 dark:border-gray-700"
-                                   {{ old('is_active', $section->is_active) ? 'checked' : '' }}>
-                            {{ __('Active (visible on the frontend)') }}
-                        </label>
-                    </div>
+                <div class="flex items-center">
+                    <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+                        <input
+                            type="checkbox"
+                            name="is_active"
+                            value="1"
+                            class="rounded border-slate-300"
+                            {{ old('is_active', $section->is_active) ? 'checked' : '' }}
+                        >
+                        {{ __('Active on frontend') }}
+                    </label>
                 </div>
             </div>
+        </div>
 
-            {{-- --------------------------------------------------
-                 Section Content (per language) – Hero Default JSON
-               -------------------------------------------------- --}}
-            <div class="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-6 space-y-6">
-                <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                    {{ __('Section Content (per language)') }}
-                </h2>
+        <div class="rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div class="border-b border-slate-200 px-5 py-4 lg:px-6">
+                <h2 class="text-xl font-semibold text-slate-900">{{ __('Section Content') }}</h2>
+                <p class="mt-1 text-sm text-slate-500">{{ __('Edit localized content for each language.') }}</p>
+            </div>
 
-                {{-- Tabs for languages --}}
-                <div class="border-b border-gray-200 dark:border-gray-700 mb-4">
-                    <nav class="-mb-px flex space-x-4 rtl:space-x-reverse" aria-label="Tabs">
+            <div class="p-5 lg:p-6">
+                <div class="mb-5 border-b border-slate-200">
+                    <nav class="-mb-px flex flex-wrap gap-2" aria-label="Language tabs">
                         @foreach($languages as $index => $language)
                             @php
                                 $active = $index === 0;
                             @endphp
                             <button
                                 type="button"
-                                class="tab-btn px-3 py-2 text-sm font-medium border-b-2
-                                       {{ $active
-                                            ? 'border-primary text-primary'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-300 dark:hover:text-white' }}"
-                                data-tab="lang-{{ $language->code }}">
+                                class="tab-btn rounded-t-2xl border-b-2 px-4 py-2 text-sm font-medium transition {{ $active ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300' }}"
+                                data-tab="lang-{{ $language->code }}"
+                            >
                                 {{ $language->name }} ({{ $language->code }})
                             </button>
                         @endforeach
                     </nav>
                 </div>
 
-                {{-- Panels --}}
                 @foreach($languages as $index => $language)
                     @php
-                        $code        = $language->code;
+                        $code = $language->code;
                         $translation = $section->translations->firstWhere('locale', $code);
-                        $content     = $translation?->content ?? [];
+                        $content = $translation?->content ?? [];
 
-                        // إعداد قيمة textarea للـ features (من الـ content['features'] كـ array)
                         $featuresTextarea = old("translations.$code.content.features_textarea");
 
                         if ($featuresTextarea === null) {
@@ -145,184 +144,205 @@
                     @endphp
 
                     <div class="tab-panel {{ $index === 0 ? '' : 'hidden' }}" id="lang-{{ $code }}">
-                        {{-- Hidden locale field required by validation --}}
                         <input type="hidden" name="translations[{{ $code }}][locale]" value="{{ $code }}">
 
-                        {{-- Section title (per language) --}}
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                {{ __('Section title') }} ({{ $code }})
-                            </label>
-                            <input type="text"
-                                   name="translations[{{ $code }}][title]"
-                                   value="{{ old("translations.$code.title", $translation->title ?? '') }}"
-                                   class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
-                        </div>
-
-                        {{-- Eyebrow --}}
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                {{ __('Eyebrow (small label above title)') }}
-                            </label>
-                            <input type="text"
-                                   name="translations[{{ $code }}][content][eyebrow]"
-                                   value="{{ old("translations.$code.content.eyebrow", $content['eyebrow'] ?? '') }}"
-                                   class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
-                        </div>
-
-                        {{-- Hero Title --}}
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                {{ __('Hero Title') }}
-                            </label>
-                            <input type="text"
-                                   name="translations[{{ $code }}][content][title]"
-                                   value="{{ old("translations.$code.content.title", $content['title'] ?? '') }}"
-                                   class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
-                        </div>
-
-                        {{-- Subtitle --}}
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                {{ __('Subtitle') }}
-                            </label>
-                            <textarea
-                                name="translations[{{ $code }}][content][subtitle]"
-                                rows="3"
-                                class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm"
-                            >{{ old("translations.$code.content.subtitle", $content['subtitle'] ?? '') }}</textarea>
-                        </div>
-
-                        {{-- Primary Button --}}
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {{ __('Primary Button Label') }}
-                                </label>
-                                <input type="text"
-                                       name="translations[{{ $code }}][content][primary_button][label]"
-                                       value="{{ old("translations.$code.content.primary_button.label", $content['primary_button']['label'] ?? '') }}"
-                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
+                        <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Section Title') }} ({{ $code }})</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][title]"
+                                    value="{{ old("translations.$code.title", $translation->title ?? '') }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {{ __('Primary Button URL') }}
-                                </label>
-                                <input type="text"
-                                       name="translations[{{ $code }}][content][primary_button][url]"
-                                       value="{{ old("translations.$code.content.primary_button.url", $content['primary_button']['url'] ?? '') }}"
-                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
-                            </div>
-                        </div>
 
-                        {{-- Secondary Button --}}
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {{ __('Secondary Button Label') }}
-                                </label>
-                                <input type="text"
-                                       name="translations[{{ $code }}][content][secondary_button][label]"
-                                       value="{{ old("translations.$code.content.secondary_button.label", $content['secondary_button']['label'] ?? '') }}"
-                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Eyebrow') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][eyebrow]"
+                                    value="{{ old("translations.$code.content.eyebrow", $content['eyebrow'] ?? '') }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
                             </div>
+
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {{ __('Secondary Button URL') }}
-                                </label>
-                                <input type="text"
-                                       name="translations[{{ $code }}][content][secondary_button][url]"
-                                       value="{{ old("translations.$code.content.secondary_button.url", $content['secondary_button']['url'] ?? '') }}"
-                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Hero Title') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][title]"
+                                    value="{{ old("translations.$code.content.title", $content['title'] ?? '') }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
                             </div>
-                        </div>
 
-                        {{-- Features (each line = one bullet) --}}
-                        <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                {{ __('Features (each line = one bullet)') }}
-                            </label>
-                            <textarea
-                                name="translations[{{ $code }}][content][features_textarea]"
-                                rows="4"
-                                class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm"
-                            >{{ $featuresTextarea }}</textarea>
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                {{ __('Each line will be converted to a feature item.') }}
-                            </p>
-                        </div>
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Subtitle') }}</label>
+                                <textarea
+                                    name="translations[{{ $code }}][content][subtitle]"
+                                    rows="4"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >{{ old("translations.$code.content.subtitle", $content['subtitle'] ?? '') }}</textarea>
+                            </div>
 
-                        {{-- Media --}}
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {{ __('Media Type') }}
-                                </label>
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Primary Button Label') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][primary_button][label]"
+                                    value="{{ old("translations.$code.content.primary_button.label", $content['primary_button']['label'] ?? '') }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Primary Button URL') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][primary_button][url]"
+                                    value="{{ old("translations.$code.content.primary_button.url", $content['primary_button']['url'] ?? '') }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Secondary Button Label') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][secondary_button][label]"
+                                    value="{{ old("translations.$code.content.secondary_button.label", $content['secondary_button']['label'] ?? '') }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Secondary Button URL') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][secondary_button][url]"
+                                    value="{{ old("translations.$code.content.secondary_button.url", $content['secondary_button']['url'] ?? '') }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
+                            </div>
+
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Features (each line = one bullet)') }}</label>
+                                <textarea
+                                    name="translations[{{ $code }}][content][features_textarea]"
+                                    rows="5"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >{{ $featuresTextarea }}</textarea>
+                                <p class="mt-2 text-xs text-slate-500">{{ __('Each line will be converted to a feature item.') }}</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Media Type') }}</label>
                                 <select
                                     name="translations[{{ $code }}][content][media_type]"
-                                    class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >
                                     <option value="image" {{ $mediaTypeOld === 'image' ? 'selected' : '' }}>Image</option>
                                     <option value="video" {{ $mediaTypeOld === 'video' ? 'selected' : '' }}>Video</option>
                                 </select>
                             </div>
+
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                                    {{ __('Media URL') }}
-                                </label>
-                                <input type="text"
-                                       name="translations[{{ $code }}][content][media_url]"
-                                       value="{{ old("translations.$code.content.media_url", $content['media_url'] ?? '') }}"
-                                       class="mt-1 block w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white text-sm">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Media URL') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][media_url]"
+                                    value="{{ old("translations.$code.content.media_url", $content['media_url'] ?? '') }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
                             </div>
                         </div>
                     </div>
                 @endforeach
+            </div>
+        </div>
+    </form>
+@endsection
 
-                <p class="text-xs text-gray-500 dark:text-gray-400">
-                    {{ __('All fields inside "content" will be stored as JSON and used by the Hero Default front-end component.') }}
+@section('workspace-sidebar')
+    <div class="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+        <h3 class="text-base font-semibold text-slate-900">{{ __('Editing Summary') }}</h3>
+        <div class="mt-4 space-y-3 text-sm text-slate-600">
+            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{{ __('Page') }}</p>
+                <p class="mt-2 font-medium text-slate-900">{{ $pageTitle }}</p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{{ __('Section Type') }}</p>
+                <p class="mt-2 font-medium text-slate-900">{{ $sectionTypeLabel }}</p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{{ __('Current Order') }}</p>
+                <p class="mt-2 font-medium text-slate-900">{{ $section->order ?? 1 }}</p>
+            </div>
+
+            <div class="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{{ __('Status') }}</p>
+                <p class="mt-2 font-medium {{ $section->is_active ? 'text-emerald-700' : 'text-rose-700' }}">
+                    {{ $section->is_active ? __('Active on frontend') : __('Hidden on frontend') }}
                 </p>
             </div>
-
-            {{-- Actions --}}
-            <div class="flex items-center justify-between">
-                <a href="{{ route('dashboard.pages.sections.index', $page) }}"
-                   class="text-sm text-gray-600 dark:text-gray-300 hover:underline">
-                    {{ __('Back to Sections') }}
-                </a>
-
-                <button type="submit"
-                        class="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-primary/90">
-                    {{ __('Update Section') }}
-                </button>
-            </div>
-        </form>
+        </div>
     </div>
 
-    {{-- Simple JS for switching language tabs --}}
-    @push('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const buttons = document.querySelectorAll('.tab-btn');
-                const panels  = document.querySelectorAll('.tab-panel');
+    <div class="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+        <h3 class="text-base font-semibold text-slate-900">{{ __('Quick Links') }}</h3>
+        <div class="mt-4 space-y-3">
+            <a
+                href="{{ route('dashboard.pages.sections.index', $page) }}"
+                class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:bg-slate-50"
+            >
+                <span>
+                    <span class="block text-sm font-semibold text-slate-900">{{ __('Back to Sections') }}</span>
+                    <span class="block text-xs text-slate-500">{{ __('Return to the workspace outline.') }}</span>
+                </span>
+                <span class="text-sm font-semibold text-slate-500">{{ __('Open') }}</span>
+            </a>
 
-                buttons.forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const target = btn.getAttribute('data-tab');
+            <a
+                href="{{ route('dashboard.pages.builder', $page) }}"
+                class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:bg-slate-50"
+            >
+                <span>
+                    <span class="block text-sm font-semibold text-slate-900">{{ __('Visual Builder') }}</span>
+                    <span class="block text-xs text-slate-500">{{ __('Switch to the visual page builder.') }}</span>
+                </span>
+                <span class="text-sm font-semibold text-slate-500">{{ __('Open') }}</span>
+            </a>
+        </div>
+    </div>
+@endsection
 
-                        buttons.forEach(b => {
-                            b.classList.remove('border-primary','text-primary');
-                            b.classList.add('border-transparent','text-gray-500');
-                        });
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const buttons = document.querySelectorAll('.tab-btn');
+            const panels = document.querySelectorAll('.tab-panel');
 
-                        btn.classList.add('border-primary','text-primary');
+            buttons.forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const target = btn.getAttribute('data-tab');
 
-                        panels.forEach(panel => {
-                            panel.classList.toggle('hidden', panel.id !== target);
-                        });
+                    buttons.forEach((button) => {
+                        button.classList.remove('border-slate-900', 'text-slate-900');
+                        button.classList.add('border-transparent', 'text-slate-500');
+                    });
+
+                    btn.classList.add('border-slate-900', 'text-slate-900');
+                    btn.classList.remove('border-transparent', 'text-slate-500');
+
+                    panels.forEach((panel) => {
+                        panel.classList.toggle('hidden', panel.id !== target);
                     });
                 });
             });
-        </script>
-    @endpush
-</x-dashboard-layout>
+        });
+    </script>
+@endpush

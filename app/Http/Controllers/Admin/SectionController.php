@@ -9,246 +9,200 @@ use App\Models\Section;
 use App\Models\SectionTranslation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class SectionController extends Controller
 {
     /**
      * List all sections for a given marketing page.
-     *
-     * Route example:
-     *  GET /admin/pages/{page}/sections
-     *  Name: dashboard.pages.sections.index
      */
     public function index(Page $page)
     {
-        // Eager-load translations for better performance
+        $page->loadMissing('translations');
+
         $sections = Section::with('translations')
             ->where('page_id', $page->id)
             ->orderBy('order')
+            ->orderBy('id')
             ->get();
 
-        return view('dashboard.pages.sections.index', [
-            'page'     => $page,
-            'sections' => $sections,
-        ]);
-    }
-
-    /**
-     * Show the "Create Section" form for a specific page.
-     *
-     * Route example:
-     *  GET /admin/pages/{page}/sections/create
-     *  Name: dashboard.pages.sections.create
-     */
-    public function create(Page $page)
-    {
-        // Load active languages (used for multi-locale content)
         $languages = Language::where('is_active', true)
             ->orderBy('id')
             ->get();
 
-        // Pre-calc a suggested "order" (append to the end)
-        $nextOrder = Section::where('page_id', $page->id)->max('order');
-        $nextOrder = is_null($nextOrder) ? 1 : $nextOrder + 1;
+        return view('dashboard.pages.sections.index', [
+            'page'         => $page,
+            'sections'     => $sections,
+            'languages'    => $languages,
+            'sectionTypes' => $this->availableSectionTypes(),
+        ]);
+    }
 
-        // Available section types for the Page Builder
-        $sectionTypes = $this->availableSectionTypes();
+    /**
+     * Show the full create form for a specific page.
+     */
+    public function create(Page $page)
+    {
+        $languages = Language::where('is_active', true)
+            ->orderBy('id')
+            ->get();
 
-        // Make sure we have translations loaded for page title usage in breadcrumb, etc.
         $page->loadMissing('translations');
 
         return view('dashboard.pages.sections.create', [
             'page'         => $page,
             'languages'    => $languages,
-            'sectionTypes' => $sectionTypes,
-            'nextOrder'    => $nextOrder,
+            'sectionTypes' => $this->availableSectionTypes(),
+            'nextOrder'    => $this->nextOrderForPage($page),
         ]);
     }
 
     /**
-     * Store a newly created section and its translations for a specific page.
-     *
-     * Route example:
-     *  POST /admin/pages/{page}/sections
-     *  Name: dashboard.pages.sections.store
-     *
-     * Expected request shape (simplified):
-     *  - type, variant, order, is_active
-     *  - translations[LOCALE][locale]
-     *  - translations[LOCALE][title]
-     *  - translations[LOCALE][content] = array (structure depends on section type)
+     * Store a newly created section and its translations.
      */
     public function store(Request $request, Page $page)
     {
-        // Basic validation
         $validated = $request->validate([
-            'type'      => 'required|string|max:100',
+            'type'      => ['required', 'string', 'max:100', Rule::in($this->availableSectionTypeKeys())],
             'variant'   => 'nullable|string|max:100',
+            'style'     => 'nullable|array',
             'order'     => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
 
-            'translations'                      => 'required|array',
-            'translations.*.locale'             => 'required|string',
-            'translations.*.title'              => 'nullable|string|max:255',
-            'translations.*.content'            => 'nullable|array',
+            'translations'           => 'required|array',
+            'translations.*.locale'  => 'required|string',
+            'translations.*.title'   => 'nullable|string|max:255',
+            'translations.*.content' => 'nullable|array',
         ]);
 
         DB::transaction(function () use ($validated, $page) {
-            // ترتيب السكشن
-            $order = $validated['order'] ?? null;
-            if ($order === null) {
-                $maxOrder = Section::where('page_id', $page->id)->max('order');
-                $order    = is_null($maxOrder) ? 1 : $maxOrder + 1;
-            }
+            $type = $validated['type'];
 
-            // إنشاء السكشن
             $section = Section::create([
                 'page_id'   => $page->id,
-                'type'      => $validated['type'],          // hero_default
+                'type'      => $type,
                 'variant'   => $validated['variant'] ?? null,
-                'order'     => $order,
+                'style'     => $validated['style'] ?? $this->defaultStyleForType($type),
+                'order'     => $validated['order'] ?? $this->nextOrderForPage($page),
                 'is_active' => (bool) ($validated['is_active'] ?? true),
             ]);
 
-            // إنشاء الترجمات
-            foreach ($validated['translations'] as $locale => $t) {
-                $content = $t['content'] ?? [];
-
-                // 👇 معالجة خاصة لـ Hero Default: تحويل الـ textarea → array
-                // إذا السكشن من نوع hero_default
-                if ($section->type === 'hero_default') {
-                    // features_textarea → features[]
-                    if (! empty($content['features_textarea'])) {
-                        $lines = preg_split('/\r\n|\r|\n/', (string) $content['features_textarea']);
-                        $features = collect($lines)
-                            ->map(fn($line) => trim($line))
-                            ->filter()
-                            ->values()
-                            ->all();
-
-                        $content['features'] = $features;
-                    }
-
-                    // لا نريد تخزين الـ features_textarea في JSON
-                    unset($content['features_textarea']);
-                }
+            foreach ($validated['translations'] as $translationData) {
+                $content = $this->normalizeContentByType($type, $translationData['content'] ?? []);
 
                 SectionTranslation::create([
                     'section_id' => $section->id,
-                    'locale'     => $t['locale'],
-                    'title'      => $t['title'] ?? null,
+                    'locale'     => $translationData['locale'],
+                    'title'      => $translationData['title'] ?? null,
                     'content'    => $content,
                 ]);
             }
         });
+
+        $this->normalizePageSectionOrders($page);
 
         return redirect()
             ->route('dashboard.pages.sections.index', $page)
             ->with('success', 'Section has been created successfully.');
     }
 
+    /**
+     * Quick-add a section from the workspace library, then open its editor.
+     */
+    public function quickStore(Request $request, Page $page)
+    {
+        $validated = $request->validate([
+            'type'    => ['required', 'string', 'max:100', Rule::in($this->availableSectionTypeKeys())],
+            'variant' => 'nullable|string|max:100',
+        ]);
+
+        $page->loadMissing('translations');
+        $createdSection = null;
+
+        DB::transaction(function () use ($page, $validated, &$createdSection) {
+            $createdSection = $this->createDefaultSection(
+                $page,
+                $validated['type'],
+                $validated['variant'] ?? null
+            );
+        });
+
+        return redirect()
+            ->route('dashboard.pages.sections.edit', [$page, $createdSection])
+            ->with('success', 'Section added. Continue customizing it in the editor.');
+    }
 
     /**
-     * Show the "Edit Section" form for a specific page section.
-     *
-     * Route example:
-     *  GET /admin/pages/{page}/sections/{section}/edit
-     *  Name: dashboard.pages.sections.edit
+     * Show the edit form for a specific page section.
      */
     public function edit(Page $page, Section $section)
     {
-        // Safety check: ensure the section really belongs to this page
-        if ($section->page_id !== $page->id) {
-            abort(404);
-        }
+        $this->ensureSectionBelongsToPage($page, $section);
 
-        // Load translations for the section and page
         $section->load('translations');
         $page->loadMissing('translations');
 
-        // Active languages for multi-locale content
         $languages = Language::where('is_active', true)
             ->orderBy('id')
             ->get();
-
-        // Section types registry
-        $sectionTypes = $this->availableSectionTypes();
 
         return view('dashboard.pages.sections.edit', [
             'page'         => $page,
             'section'      => $section,
             'languages'    => $languages,
-            'sectionTypes' => $sectionTypes,
+            'sectionTypes' => $this->availableSectionTypes(),
         ]);
     }
 
     /**
      * Update an existing section and its translations.
-     *
-     * Route example:
-     *  PUT/PATCH /admin/pages/{page}/sections/{section}
-     *  Name: dashboard.pages.sections.update
      */
     public function update(Request $request, Page $page, Section $section)
     {
-        if ($section->page_id !== $page->id) {
-            abort(404);
-        }
+        $this->ensureSectionBelongsToPage($page, $section);
 
         $validated = $request->validate([
-            'type'      => 'required|string|max:100',
+            'type'      => ['required', 'string', 'max:100', Rule::in($this->availableSectionTypeKeys())],
             'variant'   => 'nullable|string|max:100',
+            'style'     => 'nullable|array',
             'order'     => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
 
-            'translations'                      => 'required|array',
-            'translations.*.locale'             => 'required|string',
-            'translations.*.title'              => 'nullable|string|max:255',
-            'translations.*.content'            => 'nullable|array',
+            'translations'           => 'required|array',
+            'translations.*.locale'  => 'required|string',
+            'translations.*.title'   => 'nullable|string|max:255',
+            'translations.*.content' => 'nullable|array',
         ]);
 
         DB::transaction(function () use ($validated, $section) {
-            // تحديث السكشن نفسه
+            $type = $validated['type'];
+
             $section->update([
-                'type'      => $validated['type'],
+                'type'      => $type,
                 'variant'   => $validated['variant'] ?? null,
+                'style'     => $validated['style'] ?? $section->style,
                 'order'     => $validated['order'] ?? $section->order,
                 'is_active' => (bool) ($validated['is_active'] ?? false),
             ]);
 
-            $translationsData = $validated['translations'];
-            $locales          = [];
+            $locales = [];
 
-            foreach ($translationsData as $locale => $t) {
+            foreach ($validated['translations'] as $locale => $translationData) {
                 $locales[] = $locale;
-                $content   = $t['content'] ?? [];
-
-                // 👇 نفس المعالجة الخاصة لـ Hero Default
-                if ($section->type === 'hero_default') {
-                    if (! empty($content['features_textarea'])) {
-                        $lines = preg_split('/\r\n|\r|\n/', (string) $content['features_textarea']);
-                        $features = collect($lines)
-                            ->map(fn($line) => trim($line))
-                            ->filter()
-                            ->values()
-                            ->all();
-
-                        $content['features'] = $features;
-                    }
-                    unset($content['features_textarea']);
-                }
 
                 $translation = SectionTranslation::firstOrNew([
                     'section_id' => $section->id,
                     'locale'     => $locale,
                 ]);
 
-                $translation->title   = $t['title'] ?? null;
-                $translation->content = $content;
+                $translation->title = $translationData['title'] ?? null;
+                $translation->content = $this->normalizeContentByType(
+                    $type,
+                    $translationData['content'] ?? []
+                );
                 $translation->save();
             }
 
-            // (اختياري) حذف الترجمات للغات التي لم تعد موجودة في الفورم
             if (! empty($locales)) {
                 SectionTranslation::where('section_id', $section->id)
                     ->whereNotIn('locale', $locales)
@@ -256,27 +210,110 @@ class SectionController extends Controller
             }
         });
 
+        $this->normalizePageSectionOrders($page);
+
         return redirect()
             ->route('dashboard.pages.sections.index', $page)
             ->with('success', 'Section has been updated successfully.');
     }
 
+    /**
+     * Toggle section visibility without opening the editor.
+     */
+    public function toggleActive(Page $page, Section $section)
+    {
+        $this->ensureSectionBelongsToPage($page, $section);
+
+        $section->update([
+            'is_active' => ! $section->is_active,
+        ]);
+
+        return redirect()
+            ->back()
+            ->with('success', 'Section visibility has been updated.');
+    }
 
     /**
-     * Delete a section (and cascade delete translations via FK, if configured).
-     *
-     * Route example:
-     *  DELETE /admin/pages/{page}/sections/{section}
-     *  Name: dashboard.pages.sections.destroy
+     * Move a section up or down in the current page outline.
+     */
+    public function move(Request $request, Page $page, Section $section)
+    {
+        $this->ensureSectionBelongsToPage($page, $section);
+
+        $validated = $request->validate([
+            'direction' => ['required', Rule::in(['up', 'down'])],
+        ]);
+
+        $this->normalizePageSectionOrders($page);
+        $section->refresh();
+
+        $currentOrder = (int) ($section->order ?? 0);
+
+        $targetQuery = Section::where('page_id', $page->id)
+            ->where('id', '!=', $section->id);
+
+        $target = $validated['direction'] === 'up'
+            ? $targetQuery->where('order', '<', $currentOrder)->orderBy('order', 'desc')->first()
+            : $targetQuery->where('order', '>', $currentOrder)->orderBy('order')->first();
+
+        if (! $target) {
+            return redirect()->back();
+        }
+
+        DB::transaction(function () use ($section, $target, $currentOrder) {
+            $section->update(['order' => $target->order]);
+            $target->update(['order' => $currentOrder]);
+        });
+
+        return redirect()
+            ->back()
+            ->with('success', 'Section order has been updated.');
+    }
+
+    /**
+     * Duplicate a section as a new draft copy.
+     */
+    public function duplicate(Page $page, Section $section)
+    {
+        $this->ensureSectionBelongsToPage($page, $section);
+        $section->loadMissing('translations');
+
+        $duplicate = null;
+
+        DB::transaction(function () use ($page, $section, &$duplicate) {
+            $duplicate = Section::create([
+                'page_id'   => $page->id,
+                'type'      => $section->type,
+                'variant'   => $section->variant,
+                'style'     => $section->style,
+                'order'     => $this->nextOrderForPage($page),
+                'is_active' => false,
+            ]);
+
+            foreach ($section->translations as $translation) {
+                SectionTranslation::create([
+                    'section_id' => $duplicate->id,
+                    'locale'     => $translation->locale,
+                    'title'      => $translation->title ? $translation->title . ' (Copy)' : null,
+                    'content'    => $translation->content ?? [],
+                ]);
+            }
+        });
+
+        return redirect()
+            ->route('dashboard.pages.sections.index', ['page' => $page, 'highlight' => $duplicate->id])
+            ->with('success', 'Section duplicated as a draft copy.');
+    }
+
+    /**
+     * Delete a section.
      */
     public function destroy(Page $page, Section $section)
     {
-        // Safety check: ensure the section really belongs to this page
-        if ($section->page_id !== $page->id) {
-            abort(404);
-        }
+        $this->ensureSectionBelongsToPage($page, $section);
 
         $section->delete();
+        $this->normalizePageSectionOrders($page);
 
         return redirect()
             ->route('dashboard.pages.sections.index', $page)
@@ -284,19 +321,14 @@ class SectionController extends Controller
     }
 
     /**
-     * Helper: list of available section types for the Page Builder.
-     *
-     * Keys here MUST match the "type" values used in front/pages/page.blade.php:
-     *  hero, hero_default, features, features-2, features-3, cta, services,
-     *  templates, works, home-works, testimonials, blog, banner,
-     *  search-domain, templates-pages, hosting-plans, faq
+     * Registry of section types available to the workspace.
      */
     protected function availableSectionTypes(): array
     {
         return [
             'hero_default' => [
                 'type'        => 'hero_default',
-                'label'       => 'Hero – Default',
+                'label'       => 'Hero - Default',
                 'description' => 'Main hero with title, subtitle, 2 buttons, and media.',
                 'category'    => 'hero',
                 'preview'     => 'assets/admin/sections/hero-default.png',
@@ -304,7 +336,7 @@ class SectionController extends Controller
 
             'hero_minimal' => [
                 'type'        => 'hero_minimal',
-                'label'       => 'Hero – Minimal',
+                'label'       => 'Hero - Minimal',
                 'description' => 'Simple hero with title and single CTA.',
                 'category'    => 'hero',
                 'preview'     => 'assets/admin/sections/hero-minimal.png',
@@ -313,7 +345,7 @@ class SectionController extends Controller
             'features_grid' => [
                 'type'        => 'features_grid',
                 'label'       => 'Features Grid',
-                'description' => '4–6 feature cards in responsive grid.',
+                'description' => 'Grid of feature cards with a short intro.',
                 'category'    => 'features',
                 'preview'     => 'assets/admin/sections/features-grid.png',
             ],
@@ -321,7 +353,7 @@ class SectionController extends Controller
             'services_grid' => [
                 'type'        => 'services_grid',
                 'label'       => 'Services Grid',
-                'description' => 'Services with icons and short description.',
+                'description' => 'Services with icons and short descriptions.',
                 'category'    => 'services',
                 'preview'     => 'assets/admin/sections/services-grid.png',
             ],
@@ -329,7 +361,7 @@ class SectionController extends Controller
             'templates_showcase' => [
                 'type'        => 'templates_showcase',
                 'label'       => 'Templates Showcase',
-                'description' => 'Palgoals templates in grid or slider.',
+                'description' => 'Selected templates in a grid or slider.',
                 'category'    => 'templates',
                 'preview'     => 'assets/admin/sections/templates-showcase.png',
             ],
@@ -337,20 +369,14 @@ class SectionController extends Controller
     }
 
     /**
-     * Normalize translation "content" structure depending on section type.
-     *
-     * This is where we convert raw form content into a clean JSON schema
-     * used in the frontend components (hero_default, features, etc.).
-     *
-     * NOTE:
-     *  - You can keep forms simple (content[eyebrow], content[primary_button_label]...),
-     *    and we reshape here to nested arrays when needed.
+     * Convert form payloads into a stable JSON shape for frontend rendering.
      */
     protected function normalizeContentByType(string $type, array $content): array
     {
         switch ($type) {
             case 'hero_default':
-                $featuresRaw = $content['features_raw'] ?? ($content['features'] ?? '');
+                $featuresRaw = $content['features_textarea'] ?? ($content['features_raw'] ?? ($content['features'] ?? ''));
+
                 if (is_array($featuresRaw)) {
                     $features = array_values(array_filter(array_map('trim', $featuresRaw)));
                 } else {
@@ -386,5 +412,177 @@ class SectionController extends Controller
             default:
                 return $content;
         }
+    }
+
+    /**
+     * Create a section with lightweight defaults for the quick-add workflow.
+     */
+    protected function createDefaultSection(Page $page, string $type, ?string $variant = null): Section
+    {
+        $sectionTypes = $this->availableSectionTypes();
+        $label = $sectionTypes[$type]['label'] ?? ucfirst(str_replace('_', ' ', $type));
+
+        $section = Section::create([
+            'page_id'   => $page->id,
+            'type'      => $type,
+            'variant'   => $variant,
+            'style'     => $this->defaultStyleForType($type),
+            'order'     => $this->nextOrderForPage($page),
+            'is_active' => true,
+        ]);
+
+        foreach ($this->activeLocaleCodes() as $locale) {
+            $pageTitle = $page->translation($locale)?->title
+                ?? $page->translation()?->title
+                ?? ('Page #' . $page->id);
+
+            SectionTranslation::create([
+                'section_id' => $section->id,
+                'locale'     => $locale,
+                'title'      => $label,
+                'content'    => $this->defaultContentForType($type, $pageTitle),
+            ]);
+        }
+
+        return $section;
+    }
+
+    /**
+     * Seed starter content so a newly-added section is not completely empty.
+     */
+    protected function defaultContentForType(string $type, string $pageTitle): array
+    {
+        return match ($type) {
+            'hero_default' => [
+                'eyebrow'  => 'New section',
+                'title'    => $pageTitle,
+                'subtitle' => 'Update this hero from the section editor.',
+                'primary_button' => [
+                    'label' => 'Get Started',
+                    'url'   => '#',
+                ],
+                'secondary_button' => [
+                    'label' => 'Learn More',
+                    'url'   => '#',
+                ],
+                'features' => [
+                    'First benefit',
+                    'Second benefit',
+                ],
+                'media_type' => 'image',
+                'media_url'  => null,
+            ],
+
+            'hero_minimal' => [
+                'title'    => $pageTitle,
+                'subtitle' => 'Update this hero from the section editor.',
+                'primary_button' => [
+                    'label' => 'Get Started',
+                    'url'   => '#',
+                ],
+            ],
+
+            'features_grid' => [
+                'title'    => 'Why choose us',
+                'subtitle' => 'Add your key benefits here.',
+                'features' => [],
+            ],
+
+            'services_grid' => [
+                'title'    => 'Services',
+                'subtitle' => 'Highlight your core services.',
+                'items'    => [],
+            ],
+
+            'templates_showcase' => [
+                'title'    => 'Templates',
+                'subtitle' => 'Show your best templates.',
+                'items'    => [],
+            ],
+
+            default => [
+                'title'    => $pageTitle,
+                'subtitle' => '',
+            ],
+        };
+    }
+
+    /**
+     * Default style values for quick-created sections.
+     */
+    protected function defaultStyleForType(string $type): array
+    {
+        return match ($type) {
+            'hero_default' => [
+                'background_color' => 'bg-background dark:bg-gray-950',
+                'text_align'       => 'rtl:text-right ltr:text-left',
+                'padding_y'        => 'py-16 sm:py-20',
+            ],
+            default => [],
+        };
+    }
+
+    /**
+     * Keep orders contiguous after move/delete/manual changes.
+     */
+    protected function normalizePageSectionOrders(Page $page): void
+    {
+        $sections = Section::where('page_id', $page->id)
+            ->orderBy('order')
+            ->orderBy('id')
+            ->get(['id', 'order']);
+
+        foreach ($sections as $index => $item) {
+            $expectedOrder = $index + 1;
+
+            if ((int) ($item->order ?? 0) !== $expectedOrder) {
+                Section::whereKey($item->id)->update([
+                    'order' => $expectedOrder,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Guard route-model binding so a section cannot be edited from another page.
+     */
+    protected function ensureSectionBelongsToPage(Page $page, Section $section): void
+    {
+        if ($section->page_id !== $page->id) {
+            abort(404);
+        }
+    }
+
+    /**
+     * Return type keys for validation.
+     */
+    protected function availableSectionTypeKeys(): array
+    {
+        return array_keys($this->availableSectionTypes());
+    }
+
+    /**
+     * Return the next display order for a page.
+     */
+    protected function nextOrderForPage(Page $page): int
+    {
+        $maxOrder = Section::where('page_id', $page->id)->max('order');
+
+        return is_null($maxOrder) ? 1 : ((int) $maxOrder + 1);
+    }
+
+    /**
+     * Return active locale codes, with a safe fallback to the app locale.
+     */
+    protected function activeLocaleCodes(): array
+    {
+        $localeCodes = Language::where('is_active', true)
+            ->orderBy('id')
+            ->pluck('code')
+            ->filter()
+            ->values()
+            ->all();
+
+        return $localeCodes !== [] ? $localeCodes : [app()->getLocale()];
     }
 }
