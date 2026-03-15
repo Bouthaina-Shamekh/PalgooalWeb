@@ -1,4 +1,6 @@
 @php
+    use App\Models\Media;
+
     $formId = $formId ?? 'section-edit-form';
     $formAction = $formAction ?? route('dashboard.pages.sections.update', [$page, $section]);
     $formClass = $formClass ?? 'space-y-6';
@@ -29,6 +31,15 @@
         $feedbackClasses = $feedbackTone === 'error'
             ? 'border-red-200 bg-red-50 text-red-800'
             : 'border-emerald-200 bg-emerald-50 text-emerald-800';
+        $selectedType = old('type', $section->type);
+        $isHeroCampaign = $selectedType === 'hero_campaign';
+        $showEyebrowField = $selectedType === 'hero_default';
+        $showDescriptionField = $isHeroCampaign;
+        $showFeaturesHeadingField = $isHeroCampaign;
+        $showSecondaryButtonFields = $selectedType === 'hero_default';
+        $showFeaturesTextareaField = in_array($selectedType, ['hero_default', 'hero_campaign', 'features_grid'], true);
+        $showMediaTypeField = $selectedType === 'hero_default';
+        $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign'], true);
     @endphp
 
     <div
@@ -159,12 +170,29 @@
                     $eyebrowValue = $stringifyValue(old("translations.$code.content.eyebrow", $content['eyebrow'] ?? ''));
                     $heroTitleValue = $stringifyValue(old("translations.$code.content.title", $content['title'] ?? ''));
                     $subtitleValue = $stringifyValue(old("translations.$code.content.subtitle", $content['subtitle'] ?? ''));
+                    $descriptionValue = $stringifyValue(old("translations.$code.content.description", $content['description'] ?? ''));
+                    $featuresHeadingValue = $stringifyValue(old("translations.$code.content.features_heading", $content['features_heading'] ?? ''));
                     $primaryButtonLabelValue = $stringifyValue(old("translations.$code.content.primary_button.label", $primaryButton['label'] ?? ''));
                     $primaryButtonUrlValue = $stringifyValue(old("translations.$code.content.primary_button.url", $primaryButton['url'] ?? ''));
                     $secondaryButtonLabelValue = $stringifyValue(old("translations.$code.content.secondary_button.label", $secondaryButton['label'] ?? ''));
                     $secondaryButtonUrlValue = $stringifyValue(old("translations.$code.content.secondary_button.url", $secondaryButton['url'] ?? ''));
                     $mediaUrlValue = $stringifyValue(old("translations.$code.content.media_url", $content['media_url'] ?? ''));
                     $mediaTypeOld = old("translations.$code.content.media_type", $content['media_type'] ?? 'image');
+                    $campaignIllustrationValue = old("translations.$code.content.media_url", $content['media_url'] ?? null);
+                    $campaignIllustrationPreviewUrls = [];
+
+                    if ($isHeroCampaign) {
+                        if (is_numeric($campaignIllustrationValue)) {
+                            $mediaItem = Media::find((int) $campaignIllustrationValue);
+                            $campaignIllustrationPreviewUrls = $mediaItem?->url ? [$mediaItem->url] : [];
+                        } elseif (is_string($campaignIllustrationValue) && $campaignIllustrationValue !== '') {
+                            $campaignIllustrationPreviewUrls = [
+                                \Illuminate\Support\Str::startsWith($campaignIllustrationValue, ['http://', 'https://', '//', '/', 'data:'])
+                                    ? $campaignIllustrationValue
+                                    : asset($campaignIllustrationValue),
+                            ];
+                        }
+                    }
                 @endphp
 
                 <div
@@ -176,27 +204,47 @@
 
                     <div class="{{ $contentGridClass }}">
                         <div class="lg:col-span-2">
-                            <label class="block text-sm font-medium text-slate-700">{{ __('Section Title') }} ({{ $code }})</label>
+                            <div class="flex items-center justify-between gap-3">
+                                <label class="block text-sm font-medium text-slate-700">
+                                    {{ $isHeroCampaign ? __('Internal Label') : __('Section Title') }} ({{ $code }})
+                                </label>
+                                @if ($isHeroCampaign)
+                                    <span class="text-xs font-medium text-slate-400">{{ __('Used only in the workspace list') }}</span>
+                                @endif
+                            </div>
                             <input
                                 type="text"
                                 name="translations[{{ $code }}][title]"
                                 value="{{ $sectionTitleValue }}"
                                 class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                             >
+                            @if ($isHeroCampaign)
+                                <p class="mt-2 text-xs text-slate-500">{{ __('The front design uses the fields below, not this internal label.') }}</p>
+                            @endif
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">{{ __('Eyebrow') }}</label>
-                            <input
-                                type="text"
-                                name="translations[{{ $code }}][content][eyebrow]"
-                                value="{{ $eyebrowValue }}"
-                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                            >
-                        </div>
+                        @if ($isHeroCampaign)
+                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                {{ __('This hero uses one CTA button, a benefit grid, and one side illustration. Fill only the content that appears in the design.') }}
+                            </div>
+                        @endif
+
+                        @if ($showEyebrowField)
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Eyebrow') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][eyebrow]"
+                                    value="{{ $eyebrowValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
+                            </div>
+                        @endif
 
                         <div>
-                            <label class="block text-sm font-medium text-slate-700">{{ __('Hero Title') }}</label>
+                            <label class="block text-sm font-medium text-slate-700">
+                                {{ $isHeroCampaign ? __('Main Title - Line 1') : __('Main Title') }}
+                            </label>
                             <input
                                 type="text"
                                 name="translations[{{ $code }}][content][title]"
@@ -205,17 +253,44 @@
                             >
                         </div>
 
-                        <div class="lg:col-span-2">
-                            <label class="block text-sm font-medium text-slate-700">{{ __('Subtitle') }}</label>
+                        <div class="{{ $isHeroCampaign ? '' : 'lg:col-span-2' }}">
+                            <label class="block text-sm font-medium text-slate-700">
+                                {{ $isHeroCampaign ? __('Main Title - Line 2') : __('Subtitle') }}
+                            </label>
                             <textarea
                                 name="translations[{{ $code }}][content][subtitle]"
-                                rows="4"
+                                rows="3"
                                 class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                             >{{ $subtitleValue }}</textarea>
                         </div>
 
+                        @if ($showDescriptionField)
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Description') }}</label>
+                                <textarea
+                                    name="translations[{{ $code }}][content][description]"
+                                    rows="4"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >{{ $descriptionValue }}</textarea>
+                            </div>
+                        @endif
+
+                        @if ($showFeaturesHeadingField)
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Features Heading') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][features_heading]"
+                                    value="{{ $featuresHeadingValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
+                            </div>
+                        @endif
+
                         <div>
-                            <label class="block text-sm font-medium text-slate-700">{{ __('Primary Button Label') }}</label>
+                            <label class="block text-sm font-medium text-slate-700">
+                                {{ $isHeroCampaign ? __('CTA Button Label') : __('Primary Button Label') }}
+                            </label>
                             <input
                                 type="text"
                                 name="translations[{{ $code }}][content][primary_button][label]"
@@ -225,7 +300,9 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-slate-700">{{ __('Primary Button URL') }}</label>
+                            <label class="block text-sm font-medium text-slate-700">
+                                {{ $isHeroCampaign ? __('CTA Button URL') : __('Primary Button URL') }}
+                            </label>
                             <input
                                 type="text"
                                 name="translations[{{ $code }}][content][primary_button][url]"
@@ -234,56 +311,84 @@
                             >
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">{{ __('Secondary Button Label') }}</label>
-                            <input
-                                type="text"
-                                name="translations[{{ $code }}][content][secondary_button][label]"
-                                value="{{ $secondaryButtonLabelValue }}"
-                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                            >
-                        </div>
+                        @if ($showSecondaryButtonFields)
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Secondary Button Label') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][secondary_button][label]"
+                                    value="{{ $secondaryButtonLabelValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
+                            </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">{{ __('Secondary Button URL') }}</label>
-                            <input
-                                type="text"
-                                name="translations[{{ $code }}][content][secondary_button][url]"
-                                value="{{ $secondaryButtonUrlValue }}"
-                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                            >
-                        </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Secondary Button URL') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][secondary_button][url]"
+                                    value="{{ $secondaryButtonUrlValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
+                            </div>
+                        @endif
 
-                        <div class="lg:col-span-2">
-                            <label class="block text-sm font-medium text-slate-700">{{ __('Features (each line = one bullet)') }}</label>
-                            <textarea
-                                name="translations[{{ $code }}][content][features_textarea]"
-                                rows="5"
-                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                            >{{ $featuresTextarea }}</textarea>
-                            <p class="mt-2 text-xs text-slate-500">{{ __('Each line will be converted to a feature item.') }}</p>
-                        </div>
+                        @if ($showFeaturesTextareaField)
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">
+                                    {{ $isHeroCampaign ? __('Campaign Features') : __('Features (each line = one bullet)') }}
+                                </label>
+                                <textarea
+                                    name="translations[{{ $code }}][content][features_textarea]"
+                                    rows="{{ $isHeroCampaign ? '8' : '5' }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >{{ $featuresTextarea }}</textarea>
+                                <p class="mt-2 text-xs text-slate-500">
+                                    {{ $isHeroCampaign ? __('Each line becomes one campaign feature item in the two-column grid.') : __('Each line will be converted to a feature item.') }}
+                                </p>
+                            </div>
+                        @endif
 
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">{{ __('Media Type') }}</label>
-                            <select
-                                name="translations[{{ $code }}][content][media_type]"
-                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                            >
-                                <option value="image" {{ $mediaTypeOld === 'image' ? 'selected' : '' }}>Image</option>
-                                <option value="video" {{ $mediaTypeOld === 'video' ? 'selected' : '' }}>Video</option>
-                            </select>
-                        </div>
+                        @if ($showMediaTypeField)
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Media Type') }}</label>
+                                <select
+                                    name="translations[{{ $code }}][content][media_type]"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
+                                    <option value="image" {{ $mediaTypeOld === 'image' ? 'selected' : '' }}>Image</option>
+                                    <option value="video" {{ $mediaTypeOld === 'video' ? 'selected' : '' }}>Video</option>
+                                </select>
+                            </div>
+                        @endif
 
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">{{ __('Media URL') }}</label>
-                            <input
-                                type="text"
-                                name="translations[{{ $code }}][content][media_url]"
-                                value="{{ $mediaUrlValue }}"
-                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                            >
-                        </div>
+                        @if ($showMediaUrlField)
+                            @if ($isHeroCampaign)
+                                <div class="lg:col-span-2">
+                                    <x-dashboard.media-picker
+                                        :name="'translations['.$code.'][content][media_url]'"
+                                        :label="__('Illustration')"
+                                        :button-text="__('Choose From Media Library')"
+                                        :value="$campaignIllustrationValue"
+                                        :preview-urls="$campaignIllustrationPreviewUrls"
+                                        :multiple="false"
+                                        store-value="id"
+                                        data-shared-media-group="hero-campaign-illustration"
+                                    />
+                                    <p class="mt-2 text-xs text-slate-500">{{ __('This illustration is shared across all languages for this hero.') }}</p>
+                                </div>
+                            @else
+                                <div>
+                                    <label class="block text-sm font-medium text-slate-700">{{ __('Media URL') }}</label>
+                                    <input
+                                        type="text"
+                                        name="translations[{{ $code }}][content][media_url]"
+                                        value="{{ $mediaUrlValue }}"
+                                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    >
+                                </div>
+                            @endif
+                        @endif
                     </div>
                 </div>
             @endforeach

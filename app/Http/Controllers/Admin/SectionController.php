@@ -109,6 +109,11 @@ class SectionController extends Controller
             'translations.*.content' => 'nullable|array',
         ]);
 
+        $validated['translations'] = $this->syncSharedSectionContent(
+            $validated['type'],
+            $validated['translations'] ?? []
+        );
+
         DB::transaction(function () use ($validated, $page) {
             $type = $validated['type'];
 
@@ -220,6 +225,11 @@ class SectionController extends Controller
             'translations.*.title'   => 'nullable|string|max:255',
             'translations.*.content' => 'nullable|array',
         ]);
+
+        $validated['translations'] = $this->syncSharedSectionContent(
+            $validated['type'],
+            $validated['translations'] ?? []
+        );
 
         DB::transaction(function () use ($validated, $section) {
             $type = $validated['type'];
@@ -486,6 +496,14 @@ class SectionController extends Controller
                 'preview'     => 'assets/admin/sections/hero-minimal.png',
             ],
 
+            'hero_campaign' => [
+                'type'        => 'hero_campaign',
+                'label'       => 'Hero - Campaign',
+                'description' => 'Two-line hero with campaign benefits, CTA, and side illustration.',
+                'category'    => 'hero',
+                'preview'     => null,
+            ],
+
             'features_grid' => [
                 'type'        => 'features_grid',
                 'label'       => 'Features Grid',
@@ -519,39 +537,9 @@ class SectionController extends Controller
     {
         switch ($type) {
             case 'hero_default':
-                $featuresRaw = $content['features_textarea'] ?? ($content['features_raw'] ?? ($content['features'] ?? ''));
-
-                if (is_array($featuresRaw)) {
-                    $features = array_values(array_filter(array_map('trim', $featuresRaw)));
-                } else {
-                    $features = array_values(array_filter(
-                        array_map('trim', preg_split("/\r\n|\r|\n/", (string) $featuresRaw))
-                    ));
-                }
-
-                return [
-                    'eyebrow'  => $content['eyebrow'] ?? null,
-                    'title'    => $content['title'] ?? null,
-                    'subtitle' => $content['subtitle'] ?? null,
-
-                    'primary_button' => [
-                        'label' => $content['primary_button_label']
-                            ?? ($content['primary_button']['label'] ?? null),
-                        'url'   => $content['primary_button_url']
-                            ?? ($content['primary_button']['url'] ?? null),
-                    ],
-
-                    'secondary_button' => [
-                        'label' => $content['secondary_button_label']
-                            ?? ($content['secondary_button']['label'] ?? null),
-                        'url'   => $content['secondary_button_url']
-                            ?? ($content['secondary_button']['url'] ?? null),
-                    ],
-
-                    'features'   => $features,
-                    'media_type' => $content['media_type'] ?? 'image',
-                    'media_url'  => $content['media_url'] ?? null,
-                ];
+            case 'hero_minimal':
+            case 'hero_campaign':
+                return $this->normalizeHeroContent($content);
 
             default:
                 return $content;
@@ -626,6 +614,29 @@ class SectionController extends Controller
                 ],
             ],
 
+            'hero_campaign' => [
+                'title' => 'in 5 Minutes',
+                'subtitle' => 'Launch your website at Minimal Cost',
+                'description' => 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat.',
+                'features_heading' => 'The campaign includes:',
+                'primary_button' => [
+                    'label' => 'Choose Your template',
+                    'url' => '#',
+                ],
+                'features' => [
+                    'Choose Your Template',
+                    'Website Hosting',
+                    'Control Panel',
+                    'Email Addresses',
+                    'Private Domain',
+                    '24/7 technical support',
+                    'Private Domain',
+                    '24/7 technical support',
+                ],
+                'media_type' => 'image',
+                'media_url' => 'assets/tamplate/images/Fu.svg',
+            ],
+
             'features_grid' => [
                 'title'    => 'Why choose us',
                 'subtitle' => 'Add your key benefits here.',
@@ -662,8 +673,82 @@ class SectionController extends Controller
                 'text_align'       => 'rtl:text-right ltr:text-left',
                 'padding_y'        => 'py-16 sm:py-20',
             ],
+            'hero_campaign' => [
+                'padding_y' => 'pt-6 pb-8 lg:pt-10 lg:pb-18',
+            ],
             default => [],
         };
+    }
+
+    /**
+     * Normalize all hero-like section payloads to one stable structure.
+     */
+    protected function normalizeHeroContent(array $content): array
+    {
+        $featuresRaw = $content['features_textarea'] ?? ($content['features_raw'] ?? ($content['features'] ?? ''));
+
+        if (is_array($featuresRaw)) {
+            $features = array_values(array_filter(array_map(
+                static fn ($item) => is_scalar($item) ? trim((string) $item) : '',
+                $featuresRaw
+            )));
+        } else {
+            $features = array_values(array_filter(
+                array_map('trim', preg_split("/\r\n|\r|\n/", (string) $featuresRaw))
+            ));
+        }
+
+        return [
+            'eyebrow' => $content['eyebrow'] ?? null,
+            'title' => $content['title'] ?? null,
+            'subtitle' => $content['subtitle'] ?? null,
+            'description' => $content['description'] ?? null,
+            'features_heading' => $content['features_heading'] ?? null,
+
+            'primary_button' => [
+                'label' => $content['primary_button_label']
+                    ?? ($content['primary_button']['label'] ?? null),
+                'url' => $content['primary_button_url']
+                    ?? ($content['primary_button']['url'] ?? null),
+            ],
+
+            'secondary_button' => [
+                'label' => $content['secondary_button_label']
+                    ?? ($content['secondary_button']['label'] ?? null),
+                'url' => $content['secondary_button_url']
+                    ?? ($content['secondary_button']['url'] ?? null),
+            ],
+
+            'features' => $features,
+            'media_type' => $content['media_type'] ?? 'image',
+            'media_url' => $content['media_url'] ?? null,
+        ];
+    }
+
+    /**
+     * Copy shared non-translatable fields across locales for section types that need it.
+     */
+    protected function syncSharedSectionContent(string $type, array $translations): array
+    {
+        if ($type !== 'hero_campaign' || $translations === []) {
+            return $translations;
+        }
+
+        $sharedMedia = collect($translations)
+            ->map(fn ($translation) => data_get($translation, 'content.media_url'))
+            ->first(fn ($value) => ! is_null($value) && $value !== '');
+
+        if ($sharedMedia === null || $sharedMedia === '') {
+            return $translations;
+        }
+
+        foreach ($translations as $key => $translation) {
+            $content = is_array($translation['content'] ?? null) ? $translation['content'] : [];
+            $content['media_url'] = $sharedMedia;
+            $translations[$key]['content'] = $content;
+        }
+
+        return $translations;
     }
 
     /**

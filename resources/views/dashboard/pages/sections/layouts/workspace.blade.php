@@ -287,6 +287,14 @@
         </main>
     </div>
 
+    <script>
+        window.MEDIA_CONFIG = window.MEDIA_CONFIG || {};
+        window.MEDIA_CONFIG.baseUrl = window.MEDIA_CONFIG.baseUrl || @json(url('admin/media'));
+        window.MEDIA_CONFIG.csrfToken = window.MEDIA_CONFIG.csrfToken || @json(csrf_token());
+    </script>
+    <script src="{{ asset('assets/dashboard/js/media-picker.js') }}?v={{ filemtime(public_path('assets/dashboard/js/media-picker.js')) }}" defer></script>
+    @include('dashboard.partials.media-picker')
+
     @stack('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -343,6 +351,57 @@
             openButton?.addEventListener('click', function () {
                 applySidebarState(false);
                 persistSidebarState(false);
+            });
+
+            window.addEventListener('media-picker-confirmed', function (event) {
+                const targetInputId = event.detail?.targetInputId;
+                if (!targetInputId) {
+                    return;
+                }
+
+                const targetInput = document.getElementById(targetInputId);
+                const currentGroup = targetInput?.closest?.('[data-shared-media-group]');
+                const form = targetInput?.closest?.('[data-section-editor-form]');
+
+                if (!currentGroup || !form) {
+                    return;
+                }
+
+                const groupName = currentGroup.dataset.sharedMediaGroup;
+                const values = Array.isArray(event.detail?.values) ? event.detail.values : [];
+                const items = Array.isArray(event.detail?.items) ? event.detail.items : [];
+                const nextValue = values[0] ?? '';
+
+                form.querySelectorAll(`[data-shared-media-group="${groupName}"]`).forEach((group) => {
+                    const input = group.querySelector('input[type="hidden"]');
+                    const preview = group.querySelector('[id$="_preview"]');
+
+                    if (!input) {
+                        return;
+                    }
+
+                    input.value = nextValue;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+
+                    if (!preview) {
+                        return;
+                    }
+
+                    preview.innerHTML = '';
+                    items.forEach((item) => {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'relative h-20 w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900';
+
+                        const image = document.createElement('img');
+                        image.src = item.url || '';
+                        image.alt = item.name || '';
+                        image.className = 'h-full w-full object-cover';
+
+                        wrapper.appendChild(image);
+                        preview.appendChild(wrapper);
+                    });
+                });
             });
         });
 

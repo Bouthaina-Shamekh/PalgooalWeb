@@ -68,6 +68,15 @@
         ])
         @break
 
+    @case('hero_campaign')
+        @include('components.template.sections.hero_campaign', [
+            'section' => $section,
+            'title' => $fallbackTranslation?->title,
+            'content' => $content,
+            'variant' => $section->variant,
+        ])
+        @break
+
     @case('features_grid')
         <x-template.sections.features :data="$featuresData" />
         @break

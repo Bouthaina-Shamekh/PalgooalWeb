@@ -33,9 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeBtnEl = document.getElementById('media-picker-close');
     const confirmBtnEl = document.getElementById('media-picker-confirm');
 
-    // All trigger buttons that open the media picker
-    const openButtons = document.querySelectorAll('.btn-open-media-picker');
-
     /**
      * Elements for uploading media directly from inside the popup
      */
@@ -48,8 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     const popupDropzoneEl = document.getElementById('media-picker-dropzone');
 
-    // If there is no modal or open button, the picker is not used on this page
-    if (!modalEl || !gridEl || !openButtons.length) {
+    // If there is no modal on the page, the picker is not used here.
+    if (!modalEl || !gridEl) {
         return;
     }
 
@@ -614,33 +611,30 @@ document.addEventListener('DOMContentLoaded', () => {
      */
 
     /**
-     * Open buttons: each one is bound to a specific hidden input and preview.
-     * Uses data attributes:
-     *  - data-target-input
-     *  - data-target-preview
-     *  - data-multiple
+     * Open buttons are handled through event delegation so the picker also works
+     * for forms injected later (for example inline editors loaded via AJAX).
      */
-    openButtons.forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const targetInputId = btn.dataset.targetInput;
-            const previewContainerId = btn.dataset.targetPreview || null;
-            const multiple = btn.dataset.multiple === 'true';
-            const storeValue = btn.dataset.storeValue || 'id';
+    document.addEventListener('click', (event) => {
+        const btn = event.target.closest('.btn-open-media-picker');
+        if (!btn) {
+            return;
+        }
 
-            if (!targetInputId) {
-                console.warn(
-                    '[MediaPicker] data-target-input is not defined on button:',
-                    btn
-                );
-                return;
-            }
+        const targetInputId = btn.dataset.targetInput;
+        const previewContainerId = btn.dataset.targetPreview || null;
+        const multiple = btn.dataset.multiple === 'true';
+        const storeValue = btn.dataset.storeValue || 'id';
 
-            openPicker({
-                targetInputId,
-                previewContainerId,
-                multiple,
-                storeValue,
-            });
+        if (!targetInputId) {
+            console.warn('[MediaPicker] data-target-input is not defined on button:', btn);
+            return;
+        }
+
+        openPicker({
+            targetInputId,
+            previewContainerId,
+            multiple,
+            storeValue,
         });
     });
 
