@@ -26,6 +26,16 @@
 
 }
 
+/* Prevent horizontal overflow on mobile - fix for extra space on the right */
+html {
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
+body {
+    max-width: 100%;
+}
+
 @layer base {
     body, * {
         font-family: "Almarai", sans-serif;
