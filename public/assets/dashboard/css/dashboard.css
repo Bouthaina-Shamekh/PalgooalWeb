@@ -1270,6 +1270,9 @@
   .max-h-\[95vh\] {
     max-height: 95vh;
   }
+  .max-h-\[calc\(100vh-16rem\)\] {
+    max-height: calc(100vh - 16rem);
+  }
   .max-h-full {
     max-height: 100%;
   }

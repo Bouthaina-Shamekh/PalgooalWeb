@@ -161,7 +161,11 @@ class SectionController extends Controller
             );
         });
 
-        $redirectUrl = route('dashboard.pages.sections.edit', [$page, $createdSection]);
+        $redirectUrl = route('dashboard.pages.sections.index', [
+            'page' => $page,
+            'highlight' => $createdSection->id,
+            'edit' => $createdSection->id,
+        ]);
 
         if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -184,19 +188,17 @@ class SectionController extends Controller
     {
         $this->ensureSectionBelongsToPage($page, $section);
 
-        $section->load('translations');
-        $page->loadMissing('translations');
+        return view('dashboard.pages.sections.edit', $this->sectionEditorViewData($page, $section));
+    }
 
-        $languages = Language::where('is_active', true)
-            ->orderBy('id')
-            ->get();
+    /**
+     * Render the inline workspace editor panel for a specific section.
+     */
+    public function editor(Page $page, Section $section)
+    {
+        $this->ensureSectionBelongsToPage($page, $section);
 
-        return view('dashboard.pages.sections.edit', [
-            'page'         => $page,
-            'section'      => $section,
-            'languages'    => $languages,
-            'sectionTypes' => $this->availableSectionTypes(),
-        ]);
+        return view('dashboard.pages.sections.partials.sidebar-editor', $this->sectionEditorViewData($page, $section));
     }
 
     /**
@@ -257,8 +259,31 @@ class SectionController extends Controller
 
         $this->normalizePageSectionOrders($page);
 
+        $section->refresh()->load('translations');
+
+        if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
+            $typeLabel = $this->availableSectionTypes()[$section->type]['label']
+                ?? \Illuminate\Support\Str::headline(str_replace(['_', '-'], ' ', $section->type));
+
+            $translation = $section->translation(app()->getLocale()) ?? $section->translations->first();
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Section has been updated successfully.',
+                'section' => [
+                    'id' => $section->id,
+                    'title' => $translation?->title ?: $typeLabel,
+                    'type_label' => $typeLabel,
+                    'is_active' => (bool) $section->is_active,
+                ],
+            ]);
+        }
+
         return redirect()
-            ->route('dashboard.pages.sections.index', $page)
+            ->route('dashboard.pages.sections.index', [
+                'page' => $page,
+                'highlight' => $section->id,
+            ])
             ->with('success', 'Section has been updated successfully.');
     }
 
@@ -703,5 +728,25 @@ class SectionController extends Controller
             ->all();
 
         return $localeCodes !== [] ? $localeCodes : [app()->getLocale()];
+    }
+
+    /**
+     * Shared payload for the standalone edit page and inline workspace editor.
+     */
+    protected function sectionEditorViewData(Page $page, Section $section): array
+    {
+        $section->load('translations');
+        $page->loadMissing('translations');
+
+        $languages = Language::where('is_active', true)
+            ->orderBy('id')
+            ->get();
+
+        return [
+            'page' => $page,
+            'section' => $section,
+            'languages' => $languages,
+            'sectionTypes' => $this->availableSectionTypes(),
+        ];
     }
 }

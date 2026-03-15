@@ -5,6 +5,7 @@
     use App\Models\DomainTld;
     use App\Models\DomainTldPrice;
     use App\Models\Media;
+    use App\Models\Template;
     use Illuminate\Support\Str;
     use App\Support\SeoMeta;
     use App\Support\Sections\SectionRenderer;
@@ -213,6 +214,10 @@
             return [$type => $data];
         });
 
+    $legacySections = $page->sections
+        ->where('is_active', true)
+        ->values();
+
     $shouldRenderPublishedHtml = $selectedBuilderMode !== 'sections' && !empty($publishedHtml);
     $shouldRenderBuilderSections = $selectedBuilderMode !== 'sections'
         && !$shouldRenderPublishedHtml
@@ -220,7 +225,21 @@
     $shouldRenderLegacySections = $selectedBuilderMode !== 'visual'
         && !$shouldRenderPublishedHtml
         && !$shouldRenderBuilderSections
-        && $page->sections->isNotEmpty();
+        && $legacySections->isNotEmpty();
+
+    $legacyTemplates = collect();
+
+    if ($shouldRenderLegacySections && $legacySections->contains(fn ($section) => $section->type === 'templates_showcase')) {
+        $legacyTemplates = Template::query()
+            ->with([
+                'translations',
+                'categoryTemplate.translation',
+                'categoryTemplate.translations',
+            ])
+            ->latest('id')
+            ->limit(8)
+            ->get();
+    }
 @endphp
 
 {{-- =========================================================
@@ -289,20 +308,11 @@
 ========================================================== --}}
 @elseif ($shouldRenderLegacySections)
 
-    @foreach ($page->sections as $section)
-        @php
-            $key = $section->type;
-            $component = $sectionComponents[$key] ?? null;
-        @endphp
-
-        @if ($key === 'hero')
-            {!! \App\Support\Sections\SectionRenderer::render($section) !!}
-        @elseif ($component)
-            <x-dynamic-component
-                :component="'template.sections.' . $component"
-                :data="[]"
-            />
-        @endif
+    @foreach ($legacySections as $section)
+        @include('front.pages.partials.legacy-section', [
+            'section' => $section,
+            'templates' => $legacyTemplates,
+        ])
     @endforeach
 
 

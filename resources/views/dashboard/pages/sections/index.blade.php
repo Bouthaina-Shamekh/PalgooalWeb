@@ -11,6 +11,8 @@
     $drawerClosedTranslateClass = $isRtl ? '-translate-x-full' : 'translate-x-full';
     $previewBaseUrl = route('dashboard.pages.sections.preview', $page);
     $previewUrl = $previewBaseUrl . ($selectedSectionId ? ('?highlight=' . $selectedSectionId) : '');
+    $autoEditSectionId = (int) request('edit');
+    $editingSection = $autoEditSectionId > 0 ? $sections->firstWhere('id', $autoEditSectionId) : null;
 @endphp
 
 @extends('dashboard.pages.sections.layouts.workspace')
@@ -94,6 +96,23 @@
             background: #0f172a;
             color: #ffffff;
             box-shadow: 0 10px 24px -18px rgba(15, 23, 42, 0.55);
+        }
+
+        .sections-editor-loading {
+            display: grid;
+            place-items: center;
+            min-height: 16rem;
+            border: 1px dashed #cbd5e1;
+            border-radius: 1.5rem;
+            background: rgba(248, 250, 252, 0.92);
+            color: #64748b;
+        }
+
+        @media (min-width: 1280px) {
+            .sections-workspace-shell.is-section-editor-open .sections-workspace-sidebar-shell {
+                width: 34rem;
+                min-width: 34rem;
+            }
         }
     </style>
 @endpush
@@ -227,6 +246,7 @@
 @endsection
 
 @section('workspace-sidebar')
+    <div data-sections-sidebar-outline class="space-y-5 {{ $editingSection ? 'hidden' : '' }}">
     @if ($pageBuilderMode !== 'sections')
         <div class="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
             <h3 class="text-base font-semibold text-slate-900">{{ __('Sections are not the active builder yet') }}</h3>
@@ -272,26 +292,33 @@
                         $sidebarTypeMeta = $sectionTypes[$section->type] ?? null;
                         $sidebarTypeLabel = $sidebarTypeMeta['label'] ?? \Illuminate\Support\Str::headline(str_replace(['_', '-'], ' ', $section->type));
                         $sidebarTitle = $sidebarFallbackTranslation?->title ?: $sidebarTypeLabel;
+                        $editorUrl = route('dashboard.pages.sections.editor', [$page, $section]);
+                        $fallbackEditUrl = route('dashboard.pages.sections.edit', [$page, $section]);
                     @endphp
 
-                    <article data-section-id="{{ $section->id }}" class="sections-outline-item rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 transition hover:border-slate-300 {{ $selectedSectionId === $section->id ? 'is-selected' : '' }}">
+                    <article
+                        data-section-id="{{ $section->id }}"
+                        data-edit-section-url="{{ $editorUrl }}"
+                        data-edit-section-fallback-url="{{ $fallbackEditUrl }}"
+                        class="sections-outline-item rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 transition hover:border-slate-300 {{ $selectedSectionId === $section->id ? 'is-selected' : '' }}"
+                    >
                         <div class="flex items-center justify-between gap-3">
                             <div class="min-w-0 flex-1 ltr:text-left rtl:text-right">
-                                    <p class="truncate text-sm font-semibold text-slate-900">{{ $sidebarTitle }}</p>
+                                    <p data-section-title class="truncate text-sm font-semibold text-slate-900">{{ $sidebarTitle }}</p>
                                     <div class="mt-1 flex flex-wrap items-center gap-2 ltr:justify-start rtl:justify-end rtl:flex-row-reverse">
-                                        <span class="text-xs text-slate-500">{{ $sidebarTypeLabel }}</span>
-                                        <span class="rounded-full px-2 py-0.5 text-[11px] font-medium {{ $section->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' }}">
+                                        <span data-section-type-label class="text-xs text-slate-500">{{ $sidebarTypeLabel }}</span>
+                                        <span data-section-status class="rounded-full px-2 py-0.5 text-[11px] font-medium {{ $section->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' }}">
                                             {{ $section->is_active ? __('Active') : __('Hidden') }}
                                         </span>
                                     </div>
                             </div>
 
                             <div class="flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white/90 p-1 shadow-sm rtl:flex-row-reverse">
-                                <a href="{{ route('dashboard.pages.sections.edit', [$page, $section]) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900" aria-label="{{ __('Edit section') }}">
+                                <button type="button" data-edit-section-button class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900" aria-label="{{ __('Edit section') }}">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z" />
                                     </svg>
-                                </a>
+                                </button>
                                 <div class="relative">
                                     <button
                                         type="button"
@@ -394,12 +421,25 @@
             </div>
         </div>
     </div>
+    </div>
+
+    <div data-sections-sidebar-editor class="{{ $editingSection ? '' : 'hidden' }}">
+        @if ($editingSection)
+            @include('dashboard.pages.sections.partials.sidebar-editor', [
+                'page' => $page,
+                'section' => $editingSection,
+                'languages' => $languages,
+                'sectionTypes' => $sectionTypes,
+            ])
+        @endif
+    </div>
 @endsection
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const workspaceShell = document.getElementById('sections-workspace-shell');
             const overlay = document.getElementById('section-library-overlay');
             const drawer = document.getElementById('section-library-drawer');
             const hiddenTranslateClass = drawer?.dataset.closedTranslate || 'translate-x-full';
@@ -411,7 +451,10 @@
             const libraryForms = Array.from(document.querySelectorAll('form[data-library-item]'));
             const mainSortableList = document.getElementById('sections-workspace-list');
             const sidebarSortableList = document.querySelector('[data-sections-sortable-sidebar]');
+            const sidebarOutlinePanel = document.querySelector('[data-sections-sidebar-outline]');
+            const sidebarEditorPanel = document.querySelector('[data-sections-sidebar-editor]');
             const sidebarSectionItems = Array.from(document.querySelectorAll('#sections-outline-list [data-section-id]'));
+            const editSectionButtons = Array.from(document.querySelectorAll('[data-edit-section-button]'));
             const sectionMenuButtons = Array.from(document.querySelectorAll('[data-section-menu-button]'));
             const renameToggleButtons = Array.from(document.querySelectorAll('[data-rename-toggle]'));
             const renameCancelButtons = Array.from(document.querySelectorAll('[data-rename-cancel]'));
@@ -424,6 +467,13 @@
             const reorderFailedMessage = @json(__('Section order could not be updated. Please try again.'));
             const quickAddFailedMessage = @json(__('Section could not be added. Please try again.'));
             const quickAddLoadingLabel = @json(__('Adding...'));
+            const editorOpenFailedMessage = @json(__('Section editor could not be opened. Please try again.'));
+            const editorSaveFailedMessage = @json(__('Section could not be updated. Please review the form and try again.'));
+            const editorLoadingLabel = @json(__('Loading editor...'));
+            const editorSaveSuccessMessage = @json(__('Section has been updated successfully.'));
+            const activeStatusLabel = @json(__('Active'));
+            const hiddenStatusLabel = @json(__('Hidden'));
+            const autoEditSectionId = Number(@json($autoEditSectionId));
             const frameBaseUrl = previewFrame?.dataset.baseUrl || '';
             let currentSelectedSectionId = Number(@json($selectedSectionId));
 
@@ -431,6 +481,87 @@
                 sidebarSectionItems.forEach((item) => {
                     item.classList.toggle('is-selected', Number(item.dataset.sectionId || 0) === sectionId);
                 });
+            };
+
+            const setEditorMode = (isOpen) => {
+                workspaceShell?.classList.toggle('is-section-editor-open', isOpen);
+                sidebarOutlinePanel?.classList.toggle('hidden', isOpen);
+                sidebarEditorPanel?.classList.toggle('hidden', !isOpen);
+            };
+
+            const updateWorkspaceUrl = (editSectionId = null) => {
+                const url = new URL(window.location.href);
+
+                if (currentSelectedSectionId) {
+                    url.searchParams.set('highlight', String(currentSelectedSectionId));
+                } else {
+                    url.searchParams.delete('highlight');
+                }
+
+                if (editSectionId) {
+                    url.searchParams.set('edit', String(editSectionId));
+                } else {
+                    url.searchParams.delete('edit');
+                }
+
+                window.history.replaceState({}, '', url.toString());
+            };
+
+            const renderEditorFeedback = (root, tone, messages) => {
+                const feedback = root?.querySelector('[data-section-editor-feedback]');
+                const list = root?.querySelector('[data-section-editor-feedback-list]');
+                if (!feedback || !list) {
+                    return;
+                }
+
+                const safeMessages = Array.isArray(messages) ? messages.filter(Boolean) : [];
+                list.replaceChildren();
+                safeMessages.forEach((message) => {
+                    const item = document.createElement('li');
+                    item.textContent = message;
+                    list.appendChild(item);
+                });
+                list.classList.toggle('hidden', safeMessages.length === 0);
+                feedback.classList.toggle('hidden', safeMessages.length === 0);
+                feedback.classList.remove('border-red-200', 'bg-red-50', 'text-red-800', 'border-emerald-200', 'bg-emerald-50', 'text-emerald-800');
+
+                if (safeMessages.length > 0) {
+                    feedback.classList.add(
+                        tone === 'error' ? 'border-red-200' : 'border-emerald-200',
+                        tone === 'error' ? 'bg-red-50' : 'bg-emerald-50',
+                        tone === 'error' ? 'text-red-800' : 'text-emerald-800'
+                    );
+                }
+            };
+
+            const updateSidebarSectionCard = (sectionData) => {
+                if (!sectionData?.id) {
+                    return;
+                }
+
+                const article = document.querySelector(`#sections-outline-list [data-section-id="${sectionData.id}"]`);
+                if (!article) {
+                    return;
+                }
+
+                const title = article.querySelector('[data-section-title]');
+                const typeLabel = article.querySelector('[data-section-type-label]');
+                const status = article.querySelector('[data-section-status]');
+
+                if (title && sectionData.title) {
+                    title.textContent = sectionData.title;
+                }
+
+                if (typeLabel && sectionData.type_label) {
+                    typeLabel.textContent = sectionData.type_label;
+                }
+
+                if (status) {
+                    status.textContent = sectionData.is_active ? activeStatusLabel : hiddenStatusLabel;
+                    status.classList.remove('bg-emerald-50', 'text-emerald-700', 'bg-rose-50', 'text-rose-700');
+                    status.classList.add(sectionData.is_active ? 'bg-emerald-50' : 'bg-rose-50');
+                    status.classList.add(sectionData.is_active ? 'text-emerald-700' : 'text-rose-700');
+                }
             };
 
             const postPreviewHighlight = (sectionId) => {
@@ -471,6 +602,147 @@
                 }
 
                 postPreviewHighlight(currentSelectedSectionId);
+            };
+
+            const closeSectionEditor = () => {
+                setEditorMode(false);
+                if (sidebarEditorPanel) {
+                    sidebarEditorPanel.innerHTML = '';
+                }
+                updateWorkspaceUrl(null);
+            };
+
+            const bindSectionEditor = (root, sectionId) => {
+                if (!root) {
+                    return;
+                }
+
+                window.initSectionEditorTabs?.(root);
+
+                root.querySelectorAll('[data-close-section-editor]').forEach((button) => {
+                    button.addEventListener('click', closeSectionEditor);
+                });
+
+                const form = root.querySelector('[data-section-editor-form]');
+                if (!form) {
+                    return;
+                }
+
+                form.addEventListener('submit', async function (event) {
+                    event.preventDefault();
+
+                    const submitButtons = Array.from(root.querySelectorAll('[data-section-editor-submit]'));
+                    submitButtons.forEach((button) => {
+                        button.disabled = true;
+                        button.classList.add('opacity-70', 'pointer-events-none');
+                    });
+
+                    renderEditorFeedback(root, 'success', []);
+
+                    try {
+                        const response = await fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': csrfToken,
+                            },
+                            body: new FormData(form),
+                        });
+
+                        const payload = await response.json().catch(() => ({}));
+
+                        if (response.status === 422) {
+                            const validationMessages = Object.values(payload.errors || {}).flat();
+                            renderEditorFeedback(root, 'error', validationMessages.length ? validationMessages : [editorSaveFailedMessage]);
+                            return;
+                        }
+
+                        if (!response.ok || !payload.ok) {
+                            throw new Error(payload.message || 'editor_save_failed');
+                        }
+
+                        renderEditorFeedback(root, 'success', [payload.message || editorSaveSuccessMessage]);
+                        updateSidebarSectionCard(payload.section || {});
+                        focusSectionPreview(Number(payload.section?.id || sectionId), true);
+
+                        const editorHeading = root.querySelector('[data-section-editor-heading]');
+                        const editorType = root.querySelector('[data-section-editor-type]');
+                        const editorStatus = root.querySelector('[data-section-editor-status]');
+
+                        if (editorHeading && payload.section?.title) {
+                            editorHeading.textContent = payload.section.title;
+                        }
+
+                        if (editorType && payload.section?.type_label) {
+                            editorType.textContent = payload.section.type_label;
+                        }
+
+                        if (editorStatus) {
+                            editorStatus.textContent = payload.section?.is_active ? activeStatusLabel : hiddenStatusLabel;
+                            editorStatus.classList.remove('bg-emerald-50', 'text-emerald-700', 'bg-rose-50', 'text-rose-700');
+                            editorStatus.classList.add(payload.section?.is_active ? 'bg-emerald-50' : 'bg-rose-50');
+                            editorStatus.classList.add(payload.section?.is_active ? 'text-emerald-700' : 'text-rose-700');
+                        }
+                    } catch (error) {
+                        renderEditorFeedback(root, 'error', [
+                            error?.message && error.message !== 'editor_save_failed'
+                                ? error.message
+                                : editorSaveFailedMessage,
+                        ]);
+                    } finally {
+                        submitButtons.forEach((button) => {
+                            button.disabled = false;
+                            button.classList.remove('opacity-70', 'pointer-events-none');
+                        });
+                    }
+                });
+            };
+
+            const openSectionEditor = async (sectionId, editorUrl, fallbackUrl = '', shouldPushState = true) => {
+                if (!sidebarEditorPanel || !editorUrl) {
+                    if (fallbackUrl) {
+                        window.location.assign(fallbackUrl);
+                    }
+                    return;
+                }
+
+                currentSelectedSectionId = Number(sectionId || 0);
+                applySidebarSelection(currentSelectedSectionId);
+                closeAllSectionMenus();
+                closeAllRenamePanels();
+                setEditorMode(true);
+                sidebarEditorPanel.innerHTML = `<div class="sections-editor-loading">${editorLoadingLabel}</div>`;
+
+                if (shouldPushState) {
+                    updateWorkspaceUrl(currentSelectedSectionId);
+                }
+
+                try {
+                    const response = await fetch(editorUrl, {
+                        headers: {
+                            'Accept': 'text/html',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('editor_open_failed');
+                    }
+
+                    sidebarEditorPanel.innerHTML = await response.text();
+                    bindSectionEditor(sidebarEditorPanel, currentSelectedSectionId);
+                } catch (error) {
+                    setEditorMode(false);
+                    sidebarEditorPanel.innerHTML = '';
+
+                    if (fallbackUrl) {
+                        window.location.assign(fallbackUrl);
+                        return;
+                    }
+
+                    window.alert(editorOpenFailedMessage);
+                }
             };
 
             const applyPreviewDevice = (device) => {
@@ -527,6 +799,9 @@
                     closeDrawer();
                     closeAllSectionMenus();
                     closeAllRenamePanels();
+                    if (!sidebarEditorPanel?.classList.contains('hidden')) {
+                        closeSectionEditor();
+                    }
                 }
             });
 
@@ -584,6 +859,24 @@
                 button.addEventListener('click', function () {
                     const panel = button.closest('[data-rename-panel]');
                     panel?.classList.add('hidden');
+                });
+            });
+
+            editSectionButtons.forEach((button) => {
+                button.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    const article = button.closest('[data-section-id]');
+                    const sectionId = Number(article?.dataset.sectionId || 0);
+                    const editorUrl = article?.dataset.editSectionUrl || '';
+                    const fallbackUrl = article?.dataset.editSectionFallbackUrl || '';
+
+                    if (!sectionId) {
+                        return;
+                    }
+
+                    openSectionEditor(sectionId, editorUrl, fallbackUrl, true);
                 });
             });
 
@@ -785,6 +1078,24 @@
 
             applySidebarSelection(currentSelectedSectionId);
             applyPreviewDevice('desktop');
+
+            if (autoEditSectionId) {
+                if (sidebarEditorPanel?.querySelector('[data-section-editor-root]')) {
+                    setEditorMode(true);
+                    bindSectionEditor(sidebarEditorPanel, autoEditSectionId);
+                    updateWorkspaceUrl(autoEditSectionId);
+                } else {
+                    const autoEditItem = document.querySelector(`#sections-outline-list [data-section-id="${autoEditSectionId}"]`);
+                    if (autoEditItem) {
+                        openSectionEditor(
+                            autoEditSectionId,
+                            autoEditItem.dataset.editSectionUrl || '',
+                            autoEditItem.dataset.editSectionFallbackUrl || '',
+                            false
+                        );
+                    }
+                }
+            }
         });
     </script>
 @endpush

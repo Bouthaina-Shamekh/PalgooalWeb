@@ -1,9 +1,6 @@
 @php
-    use Illuminate\Support\Str;
-
     $pageTranslation = method_exists($page, 'translation') ? $page->translation() : null;
     $pageTitle = $pageTranslation?->title ?? $page->slug ?? ('#' . $page->id);
-    $currentLocale = app()->getLocale();
     $previewTitle = $pageTitle . ' - ' . __('Sections Preview');
     $previewDescription = __('Live preview for the sections workspace.');
 @endphp
@@ -28,7 +25,7 @@
 
         .sections-preview-block {
             position: relative;
-            scroll-margin-top: 1rem;
+            scroll-margin-top: calc(var(--sections-preview-top-offset, 0px) + 1rem);
             transition: box-shadow 180ms ease, transform 180ms ease, opacity 180ms ease;
         }
 
@@ -109,59 +106,6 @@
         <div class="sections-preview-page">
             <div class="sections-preview-shell">
                 @forelse ($sections as $section)
-                    @php
-                        $translation = method_exists($section, 'translation') ? $section->translation($currentLocale) : null;
-                        $fallbackTranslation = $translation ?? $section->translations->first();
-                        $content = is_array($fallbackTranslation?->content ?? null) ? $fallbackTranslation->content : [];
-                        $typeLabel = $sectionTypes[$section->type]['label'] ?? Str::headline(str_replace(['_', '-'], ' ', $section->type));
-
-                        $featureItems = collect(is_array($content['features'] ?? null) ? $content['features'] : [])
-                            ->map(function ($item) {
-                                if (is_string($item)) {
-                                    return [
-                                        'title' => $item,
-                                        'description' => '',
-                                        'icon' => null,
-                                    ];
-                                }
-
-                                if (is_array($item)) {
-                                    return [
-                                        'title' => $item['title'] ?? $item['label'] ?? __('Feature'),
-                                        'description' => $item['description'] ?? $item['subtitle'] ?? '',
-                                        'icon' => $item['icon'] ?? null,
-                                    ];
-                                }
-
-                                return null;
-                            })
-                            ->filter()
-                            ->values()
-                            ->all();
-
-                        $featuresData = [
-                            'title' => $fallbackTranslation?->title ?? ($content['title'] ?? $typeLabel),
-                            'subtitle' => $content['subtitle'] ?? '',
-                            'features' => $featureItems,
-                            'show_illustration' => array_key_exists('show_illustration', $content)
-                                ? (bool) $content['show_illustration']
-                                : true,
-                            'illustration' => $content['illustration'] ?? null,
-                        ];
-
-                        $servicesData = \App\Support\Sections\SectionQueryResolver::resolve('services', [
-                            'title' => $fallbackTranslation?->title ?? ($content['title'] ?? $typeLabel),
-                            'subtitle' => $content['subtitle'] ?? '',
-                            'limit' => $content['limit'] ?? 8,
-                            'order' => $content['order'] ?? 'order',
-                        ]);
-
-                        $templatesData = [
-                            'title' => $fallbackTranslation?->title ?? ($content['title'] ?? $typeLabel),
-                            'subtitle' => $content['subtitle'] ?? '',
-                        ];
-                    @endphp
-
                     <div
                         id="preview-section-{{ $section->id }}"
                         data-preview-section-id="{{ $section->id }}"
@@ -171,35 +115,11 @@
                             <div class="sections-preview-state">{{ __('Hidden') }}</div>
                         @endunless
 
-                        @switch($section->type)
-                            @case('hero_default')
-                            @case('hero_minimal')
-                                @include('components.template.sections.hero_default', [
-                                    'section' => $section,
-                                    'title' => $fallbackTranslation?->title,
-                                    'content' => $content,
-                                    'variant' => $section->variant,
-                                ])
-                                @break
-
-                            @case('features_grid')
-                                <x-template.sections.features :data="$featuresData" />
-                                @break
-
-                            @case('services_grid')
-                                @include('components.template.sections.services', ['data' => $servicesData])
-                                @break
-
-                            @case('templates_showcase')
-                                <x-template.sections.templates :data="$templatesData" :templates="$previewTemplates" />
-                                @break
-
-                            @default
-                                <div class="sections-preview-fallback">
-                                    <h2 class="text-xl font-semibold text-slate-900">{{ $typeLabel }}</h2>
-                                    <p class="mt-2 text-sm text-slate-600">{{ __('This section type does not have a preview renderer yet.') }}</p>
-                                </div>
-                        @endswitch
+                        @include('front.pages.partials.legacy-section', [
+                            'section' => $section,
+                            'sectionTypes' => $sectionTypes,
+                            'templates' => $previewTemplates,
+                        ])
                     </div>
                 @empty
                     <div class="sections-preview-empty">
@@ -222,6 +142,47 @@
         const initialHighlight = Number(@json($highlightSectionId));
         const currentOrigin = window.location.origin;
 
+        const getTopOverlayOffset = () => {
+            return Array.from(document.body.querySelectorAll('*'))
+                .reduce((maxOffset, element) => {
+                    const style = window.getComputedStyle(element);
+                    if (!['sticky', 'fixed'].includes(style.position)) {
+                        return maxOffset;
+                    }
+
+                    const rect = element.getBoundingClientRect();
+                    if (rect.height <= 0 || rect.width <= 0) {
+                        return maxOffset;
+                    }
+
+                    if (rect.top > 4 || rect.bottom <= 0) {
+                        return maxOffset;
+                    }
+
+                    return Math.max(maxOffset, rect.bottom);
+                }, 0);
+        };
+
+        const updatePreviewOffset = () => {
+            const offset = Math.ceil(getTopOverlayOffset());
+            document.documentElement.style.setProperty('--sections-preview-top-offset', `${offset}px`);
+            return offset;
+        };
+
+        const scrollSectionIntoView = (element) => {
+            if (!element) {
+                return;
+            }
+
+            const offset = updatePreviewOffset() + 16;
+            const targetTop = window.scrollY + element.getBoundingClientRect().top - offset;
+
+            window.scrollTo({
+                top: Math.max(targetTop, 0),
+                behavior: 'smooth',
+            });
+        };
+
         const setHighlightedSection = (sectionId, shouldScroll = true) => {
             if (!sectionId) {
                 return;
@@ -233,10 +194,7 @@
 
             const activeBlock = document.querySelector(`[data-preview-section-id="${sectionId}"]`);
             if (activeBlock && shouldScroll) {
-                activeBlock.scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center',
-                });
+                scrollSectionIntoView(activeBlock);
             }
         };
 
@@ -278,6 +236,10 @@
                 setHighlightedSection(Number(payload.sectionId || 0), true);
             }
         });
+
+        window.addEventListener('resize', updatePreviewOffset);
+
+        updatePreviewOffset();
 
         if (initialHighlight) {
             window.setTimeout(() => {

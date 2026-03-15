@@ -1,0 +1,64 @@
+@php
+    $currentLocale = app()->getLocale();
+    $sectionTranslation = method_exists($section, 'translation') ? $section->translation($currentLocale) : null;
+    $fallbackTranslation = $sectionTranslation ?? $section->translations->first();
+    $sectionTypeMeta = $sectionTypes[$section->type] ?? null;
+    $sectionTypeLabel = $sectionTypeMeta['label'] ?? \Illuminate\Support\Str::headline(str_replace(['_', '-'], ' ', $section->type));
+    $editorTitle = $fallbackTranslation?->title ?: $sectionTypeLabel;
+@endphp
+
+<div class="rounded-[2rem] border border-slate-200 bg-white shadow-sm" data-section-editor-root>
+    <div class="border-b border-slate-200 px-5 py-4">
+        <div class="flex items-start justify-between gap-3 rtl:flex-row-reverse">
+            <div class="min-w-0 flex-1">
+                <button
+                    type="button"
+                    data-close-section-editor
+                    class="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition hover:text-slate-900 rtl:flex-row-reverse"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6 4.5 12l6 6M19.5 12h-15" />
+                    </svg>
+                    <span>{{ __('Back to elements') }}</span>
+                </button>
+
+                <h3 class="mt-3 truncate text-lg font-semibold text-slate-900" data-section-editor-heading>{{ $editorTitle }}</h3>
+                <p class="mt-1 text-sm text-slate-500">{{ __('Update this section without leaving the workspace.') }}</p>
+
+                <div class="mt-3 flex flex-wrap items-center gap-2 rtl:flex-row-reverse">
+                    <span data-section-editor-type class="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                        {{ $sectionTypeLabel }}
+                    </span>
+                    <span
+                        data-section-editor-status
+                        class="rounded-full px-3 py-1 text-xs font-medium {{ $section->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' }}"
+                    >
+                        {{ $section->is_active ? __('Active') : __('Hidden') }}
+                    </span>
+                </div>
+            </div>
+
+            <button
+                type="submit"
+                form="sidebar-section-edit-form"
+                data-section-editor-submit
+                class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+                {{ __('Save') }}
+            </button>
+        </div>
+    </div>
+
+    <div class="workspace-scrollbar max-h-[calc(100vh-16rem)] overflow-y-auto px-5 py-5">
+        @include('dashboard.pages.sections.partials.editor-form', [
+            'formId' => 'sidebar-section-edit-form',
+            'formClass' => 'space-y-4',
+            'surfaceClass' => 'rounded-3xl border border-slate-200 bg-slate-50/70',
+            'sectionHeaderClass' => 'border-b border-slate-200 px-4 py-3',
+            'sectionBodyClass' => 'p-4',
+            'settingsGridClass' => 'grid grid-cols-1 gap-4',
+            'contentGridClass' => 'grid grid-cols-1 gap-4',
+            'showOrderField' => false,
+        ])
+    </div>
+</div>

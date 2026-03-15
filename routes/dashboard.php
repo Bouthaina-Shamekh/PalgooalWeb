@@ -228,6 +228,7 @@ Route::group([
             Route::post('sections/quick-store', [SectionController::class, 'quickStore'])->name('quick-store');
 
             // Edit an existing section
+            Route::get('sections/{section}/editor', [SectionController::class, 'editor'])->name('editor');
             Route::get('sections/{section}/edit', [SectionController::class, 'edit'])->name('edit');
 
             // Update section
