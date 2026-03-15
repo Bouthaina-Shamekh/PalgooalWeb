@@ -51,6 +51,7 @@
                                     <th>{{ t('dashboard.Homepage', 'Homepage') }}</th>
                                     <th>{{ t('dashboard.Status', 'Status') }}</th>
                                     <th>{{ t('dashboard.Date', 'Date') }}</th>
+                                    <th>{{ __('Builder') }}</th>
                                     <th>{{ t('dashboard.Action', 'Action') }}</th>
                                 </tr>
                             </thead>
@@ -61,6 +62,9 @@
                                         $title = $translation?->title ?? ($p->slug ?? '#' . $p->id);
                                         $slug = $translation?->slug ?? ($p->slug ?? '');
                                         $frontUrl = $p->is_home ? url('/') : ($slug ? url($slug) : url('/'));
+                                        $currentBuilderMode = in_array($p->builder_mode, ['visual', 'sections'], true)
+                                            ? $p->builder_mode
+                                            : ((($p->builder_structures_count ?? 0) > 0) ? 'visual' : ((($p->sections_count ?? 0) > 0) ? 'sections' : 'visual'));
                                     @endphp
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
@@ -116,6 +120,36 @@
                                             {{ optional($p->created_at)->translatedFormat('Y-m-d h:i A') }}
                                         </td>
 
+                                        <td>
+                                            <div class="space-y-2">
+                                                <span class="text-xs px-2 py-1 rounded {{ $currentBuilderMode === 'visual' ? 'bg-indigo-100 text-indigo-800' : 'bg-amber-100 text-amber-800' }}">
+                                                    {{ $currentBuilderMode === 'visual' ? __('Visual Builder') : __('Sections Builder') }}
+                                                </span>
+
+                                                <div class="flex items-center gap-1">
+                                                    <form action="{{ route('dashboard.pages.builder-mode', $p) }}"
+                                                        method="POST" class="inline">
+                                                        @csrf
+                                                        <input type="hidden" name="builder_mode" value="visual">
+                                                        <button type="submit"
+                                                            class="btn btn-sm {{ $currentBuilderMode === 'visual' ? 'btn-primary' : 'btn-light-primary' }}">
+                                                            {{ __('Visual') }}
+                                                        </button>
+                                                    </form>
+
+                                                    <form action="{{ route('dashboard.pages.builder-mode', $p) }}"
+                                                        method="POST" class="inline">
+                                                        @csrf
+                                                        <input type="hidden" name="builder_mode" value="sections">
+                                                        <button type="submit"
+                                                            class="btn btn-sm {{ $currentBuilderMode === 'sections' ? 'btn-warning' : 'btn-light-warning' }}">
+                                                            {{ __('Sections') }}
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </td>
+
                                         {{-- Actions --}}
                                         <td class="space-x-1 rtl:space-x-reverse">
                                             {{-- View --}}
@@ -149,15 +183,22 @@
                                             {{-- Page Builder --}}
                                             <a href="{{ route('dashboard.pages.builder', $p) }}"
                                                 class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
-                                                title="{{ __('Page Builder') }}">
+                                                title="{{ __('Visual Builder') }}">
                                                 <i class="ti ti-vector text-xl leading-none"></i>
+                                            </a>
+
+                                            {{-- Sections Builder --}}
+                                            <a href="{{ route('dashboard.pages.sections.index', $p) }}"
+                                                class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
+                                                title="{{ __('Sections Builder') }}">
+                                                <i class="ti ti-layout-list text-xl leading-none"></i>
                                             </a>
 
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center text-slate-500 py-4">
+                                        <td colspan="8" class="text-center text-slate-500 py-4">
                                             {{ __('لا توجد صفحات حتى الآن.') }}
                                         </td>
                                     </tr>

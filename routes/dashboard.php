@@ -193,6 +193,10 @@ Route::group([
             // Mark as homepage
             Route::post('/{page}/set-home', [PageController::class, 'setHome'])->name('set-home');
 
+            // Preferred builder mode (visual vs sections)
+            Route::post('/{page}/builder-mode', [PageController::class, 'updateBuilderMode'])
+                ->name('builder-mode');
+
             // Visual Page Builder (GrapesJS)
             Route::get('/{page}/builder', [PageBuilderController::class, 'edit'])->name('builder');
             Route::get('/{page}/builder/data', [PageBuilderController::class, 'loadData'])->name('builder.data');

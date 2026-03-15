@@ -8,6 +8,20 @@
     $isEdit        = isset($page) && $page?->exists;
     $defaultStatus = $isEdit ? (int) $page->is_active : 1;  // 1 = Published, 0 = Draft
     $defaultIsHome = $isEdit ? (int) $page->is_home   : 0;  // 1 = Homepage
+
+    $defaultBuilderMode = old('builder_mode');
+
+    if ($defaultBuilderMode === null) {
+        if ($isEdit && in_array($page->builder_mode, ['visual', 'sections'], true)) {
+            $defaultBuilderMode = $page->builder_mode;
+        } elseif ($isEdit && (($page->builder_structures_count ?? 0) > 0)) {
+            $defaultBuilderMode = 'visual';
+        } elseif ($isEdit && (($page->sections_count ?? 0) > 0)) {
+            $defaultBuilderMode = 'sections';
+        } else {
+            $defaultBuilderMode = 'visual';
+        }
+    }
 @endphp
 
 {{-- ===========================
@@ -290,6 +304,48 @@
         <h3 class="font-semibold">
             {{ t('dashboard.Publishing_Options', 'Publishing Options') }}
         </h3>
+
+        <div>
+            <label class="block font-semibold mb-1">
+                {{ __('Builder Type') }}
+            </label>
+
+            <label class="flex items-start gap-2">
+                <input
+                    type="radio"
+                    name="builder_mode"
+                    value="visual"
+                    class="form-radio mt-1"
+                    {{ $defaultBuilderMode === 'visual' ? 'checked' : '' }}
+                >
+                <span>
+                    <span class="block">{{ __('Visual Builder') }}</span>
+                    <span class="block text-xs text-gray-500">
+                        {{ __('Use the drag-and-drop page builder.') }}
+                    </span>
+                </span>
+            </label>
+
+            <label class="flex items-start gap-2 mt-2">
+                <input
+                    type="radio"
+                    name="builder_mode"
+                    value="sections"
+                    class="form-radio mt-1"
+                    {{ $defaultBuilderMode === 'sections' ? 'checked' : '' }}
+                >
+                <span>
+                    <span class="block">{{ __('Sections Builder') }}</span>
+                    <span class="block text-xs text-gray-500">
+                        {{ __('Use the per-section page builder from the dashboard.') }}
+                    </span>
+                </span>
+            </label>
+
+            @error('builder_mode')
+                <span class="text-red-500 text-sm">{{ $message }}</span>
+            @enderror
+        </div>
 
         {{-- Status (draft / published) --}}
         <div>

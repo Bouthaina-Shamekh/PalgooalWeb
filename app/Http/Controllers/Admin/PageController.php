@@ -17,6 +17,7 @@ class PageController extends Controller
     public function index()
     {
         $pages = Page::with('translations')
+            ->withCount(['sections', 'builderStructures'])
             ->where('context', 'marketing') // Only marketing-site pages
             ->orderBy('id', 'desc')
             ->paginate(20);
@@ -51,6 +52,7 @@ class PageController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'builder_mode' => 'required|in:visual,sections',
             'is_active'    => 'nullable|boolean',
             'is_home'      => 'nullable|boolean',
             'published_at' => 'nullable|date',
@@ -98,6 +100,7 @@ class PageController extends Controller
             // Create the base Page record (context = marketing)
             $page = Page::create([
                 'context'      => 'marketing',
+                'builder_mode' => $validated['builder_mode'],
                 'is_active'    => (bool) ($validated['is_active'] ?? false),
                 'is_home'      => (bool) ($validated['is_home'] ?? false),
                 'published_at' => $validated['published_at'] ?? null,
@@ -132,6 +135,7 @@ class PageController extends Controller
         }
 
         $page->load('translations');
+        $page->loadCount(['sections', 'builderStructures']);
 
         // Load all active languages to show per-locale fields
         $languages = Language::where('is_active', true)
@@ -151,6 +155,7 @@ class PageController extends Controller
         }
 
         $validated = $request->validate([
+            'builder_mode' => 'required|in:visual,sections',
             'is_active'    => 'nullable|boolean',
             'is_home'      => 'nullable|boolean',
             'published_at' => 'nullable|date',
@@ -195,6 +200,7 @@ class PageController extends Controller
         DB::transaction(function () use ($validated, $page) {
             // Update main page flags
             $page->update([
+                'builder_mode' => $validated['builder_mode'],
                 'is_active'    => (bool) ($validated['is_active'] ?? false),
                 'is_home'      => (bool) ($validated['is_home'] ?? false),
                 'published_at' => $validated['published_at'] ?? null,
@@ -277,5 +283,26 @@ class PageController extends Controller
         return redirect()
             ->back()
             ->with('success', 'تم تعيين الصفحة كصفحة رئيسية.');
+    }
+    /**
+     * Update the preferred builder mode for a marketing page.
+     */
+    public function updateBuilderMode(Request $request, Page $page)
+    {
+        if ($page->context !== 'marketing') {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'builder_mode' => 'required|in:visual,sections',
+        ]);
+
+        $page->update([
+            'builder_mode' => $validated['builder_mode'],
+        ]);
+
+        return redirect()
+            ->back()
+            ->with('success', 'تم تحديث نوع البلدر للصفحة.');
     }
 }

@@ -185,6 +185,10 @@
     $publishedCss = $builder?->published_css_path;
 
     $builderSections = $builder?->normalizedSections() ?? [];
+
+    $selectedBuilderMode = in_array($page->builder_mode, ['visual', 'sections'], true)
+        ? $page->builder_mode
+        : null;
 @endphp
 
 @extends('front.layouts.app')
@@ -208,12 +212,21 @@
 
             return [$type => $data];
         });
+
+    $shouldRenderPublishedHtml = $selectedBuilderMode !== 'sections' && !empty($publishedHtml);
+    $shouldRenderBuilderSections = $selectedBuilderMode !== 'sections'
+        && !$shouldRenderPublishedHtml
+        && !empty($builderSections);
+    $shouldRenderLegacySections = $selectedBuilderMode !== 'visual'
+        && !$shouldRenderPublishedHtml
+        && !$shouldRenderBuilderSections
+        && $page->sections->isNotEmpty();
 @endphp
 
 {{-- =========================================================
      CASE 1: Published Builder HTML (PRIMARY – like Elementor)
 ========================================================== --}}
-@if ($publishedHtml)
+@if ($shouldRenderPublishedHtml)
 
     @push('styles')
         @if ($publishedCss)
@@ -253,7 +266,7 @@
 {{-- =========================================================
      CASE 2: Builder Sections ONLY (no snapshot yet)
 ========================================================== --}}
-@elseif (!empty($builderSections))
+@elseif ($shouldRenderBuilderSections)
 
     @foreach ($builderSections as $builderSection)
         @php
@@ -274,7 +287,7 @@
 {{-- =========================================================
      CASE 3: Legacy Admin Sections
 ========================================================== --}}
-@elseif ($page->sections->isNotEmpty())
+@elseif ($shouldRenderLegacySections)
 
     @foreach ($page->sections as $section)
         @php
@@ -312,4 +325,3 @@
 
 @endif
 @endsection
-

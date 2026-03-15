@@ -22,6 +22,7 @@ class Page extends Model
     protected $fillable = [
         'context',
         'subscription_id',
+        'builder_mode',
         'is_active',
         'is_home',
         'published_at',
@@ -62,6 +63,14 @@ class Page extends Model
     public function builderStructure()
     {
         return $this->hasOne(PageBuilderStructure::class);
+    }
+
+    /**
+     * Relationship: all builder structure snapshots/records for this page.
+     */
+    public function builderStructures()
+    {
+        return $this->hasMany(PageBuilderStructure::class);
     }
 
     /**
