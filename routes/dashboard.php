@@ -236,6 +236,9 @@ Route::group([
             // Quick actions from the sections workspace
             Route::post('sections/{section}/toggle-active', [SectionController::class, 'toggleActive'])
                 ->name('toggle-active');
+            Route::post('sections/{section}/rename', [SectionController::class, 'rename'])
+                ->name('rename');
+            Route::post('sections/reorder', [SectionController::class, 'reorder'])->name('reorder');
             Route::post('sections/{section}/move', [SectionController::class, 'move'])->name('move');
             Route::post('sections/{section}/duplicate', [SectionController::class, 'duplicate'])
                 ->name('duplicate');

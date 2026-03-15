@@ -7,6 +7,7 @@ use App\Models\Language;
 use App\Models\Page;
 use App\Models\Section;
 use App\Models\SectionTranslation;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -234,6 +235,36 @@ class SectionController extends Controller
     }
 
     /**
+     * Quickly rename a section in a specific locale from the workspace.
+     */
+    public function rename(Request $request, Page $page, Section $section)
+    {
+        $this->ensureSectionBelongsToPage($page, $section);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'locale' => ['required', 'string', 'max:10'],
+        ]);
+
+        $translation = SectionTranslation::firstOrNew([
+            'section_id' => $section->id,
+            'locale' => $validated['locale'],
+        ]);
+
+        $translation->title = trim((string) $validated['title']);
+
+        if (! is_array($translation->content)) {
+            $translation->content = [];
+        }
+
+        $translation->save();
+
+        return redirect()
+            ->route('dashboard.pages.sections.index', ['page' => $page, 'highlight' => $section->id])
+            ->with('success', 'Section title has been updated.');
+    }
+
+    /**
      * Move a section up or down in the current page outline.
      */
     public function move(Request $request, Page $page, Section $section)
@@ -268,6 +299,50 @@ class SectionController extends Controller
         return redirect()
             ->back()
             ->with('success', 'Section order has been updated.');
+    }
+
+    /**
+     * Reorder all sections for the current page via drag and drop.
+     */
+    public function reorder(Request $request, Page $page): JsonResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'distinct'],
+        ]);
+
+        $orderedIds = collect($validated['ids'])
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        $pageSectionIds = Section::where('page_id', $page->id)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        if (
+            $orderedIds->count() !== $pageSectionIds->count()
+            || $orderedIds->diff($pageSectionIds)->isNotEmpty()
+            || $pageSectionIds->diff($orderedIds)->isNotEmpty()
+        ) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Invalid reorder payload.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($page, $orderedIds): void {
+            foreach ($orderedIds as $index => $id) {
+                Section::where('page_id', $page->id)
+                    ->where('id', $id)
+                    ->update(['order' => $index + 1]);
+            }
+        });
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Section order has been updated.',
+        ]);
     }
 
     /**

@@ -1578,6 +1578,9 @@
   .min-w-0 {
     min-width: calc(var(--spacing) * 0);
   }
+  .min-w-8 {
+    min-width: calc(var(--spacing) * 8);
+  }
   .min-w-40 {
     min-width: calc(var(--spacing) * 40);
   }
@@ -3773,6 +3776,10 @@
     --tw-tracking: 0.10em;
     letter-spacing: 0.10em;
   }
+  .tracking-\[0\.18em\] {
+    --tw-tracking: 0.18em;
+    letter-spacing: 0.18em;
+  }
   .tracking-\[0\.22em\] {
     --tw-tracking: 0.22em;
     letter-spacing: 0.22em;
@@ -4017,8 +4024,14 @@
   .text-rose-50 {
     color: var(--color-rose-50);
   }
+  .text-rose-400 {
+    color: var(--color-rose-400);
+  }
   .text-rose-500 {
     color: var(--color-rose-500);
+  }
+  .text-rose-600 {
+    color: var(--color-rose-600);
   }
   .text-rose-700 {
     color: var(--color-rose-700);
@@ -5520,6 +5533,13 @@
       }
     }
   }
+  .hover\:bg-rose-50 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-rose-50);
+      }
+    }
+  }
   .hover\:bg-rose-100 {
     &:hover {
       @media (hover: hover) {
@@ -5906,6 +5926,13 @@
     &:hover {
       @media (hover: hover) {
         color: var(--color-secondary);
+      }
+    }
+  }
+  .hover\:text-slate-700 {
+    &:hover {
+      @media (hover: hover) {
+        color: var(--color-slate-700);
       }
     }
   }
@@ -7586,6 +7613,11 @@
       left: calc(var(--spacing) * 3);
     }
   }
+  .ltr\:left-auto {
+    &:where(:dir(ltr), [dir="ltr"], [dir="ltr"] *) {
+      left: auto;
+    }
+  }
   .ltr\:\!ml-0 {
     &:where(:dir(ltr), [dir="ltr"], [dir="ltr"] *) {
       margin-left: calc(var(--spacing) * 0) !important;
@@ -7616,6 +7648,11 @@
   .ltr\:flex-row {
     &:where(:dir(ltr), [dir="ltr"], [dir="ltr"] *) {
       flex-direction: row;
+    }
+  }
+  .ltr\:justify-start {
+    &:where(:dir(ltr), [dir="ltr"], [dir="ltr"] *) {
+      justify-content: flex-start;
     }
   }
   .ltr\:pr-4 {
@@ -7733,6 +7770,11 @@
   .rtl\:flex-row-reverse {
     &:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
       flex-direction: row-reverse;
+    }
+  }
+  .rtl\:justify-end {
+    &:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
+      justify-content: flex-end;
     }
   }
   .rtl\:space-x-reverse {
