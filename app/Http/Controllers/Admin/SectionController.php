@@ -538,8 +538,10 @@ class SectionController extends Controller
         switch ($type) {
             case 'hero_default':
             case 'hero_minimal':
-            case 'hero_campaign':
                 return $this->normalizeHeroContent($content);
+
+            case 'hero_campaign':
+                return $this->normalizeHeroCampaignContent($content);
 
             default:
                 return $content;
@@ -624,14 +626,14 @@ class SectionController extends Controller
                     'url' => '#',
                 ],
                 'features' => [
-                    'Choose Your Template',
-                    'Website Hosting',
-                    'Control Panel',
-                    'Email Addresses',
-                    'Private Domain',
-                    '24/7 technical support',
-                    'Private Domain',
-                    '24/7 technical support',
+                    ['text' => 'Choose Your Template', 'icon' => 'ti ti-layout-grid'],
+                    ['text' => 'Website Hosting', 'icon' => 'ti ti-server'],
+                    ['text' => 'Control Panel', 'icon' => 'ti ti-settings'],
+                    ['text' => 'Email Addresses', 'icon' => 'ti ti-mail'],
+                    ['text' => 'Private Domain', 'icon' => 'ti ti-world'],
+                    ['text' => '24/7 technical support', 'icon' => 'ti ti-headset'],
+                    ['text' => 'Private Domain', 'icon' => 'ti ti-world'],
+                    ['text' => '24/7 technical support', 'icon' => 'ti ti-headset'],
                 ],
                 'media_type' => 'image',
                 'media_url' => 'assets/tamplate/images/Fu.svg',
@@ -723,6 +725,104 @@ class SectionController extends Controller
             'media_type' => $content['media_type'] ?? 'image',
             'media_url' => $content['media_url'] ?? null,
         ];
+    }
+
+    /**
+     * Normalize the campaign hero payload while preserving per-feature icon choices.
+     */
+    protected function normalizeHeroCampaignContent(array $content): array
+    {
+        return [
+            'eyebrow' => $content['eyebrow'] ?? null,
+            'title' => $content['title'] ?? null,
+            'subtitle' => $content['subtitle'] ?? null,
+            'description' => $content['description'] ?? null,
+            'features_heading' => $content['features_heading'] ?? null,
+
+            'primary_button' => [
+                'label' => $content['primary_button_label']
+                    ?? ($content['primary_button']['label'] ?? null),
+                'url' => $content['primary_button_url']
+                    ?? ($content['primary_button']['url'] ?? null),
+            ],
+
+            'secondary_button' => [
+                'label' => null,
+                'url' => null,
+            ],
+
+            'features' => $this->normalizeCampaignFeatureItems(
+                $content['features'] ?? ($content['features_textarea'] ?? '')
+            ),
+            'media_type' => $content['media_type'] ?? 'image',
+            'media_url' => $content['media_url'] ?? null,
+        ];
+    }
+
+    /**
+     * Convert campaign features into stable {text, icon} items.
+     *
+     * @return array<int, array{text: string, icon: string|null}>
+     */
+    protected function normalizeCampaignFeatureItems(mixed $featuresRaw): array
+    {
+        if (! is_array($featuresRaw)) {
+            return collect(preg_split("/\r\n|\r|\n/", (string) $featuresRaw))
+                ->map(fn ($item) => trim((string) $item))
+                ->filter()
+                ->values()
+                ->map(fn ($item) => [
+                    'text' => $item,
+                    'icon' => null,
+                ])
+                ->all();
+        }
+
+        return collect($featuresRaw)
+            ->map(function ($item): ?array {
+                if (is_string($item)) {
+                    $text = trim($item);
+
+                    return $text !== ''
+                        ? ['text' => $text, 'icon' => null]
+                        : null;
+                }
+
+                if (! is_array($item)) {
+                    return null;
+                }
+
+                $text = trim((string) ($item['text'] ?? $item['title'] ?? $item['label'] ?? ''));
+
+                if ($text === '') {
+                    return null;
+                }
+
+                return [
+                    'text' => $text,
+                    'icon' => $this->sanitizeFeatureIconClass($item['icon'] ?? null),
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Keep icon classes limited to safe class-name characters.
+     */
+    protected function sanitizeFeatureIconClass(mixed $icon): ?string
+    {
+        $value = trim((string) $icon);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $value = preg_replace('/[^A-Za-z0-9\-_ ]/', '', $value) ?? '';
+        $value = trim(preg_replace('/\s+/', ' ', $value) ?? '');
+
+        return $value !== '' ? $value : null;
     }
 
     /**

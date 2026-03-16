@@ -11,7 +11,46 @@
     $primaryLabel = $primaryButton['label'] ?? null;
     $primaryUrl = $primaryButton['url'] ?? null;
 
-    $features = is_array($content['features'] ?? null) ? $content['features'] : [];
+    $sanitizeIconClass = static function ($value): ?string {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $value = preg_replace('/[^A-Za-z0-9\-_ ]/', '', $value) ?? '';
+        $value = trim(preg_replace('/\s+/', ' ', $value) ?? '');
+
+        return $value !== '' ? $value : null;
+    };
+
+    $features = collect(is_array($content['features'] ?? null) ? $content['features'] : [])
+        ->map(function ($feature) use ($sanitizeIconClass): ?array {
+            if (is_string($feature)) {
+                $text = trim($feature);
+
+                return $text !== ''
+                    ? ['text' => $text, 'icon' => null]
+                    : null;
+            }
+
+            if (! is_array($feature)) {
+                return null;
+            }
+
+            $text = trim((string) ($feature['text'] ?? $feature['title'] ?? $feature['label'] ?? ''));
+
+            if ($text === '') {
+                return null;
+            }
+
+            return [
+                'text' => $text,
+                'icon' => $sanitizeIconClass($feature['icon'] ?? null),
+            ];
+        })
+        ->filter()
+        ->values();
     $rawMediaValue = $content['media_url'] ?? null;
     $mediaUrl = null;
 
@@ -52,15 +91,18 @@
                 </h3>
             @endif
 
-            @if (! empty($features))
+            @if ($features->isNotEmpty())
                 <div class="mb-10 grid grid-cols-1 gap-4 md:grid-cols-2">
                     @foreach ($features as $feature)
-                        @continue(blank($feature))
                         <div class="flex items-center gap-3 ltr:justify-start rtl:justify-start">
-                            <svg class="h-5 text-red-brand" fill="currentColor" viewBox="0 0 27 21" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                <path d="M8.4 15.9L2.1 9.6L0 11.7L8.4 20.1L26.4 2.1L24.3 0L8.4 15.9Z" fill="#BA112C" />
-                            </svg>
-                            <span class="text-base text-purple-brand md:text-xl">{{ $feature }}</span>
+                            @if ($feature['icon'])
+                                <i class="{{ $feature['icon'] }} text-xl text-red-brand md:text-2xl" aria-hidden="true"></i>
+                            @else
+                                <svg class="h-5 text-red-brand" fill="currentColor" viewBox="0 0 27 21" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <path d="M8.4 15.9L2.1 9.6L0 11.7L8.4 20.1L26.4 2.1L24.3 0L8.4 15.9Z" fill="#BA112C" />
+                                </svg>
+                            @endif
+                            <span class="text-base text-purple-brand md:text-xl">{{ $feature['text'] }}</span>
                         </div>
                     @endforeach
                 </div>

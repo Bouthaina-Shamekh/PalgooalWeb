@@ -16,6 +16,7 @@
     <title>{{ $pageTitle }} - {{ __('Sections Workspace') }}</title>
 
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}" id="palgoals-app-css">
+    <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/tabler-icons.min.css') }}">
 
     <style>
         .workspace-scrollbar::-webkit-scrollbar {
@@ -292,6 +293,7 @@
         window.MEDIA_CONFIG.baseUrl = window.MEDIA_CONFIG.baseUrl || @json(url('admin/media'));
         window.MEDIA_CONFIG.csrfToken = window.MEDIA_CONFIG.csrfToken || @json(csrf_token());
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="{{ asset('assets/dashboard/js/media-picker.js') }}?v={{ filemtime(public_path('assets/dashboard/js/media-picker.js')) }}" defer></script>
     @include('dashboard.partials.media-picker')
 
@@ -403,6 +405,9 @@
                     });
                 });
             });
+
+            window.initSectionEditorTabs?.(document);
+            window.initSectionFeatureRepeaters?.(document);
         });
 
         window.initSectionEditorTabs = function (scope) {
@@ -444,8 +449,183 @@
                     });
                 });
 
-                activateTab(buttons[0].dataset.tab || '');
+                const defaultTab = form.dataset.defaultEditorTab || buttons[0].dataset.tab || '';
+                const hasDefaultButton = buttons.some((button) => button.dataset.tab === defaultTab);
+
+                activateTab(hasDefaultButton ? defaultTab : (buttons[0].dataset.tab || ''));
                 form.dataset.editorTabsBound = '1';
+            });
+        };
+
+        window.initSectionFeatureRepeaters = function (scope) {
+            const root = scope instanceof Element || scope instanceof Document ? scope : document;
+            const repeaters = root.matches?.('[data-feature-repeater]')
+                ? [root]
+                : Array.from(root.querySelectorAll('[data-feature-repeater]'));
+
+            repeaters.forEach((repeater) => {
+                if (repeater.dataset.featureRepeaterBound === '1') {
+                    return;
+                }
+
+                const list = repeater.querySelector('[data-feature-items]');
+                const template = repeater.querySelector('template[data-feature-item-template]');
+                const emptyState = repeater.querySelector('[data-feature-empty]');
+                const addButtons = Array.from(repeater.querySelectorAll('[data-add-feature-item]'));
+
+                if (!list || !template) {
+                    repeater.dataset.featureRepeaterBound = '1';
+                    return;
+                }
+
+                const sanitizeIconClass = (value) => String(value || '')
+                    .replace(/[^A-Za-z0-9\-_ ]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                const renderIconPreview = (item) => {
+                    const preview = item.querySelector('[data-feature-icon-preview]');
+                    const input = item.querySelector('[data-feature-field="icon"]');
+
+                    if (!preview || !input) {
+                        return;
+                    }
+
+                    const iconClass = sanitizeIconClass(input.value);
+                    if (input.value !== iconClass) {
+                        input.value = iconClass;
+                    }
+
+                    preview.innerHTML = '';
+
+                    const icon = document.createElement('i');
+                    icon.className = `${iconClass || 'ti ti-check'} text-xl leading-none`;
+                    icon.setAttribute('aria-hidden', 'true');
+                    preview.appendChild(icon);
+                };
+
+                const reindexItems = () => {
+                    const items = Array.from(list.querySelectorAll('[data-feature-item]'));
+
+                    items.forEach((item, index) => {
+                        item.querySelectorAll('[data-name-template]').forEach((field) => {
+                            const templateName = field.dataset.nameTemplate || '';
+                            if (templateName) {
+                                field.name = templateName.replace(/__INDEX__/g, String(index));
+                            }
+                        });
+
+                        const numberBadge = item.querySelector('[data-feature-item-number]');
+                        if (numberBadge) {
+                            numberBadge.textContent = String(index + 1);
+                        }
+                    });
+
+                    if (emptyState) {
+                        emptyState.classList.toggle('hidden', items.length > 0);
+                    }
+                };
+
+                const bindFeatureItem = (item) => {
+                    if (!(item instanceof HTMLElement) || item.dataset.featureItemBound === '1') {
+                        return;
+                    }
+
+                    const iconInput = item.querySelector('[data-feature-field="icon"]');
+                    const textInput = item.querySelector('[data-feature-field="text"]');
+                    const removeButton = item.querySelector('[data-remove-feature-item]');
+                    const duplicateButton = item.querySelector('[data-duplicate-feature-item]');
+                    const presetButtons = Array.from(item.querySelectorAll('[data-feature-icon-preset]'));
+
+                    iconInput?.addEventListener('input', function () {
+                        renderIconPreview(item);
+                    });
+
+                    removeButton?.addEventListener('click', function () {
+                        item.remove();
+                        reindexItems();
+                    });
+
+                    duplicateButton?.addEventListener('click', function () {
+                        createFeatureItem({
+                            text: textInput?.value || '',
+                            icon: iconInput?.value || '',
+                        });
+                    });
+
+                    presetButtons.forEach((button) => {
+                        button.addEventListener('click', function () {
+                            if (!iconInput) {
+                                return;
+                            }
+
+                            iconInput.value = button.dataset.featureIconValue || '';
+                            renderIconPreview(item);
+                            iconInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        });
+                    });
+
+                    renderIconPreview(item);
+                    item.dataset.featureItemBound = '1';
+                };
+
+                const createFeatureItem = (seed = {}) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = template.innerHTML.trim();
+
+                    const item = wrapper.firstElementChild;
+                    if (!(item instanceof HTMLElement)) {
+                        return null;
+                    }
+
+                    list.appendChild(item);
+                    bindFeatureItem(item);
+
+                    const textInput = item.querySelector('[data-feature-field="text"]');
+                    const iconInput = item.querySelector('[data-feature-field="icon"]');
+
+                    if (textInput && typeof seed.text === 'string') {
+                        textInput.value = seed.text;
+                    }
+
+                    if (iconInput && typeof seed.icon === 'string') {
+                        iconInput.value = sanitizeIconClass(seed.icon);
+                    }
+
+                    renderIconPreview(item);
+                    reindexItems();
+
+                    return item;
+                };
+
+                addButtons.forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const item = createFeatureItem();
+                        const textInput = item?.querySelector('[data-feature-field="text"]');
+
+                        if (textInput instanceof HTMLElement) {
+                            window.setTimeout(() => textInput.focus(), 30);
+                        }
+                    });
+                });
+
+                Array.from(list.querySelectorAll('[data-feature-item]')).forEach(bindFeatureItem);
+
+                if (typeof Sortable !== 'undefined' && list.dataset.featureSortableBound !== '1') {
+                    Sortable.create(list, {
+                        animation: 160,
+                        handle: '[data-feature-drag-handle]',
+                        ghostClass: 'sections-sortable-ghost',
+                        chosenClass: 'sections-sortable-chosen',
+                        dragClass: 'sections-sortable-drag',
+                        onEnd: reindexItems,
+                    });
+
+                    list.dataset.featureSortableBound = '1';
+                }
+
+                reindexItems();
+                repeater.dataset.featureRepeaterBound = '1';
             });
         };
     </script>

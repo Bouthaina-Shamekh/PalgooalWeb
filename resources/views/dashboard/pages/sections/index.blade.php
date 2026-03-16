@@ -436,7 +436,6 @@
 @endsection
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const workspaceShell = document.getElementById('sections-workspace-shell');
@@ -618,6 +617,7 @@
                 }
 
                 window.initSectionEditorTabs?.(root);
+                window.initSectionFeatureRepeaters?.(root);
 
                 root.querySelectorAll('[data-close-section-editor]').forEach((button) => {
                     button.addEventListener('click', closeSectionEditor);

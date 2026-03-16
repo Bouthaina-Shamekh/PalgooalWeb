@@ -89,6 +89,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             window.initSectionEditorTabs?.(document);
+            window.initSectionFeatureRepeaters?.(document);
         });
     </script>
 @endpush

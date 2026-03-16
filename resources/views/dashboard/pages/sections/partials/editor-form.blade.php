@@ -13,6 +13,18 @@
     $feedbackMessage = $feedbackMessage ?? null;
     $feedbackTone = $feedbackTone ?? 'success';
     $viewErrors = $errors ?? new \Illuminate\Support\ViewErrorBag();
+    $editorLocaleCodes = collect($languages ?? [])->pluck('code')->filter()->values();
+    $editorDefaultLocale = $editorLocaleCodes->contains(app()->getLocale())
+        ? app()->getLocale()
+        : ($editorLocaleCodes->first() ?? app()->getLocale());
+    $heroCampaignIconPresets = [
+        ['label' => __('Template'), 'value' => 'ti ti-layout-grid'],
+        ['label' => __('Hosting'), 'value' => 'ti ti-server'],
+        ['label' => __('Settings'), 'value' => 'ti ti-settings'],
+        ['label' => __('Mail'), 'value' => 'ti ti-mail'],
+        ['label' => __('Domain'), 'value' => 'ti ti-world'],
+        ['label' => __('Support'), 'value' => 'ti ti-headset'],
+    ];
 @endphp
 
 <form
@@ -22,6 +34,7 @@
     class="{{ $formClass }}"
     data-section-editor-form
     data-section-id="{{ $section->id }}"
+    data-default-editor-tab="lang-{{ $editorDefaultLocale }}"
 >
     @csrf
     @method('PUT')
@@ -37,7 +50,8 @@
         $showDescriptionField = $isHeroCampaign;
         $showFeaturesHeadingField = $isHeroCampaign;
         $showSecondaryButtonFields = $selectedType === 'hero_default';
-        $showFeaturesTextareaField = in_array($selectedType, ['hero_default', 'hero_campaign', 'features_grid'], true);
+        $showFeatureRepeaterField = $isHeroCampaign;
+        $showFeaturesTextareaField = in_array($selectedType, ['hero_default', 'features_grid'], true);
         $showMediaTypeField = $selectedType === 'hero_default';
         $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign'], true);
     @endphp
@@ -133,7 +147,7 @@
                 <nav class="-mb-px flex flex-wrap gap-2" aria-label="Language tabs">
                     @foreach ($languages as $index => $language)
                         @php
-                            $active = $index === 0;
+                            $active = $language->code === $editorDefaultLocale;
                         @endphp
                         <button
                             type="button"
@@ -157,13 +171,55 @@
                     $secondaryButton = is_array($content['secondary_button'] ?? null) ? $content['secondary_button'] : [];
 
                     $featuresTextarea = old("translations.$code.content.features_textarea");
+                    $campaignFeatureItems = [];
 
                     if ($featuresTextarea === null) {
                         if (!empty($content['features']) && is_array($content['features'])) {
-                            $featuresTextarea = implode("\n", $content['features']);
+                            $featuresTextarea = collect($content['features'])
+                                ->map(function ($item) {
+                                    if (is_array($item)) {
+                                        return trim((string) ($item['text'] ?? $item['title'] ?? $item['label'] ?? ''));
+                                    }
+
+                                    return is_scalar($item) ? trim((string) $item) : '';
+                                })
+                                ->filter()
+                                ->implode("\n");
                         } else {
                             $featuresTextarea = '';
                         }
+                    }
+
+                    if ($isHeroCampaign) {
+                        $oldCampaignFeatures = old("translations.$code.content.features");
+                        $campaignFeaturesSource = is_array($oldCampaignFeatures)
+                            ? $oldCampaignFeatures
+                            : (is_array($content['features'] ?? null) ? $content['features'] : []);
+
+                        $campaignFeatureItems = collect($campaignFeaturesSource)
+                            ->map(function ($item) {
+                                if (is_array($item)) {
+                                    $text = trim((string) ($item['text'] ?? $item['title'] ?? $item['label'] ?? ''));
+                                    $icon = trim((string) ($item['icon'] ?? ''));
+                                } elseif (is_scalar($item)) {
+                                    $text = trim((string) $item);
+                                    $icon = '';
+                                } else {
+                                    return null;
+                                }
+
+                                if ($text === '') {
+                                    return null;
+                                }
+
+                                return [
+                                    'text' => $text,
+                                    'icon' => $icon,
+                                ];
+                            })
+                            ->filter()
+                            ->values()
+                            ->all();
                     }
 
                     $sectionTitleValue = $stringifyValue(old("translations.$code.title", $translation->title ?? ''));
@@ -198,7 +254,7 @@
                 <div
                     id="lang-{{ $code }}"
                     data-editor-tab-panel
-                    class="{{ $index === 0 ? '' : 'hidden' }}"
+                    class="{{ $code === $editorDefaultLocale ? '' : 'hidden' }}"
                 >
                     <input type="hidden" name="translations[{{ $code }}][locale]" value="{{ $code }}">
 
@@ -333,18 +389,257 @@
                             </div>
                         @endif
 
+                        @if ($showFeatureRepeaterField)
+                            <div class="lg:col-span-2" data-feature-repeater>
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Campaign Features') }}</label>
+                                        <p class="mt-1 text-xs text-slate-500">{{ __('Create structured feature items with their own icon and text.') }}</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        data-add-feature-item
+                                        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                    >
+                                        <i class="ti ti-plus text-base leading-none" aria-hidden="true"></i>
+                                        <span>{{ __('Add Feature') }}</span>
+                                    </button>
+                                </div>
+
+                                <div class="mt-3 rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
+                                    <div class="space-y-3" data-feature-items>
+                                        @foreach ($campaignFeatureItems as $featureIndex => $featureItem)
+                                            <article data-feature-item class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                                    <div class="flex items-center gap-3 rtl:flex-row-reverse">
+                                                        <button
+                                                            type="button"
+                                                            data-feature-drag-handle
+                                                            class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
+                                                            aria-label="{{ __('Reorder feature') }}"
+                                                        >
+                                                            <i class="ti ti-grip-vertical text-lg leading-none" aria-hidden="true"></i>
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="flex items-center gap-2 rtl:flex-row-reverse">
+                                                        <button
+                                                            type="button"
+                                                            data-duplicate-feature-item
+                                                            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                                                            aria-label="{{ __('Duplicate feature') }}"
+                                                        >
+                                                            <i class="ti ti-copy text-base leading-none" aria-hidden="true"></i>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            data-remove-feature-item
+                                                            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                                                            aria-label="{{ __('Remove feature') }}"
+                                                        >
+                                                            <i class="ti ti-trash text-base leading-none" aria-hidden="true"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mt-4 space-y-4">
+                                                    <div>
+                                                        <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                                            <label class="block text-sm font-medium text-slate-700">{{ __('Feature Text') }}</label>
+                                                            <span class="text-xs text-slate-400">{{ __('Visible on the page') }}</span>
+                                                        </div>
+                                                        <input
+                                                            type="text"
+                                                            name="translations[{{ $code }}][content][features][{{ $featureIndex }}][text]"
+                                                            data-name-template="translations[{{ $code }}][content][features][__INDEX__][text]"
+                                                            data-feature-field="text"
+                                                            value="{{ $featureItem['text'] ?? '' }}"
+                                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                            placeholder="{{ __('Example: 24/7 technical support') }}"
+                                                        >
+                                                        <p class="mt-2 text-xs text-slate-500">{{ __('This is the text shown next to the icon in the campaign grid.') }}</p>
+                                                    </div>
+
+                                                    <div class="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3">
+                                                        <div
+                                                            data-feature-icon-preview
+                                                            class="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl border border-red-brand/15 bg-red-brand/5 text-red-brand"
+                                                        >
+                                                            @if (! empty($featureItem['icon']))
+                                                                <i class="{{ $featureItem['icon'] }} text-2xl leading-none" aria-hidden="true"></i>
+                                                            @else
+                                                                <i class="ti ti-check text-2xl leading-none" aria-hidden="true"></i>
+                                                            @endif
+                                                        </div>
+
+                                                        <div>
+                                                            <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                                                <label class="block text-sm font-medium text-slate-700">{{ __('Icon') }}</label>
+                                                                <span class="text-xs text-slate-400">{{ __('Tabler class') }}</span>
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                name="translations[{{ $code }}][content][features][{{ $featureIndex }}][icon]"
+                                                                data-name-template="translations[{{ $code }}][content][features][__INDEX__][icon]"
+                                                                data-feature-field="icon"
+                                                                value="{{ $featureItem['icon'] ?? '' }}"
+                                                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                                placeholder="ti ti-layout-grid"
+                                                            >
+                                                            <p class="mt-2 text-xs text-slate-500">{{ __('Type a Tabler icon class, or choose one of the ready presets below.') }}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mt-4">
+                                                    <p class="mb-2 text-xs font-medium text-slate-400">{{ __('Quick Icon Presets') }}</p>
+                                                    <div class="flex flex-wrap gap-2">
+                                                    @foreach ($heroCampaignIconPresets as $preset)
+                                                        <button
+                                                            type="button"
+                                                            data-feature-icon-preset
+                                                            data-feature-icon-value="{{ $preset['value'] }}"
+                                                            class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-white hover:text-slate-800 rtl:flex-row-reverse"
+                                                        >
+                                                            <i class="{{ $preset['value'] }} text-base leading-none" aria-hidden="true"></i>
+                                                            <span>{{ $preset['label'] }}</span>
+                                                        </button>
+                                                    @endforeach
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        @endforeach
+                                    </div>
+
+                                    <div data-feature-empty class="{{ count($campaignFeatureItems) ? 'hidden ' : '' }}mt-3 rounded-2xl border border-dashed border-slate-300 bg-white/80 px-4 py-6 text-center text-sm text-slate-500">
+                                        {{ __('No campaign features yet. Add the first one to build the grid.') }}
+                                    </div>
+
+                                    <template data-feature-item-template>
+                                        <article data-feature-item class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                                <div class="flex items-center gap-3 rtl:flex-row-reverse">
+                                                    <button
+                                                        type="button"
+                                                        data-feature-drag-handle
+                                                        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
+                                                        aria-label="{{ __('Reorder feature') }}"
+                                                    >
+                                                        <i class="ti ti-grip-vertical text-lg leading-none" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+
+                                                <div class="flex items-center gap-2 rtl:flex-row-reverse">
+                                                    <button
+                                                        type="button"
+                                                        data-duplicate-feature-item
+                                                        class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                                                        aria-label="{{ __('Duplicate feature') }}"
+                                                    >
+                                                        <i class="ti ti-copy text-base leading-none" aria-hidden="true"></i>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        data-remove-feature-item
+                                                        class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                                                        aria-label="{{ __('Remove feature') }}"
+                                                    >
+                                                        <i class="ti ti-trash text-base leading-none" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-4 space-y-4">
+                                                <div>
+                                                    <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                                        <label class="block text-sm font-medium text-slate-700">{{ __('Feature Text') }}</label>
+                                                        <span class="text-xs text-slate-400">{{ __('Visible on the page') }}</span>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        name="translations[{{ $code }}][content][features][__INDEX__][text]"
+                                                        data-name-template="translations[{{ $code }}][content][features][__INDEX__][text]"
+                                                        data-feature-field="text"
+                                                        value=""
+                                                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                        placeholder="{{ __('Example: 24/7 technical support') }}"
+                                                    >
+                                                    <p class="mt-2 text-xs text-slate-500">{{ __('This is the text shown next to the icon in the campaign grid.') }}</p>
+                                                </div>
+
+                                                <div class="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3">
+                                                    <div
+                                                        data-feature-icon-preview
+                                                        class="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl border border-red-brand/15 bg-red-brand/5 text-red-brand"
+                                                    >
+                                                        <i class="ti ti-check text-2xl leading-none" aria-hidden="true"></i>
+                                                    </div>
+
+                                                    <div>
+                                                        <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                                            <label class="block text-sm font-medium text-slate-700">{{ __('Icon') }}</label>
+                                                            <span class="text-xs text-slate-400">{{ __('Tabler class') }}</span>
+                                                        </div>
+                                                        <input
+                                                            type="text"
+                                                            name="translations[{{ $code }}][content][features][__INDEX__][icon]"
+                                                            data-name-template="translations[{{ $code }}][content][features][__INDEX__][icon]"
+                                                            data-feature-field="icon"
+                                                            value=""
+                                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                            placeholder="ti ti-layout-grid"
+                                                        >
+                                                        <p class="mt-2 text-xs text-slate-500">{{ __('Type a Tabler icon class, or choose one of the ready presets below.') }}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-4">
+                                                <p class="mb-2 text-xs font-medium text-slate-400">{{ __('Quick Icon Presets') }}</p>
+                                                <div class="flex flex-wrap gap-2">
+                                                @foreach ($heroCampaignIconPresets as $preset)
+                                                    <button
+                                                        type="button"
+                                                        data-feature-icon-preset
+                                                        data-feature-icon-value="{{ $preset['value'] }}"
+                                                        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-white hover:text-slate-800 rtl:flex-row-reverse"
+                                                    >
+                                                        <i class="{{ $preset['value'] }} text-base leading-none" aria-hidden="true"></i>
+                                                        <span>{{ $preset['label'] }}</span>
+                                                    </button>
+                                                @endforeach
+                                                </div>
+                                            </div>
+                                        </article>
+                                    </template>
+
+                                    <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500 rtl:flex-row-reverse">
+                                        <span>{{ __('Each feature item keeps its own icon and text. Drag items to reorder them.') }}</span>
+                                        <button
+                                            type="button"
+                                            data-add-feature-item
+                                            class="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                                        >
+                                            <i class="ti ti-plus text-base leading-none" aria-hidden="true"></i>
+                                            <span>{{ __('Add Feature') }}</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
                         @if ($showFeaturesTextareaField)
                             <div class="lg:col-span-2">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ $isHeroCampaign ? __('Campaign Features') : __('Features (each line = one bullet)') }}
+                                    {{ __('Features (each line = one bullet)') }}
                                 </label>
                                 <textarea
                                     name="translations[{{ $code }}][content][features_textarea]"
-                                    rows="{{ $isHeroCampaign ? '8' : '5' }}"
+                                    rows="5"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >{{ $featuresTextarea }}</textarea>
                                 <p class="mt-2 text-xs text-slate-500">
-                                    {{ $isHeroCampaign ? __('Each line becomes one campaign feature item in the two-column grid.') : __('Each line will be converted to a feature item.') }}
+                                    {{ __('Each line will be converted to a feature item.') }}
                                 </p>
                             </div>
                         @endif
