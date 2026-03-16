@@ -512,6 +512,14 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
+            'mobile_app_showcase' => [
+                'type'        => 'mobile_app_showcase',
+                'label'       => 'Mobile App Showcase',
+                'description' => 'Mobile app department section with brand label, CTA, and a three-image gallery.',
+                'category'    => 'services',
+                'preview'     => null,
+            ],
+
             'features_grid' => [
                 'type'        => 'features_grid',
                 'label'       => 'Features Grid',
@@ -553,6 +561,9 @@ class SectionController extends Controller
 
             case 'programming_showcase':
                 return $this->normalizeProgrammingContent($content);
+
+            case 'mobile_app_showcase':
+                return $this->normalizeMobileAppContent($content);
 
             default:
                 return $content;
@@ -676,6 +687,20 @@ class SectionController extends Controller
                 'media_url' => 'assets/tamplate/images/tech company-rafiki.svg',
             ],
 
+            'mobile_app_showcase' => [
+                'brand_prefix' => 'PAL',
+                'brand_suffix' => 'GOALS',
+                'title' => 'MOBILE APP',
+                'description' => 'The Mobile Programming Department harnesses cutting-edge technologies to craft seamless, high-performance applications. Its outputs reflect precision, creativity, and innovation that elevate user experiences to global standards.',
+                'primary_button' => [
+                    'label' => 'Send Your idea',
+                    'url' => '#',
+                ],
+                'image_one' => 'assets/dashboard/images/landing/img-productivity-1.png',
+                'image_two' => 'assets/dashboard/images/landing/img-productivity-2.png',
+                'image_three' => 'assets/dashboard/images/landing/business-presentation-1.png',
+            ],
+
             'services_grid' => [
                 'title'    => 'Services',
                 'subtitle' => 'Highlight your core services.',
@@ -710,6 +735,9 @@ class SectionController extends Controller
                 'padding_y' => 'pt-6 pb-8 lg:pt-10 lg:pb-18',
             ],
             'programming_showcase' => [
+                'padding_y' => 'py-16 lg:py-24',
+            ],
+            'mobile_app_showcase' => [
                 'padding_y' => 'py-16 lg:py-24',
             ],
             default => [],
@@ -830,6 +858,28 @@ class SectionController extends Controller
     }
 
     /**
+     * Normalize the mobile app showcase payload.
+     */
+    protected function normalizeMobileAppContent(array $content): array
+    {
+        return [
+            'brand_prefix' => $content['brand_prefix'] ?? null,
+            'brand_suffix' => $content['brand_suffix'] ?? null,
+            'title' => $content['title'] ?? null,
+            'description' => $content['description'] ?? null,
+            'primary_button' => [
+                'label' => $content['primary_button_label']
+                    ?? ($content['primary_button']['label'] ?? null),
+                'url' => $content['primary_button_url']
+                    ?? ($content['primary_button']['url'] ?? null),
+            ],
+            'image_one' => $content['image_one'] ?? null,
+            'image_two' => $content['image_two'] ?? null,
+            'image_three' => $content['image_three'] ?? null,
+        ];
+    }
+
+    /**
      * Convert campaign features into stable {text, icon} items.
      *
      * @return array<int, array{text: string, icon: string|null}>
@@ -900,22 +950,28 @@ class SectionController extends Controller
      */
     protected function syncSharedSectionContent(string $type, array $translations): array
     {
-        if (! in_array($type, ['hero_campaign', 'programming_showcase'], true) || $translations === []) {
+        if (! in_array($type, ['hero_campaign', 'programming_showcase', 'mobile_app_showcase'], true) || $translations === []) {
             return $translations;
         }
 
-        $sharedMedia = collect($translations)
-            ->map(fn ($translation) => data_get($translation, 'content.media_url'))
-            ->first(fn ($value) => ! is_null($value) && $value !== '');
+        $sharedKeys = $type === 'mobile_app_showcase'
+            ? ['image_one', 'image_two', 'image_three']
+            : ['media_url'];
 
-        if ($sharedMedia === null || $sharedMedia === '') {
-            return $translations;
-        }
+        foreach ($sharedKeys as $sharedKey) {
+            $sharedValue = collect($translations)
+                ->map(fn ($translation) => data_get($translation, "content.$sharedKey"))
+                ->first(fn ($value) => ! is_null($value) && $value !== '');
 
-        foreach ($translations as $key => $translation) {
-            $content = is_array($translation['content'] ?? null) ? $translation['content'] : [];
-            $content['media_url'] = $sharedMedia;
-            $translations[$key]['content'] = $content;
+            if ($sharedValue === null || $sharedValue === '') {
+                continue;
+            }
+
+            foreach ($translations as $key => $translation) {
+                $content = is_array($translation['content'] ?? null) ? $translation['content'] : [];
+                $content[$sharedKey] = $sharedValue;
+                $translations[$key]['content'] = $content;
+            }
         }
 
         return $translations;

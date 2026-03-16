@@ -86,6 +86,15 @@
         ])
         @break
 
+    @case('mobile_app_showcase')
+        @include('components.template.sections.mobile_app_showcase', [
+            'section' => $section,
+            'title' => $fallbackTranslation?->title,
+            'content' => $content,
+            'variant' => $section->variant,
+        ])
+        @break
+
     @case('features_grid')
         <x-template.sections.features :data="$featuresData" />
         @break

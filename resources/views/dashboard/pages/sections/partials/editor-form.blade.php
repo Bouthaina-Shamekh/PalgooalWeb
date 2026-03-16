@@ -47,19 +47,21 @@
         $selectedType = old('type', $section->type);
         $isHeroCampaign = $selectedType === 'hero_campaign';
         $isProgrammingShowcase = $selectedType === 'programming_showcase';
-        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase;
+        $isMobileAppShowcase = $selectedType === 'mobile_app_showcase';
+        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase;
         $showEyebrowField = $selectedType === 'hero_default';
-        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase;
+        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase;
         $showFeaturesHeadingField = $isHeroCampaign;
         $showOutputsHeadingField = $isProgrammingShowcase;
         $showOutputsTextareaField = $isProgrammingShowcase;
-        $showBrandFields = $isProgrammingShowcase;
+        $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase;
         $showSecondaryButtonFields = $selectedType === 'hero_default';
         $showFeatureRepeaterField = $isHeroCampaign;
         $showFeaturesTextareaField = in_array($selectedType, ['hero_default', 'features_grid'], true);
+        $showMobileAppGalleryField = $isMobileAppShowcase;
         $showMediaTypeField = $selectedType === 'hero_default';
         $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign', 'programming_showcase'], true);
-        $showSubtitleField = ! $isProgrammingShowcase;
+        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase'], true);
     @endphp
 
     <div
@@ -254,18 +256,39 @@
                     $mediaTypeOld = old("translations.$code.content.media_type", $content['media_type'] ?? 'image');
                     $campaignIllustrationValue = old("translations.$code.content.media_url", $content['media_url'] ?? null);
                     $campaignIllustrationPreviewUrls = [];
+                    $mobileAppImageOneValue = old("translations.$code.content.image_one", $content['image_one'] ?? null);
+                    $mobileAppImageTwoValue = old("translations.$code.content.image_two", $content['image_two'] ?? null);
+                    $mobileAppImageThreeValue = old("translations.$code.content.image_three", $content['image_three'] ?? null);
+                    $mobileAppImageOnePreviewUrls = [];
+                    $mobileAppImageTwoPreviewUrls = [];
+                    $mobileAppImageThreePreviewUrls = [];
 
-                    if ($isHeroCampaign || $isProgrammingShowcase) {
-                        if (is_numeric($campaignIllustrationValue)) {
-                            $mediaItem = Media::find((int) $campaignIllustrationValue);
-                            $campaignIllustrationPreviewUrls = $mediaItem?->url ? [$mediaItem->url] : [];
-                        } elseif (is_string($campaignIllustrationValue) && $campaignIllustrationValue !== '') {
-                            $campaignIllustrationPreviewUrls = [
-                                \Illuminate\Support\Str::startsWith($campaignIllustrationValue, ['http://', 'https://', '//', '/', 'data:'])
-                                    ? $campaignIllustrationValue
-                                    : asset($campaignIllustrationValue),
+                    $buildMediaPreviewUrls = static function ($value): array {
+                        if (is_numeric($value)) {
+                            $mediaItem = Media::find((int) $value);
+
+                            return $mediaItem?->url ? [$mediaItem->url] : [];
+                        }
+
+                        if (is_string($value) && $value !== '') {
+                            return [
+                                \Illuminate\Support\Str::startsWith($value, ['http://', 'https://', '//', '/', 'data:'])
+                                    ? $value
+                                    : asset($value),
                             ];
                         }
+
+                        return [];
+                    };
+
+                    if ($isHeroCampaign || $isProgrammingShowcase) {
+                        $campaignIllustrationPreviewUrls = $buildMediaPreviewUrls($campaignIllustrationValue);
+                    }
+
+                    if ($isMobileAppShowcase) {
+                        $mobileAppImageOnePreviewUrls = $buildMediaPreviewUrls($mobileAppImageOneValue);
+                        $mobileAppImageTwoPreviewUrls = $buildMediaPreviewUrls($mobileAppImageTwoValue);
+                        $mobileAppImageThreePreviewUrls = $buildMediaPreviewUrls($mobileAppImageThreeValue);
                     }
                 @endphp
 
@@ -306,6 +329,12 @@
                         @if ($isProgrammingShowcase)
                             <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 {{ __('This section uses a brand label, one main heading, an outputs list, one CTA button, and one featured image.') }}
+                            </div>
+                        @endif
+
+                        @if ($isMobileAppShowcase)
+                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                {{ __('This section uses a brand label, one main heading, one CTA button, and a three-image mobile gallery.') }}
                             </div>
                         @endif
 
@@ -715,6 +744,58 @@
                                 <p class="mt-2 text-xs text-slate-500">
                                     {{ __('Each line will be converted to a feature item.') }}
                                 </p>
+                            </div>
+                        @endif
+
+                        @if ($showMobileAppGalleryField)
+                            <div class="lg:col-span-2">
+                                <div class="mb-3">
+                                    <label class="block text-sm font-medium text-slate-700">{{ __('Mobile App Gallery') }}</label>
+                                    <p class="mt-1 text-xs text-slate-500">{{ __('Choose the three app screenshots shown in the left image grid.') }}</p>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                                    <div>
+                                        <x-dashboard.media-picker
+                                            :name="'translations['.$code.'][content][image_one]'"
+                                            :label="__('Image 1')"
+                                            :button-text="__('Choose From Media Library')"
+                                            :value="$mobileAppImageOneValue"
+                                            :preview-urls="$mobileAppImageOnePreviewUrls"
+                                            :multiple="false"
+                                            store-value="id"
+                                            data-shared-media-group="mobile-app-showcase-image-one"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <x-dashboard.media-picker
+                                            :name="'translations['.$code.'][content][image_two]'"
+                                            :label="__('Image 2')"
+                                            :button-text="__('Choose From Media Library')"
+                                            :value="$mobileAppImageTwoValue"
+                                            :preview-urls="$mobileAppImageTwoPreviewUrls"
+                                            :multiple="false"
+                                            store-value="id"
+                                            data-shared-media-group="mobile-app-showcase-image-two"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <x-dashboard.media-picker
+                                            :name="'translations['.$code.'][content][image_three]'"
+                                            :label="__('Image 3')"
+                                            :button-text="__('Choose From Media Library')"
+                                            :value="$mobileAppImageThreeValue"
+                                            :preview-urls="$mobileAppImageThreePreviewUrls"
+                                            :multiple="false"
+                                            store-value="id"
+                                            data-shared-media-group="mobile-app-showcase-image-three"
+                                        />
+                                    </div>
+                                </div>
+
+                                <p class="mt-2 text-xs text-slate-500">{{ __('These gallery images are shared across all languages for this section.') }}</p>
                             </div>
                         @endif
 
