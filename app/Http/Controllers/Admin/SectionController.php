@@ -552,6 +552,14 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
+            'reviews_showcase' => [
+                'type'        => 'reviews_showcase',
+                'label'       => 'Reviews Showcase',
+                'description' => 'Reviews slider with brand heading, intro text, and testimonial cards.',
+                'category'    => 'testimonials',
+                'preview'     => null,
+            ],
+
             'features_grid' => [
                 'type'        => 'features_grid',
                 'label'       => 'Features Grid',
@@ -608,6 +616,9 @@ class SectionController extends Controller
 
             case 'tech_stack_showcase':
                 return $this->normalizeTechStackShowcaseContent($content);
+
+            case 'reviews_showcase':
+                return $this->normalizeReviewsShowcaseContent($content);
 
             default:
                 return $content;
@@ -806,6 +817,33 @@ class SectionController extends Controller
                 'logos' => [],
             ],
 
+            'reviews_showcase' => [
+                'brand_prefix' => 'PAL',
+                'brand_suffix' => 'GOALS',
+                'title' => 'REVIEWS',
+                'description' => 'Customer opinions drive innovation, trust, and growth',
+                'reviews' => [
+                    [
+                        'name' => 'Linda Hudson',
+                        'rating' => 4,
+                        'text' => 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.',
+                        'avatar' => 'assets/dashboard/images/user/avatar-1.jpg',
+                    ],
+                    [
+                        'name' => 'Michael Carter',
+                        'rating' => 5,
+                        'text' => 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.',
+                        'avatar' => 'assets/dashboard/images/user/avatar-2.jpg',
+                    ],
+                    [
+                        'name' => 'Sophia James',
+                        'rating' => 4,
+                        'text' => 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.',
+                        'avatar' => 'assets/dashboard/images/user/avatar-3.jpg',
+                    ],
+                ],
+            ],
+
             'services_grid' => [
                 'title'    => 'Services',
                 'subtitle' => 'Highlight your core services.',
@@ -856,6 +894,9 @@ class SectionController extends Controller
             ],
             'tech_stack_showcase' => [
                 'padding_y' => 'py-12',
+            ],
+            'reviews_showcase' => [
+                'padding_y' => 'py-16 lg:py-24',
             ],
             default => [],
         };
@@ -1127,6 +1168,48 @@ class SectionController extends Controller
 
         return [
             'logos' => $logos,
+        ];
+    }
+
+    /**
+     * Normalize the reviews showcase payload.
+     */
+    protected function normalizeReviewsShowcaseContent(array $content): array
+    {
+        return [
+            'brand_prefix' => $content['brand_prefix'] ?? null,
+            'brand_suffix' => $content['brand_suffix'] ?? null,
+            'title' => $content['title'] ?? null,
+            'description' => $content['description'] ?? null,
+            'reviews' => collect(is_array($content['reviews'] ?? null) ? $content['reviews'] : [])
+                ->map(function ($review): ?array {
+                    if (! is_array($review)) {
+                        return null;
+                    }
+
+                    $name = trim((string) ($review['name'] ?? ''));
+                    $text = trim((string) ($review['text'] ?? ''));
+
+                    if ($name === '' && $text === '') {
+                        return null;
+                    }
+
+                    $rating = (int) ($review['rating'] ?? 5);
+                    $rating = max(1, min(5, $rating));
+
+                    $avatar = $review['avatar'] ?? null;
+                    $avatar = is_scalar($avatar) ? trim((string) $avatar) : null;
+
+                    return [
+                        'name' => $name !== '' ? $name : null,
+                        'rating' => $rating,
+                        'text' => $text !== '' ? $text : null,
+                        'avatar' => $avatar !== '' ? $avatar : null,
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all(),
         ];
     }
 

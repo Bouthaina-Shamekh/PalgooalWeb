@@ -91,6 +91,7 @@
             window.initSectionEditorTabs?.(document);
             window.initSectionFeatureRepeaters?.(document);
             window.initBuildStepRepeaters?.(document);
+            window.initReviewRepeaters?.(document);
         });
     </script>
 @endpush

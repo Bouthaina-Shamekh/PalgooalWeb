@@ -58,18 +58,20 @@
         $isDesignShowcase = $selectedType === 'design_showcase';
         $isDigitalMarketingShowcase = $selectedType === 'digital_marketing_showcase';
         $isTechStackShowcase = $selectedType === 'tech_stack_showcase';
-        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isTechStackShowcase;
+        $isReviewsShowcase = $selectedType === 'reviews_showcase';
+        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isTechStackShowcase || $isReviewsShowcase;
         $showEyebrowField = $selectedType === 'hero_default';
-        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase;
+        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isReviewsShowcase;
         $showFeaturesHeadingField = $isHeroCampaign;
         $showOutputsHeadingField = $isProgrammingShowcase;
         $showOutputsTextareaField = $isProgrammingShowcase;
         $showServicesTextareaField = $isDesignShowcase || $isDigitalMarketingShowcase;
-        $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase;
-        $showPrimaryButtonFields = ! in_array($selectedType, ['how_we_build', 'tech_stack_showcase'], true);
+        $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase;
+        $showPrimaryButtonFields = ! in_array($selectedType, ['how_we_build', 'tech_stack_showcase', 'reviews_showcase'], true);
         $showSecondaryButtonFields = $selectedType === 'hero_default';
         $showFeatureRepeaterField = $isHeroCampaign;
         $showBuildStepsRepeaterField = $selectedType === 'how_we_build';
+        $showReviewsRepeaterField = $isReviewsShowcase;
         $showFeaturesTextareaField = in_array($selectedType, ['hero_default', 'features_grid'], true);
         $showMobileAppGalleryField = $isMobileAppShowcase;
         $showDesignGalleryField = $isDesignShowcase;
@@ -77,7 +79,7 @@
         $showTechStackMediaField = $isTechStackShowcase;
         $showMediaTypeField = $selectedType === 'hero_default';
         $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign', 'programming_showcase'], true);
-        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase', 'tech_stack_showcase'], true);
+        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase', 'tech_stack_showcase', 'reviews_showcase'], true);
         $showMainTitleField = ! $isTechStackShowcase;
     @endphp
 
@@ -198,6 +200,7 @@
                     $featuresTextarea = old("translations.$code.content.features_textarea");
                     $campaignFeatureItems = [];
                     $buildStepItems = [];
+                    $reviewItems = [];
                     $outputsTextarea = old("translations.$code.content.outputs_textarea");
                     $servicesTextarea = old("translations.$code.content.services_textarea");
 
@@ -379,6 +382,42 @@
                             ->values()
                             ->all();
                     }
+
+                    if ($isReviewsShowcase) {
+                        $oldReviews = old("translations.$code.content.reviews");
+                        $reviewsSource = is_array($oldReviews)
+                            ? $oldReviews
+                            : (is_array($content['reviews'] ?? null) ? $content['reviews'] : []);
+
+                        $reviewItems = collect($reviewsSource)
+                            ->map(function ($item) use ($buildMediaPreviewUrls) {
+                                if (! is_array($item)) {
+                                    return null;
+                                }
+
+                                $name = trim((string) ($item['name'] ?? ''));
+                                $text = trim((string) ($item['text'] ?? ''));
+
+                                if ($name === '' && $text === '') {
+                                    return null;
+                                }
+
+                                $rating = max(1, min(5, (int) ($item['rating'] ?? 5)));
+                                $avatar = $item['avatar'] ?? null;
+                                $avatar = is_scalar($avatar) ? trim((string) $avatar) : null;
+
+                                return [
+                                    'name' => $name,
+                                    'text' => $text,
+                                    'rating' => $rating,
+                                    'avatar' => $avatar,
+                                    'avatar_preview_urls' => $avatar ? $buildMediaPreviewUrls($avatar) : [],
+                                ];
+                            })
+                            ->filter()
+                            ->values()
+                            ->all();
+                    }
                 @endphp
 
                 <div
@@ -442,6 +481,12 @@
                         @if ($isTechStackShowcase)
                             <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 {{ __('This section renders a horizontally scrollable strip of technology logos. Only the internal label and media library logos are needed.') }}
+                            </div>
+                        @endif
+
+                        @if ($isReviewsShowcase)
+                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                {{ __('This section uses a brand label, one main heading, a short intro, and review cards with customer name, rating, text, and avatar.') }}
                             </div>
                         @endif
 
@@ -799,6 +844,247 @@
                                                             <span>{{ $preset['label'] }}</span>
                                                         </button>
                                                     @endforeach
+                                                </div>
+                                            </div>
+                                        </article>
+                                    </template>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($showReviewsRepeaterField)
+                            <div class="lg:col-span-2" data-review-repeater>
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Review Cards') }}</label>
+                                        <p class="mt-1 text-xs text-slate-500">{{ __('Create testimonial cards with avatar, customer name, rating, and review text.') }}</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        data-add-review-item
+                                        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                    >
+                                        <i class="ti ti-plus text-base leading-none" aria-hidden="true"></i>
+                                        <span>{{ __('Add Review') }}</span>
+                                    </button>
+                                </div>
+
+                                <div class="mt-3 rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
+                                    <div class="space-y-3" data-review-items>
+                                        @foreach ($reviewItems as $reviewIndex => $reviewItem)
+                                            <article data-review-item class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                                    <button
+                                                        type="button"
+                                                        data-review-drag-handle
+                                                        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
+                                                        aria-label="{{ __('Reorder review') }}"
+                                                    >
+                                                        <i class="ti ti-grip-vertical text-lg leading-none" aria-hidden="true"></i>
+                                                    </button>
+
+                                                    <div class="flex items-center gap-2 rtl:flex-row-reverse">
+                                                        <button
+                                                            type="button"
+                                                            data-duplicate-review-item
+                                                            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                                                            aria-label="{{ __('Duplicate review') }}"
+                                                        >
+                                                            <i class="ti ti-copy text-base leading-none" aria-hidden="true"></i>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            data-remove-review-item
+                                                            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                                                            aria-label="{{ __('Remove review') }}"
+                                                        >
+                                                            <i class="ti ti-trash text-base leading-none" aria-hidden="true"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[6rem_minmax(0,1fr)_10rem]">
+                                                    <div>
+                                                        <p class="mb-2 text-sm font-medium text-slate-700">{{ __('Avatar') }}</p>
+                                                        <div
+                                                            data-review-avatar-preview
+                                                            class="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-purple-brand/10 bg-slate-100 text-slate-500"
+                                                        >
+                                                            @if (! empty($reviewItem['avatar_preview_urls'][0]))
+                                                                <img src="{{ $reviewItem['avatar_preview_urls'][0] }}" alt="" class="h-full w-full object-cover">
+                                                            @else
+                                                                <i class="ti ti-user text-3xl leading-none" aria-hidden="true"></i>
+                                                            @endif
+                                                        </div>
+                                                        <input
+                                                            type="hidden"
+                                                            name="translations[{{ $code }}][content][reviews][{{ $reviewIndex }}][avatar]"
+                                                            data-name-template="translations[{{ $code }}][content][reviews][__INDEX__][avatar]"
+                                                            data-review-avatar-input
+                                                            value="{{ $reviewItem['avatar'] ?? '' }}"
+                                                        >
+                                                        <button
+                                                            type="button"
+                                                            data-review-avatar-button
+                                                            class="btn-open-media-picker mt-3 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                                                        >
+                                                            <i class="ti ti-photo text-base leading-none" aria-hidden="true"></i>
+                                                            <span>{{ __('Choose Photo') }}</span>
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="space-y-4">
+                                                        <div>
+                                                            <label class="block text-sm font-medium text-slate-700">{{ __('Customer Name') }}</label>
+                                                            <input
+                                                                type="text"
+                                                                name="translations[{{ $code }}][content][reviews][{{ $reviewIndex }}][name]"
+                                                                data-name-template="translations[{{ $code }}][content][reviews][__INDEX__][name]"
+                                                                data-review-field="name"
+                                                                value="{{ $reviewItem['name'] ?? '' }}"
+                                                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                                placeholder="{{ __('Example: Linda Hudson') }}"
+                                                            >
+                                                        </div>
+
+                                                        <div>
+                                                            <label class="block text-sm font-medium text-slate-700">{{ __('Review Text') }}</label>
+                                                            <textarea
+                                                                name="translations[{{ $code }}][content][reviews][{{ $reviewIndex }}][text]"
+                                                                data-name-template="translations[{{ $code }}][content][reviews][__INDEX__][text]"
+                                                                data-review-field="text"
+                                                                rows="4"
+                                                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                                placeholder="{{ __('Write the customer review here...') }}"
+                                                            >{{ $reviewItem['text'] ?? '' }}</textarea>
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-sm font-medium text-slate-700">{{ __('Rating') }}</label>
+                                                        <select
+                                                            name="translations[{{ $code }}][content][reviews][{{ $reviewIndex }}][rating]"
+                                                            data-name-template="translations[{{ $code }}][content][reviews][__INDEX__][rating]"
+                                                            data-review-field="rating"
+                                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                        >
+                                                            @for ($rating = 1; $rating <= 5; $rating++)
+                                                                <option value="{{ $rating }}" {{ (int) ($reviewItem['rating'] ?? 5) === $rating ? 'selected' : '' }}>
+                                                                    {{ $rating }} {{ \Illuminate\Support\Str::plural(__('Star'), $rating) }}
+                                                                </option>
+                                                            @endfor
+                                                        </select>
+                                                        <p class="mt-2 text-xs text-slate-500">{{ __('This controls the filled stars shown on the card.') }}</p>
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        @endforeach
+                                    </div>
+
+                                    <div data-review-empty class="{{ count($reviewItems) ? 'hidden ' : '' }}mt-3 rounded-2xl border border-dashed border-slate-300 bg-white/80 px-4 py-6 text-center text-sm text-slate-500">
+                                        {{ __('No review cards yet. Add the first testimonial to start the slider.') }}
+                                    </div>
+
+                                    <template data-review-item-template>
+                                        <article data-review-item class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                                <button
+                                                    type="button"
+                                                    data-review-drag-handle
+                                                    class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
+                                                    aria-label="{{ __('Reorder review') }}"
+                                                >
+                                                    <i class="ti ti-grip-vertical text-lg leading-none" aria-hidden="true"></i>
+                                                </button>
+
+                                                <div class="flex items-center gap-2 rtl:flex-row-reverse">
+                                                    <button
+                                                        type="button"
+                                                        data-duplicate-review-item
+                                                        class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                                                        aria-label="{{ __('Duplicate review') }}"
+                                                    >
+                                                        <i class="ti ti-copy text-base leading-none" aria-hidden="true"></i>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        data-remove-review-item
+                                                        class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                                                        aria-label="{{ __('Remove review') }}"
+                                                    >
+                                                        <i class="ti ti-trash text-base leading-none" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[6rem_minmax(0,1fr)_10rem]">
+                                                <div>
+                                                    <p class="mb-2 text-sm font-medium text-slate-700">{{ __('Avatar') }}</p>
+                                                    <div
+                                                        data-review-avatar-preview
+                                                        class="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border-2 border-purple-brand/10 bg-slate-100 text-slate-500"
+                                                    >
+                                                        <i class="ti ti-user text-3xl leading-none" aria-hidden="true"></i>
+                                                    </div>
+                                                    <input
+                                                        type="hidden"
+                                                        name="translations[{{ $code }}][content][reviews][__INDEX__][avatar]"
+                                                        data-name-template="translations[{{ $code }}][content][reviews][__INDEX__][avatar]"
+                                                        data-review-avatar-input
+                                                        value=""
+                                                    >
+                                                    <button
+                                                        type="button"
+                                                        data-review-avatar-button
+                                                        class="btn-open-media-picker mt-3 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                                                    >
+                                                        <i class="ti ti-photo text-base leading-none" aria-hidden="true"></i>
+                                                        <span>{{ __('Choose Photo') }}</span>
+                                                    </button>
+                                                </div>
+
+                                                <div class="space-y-4">
+                                                    <div>
+                                                        <label class="block text-sm font-medium text-slate-700">{{ __('Customer Name') }}</label>
+                                                        <input
+                                                            type="text"
+                                                            name="translations[{{ $code }}][content][reviews][__INDEX__][name]"
+                                                            data-name-template="translations[{{ $code }}][content][reviews][__INDEX__][name]"
+                                                            data-review-field="name"
+                                                            value=""
+                                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                            placeholder="{{ __('Example: Linda Hudson') }}"
+                                                        >
+                                                    </div>
+
+                                                    <div>
+                                                        <label class="block text-sm font-medium text-slate-700">{{ __('Review Text') }}</label>
+                                                        <textarea
+                                                            name="translations[{{ $code }}][content][reviews][__INDEX__][text]"
+                                                            data-name-template="translations[{{ $code }}][content][reviews][__INDEX__][text]"
+                                                            data-review-field="text"
+                                                            rows="4"
+                                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                            placeholder="{{ __('Write the customer review here...') }}"
+                                                        ></textarea>
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label class="block text-sm font-medium text-slate-700">{{ __('Rating') }}</label>
+                                                    <select
+                                                        name="translations[{{ $code }}][content][reviews][__INDEX__][rating]"
+                                                        data-name-template="translations[{{ $code }}][content][reviews][__INDEX__][rating]"
+                                                        data-review-field="rating"
+                                                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                    >
+                                                        @for ($rating = 1; $rating <= 5; $rating++)
+                                                            <option value="{{ $rating }}" {{ $rating === 5 ? 'selected' : '' }}>
+                                                                {{ $rating }} {{ \Illuminate\Support\Str::plural(__('Star'), $rating) }}
+                                                            </option>
+                                                        @endfor
+                                                    </select>
+                                                    <p class="mt-2 text-xs text-slate-500">{{ __('This controls the filled stars shown on the card.') }}</p>
                                                 </div>
                                             </div>
                                         </article>

@@ -619,6 +619,7 @@
                 window.initSectionEditorTabs?.(root);
                 window.initSectionFeatureRepeaters?.(root);
                 window.initBuildStepRepeaters?.(root);
+                window.initReviewRepeaters?.(root);
 
                 root.querySelectorAll('[data-close-section-editor]').forEach((button) => {
                     button.addEventListener('click', closeSectionEditor);

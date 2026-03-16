@@ -1483,6 +1483,9 @@
   .w-\[80\%\] {
     width: 80%;
   }
+  .w-\[85vw\] {
+    width: 85vw;
+  }
   .w-\[95\%\] {
     width: 95%;
   }
@@ -2198,6 +2201,9 @@
   .rounded-\[28px\] {
     border-radius: 28px;
   }
+  .rounded-\[32px\] {
+    border-radius: 32px;
+  }
   .rounded-\[40px\] {
     border-radius: 40px;
   }
@@ -2472,6 +2478,12 @@
   }
   .border-purple-200 {
     border-color: var(--color-purple-200);
+  }
+  .border-purple-brand\/10 {
+    border-color: color-mix(in srgb, #240a37 10%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-purple-brand) 10%, transparent);
+    }
   }
   .border-red-200 {
     border-color: var(--color-red-200);
@@ -6989,6 +7001,11 @@
       width: calc(var(--spacing) * 80);
     }
   }
+  .md\:w-\[500px\] {
+    @media (width >= 48rem) {
+      width: 500px;
+    }
+  }
   .md\:-translate-y-1\/2 {
     @media (width >= 48rem) {
       --tw-translate-y: calc(calc(1/2 * 100%) * -1);
@@ -7429,6 +7446,11 @@
   .lg\:grid-cols-\[1\.5fr_auto\] {
     @media (width >= 64rem) {
       grid-template-columns: 1.5fr auto;
+    }
+  }
+  .lg\:grid-cols-\[6rem_minmax\(0\,1fr\)_10rem\] {
+    @media (width >= 64rem) {
+      grid-template-columns: 6rem minmax(0,1fr) 10rem;
     }
   }
   .lg\:grid-cols-\[minmax\(0\,1fr\)_15rem\] {

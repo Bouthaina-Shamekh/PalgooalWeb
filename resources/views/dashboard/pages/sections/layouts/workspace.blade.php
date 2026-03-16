@@ -409,6 +409,7 @@
             window.initSectionEditorTabs?.(document);
             window.initSectionFeatureRepeaters?.(document);
             window.initBuildStepRepeaters?.(document);
+            window.initReviewRepeaters?.(document);
         });
 
         window.initSectionEditorTabs = function (scope) {
@@ -800,6 +801,194 @@
 
                 reindexItems();
                 repeater.dataset.buildStepRepeaterBound = '1';
+            });
+        };
+
+        window.initReviewRepeaters = function (scope) {
+            const root = scope instanceof Element || scope instanceof Document ? scope : document;
+            const repeaters = root.matches?.('[data-review-repeater]')
+                ? [root]
+                : Array.from(root.querySelectorAll('[data-review-repeater]'));
+
+            const createUniqueId = () => `review_media_${Math.random().toString(36).slice(2, 10)}`;
+
+            repeaters.forEach((repeater) => {
+                if (repeater.dataset.reviewRepeaterBound === '1') {
+                    return;
+                }
+
+                const list = repeater.querySelector('[data-review-items]');
+                const template = repeater.querySelector('template[data-review-item-template]');
+                const emptyState = repeater.querySelector('[data-review-empty]');
+                const addButtons = Array.from(repeater.querySelectorAll('[data-add-review-item]'));
+
+                if (!list || !template) {
+                    repeater.dataset.reviewRepeaterBound = '1';
+                    return;
+                }
+
+                const renderAvatarPreview = (item, imageUrl = '') => {
+                    const preview = item.querySelector('[data-review-avatar-preview]');
+                    if (!preview) {
+                        return;
+                    }
+
+                    preview.innerHTML = '';
+
+                    if (imageUrl) {
+                        const image = document.createElement('img');
+                        image.src = imageUrl;
+                        image.alt = '';
+                        image.className = 'h-full w-full object-cover';
+                        preview.appendChild(image);
+                        return;
+                    }
+
+                    const icon = document.createElement('i');
+                    icon.className = 'ti ti-user text-3xl leading-none';
+                    icon.setAttribute('aria-hidden', 'true');
+                    preview.appendChild(icon);
+                };
+
+                const ensureAvatarPickerTargets = (item) => {
+                    const avatarInput = item.querySelector('[data-review-avatar-input]');
+                    const avatarButton = item.querySelector('[data-review-avatar-button]');
+                    const avatarPreview = item.querySelector('[data-review-avatar-preview]');
+
+                    if (!avatarInput || !avatarButton || !avatarPreview) {
+                        return;
+                    }
+
+                    const baseId = createUniqueId();
+                    avatarInput.id = `${baseId}_input`;
+                    avatarPreview.id = `${baseId}_preview`;
+                    avatarButton.dataset.targetInput = avatarInput.id;
+                    avatarButton.dataset.targetPreview = avatarPreview.id;
+                    avatarButton.dataset.multiple = 'false';
+                    avatarButton.dataset.storeValue = 'id';
+                };
+
+                const reindexItems = () => {
+                    const items = Array.from(list.querySelectorAll('[data-review-item]'));
+
+                    items.forEach((item, index) => {
+                        item.querySelectorAll('[data-name-template]').forEach((field) => {
+                            const templateName = field.dataset.nameTemplate || '';
+                            if (templateName) {
+                                field.name = templateName.replace(/__INDEX__/g, String(index));
+                            }
+                        });
+                    });
+
+                    if (emptyState) {
+                        emptyState.classList.toggle('hidden', items.length > 0);
+                    }
+                };
+
+                const bindReviewItem = (item) => {
+                    if (!(item instanceof HTMLElement) || item.dataset.reviewItemBound === '1') {
+                        return;
+                    }
+
+                    ensureAvatarPickerTargets(item);
+
+                    const nameInput = item.querySelector('[data-review-field="name"]');
+                    const textInput = item.querySelector('[data-review-field="text"]');
+                    const ratingInput = item.querySelector('[data-review-field="rating"]');
+                    const avatarInput = item.querySelector('[data-review-avatar-input]');
+                    const avatarPreviewImage = item.querySelector('[data-review-avatar-preview] img');
+                    const removeButton = item.querySelector('[data-remove-review-item]');
+                    const duplicateButton = item.querySelector('[data-duplicate-review-item]');
+
+                    if (!avatarPreviewImage) {
+                        renderAvatarPreview(item);
+                    }
+
+                    removeButton?.addEventListener('click', function () {
+                        item.remove();
+                        reindexItems();
+                    });
+
+                    duplicateButton?.addEventListener('click', function () {
+                        createReviewItem({
+                            name: nameInput?.value || '',
+                            text: textInput?.value || '',
+                            rating: ratingInput?.value || '5',
+                            avatar: avatarInput?.value || '',
+                            previewUrl: item.querySelector('[data-review-avatar-preview] img')?.getAttribute('src') || '',
+                        });
+                    });
+
+                    item.dataset.reviewItemBound = '1';
+                };
+
+                const createReviewItem = (seed = {}) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = template.innerHTML.trim();
+
+                    const item = wrapper.firstElementChild;
+                    if (!(item instanceof HTMLElement)) {
+                        return null;
+                    }
+
+                    list.appendChild(item);
+                    bindReviewItem(item);
+
+                    const nameInput = item.querySelector('[data-review-field="name"]');
+                    const textInput = item.querySelector('[data-review-field="text"]');
+                    const ratingInput = item.querySelector('[data-review-field="rating"]');
+                    const avatarInput = item.querySelector('[data-review-avatar-input]');
+
+                    if (nameInput && typeof seed.name === 'string') {
+                        nameInput.value = seed.name;
+                    }
+
+                    if (textInput && typeof seed.text === 'string') {
+                        textInput.value = seed.text;
+                    }
+
+                    if (ratingInput && typeof seed.rating !== 'undefined') {
+                        ratingInput.value = String(seed.rating || '5');
+                    }
+
+                    if (avatarInput && typeof seed.avatar === 'string') {
+                        avatarInput.value = seed.avatar;
+                    }
+
+                    renderAvatarPreview(item, typeof seed.previewUrl === 'string' ? seed.previewUrl : '');
+                    reindexItems();
+
+                    return item;
+                };
+
+                addButtons.forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const item = createReviewItem();
+                        const nameInput = item?.querySelector('[data-review-field="name"]');
+
+                        if (nameInput instanceof HTMLElement) {
+                            window.setTimeout(() => nameInput.focus(), 30);
+                        }
+                    });
+                });
+
+                Array.from(list.querySelectorAll('[data-review-item]')).forEach(bindReviewItem);
+
+                if (typeof Sortable !== 'undefined' && list.dataset.reviewSortableBound !== '1') {
+                    Sortable.create(list, {
+                        animation: 160,
+                        handle: '[data-review-drag-handle]',
+                        ghostClass: 'sections-sortable-ghost',
+                        chosenClass: 'sections-sortable-chosen',
+                        dragClass: 'sections-sortable-drag',
+                        onEnd: reindexItems,
+                    });
+
+                    list.dataset.reviewSortableBound = '1';
+                }
+
+                reindexItems();
+                repeater.dataset.reviewRepeaterBound = '1';
             });
         };
     </script>
