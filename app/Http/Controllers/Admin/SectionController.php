@@ -560,6 +560,14 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
+            'our_work_showcase' => [
+                'type'        => 'our_work_showcase',
+                'label'       => 'Our Work Showcase',
+                'description' => 'Portfolio slider with brand heading, intro text, and visit button on each project card.',
+                'category'    => 'portfolio',
+                'preview'     => null,
+            ],
+
             'features_grid' => [
                 'type'        => 'features_grid',
                 'label'       => 'Features Grid',
@@ -619,6 +627,9 @@ class SectionController extends Controller
 
             case 'reviews_showcase':
                 return $this->normalizeReviewsShowcaseContent($content);
+
+            case 'our_work_showcase':
+                return $this->normalizeOurWorkShowcaseContent($content);
 
             default:
                 return $content;
@@ -825,6 +836,15 @@ class SectionController extends Controller
                 'limit' => 8,
             ],
 
+            'our_work_showcase' => [
+                'brand_prefix' => 'PAL',
+                'brand_suffix' => 'GOALS',
+                'title' => 'OUR WORK',
+                'description' => 'Customer opinions drive innovation, trust, and growth.',
+                'visit_label' => 'Visit',
+                'limit' => 6,
+            ],
+
             'services_grid' => [
                 'title'    => 'Services',
                 'subtitle' => 'Highlight your core services.',
@@ -877,6 +897,9 @@ class SectionController extends Controller
                 'padding_y' => 'py-12',
             ],
             'reviews_showcase' => [
+                'padding_y' => 'py-16 lg:py-24',
+            ],
+            'our_work_showcase' => [
                 'padding_y' => 'py-16 lg:py-24',
             ],
             default => [],
@@ -1165,6 +1188,24 @@ class SectionController extends Controller
             'brand_suffix' => $content['brand_suffix'] ?? null,
             'title' => $content['title'] ?? null,
             'description' => $content['description'] ?? null,
+            'limit' => $limit,
+        ];
+    }
+
+    /**
+     * Normalize the our-work showcase payload.
+     */
+    protected function normalizeOurWorkShowcaseContent(array $content): array
+    {
+        $limit = $content['limit'] ?? null;
+        $limit = is_numeric($limit) ? max(1, (int) $limit) : null;
+
+        return [
+            'brand_prefix' => $content['brand_prefix'] ?? null,
+            'brand_suffix' => $content['brand_suffix'] ?? null,
+            'title' => $content['title'] ?? null,
+            'description' => $content['description'] ?? null,
+            'visit_label' => $content['visit_label'] ?? null,
             'limit' => $limit,
         ];
     }

@@ -59,19 +59,21 @@
         $isDigitalMarketingShowcase = $selectedType === 'digital_marketing_showcase';
         $isTechStackShowcase = $selectedType === 'tech_stack_showcase';
         $isReviewsShowcase = $selectedType === 'reviews_showcase';
-        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isTechStackShowcase || $isReviewsShowcase;
+        $isOurWorkShowcase = $selectedType === 'our_work_showcase';
+        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isTechStackShowcase || $isReviewsShowcase || $isOurWorkShowcase;
         $showEyebrowField = $selectedType === 'hero_default';
-        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isReviewsShowcase;
+        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isReviewsShowcase || $isOurWorkShowcase;
         $showFeaturesHeadingField = $isHeroCampaign;
         $showOutputsHeadingField = $isProgrammingShowcase;
         $showOutputsTextareaField = $isProgrammingShowcase;
         $showServicesTextareaField = $isDesignShowcase || $isDigitalMarketingShowcase;
-        $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase;
-        $showPrimaryButtonFields = ! in_array($selectedType, ['how_we_build', 'tech_stack_showcase', 'reviews_showcase'], true);
+        $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase;
+        $showPrimaryButtonFields = ! in_array($selectedType, ['how_we_build', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase'], true);
         $showSecondaryButtonFields = $selectedType === 'hero_default';
         $showFeatureRepeaterField = $isHeroCampaign;
         $showBuildStepsRepeaterField = $selectedType === 'how_we_build';
         $showReviewsDatabaseField = $isReviewsShowcase;
+        $showOurWorkDatabaseField = $isOurWorkShowcase;
         $showFeaturesTextareaField = in_array($selectedType, ['hero_default', 'features_grid'], true);
         $showMobileAppGalleryField = $isMobileAppShowcase;
         $showDesignGalleryField = $isDesignShowcase;
@@ -79,7 +81,7 @@
         $showTechStackMediaField = $isTechStackShowcase;
         $showMediaTypeField = $selectedType === 'hero_default';
         $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign', 'programming_showcase'], true);
-        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase', 'tech_stack_showcase', 'reviews_showcase'], true);
+        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase'], true);
         $showMainTitleField = ! $isTechStackShowcase;
     @endphp
 
@@ -310,6 +312,8 @@
                     $secondaryButtonLabelValue = $stringifyValue(old("translations.$code.content.secondary_button.label", $secondaryButton['label'] ?? ''));
                     $secondaryButtonUrlValue = $stringifyValue(old("translations.$code.content.secondary_button.url", $secondaryButton['url'] ?? ''));
                     $reviewsLimitValue = $stringifyValue(old("translations.$code.content.limit", $content['limit'] ?? ''));
+                    $ourWorkLimitValue = $stringifyValue(old("translations.$code.content.limit", $content['limit'] ?? ''));
+                    $ourWorkVisitLabelValue = $stringifyValue(old("translations.$code.content.visit_label", $content['visit_label'] ?? ''));
                     $mediaUrlValue = $stringifyValue(old("translations.$code.content.media_url", $content['media_url'] ?? ''));
                     $mediaTypeOld = old("translations.$code.content.media_type", $content['media_type'] ?? 'image');
                     $campaignIllustrationValue = old("translations.$code.content.media_url", $content['media_url'] ?? null);
@@ -452,6 +456,12 @@
                         @if ($isReviewsShowcase)
                             <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 {{ __('This section uses a brand label, one main heading, a short intro, and approved testimonial cards pulled automatically from the Testimonials module.') }}
+                            </div>
+                        @endif
+
+                        @if ($isOurWorkShowcase)
+                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                {{ __('This section uses a brand label, one main heading, a short intro, and portfolio cards pulled automatically from the Portfolios module.') }}
                             </div>
                         @endif
 
@@ -845,6 +855,51 @@
                                             placeholder="{{ __('Leave empty to show all approved testimonials') }}"
                                         >
                                         <p class="mt-2 text-xs text-slate-500">{{ __('Optional. Use this to show only the first approved testimonials ordered from the Testimonials module.') }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($showOurWorkDatabaseField)
+                            <div class="lg:col-span-2 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+                                <div class="flex flex-wrap items-start justify-between gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Portfolios Source') }}</label>
+                                        <p class="mt-1 text-sm text-slate-500">{{ __('This section reads portfolio cards directly from the Portfolios module in the dashboard.') }}</p>
+                                    </div>
+                                    <a
+                                        href="{{ route('dashboard.portfolios.index') }}"
+                                        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                    >
+                                        <i class="ti ti-briefcase text-base leading-none" aria-hidden="true"></i>
+                                        <span>{{ __('Open Portfolios') }}</span>
+                                    </a>
+                                </div>
+
+                                <div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Items Limit') }}</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            name="translations[{{ $code }}][content][limit]"
+                                            value="{{ $ourWorkLimitValue }}"
+                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                            placeholder="{{ __('Leave empty to show all portfolio items') }}"
+                                        >
+                                        <p class="mt-2 text-xs text-slate-500">{{ __('Optional. Use this to show only the first portfolio items ordered from the Portfolios module.') }}</p>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Visit Button Label') }}</label>
+                                        <input
+                                            type="text"
+                                            name="translations[{{ $code }}][content][visit_label]"
+                                            value="{{ $ourWorkVisitLabelValue }}"
+                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                            placeholder="{{ __('Visit') }}"
+                                        >
+                                        <p class="mt-2 text-xs text-slate-500">{{ __('This text appears on the card button for every portfolio item in the slider.') }}</p>
                                     </div>
                                 </div>
                             </div>

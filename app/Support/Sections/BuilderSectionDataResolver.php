@@ -6,6 +6,7 @@ use App\Models\DomainTld;
 use App\Models\DomainTldPrice;
 use App\Models\Plan;
 use App\Models\PlanCategory;
+use App\Models\Portfolio;
 use App\Models\Service;
 use App\Models\Template;
 use App\Models\CategoryTemplate;
@@ -25,6 +26,7 @@ class BuilderSectionDataResolver
             'services' => self::services($data),
             'templates' => self::templates($data),
             'testimonials' => self::testimonials($data),
+            'our_work_showcase' => self::portfolios($data),
             'hosting-plans' => self::hostingPlans($data),
             'search-domain' => self::searchDomain($data),
             'templates-pages' => self::templatesPages($data),
@@ -59,6 +61,27 @@ class BuilderSectionDataResolver
             ->with(['translations', 'image'])
             ->orderBy('order')
             ->get();
+
+        return $data;
+    }
+
+    protected static function portfolios(array $data): array
+    {
+        $limit = isset($data['limit']) && is_numeric($data['limit']) ? (int) $data['limit'] : null;
+        if ($limit !== null && $limit <= 0) {
+            $limit = null;
+        }
+
+        $query = Portfolio::query()
+            ->with('translations')
+            ->orderBy('order')
+            ->orderByDesc('id');
+
+        if ($limit) {
+            $query->limit($limit);
+        }
+
+        $data['portfolios'] = $query->get();
 
         return $data;
     }

@@ -2,6 +2,7 @@
 
 namespace App\Support\Sections;
 
+use App\Models\Portfolio;
 use App\Models\Service;
 use App\Models\Testimonial;
 use App\Models\DomainTld;
@@ -22,6 +23,7 @@ class SectionQueryResolver
             'services' => self::services($data),
             'testimonials' => self::testimonials($data),
             'reviews_showcase' => self::testimonials($data),
+            'our_work_showcase' => self::portfolios($data),
             'search-domain' => self::searchDomain($data),
             default => $data,
         };
@@ -60,6 +62,23 @@ class SectionQueryResolver
         if ($limit) $q->limit($limit);
 
         $data['testimonials'] = $q->get();
+
+        return $data;
+    }
+
+    protected static function portfolios(array $data): array
+    {
+        $limit = isset($data['limit']) && is_numeric($data['limit']) ? (int) $data['limit'] : null;
+        if ($limit !== null && $limit <= 0) $limit = null;
+
+        $q = Portfolio::query()
+            ->with('translations')
+            ->orderBy('order')
+            ->orderByDesc('id');
+
+        if ($limit) $q->limit($limit);
+
+        $data['portfolios'] = $q->get();
 
         return $data;
     }

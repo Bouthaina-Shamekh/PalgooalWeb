@@ -64,6 +64,15 @@
         'limit' => $content['limit'] ?? null,
         'reviews' => is_array($content['reviews'] ?? null) ? $content['reviews'] : [],
     ]);
+
+    $ourWorkData = \App\Support\Sections\SectionQueryResolver::resolve('our_work_showcase', [
+        'brand_prefix' => $content['brand_prefix'] ?? 'PAL',
+        'brand_suffix' => $content['brand_suffix'] ?? 'GOALS',
+        'title' => $content['title'] ?? ($fallbackTranslation?->title ?? $typeLabel),
+        'description' => $content['description'] ?? '',
+        'visit_label' => $content['visit_label'] ?? __('Visit'),
+        'limit' => $content['limit'] ?? null,
+    ]);
 @endphp
 
 @switch($section->type)
@@ -143,6 +152,12 @@
     @case('reviews_showcase')
         @include('components.template.sections.reviews_showcase', [
             'data' => $reviewsData,
+        ])
+        @break
+
+    @case('our_work_showcase')
+        @include('components.template.sections.our_work_showcase', [
+            'data' => $ourWorkData,
         ])
         @break
 
