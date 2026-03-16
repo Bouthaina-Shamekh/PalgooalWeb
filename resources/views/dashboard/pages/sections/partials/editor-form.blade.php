@@ -46,14 +46,20 @@
             : 'border-emerald-200 bg-emerald-50 text-emerald-800';
         $selectedType = old('type', $section->type);
         $isHeroCampaign = $selectedType === 'hero_campaign';
+        $isProgrammingShowcase = $selectedType === 'programming_showcase';
+        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase;
         $showEyebrowField = $selectedType === 'hero_default';
-        $showDescriptionField = $isHeroCampaign;
+        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase;
         $showFeaturesHeadingField = $isHeroCampaign;
+        $showOutputsHeadingField = $isProgrammingShowcase;
+        $showOutputsTextareaField = $isProgrammingShowcase;
+        $showBrandFields = $isProgrammingShowcase;
         $showSecondaryButtonFields = $selectedType === 'hero_default';
         $showFeatureRepeaterField = $isHeroCampaign;
         $showFeaturesTextareaField = in_array($selectedType, ['hero_default', 'features_grid'], true);
         $showMediaTypeField = $selectedType === 'hero_default';
-        $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign'], true);
+        $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign', 'programming_showcase'], true);
+        $showSubtitleField = ! $isProgrammingShowcase;
     @endphp
 
     <div
@@ -172,6 +178,7 @@
 
                     $featuresTextarea = old("translations.$code.content.features_textarea");
                     $campaignFeatureItems = [];
+                    $outputsTextarea = old("translations.$code.content.outputs_textarea");
 
                     if ($featuresTextarea === null) {
                         if (!empty($content['features']) && is_array($content['features'])) {
@@ -187,6 +194,14 @@
                                 ->implode("\n");
                         } else {
                             $featuresTextarea = '';
+                        }
+                    }
+
+                    if ($outputsTextarea === null) {
+                        if (! empty($content['outputs']) && is_array($content['outputs'])) {
+                            $outputsTextarea = implode("\n", $content['outputs']);
+                        } else {
+                            $outputsTextarea = '';
                         }
                     }
 
@@ -225,9 +240,12 @@
                     $sectionTitleValue = $stringifyValue(old("translations.$code.title", $translation->title ?? ''));
                     $eyebrowValue = $stringifyValue(old("translations.$code.content.eyebrow", $content['eyebrow'] ?? ''));
                     $heroTitleValue = $stringifyValue(old("translations.$code.content.title", $content['title'] ?? ''));
+                    $brandPrefixValue = $stringifyValue(old("translations.$code.content.brand_prefix", $content['brand_prefix'] ?? ''));
+                    $brandSuffixValue = $stringifyValue(old("translations.$code.content.brand_suffix", $content['brand_suffix'] ?? ''));
                     $subtitleValue = $stringifyValue(old("translations.$code.content.subtitle", $content['subtitle'] ?? ''));
                     $descriptionValue = $stringifyValue(old("translations.$code.content.description", $content['description'] ?? ''));
                     $featuresHeadingValue = $stringifyValue(old("translations.$code.content.features_heading", $content['features_heading'] ?? ''));
+                    $outputsHeadingValue = $stringifyValue(old("translations.$code.content.outputs_heading", $content['outputs_heading'] ?? ''));
                     $primaryButtonLabelValue = $stringifyValue(old("translations.$code.content.primary_button.label", $primaryButton['label'] ?? ''));
                     $primaryButtonUrlValue = $stringifyValue(old("translations.$code.content.primary_button.url", $primaryButton['url'] ?? ''));
                     $secondaryButtonLabelValue = $stringifyValue(old("translations.$code.content.secondary_button.label", $secondaryButton['label'] ?? ''));
@@ -237,7 +255,7 @@
                     $campaignIllustrationValue = old("translations.$code.content.media_url", $content['media_url'] ?? null);
                     $campaignIllustrationPreviewUrls = [];
 
-                    if ($isHeroCampaign) {
+                    if ($isHeroCampaign || $isProgrammingShowcase) {
                         if (is_numeric($campaignIllustrationValue)) {
                             $mediaItem = Media::find((int) $campaignIllustrationValue);
                             $campaignIllustrationPreviewUrls = $mediaItem?->url ? [$mediaItem->url] : [];
@@ -262,9 +280,9 @@
                         <div class="lg:col-span-2">
                             <div class="flex items-center justify-between gap-3">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ $isHeroCampaign ? __('Internal Label') : __('Section Title') }} ({{ $code }})
+                                    {{ $usesInternalLabel ? __('Internal Label') : __('Section Title') }} ({{ $code }})
                                 </label>
-                                @if ($isHeroCampaign)
+                                @if ($usesInternalLabel)
                                     <span class="text-xs font-medium text-slate-400">{{ __('Used only in the workspace list') }}</span>
                                 @endif
                             </div>
@@ -274,7 +292,7 @@
                                 value="{{ $sectionTitleValue }}"
                                 class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                             >
-                            @if ($isHeroCampaign)
+                            @if ($usesInternalLabel)
                                 <p class="mt-2 text-xs text-slate-500">{{ __('The front design uses the fields below, not this internal label.') }}</p>
                             @endif
                         </div>
@@ -282,6 +300,12 @@
                         @if ($isHeroCampaign)
                             <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 {{ __('This hero uses one CTA button, a benefit grid, and one side illustration. Fill only the content that appears in the design.') }}
+                            </div>
+                        @endif
+
+                        @if ($isProgrammingShowcase)
+                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                {{ __('This section uses a brand label, one main heading, an outputs list, one CTA button, and one featured image.') }}
                             </div>
                         @endif
 
@@ -297,9 +321,33 @@
                             </div>
                         @endif
 
+                        @if ($showBrandFields)
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Brand Prefix') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][brand_prefix]"
+                                    value="{{ $brandPrefixValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    placeholder="PAL"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Brand Suffix') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][brand_suffix]"
+                                    value="{{ $brandSuffixValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    placeholder="GOALS"
+                                >
+                            </div>
+                        @endif
+
                         <div>
                             <label class="block text-sm font-medium text-slate-700">
-                                {{ $isHeroCampaign ? __('Main Title - Line 1') : __('Main Title') }}
+                                {{ $isHeroCampaign ? __('Main Title - Line 1') : ($isProgrammingShowcase ? __('Section Title') : __('Main Title')) }}
                             </label>
                             <input
                                 type="text"
@@ -309,16 +357,18 @@
                             >
                         </div>
 
-                        <div class="{{ $isHeroCampaign ? '' : 'lg:col-span-2' }}">
-                            <label class="block text-sm font-medium text-slate-700">
-                                {{ $isHeroCampaign ? __('Main Title - Line 2') : __('Subtitle') }}
-                            </label>
-                            <textarea
-                                name="translations[{{ $code }}][content][subtitle]"
-                                rows="3"
-                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                            >{{ $subtitleValue }}</textarea>
-                        </div>
+                        @if ($showSubtitleField)
+                            <div class="{{ $isHeroCampaign ? '' : 'lg:col-span-2' }}">
+                                <label class="block text-sm font-medium text-slate-700">
+                                    {{ $isHeroCampaign ? __('Main Title - Line 2') : __('Subtitle') }}
+                                </label>
+                                <textarea
+                                    name="translations[{{ $code }}][content][subtitle]"
+                                    rows="3"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >{{ $subtitleValue }}</textarea>
+                            </div>
+                        @endif
 
                         @if ($showDescriptionField)
                             <div class="lg:col-span-2">
@@ -328,6 +378,18 @@
                                     rows="4"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >{{ $descriptionValue }}</textarea>
+                            </div>
+                        @endif
+
+                        @if ($showOutputsHeadingField)
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Outputs Heading') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][outputs_heading]"
+                                    value="{{ $outputsHeadingValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
                             </div>
                         @endif
 
@@ -343,9 +405,21 @@
                             </div>
                         @endif
 
+                        @if ($showOutputsTextareaField)
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Outputs List') }}</label>
+                                <textarea
+                                    name="translations[{{ $code }}][content][outputs_textarea]"
+                                    rows="6"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >{{ $outputsTextarea }}</textarea>
+                                <p class="mt-2 text-xs text-slate-500">{{ __('Each line becomes one output item in the outputs list.') }}</p>
+                            </div>
+                        @endif
+
                         <div>
                             <label class="block text-sm font-medium text-slate-700">
-                                {{ $isHeroCampaign ? __('CTA Button Label') : __('Primary Button Label') }}
+                                {{ ($isHeroCampaign || $isProgrammingShowcase) ? __('CTA Button Label') : __('Primary Button Label') }}
                             </label>
                             <input
                                 type="text"
@@ -357,7 +431,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">
-                                {{ $isHeroCampaign ? __('CTA Button URL') : __('Primary Button URL') }}
+                                {{ ($isHeroCampaign || $isProgrammingShowcase) ? __('CTA Button URL') : __('Primary Button URL') }}
                             </label>
                             <input
                                 type="text"
@@ -658,19 +732,23 @@
                         @endif
 
                         @if ($showMediaUrlField)
-                            @if ($isHeroCampaign)
+                            @if ($isHeroCampaign || $isProgrammingShowcase)
                                 <div class="lg:col-span-2">
                                     <x-dashboard.media-picker
                                         :name="'translations['.$code.'][content][media_url]'"
-                                        :label="__('Illustration')"
+                                        :label="$isProgrammingShowcase ? __('Featured Image') : __('Illustration')"
                                         :button-text="__('Choose From Media Library')"
                                         :value="$campaignIllustrationValue"
                                         :preview-urls="$campaignIllustrationPreviewUrls"
                                         :multiple="false"
                                         store-value="id"
-                                        data-shared-media-group="hero-campaign-illustration"
+                                        data-shared-media-group="{{ $isProgrammingShowcase ? 'programming-showcase-image' : 'hero-campaign-illustration' }}"
                                     />
-                                    <p class="mt-2 text-xs text-slate-500">{{ __('This illustration is shared across all languages for this hero.') }}</p>
+                                    <p class="mt-2 text-xs text-slate-500">
+                                        {{ $isProgrammingShowcase
+                                            ? __('This featured image is shared across all languages for this section.')
+                                            : __('This illustration is shared across all languages for this hero.') }}
+                                    </p>
                                 </div>
                             @else
                                 <div>

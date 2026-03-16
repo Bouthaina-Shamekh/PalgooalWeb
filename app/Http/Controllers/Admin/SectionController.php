@@ -504,6 +504,14 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
+            'programming_showcase' => [
+                'type'        => 'programming_showcase',
+                'label'       => 'Programming Showcase',
+                'description' => 'Programming department section with outputs list, CTA, and featured image.',
+                'category'    => 'services',
+                'preview'     => null,
+            ],
+
             'features_grid' => [
                 'type'        => 'features_grid',
                 'label'       => 'Features Grid',
@@ -542,6 +550,9 @@ class SectionController extends Controller
 
             case 'hero_campaign':
                 return $this->normalizeHeroCampaignContent($content);
+
+            case 'programming_showcase':
+                return $this->normalizeProgrammingContent($content);
 
             default:
                 return $content;
@@ -645,6 +656,26 @@ class SectionController extends Controller
                 'features' => [],
             ],
 
+            'programming_showcase' => [
+                'brand_prefix' => 'PAL',
+                'brand_suffix' => 'GOALS',
+                'title' => 'PROGRAMMING',
+                'description' => 'The Programming Department is the core of our web development company, turning ideas into functional websites. Our developers build dynamic, user-friendly platforms with modern tools, ensuring precision, performance, and innovation in every project.',
+                'outputs_heading' => 'What Are Our Outputs?',
+                'outputs' => [
+                    'Landing Sites',
+                    'Company and organization websites',
+                    'E-Commerce Stores',
+                    'SaaS Platforms',
+                ],
+                'primary_button' => [
+                    'label' => 'Send Your idea',
+                    'url' => '#',
+                ],
+                'media_type' => 'image',
+                'media_url' => 'assets/tamplate/images/tech company-rafiki.svg',
+            ],
+
             'services_grid' => [
                 'title'    => 'Services',
                 'subtitle' => 'Highlight your core services.',
@@ -677,6 +708,9 @@ class SectionController extends Controller
             ],
             'hero_campaign' => [
                 'padding_y' => 'pt-6 pb-8 lg:pt-10 lg:pb-18',
+            ],
+            'programming_showcase' => [
+                'padding_y' => 'py-16 lg:py-24',
             ],
             default => [],
         };
@@ -760,6 +794,42 @@ class SectionController extends Controller
     }
 
     /**
+     * Normalize the programming showcase payload.
+     */
+    protected function normalizeProgrammingContent(array $content): array
+    {
+        $outputsRaw = $content['outputs_textarea'] ?? ($content['outputs'] ?? '');
+
+        if (is_array($outputsRaw)) {
+            $outputs = array_values(array_filter(array_map(
+                static fn ($item) => is_scalar($item) ? trim((string) $item) : '',
+                $outputsRaw
+            )));
+        } else {
+            $outputs = array_values(array_filter(
+                array_map('trim', preg_split("/\r\n|\r|\n/", (string) $outputsRaw))
+            ));
+        }
+
+        return [
+            'brand_prefix' => $content['brand_prefix'] ?? null,
+            'brand_suffix' => $content['brand_suffix'] ?? null,
+            'title' => $content['title'] ?? null,
+            'description' => $content['description'] ?? null,
+            'outputs_heading' => $content['outputs_heading'] ?? null,
+            'outputs' => $outputs,
+            'primary_button' => [
+                'label' => $content['primary_button_label']
+                    ?? ($content['primary_button']['label'] ?? null),
+                'url' => $content['primary_button_url']
+                    ?? ($content['primary_button']['url'] ?? null),
+            ],
+            'media_type' => $content['media_type'] ?? 'image',
+            'media_url' => $content['media_url'] ?? null,
+        ];
+    }
+
+    /**
      * Convert campaign features into stable {text, icon} items.
      *
      * @return array<int, array{text: string, icon: string|null}>
@@ -830,7 +900,7 @@ class SectionController extends Controller
      */
     protected function syncSharedSectionContent(string $type, array $translations): array
     {
-        if ($type !== 'hero_campaign' || $translations === []) {
+        if (! in_array($type, ['hero_campaign', 'programming_showcase'], true) || $translations === []) {
             return $translations;
         }
 
