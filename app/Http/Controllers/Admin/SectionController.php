@@ -822,26 +822,7 @@ class SectionController extends Controller
                 'brand_suffix' => 'GOALS',
                 'title' => 'REVIEWS',
                 'description' => 'Customer opinions drive innovation, trust, and growth',
-                'reviews' => [
-                    [
-                        'name' => 'Linda Hudson',
-                        'rating' => 4,
-                        'text' => 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.',
-                        'avatar' => 'assets/dashboard/images/user/avatar-1.jpg',
-                    ],
-                    [
-                        'name' => 'Michael Carter',
-                        'rating' => 5,
-                        'text' => 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.',
-                        'avatar' => 'assets/dashboard/images/user/avatar-2.jpg',
-                    ],
-                    [
-                        'name' => 'Sophia James',
-                        'rating' => 4,
-                        'text' => 'Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.',
-                        'avatar' => 'assets/dashboard/images/user/avatar-3.jpg',
-                    ],
-                ],
+                'limit' => 8,
             ],
 
             'services_grid' => [
@@ -1176,40 +1157,15 @@ class SectionController extends Controller
      */
     protected function normalizeReviewsShowcaseContent(array $content): array
     {
+        $limit = $content['limit'] ?? null;
+        $limit = is_numeric($limit) ? max(1, (int) $limit) : null;
+
         return [
             'brand_prefix' => $content['brand_prefix'] ?? null,
             'brand_suffix' => $content['brand_suffix'] ?? null,
             'title' => $content['title'] ?? null,
             'description' => $content['description'] ?? null,
-            'reviews' => collect(is_array($content['reviews'] ?? null) ? $content['reviews'] : [])
-                ->map(function ($review): ?array {
-                    if (! is_array($review)) {
-                        return null;
-                    }
-
-                    $name = trim((string) ($review['name'] ?? ''));
-                    $text = trim((string) ($review['text'] ?? ''));
-
-                    if ($name === '' && $text === '') {
-                        return null;
-                    }
-
-                    $rating = (int) ($review['rating'] ?? 5);
-                    $rating = max(1, min(5, $rating));
-
-                    $avatar = $review['avatar'] ?? null;
-                    $avatar = is_scalar($avatar) ? trim((string) $avatar) : null;
-
-                    return [
-                        'name' => $name !== '' ? $name : null,
-                        'rating' => $rating,
-                        'text' => $text !== '' ? $text : null,
-                        'avatar' => $avatar !== '' ? $avatar : null,
-                    ];
-                })
-                ->filter()
-                ->values()
-                ->all(),
+            'limit' => $limit,
         ];
     }
 

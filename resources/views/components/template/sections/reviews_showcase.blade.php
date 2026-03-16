@@ -1,11 +1,10 @@
 @php
-    $style = is_array($section->style ?? null) ? $section->style : [];
-    $paddingY = $style['padding_y'] ?? 'py-16 lg:py-24';
+    $data = $data ?? [];
 
-    $brandPrefix = $content['brand_prefix'] ?? 'PAL';
-    $brandSuffix = $content['brand_suffix'] ?? 'GOALS';
-    $sectionTitle = $content['title'] ?? '';
-    $sectionDescription = $content['description'] ?? '';
+    $brandPrefix = $data['brand_prefix'] ?? 'PAL';
+    $brandSuffix = $data['brand_suffix'] ?? 'GOALS';
+    $sectionTitle = $data['title'] ?? '';
+    $sectionDescription = $data['description'] ?? '';
 
     $resolveMediaUrl = static function ($value): ?string {
         if (is_numeric($value)) {
@@ -23,7 +22,30 @@
         return null;
     };
 
-    $reviews = collect(is_array($content['reviews'] ?? null) ? $content['reviews'] : [])
+    $dbReviews = collect($data['testimonials'] ?? [])
+        ->map(function ($testimonial): ?array {
+            if (! $testimonial) {
+                return null;
+            }
+
+            $translation = $testimonial->translations->firstWhere('locale', app()->getLocale())
+                ?? $testimonial->translations->first();
+
+            if (! $translation) {
+                return null;
+            }
+
+            return [
+                'name' => $translation->name ?: __('Anonymous'),
+                'text' => $translation->feedback ?? '',
+                'rating' => max(1, min(5, (int) ($testimonial->star ?? 5))),
+                'avatar_url' => $testimonial->image?->url,
+            ];
+        })
+        ->filter()
+        ->values();
+
+    $fallbackReviews = collect(is_array($data['reviews'] ?? null) ? $data['reviews'] : [])
         ->map(function ($review) use ($resolveMediaUrl): ?array {
             if (! is_array($review)) {
                 return null;
@@ -31,26 +53,24 @@
 
             $name = trim((string) ($review['name'] ?? ''));
             $text = trim((string) ($review['text'] ?? ''));
-
             if ($name === '' && $text === '') {
                 return null;
             }
 
-            $rating = max(1, min(5, (int) ($review['rating'] ?? 5)));
-            $avatarUrl = $resolveMediaUrl($review['avatar'] ?? null);
-
             return [
                 'name' => $name !== '' ? $name : __('Anonymous'),
                 'text' => $text,
-                'rating' => $rating,
-                'avatar_url' => $avatarUrl,
+                'rating' => max(1, min(5, (int) ($review['rating'] ?? 5))),
+                'avatar_url' => $resolveMediaUrl($review['avatar'] ?? null),
             ];
         })
         ->filter()
         ->values();
+
+    $reviews = $dbReviews->isNotEmpty() ? $dbReviews : $fallbackReviews;
 @endphp
 
-<section id="reviews" class="{{ $paddingY }} relative overflow-hidden bg-gray-50 px-4 sm:px-6 lg:px-12">
+<section id="reviews" class="overflow-hidden bg-gray-50 px-4 py-16 relative sm:px-6 lg:px-12 lg:py-24">
     <div class="container mx-auto">
         <div class="mb-12 text-center">
             <p class="text-lg md:text-xl">
@@ -84,7 +104,6 @@
                                 </div>
                             @endif
                         </div>
-
                         <div class="ltr:text-left rtl:text-right">
                             <h3 class="text-lg font-bold text-purple-brand md:text-xl">{{ $review['name'] }}</h3>
                             <div class="mt-1 flex items-center gap-1 ltr:flex-row rtl:flex-row-reverse">
@@ -108,7 +127,7 @@
                 </div>
             @empty
                 <div class="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-slate-500">
-                    {{ __('Add review cards from the section editor.') }}
+                    {{ __('No approved testimonials available yet.') }}
                 </div>
             @endforelse
         </div>

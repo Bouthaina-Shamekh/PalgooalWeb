@@ -56,7 +56,7 @@ class BuilderSectionDataResolver
     protected static function testimonials(array $data): array
     {
         $data['testimonials'] = Testimonial::approved()
-            ->with('translations')
+            ->with(['translations', 'image'])
             ->orderBy('order')
             ->get();
 

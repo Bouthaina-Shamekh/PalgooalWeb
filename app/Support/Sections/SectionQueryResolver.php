@@ -21,6 +21,7 @@ class SectionQueryResolver
         return match ($type) {
             'services' => self::services($data),
             'testimonials' => self::testimonials($data),
+            'reviews_showcase' => self::testimonials($data),
             'search-domain' => self::searchDomain($data),
             default => $data,
         };
@@ -54,7 +55,7 @@ class SectionQueryResolver
         $limit = isset($data['limit']) && is_numeric($data['limit']) ? (int) $data['limit'] : null;
         if ($limit !== null && $limit <= 0) $limit = null;
 
-        $q = Testimonial::approved()->with('translations')->orderBy('order');
+        $q = Testimonial::approved()->with(['translations', 'image'])->orderBy('order');
 
         if ($limit) $q->limit($limit);
 

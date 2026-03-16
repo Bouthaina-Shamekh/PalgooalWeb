@@ -55,6 +55,15 @@
         'title' => $fallbackTranslation?->title ?? ($content['title'] ?? $typeLabel),
         'subtitle' => $content['subtitle'] ?? '',
     ];
+
+    $reviewsData = \App\Support\Sections\SectionQueryResolver::resolve('reviews_showcase', [
+        'brand_prefix' => $content['brand_prefix'] ?? 'PAL',
+        'brand_suffix' => $content['brand_suffix'] ?? 'GOALS',
+        'title' => $content['title'] ?? ($fallbackTranslation?->title ?? $typeLabel),
+        'description' => $content['description'] ?? '',
+        'limit' => $content['limit'] ?? null,
+        'reviews' => is_array($content['reviews'] ?? null) ? $content['reviews'] : [],
+    ]);
 @endphp
 
 @switch($section->type)
@@ -133,10 +142,7 @@
 
     @case('reviews_showcase')
         @include('components.template.sections.reviews_showcase', [
-            'section' => $section,
-            'title' => $fallbackTranslation?->title,
-            'content' => $content,
-            'variant' => $section->variant,
+            'data' => $reviewsData,
         ])
         @break
 
