@@ -104,6 +104,15 @@
         ])
         @break
 
+    @case('design_showcase')
+        @include('components.template.sections.design_showcase', [
+            'section' => $section,
+            'title' => $fallbackTranslation?->title,
+            'content' => $content,
+            'variant' => $section->variant,
+        ])
+        @break
+
     @case('features_grid')
         <x-template.sections.features :data="$featuresData" />
         @break

@@ -55,22 +55,25 @@
         $isHeroCampaign = $selectedType === 'hero_campaign';
         $isProgrammingShowcase = $selectedType === 'programming_showcase';
         $isMobileAppShowcase = $selectedType === 'mobile_app_showcase';
-        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase;
+        $isDesignShowcase = $selectedType === 'design_showcase';
+        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase;
         $showEyebrowField = $selectedType === 'hero_default';
-        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase;
+        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase;
         $showFeaturesHeadingField = $isHeroCampaign;
         $showOutputsHeadingField = $isProgrammingShowcase;
         $showOutputsTextareaField = $isProgrammingShowcase;
-        $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase;
+        $showServicesTextareaField = $isDesignShowcase;
+        $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase;
         $showPrimaryButtonFields = $selectedType !== 'how_we_build';
         $showSecondaryButtonFields = $selectedType === 'hero_default';
         $showFeatureRepeaterField = $isHeroCampaign;
         $showBuildStepsRepeaterField = $selectedType === 'how_we_build';
         $showFeaturesTextareaField = in_array($selectedType, ['hero_default', 'features_grid'], true);
         $showMobileAppGalleryField = $isMobileAppShowcase;
+        $showDesignGalleryField = $isDesignShowcase;
         $showMediaTypeField = $selectedType === 'hero_default';
         $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign', 'programming_showcase'], true);
-        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase'], true);
+        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase'], true);
     @endphp
 
     <div
@@ -191,6 +194,7 @@
                     $campaignFeatureItems = [];
                     $buildStepItems = [];
                     $outputsTextarea = old("translations.$code.content.outputs_textarea");
+                    $servicesTextarea = old("translations.$code.content.services_textarea");
 
                     if ($featuresTextarea === null) {
                         if (!empty($content['features']) && is_array($content['features'])) {
@@ -214,6 +218,14 @@
                             $outputsTextarea = implode("\n", $content['outputs']);
                         } else {
                             $outputsTextarea = '';
+                        }
+                    }
+
+                    if ($servicesTextarea === null) {
+                        if (! empty($content['services']) && is_array($content['services'])) {
+                            $servicesTextarea = implode("\n", $content['services']);
+                        } else {
+                            $servicesTextarea = '';
                         }
                     }
 
@@ -297,9 +309,15 @@
                     $mobileAppImageOneValue = old("translations.$code.content.image_one", $content['image_one'] ?? null);
                     $mobileAppImageTwoValue = old("translations.$code.content.image_two", $content['image_two'] ?? null);
                     $mobileAppImageThreeValue = old("translations.$code.content.image_three", $content['image_three'] ?? null);
+                    $designImageFourValue = old("translations.$code.content.image_four", $content['image_four'] ?? null);
+                    $designImageFiveValue = old("translations.$code.content.image_five", $content['image_five'] ?? null);
+                    $designImageSixValue = old("translations.$code.content.image_six", $content['image_six'] ?? null);
                     $mobileAppImageOnePreviewUrls = [];
                     $mobileAppImageTwoPreviewUrls = [];
                     $mobileAppImageThreePreviewUrls = [];
+                    $designImageFourPreviewUrls = [];
+                    $designImageFivePreviewUrls = [];
+                    $designImageSixPreviewUrls = [];
 
                     $buildMediaPreviewUrls = static function ($value): array {
                         if (is_numeric($value)) {
@@ -327,6 +345,15 @@
                         $mobileAppImageOnePreviewUrls = $buildMediaPreviewUrls($mobileAppImageOneValue);
                         $mobileAppImageTwoPreviewUrls = $buildMediaPreviewUrls($mobileAppImageTwoValue);
                         $mobileAppImageThreePreviewUrls = $buildMediaPreviewUrls($mobileAppImageThreeValue);
+                    }
+
+                    if ($isDesignShowcase) {
+                        $mobileAppImageOnePreviewUrls = $buildMediaPreviewUrls($mobileAppImageOneValue);
+                        $mobileAppImageTwoPreviewUrls = $buildMediaPreviewUrls($mobileAppImageTwoValue);
+                        $mobileAppImageThreePreviewUrls = $buildMediaPreviewUrls($mobileAppImageThreeValue);
+                        $designImageFourPreviewUrls = $buildMediaPreviewUrls($designImageFourValue);
+                        $designImageFivePreviewUrls = $buildMediaPreviewUrls($designImageFiveValue);
+                        $designImageSixPreviewUrls = $buildMediaPreviewUrls($designImageSixValue);
                     }
                 @endphp
 
@@ -376,6 +403,12 @@
                             </div>
                         @endif
 
+                        @if ($isDesignShowcase)
+                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                {{ __('This section uses a brand label, one main heading, a services list, one CTA button, and a six-image design gallery.') }}
+                            </div>
+                        @endif
+
                         @if ($selectedType === 'how_we_build')
                             <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 {{ __('This section uses a heading, a short subtitle, and a build-process timeline made of editable step cards.') }}
@@ -420,7 +453,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">
-                                {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase) ? __('Section Title') : __('Main Title')) }}
+                                {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase) ? __('Section Title') : __('Main Title')) }}
                             </label>
                             <input
                                 type="text"
@@ -487,6 +520,18 @@
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >{{ $outputsTextarea }}</textarea>
                                 <p class="mt-2 text-xs text-slate-500">{{ __('Each line becomes one output item in the outputs list.') }}</p>
+                            </div>
+                        @endif
+
+                        @if ($showServicesTextareaField)
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Services List') }}</label>
+                                <textarea
+                                    name="translations[{{ $code }}][content][services_textarea]"
+                                    rows="6"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >{{ $servicesTextarea }}</textarea>
+                                <p class="mt-2 text-xs text-slate-500">{{ __('Each line becomes one design service item in the list.') }}</p>
                             </div>
                         @endif
 
@@ -727,7 +772,7 @@
                         @if ($showPrimaryButtonFields)
                             <div>
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase) ? __('CTA Button Label') : __('Primary Button Label') }}
+                                    {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase) ? __('CTA Button Label') : __('Primary Button Label') }}
                                 </label>
                                 <input
                                     type="text"
@@ -739,7 +784,7 @@
 
                             <div>
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase) ? __('CTA Button URL') : __('Primary Button URL') }}
+                                    {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase) ? __('CTA Button URL') : __('Primary Button URL') }}
                                 </label>
                                 <input
                                     type="text"
@@ -1071,6 +1116,97 @@
                                             :multiple="false"
                                             store-value="id"
                                             data-shared-media-group="mobile-app-showcase-image-three"
+                                        />
+                                    </div>
+                                </div>
+
+                                <p class="mt-2 text-xs text-slate-500">{{ __('These gallery images are shared across all languages for this section.') }}</p>
+                            </div>
+                        @endif
+
+                        @if ($showDesignGalleryField)
+                            <div class="lg:col-span-2">
+                                <div class="mb-3">
+                                    <label class="block text-sm font-medium text-slate-700">{{ __('Design Gallery') }}</label>
+                                    <p class="mt-1 text-xs text-slate-500">{{ __('Choose the six images used in the two-row design portfolio grid.') }}</p>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                                    <div>
+                                        <x-dashboard.media-picker
+                                            :name="'translations['.$code.'][content][image_one]'"
+                                            :label="__('Image 1')"
+                                            :button-text="__('Choose From Media Library')"
+                                            :value="$mobileAppImageOneValue"
+                                            :preview-urls="$mobileAppImageOnePreviewUrls"
+                                            :multiple="false"
+                                            store-value="id"
+                                            data-shared-media-group="design-showcase-image-one"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <x-dashboard.media-picker
+                                            :name="'translations['.$code.'][content][image_two]'"
+                                            :label="__('Image 2')"
+                                            :button-text="__('Choose From Media Library')"
+                                            :value="$mobileAppImageTwoValue"
+                                            :preview-urls="$mobileAppImageTwoPreviewUrls"
+                                            :multiple="false"
+                                            store-value="id"
+                                            data-shared-media-group="design-showcase-image-two"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <x-dashboard.media-picker
+                                            :name="'translations['.$code.'][content][image_three]'"
+                                            :label="__('Image 3')"
+                                            :button-text="__('Choose From Media Library')"
+                                            :value="$mobileAppImageThreeValue"
+                                            :preview-urls="$mobileAppImageThreePreviewUrls"
+                                            :multiple="false"
+                                            store-value="id"
+                                            data-shared-media-group="design-showcase-image-three"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <x-dashboard.media-picker
+                                            :name="'translations['.$code.'][content][image_four]'"
+                                            :label="__('Image 4')"
+                                            :button-text="__('Choose From Media Library')"
+                                            :value="$designImageFourValue"
+                                            :preview-urls="$designImageFourPreviewUrls"
+                                            :multiple="false"
+                                            store-value="id"
+                                            data-shared-media-group="design-showcase-image-four"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <x-dashboard.media-picker
+                                            :name="'translations['.$code.'][content][image_five]'"
+                                            :label="__('Image 5')"
+                                            :button-text="__('Choose From Media Library')"
+                                            :value="$designImageFiveValue"
+                                            :preview-urls="$designImageFivePreviewUrls"
+                                            :multiple="false"
+                                            store-value="id"
+                                            data-shared-media-group="design-showcase-image-five"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <x-dashboard.media-picker
+                                            :name="'translations['.$code.'][content][image_six]'"
+                                            :label="__('Image 6')"
+                                            :button-text="__('Choose From Media Library')"
+                                            :value="$designImageSixValue"
+                                            :preview-urls="$designImageSixPreviewUrls"
+                                            :multiple="false"
+                                            store-value="id"
+                                            data-shared-media-group="design-showcase-image-six"
                                         />
                                     </div>
                                 </div>
