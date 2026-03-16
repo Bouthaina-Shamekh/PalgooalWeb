@@ -408,6 +408,7 @@
 
             window.initSectionEditorTabs?.(document);
             window.initSectionFeatureRepeaters?.(document);
+            window.initBuildStepRepeaters?.(document);
         });
 
         window.initSectionEditorTabs = function (scope) {
@@ -626,6 +627,179 @@
 
                 reindexItems();
                 repeater.dataset.featureRepeaterBound = '1';
+            });
+        };
+
+        window.initBuildStepRepeaters = function (scope) {
+            const root = scope instanceof Element || scope instanceof Document ? scope : document;
+            const repeaters = root.matches?.('[data-build-step-repeater]')
+                ? [root]
+                : Array.from(root.querySelectorAll('[data-build-step-repeater]'));
+
+            repeaters.forEach((repeater) => {
+                if (repeater.dataset.buildStepRepeaterBound === '1') {
+                    return;
+                }
+
+                const list = repeater.querySelector('[data-build-step-items]');
+                const template = repeater.querySelector('template[data-build-step-item-template]');
+                const emptyState = repeater.querySelector('[data-build-step-empty]');
+                const addButtons = Array.from(repeater.querySelectorAll('[data-add-build-step]'));
+
+                if (!list || !template) {
+                    repeater.dataset.buildStepRepeaterBound = '1';
+                    return;
+                }
+
+                const sanitizeIconClass = (value) => String(value || '')
+                    .replace(/[^A-Za-z0-9\-_ ]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                const renderIconPreview = (item) => {
+                    const preview = item.querySelector('[data-build-step-icon-preview]');
+                    const input = item.querySelector('[data-build-step-field="icon"]');
+
+                    if (!preview || !input) {
+                        return;
+                    }
+
+                    const iconClass = sanitizeIconClass(input.value);
+                    if (input.value !== iconClass) {
+                        input.value = iconClass;
+                    }
+
+                    preview.innerHTML = '';
+
+                    const icon = document.createElement('i');
+                    icon.className = `${iconClass || 'ti ti-search'} text-2xl leading-none`;
+                    icon.setAttribute('aria-hidden', 'true');
+                    preview.appendChild(icon);
+                };
+
+                const reindexItems = () => {
+                    const items = Array.from(list.querySelectorAll('[data-build-step-item]'));
+
+                    items.forEach((item, index) => {
+                        item.querySelectorAll('[data-name-template]').forEach((field) => {
+                            const templateName = field.dataset.nameTemplate || '';
+                            if (templateName) {
+                                field.name = templateName.replace(/__INDEX__/g, String(index));
+                            }
+                        });
+                    });
+
+                    if (emptyState) {
+                        emptyState.classList.toggle('hidden', items.length > 0);
+                    }
+                };
+
+                const bindStepItem = (item) => {
+                    if (!(item instanceof HTMLElement) || item.dataset.buildStepItemBound === '1') {
+                        return;
+                    }
+
+                    const iconInput = item.querySelector('[data-build-step-field="icon"]');
+                    const titleInput = item.querySelector('[data-build-step-field="title"]');
+                    const removeButton = item.querySelector('[data-remove-build-step]');
+                    const duplicateButton = item.querySelector('[data-duplicate-build-step]');
+                    const presetButtons = Array.from(item.querySelectorAll('[data-build-step-icon-preset]'));
+
+                    iconInput?.addEventListener('input', function () {
+                        renderIconPreview(item);
+                    });
+
+                    removeButton?.addEventListener('click', function () {
+                        item.remove();
+                        reindexItems();
+                    });
+
+                    duplicateButton?.addEventListener('click', function () {
+                        createStepItem({
+                            title: titleInput?.value || '',
+                            icon: iconInput?.value || '',
+                            isAccent: item.querySelector('[data-build-step-field="accent"]')?.checked || false,
+                        });
+                    });
+
+                    presetButtons.forEach((button) => {
+                        button.addEventListener('click', function () {
+                            if (!iconInput) {
+                                return;
+                            }
+
+                            iconInput.value = button.dataset.buildStepIconValue || '';
+                            renderIconPreview(item);
+                            iconInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        });
+                    });
+
+                    renderIconPreview(item);
+                    item.dataset.buildStepItemBound = '1';
+                };
+
+                const createStepItem = (seed = {}) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = template.innerHTML.trim();
+
+                    const item = wrapper.firstElementChild;
+                    if (!(item instanceof HTMLElement)) {
+                        return null;
+                    }
+
+                    list.appendChild(item);
+                    bindStepItem(item);
+
+                    const titleInput = item.querySelector('[data-build-step-field="title"]');
+                    const iconInput = item.querySelector('[data-build-step-field="icon"]');
+                    const accentInput = item.querySelector('[data-build-step-field="accent"]');
+
+                    if (titleInput && typeof seed.title === 'string') {
+                        titleInput.value = seed.title;
+                    }
+
+                    if (iconInput && typeof seed.icon === 'string') {
+                        iconInput.value = sanitizeIconClass(seed.icon);
+                    }
+
+                    if (accentInput) {
+                        accentInput.checked = Boolean(seed.isAccent);
+                    }
+
+                    renderIconPreview(item);
+                    reindexItems();
+
+                    return item;
+                };
+
+                addButtons.forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const item = createStepItem();
+                        const titleInput = item?.querySelector('[data-build-step-field="title"]');
+
+                        if (titleInput instanceof HTMLElement) {
+                            window.setTimeout(() => titleInput.focus(), 30);
+                        }
+                    });
+                });
+
+                Array.from(list.querySelectorAll('[data-build-step-item]')).forEach(bindStepItem);
+
+                if (typeof Sortable !== 'undefined' && list.dataset.buildStepSortableBound !== '1') {
+                    Sortable.create(list, {
+                        animation: 160,
+                        handle: '[data-build-step-drag-handle]',
+                        ghostClass: 'sections-sortable-ghost',
+                        chosenClass: 'sections-sortable-chosen',
+                        dragClass: 'sections-sortable-drag',
+                        onEnd: reindexItems,
+                    });
+
+                    list.dataset.buildStepSortableBound = '1';
+                }
+
+                reindexItems();
+                repeater.dataset.buildStepRepeaterBound = '1';
             });
         };
     </script>

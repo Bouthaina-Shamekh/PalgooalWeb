@@ -90,6 +90,7 @@
         document.addEventListener('DOMContentLoaded', function () {
             window.initSectionEditorTabs?.(document);
             window.initSectionFeatureRepeaters?.(document);
+            window.initBuildStepRepeaters?.(document);
         });
     </script>
 @endpush

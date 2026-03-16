@@ -520,6 +520,14 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
+            'how_we_build' => [
+                'type'        => 'how_we_build',
+                'label'       => 'How We Build',
+                'description' => 'A five-step build process section with highlighted final launch step.',
+                'category'    => 'process',
+                'preview'     => null,
+            ],
+
             'features_grid' => [
                 'type'        => 'features_grid',
                 'label'       => 'Features Grid',
@@ -564,6 +572,9 @@ class SectionController extends Controller
 
             case 'mobile_app_showcase':
                 return $this->normalizeMobileAppContent($content);
+
+            case 'how_we_build':
+                return $this->normalizeHowWeBuildContent($content);
 
             default:
                 return $content;
@@ -701,6 +712,18 @@ class SectionController extends Controller
                 'image_three' => 'assets/dashboard/images/landing/business-presentation-1.png',
             ],
 
+            'how_we_build' => [
+                'title' => 'How We Build',
+                'subtitle' => 'We Build with precision, passion, and purpose',
+                'steps' => [
+                    ['title' => 'Analysis', 'icon' => 'ti ti-search', 'is_accent' => false],
+                    ['title' => 'Ux/Ui', 'icon' => 'ti ti-palette', 'is_accent' => false],
+                    ['title' => 'Development', 'icon' => 'ti ti-code', 'is_accent' => false],
+                    ['title' => 'Testing And Review', 'icon' => 'ti ti-test-pipe', 'is_accent' => false],
+                    ['title' => 'Launch', 'icon' => 'ti ti-rocket', 'is_accent' => true],
+                ],
+            ],
+
             'services_grid' => [
                 'title'    => 'Services',
                 'subtitle' => 'Highlight your core services.',
@@ -738,6 +761,9 @@ class SectionController extends Controller
                 'padding_y' => 'py-16 lg:py-24',
             ],
             'mobile_app_showcase' => [
+                'padding_y' => 'py-16 lg:py-24',
+            ],
+            'how_we_build' => [
                 'padding_y' => 'py-16 lg:py-24',
             ],
             default => [],
@@ -876,6 +902,41 @@ class SectionController extends Controller
             'image_one' => $content['image_one'] ?? null,
             'image_two' => $content['image_two'] ?? null,
             'image_three' => $content['image_three'] ?? null,
+        ];
+    }
+
+    /**
+     * Normalize the how-we-build process payload.
+     */
+    protected function normalizeHowWeBuildContent(array $content): array
+    {
+        return [
+            'title' => $content['title'] ?? null,
+            'subtitle' => $content['subtitle'] ?? null,
+            'steps' => collect(is_array($content['steps'] ?? null) ? $content['steps'] : [])
+                ->map(function ($step): ?array {
+                    if (! is_array($step)) {
+                        return null;
+                    }
+
+                    $title = trim((string) ($step['title'] ?? $step['label'] ?? ''));
+                    if ($title === '') {
+                        return null;
+                    }
+
+                    $icon = trim((string) ($step['icon'] ?? ''));
+                    $icon = preg_replace('/[^A-Za-z0-9\-_ ]/', '', $icon) ?? '';
+                    $icon = trim(preg_replace('/\s+/', ' ', $icon) ?? '');
+
+                    return [
+                        'title' => $title,
+                        'icon' => $icon !== '' ? $icon : null,
+                        'is_accent' => filter_var($step['is_accent'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all(),
         ];
     }
 

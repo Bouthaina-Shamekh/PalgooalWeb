@@ -25,6 +25,13 @@
         ['label' => __('Domain'), 'value' => 'ti ti-world'],
         ['label' => __('Support'), 'value' => 'ti ti-headset'],
     ];
+    $buildStepIconPresets = [
+        ['label' => __('Analysis'), 'value' => 'ti ti-search'],
+        ['label' => __('Design'), 'value' => 'ti ti-palette'],
+        ['label' => __('Build'), 'value' => 'ti ti-code'],
+        ['label' => __('Testing'), 'value' => 'ti ti-test-pipe'],
+        ['label' => __('Launch'), 'value' => 'ti ti-rocket'],
+    ];
 @endphp
 
 <form
@@ -55,8 +62,10 @@
         $showOutputsHeadingField = $isProgrammingShowcase;
         $showOutputsTextareaField = $isProgrammingShowcase;
         $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase;
+        $showPrimaryButtonFields = $selectedType !== 'how_we_build';
         $showSecondaryButtonFields = $selectedType === 'hero_default';
         $showFeatureRepeaterField = $isHeroCampaign;
+        $showBuildStepsRepeaterField = $selectedType === 'how_we_build';
         $showFeaturesTextareaField = in_array($selectedType, ['hero_default', 'features_grid'], true);
         $showMobileAppGalleryField = $isMobileAppShowcase;
         $showMediaTypeField = $selectedType === 'hero_default';
@@ -180,6 +189,7 @@
 
                     $featuresTextarea = old("translations.$code.content.features_textarea");
                     $campaignFeatureItems = [];
+                    $buildStepItems = [];
                     $outputsTextarea = old("translations.$code.content.outputs_textarea");
 
                     if ($featuresTextarea === null) {
@@ -232,6 +242,34 @@
                                 return [
                                     'text' => $text,
                                     'icon' => $icon,
+                                ];
+                            })
+                            ->filter()
+                            ->values()
+                            ->all();
+                    }
+
+                    if ($selectedType === 'how_we_build') {
+                        $oldBuildSteps = old("translations.$code.content.steps");
+                        $buildStepsSource = is_array($oldBuildSteps)
+                            ? $oldBuildSteps
+                            : (is_array($content['steps'] ?? null) ? $content['steps'] : []);
+
+                        $buildStepItems = collect($buildStepsSource)
+                            ->map(function ($item) {
+                                if (! is_array($item)) {
+                                    return null;
+                                }
+
+                                $title = trim((string) ($item['title'] ?? $item['label'] ?? ''));
+                                if ($title === '') {
+                                    return null;
+                                }
+
+                                return [
+                                    'title' => $title,
+                                    'icon' => trim((string) ($item['icon'] ?? '')),
+                                    'is_accent' => filter_var($item['is_accent'] ?? false, FILTER_VALIDATE_BOOLEAN),
                                 ];
                             })
                             ->filter()
@@ -338,6 +376,12 @@
                             </div>
                         @endif
 
+                        @if ($selectedType === 'how_we_build')
+                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                {{ __('This section uses a heading, a short subtitle, and a build-process timeline made of editable step cards.') }}
+                            </div>
+                        @endif
+
                         @if ($showEyebrowField)
                             <div>
                                 <label class="block text-sm font-medium text-slate-700">{{ __('Eyebrow') }}</label>
@@ -376,7 +420,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">
-                                {{ $isHeroCampaign ? __('Main Title - Line 1') : ($isProgrammingShowcase ? __('Section Title') : __('Main Title')) }}
+                                {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase) ? __('Section Title') : __('Main Title')) }}
                             </label>
                             <input
                                 type="text"
@@ -446,29 +490,265 @@
                             </div>
                         @endif
 
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">
-                                {{ ($isHeroCampaign || $isProgrammingShowcase) ? __('CTA Button Label') : __('Primary Button Label') }}
-                            </label>
-                            <input
-                                type="text"
-                                name="translations[{{ $code }}][content][primary_button][label]"
-                                value="{{ $primaryButtonLabelValue }}"
-                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                            >
-                        </div>
+                        @if ($showBuildStepsRepeaterField)
+                            <div class="lg:col-span-2" data-build-step-repeater>
+                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Build Steps') }}</label>
+                                        <p class="mt-1 text-xs text-slate-500">{{ __('Edit each step card, choose its icon, and mark the final highlighted step when needed.') }}</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        data-add-build-step
+                                        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                    >
+                                        <i class="ti ti-plus text-base leading-none" aria-hidden="true"></i>
+                                        <span>{{ __('Add Step') }}</span>
+                                    </button>
+                                </div>
 
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">
-                                {{ ($isHeroCampaign || $isProgrammingShowcase) ? __('CTA Button URL') : __('Primary Button URL') }}
-                            </label>
-                            <input
-                                type="text"
-                                name="translations[{{ $code }}][content][primary_button][url]"
-                                value="{{ $primaryButtonUrlValue }}"
-                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                            >
-                        </div>
+                                <div class="mt-3 rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
+                                    <div class="space-y-3" data-build-step-items>
+                                        @foreach ($buildStepItems as $stepIndex => $stepItem)
+                                            <article data-build-step-item class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                                <div class="flex flex-wrap items-start justify-between gap-3">
+                                                    <button
+                                                        type="button"
+                                                        data-build-step-drag-handle
+                                                        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
+                                                        aria-label="{{ __('Reorder step') }}"
+                                                    >
+                                                        <i class="ti ti-grip-vertical text-lg leading-none" aria-hidden="true"></i>
+                                                    </button>
+
+                                                    <div class="flex items-center gap-2 rtl:flex-row-reverse">
+                                                        <button
+                                                            type="button"
+                                                            data-duplicate-build-step
+                                                            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                                                            aria-label="{{ __('Duplicate step') }}"
+                                                        >
+                                                            <i class="ti ti-copy text-base leading-none" aria-hidden="true"></i>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            data-remove-build-step
+                                                            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                                                            aria-label="{{ __('Remove step') }}"
+                                                        >
+                                                            <i class="ti ti-trash text-base leading-none" aria-hidden="true"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <div class="mt-4 space-y-4">
+                                                    <div>
+                                                        <label class="block text-sm font-medium text-slate-700">{{ __('Step Title') }}</label>
+                                                        <input
+                                                            type="text"
+                                                            name="translations[{{ $code }}][content][steps][{{ $stepIndex }}][title]"
+                                                            data-name-template="translations[{{ $code }}][content][steps][__INDEX__][title]"
+                                                            data-build-step-field="title"
+                                                            value="{{ $stepItem['title'] ?? '' }}"
+                                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                            placeholder="{{ __('Example: Development') }}"
+                                                        >
+                                                    </div>
+
+                                                    <div class="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3">
+                                                        <div
+                                                            data-build-step-icon-preview
+                                                            class="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl border border-red-brand/15 bg-red-brand/5 text-red-brand"
+                                                        >
+                                                            <i class="{{ $stepItem['icon'] ?: 'ti ti-search' }} text-2xl leading-none" aria-hidden="true"></i>
+                                                        </div>
+
+                                                        <div>
+                                                            <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                                                <label class="block text-sm font-medium text-slate-700">{{ __('Icon') }}</label>
+                                                                <span class="text-xs text-slate-400">{{ __('Tabler class') }}</span>
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                name="translations[{{ $code }}][content][steps][{{ $stepIndex }}][icon]"
+                                                                data-name-template="translations[{{ $code }}][content][steps][__INDEX__][icon]"
+                                                                data-build-step-field="icon"
+                                                                value="{{ $stepItem['icon'] ?? '' }}"
+                                                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                                placeholder="ti ti-search"
+                                                            >
+                                                        </div>
+                                                    </div>
+
+                                                    <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 rtl:flex-row-reverse">
+                                                        <input
+                                                            type="checkbox"
+                                                            name="translations[{{ $code }}][content][steps][{{ $stepIndex }}][is_accent]"
+                                                            value="1"
+                                                            data-name-template="translations[{{ $code }}][content][steps][__INDEX__][is_accent]"
+                                                            data-build-step-field="accent"
+                                                            class="rounded border-slate-300"
+                                                            {{ ! empty($stepItem['is_accent']) ? 'checked' : '' }}
+                                                        >
+                                                        <span>{{ __('Highlight this step in red') }}</span>
+                                                    </label>
+                                                </div>
+
+                                                <div class="mt-4">
+                                                    <p class="mb-2 text-xs font-medium text-slate-400">{{ __('Quick Icon Presets') }}</p>
+                                                    <div class="flex flex-wrap gap-2">
+                                                        @foreach ($buildStepIconPresets as $preset)
+                                                            <button
+                                                                type="button"
+                                                                data-build-step-icon-preset
+                                                                data-build-step-icon-value="{{ $preset['value'] }}"
+                                                                class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-white hover:text-slate-800 rtl:flex-row-reverse"
+                                                            >
+                                                                <i class="{{ $preset['value'] }} text-base leading-none" aria-hidden="true"></i>
+                                                                <span>{{ $preset['label'] }}</span>
+                                                            </button>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        @endforeach
+                                    </div>
+
+                                    <div data-build-step-empty class="{{ count($buildStepItems) ? 'hidden ' : '' }}mt-3 rounded-2xl border border-dashed border-slate-300 bg-white/80 px-4 py-6 text-center text-sm text-slate-500">
+                                        {{ __('No build steps yet. Add the first step to start the process timeline.') }}
+                                    </div>
+
+                                    <template data-build-step-item-template>
+                                        <article data-build-step-item class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                                <button
+                                                    type="button"
+                                                    data-build-step-drag-handle
+                                                    class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
+                                                    aria-label="{{ __('Reorder step') }}"
+                                                >
+                                                    <i class="ti ti-grip-vertical text-lg leading-none" aria-hidden="true"></i>
+                                                </button>
+
+                                                <div class="flex items-center gap-2 rtl:flex-row-reverse">
+                                                    <button
+                                                        type="button"
+                                                        data-duplicate-build-step
+                                                        class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                                                        aria-label="{{ __('Duplicate step') }}"
+                                                    >
+                                                        <i class="ti ti-copy text-base leading-none" aria-hidden="true"></i>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        data-remove-build-step
+                                                        class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                                                        aria-label="{{ __('Remove step') }}"
+                                                    >
+                                                        <i class="ti ti-trash text-base leading-none" aria-hidden="true"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-4 space-y-4">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-slate-700">{{ __('Step Title') }}</label>
+                                                    <input
+                                                        type="text"
+                                                        name="translations[{{ $code }}][content][steps][__INDEX__][title]"
+                                                        data-name-template="translations[{{ $code }}][content][steps][__INDEX__][title]"
+                                                        data-build-step-field="title"
+                                                        value=""
+                                                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                        placeholder="{{ __('Example: Development') }}"
+                                                    >
+                                                </div>
+
+                                                <div class="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3">
+                                                    <div
+                                                        data-build-step-icon-preview
+                                                        class="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-2xl border border-red-brand/15 bg-red-brand/5 text-red-brand"
+                                                    >
+                                                        <i class="ti ti-search text-2xl leading-none" aria-hidden="true"></i>
+                                                    </div>
+
+                                                    <div>
+                                                        <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                                            <label class="block text-sm font-medium text-slate-700">{{ __('Icon') }}</label>
+                                                            <span class="text-xs text-slate-400">{{ __('Tabler class') }}</span>
+                                                        </div>
+                                                        <input
+                                                            type="text"
+                                                            name="translations[{{ $code }}][content][steps][__INDEX__][icon]"
+                                                            data-name-template="translations[{{ $code }}][content][steps][__INDEX__][icon]"
+                                                            data-build-step-field="icon"
+                                                            value=""
+                                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                            placeholder="ti ti-search"
+                                                        >
+                                                    </div>
+                                                </div>
+
+                                                <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 rtl:flex-row-reverse">
+                                                    <input
+                                                        type="checkbox"
+                                                        name="translations[{{ $code }}][content][steps][__INDEX__][is_accent]"
+                                                        value="1"
+                                                        data-name-template="translations[{{ $code }}][content][steps][__INDEX__][is_accent]"
+                                                        data-build-step-field="accent"
+                                                        class="rounded border-slate-300"
+                                                    >
+                                                    <span>{{ __('Highlight this step in red') }}</span>
+                                                </label>
+                                            </div>
+
+                                            <div class="mt-4">
+                                                <p class="mb-2 text-xs font-medium text-slate-400">{{ __('Quick Icon Presets') }}</p>
+                                                <div class="flex flex-wrap gap-2">
+                                                    @foreach ($buildStepIconPresets as $preset)
+                                                        <button
+                                                            type="button"
+                                                            data-build-step-icon-preset
+                                                            data-build-step-icon-value="{{ $preset['value'] }}"
+                                                            class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:bg-white hover:text-slate-800 rtl:flex-row-reverse"
+                                                        >
+                                                            <i class="{{ $preset['value'] }} text-base leading-none" aria-hidden="true"></i>
+                                                            <span>{{ $preset['label'] }}</span>
+                                                        </button>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        </article>
+                                    </template>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($showPrimaryButtonFields)
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">
+                                    {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase) ? __('CTA Button Label') : __('Primary Button Label') }}
+                                </label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][primary_button][label]"
+                                    value="{{ $primaryButtonLabelValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">
+                                    {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase) ? __('CTA Button URL') : __('Primary Button URL') }}
+                                </label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][primary_button][url]"
+                                    value="{{ $primaryButtonUrlValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
+                            </div>
+                        @endif
 
                         @if ($showSecondaryButtonFields)
                             <div>

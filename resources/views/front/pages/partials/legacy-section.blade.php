@@ -95,6 +95,15 @@
         ])
         @break
 
+    @case('how_we_build')
+        @include('components.template.sections.how_we_build', [
+            'section' => $section,
+            'title' => $fallbackTranslation?->title,
+            'content' => $content,
+            'variant' => $section->variant,
+        ])
+        @break
+
     @case('features_grid')
         <x-template.sections.features :data="$featuresData" />
         @break
