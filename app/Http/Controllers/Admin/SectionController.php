@@ -544,6 +544,14 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
+            'tech_stack_showcase' => [
+                'type'        => 'tech_stack_showcase',
+                'label'       => 'Technology Stack',
+                'description' => 'Horizontally scrollable strip of technology logos from the media library.',
+                'category'    => 'services',
+                'preview'     => null,
+            ],
+
             'features_grid' => [
                 'type'        => 'features_grid',
                 'label'       => 'Features Grid',
@@ -597,6 +605,9 @@ class SectionController extends Controller
 
             case 'digital_marketing_showcase':
                 return $this->normalizeDigitalMarketingShowcaseContent($content);
+
+            case 'tech_stack_showcase':
+                return $this->normalizeTechStackShowcaseContent($content);
 
             default:
                 return $content;
@@ -791,6 +802,10 @@ class SectionController extends Controller
                 'image_two' => 'assets/dashboard/images/landing/img-productivity-2.png',
             ],
 
+            'tech_stack_showcase' => [
+                'logos' => [],
+            ],
+
             'services_grid' => [
                 'title'    => 'Services',
                 'subtitle' => 'Highlight your core services.',
@@ -838,6 +853,9 @@ class SectionController extends Controller
             ],
             'digital_marketing_showcase' => [
                 'padding_y' => 'py-16 lg:py-24',
+            ],
+            'tech_stack_showcase' => [
+                'padding_y' => 'py-12',
             ],
             default => [],
         };
@@ -1087,6 +1105,32 @@ class SectionController extends Controller
     }
 
     /**
+     * Normalize the technology stack payload.
+     */
+    protected function normalizeTechStackShowcaseContent(array $content): array
+    {
+        $logosRaw = $content['logos'] ?? [];
+
+        if (is_string($logosRaw)) {
+            $logos = array_values(array_filter(array_map(
+                'trim',
+                explode(',', $logosRaw)
+            )));
+        } elseif (is_array($logosRaw)) {
+            $logos = array_values(array_filter(array_map(
+                static fn ($item) => is_scalar($item) ? trim((string) $item) : '',
+                $logosRaw
+            )));
+        } else {
+            $logos = [];
+        }
+
+        return [
+            'logos' => $logos,
+        ];
+    }
+
+    /**
      * Convert campaign features into stable {text, icon} items.
      *
      * @return array<int, array{text: string, icon: string|null}>
@@ -1157,7 +1201,7 @@ class SectionController extends Controller
      */
     protected function syncSharedSectionContent(string $type, array $translations): array
     {
-        if (! in_array($type, ['hero_campaign', 'programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase'], true) || $translations === []) {
+        if (! in_array($type, ['hero_campaign', 'programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase', 'tech_stack_showcase'], true) || $translations === []) {
             return $translations;
         }
 
@@ -1165,6 +1209,7 @@ class SectionController extends Controller
             'mobile_app_showcase' => ['image_one', 'image_two', 'image_three'],
             'design_showcase' => ['image_one', 'image_two', 'image_three', 'image_four', 'image_five', 'image_six'],
             'digital_marketing_showcase' => ['image_one', 'image_two'],
+            'tech_stack_showcase' => ['logos'],
             default => ['media_url'],
         };
 

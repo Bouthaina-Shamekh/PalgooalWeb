@@ -372,7 +372,7 @@
                 const groupName = currentGroup.dataset.sharedMediaGroup;
                 const values = Array.isArray(event.detail?.values) ? event.detail.values : [];
                 const items = Array.isArray(event.detail?.items) ? event.detail.items : [];
-                const nextValue = values[0] ?? '';
+                const nextValue = values.join(',');
 
                 form.querySelectorAll(`[data-shared-media-group="${groupName}"]`).forEach((group) => {
                     const input = group.querySelector('input[type="hidden"]');

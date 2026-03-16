@@ -57,7 +57,8 @@
         $isMobileAppShowcase = $selectedType === 'mobile_app_showcase';
         $isDesignShowcase = $selectedType === 'design_showcase';
         $isDigitalMarketingShowcase = $selectedType === 'digital_marketing_showcase';
-        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase;
+        $isTechStackShowcase = $selectedType === 'tech_stack_showcase';
+        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isTechStackShowcase;
         $showEyebrowField = $selectedType === 'hero_default';
         $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase;
         $showFeaturesHeadingField = $isHeroCampaign;
@@ -65,7 +66,7 @@
         $showOutputsTextareaField = $isProgrammingShowcase;
         $showServicesTextareaField = $isDesignShowcase || $isDigitalMarketingShowcase;
         $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase;
-        $showPrimaryButtonFields = $selectedType !== 'how_we_build';
+        $showPrimaryButtonFields = ! in_array($selectedType, ['how_we_build', 'tech_stack_showcase'], true);
         $showSecondaryButtonFields = $selectedType === 'hero_default';
         $showFeatureRepeaterField = $isHeroCampaign;
         $showBuildStepsRepeaterField = $selectedType === 'how_we_build';
@@ -73,9 +74,11 @@
         $showMobileAppGalleryField = $isMobileAppShowcase;
         $showDesignGalleryField = $isDesignShowcase;
         $showDigitalMarketingGalleryField = $isDigitalMarketingShowcase;
+        $showTechStackMediaField = $isTechStackShowcase;
         $showMediaTypeField = $selectedType === 'hero_default';
         $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign', 'programming_showcase'], true);
-        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase'], true);
+        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase', 'tech_stack_showcase'], true);
+        $showMainTitleField = ! $isTechStackShowcase;
     @endphp
 
     <div
@@ -320,6 +323,8 @@
                     $designImageFourPreviewUrls = [];
                     $designImageFivePreviewUrls = [];
                     $designImageSixPreviewUrls = [];
+                    $techStackLogosValue = old("translations.$code.content.logos", $content['logos'] ?? []);
+                    $techStackLogoPreviewUrls = [];
 
                     $buildMediaPreviewUrls = static function ($value): array {
                         if (is_numeric($value)) {
@@ -361,6 +366,18 @@
                     if ($isDigitalMarketingShowcase) {
                         $mobileAppImageOnePreviewUrls = $buildMediaPreviewUrls($mobileAppImageOneValue);
                         $mobileAppImageTwoPreviewUrls = $buildMediaPreviewUrls($mobileAppImageTwoValue);
+                    }
+
+                    if ($isTechStackShowcase) {
+                        $logoValues = is_string($techStackLogosValue)
+                            ? array_values(array_filter(array_map('trim', explode(',', $techStackLogosValue))))
+                            : (is_array($techStackLogosValue) ? $techStackLogosValue : []);
+
+                        $techStackLogoPreviewUrls = collect($logoValues)
+                            ->flatMap(fn ($value) => $buildMediaPreviewUrls($value))
+                            ->filter()
+                            ->values()
+                            ->all();
                     }
                 @endphp
 
@@ -422,6 +439,12 @@
                             </div>
                         @endif
 
+                        @if ($isTechStackShowcase)
+                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                {{ __('This section renders a horizontally scrollable strip of technology logos. Only the internal label and media library logos are needed.') }}
+                            </div>
+                        @endif
+
                         @if ($selectedType === 'how_we_build')
                             <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 {{ __('This section uses a heading, a short subtitle, and a build-process timeline made of editable step cards.') }}
@@ -464,17 +487,19 @@
                             </div>
                         @endif
 
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">
-                                {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('Section Title') : __('Main Title')) }}
-                            </label>
-                            <input
-                                type="text"
-                                name="translations[{{ $code }}][content][title]"
-                                value="{{ $heroTitleValue }}"
-                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                            >
-                        </div>
+                        @if ($showMainTitleField)
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">
+                                    {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('Section Title') : __('Main Title')) }}
+                                </label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][title]"
+                                    value="{{ $heroTitleValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
+                            </div>
+                        @endif
 
                         @if ($showSubtitleField)
                             <div class="{{ $isHeroCampaign ? '' : 'lg:col-span-2' }}">
@@ -1264,6 +1289,26 @@
                                 </div>
 
                                 <p class="mt-2 text-xs text-slate-500">{{ __('These gallery images are shared across all languages for this section.') }}</p>
+                            </div>
+                        @endif
+
+                        @if ($showTechStackMediaField)
+                            <div class="lg:col-span-2">
+                                <div class="mb-3">
+                                    <label class="block text-sm font-medium text-slate-700">{{ __('Technology Logos') }}</label>
+                                    <p class="mt-1 text-xs text-slate-500">{{ __('Choose all stack logos from the media library. They will render in one horizontal strip and stay shared across all languages.') }}</p>
+                                </div>
+
+                                <x-dashboard.media-picker
+                                    :name="'translations['.$code.'][content][logos]'"
+                                    :label="__('Stack Logos')"
+                                    :button-text="__('Choose From Media Library')"
+                                    :value="$techStackLogosValue"
+                                    :preview-urls="$techStackLogoPreviewUrls"
+                                    :multiple="true"
+                                    store-value="id"
+                                    data-shared-media-group="tech-stack-showcase-logos"
+                                />
                             </div>
                         @endif
 
