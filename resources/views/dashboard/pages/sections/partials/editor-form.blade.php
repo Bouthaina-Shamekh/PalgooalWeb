@@ -56,14 +56,15 @@
         $isProgrammingShowcase = $selectedType === 'programming_showcase';
         $isMobileAppShowcase = $selectedType === 'mobile_app_showcase';
         $isDesignShowcase = $selectedType === 'design_showcase';
-        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase;
+        $isDigitalMarketingShowcase = $selectedType === 'digital_marketing_showcase';
+        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase;
         $showEyebrowField = $selectedType === 'hero_default';
         $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase;
         $showFeaturesHeadingField = $isHeroCampaign;
         $showOutputsHeadingField = $isProgrammingShowcase;
         $showOutputsTextareaField = $isProgrammingShowcase;
-        $showServicesTextareaField = $isDesignShowcase;
-        $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase;
+        $showServicesTextareaField = $isDesignShowcase || $isDigitalMarketingShowcase;
+        $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase;
         $showPrimaryButtonFields = $selectedType !== 'how_we_build';
         $showSecondaryButtonFields = $selectedType === 'hero_default';
         $showFeatureRepeaterField = $isHeroCampaign;
@@ -71,9 +72,10 @@
         $showFeaturesTextareaField = in_array($selectedType, ['hero_default', 'features_grid'], true);
         $showMobileAppGalleryField = $isMobileAppShowcase;
         $showDesignGalleryField = $isDesignShowcase;
+        $showDigitalMarketingGalleryField = $isDigitalMarketingShowcase;
         $showMediaTypeField = $selectedType === 'hero_default';
         $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign', 'programming_showcase'], true);
-        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase'], true);
+        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase'], true);
     @endphp
 
     <div
@@ -355,6 +357,11 @@
                         $designImageFivePreviewUrls = $buildMediaPreviewUrls($designImageFiveValue);
                         $designImageSixPreviewUrls = $buildMediaPreviewUrls($designImageSixValue);
                     }
+
+                    if ($isDigitalMarketingShowcase) {
+                        $mobileAppImageOnePreviewUrls = $buildMediaPreviewUrls($mobileAppImageOneValue);
+                        $mobileAppImageTwoPreviewUrls = $buildMediaPreviewUrls($mobileAppImageTwoValue);
+                    }
                 @endphp
 
                 <div
@@ -409,6 +416,12 @@
                             </div>
                         @endif
 
+                        @if ($isDigitalMarketingShowcase)
+                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                {{ __('This section uses a brand label, one main heading, a services list, one CTA button, and a two-image marketing gallery.') }}
+                            </div>
+                        @endif
+
                         @if ($selectedType === 'how_we_build')
                             <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 {{ __('This section uses a heading, a short subtitle, and a build-process timeline made of editable step cards.') }}
@@ -453,7 +466,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-slate-700">
-                                {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase) ? __('Section Title') : __('Main Title')) }}
+                                {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('Section Title') : __('Main Title')) }}
                             </label>
                             <input
                                 type="text"
@@ -772,7 +785,7 @@
                         @if ($showPrimaryButtonFields)
                             <div>
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase) ? __('CTA Button Label') : __('Primary Button Label') }}
+                                    {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('CTA Button Label') : __('Primary Button Label') }}
                                 </label>
                                 <input
                                     type="text"
@@ -784,7 +797,7 @@
 
                             <div>
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase) ? __('CTA Button URL') : __('Primary Button URL') }}
+                                    {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('CTA Button URL') : __('Primary Button URL') }}
                                 </label>
                                 <input
                                     type="text"
@@ -1207,6 +1220,45 @@
                                             :multiple="false"
                                             store-value="id"
                                             data-shared-media-group="design-showcase-image-six"
+                                        />
+                                    </div>
+                                </div>
+
+                                <p class="mt-2 text-xs text-slate-500">{{ __('These gallery images are shared across all languages for this section.') }}</p>
+                            </div>
+                        @endif
+
+                        @if ($showDigitalMarketingGalleryField)
+                            <div class="lg:col-span-2">
+                                <div class="mb-3">
+                                    <label class="block text-sm font-medium text-slate-700">{{ __('Marketing Gallery') }}</label>
+                                    <p class="mt-1 text-xs text-slate-500">{{ __('Choose the two images shown in the digital marketing gallery.') }}</p>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                    <div>
+                                        <x-dashboard.media-picker
+                                            :name="'translations['.$code.'][content][image_one]'"
+                                            :label="__('Image 1')"
+                                            :button-text="__('Choose From Media Library')"
+                                            :value="$mobileAppImageOneValue"
+                                            :preview-urls="$mobileAppImageOnePreviewUrls"
+                                            :multiple="false"
+                                            store-value="id"
+                                            data-shared-media-group="digital-marketing-showcase-image-one"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <x-dashboard.media-picker
+                                            :name="'translations['.$code.'][content][image_two]'"
+                                            :label="__('Image 2')"
+                                            :button-text="__('Choose From Media Library')"
+                                            :value="$mobileAppImageTwoValue"
+                                            :preview-urls="$mobileAppImageTwoPreviewUrls"
+                                            :multiple="false"
+                                            store-value="id"
+                                            data-shared-media-group="digital-marketing-showcase-image-two"
                                         />
                                     </div>
                                 </div>

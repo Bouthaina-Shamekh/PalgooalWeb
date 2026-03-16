@@ -536,6 +536,14 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
+            'digital_marketing_showcase' => [
+                'type'        => 'digital_marketing_showcase',
+                'label'       => 'Digital Marketing Showcase',
+                'description' => 'Digital marketing section with services list, CTA, and a two-image gallery.',
+                'category'    => 'services',
+                'preview'     => null,
+            ],
+
             'features_grid' => [
                 'type'        => 'features_grid',
                 'label'       => 'Features Grid',
@@ -586,6 +594,9 @@ class SectionController extends Controller
 
             case 'design_showcase':
                 return $this->normalizeDesignShowcaseContent($content);
+
+            case 'digital_marketing_showcase':
+                return $this->normalizeDigitalMarketingShowcaseContent($content);
 
             default:
                 return $content;
@@ -760,6 +771,26 @@ class SectionController extends Controller
                 'image_six' => 'assets/dashboard/images/landing/business-presentation-1.png',
             ],
 
+            'digital_marketing_showcase' => [
+                'brand_prefix' => 'PAL',
+                'brand_suffix' => 'GOALS',
+                'title' => 'DIGITAL MARKETING',
+                'services' => [
+                    'Search Engine Optimization (SEO)',
+                    'Content writing',
+                    'E-Commerce store management and data analysis',
+                    'Pay-Per-Click Advertising (PPC)',
+                    'Social Media Marketing',
+                    'Content Marketing',
+                ],
+                'primary_button' => [
+                    'label' => 'Send Order',
+                    'url' => '#',
+                ],
+                'image_one' => 'assets/dashboard/images/landing/img-productivity-1.png',
+                'image_two' => 'assets/dashboard/images/landing/img-productivity-2.png',
+            ],
+
             'services_grid' => [
                 'title'    => 'Services',
                 'subtitle' => 'Highlight your core services.',
@@ -803,6 +834,9 @@ class SectionController extends Controller
                 'padding_y' => 'py-16 lg:py-24',
             ],
             'design_showcase' => [
+                'padding_y' => 'py-16 lg:py-24',
+            ],
+            'digital_marketing_showcase' => [
                 'padding_y' => 'py-16 lg:py-24',
             ],
             default => [],
@@ -1019,6 +1053,40 @@ class SectionController extends Controller
     }
 
     /**
+     * Normalize the digital marketing showcase payload.
+     */
+    protected function normalizeDigitalMarketingShowcaseContent(array $content): array
+    {
+        $servicesRaw = $content['services_textarea'] ?? ($content['services'] ?? '');
+
+        if (is_array($servicesRaw)) {
+            $services = array_values(array_filter(array_map(
+                static fn ($item) => is_scalar($item) ? trim((string) $item) : '',
+                $servicesRaw
+            )));
+        } else {
+            $services = array_values(array_filter(
+                array_map('trim', preg_split("/\r\n|\r|\n/", (string) $servicesRaw))
+            ));
+        }
+
+        return [
+            'brand_prefix' => $content['brand_prefix'] ?? null,
+            'brand_suffix' => $content['brand_suffix'] ?? null,
+            'title' => $content['title'] ?? null,
+            'services' => $services,
+            'primary_button' => [
+                'label' => $content['primary_button_label']
+                    ?? ($content['primary_button']['label'] ?? null),
+                'url' => $content['primary_button_url']
+                    ?? ($content['primary_button']['url'] ?? null),
+            ],
+            'image_one' => $content['image_one'] ?? null,
+            'image_two' => $content['image_two'] ?? null,
+        ];
+    }
+
+    /**
      * Convert campaign features into stable {text, icon} items.
      *
      * @return array<int, array{text: string, icon: string|null}>
@@ -1089,13 +1157,14 @@ class SectionController extends Controller
      */
     protected function syncSharedSectionContent(string $type, array $translations): array
     {
-        if (! in_array($type, ['hero_campaign', 'programming_showcase', 'mobile_app_showcase', 'design_showcase'], true) || $translations === []) {
+        if (! in_array($type, ['hero_campaign', 'programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase'], true) || $translations === []) {
             return $translations;
         }
 
         $sharedKeys = match ($type) {
             'mobile_app_showcase' => ['image_one', 'image_two', 'image_three'],
             'design_showcase' => ['image_one', 'image_two', 'image_three', 'image_four', 'image_five', 'image_six'],
+            'digital_marketing_showcase' => ['image_one', 'image_two'],
             default => ['media_url'],
         };
 
