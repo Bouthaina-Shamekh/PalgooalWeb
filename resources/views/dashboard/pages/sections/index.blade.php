@@ -674,9 +674,13 @@
                     return;
                 }
 
-                form.addEventListener('submit', async function (event) {
-                    event.preventDefault();
+                let isSavingEditor = false;
+                const handleEditorSave = async () => {
+                    if (isSavingEditor) {
+                        return;
+                    }
 
+                    isSavingEditor = true;
                     const submitButtons = Array.from(root.querySelectorAll('[data-section-editor-submit]'));
                     submitButtons.forEach((button) => {
                         button.disabled = true;
@@ -687,15 +691,19 @@
 
                     try {
                         const formData = new FormData(form);
-                        formData.set('_method', 'PUT');
+                        const methodOverride = String(formData.get('_method') || '').toUpperCase();
+                        const requestMethod = ['PUT', 'PATCH', 'DELETE'].includes(methodOverride) ? methodOverride : 'POST';
+
+                        if (requestMethod !== 'POST') {
+                            formData.delete('_method');
+                        }
 
                         const response = await fetch(form.action, {
-                            method: 'POST',
+                            method: requestMethod,
                             headers: {
                                 'Accept': 'application/json',
                                 'X-Requested-With': 'XMLHttpRequest',
                                 'X-CSRF-TOKEN': csrfToken,
-                                'X-HTTP-Method-Override': 'PUT',
                             },
                             body: formData,
                         });
@@ -741,11 +749,26 @@
                                 : editorSaveFailedMessage,
                         ]);
                     } finally {
+                        isSavingEditor = false;
                         submitButtons.forEach((button) => {
                             button.disabled = false;
                             button.classList.remove('opacity-70', 'pointer-events-none');
                         });
                     }
+                };
+
+                form.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleEditorSave();
+                });
+
+                root.querySelectorAll('[data-section-editor-submit]').forEach((button) => {
+                    button.addEventListener('click', function (event) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        handleEditorSave();
+                    });
                 });
 
                 const runEditorInitializer = (initializer) => {

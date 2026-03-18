@@ -5,7 +5,8 @@
     $formAction = $formAction ?? route('dashboard.pages.sections.update', [$page, $section], false);
     $formClass = $formClass ?? 'space-y-6';
     $formMethod = $formMethod ?? 'POST';
-    $formMethodSpoof = $formMethodSpoof ?? null;
+    $formMethodSpoof = $formMethodSpoof ?? 'PUT';
+    $preventNativeSubmit = $preventNativeSubmit ?? false;
     $surfaceClass = $surfaceClass ?? 'rounded-3xl border border-slate-200 bg-white shadow-sm';
     $sectionHeaderClass = $sectionHeaderClass ?? 'border-b border-slate-200 px-5 py-4 lg:px-6';
     $sectionBodyClass = $sectionBodyClass ?? 'p-5 lg:p-6';
@@ -29,6 +30,7 @@
     data-section-editor-form
     data-section-id="{{ $section->id }}"
     data-default-editor-tab="lang-{{ $editorDefaultLocale }}"
+    @if ($preventNativeSubmit) onsubmit="return false;" @endif
 >
     @csrf
     @if ($formMethodSpoof)

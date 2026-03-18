@@ -42,6 +42,7 @@
         @include('dashboard.pages.sections.partials.editor-form', [
             'formId' => 'sidebar-section-edit-form',
             'formClass' => 'space-y-0',
+            'preventNativeSubmit' => true,
             'surfaceClass' => 'rounded-none border-b border-slate-200 bg-transparent shadow-none',
             'sectionHeaderClass' => 'border-b border-slate-200 px-4 py-3',
             'sectionBodyClass' => 'px-4 py-3',
@@ -53,8 +54,7 @@
 
     <div class="shrink-0 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
         <button
-            type="submit"
-            form="sidebar-section-edit-form"
+            type="button"
             data-section-editor-submit
             class="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
