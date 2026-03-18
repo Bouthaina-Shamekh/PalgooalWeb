@@ -2,7 +2,7 @@
     use App\Models\Media;
 
     $formId = $formId ?? 'section-edit-form';
-    $formAction = $formAction ?? route('dashboard.pages.sections.save', [$page, $section], false);
+    $formAction = $formAction ?? route('dashboard.pages.sections.update', [$page, $section], false);
     $formClass = $formClass ?? 'space-y-6';
     $formMethod = $formMethod ?? 'POST';
     $formMethodSpoof = $formMethodSpoof ?? null;
