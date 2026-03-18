@@ -58,12 +58,18 @@
 
         .sections-outline-item {
             cursor: pointer;
+            background: #ffffff;
+            box-shadow: 0 10px 24px -24px rgba(15, 23, 42, 0.18), 0 4px 10px rgba(15, 23, 42, 0.04);
+        }
+
+        .sections-outline-item:hover {
+            background: #ffffff;
+            box-shadow: 0 16px 32px -28px rgba(15, 23, 42, 0.2), 0 6px 14px rgba(15, 23, 42, 0.05);
         }
 
         .sections-outline-item.is-selected {
-            border-color: rgba(15, 23, 42, 0.18);
-            background: rgba(255, 255, 255, 0.98);
-            box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.08);
+            background: #ffffff;
+            box-shadow: 0 18px 34px -28px rgba(15, 23, 42, 0.22), 0 8px 18px rgba(15, 23, 42, 0.06);
         }
 
         .sections-preview-stage {
@@ -306,19 +312,19 @@
         </div>
     @endif
 
-    <div class="rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-        <div class="border-b border-slate-200 px-5 py-5 ltr:text-left rtl:text-right">
-            <h3 class="text-xl font-semibold text-slate-900">{{ $pageTitle }}</h3>
-            <p class="mt-2 text-sm leading-6 text-slate-500">{{ __('Customize this page sections and keep the structure organized.') }}</p>
-            <button type="button" data-open-section-library class="mt-3 inline-flex items-center gap-2 text-sm font-medium text-slate-700 transition hover:text-slate-900 rtl:flex-row-reverse">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6 4.5 12l6 6M19.5 12h-15" />
-                </svg>
-                <span>{{ __('Need help? Open the section library') }}</span>
-            </button>
-        </div>
+    <div class="ltr:text-left rtl:text-right">
+        <h3 class="text-xl font-semibold text-slate-900">{{ $pageTitle }}</h3>
+        <p class="mt-2 text-sm leading-6 text-slate-500">{{ __('Customize this page sections and keep the structure organized.') }}</p>
+        <button type="button" data-open-section-library class="mt-3 inline-flex items-center gap-2 text-sm font-medium text-slate-700 transition hover:text-slate-900 rtl:flex-row-reverse">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6 4.5 12l6 6M19.5 12h-15" />
+            </svg>
+            <span>{{ __('Need help? Open the section library') }}</span>
+        </button>
+    </div>
 
-        <div class="space-y-4 px-5 py-5">
+    <div class="border-t border-slate-200 pt-5">
+        <div class="space-y-4">
             <div class="flex items-center justify-between gap-3">
                 <h4 class="text-lg font-semibold text-slate-900">{{ __('Page Elements') }}</h4>
                 <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{{ $sections->count() }}</span>
@@ -347,7 +353,7 @@
                         data-section-id="{{ $section->id }}"
                         data-edit-section-url="{{ $editorUrl }}"
                         data-edit-section-fallback-url="{{ $fallbackEditUrl }}"
-                        class="sections-outline-item rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 transition hover:border-slate-300 {{ $selectedSectionId === $section->id ? 'is-selected' : '' }}"
+                        class="sections-outline-item rounded-2xl px-4 py-3 transition {{ $selectedSectionId === $section->id ? 'is-selected' : '' }}"
                     >
                         <div class="flex items-center justify-between gap-3">
                             <div class="min-w-0 flex-1 ltr:text-left rtl:text-right">
@@ -461,11 +467,11 @@
                 @endforelse
             </div>
         </div>
+    </div>
 
-        <div class="border-t border-slate-200 bg-slate-50/70 px-5 py-4">
-            <div class="flex items-center justify-center rounded-2xl bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-700">
-                {{ __('Changes save automatically') }}
-            </div>
+    <div class="border-t border-slate-200 pt-4">
+        <div class="flex items-center justify-center rounded-2xl bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-700">
+            {{ __('Changes save automatically') }}
         </div>
     </div>
     </div>

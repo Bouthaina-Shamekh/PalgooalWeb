@@ -7,7 +7,7 @@
     $editorTitle = $fallbackTranslation?->title ?: $sectionTypeLabel;
 @endphp
 
-<div class="h-full overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_60px_-36px_rgba(15,23,42,0.35)]" data-section-editor-root>
+<div class="overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_60px_-36px_rgba(15,23,42,0.35)]" data-section-editor-root>
     <div class="border-b border-slate-200 px-4 py-3">
         <div class="flex items-start justify-between gap-3 rtl:flex-row-reverse">
             <div class="min-w-0 flex-1">
@@ -49,7 +49,7 @@
         </div>
     </div>
 
-    <div class="workspace-scrollbar max-h-[calc(100vh-12.5rem)] overflow-y-auto px-0 py-0">
+    <div class="px-0 py-0">
         @include('dashboard.pages.sections.partials.editor-form', [
             'formId' => 'sidebar-section-edit-form',
             'formClass' => 'space-y-0',
