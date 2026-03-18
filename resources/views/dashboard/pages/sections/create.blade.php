@@ -48,7 +48,7 @@
     <form
         id="section-create-form"
         method="POST"
-        action="{{ route('dashboard.pages.sections.store', $page) }}"
+        action="{{ route('dashboard.pages.sections.store', $page, false) }}"
         class="space-y-6"
     >
         @csrf

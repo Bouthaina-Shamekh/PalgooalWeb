@@ -9,7 +9,7 @@
     $pageBuilderMode = in_array($page->builder_mode, ['visual', 'sections'], true) ? $page->builder_mode : 'sections';
     $isRtl = current_dir() === 'rtl';
     $drawerClosedTranslateClass = $isRtl ? '-translate-x-full' : 'translate-x-full';
-    $previewBaseUrl = route('dashboard.pages.sections.preview', $page);
+    $previewBaseUrl = route('dashboard.pages.sections.preview', $page, false);
     $previewUrl = $previewBaseUrl . ($selectedSectionId ? ('?highlight=' . $selectedSectionId) : '');
     $autoEditSectionId = (int) request('edit');
     $editingSection = $autoEditSectionId > 0 ? $sections->firstWhere('id', $autoEditSectionId) : null;
@@ -262,7 +262,7 @@
                                         ? asset($meta['preview'])
                                         : null;
                                 @endphp
-                                <form action="{{ route('dashboard.pages.sections.quick-store', $page) }}" method="POST" data-library-item data-library-text="{{ \Illuminate\Support\Str::lower($meta['label'] . ' ' . ($meta['description'] ?? '') . ' ' . $category) }}">
+                                <form action="{{ route('dashboard.pages.sections.quick-store', $page, false) }}" method="POST" data-library-item data-library-text="{{ \Illuminate\Support\Str::lower($meta['label'] . ' ' . ($meta['description'] ?? '') . ' ' . $category) }}">
                                     @csrf
                                     <input type="hidden" name="type" value="{{ $type }}">
                                     <button type="submit" class="group flex h-full w-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md ltr:text-left rtl:text-right">
@@ -337,7 +337,7 @@
                 <span>{{ __('Add New Element') }}</span>
             </button>
 
-            <div id="sections-outline-list" class="space-y-3" data-sections-sortable-sidebar data-reorder-url="{{ route('dashboard.pages.sections.reorder', $page) }}">
+            <div id="sections-outline-list" class="space-y-3" data-sections-sortable-sidebar data-reorder-url="{{ route('dashboard.pages.sections.reorder', $page, false) }}">
                 @forelse ($sections as $section)
                     @php
                         $sidebarTranslation = method_exists($section, 'translation') ? $section->translation($currentLocale) : null;
@@ -345,8 +345,8 @@
                         $sidebarTypeMeta = $sectionTypes[$section->type] ?? null;
                         $sidebarTypeLabel = $sidebarTypeMeta['label'] ?? \Illuminate\Support\Str::headline(str_replace(['_', '-'], ' ', $section->type));
                         $sidebarTitle = $sidebarFallbackTranslation?->title ?: $sidebarTypeLabel;
-                        $editorUrl = route('dashboard.pages.sections.editor', [$page, $section]);
-                        $fallbackEditUrl = route('dashboard.pages.sections.edit', [$page, $section]);
+                        $editorUrl = route('dashboard.pages.sections.editor', [$page, $section], false);
+                        $fallbackEditUrl = route('dashboard.pages.sections.edit', [$page, $section], false);
                     @endphp
 
                     <article
@@ -389,7 +389,7 @@
                                         data-section-menu
                                         class="absolute top-full z-20 mt-2 hidden w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl ltr:right-0 ltr:left-auto rtl:left-0 rtl:right-auto"
                                     >
-                                        <form action="{{ route('dashboard.pages.sections.toggle-active', [$page, $section]) }}" method="POST">
+                                        <form action="{{ route('dashboard.pages.sections.toggle-active', [$page, $section], false) }}" method="POST">
                                             @csrf
                                             <button type="submit" class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 ltr:text-left rtl:text-right rtl:flex-row-reverse">
                                                 <span>{{ $section->is_active ? __('Hide') : __('Show') }}</span>
@@ -399,7 +399,7 @@
                                             </button>
                                         </form>
 
-                                        <form action="{{ route('dashboard.pages.sections.duplicate', [$page, $section]) }}" method="POST">
+                                        <form action="{{ route('dashboard.pages.sections.duplicate', [$page, $section], false) }}" method="POST">
                                             @csrf
                                             <button type="submit" class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 ltr:text-left rtl:text-right rtl:flex-row-reverse">
                                                 <span>{{ __('Duplicate') }}</span>
@@ -416,7 +416,7 @@
                                             </svg>
                                         </button>
 
-                                        <form action="{{ route('dashboard.pages.sections.destroy', [$page, $section]) }}" method="POST" onsubmit="return confirm('{{ __('Are you sure you want to delete this section? This action cannot be undone.') }}')">
+                                        <form action="{{ route('dashboard.pages.sections.destroy', [$page, $section], false) }}" method="POST" onsubmit="return confirm('{{ __('Are you sure you want to delete this section? This action cannot be undone.') }}')">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50 ltr:text-left rtl:text-right rtl:flex-row-reverse">
@@ -438,7 +438,7 @@
                         </div>
 
                         <div data-rename-panel class="mt-3 hidden border-t border-slate-200 pt-3">
-                            <form action="{{ route('dashboard.pages.sections.rename', [$page, $section]) }}" method="POST" class="space-y-3">
+                            <form action="{{ route('dashboard.pages.sections.rename', [$page, $section], false) }}" method="POST" class="space-y-3">
                                 @csrf
                                 <input type="hidden" name="locale" value="{{ $currentLocale }}">
                                 <div>

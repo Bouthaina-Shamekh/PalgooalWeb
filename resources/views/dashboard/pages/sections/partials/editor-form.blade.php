@@ -2,7 +2,7 @@
     use App\Models\Media;
 
     $formId = $formId ?? 'section-edit-form';
-    $formAction = $formAction ?? route('dashboard.pages.sections.update', [$page, $section]);
+    $formAction = $formAction ?? route('dashboard.pages.sections.update', [$page, $section], false);
     $formClass = $formClass ?? 'space-y-6';
     $surfaceClass = $surfaceClass ?? 'rounded-3xl border border-slate-200 bg-white shadow-sm';
     $sectionHeaderClass = $sectionHeaderClass ?? 'border-b border-slate-200 px-5 py-4 lg:px-6';
