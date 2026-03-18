@@ -686,14 +686,18 @@
                     renderEditorFeedback(root, 'success', []);
 
                     try {
+                        const formData = new FormData(form);
+                        formData.set('_method', 'PUT');
+
                         const response = await fetch(form.action, {
                             method: 'POST',
                             headers: {
                                 'Accept': 'application/json',
                                 'X-Requested-With': 'XMLHttpRequest',
                                 'X-CSRF-TOKEN': csrfToken,
+                                'X-HTTP-Method-Override': 'PUT',
                             },
-                            body: new FormData(form),
+                            body: formData,
                         });
 
                         const payload = await response.json().catch(() => ({}));
