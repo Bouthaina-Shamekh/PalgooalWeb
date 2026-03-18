@@ -691,6 +691,7 @@
 
                     try {
                         const formData = new FormData(form);
+                        const saveUrl = form.dataset.saveAction || form.action;
                         const methodOverride = String(formData.get('_method') || '').toUpperCase();
                         const requestMethod = ['PUT', 'PATCH', 'DELETE'].includes(methodOverride) ? methodOverride : 'POST';
 
@@ -698,7 +699,7 @@
                             formData.delete('_method');
                         }
 
-                        const response = await fetch(form.action, {
+                        const response = await fetch(saveUrl, {
                             method: requestMethod,
                             headers: {
                                 'Accept': 'application/json',
@@ -760,13 +761,15 @@
                 form.addEventListener('submit', function (event) {
                     event.preventDefault();
                     event.stopPropagation();
+                    event.stopImmediatePropagation();
                     handleEditorSave();
-                });
+                }, true);
 
                 root.querySelectorAll('[data-section-editor-submit]').forEach((button) => {
                     button.addEventListener('click', function (event) {
                         event.preventDefault();
                         event.stopPropagation();
+                        event.stopImmediatePropagation();
                         handleEditorSave();
                     });
                 });

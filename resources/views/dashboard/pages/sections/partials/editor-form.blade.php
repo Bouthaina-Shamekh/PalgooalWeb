@@ -3,6 +3,7 @@
 
     $formId = $formId ?? 'section-edit-form';
     $formAction = $formAction ?? route('dashboard.pages.sections.update', [$page, $section], false);
+    $saveAction = $saveAction ?? $formAction;
     $formClass = $formClass ?? 'space-y-6';
     $formMethod = $formMethod ?? 'POST';
     $formMethodSpoof = $formMethodSpoof ?? 'PUT';
@@ -30,6 +31,7 @@
     data-section-editor-form
     data-section-id="{{ $section->id }}"
     data-default-editor-tab="lang-{{ $editorDefaultLocale }}"
+    data-save-action="{{ $saveAction }}"
     @if ($preventNativeSubmit) onsubmit="return false;" @endif
 >
     @csrf

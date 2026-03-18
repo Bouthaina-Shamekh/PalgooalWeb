@@ -41,6 +41,9 @@
     <div class="workspace-scrollbar min-h-0 flex-1 overflow-y-auto px-0 py-0">
         @include('dashboard.pages.sections.partials.editor-form', [
             'formId' => 'sidebar-section-edit-form',
+            'formAction' => '#',
+            'saveAction' => route('dashboard.pages.sections.update', [$page, $section], false),
+            'formMethod' => 'GET',
             'formClass' => 'space-y-0',
             'preventNativeSubmit' => true,
             'surfaceClass' => 'rounded-none border-b border-slate-200 bg-transparent shadow-none',
