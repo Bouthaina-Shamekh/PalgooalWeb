@@ -922,7 +922,12 @@
                         @endif
 
                         @if ($showFeatureRepeaterField)
-                            <div class="lg:col-span-2" data-feature-repeater>
+                            <div
+                                class="lg:col-span-2"
+                                data-feature-repeater
+                                data-feature-item-label="{{ __('Feature') }}"
+                                data-feature-item-hint="{{ __('Click to edit this feature') }}"
+                            >
                                 <div class="flex flex-wrap items-start justify-between gap-3">
                                     <div>
                                         <label class="block text-sm font-medium text-slate-700">{{ __('Campaign Features') }}</label>
@@ -942,19 +947,37 @@
                                     <div class="space-y-3" data-feature-items>
                                         @foreach ($campaignFeatureItems as $featureIndex => $featureItem)
                                             <article data-feature-item class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                                                <div class="flex flex-wrap items-start justify-between gap-3">
-                                                    <div class="flex items-center gap-3 rtl:flex-row-reverse">
-                                                        <button
-                                                            type="button"
-                                                            data-feature-drag-handle
-                                                            class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
-                                                            aria-label="{{ __('Reorder feature') }}"
-                                                        >
-                                                            <i class="ti ti-grip-vertical text-lg leading-none" aria-hidden="true"></i>
-                                                        </button>
-                                                    </div>
+                                                <div class="flex items-start gap-3">
+                                                    <button
+                                                        type="button"
+                                                        data-feature-drag-handle
+                                                        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
+                                                        aria-label="{{ __('Reorder feature') }}"
+                                                    >
+                                                        <i class="ti ti-grip-vertical text-lg leading-none" aria-hidden="true"></i>
+                                                    </button>
 
-                                                    <div class="flex items-center gap-2 rtl:flex-row-reverse">
+                                                    <button
+                                                        type="button"
+                                                        data-feature-toggle
+                                                        aria-expanded="{{ $loop->first ? 'true' : 'false' }}"
+                                                        class="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl bg-slate-50/80 px-3 py-2 text-left transition hover:bg-slate-100 rtl:flex-row-reverse rtl:text-right"
+                                                    >
+                                                        <div class="min-w-0 flex-1">
+                                                            <p data-feature-item-title class="truncate text-sm font-semibold text-slate-900">
+                                                                {{ filled($featureItem['text'] ?? '') ? $featureItem['text'] : __('Feature') . ' ' . ($featureIndex + 1) }}
+                                                            </p>
+                                                            <p data-feature-item-summary class="mt-1 truncate text-xs text-slate-500">
+                                                                {{ filled($featureItem['icon'] ?? '') ? $featureItem['icon'] : __('Click to edit this feature') }}
+                                                            </p>
+                                                        </div>
+
+                                                        <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500">
+                                                            <i data-feature-toggle-icon class="ti ti-chevron-down text-base leading-none {{ $loop->first ? 'rotate-180' : '' }}" aria-hidden="true"></i>
+                                                        </span>
+                                                    </button>
+
+                                                    <div class="flex shrink-0 items-center gap-2 rtl:flex-row-reverse">
                                                         <button
                                                             type="button"
                                                             data-duplicate-feature-item
@@ -974,7 +997,7 @@
                                                     </div>
                                                 </div>
 
-                                                <div class="mt-4 space-y-4">
+                                                <div data-feature-item-body class="mt-4 space-y-4 {{ $loop->first ? '' : 'hidden' }}">
                                                     <div>
                                                         <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
                                                             <label class="block text-sm font-medium text-slate-700">{{ __('Feature Text') }}</label>
@@ -1049,19 +1072,33 @@
 
                                     <template data-feature-item-template>
                                         <article data-feature-item class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                                            <div class="flex flex-wrap items-start justify-between gap-3">
-                                                <div class="flex items-center gap-3 rtl:flex-row-reverse">
-                                                    <button
-                                                        type="button"
-                                                        data-feature-drag-handle
-                                                        class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
-                                                        aria-label="{{ __('Reorder feature') }}"
-                                                    >
-                                                        <i class="ti ti-grip-vertical text-lg leading-none" aria-hidden="true"></i>
-                                                    </button>
-                                                </div>
+                                            <div class="flex items-start gap-3">
+                                                <button
+                                                    type="button"
+                                                    data-feature-drag-handle
+                                                    class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
+                                                    aria-label="{{ __('Reorder feature') }}"
+                                                >
+                                                    <i class="ti ti-grip-vertical text-lg leading-none" aria-hidden="true"></i>
+                                                </button>
 
-                                                <div class="flex items-center gap-2 rtl:flex-row-reverse">
+                                                <button
+                                                    type="button"
+                                                    data-feature-toggle
+                                                    aria-expanded="false"
+                                                    class="flex min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl bg-slate-50/80 px-3 py-2 text-left transition hover:bg-slate-100 rtl:flex-row-reverse rtl:text-right"
+                                                >
+                                                    <div class="min-w-0 flex-1">
+                                                        <p data-feature-item-title class="truncate text-sm font-semibold text-slate-900">{{ __('New Feature') }}</p>
+                                                        <p data-feature-item-summary class="mt-1 truncate text-xs text-slate-500">{{ __('Click to edit this feature') }}</p>
+                                                    </div>
+
+                                                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500">
+                                                        <i data-feature-toggle-icon class="ti ti-chevron-down text-base leading-none" aria-hidden="true"></i>
+                                                    </span>
+                                                </button>
+
+                                                <div class="flex shrink-0 items-center gap-2 rtl:flex-row-reverse">
                                                     <button
                                                         type="button"
                                                         data-duplicate-feature-item
@@ -1081,7 +1118,7 @@
                                                 </div>
                                             </div>
 
-                                            <div class="mt-4 space-y-4">
+                                            <div data-feature-item-body class="mt-4 hidden space-y-4">
                                                 <div>
                                                     <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
                                                         <label class="block text-sm font-medium text-slate-700">{{ __('Feature Text') }}</label>

@@ -474,6 +474,8 @@
                 const template = repeater.querySelector('template[data-feature-item-template]');
                 const emptyState = repeater.querySelector('[data-feature-empty]');
                 const addButtons = Array.from(repeater.querySelectorAll('[data-add-feature-item]'));
+                const featureItemLabel = repeater.dataset.featureItemLabel || 'Feature';
+                const featureItemHint = repeater.dataset.featureItemHint || 'Click to edit this feature';
 
                 if (!list || !template) {
                     repeater.dataset.featureRepeaterBound = '1';
@@ -506,6 +508,58 @@
                     preview.appendChild(icon);
                 };
 
+                const setFeatureExpanded = (item, expanded, collapseOthers = false) => {
+                    if (!(item instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    if (collapseOthers) {
+                        Array.from(list.querySelectorAll('[data-feature-item]')).forEach((entry) => {
+                            if (entry !== item) {
+                                setFeatureExpanded(entry, false, false);
+                            }
+                        });
+                    }
+
+                    const body = item.querySelector('[data-feature-item-body]');
+                    const toggle = item.querySelector('[data-feature-toggle]');
+                    const toggleIcon = item.querySelector('[data-feature-toggle-icon]');
+
+                    if (body) {
+                        body.classList.toggle('hidden', !expanded);
+                    }
+
+                    if (toggle) {
+                        toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                    }
+
+                    if (toggleIcon) {
+                        toggleIcon.classList.toggle('rotate-180', expanded);
+                    }
+                };
+
+                const refreshFeatureItemMeta = (item, index = null) => {
+                    if (!(item instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    const textInput = item.querySelector('[data-feature-field="text"]');
+                    const iconInput = item.querySelector('[data-feature-field="icon"]');
+                    const title = item.querySelector('[data-feature-item-title]');
+                    const summary = item.querySelector('[data-feature-item-summary]');
+                    const textValue = String(textInput?.value || '').trim();
+                    const iconValue = sanitizeIconClass(iconInput?.value || '');
+                    const fallbackTitle = `${featureItemLabel} ${Number(index ?? 0) + 1}`;
+
+                    if (title) {
+                        title.textContent = textValue || fallbackTitle;
+                    }
+
+                    if (summary) {
+                        summary.textContent = iconValue || featureItemHint;
+                    }
+                };
+
                 const reindexItems = () => {
                     const items = Array.from(list.querySelectorAll('[data-feature-item]'));
 
@@ -521,10 +575,21 @@
                         if (numberBadge) {
                             numberBadge.textContent = String(index + 1);
                         }
+
+                        refreshFeatureItemMeta(item, index);
                     });
 
                     if (emptyState) {
                         emptyState.classList.toggle('hidden', items.length > 0);
+                    }
+
+                    const hasExpandedItem = items.some((item) => {
+                        const body = item.querySelector('[data-feature-item-body]');
+                        return body && !body.classList.contains('hidden');
+                    });
+
+                    if (!hasExpandedItem && items[0]) {
+                        setFeatureExpanded(items[0], true, false);
                     }
                 };
 
@@ -537,10 +602,16 @@
                     const textInput = item.querySelector('[data-feature-field="text"]');
                     const removeButton = item.querySelector('[data-remove-feature-item]');
                     const duplicateButton = item.querySelector('[data-duplicate-feature-item]');
+                    const toggleButton = item.querySelector('[data-feature-toggle]');
                     const presetButtons = Array.from(item.querySelectorAll('[data-feature-icon-preset]'));
 
                     iconInput?.addEventListener('input', function () {
                         renderIconPreview(item);
+                        refreshFeatureItemMeta(item);
+                    });
+
+                    textInput?.addEventListener('input', function () {
+                        refreshFeatureItemMeta(item);
                     });
 
                     removeButton?.addEventListener('click', function () {
@@ -549,10 +620,12 @@
                     });
 
                     duplicateButton?.addEventListener('click', function () {
-                        createFeatureItem({
+                        const createdItem = createFeatureItem({
                             text: textInput?.value || '',
                             icon: iconInput?.value || '',
                         });
+
+                        setFeatureExpanded(createdItem, true, true);
                     });
 
                     presetButtons.forEach((button) => {
@@ -567,7 +640,14 @@
                         });
                     });
 
+                    toggleButton?.addEventListener('click', function () {
+                        const body = item.querySelector('[data-feature-item-body]');
+                        const shouldExpand = body?.classList.contains('hidden') ?? true;
+                        setFeatureExpanded(item, shouldExpand, shouldExpand);
+                    });
+
                     renderIconPreview(item);
+                    refreshFeatureItemMeta(item);
                     item.dataset.featureItemBound = '1';
                 };
 
@@ -596,6 +676,7 @@
 
                     renderIconPreview(item);
                     reindexItems();
+                    setFeatureExpanded(item, true, true);
 
                     return item;
                 };
