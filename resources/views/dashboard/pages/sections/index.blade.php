@@ -72,7 +72,7 @@
             height: 100%;
             min-height: 38rem;
             display: block;
-            padding: 0 1rem;
+            padding: 0;
             background:
                 radial-gradient(circle at top, rgba(148, 163, 184, 0.12), transparent 40%),
                 linear-gradient(180deg, #eef4fa 0%, #f7fafc 100%);
@@ -91,7 +91,7 @@
         }
 
         .sections-preview-viewport[data-device="desktop"] {
-            max-width: 1280px;
+            max-width: 100%;
         }
 
         .sections-preview-viewport[data-device="tablet"] {
