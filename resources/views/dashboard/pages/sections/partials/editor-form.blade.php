@@ -105,38 +105,11 @@
     </div>
 
     <div class="{{ $surfaceClass }}">
-        <div class="{{ $sectionHeaderClass }}">
-            <h2 class="text-lg font-semibold text-slate-900">{{ __('Section Settings') }}</h2>
-            <p class="mt-1 text-sm text-slate-500">{{ __('Update the type, variant, and visibility for this section.') }}</p>
-        </div>
-
         <div class="{{ $sectionBodyClass }}">
+            <input type="hidden" name="type" value="{{ old('type', $section->type) }}">
+            <input type="hidden" name="variant" value="{{ old('variant', $section->variant) }}">
+
             <div class="{{ $settingsGridClass }}">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700">{{ __('Section Type') }}</label>
-                    <select
-                        name="type"
-                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                    >
-                        @foreach ($sectionTypes as $value => $meta)
-                            <option value="{{ $value }}" {{ old('type', $section->type) === $value ? 'selected' : '' }}>
-                                {{ $meta['label'] ?? $value }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-slate-700">{{ __('Variant') }}</label>
-                    <input
-                        type="text"
-                        name="variant"
-                        value="{{ old('variant', $section->variant) }}"
-                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                        placeholder="default / minimal / v2"
-                    >
-                </div>
-
                 @if ($showOrderField)
                     <div>
                         <label class="block text-sm font-medium text-slate-700">{{ __('Display Order') }}</label>
@@ -309,6 +282,7 @@
                     $outputsHeadingValue = $stringifyValue(old("translations.$code.content.outputs_heading", $content['outputs_heading'] ?? ''));
                     $primaryButtonLabelValue = $stringifyValue(old("translations.$code.content.primary_button.label", $primaryButton['label'] ?? ''));
                     $primaryButtonUrlValue = $stringifyValue(old("translations.$code.content.primary_button.url", $primaryButton['url'] ?? ''));
+                    $primaryButtonNewTabValue = filter_var(old("translations.$code.content.primary_button.new_tab", $primaryButton['new_tab'] ?? false), FILTER_VALIDATE_BOOLEAN);
                     $secondaryButtonLabelValue = $stringifyValue(old("translations.$code.content.secondary_button.label", $secondaryButton['label'] ?? ''));
                     $secondaryButtonUrlValue = $stringifyValue(old("translations.$code.content.secondary_button.url", $secondaryButton['url'] ?? ''));
                     $reviewsLimitValue = $stringifyValue(old("translations.$code.content.limit", $content['limit'] ?? ''));
@@ -397,29 +371,23 @@
                     <input type="hidden" name="translations[{{ $code }}][locale]" value="{{ $code }}">
 
                     <div class="{{ $contentGridClass }}">
-                        <div class="lg:col-span-2">
-                            <div class="flex items-center justify-between gap-3">
-                                <label class="block text-sm font-medium text-slate-700">
-                                    {{ $usesInternalLabel ? __('Internal Label') : __('Section Title') }} ({{ $code }})
-                                </label>
-                                @if ($usesInternalLabel)
-                                    <span class="text-xs font-medium text-slate-400">{{ __('Used only in the workspace list') }}</span>
-                                @endif
-                            </div>
+                        @if ($usesInternalLabel)
                             <input
-                                type="text"
+                                type="hidden"
                                 name="translations[{{ $code }}][title]"
                                 value="{{ $sectionTitleValue }}"
-                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                             >
-                            @if ($usesInternalLabel)
-                                <p class="mt-2 text-xs text-slate-500">{{ __('The front design uses the fields below, not this internal label.') }}</p>
-                            @endif
-                        </div>
-
-                        @if ($isHeroCampaign)
-                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                {{ __('This hero uses one CTA button, a benefit grid, and one side illustration. Fill only the content that appears in the design.') }}
+                        @else
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">
+                                    {{ __('Section Title') }} ({{ $code }})
+                                </label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][title]"
+                                    value="{{ $sectionTitleValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                >
                             </div>
                         @endif
 
@@ -508,7 +476,7 @@
                         @endif
 
                         @if ($showMainTitleField)
-                            <div>
+                            <div class="{{ $isHeroCampaign ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
                                     {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('Section Title') : __('Main Title')) }}
                                 </label>
@@ -522,7 +490,7 @@
                         @endif
 
                         @if ($showSubtitleField)
-                            <div class="{{ $isHeroCampaign ? '' : 'lg:col-span-2' }}">
+                            <div class="lg:col-span-2">
                                 <label class="block text-sm font-medium text-slate-700">
                                     {{ $isHeroCampaign ? __('Main Title - Line 2') : __('Subtitle') }}
                                 </label>
@@ -905,7 +873,7 @@
                             </div>
                         @endif
 
-                        @if ($showPrimaryButtonFields)
+                        @if ($showPrimaryButtonFields && ! $isHeroCampaign)
                             <div>
                                 <label class="block text-sm font-medium text-slate-700">
                                     {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('CTA Button Label') : __('Primary Button Label') }}
@@ -1407,6 +1375,48 @@
                                     store-value="id"
                                     data-shared-media-group="tech-stack-showcase-logos"
                                 />
+                            </div>
+                        @endif
+
+                        @if ($isHeroCampaign)
+                            <div class="lg:col-span-2 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+                                <div class="mb-4">
+                                    <label class="block text-sm font-medium text-slate-700">{{ __('CTA Button') }}</label>
+                                    <p class="mt-1 text-xs text-slate-500">{{ __('This button appears below the campaign features and right before the illustration block.') }}</p>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('CTA Button Label') }}</label>
+                                        <input
+                                            type="text"
+                                            name="translations[{{ $code }}][content][primary_button][label]"
+                                            value="{{ $primaryButtonLabelValue }}"
+                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                        >
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('CTA Button URL') }}</label>
+                                        <input
+                                            type="text"
+                                            name="translations[{{ $code }}][content][primary_button][url]"
+                                            value="{{ $primaryButtonUrlValue }}"
+                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                        >
+                                    </div>
+                                </div>
+
+                                <label class="mt-5 inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 rtl:flex-row-reverse">
+                                    <input
+                                        type="checkbox"
+                                        name="translations[{{ $code }}][content][primary_button][new_tab]"
+                                        value="1"
+                                        class="rounded border-slate-300"
+                                        {{ $primaryButtonNewTabValue ? 'checked' : '' }}
+                                    >
+                                    <span>{{ __('Open CTA in a new tab') }}</span>
+                                </label>
                             </div>
                         @endif
 

@@ -10,6 +10,7 @@
     $primaryButton = is_array($content['primary_button'] ?? null) ? $content['primary_button'] : [];
     $primaryLabel = $primaryButton['label'] ?? null;
     $primaryUrl = $primaryButton['url'] ?? null;
+    $primaryNewTab = filter_var($primaryButton['new_tab'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
     $sanitizeIconClass = static function ($value): ?string {
         $value = trim((string) $value);
@@ -111,6 +112,7 @@
             @if ($primaryLabel && $primaryUrl)
                 <a
                     href="{{ $primaryUrl }}"
+                    @if ($primaryNewTab) target="_blank" rel="noopener" @endif
                     class="inline-flex items-center justify-center rounded-xl bg-red-brand px-10 py-3 text-lg text-white shadow-md transition-all duration-300 hover:translate-x-1 hover:bg-red-brand/90 hover:shadow-lg md:text-xl"
                 >
                     {{ $primaryLabel }}

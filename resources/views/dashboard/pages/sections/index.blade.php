@@ -19,6 +19,22 @@
 
 @push('styles')
     <style>
+        .sections-workspace-main {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow: hidden;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
+
+        .sections-preview-shell-host {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
         .sections-sortable-ghost {
             opacity: 0.55;
         }
@@ -51,19 +67,31 @@
         }
 
         .sections-preview-stage {
-            overflow: auto;
-            min-height: calc(100vh - 11rem);
+            overflow: hidden;
+            flex: 1 1 auto;
+            height: 100%;
+            min-height: 38rem;
+            display: block;
+            padding: 0 1rem;
             background:
-                radial-gradient(circle at top, rgba(148, 163, 184, 0.16), transparent 42%),
-                linear-gradient(180deg, #eef4fa 0%, #f8fbff 100%);
+                radial-gradient(circle at top, rgba(148, 163, 184, 0.12), transparent 40%),
+                linear-gradient(180deg, #eef4fa 0%, #f7fafc 100%);
         }
 
         .sections-preview-viewport {
+            box-sizing: border-box;
             width: 100%;
             max-width: 100%;
+            height: 100%;
+            min-width: 0;
             margin: 0 auto;
             padding: 0;
-            transition: max-width 200ms ease;
+            display: flex;
+            transition: max-width 200ms ease, padding 200ms ease;
+        }
+
+        .sections-preview-viewport[data-device="desktop"] {
+            max-width: 1280px;
         }
 
         .sections-preview-viewport[data-device="tablet"] {
@@ -78,12 +106,12 @@
 
         .sections-preview-frame {
             display: block;
+            flex: 1 1 auto;
             width: 100%;
-            height: calc(100vh - 11rem);
-            min-height: 52rem;
+            height: 100%;
+            min-height: 0;
             border: 0;
             background: #ffffff;
-            box-shadow: none;
         }
 
         .sections-preview-viewport[data-device="tablet"] .sections-preview-frame,
@@ -110,8 +138,27 @@
 
         @media (min-width: 1280px) {
             .sections-workspace-shell.is-section-editor-open .sections-workspace-sidebar-shell {
-                width: 34rem;
-                min-width: 34rem;
+                position: relative;
+                inset: auto;
+                z-index: auto;
+                width: clamp(19rem, 22vw, 21rem);
+                min-width: clamp(19rem, 22vw, 21rem);
+            }
+
+            html[dir="ltr"] .sections-workspace-shell.is-section-editor-open .sections-workspace-sidebar-shell {
+                right: auto;
+            }
+
+            html[dir="rtl"] .sections-workspace-shell.is-section-editor-open .sections-workspace-sidebar-shell {
+                right: auto;
+            }
+
+            .sections-workspace-shell.is-section-editor-open .sections-workspace-sidebar {
+                padding: 0.25rem;
+                border-color: #e2e8f0;
+                background: rgba(255, 255, 255, 0.96);
+                height: 100%;
+                box-shadow: none;
             }
         }
     </style>
@@ -146,7 +193,7 @@
         <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ session('error') }}</div>
     @endif
 
-    <div class="-mx-4 lg:-mx-6">
+    <div class="-mx-4 lg:-mx-6 sections-preview-shell-host">
         @if ($sections->isEmpty())
             <div class="mx-4 rounded-[2rem] border border-dashed border-slate-300 bg-white/80 px-6 py-16 text-center lg:mx-6">
                 <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 shadow-sm">
@@ -159,7 +206,7 @@
                 </div>
             </div>
         @else
-            <div class="sections-preview-stage">
+            <div id="sections-preview-stage" class="sections-preview-stage">
                 <div id="sections-preview-viewport" class="sections-preview-viewport" data-device="desktop">
                     <iframe
                         id="sections-preview-frame"

@@ -200,6 +200,12 @@
 
         previewBlocks.forEach((block) => {
             block.addEventListener('click', function (event) {
+                const clickedLink = event.target.closest('a');
+
+                if (clickedLink && clickedLink.getAttribute('target') === '_blank') {
+                    return;
+                }
+
                 if (event.target.closest('a, button, input, textarea, select, form')) {
                     event.preventDefault();
                 }
@@ -221,6 +227,12 @@
         });
 
         document.addEventListener('click', function (event) {
+            const clickedLink = event.target.closest('a');
+
+            if (clickedLink && clickedLink.getAttribute('target') === '_blank') {
+                return;
+            }
+
             if (event.target.closest('a, button, [role="button"], form')) {
                 event.preventDefault();
             }

@@ -7,8 +7,8 @@
     $editorTitle = $fallbackTranslation?->title ?: $sectionTypeLabel;
 @endphp
 
-<div class="rounded-[2rem] border border-slate-200 bg-white shadow-sm" data-section-editor-root>
-    <div class="border-b border-slate-200 px-5 py-4">
+<div class="h-full overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_60px_-36px_rgba(15,23,42,0.35)]" data-section-editor-root>
+    <div class="border-b border-slate-200 px-4 py-3">
         <div class="flex items-start justify-between gap-3 rtl:flex-row-reverse">
             <div class="min-w-0 flex-1">
                 <button
@@ -22,7 +22,7 @@
                     <span>{{ __('Back to elements') }}</span>
                 </button>
 
-                <h3 class="mt-3 truncate text-lg font-semibold text-slate-900" data-section-editor-heading>{{ $editorTitle }}</h3>
+                <h3 class="mt-2 truncate text-lg font-semibold text-slate-900" data-section-editor-heading>{{ $editorTitle }}</h3>
                 <p class="mt-1 text-sm text-slate-500">{{ __('Update this section without leaving the workspace.') }}</p>
 
                 <div class="mt-3 flex flex-wrap items-center gap-2 rtl:flex-row-reverse">
@@ -49,15 +49,15 @@
         </div>
     </div>
 
-    <div class="workspace-scrollbar max-h-[calc(100vh-16rem)] overflow-y-auto px-5 py-5">
+    <div class="workspace-scrollbar max-h-[calc(100vh-12.5rem)] overflow-y-auto px-0 py-0">
         @include('dashboard.pages.sections.partials.editor-form', [
             'formId' => 'sidebar-section-edit-form',
-            'formClass' => 'space-y-4',
-            'surfaceClass' => 'rounded-3xl border border-slate-200 bg-slate-50/70',
+            'formClass' => 'space-y-0',
+            'surfaceClass' => 'rounded-none border-b border-slate-200 bg-transparent shadow-none',
             'sectionHeaderClass' => 'border-b border-slate-200 px-4 py-3',
-            'sectionBodyClass' => 'p-4',
-            'settingsGridClass' => 'grid grid-cols-1 gap-4',
-            'contentGridClass' => 'grid grid-cols-1 gap-4',
+            'sectionBodyClass' => 'px-4 py-3',
+            'settingsGridClass' => 'grid grid-cols-1 gap-3',
+            'contentGridClass' => 'grid grid-cols-1 gap-3',
             'showOrderField' => false,
         ])
     </div>

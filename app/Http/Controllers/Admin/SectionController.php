@@ -712,6 +712,7 @@ class SectionController extends Controller
                 'primary_button' => [
                     'label' => 'Choose Your template',
                     'url' => '#',
+                    'new_tab' => false,
                 ],
                 'features' => [
                     ['text' => 'Choose Your Template', 'icon' => 'ti ti-layout-grid'],
@@ -936,6 +937,11 @@ class SectionController extends Controller
                     ?? ($content['primary_button']['label'] ?? null),
                 'url' => $content['primary_button_url']
                     ?? ($content['primary_button']['url'] ?? null),
+                'new_tab' => filter_var(
+                    $content['primary_button_new_tab']
+                        ?? ($content['primary_button']['new_tab'] ?? false),
+                    FILTER_VALIDATE_BOOLEAN
+                ),
             ],
 
             'secondary_button' => [
@@ -968,6 +974,11 @@ class SectionController extends Controller
                     ?? ($content['primary_button']['label'] ?? null),
                 'url' => $content['primary_button_url']
                     ?? ($content['primary_button']['url'] ?? null),
+                'new_tab' => filter_var(
+                    $content['primary_button_new_tab']
+                        ?? ($content['primary_button']['new_tab'] ?? false),
+                    FILTER_VALIDATE_BOOLEAN
+                ),
             ],
 
             'secondary_button' => [
