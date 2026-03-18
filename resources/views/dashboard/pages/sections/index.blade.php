@@ -692,19 +692,15 @@
                     try {
                         const formData = new FormData(form);
                         const saveUrl = form.dataset.saveAction || form.action;
-                        const methodOverride = String(formData.get('_method') || '').toUpperCase();
-                        const requestMethod = ['PUT', 'PATCH', 'DELETE'].includes(methodOverride) ? methodOverride : 'POST';
-
-                        if (requestMethod !== 'POST') {
-                            formData.delete('_method');
-                        }
+                        const methodOverride = String(formData.get('_method') || 'PUT').toUpperCase();
 
                         const response = await fetch(saveUrl, {
-                            method: requestMethod,
+                            method: 'POST',
                             headers: {
                                 'Accept': 'application/json',
                                 'X-Requested-With': 'XMLHttpRequest',
                                 'X-CSRF-TOKEN': csrfToken,
+                                'X-HTTP-Method-Override': methodOverride,
                             },
                             body: formData,
                         });
