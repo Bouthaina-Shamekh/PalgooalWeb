@@ -18,8 +18,34 @@
         return $value !== '' ? $value : null;
     };
 
+    $resolveMediaUrl = static function ($value): ?string {
+        if (is_numeric($value)) {
+            $media = \App\Models\Media::find((int) $value);
+
+            return $media?->url ?? ($media?->file_url ?? null);
+        }
+
+        if (is_string($value) && $value !== '') {
+            return \Illuminate\Support\Str::startsWith($value, ['http://', 'https://', '//', '/', 'data:'])
+                ? $value
+                : asset($value);
+        }
+
+        return null;
+    };
+
+    $sanitizeInlineSvg = static function ($value): ?string {
+        $svg = trim((string) $value);
+
+        if ($svg === '' || ! preg_match('/<svg\b/i', $svg)) {
+            return null;
+        }
+
+        return $svg;
+    };
+
     $steps = collect(is_array($content['steps'] ?? null) ? $content['steps'] : [])
-        ->map(function ($step) use ($sanitizeIconClass): ?array {
+        ->map(function ($step) use ($sanitizeIconClass, $resolveMediaUrl, $sanitizeInlineSvg): ?array {
             if (! is_array($step)) {
                 return null;
             }
@@ -29,9 +55,36 @@
                 return null;
             }
 
+            $iconClass = $sanitizeIconClass($step['icon'] ?? null);
+            $iconSvg = $sanitizeInlineSvg($step['icon_svg'] ?? null);
+            $iconMediaUrl = $resolveMediaUrl($step['icon_media'] ?? null);
+            $requestedSource = trim((string) ($step['icon_source'] ?? ''));
+            $iconSource = in_array($requestedSource, ['class', 'svg', 'media'], true) ? $requestedSource : null;
+
+            if ($iconSource === 'svg' && ! $iconSvg) {
+                $iconSource = null;
+            }
+
+            if ($iconSource === 'media' && ! $iconMediaUrl) {
+                $iconSource = null;
+            }
+
+            if ($iconSource === 'class' && ! $iconClass) {
+                $iconSource = null;
+            }
+
+            if (! $iconSource) {
+                $iconSource = $iconSvg
+                    ? 'svg'
+                    : ($iconMediaUrl ? 'media' : 'class');
+            }
+
             return [
                 'title' => $title,
-                'icon' => $sanitizeIconClass($step['icon'] ?? null),
+                'icon_source' => $iconSource,
+                'icon' => $iconClass,
+                'icon_svg' => $iconSvg,
+                'icon_media_url' => $iconMediaUrl,
                 'is_accent' => (bool) ($step['is_accent'] ?? false),
             ];
         })
@@ -63,7 +116,15 @@
                     @endphp
 
                     <div class="relative flex min-h-[7.5rem] flex-col items-center justify-center gap-3 rounded-2xl p-6 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl {{ $cardClasses }}">
-                        @if ($step['icon'])
+                        @if (($step['icon_source'] ?? 'class') === 'svg' && ! empty($step['icon_svg']))
+                            <span class="inline-flex h-7 w-7 items-center justify-center {{ $iconClasses }}" aria-hidden="true">
+                                {!! $step['icon_svg'] !!}
+                            </span>
+                        @elseif (($step['icon_source'] ?? 'class') === 'media' && ! empty($step['icon_media_url']))
+                            <span class="inline-flex h-7 w-7 items-center justify-center" aria-hidden="true">
+                                <img src="{{ $step['icon_media_url'] }}" alt="" class="h-full w-full object-contain">
+                            </span>
+                        @elseif ($step['icon'])
                             <i class="{{ $step['icon'] }} {{ $iconClasses }} text-2xl leading-none" aria-hidden="true"></i>
                         @else
                             <i class="ti ti-check {{ $iconClasses }} text-2xl leading-none" aria-hidden="true"></i>

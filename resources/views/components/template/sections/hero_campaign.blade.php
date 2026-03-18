@@ -25,13 +25,39 @@
         return $value !== '' ? $value : null;
     };
 
+    $resolveMediaUrl = static function ($value): ?string {
+        if (is_numeric($value)) {
+            $media = \App\Models\Media::find((int) $value);
+
+            return $media?->url ?? ($media?->file_url ?? null);
+        }
+
+        if (is_string($value) && $value !== '') {
+            return \Illuminate\Support\Str::startsWith($value, ['http://', 'https://', '//', '/', 'data:'])
+                ? $value
+                : asset($value);
+        }
+
+        return null;
+    };
+
+    $sanitizeInlineSvg = static function ($value): ?string {
+        $svg = trim((string) $value);
+
+        if ($svg === '' || ! preg_match('/<svg\b/i', $svg)) {
+            return null;
+        }
+
+        return $svg;
+    };
+
     $features = collect(is_array($content['features'] ?? null) ? $content['features'] : [])
-        ->map(function ($feature) use ($sanitizeIconClass): ?array {
+        ->map(function ($feature) use ($sanitizeIconClass, $resolveMediaUrl, $sanitizeInlineSvg): ?array {
             if (is_string($feature)) {
                 $text = trim($feature);
 
                 return $text !== ''
-                    ? ['text' => $text, 'icon' => null]
+                    ? ['text' => $text, 'icon_source' => 'class', 'icon' => null, 'icon_svg' => null, 'icon_media_url' => null]
                     : null;
             }
 
@@ -45,9 +71,36 @@
                 return null;
             }
 
+            $iconClass = $sanitizeIconClass($feature['icon'] ?? null);
+            $iconSvg = $sanitizeInlineSvg($feature['icon_svg'] ?? null);
+            $iconMediaUrl = $resolveMediaUrl($feature['icon_media'] ?? null);
+            $requestedSource = trim((string) ($feature['icon_source'] ?? ''));
+            $iconSource = in_array($requestedSource, ['class', 'svg', 'media'], true) ? $requestedSource : null;
+
+            if ($iconSource === 'svg' && ! $iconSvg) {
+                $iconSource = null;
+            }
+
+            if ($iconSource === 'media' && ! $iconMediaUrl) {
+                $iconSource = null;
+            }
+
+            if ($iconSource === 'class' && ! $iconClass) {
+                $iconSource = null;
+            }
+
+            if (! $iconSource) {
+                $iconSource = $iconSvg
+                    ? 'svg'
+                    : ($iconMediaUrl ? 'media' : 'class');
+            }
+
             return [
                 'text' => $text,
-                'icon' => $sanitizeIconClass($feature['icon'] ?? null),
+                'icon_source' => $iconSource,
+                'icon' => $iconClass,
+                'icon_svg' => $iconSvg,
+                'icon_media_url' => $iconMediaUrl,
             ];
         })
         ->filter()
@@ -96,7 +149,15 @@
                 <div class="mb-10 grid grid-cols-1 gap-4 md:grid-cols-2">
                     @foreach ($features as $feature)
                         <div class="flex items-center gap-3 ltr:justify-start rtl:justify-start">
-                            @if ($feature['icon'])
+                            @if (($feature['icon_source'] ?? 'class') === 'svg' && ! empty($feature['icon_svg']))
+                                <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center text-red-brand md:h-6 md:w-6" aria-hidden="true">
+                                    {!! $feature['icon_svg'] !!}
+                                </span>
+                            @elseif (($feature['icon_source'] ?? 'class') === 'media' && ! empty($feature['icon_media_url']))
+                                <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center md:h-6 md:w-6" aria-hidden="true">
+                                    <img src="{{ $feature['icon_media_url'] }}" alt="" class="h-full w-full object-contain">
+                                </span>
+                            @elseif ($feature['icon'])
                                 <i class="{{ $feature['icon'] }} text-xl text-red-brand md:text-2xl" aria-hidden="true"></i>
                             @else
                                 <svg class="h-5 text-red-brand" fill="currentColor" viewBox="0 0 27 21" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

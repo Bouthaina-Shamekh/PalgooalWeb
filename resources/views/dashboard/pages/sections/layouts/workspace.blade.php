@@ -4,6 +4,38 @@
     $frontUrl = $page->is_home ? url('/') : ($translation?->slug ? url($translation->slug) : url('/'));
     $workspaceLanguages = collect($languages ?? [])->filter(fn ($language) => filled($language->code))->values();
     $hasMultipleWorkspaceLanguages = $workspaceLanguages->count() > 1;
+    $sectionsIconLibrary = [
+        ['label' => __('Template'), 'value' => 'ti ti-layout-grid', 'keywords' => 'template layout grid blocks cards'],
+        ['label' => __('Hosting'), 'value' => 'ti ti-server', 'keywords' => 'hosting server infrastructure cloud'],
+        ['label' => __('Settings'), 'value' => 'ti ti-settings', 'keywords' => 'settings config options setup'],
+        ['label' => __('Mail'), 'value' => 'ti ti-mail', 'keywords' => 'mail email message inbox'],
+        ['label' => __('Domain'), 'value' => 'ti ti-world', 'keywords' => 'domain world globe website internet'],
+        ['label' => __('Support'), 'value' => 'ti ti-headset', 'keywords' => 'support help service call'],
+        ['label' => __('Analysis'), 'value' => 'ti ti-search', 'keywords' => 'analysis inspect research search audit'],
+        ['label' => __('Design'), 'value' => 'ti ti-palette', 'keywords' => 'design palette creative colors'],
+        ['label' => __('Development'), 'value' => 'ti ti-code', 'keywords' => 'development code programming engineering'],
+        ['label' => __('Testing'), 'value' => 'ti ti-test-pipe', 'keywords' => 'testing qa quality review bug'],
+        ['label' => __('Launch'), 'value' => 'ti ti-rocket', 'keywords' => 'launch publish release growth'],
+        ['label' => __('Mobile'), 'value' => 'ti ti-device-mobile', 'keywords' => 'mobile phone app smartphone'],
+        ['label' => __('Desktop'), 'value' => 'ti ti-device-desktop', 'keywords' => 'desktop web laptop monitor'],
+        ['label' => __('Marketing'), 'value' => 'ti ti-speakerphone', 'keywords' => 'marketing campaign ads announce'],
+        ['label' => __('Store'), 'value' => 'ti ti-shopping-cart', 'keywords' => 'store shop ecommerce cart'],
+        ['label' => __('Business'), 'value' => 'ti ti-briefcase', 'keywords' => 'business company service work'],
+        ['label' => __('Team'), 'value' => 'ti ti-users', 'keywords' => 'team users people clients'],
+        ['label' => __('Client'), 'value' => 'ti ti-user-star', 'keywords' => 'client customer testimonial review'],
+        ['label' => __('Message'), 'value' => 'ti ti-message-circle', 'keywords' => 'message comment chat feedback'],
+        ['label' => __('Checklist'), 'value' => 'ti ti-checklist', 'keywords' => 'checklist tasks process steps'],
+        ['label' => __('Package'), 'value' => 'ti ti-package', 'keywords' => 'package box shipping product'],
+        ['label' => __('Box'), 'value' => 'ti ti-box', 'keywords' => 'box package product item'],
+        ['label' => __('Shield'), 'value' => 'ti ti-shield-check', 'keywords' => 'shield security trust safe'],
+        ['label' => __('Lightning'), 'value' => 'ti ti-bolt', 'keywords' => 'fast speed bolt performance'],
+        ['label' => __('Image'), 'value' => 'ti ti-photo', 'keywords' => 'image photo gallery media'],
+        ['label' => __('Brush'), 'value' => 'ti ti-brush', 'keywords' => 'brush design art branding'],
+        ['label' => __('Apps'), 'value' => 'ti ti-apps', 'keywords' => 'apps modules collection tools'],
+        ['label' => __('Building'), 'value' => 'ti ti-building-store', 'keywords' => 'building store office branch'],
+        ['label' => __('Chart'), 'value' => 'ti ti-chart-bar', 'keywords' => 'chart analytics data metrics'],
+        ['label' => __('Seo'), 'value' => 'ti ti-chart-arrows-vertical', 'keywords' => 'seo rank growth analytics'],
+    ];
 @endphp
 
 <!doctype html>
@@ -140,6 +172,25 @@
         .sections-header-cluster > button,
         .sections-header-cluster > form > button {
             min-height: 2.75rem;
+        }
+
+        .sections-icon-library-tile.is-active {
+            border-color: #0f172a;
+            background: #f8fafc;
+            box-shadow: 0 14px 30px -24px rgba(15, 23, 42, 0.35);
+        }
+
+        .sections-editor-icon-preview svg,
+        .sections-editor-icon-preview img {
+            max-width: 1.75rem;
+            max-height: 1.75rem;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .sections-editor-icon-preview svg {
+            display: block;
         }
 
         @media (min-width: 1280px) {
@@ -296,6 +347,69 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="{{ asset('assets/dashboard/js/media-picker.js') }}?v={{ filemtime(public_path('assets/dashboard/js/media-picker.js')) }}" defer></script>
     @include('dashboard.partials.media-picker')
+    <div id="sections-icon-library-overlay" class="fixed inset-0 z-[70] hidden bg-slate-950/55"></div>
+    <div id="sections-icon-library-modal" class="fixed inset-0 z-[71] hidden items-center justify-center p-4 lg:p-6" aria-hidden="true">
+        <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl">
+            <div class="border-b border-slate-200 px-5 py-4 lg:px-6">
+                <div class="flex items-start justify-between gap-4 rtl:flex-row-reverse">
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-900">{{ __('Icon Library') }}</h3>
+                        <p class="mt-1 text-sm text-slate-500">{{ __('Search and choose an icon for the current item.') }}</p>
+                    </div>
+                    <div class="flex items-center gap-2 rtl:flex-row-reverse">
+                        <button
+                            type="button"
+                            data-section-icon-library-clear
+                            class="hidden rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+                        >
+                            {{ __('Clear Icon') }}
+                        </button>
+                        <button
+                            type="button"
+                            data-close-section-icon-library
+                            class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
+                            aria-label="{{ __('Close') }}"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-1 flex-col overflow-hidden px-5 py-4 lg:px-6">
+                <div class="relative">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 ltr:left-3 rtl:right-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0 0A7.5 7.5 0 1 0 6 6a7.5 7.5 0 0 0 10.65 10.65Z" />
+                    </svg>
+                    <input
+                        id="sections-icon-library-search"
+                        type="text"
+                        placeholder="{{ __('Search icons by name or use case') }}"
+                        class="w-full rounded-full border border-slate-200 bg-white py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 ltr:pl-10 ltr:pr-4 ltr:text-left rtl:pl-4 rtl:pr-10 rtl:text-right"
+                    >
+                </div>
+
+                <div class="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500 rtl:flex-row-reverse">
+                    <p>{{ __('Click any icon to apply it immediately to the current field.') }}</p>
+                    <span id="sections-icon-library-count"></span>
+                </div>
+
+                <div
+                    id="sections-icon-library-grid"
+                    class="workspace-scrollbar mt-4 grid flex-1 grid-cols-2 gap-3 overflow-y-auto pb-1 pr-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                ></div>
+
+                <div
+                    id="sections-icon-library-empty"
+                    class="mt-4 hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500"
+                >
+                    {{ __('No icons match this search yet.') }}
+                </div>
+            </div>
+        </div>
+    </div>
 
     @stack('scripts')
     <script>
@@ -365,6 +479,11 @@
                 const currentGroup = targetInput?.closest?.('[data-shared-media-group]');
                 const form = targetInput?.closest?.('[data-section-editor-form]');
 
+                if (targetInput) {
+                    targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+
                 if (!currentGroup || !form) {
                     return;
                 }
@@ -407,10 +526,176 @@
             });
 
             window.initSectionEditorTabs?.(document);
+            window.initSectionIconLibrary?.();
             window.initSectionFeatureRepeaters?.(document);
             window.initBuildStepRepeaters?.(document);
             window.initReviewRepeaters?.(document);
         });
+
+        window.initSectionIconLibrary = function () {
+            if (window.__sectionsIconLibraryBound) {
+                return;
+            }
+
+            const iconLibrary = @json($sectionsIconLibrary);
+            const overlay = document.getElementById('sections-icon-library-overlay');
+            const modal = document.getElementById('sections-icon-library-modal');
+            const searchInput = document.getElementById('sections-icon-library-search');
+            const grid = document.getElementById('sections-icon-library-grid');
+            const emptyState = document.getElementById('sections-icon-library-empty');
+            const countLabel = document.getElementById('sections-icon-library-count');
+            const clearButton = modal?.querySelector('[data-section-icon-library-clear]');
+
+            if (!overlay || !modal || !searchInput || !grid || !emptyState || !countLabel || !clearButton) {
+                return;
+            }
+
+            const sanitizeIconClass = (value) => String(value || '')
+                .replace(/[^A-Za-z0-9\-_ ]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            let activeInput = null;
+            let activeValue = '';
+
+            const closeLibrary = () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                overlay.classList.add('hidden');
+                modal.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('overflow-hidden');
+                activeInput = null;
+                activeValue = '';
+                searchInput.value = '';
+            };
+
+            const applyIconValue = (value) => {
+                if (!(activeInput instanceof HTMLInputElement || activeInput instanceof HTMLTextAreaElement)) {
+                    return;
+                }
+
+                activeInput.value = sanitizeIconClass(value);
+                activeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                activeInput.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+
+            const renderLibrary = (query = '') => {
+                const normalizedQuery = String(query || '').trim().toLowerCase();
+                const filteredIcons = iconLibrary.filter((icon) => {
+                    const haystack = `${icon.label} ${icon.value} ${icon.keywords || ''}`.toLowerCase();
+                    return normalizedQuery === '' || haystack.includes(normalizedQuery);
+                });
+
+                grid.innerHTML = '';
+                countLabel.textContent = `${filteredIcons.length} ${filteredIcons.length === 1 ? @json(__('icon')) : @json(__('icons'))}`;
+                emptyState.classList.toggle('hidden', filteredIcons.length > 0);
+                grid.classList.toggle('hidden', filteredIcons.length === 0);
+                clearButton.classList.toggle('hidden', activeValue === '');
+
+                filteredIcons.forEach((icon) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.dataset.sectionIconOption = 'true';
+                    button.dataset.sectionIconValue = icon.value;
+                    button.className = 'sections-icon-library-tile flex flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-slate-300 hover:bg-slate-50 rtl:text-right';
+
+                    if (icon.value === activeValue) {
+                        button.classList.add('is-active');
+                    }
+
+                    button.innerHTML = `
+                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-slate-700">
+                            <i class="${icon.value} text-lg leading-none" aria-hidden="true"></i>
+                        </span>
+                        <span class="block w-full truncate text-sm font-semibold text-slate-900">${icon.label}</span>
+                        <span class="block w-full truncate text-xs text-slate-500">${icon.value}</span>
+                    `;
+
+                    grid.appendChild(button);
+                });
+            };
+
+            const resolveInputFromTrigger = (trigger) => {
+                if (!(trigger instanceof HTMLElement)) {
+                    return null;
+                }
+
+                const selector = trigger.dataset.iconInputSelector || '';
+                if (!selector) {
+                    return null;
+                }
+
+                const container =
+                    trigger.closest('[data-feature-item]') ||
+                    trigger.closest('[data-build-step-item]') ||
+                    trigger.closest('[data-section-editor-form]') ||
+                    document;
+
+                return container.querySelector(selector) || document.querySelector(selector);
+            };
+
+            const openLibrary = (trigger) => {
+                const input = resolveInputFromTrigger(trigger);
+                if (!input) {
+                    return;
+                }
+
+                activeInput = input;
+                activeValue = sanitizeIconClass(input.value);
+                searchInput.value = '';
+                renderLibrary('');
+
+                overlay.classList.remove('hidden');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                modal.setAttribute('aria-hidden', 'false');
+                document.body.classList.add('overflow-hidden');
+
+                window.setTimeout(() => {
+                    searchInput.focus();
+                    searchInput.select();
+                }, 30);
+            };
+
+            searchInput.addEventListener('input', function () {
+                renderLibrary(searchInput.value);
+            });
+
+            clearButton.addEventListener('click', function () {
+                applyIconValue('');
+                closeLibrary();
+            });
+
+            overlay.addEventListener('click', closeLibrary);
+
+            modal.querySelectorAll('[data-close-section-icon-library]').forEach((button) => {
+                button.addEventListener('click', closeLibrary);
+            });
+
+            document.addEventListener('click', function (event) {
+                const openTrigger = event.target.closest('[data-open-section-icon-library]');
+                if (openTrigger) {
+                    event.preventDefault();
+                    openLibrary(openTrigger);
+                    return;
+                }
+
+                const optionTrigger = event.target.closest('[data-section-icon-option]');
+                if (optionTrigger && !modal.classList.contains('hidden')) {
+                    event.preventDefault();
+                    applyIconValue(optionTrigger.dataset.sectionIconValue || '');
+                    closeLibrary();
+                }
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                    closeLibrary();
+                }
+            });
+
+            window.__sectionsIconLibraryBound = true;
+        };
 
         window.initSectionEditorTabs = function (scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
@@ -465,6 +750,8 @@
                 ? [root]
                 : Array.from(root.querySelectorAll('[data-feature-repeater]'));
 
+            const createUniqueId = () => `feature_icon_${Math.random().toString(36).slice(2, 10)}`;
+
             repeaters.forEach((repeater) => {
                 if (repeater.dataset.featureRepeaterBound === '1') {
                     return;
@@ -487,20 +774,111 @@
                     .replace(/\s+/g, ' ')
                     .trim();
 
-                const renderIconPreview = (item) => {
-                    const preview = item.querySelector('[data-feature-icon-preview]');
-                    const input = item.querySelector('[data-feature-field="icon"]');
+                const sanitizeInlineSvg = (value) => {
+                    let svg = String(value || '').trim();
+                    if (!svg || !/<svg\b/i.test(svg)) {
+                        return '';
+                    }
 
-                    if (!preview || !input) {
+                    svg = svg.replace(/<\?(?:xml|php).*?\?>/gis, '');
+                    svg = svg.replace(/<(script|style|foreignObject)\b.*?<\/\1>/gis, '');
+                    svg = svg.replace(/\son[a-zA-Z-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/g, '');
+                    svg = svg.replace(/\s(?:href|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi, '');
+
+                    return svg.trim();
+                };
+
+                const renderMediaPreview = (container, urls = []) => {
+                    if (!(container instanceof HTMLElement)) {
                         return;
                     }
 
-                    const iconClass = sanitizeIconClass(input.value);
-                    if (input.value !== iconClass) {
-                        input.value = iconClass;
+                    container.innerHTML = '';
+                    urls.filter(Boolean).forEach((url) => {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'relative h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-50';
+
+                        const image = document.createElement('img');
+                        image.src = url;
+                        image.alt = '';
+                        image.className = 'h-full w-full object-contain p-2';
+
+                        wrapper.appendChild(image);
+                        container.appendChild(wrapper);
+                    });
+                };
+
+                const getFeatureIconSource = (item) => {
+                    const sourceInput = item.querySelector('[data-feature-field="icon_source"]');
+                    const source = String(sourceInput?.value || 'class').trim();
+
+                    return ['class', 'svg', 'media'].includes(source) ? source : 'class';
+                };
+
+                const ensureFeatureIconMediaTargets = (item) => {
+                    const mediaInput = item.querySelector('[data-feature-field="icon_media"]');
+                    const mediaButton = item.querySelector('[data-feature-icon-media-button]');
+                    const mediaPreview = item.querySelector('[data-feature-icon-media-preview]');
+
+                    if (!(mediaInput instanceof HTMLInputElement) || !(mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
+                        return;
                     }
 
+                    if (!mediaInput.id) {
+                        mediaInput.id = `${createUniqueId()}_input`;
+                    }
+
+                    if (!mediaPreview.id) {
+                        mediaPreview.id = `${createUniqueId()}_preview`;
+                    }
+
+                    mediaButton.dataset.targetInput = mediaInput.id;
+                    mediaButton.dataset.targetPreview = mediaPreview.id;
+                    mediaButton.dataset.multiple = 'false';
+                    mediaButton.dataset.storeValue = 'id';
+                };
+
+                const toggleFeatureIconPanels = (item, source = null) => {
+                    const activeSource = source || getFeatureIconSource(item);
+                    item.querySelectorAll('[data-feature-icon-panel]').forEach((panel) => {
+                        panel.classList.toggle('hidden', panel.dataset.featureIconPanel !== activeSource);
+                    });
+                };
+
+                const renderIconPreview = (item) => {
+                    const preview = item.querySelector('[data-feature-icon-preview]');
+                    const classInput = item.querySelector('[data-feature-field="icon"]');
+                    const svgInput = item.querySelector('[data-feature-field="icon_svg"]');
+                    const mediaPreview = item.querySelector('[data-feature-icon-media-preview]');
+                    const source = getFeatureIconSource(item);
+
+                    if (!preview || !classInput) {
+                        return;
+                    }
+
+                    const iconClass = sanitizeIconClass(classInput.value);
+                    if (classInput.value !== iconClass) {
+                        classInput.value = iconClass;
+                    }
+
+                    const iconSvg = sanitizeInlineSvg(svgInput?.value || '');
+                    const mediaUrl = mediaPreview?.querySelector('img')?.getAttribute('src') || '';
+
                     preview.innerHTML = '';
+
+                    if (source === 'svg' && iconSvg) {
+                        preview.innerHTML = iconSvg;
+                        return;
+                    }
+
+                    if (source === 'media' && mediaUrl) {
+                        const image = document.createElement('img');
+                        image.src = mediaUrl;
+                        image.alt = '';
+                        image.className = 'h-full w-full object-contain';
+                        preview.appendChild(image);
+                        return;
+                    }
 
                     const icon = document.createElement('i');
                     icon.className = `${iconClass || 'ti ti-check'} text-xl leading-none`;
@@ -545,10 +923,15 @@
 
                     const textInput = item.querySelector('[data-feature-field="text"]');
                     const iconInput = item.querySelector('[data-feature-field="icon"]');
+                    const iconSvgInput = item.querySelector('[data-feature-field="icon_svg"]');
+                    const mediaPreview = item.querySelector('[data-feature-icon-media-preview]');
                     const title = item.querySelector('[data-feature-item-title]');
                     const summary = item.querySelector('[data-feature-item-summary]');
                     const textValue = String(textInput?.value || '').trim();
                     const iconValue = sanitizeIconClass(iconInput?.value || '');
+                    const svgValue = sanitizeInlineSvg(iconSvgInput?.value || '');
+                    const mediaValue = mediaPreview?.querySelector('img')?.getAttribute('src') || '';
+                    const source = getFeatureIconSource(item);
                     const fallbackTitle = `${featureItemLabel} ${Number(index ?? 0) + 1}`;
 
                     if (title) {
@@ -556,7 +939,11 @@
                     }
 
                     if (summary) {
-                        summary.textContent = iconValue || featureItemHint;
+                        summary.textContent = source === 'svg'
+                            ? (svgValue ? @json(__('Custom SVG icon')) : featureItemHint)
+                            : source === 'media'
+                                ? (mediaValue ? @json(__('SVG from media library')) : featureItemHint)
+                                : (iconValue ? @json(__('Tabler icon selected')) : featureItemHint);
                     }
                 };
 
@@ -598,14 +985,40 @@
                         return;
                     }
 
+                    ensureFeatureIconMediaTargets(item);
+
                     const iconInput = item.querySelector('[data-feature-field="icon"]');
+                    const iconSourceInput = item.querySelector('[data-feature-field="icon_source"]');
+                    const iconSvgInput = item.querySelector('[data-feature-field="icon_svg"]');
+                    const iconMediaInput = item.querySelector('[data-feature-field="icon_media"]');
                     const textInput = item.querySelector('[data-feature-field="text"]');
+                    const mediaPreview = item.querySelector('[data-feature-icon-media-preview]');
                     const removeButton = item.querySelector('[data-remove-feature-item]');
                     const duplicateButton = item.querySelector('[data-duplicate-feature-item]');
                     const toggleButton = item.querySelector('[data-feature-toggle]');
-                    const presetButtons = Array.from(item.querySelectorAll('[data-feature-icon-preset]'));
 
                     iconInput?.addEventListener('input', function () {
+                        renderIconPreview(item);
+                        refreshFeatureItemMeta(item);
+                    });
+
+                    iconSourceInput?.addEventListener('change', function () {
+                        toggleFeatureIconPanels(item, getFeatureIconSource(item));
+                        renderIconPreview(item);
+                        refreshFeatureItemMeta(item);
+                    });
+
+                    iconSvgInput?.addEventListener('input', function () {
+                        renderIconPreview(item);
+                        refreshFeatureItemMeta(item);
+                    });
+
+                    iconMediaInput?.addEventListener('input', function () {
+                        renderIconPreview(item);
+                        refreshFeatureItemMeta(item);
+                    });
+
+                    iconMediaInput?.addEventListener('change', function () {
                         renderIconPreview(item);
                         refreshFeatureItemMeta(item);
                     });
@@ -623,21 +1036,13 @@
                         const createdItem = createFeatureItem({
                             text: textInput?.value || '',
                             icon: iconInput?.value || '',
+                            iconSource: getFeatureIconSource(item),
+                            iconSvg: iconSvgInput?.value || '',
+                            iconMedia: iconMediaInput?.value || '',
+                            mediaPreviewUrl: mediaPreview?.querySelector('img')?.getAttribute('src') || '',
                         });
 
                         setFeatureExpanded(createdItem, true, true);
-                    });
-
-                    presetButtons.forEach((button) => {
-                        button.addEventListener('click', function () {
-                            if (!iconInput) {
-                                return;
-                            }
-
-                            iconInput.value = button.dataset.featureIconValue || '';
-                            renderIconPreview(item);
-                            iconInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        });
                     });
 
                     toggleButton?.addEventListener('click', function () {
@@ -646,6 +1051,7 @@
                         setFeatureExpanded(item, shouldExpand, shouldExpand);
                     });
 
+                    toggleFeatureIconPanels(item, getFeatureIconSource(item));
                     renderIconPreview(item);
                     refreshFeatureItemMeta(item);
                     item.dataset.featureItemBound = '1';
@@ -665,6 +1071,10 @@
 
                     const textInput = item.querySelector('[data-feature-field="text"]');
                     const iconInput = item.querySelector('[data-feature-field="icon"]');
+                    const iconSourceInput = item.querySelector('[data-feature-field="icon_source"]');
+                    const iconSvgInput = item.querySelector('[data-feature-field="icon_svg"]');
+                    const iconMediaInput = item.querySelector('[data-feature-field="icon_media"]');
+                    const mediaPreview = item.querySelector('[data-feature-icon-media-preview]');
 
                     if (textInput && typeof seed.text === 'string') {
                         textInput.value = seed.text;
@@ -674,6 +1084,20 @@
                         iconInput.value = sanitizeIconClass(seed.icon);
                     }
 
+                    if (iconSourceInput && typeof seed.iconSource === 'string') {
+                        iconSourceInput.value = ['class', 'svg', 'media'].includes(seed.iconSource) ? seed.iconSource : 'class';
+                    }
+
+                    if (iconSvgInput && typeof seed.iconSvg === 'string') {
+                        iconSvgInput.value = seed.iconSvg;
+                    }
+
+                    if (iconMediaInput && typeof seed.iconMedia === 'string') {
+                        iconMediaInput.value = seed.iconMedia;
+                    }
+
+                    renderMediaPreview(mediaPreview, typeof seed.mediaPreviewUrl === 'string' && seed.mediaPreviewUrl ? [seed.mediaPreviewUrl] : []);
+                    toggleFeatureIconPanels(item, getFeatureIconSource(item));
                     renderIconPreview(item);
                     reindexItems();
                     setFeatureExpanded(item, true, true);
@@ -718,6 +1142,8 @@
                 ? [root]
                 : Array.from(root.querySelectorAll('[data-build-step-repeater]'));
 
+            const createUniqueId = () => `build_step_icon_${Math.random().toString(36).slice(2, 10)}`;
+
             repeaters.forEach((repeater) => {
                 if (repeater.dataset.buildStepRepeaterBound === '1') {
                     return;
@@ -738,20 +1164,111 @@
                     .replace(/\s+/g, ' ')
                     .trim();
 
-                const renderIconPreview = (item) => {
-                    const preview = item.querySelector('[data-build-step-icon-preview]');
-                    const input = item.querySelector('[data-build-step-field="icon"]');
+                const sanitizeInlineSvg = (value) => {
+                    let svg = String(value || '').trim();
+                    if (!svg || !/<svg\b/i.test(svg)) {
+                        return '';
+                    }
 
-                    if (!preview || !input) {
+                    svg = svg.replace(/<\?(?:xml|php).*?\?>/gis, '');
+                    svg = svg.replace(/<(script|style|foreignObject)\b.*?<\/\1>/gis, '');
+                    svg = svg.replace(/\son[a-zA-Z-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/g, '');
+                    svg = svg.replace(/\s(?:href|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi, '');
+
+                    return svg.trim();
+                };
+
+                const renderMediaPreview = (container, urls = []) => {
+                    if (!(container instanceof HTMLElement)) {
                         return;
                     }
 
-                    const iconClass = sanitizeIconClass(input.value);
-                    if (input.value !== iconClass) {
-                        input.value = iconClass;
+                    container.innerHTML = '';
+                    urls.filter(Boolean).forEach((url) => {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'relative h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-50';
+
+                        const image = document.createElement('img');
+                        image.src = url;
+                        image.alt = '';
+                        image.className = 'h-full w-full object-contain p-2';
+
+                        wrapper.appendChild(image);
+                        container.appendChild(wrapper);
+                    });
+                };
+
+                const getBuildStepIconSource = (item) => {
+                    const sourceInput = item.querySelector('[data-build-step-field="icon_source"]');
+                    const source = String(sourceInput?.value || 'class').trim();
+
+                    return ['class', 'svg', 'media'].includes(source) ? source : 'class';
+                };
+
+                const ensureBuildStepIconMediaTargets = (item) => {
+                    const mediaInput = item.querySelector('[data-build-step-field="icon_media"]');
+                    const mediaButton = item.querySelector('[data-build-step-icon-media-button]');
+                    const mediaPreview = item.querySelector('[data-build-step-icon-media-preview]');
+
+                    if (!(mediaInput instanceof HTMLInputElement) || !(mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
+                        return;
                     }
 
+                    if (!mediaInput.id) {
+                        mediaInput.id = `${createUniqueId()}_input`;
+                    }
+
+                    if (!mediaPreview.id) {
+                        mediaPreview.id = `${createUniqueId()}_preview`;
+                    }
+
+                    mediaButton.dataset.targetInput = mediaInput.id;
+                    mediaButton.dataset.targetPreview = mediaPreview.id;
+                    mediaButton.dataset.multiple = 'false';
+                    mediaButton.dataset.storeValue = 'id';
+                };
+
+                const toggleBuildStepIconPanels = (item, source = null) => {
+                    const activeSource = source || getBuildStepIconSource(item);
+                    item.querySelectorAll('[data-build-step-icon-panel]').forEach((panel) => {
+                        panel.classList.toggle('hidden', panel.dataset.buildStepIconPanel !== activeSource);
+                    });
+                };
+
+                const renderIconPreview = (item) => {
+                    const preview = item.querySelector('[data-build-step-icon-preview]');
+                    const classInput = item.querySelector('[data-build-step-field="icon"]');
+                    const svgInput = item.querySelector('[data-build-step-field="icon_svg"]');
+                    const mediaPreview = item.querySelector('[data-build-step-icon-media-preview]');
+                    const source = getBuildStepIconSource(item);
+
+                    if (!preview || !classInput) {
+                        return;
+                    }
+
+                    const iconClass = sanitizeIconClass(classInput.value);
+                    if (classInput.value !== iconClass) {
+                        classInput.value = iconClass;
+                    }
+
+                    const iconSvg = sanitizeInlineSvg(svgInput?.value || '');
+                    const mediaUrl = mediaPreview?.querySelector('img')?.getAttribute('src') || '';
+
                     preview.innerHTML = '';
+
+                    if (source === 'svg' && iconSvg) {
+                        preview.innerHTML = iconSvg;
+                        return;
+                    }
+
+                    if (source === 'media' && mediaUrl) {
+                        const image = document.createElement('img');
+                        image.src = mediaUrl;
+                        image.alt = '';
+                        image.className = 'h-full w-full object-contain';
+                        preview.appendChild(image);
+                        return;
+                    }
 
                     const icon = document.createElement('i');
                     icon.className = `${iconClass || 'ti ti-search'} text-2xl leading-none`;
@@ -781,13 +1298,35 @@
                         return;
                     }
 
+                    ensureBuildStepIconMediaTargets(item);
+
                     const iconInput = item.querySelector('[data-build-step-field="icon"]');
+                    const iconSourceInput = item.querySelector('[data-build-step-field="icon_source"]');
+                    const iconSvgInput = item.querySelector('[data-build-step-field="icon_svg"]');
+                    const iconMediaInput = item.querySelector('[data-build-step-field="icon_media"]');
                     const titleInput = item.querySelector('[data-build-step-field="title"]');
+                    const mediaPreview = item.querySelector('[data-build-step-icon-media-preview]');
                     const removeButton = item.querySelector('[data-remove-build-step]');
                     const duplicateButton = item.querySelector('[data-duplicate-build-step]');
-                    const presetButtons = Array.from(item.querySelectorAll('[data-build-step-icon-preset]'));
 
                     iconInput?.addEventListener('input', function () {
+                        renderIconPreview(item);
+                    });
+
+                    iconSourceInput?.addEventListener('change', function () {
+                        toggleBuildStepIconPanels(item, getBuildStepIconSource(item));
+                        renderIconPreview(item);
+                    });
+
+                    iconSvgInput?.addEventListener('input', function () {
+                        renderIconPreview(item);
+                    });
+
+                    iconMediaInput?.addEventListener('input', function () {
+                        renderIconPreview(item);
+                    });
+
+                    iconMediaInput?.addEventListener('change', function () {
                         renderIconPreview(item);
                     });
 
@@ -800,22 +1339,15 @@
                         createStepItem({
                             title: titleInput?.value || '',
                             icon: iconInput?.value || '',
+                            iconSource: getBuildStepIconSource(item),
+                            iconSvg: iconSvgInput?.value || '',
+                            iconMedia: iconMediaInput?.value || '',
+                            mediaPreviewUrl: mediaPreview?.querySelector('img')?.getAttribute('src') || '',
                             isAccent: item.querySelector('[data-build-step-field="accent"]')?.checked || false,
                         });
                     });
 
-                    presetButtons.forEach((button) => {
-                        button.addEventListener('click', function () {
-                            if (!iconInput) {
-                                return;
-                            }
-
-                            iconInput.value = button.dataset.buildStepIconValue || '';
-                            renderIconPreview(item);
-                            iconInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        });
-                    });
-
+                    toggleBuildStepIconPanels(item, getBuildStepIconSource(item));
                     renderIconPreview(item);
                     item.dataset.buildStepItemBound = '1';
                 };
@@ -834,6 +1366,10 @@
 
                     const titleInput = item.querySelector('[data-build-step-field="title"]');
                     const iconInput = item.querySelector('[data-build-step-field="icon"]');
+                    const iconSourceInput = item.querySelector('[data-build-step-field="icon_source"]');
+                    const iconSvgInput = item.querySelector('[data-build-step-field="icon_svg"]');
+                    const iconMediaInput = item.querySelector('[data-build-step-field="icon_media"]');
+                    const mediaPreview = item.querySelector('[data-build-step-icon-media-preview]');
                     const accentInput = item.querySelector('[data-build-step-field="accent"]');
 
                     if (titleInput && typeof seed.title === 'string') {
@@ -844,10 +1380,24 @@
                         iconInput.value = sanitizeIconClass(seed.icon);
                     }
 
+                    if (iconSourceInput && typeof seed.iconSource === 'string') {
+                        iconSourceInput.value = ['class', 'svg', 'media'].includes(seed.iconSource) ? seed.iconSource : 'class';
+                    }
+
+                    if (iconSvgInput && typeof seed.iconSvg === 'string') {
+                        iconSvgInput.value = seed.iconSvg;
+                    }
+
+                    if (iconMediaInput && typeof seed.iconMedia === 'string') {
+                        iconMediaInput.value = seed.iconMedia;
+                    }
+
                     if (accentInput) {
                         accentInput.checked = Boolean(seed.isAccent);
                     }
 
+                    renderMediaPreview(mediaPreview, typeof seed.mediaPreviewUrl === 'string' && seed.mediaPreviewUrl ? [seed.mediaPreviewUrl] : []);
+                    toggleBuildStepIconPanels(item, getBuildStepIconSource(item));
                     renderIconPreview(item);
                     reindexItems();
 

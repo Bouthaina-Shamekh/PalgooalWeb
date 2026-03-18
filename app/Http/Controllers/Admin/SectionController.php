@@ -714,15 +714,15 @@ class SectionController extends Controller
                     'url' => '#',
                     'new_tab' => false,
                 ],
-                'features' => [
-                    ['text' => 'Choose Your Template', 'icon' => 'ti ti-layout-grid'],
-                    ['text' => 'Website Hosting', 'icon' => 'ti ti-server'],
-                    ['text' => 'Control Panel', 'icon' => 'ti ti-settings'],
-                    ['text' => 'Email Addresses', 'icon' => 'ti ti-mail'],
-                    ['text' => 'Private Domain', 'icon' => 'ti ti-world'],
-                    ['text' => '24/7 technical support', 'icon' => 'ti ti-headset'],
-                    ['text' => 'Private Domain', 'icon' => 'ti ti-world'],
-                    ['text' => '24/7 technical support', 'icon' => 'ti ti-headset'],
+            'features' => [
+                    ['text' => 'Choose Your Template', 'icon_source' => 'class', 'icon' => 'ti ti-layout-grid'],
+                    ['text' => 'Website Hosting', 'icon_source' => 'class', 'icon' => 'ti ti-server'],
+                    ['text' => 'Control Panel', 'icon_source' => 'class', 'icon' => 'ti ti-settings'],
+                    ['text' => 'Email Addresses', 'icon_source' => 'class', 'icon' => 'ti ti-mail'],
+                    ['text' => 'Private Domain', 'icon_source' => 'class', 'icon' => 'ti ti-world'],
+                    ['text' => '24/7 technical support', 'icon_source' => 'class', 'icon' => 'ti ti-headset'],
+                    ['text' => 'Private Domain', 'icon_source' => 'class', 'icon' => 'ti ti-world'],
+                    ['text' => '24/7 technical support', 'icon_source' => 'class', 'icon' => 'ti ti-headset'],
                 ],
                 'media_type' => 'image',
                 'media_url' => 'assets/tamplate/images/Fu.svg',
@@ -772,11 +772,11 @@ class SectionController extends Controller
                 'title' => 'How We Build',
                 'subtitle' => 'We Build with precision, passion, and purpose',
                 'steps' => [
-                    ['title' => 'Analysis', 'icon' => 'ti ti-search', 'is_accent' => false],
-                    ['title' => 'Ux/Ui', 'icon' => 'ti ti-palette', 'is_accent' => false],
-                    ['title' => 'Development', 'icon' => 'ti ti-code', 'is_accent' => false],
-                    ['title' => 'Testing And Review', 'icon' => 'ti ti-test-pipe', 'is_accent' => false],
-                    ['title' => 'Launch', 'icon' => 'ti ti-rocket', 'is_accent' => true],
+                    ['title' => 'Analysis', 'icon_source' => 'class', 'icon' => 'ti ti-search', 'is_accent' => false],
+                    ['title' => 'Ux/Ui', 'icon_source' => 'class', 'icon' => 'ti ti-palette', 'is_accent' => false],
+                    ['title' => 'Development', 'icon_source' => 'class', 'icon' => 'ti ti-code', 'is_accent' => false],
+                    ['title' => 'Testing And Review', 'icon_source' => 'class', 'icon' => 'ti ti-test-pipe', 'is_accent' => false],
+                    ['title' => 'Launch', 'icon_source' => 'class', 'icon' => 'ti ti-rocket', 'is_accent' => true],
                 ],
             ],
 
@@ -1071,13 +1071,9 @@ class SectionController extends Controller
                         return null;
                     }
 
-                    $icon = trim((string) ($step['icon'] ?? ''));
-                    $icon = preg_replace('/[^A-Za-z0-9\-_ ]/', '', $icon) ?? '';
-                    $icon = trim(preg_replace('/\s+/', ' ', $icon) ?? '');
-
                     return [
                         'title' => $title,
-                        'icon' => $icon !== '' ? $icon : null,
+                        ...$this->normalizeStructuredIconPayload($step),
                         'is_accent' => filter_var($step['is_accent'] ?? false, FILTER_VALIDATE_BOOLEAN),
                     ];
                 })
@@ -1222,9 +1218,9 @@ class SectionController extends Controller
     }
 
     /**
-     * Convert campaign features into stable {text, icon} items.
+     * Convert campaign features into stable structured items.
      *
-     * @return array<int, array{text: string, icon: string|null}>
+     * @return array<int, array{text: string, icon_source: string, icon: string|null, icon_svg: string|null, icon_media: int|string|null}>
      */
     protected function normalizeCampaignFeatureItems(mixed $featuresRaw): array
     {
@@ -1235,7 +1231,10 @@ class SectionController extends Controller
                 ->values()
                 ->map(fn ($item) => [
                     'text' => $item,
+                    'icon_source' => 'class',
                     'icon' => null,
+                    'icon_svg' => null,
+                    'icon_media' => null,
                 ])
                 ->all();
         }
@@ -1262,12 +1261,56 @@ class SectionController extends Controller
 
                 return [
                     'text' => $text,
-                    'icon' => $this->sanitizeFeatureIconClass($item['icon'] ?? null),
+                    ...$this->normalizeStructuredIconPayload($item),
                 ];
             })
             ->filter()
             ->values()
             ->all();
+    }
+
+    /**
+     * Normalize class/svg/media icon payloads into one stable structure.
+     *
+     * @return array{icon_source:string,icon:?string,icon_svg:?string,icon_media:int|string|null}
+     */
+    protected function normalizeStructuredIconPayload(array $item): array
+    {
+        $iconClass = $this->sanitizeFeatureIconClass($item['icon'] ?? null);
+        $iconSvg = $this->sanitizeInlineSvg($item['icon_svg'] ?? null);
+        $iconMedia = $this->sanitizeMediaReference($item['icon_media'] ?? null);
+
+        $requestedSource = trim((string) ($item['icon_source'] ?? ''));
+        $source = in_array($requestedSource, ['class', 'svg', 'media'], true) ? $requestedSource : null;
+
+        if ($source === 'svg' && ! $iconSvg) {
+            $source = null;
+        }
+
+        if ($source === 'media' && ($iconMedia === null || $iconMedia === '')) {
+            $source = null;
+        }
+
+        if ($source === 'class' && ! $iconClass) {
+            $source = null;
+        }
+
+        if (! $source) {
+            if ($iconSvg) {
+                $source = 'svg';
+            } elseif ($iconMedia !== null && $iconMedia !== '') {
+                $source = 'media';
+            } else {
+                $source = 'class';
+            }
+        }
+
+        return [
+            'icon_source' => $source,
+            'icon' => $iconClass,
+            'icon_svg' => $iconSvg,
+            'icon_media' => $iconMedia,
+        ];
     }
 
     /**
@@ -1283,6 +1326,52 @@ class SectionController extends Controller
 
         $value = preg_replace('/[^A-Za-z0-9\-_ ]/', '', $value) ?? '';
         $value = trim(preg_replace('/\s+/', ' ', $value) ?? '');
+
+        return $value !== '' ? $value : null;
+    }
+
+    /**
+     * Keep inline SVG safe enough for admin-authored section icons.
+     */
+    protected function sanitizeInlineSvg(mixed $svg): ?string
+    {
+        $value = trim((string) $svg);
+
+        if ($value === '' || ! preg_match('/<svg\b/i', $value)) {
+            return null;
+        }
+
+        $value = preg_replace('/<\?(?:xml|php).*?\?>/is', '', $value) ?? '';
+        $value = preg_replace('/<(script|style|foreignObject)\b.*?<\/\1>/is', '', $value) ?? '';
+        $value = preg_replace('/\son[a-zA-Z-]+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $value) ?? '';
+        $value = preg_replace('/\s(?:href|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|\'\s*javascript:[^\']*\'|javascript:[^\s>]+)/i', '', $value) ?? '';
+        $value = strip_tags(
+            $value,
+            '<svg><g><path><circle><rect><line><polyline><polygon><ellipse><defs><clipPath><mask><use><linearGradient><radialGradient><stop><title><desc>'
+        );
+        $value = trim($value);
+
+        if ($value === '' || ! preg_match('/^<svg\b/i', $value)) {
+            return null;
+        }
+
+        return $value;
+    }
+
+    /**
+     * Normalize media references from the icon picker.
+     */
+    protected function sanitizeMediaReference(mixed $value): int|string|null
+    {
+        if (is_numeric($value)) {
+            return (int) $value;
+        }
+
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $value = trim($value);
 
         return $value !== '' ? $value : null;
     }
