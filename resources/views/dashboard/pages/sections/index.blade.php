@@ -476,7 +476,7 @@
     </div>
     </div>
 
-    <div data-sections-sidebar-editor class="{{ $editingSection ? '' : 'hidden' }}">
+    <div data-sections-sidebar-editor class="{{ $editingSection ? 'h-full' : 'hidden h-full' }}">
         @if ($editingSection)
             @include('dashboard.pages.sections.partials.sidebar-editor', [
                 'page' => $page,
@@ -669,15 +669,6 @@
                     return;
                 }
 
-                window.initSectionEditorTabs?.(root);
-                window.initSectionFeatureRepeaters?.(root);
-                window.initBuildStepRepeaters?.(root);
-                window.initReviewRepeaters?.(root);
-
-                root.querySelectorAll('[data-close-section-editor]').forEach((button) => {
-                    button.addEventListener('click', closeSectionEditor);
-                });
-
                 const form = root.querySelector('[data-section-editor-form]');
                 if (!form) {
                     return;
@@ -751,6 +742,27 @@
                             button.classList.remove('opacity-70', 'pointer-events-none');
                         });
                     }
+                });
+
+                const runEditorInitializer = (initializer) => {
+                    if (typeof initializer !== 'function') {
+                        return;
+                    }
+
+                    try {
+                        initializer(root);
+                    } catch (error) {
+                        console.error('Section editor initializer failed.', error);
+                    }
+                };
+
+                runEditorInitializer(window.initSectionEditorTabs);
+                runEditorInitializer(window.initSectionFeatureRepeaters);
+                runEditorInitializer(window.initBuildStepRepeaters);
+                runEditorInitializer(window.initReviewRepeaters);
+
+                root.querySelectorAll('[data-close-section-editor]').forEach((button) => {
+                    button.addEventListener('click', closeSectionEditor);
                 });
             };
 

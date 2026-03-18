@@ -1342,9 +1342,14 @@ class SectionController extends Controller
         }
 
         $value = preg_replace('/<\?(?:xml|php).*?\?>/is', '', $value) ?? '';
+        $value = preg_replace('/<!DOCTYPE[^>]*>/i', '', $value) ?? '';
         $value = preg_replace('/<(script|style|foreignObject)\b.*?<\/\1>/is', '', $value) ?? '';
         $value = preg_replace('/\son[a-zA-Z-]+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $value) ?? '';
         $value = preg_replace('/\s(?:href|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|\'\s*javascript:[^\']*\'|javascript:[^\s>]+)/i', '', $value) ?? '';
+
+        if (preg_match('/<svg\b[\s\S]*<\/svg>/i', $value, $matches)) {
+            $value = $matches[0];
+        }
         $value = strip_tags(
             $value,
             '<svg><g><path><circle><rect><line><polyline><polygon><ellipse><defs><clipPath><mask><use><linearGradient><radialGradient><stop><title><desc>'

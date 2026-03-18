@@ -93,6 +93,10 @@
             display: none;
         }
 
+        .sections-workspace-shell.is-section-editor-open .sections-workspace-sidebar {
+            overflow: hidden;
+        }
+
         .sections-sidebar-open-button {
             position: absolute;
             top: 50%;
@@ -781,9 +785,17 @@
                     }
 
                     svg = svg.replace(/<\?(?:xml|php).*?\?>/gis, '');
+                    svg = svg.replace(/<!DOCTYPE[^>]*>/gi, '');
                     svg = svg.replace(/<(script|style|foreignObject)\b.*?<\/\1>/gis, '');
                     svg = svg.replace(/\son[a-zA-Z-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/g, '');
                     svg = svg.replace(/\s(?:href|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi, '');
+
+                    const match = svg.match(/<svg\b[\s\S]*<\/svg>/i);
+                    if (!match) {
+                        return '';
+                    }
+
+                    svg = match[0];
 
                     return svg.trim();
                 };
@@ -1171,9 +1183,17 @@
                     }
 
                     svg = svg.replace(/<\?(?:xml|php).*?\?>/gis, '');
+                    svg = svg.replace(/<!DOCTYPE[^>]*>/gi, '');
                     svg = svg.replace(/<(script|style|foreignObject)\b.*?<\/\1>/gis, '');
                     svg = svg.replace(/\son[a-zA-Z-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/g, '');
                     svg = svg.replace(/\s(?:href|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi, '');
+
+                    const match = svg.match(/<svg\b[\s\S]*<\/svg>/i);
+                    if (!match) {
+                        return '';
+                    }
+
+                    svg = match[0];
 
                     return svg.trim();
                 };
