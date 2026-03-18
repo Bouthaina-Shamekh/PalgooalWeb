@@ -2,8 +2,10 @@
     use App\Models\Media;
 
     $formId = $formId ?? 'section-edit-form';
-    $formAction = $formAction ?? route('dashboard.pages.sections.update', [$page, $section], false);
+    $formAction = $formAction ?? route('dashboard.pages.sections.save', [$page, $section], false);
     $formClass = $formClass ?? 'space-y-6';
+    $formMethod = $formMethod ?? 'POST';
+    $formMethodSpoof = $formMethodSpoof ?? null;
     $surfaceClass = $surfaceClass ?? 'rounded-3xl border border-slate-200 bg-white shadow-sm';
     $sectionHeaderClass = $sectionHeaderClass ?? 'border-b border-slate-200 px-5 py-4 lg:px-6';
     $sectionBodyClass = $sectionBodyClass ?? 'p-5 lg:p-6';
@@ -21,7 +23,7 @@
 
 <form
     id="{{ $formId }}"
-    method="POST"
+    method="{{ strtoupper($formMethod) }}"
     action="{{ $formAction }}"
     class="{{ $formClass }}"
     data-section-editor-form
@@ -29,7 +31,9 @@
     data-default-editor-tab="lang-{{ $editorDefaultLocale }}"
 >
     @csrf
-    @method('PUT')
+    @if ($formMethodSpoof)
+        @method($formMethodSpoof)
+    @endif
 
     @php
         $feedbackVisible = $viewErrors->any() || filled($feedbackMessage);

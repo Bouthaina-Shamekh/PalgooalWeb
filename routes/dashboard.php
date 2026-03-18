@@ -230,6 +230,7 @@ Route::group([
             // Edit an existing section
             Route::get('sections/{section}/editor', [SectionController::class, 'editor'])->name('editor');
             Route::get('sections/{section}/edit', [SectionController::class, 'edit'])->name('edit');
+            Route::post('sections/{section}/save', [SectionController::class, 'update'])->name('save');
 
             // Update section
             Route::match(['put', 'patch'], 'sections/{section}', [SectionController::class, 'update'])
