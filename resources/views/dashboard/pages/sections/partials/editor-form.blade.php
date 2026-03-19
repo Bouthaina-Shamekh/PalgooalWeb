@@ -80,21 +80,17 @@
 
     <div
         data-section-editor-feedback
-        class="{{ $feedbackVisible ? '' : 'hidden ' }}rounded-2xl border px-4 py-3 text-sm {{ $feedbackVisible ? $feedbackClasses : 'border-slate-200 bg-slate-50 text-slate-600' }}"
+        class="hidden rounded-2xl border px-4 py-3 text-sm {{ $feedbackVisible ? $feedbackClasses : 'border-slate-200 bg-slate-50 text-slate-600' }}"
     >
-        @if ($feedbackVisible)
-            <ul class="space-y-1" data-section-editor-feedback-list>
-                @if (filled($feedbackMessage))
-                    <li>{{ $feedbackMessage }}</li>
-                @endif
+        <ul class="{{ $feedbackVisible ? '' : 'hidden ' }}space-y-1" data-section-editor-feedback-list>
+            @if (filled($feedbackMessage))
+                <li>{{ $feedbackMessage }}</li>
+            @endif
 
-                @foreach ($viewErrors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        @else
-            <ul class="hidden space-y-1" data-section-editor-feedback-list></ul>
-        @endif
+            @foreach ($viewErrors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
     </div>
 
     <div class="{{ $surfaceClass }}">
@@ -654,7 +650,6 @@
                                                                 class="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                                             >
                                                                 <option value="class" @selected(($stepItem['icon_source'] ?? 'class') === 'class')>{{ __('Tabler Icon') }}</option>
-                                                                <option value="svg" @selected(($stepItem['icon_source'] ?? 'class') === 'svg')>{{ __('SVG Code') }}</option>
                                                                 <option value="media" @selected(($stepItem['icon_source'] ?? 'class') === 'media')>{{ __('SVG From Media') }}</option>
                                                             </select>
 
@@ -680,18 +675,6 @@
                                                                     </button>
                                                                 </div>
                                                                 <p class="text-xs text-slate-500">{{ __('Use the icon library or type a Tabler class manually.') }}</p>
-                                                            </div>
-
-                                                            <div data-build-step-icon-panel="svg" class="space-y-2 hidden">
-                                                                <textarea
-                                                                    name="translations[{{ $code }}][content][steps][{{ $stepIndex }}][icon_svg]"
-                                                                    data-name-template="translations[{{ $code }}][content][steps][__INDEX__][icon_svg]"
-                                                                    data-build-step-field="icon_svg"
-                                                                    rows="5"
-                                                                    class="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                                                    placeholder="<svg viewBox='0 0 24 24'>...</svg>"
-                                                                >{{ $stepItem['icon_svg'] ?? '' }}</textarea>
-                                                                <p class="text-xs text-slate-500">{{ __('Paste SVG markup here if you need a custom icon that is not available in Tabler.') }}</p>
                                                             </div>
 
                                                             <div data-build-step-icon-panel="media" class="space-y-2 hidden">
@@ -810,7 +793,6 @@
                                                             class="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                                         >
                                                             <option value="class">{{ __('Tabler Icon') }}</option>
-                                                            <option value="svg">{{ __('SVG Code') }}</option>
                                                             <option value="media">{{ __('SVG From Media') }}</option>
                                                         </select>
 
@@ -836,18 +818,6 @@
                                                                 </button>
                                                             </div>
                                                             <p class="text-xs text-slate-500">{{ __('Use the icon library or type a Tabler class manually.') }}</p>
-                                                        </div>
-
-                                                        <div data-build-step-icon-panel="svg" class="space-y-2 hidden">
-                                                            <textarea
-                                                                name="translations[{{ $code }}][content][steps][__INDEX__][icon_svg]"
-                                                                data-name-template="translations[{{ $code }}][content][steps][__INDEX__][icon_svg]"
-                                                                data-build-step-field="icon_svg"
-                                                                rows="5"
-                                                                class="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                                                placeholder="<svg viewBox='0 0 24 24'>...</svg>"
-                                                            ></textarea>
-                                                            <p class="text-xs text-slate-500">{{ __('Paste SVG markup here if you need a custom icon that is not available in Tabler.') }}</p>
                                                         </div>
 
                                                         <div data-build-step-icon-panel="media" class="space-y-2 hidden">
@@ -1146,7 +1116,6 @@
                                                                 class="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                                             >
                                                                 <option value="class" @selected(($featureItem['icon_source'] ?? 'class') === 'class')>{{ __('Tabler Icon') }}</option>
-                                                                <option value="svg" @selected(($featureItem['icon_source'] ?? 'class') === 'svg')>{{ __('SVG Code') }}</option>
                                                                 <option value="media" @selected(($featureItem['icon_source'] ?? 'class') === 'media')>{{ __('SVG From Media') }}</option>
                                                             </select>
 
@@ -1172,18 +1141,6 @@
                                                                     </button>
                                                                 </div>
                                                                 <p class="text-xs text-slate-500">{{ __('Use the icon library or type a Tabler class manually.') }}</p>
-                                                            </div>
-
-                                                            <div data-feature-icon-panel="svg" class="space-y-2 hidden">
-                                                                <textarea
-                                                                    name="translations[{{ $code }}][content][features][{{ $featureIndex }}][icon_svg]"
-                                                                    data-name-template="translations[{{ $code }}][content][features][__INDEX__][icon_svg]"
-                                                                    data-feature-field="icon_svg"
-                                                                    rows="5"
-                                                                    class="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                                                    placeholder="<svg viewBox='0 0 24 24'>...</svg>"
-                                                                >{{ $featureItem['icon_svg'] ?? '' }}</textarea>
-                                                                <p class="text-xs text-slate-500">{{ __('Paste SVG markup here if you need a custom icon that is not available in Tabler.') }}</p>
                                                             </div>
 
                                                             <div data-feature-icon-panel="media" class="space-y-2 hidden">
@@ -1310,7 +1267,6 @@
                                                             class="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                                         >
                                                             <option value="class">{{ __('Tabler Icon') }}</option>
-                                                            <option value="svg">{{ __('SVG Code') }}</option>
                                                             <option value="media">{{ __('SVG From Media') }}</option>
                                                         </select>
 
@@ -1336,18 +1292,6 @@
                                                                 </button>
                                                             </div>
                                                             <p class="text-xs text-slate-500">{{ __('Use the icon library or type a Tabler class manually.') }}</p>
-                                                        </div>
-
-                                                        <div data-feature-icon-panel="svg" class="space-y-2 hidden">
-                                                            <textarea
-                                                                name="translations[{{ $code }}][content][features][__INDEX__][icon_svg]"
-                                                                data-name-template="translations[{{ $code }}][content][features][__INDEX__][icon_svg]"
-                                                                data-feature-field="icon_svg"
-                                                                rows="5"
-                                                                class="block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                                                placeholder="<svg viewBox='0 0 24 24'>...</svg>"
-                                                            ></textarea>
-                                                            <p class="text-xs text-slate-500">{{ __('Paste SVG markup here if you need a custom icon that is not available in Tabler.') }}</p>
                                                         </div>
 
                                                         <div data-feature-icon-panel="media" class="space-y-2 hidden">

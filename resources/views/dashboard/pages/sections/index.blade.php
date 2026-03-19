@@ -191,14 +191,6 @@
 @endsection
 
 @section('workspace-main')
-    @if (session('success'))
-        <div class="mb-4 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{{ session('success') }}</div>
-    @endif
-
-    @if (session('error'))
-        <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{{ session('error') }}</div>
-    @endif
-
     <div class="-mx-4 lg:-mx-6 sections-preview-shell-host">
         @if ($sections->isEmpty())
             <div class="mx-4 rounded-[2rem] border border-dashed border-slate-300 bg-white/80 px-6 py-16 text-center lg:mx-6">
@@ -523,11 +515,33 @@
             const editorSaveFailedMessage = @json(__('Section could not be updated. Please review the form and try again.'));
             const editorLoadingLabel = @json(__('Loading editor...'));
             const editorSaveSuccessMessage = @json(__('Section has been updated successfully.'));
+            const successAlertTitle = @json(__('Success'));
+            const errorAlertTitle = @json(__('Error'));
+            const validationAlertTitle = @json(__('Please review the form'));
             const activeStatusLabel = @json(__('Active'));
             const hiddenStatusLabel = @json(__('Hidden'));
             const autoEditSectionId = Number(@json($autoEditSectionId));
             const frameBaseUrl = previewFrame?.dataset.baseUrl || '';
             let currentSelectedSectionId = Number(@json($selectedSectionId));
+
+            const showSectionsAlert = (tone, messages, title = '') => {
+                const safeMessages = Array.isArray(messages) ? messages.filter(Boolean) : [];
+
+                if (typeof window.sectionsShowAlert === 'function') {
+                    window.sectionsShowAlert({
+                        tone,
+                        title: title || (tone === 'success' ? successAlertTitle : errorAlertTitle),
+                        messages: safeMessages,
+                    });
+                    return true;
+                }
+
+                if (safeMessages.length > 0) {
+                    window.alert(safeMessages.join('\n'));
+                }
+
+                return false;
+            };
 
             const applySidebarSelection = (sectionId) => {
                 sidebarSectionItems.forEach((item) => {
@@ -562,28 +576,54 @@
             const renderEditorFeedback = (root, tone, messages) => {
                 const feedback = root?.querySelector('[data-section-editor-feedback]');
                 const list = root?.querySelector('[data-section-editor-feedback-list]');
+                const safeMessages = Array.isArray(messages) ? messages.filter(Boolean) : [];
+
+                if (safeMessages.length === 0) {
+                    if (list) {
+                        list.replaceChildren();
+                        list.classList.add('hidden');
+                    }
+                    if (feedback) {
+                        feedback.classList.add('hidden');
+                        feedback.classList.remove('border-red-200', 'bg-red-50', 'text-red-800', 'border-emerald-200', 'bg-emerald-50', 'text-emerald-800');
+                    }
+                    return;
+                }
+
+                if (showSectionsAlert(
+                    tone,
+                    safeMessages,
+                    tone === 'error' ? validationAlertTitle : successAlertTitle
+                )) {
+                    if (list) {
+                        list.replaceChildren();
+                        list.classList.add('hidden');
+                    }
+                    if (feedback) {
+                        feedback.classList.add('hidden');
+                        feedback.classList.remove('border-red-200', 'bg-red-50', 'text-red-800', 'border-emerald-200', 'bg-emerald-50', 'text-emerald-800');
+                    }
+                    return;
+                }
+
                 if (!feedback || !list) {
                     return;
                 }
 
-                const safeMessages = Array.isArray(messages) ? messages.filter(Boolean) : [];
                 list.replaceChildren();
                 safeMessages.forEach((message) => {
                     const item = document.createElement('li');
                     item.textContent = message;
                     list.appendChild(item);
                 });
-                list.classList.toggle('hidden', safeMessages.length === 0);
-                feedback.classList.toggle('hidden', safeMessages.length === 0);
+                list.classList.remove('hidden');
+                feedback.classList.remove('hidden');
                 feedback.classList.remove('border-red-200', 'bg-red-50', 'text-red-800', 'border-emerald-200', 'bg-emerald-50', 'text-emerald-800');
-
-                if (safeMessages.length > 0) {
-                    feedback.classList.add(
-                        tone === 'error' ? 'border-red-200' : 'border-emerald-200',
-                        tone === 'error' ? 'bg-red-50' : 'bg-emerald-50',
-                        tone === 'error' ? 'text-red-800' : 'text-emerald-800'
-                    );
-                }
+                feedback.classList.add(
+                    tone === 'error' ? 'border-red-200' : 'border-emerald-200',
+                    tone === 'error' ? 'bg-red-50' : 'bg-emerald-50',
+                    tone === 'error' ? 'text-red-800' : 'text-emerald-800'
+                );
             };
 
             const updateSidebarSectionCard = (sectionData) => {
@@ -834,7 +874,7 @@
                         return;
                     }
 
-                    window.alert(editorOpenFailedMessage);
+                    showSectionsAlert('error', [editorOpenFailedMessage], errorAlertTitle);
                 }
             };
 
@@ -1090,9 +1130,15 @@
                             submitButton.innerHTML = originalButtonHtml;
                         }
 
-                        window.alert(error?.message && error.message !== 'quick_add_failed'
-                            ? error.message
-                            : quickAddFailedMessage);
+                        showSectionsAlert(
+                            'error',
+                            [
+                                error?.message && error.message !== 'quick_add_failed'
+                                    ? error.message
+                                    : quickAddFailedMessage,
+                            ],
+                            errorAlertTitle
+                        );
                     }
                 });
             });
@@ -1150,7 +1196,7 @@
                     } catch (error) {
                         syncListOrder(mainSortableList, committedOrder);
                         syncListOrder(sidebarSortableList, committedOrder);
-                        window.alert(reorderFailedMessage);
+                        showSectionsAlert('error', [reorderFailedMessage], errorAlertTitle);
                     }
                 };
 

@@ -1281,11 +1281,7 @@ class SectionController extends Controller
         $iconMedia = $this->sanitizeMediaReference($item['icon_media'] ?? null);
 
         $requestedSource = trim((string) ($item['icon_source'] ?? ''));
-        $source = in_array($requestedSource, ['class', 'svg', 'media'], true) ? $requestedSource : null;
-
-        if ($source === 'svg' && ! $iconSvg) {
-            $source = null;
-        }
+        $source = in_array($requestedSource, ['class', 'media'], true) ? $requestedSource : null;
 
         if ($source === 'media' && ($iconMedia === null || $iconMedia === '')) {
             $source = null;
@@ -1296,9 +1292,7 @@ class SectionController extends Controller
         }
 
         if (! $source) {
-            if ($iconSvg) {
-                $source = 'svg';
-            } elseif ($iconMedia !== null && $iconMedia !== '') {
+            if ($iconMedia !== null && $iconMedia !== '') {
                 $source = 'media';
             } else {
                 $source = 'class';
@@ -1308,7 +1302,7 @@ class SectionController extends Controller
         return [
             'icon_source' => $source,
             'icon' => $iconClass,
-            'icon_svg' => $iconSvg,
+            'icon_svg' => null,
             'icon_media' => $iconMedia,
         ];
     }

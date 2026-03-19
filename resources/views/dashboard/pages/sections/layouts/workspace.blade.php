@@ -348,6 +348,87 @@
         window.MEDIA_CONFIG.baseUrl = window.MEDIA_CONFIG.baseUrl || @json(url('admin/media'));
         window.MEDIA_CONFIG.csrfToken = window.MEDIA_CONFIG.csrfToken || @json(csrf_token());
     </script>
+    <script src="{{ asset('assets/dashboard/js/plugins/sweetalert2.all.min.js') }}"></script>
+    <script>
+        window.sectionsShowAlert = function (options = {}) {
+            const tone = options.tone === 'success' ? 'success' : 'error';
+            const title = String(options.title || (tone === 'success' ? @json(__('Success')) : @json(__('Something went wrong'))));
+            const messages = Array.isArray(options.messages) ? options.messages.filter(Boolean) : [];
+            const text = String(options.text || '');
+
+            if (typeof Swal === 'undefined') {
+                const fallbackMessage = messages.length ? messages.join("\n") : text || title;
+                window.alert(fallbackMessage);
+                return;
+            }
+
+            if (tone === 'success') {
+                const toast = Swal.mixin({
+                    toast: true,
+                    position: @json(current_dir() === 'rtl' ? 'top-start' : 'top-end'),
+                    showConfirmButton: false,
+                    timer: 2600,
+                    timerProgressBar: true,
+                });
+
+                toast.fire({
+                    icon: 'success',
+                    title: messages[0] || text || title,
+                });
+
+                return;
+            }
+
+            const html = messages.length
+                ? `<div class="text-start"><ul style="margin:0;padding-inline-start:1.25rem;">${messages.map((message) => `<li>${String(message)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')}</li>`).join('')}</ul></div>`
+                : '';
+
+            Swal.fire({
+                icon: 'error',
+                title,
+                text: html ? undefined : (text || ''),
+                html: html || undefined,
+                confirmButtonText: @json(__('OK')),
+                customClass: {
+                    popup: 'rounded-[1.5rem]',
+                    confirmButton: 'inline-flex items-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white',
+                },
+                buttonsStyling: false,
+            });
+        };
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const successMessage = @json(session('success'));
+            const errorMessage = @json(session('error'));
+            const validationErrors = @json($errors->all());
+
+            if (successMessage) {
+                window.sectionsShowAlert({
+                    tone: 'success',
+                    messages: [successMessage],
+                });
+            }
+
+            if (errorMessage) {
+                window.sectionsShowAlert({
+                    tone: 'error',
+                    title: @json(__('Error')),
+                    messages: [errorMessage],
+                });
+            }
+
+            if (Array.isArray(validationErrors) && validationErrors.length > 0) {
+                window.sectionsShowAlert({
+                    tone: 'error',
+                    title: @json(__('Please review the form')),
+                    messages: validationErrors,
+                });
+            }
+        });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="{{ asset('assets/dashboard/js/media-picker.js') }}?v={{ filemtime(public_path('assets/dashboard/js/media-picker.js')) }}" defer></script>
     @include('dashboard.partials.media-picker')
