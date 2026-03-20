@@ -621,6 +621,7 @@
             window.initSectionIconLibrary?.();
             window.initSectionFeatureRepeaters?.(document);
             window.initSectionOutputRepeaters?.(document);
+            window.initSectionServiceRepeaters?.(document);
             window.initBuildStepRepeaters?.(document);
             window.initReviewRepeaters?.(document);
         });
@@ -1593,6 +1594,360 @@
             });
         };
 
+        window.initSectionServiceRepeaters = function (scope) {
+            const root = scope instanceof Element || scope instanceof Document ? scope : document;
+            const repeaters = root.matches?.('[data-service-repeater]')
+                ? [root]
+                : Array.from(root.querySelectorAll('[data-service-repeater]'));
+
+            const createUniqueId = () => `service_icon_${Math.random().toString(36).slice(2, 10)}`;
+
+            repeaters.forEach((repeater) => {
+                if (repeater.dataset.serviceRepeaterBound === '1') {
+                    return;
+                }
+
+                const list = repeater.querySelector('[data-service-items]');
+                const template = repeater.querySelector('template[data-service-item-template]');
+                const emptyState = repeater.querySelector('[data-service-empty]');
+                const addButtons = Array.from(repeater.querySelectorAll('[data-add-service-item]'));
+                const serviceItemLabel = repeater.dataset.serviceItemLabel || 'Service';
+                const serviceItemHint = repeater.dataset.serviceItemHint || 'Click to edit this service';
+
+                if (!list || !template) {
+                    repeater.dataset.serviceRepeaterBound = '1';
+                    return;
+                }
+
+                const sanitizeIconClass = (value) => String(value || '')
+                    .replace(/[^A-Za-z0-9\-_ ]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                const renderMediaPreview = (container, urls = []) => {
+                    if (!(container instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    container.innerHTML = '';
+                    urls.filter(Boolean).forEach((url) => {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'relative h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-50';
+
+                        const image = document.createElement('img');
+                        image.src = url;
+                        image.alt = '';
+                        image.className = 'h-full w-full object-contain p-2';
+
+                        wrapper.appendChild(image);
+                        container.appendChild(wrapper);
+                    });
+                };
+
+                const getServiceIconSource = (item) => {
+                    const sourceInput = item.querySelector('[data-service-field="icon_source"]');
+                    const source = String(sourceInput?.value || 'class').trim();
+
+                    return ['class', 'media'].includes(source) ? source : 'class';
+                };
+
+                const ensureServiceIconMediaTargets = (item) => {
+                    const mediaInput = item.querySelector('[data-service-field="icon_media"]');
+                    const mediaButton = item.querySelector('[data-service-icon-media-button]');
+                    const mediaPreview = item.querySelector('[data-service-icon-media-preview]');
+
+                    if (!(mediaInput instanceof HTMLInputElement) || !(mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    if (!mediaInput.id) {
+                        mediaInput.id = `${createUniqueId()}_input`;
+                    }
+
+                    if (!mediaPreview.id) {
+                        mediaPreview.id = `${createUniqueId()}_preview`;
+                    }
+
+                    mediaButton.dataset.targetInput = mediaInput.id;
+                    mediaButton.dataset.targetPreview = mediaPreview.id;
+                    mediaButton.dataset.multiple = 'false';
+                    mediaButton.dataset.storeValue = 'id';
+                };
+
+                const toggleServiceIconPanels = (item, source = null) => {
+                    const activeSource = source || getServiceIconSource(item);
+                    item.querySelectorAll('[data-service-icon-panel]').forEach((panel) => {
+                        panel.classList.toggle('hidden', panel.dataset.serviceIconPanel !== activeSource);
+                    });
+                };
+
+                const renderServiceIconPreview = (item) => {
+                    const preview = item.querySelector('[data-service-icon-preview]');
+                    const classInput = item.querySelector('[data-service-field="icon"]');
+                    const mediaPreview = item.querySelector('[data-service-icon-media-preview]');
+                    const source = getServiceIconSource(item);
+
+                    if (!(preview instanceof HTMLElement) || !(classInput instanceof HTMLInputElement)) {
+                        return;
+                    }
+
+                    const iconClass = sanitizeIconClass(classInput.value);
+                    if (classInput.value !== iconClass) {
+                        classInput.value = iconClass;
+                    }
+
+                    const mediaUrl = mediaPreview?.querySelector('img')?.getAttribute('src') || '';
+                    preview.innerHTML = '';
+
+                    if (source === 'media' && mediaUrl) {
+                        const image = document.createElement('img');
+                        image.src = mediaUrl;
+                        image.alt = '';
+                        image.className = 'h-full w-full object-contain';
+                        preview.appendChild(image);
+                        return;
+                    }
+
+                    if (iconClass) {
+                        const icon = document.createElement('i');
+                        icon.className = `${iconClass} text-xl leading-none`;
+                        icon.setAttribute('aria-hidden', 'true');
+                        preview.appendChild(icon);
+                        return;
+                    }
+
+                    preview.innerHTML = '<svg width="10" height="13" viewBox="0 0 10 13" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M9.75 6.49512L0 12.9903V-7.34329e-05L9.75 6.49512Z" fill="#BA112C"></path></svg>';
+                };
+
+                const setServiceExpanded = (item, expanded, collapseOthers = false) => {
+                    if (!(item instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    if (collapseOthers) {
+                        Array.from(list.querySelectorAll('[data-service-item]')).forEach((entry) => {
+                            if (entry !== item) {
+                                setServiceExpanded(entry, false, false);
+                            }
+                        });
+                    }
+
+                    const body = item.querySelector('[data-service-item-body]');
+                    const toggle = item.querySelector('[data-service-toggle]');
+                    const toggleIcon = item.querySelector('[data-service-toggle-icon]');
+
+                    if (body) {
+                        body.classList.toggle('hidden', !expanded);
+                    }
+
+                    if (toggle) {
+                        toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                    }
+
+                    if (toggleIcon) {
+                        toggleIcon.classList.toggle('rotate-180', expanded);
+                    }
+                };
+
+                const refreshServiceItemMeta = (item, index = null) => {
+                    if (!(item instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    const textInput = item.querySelector('[data-service-field="text"]');
+                    const iconInput = item.querySelector('[data-service-field="icon"]');
+                    const mediaPreview = item.querySelector('[data-service-icon-media-preview]');
+                    const title = item.querySelector('[data-service-item-title]');
+                    const summary = item.querySelector('[data-service-item-summary]');
+                    const textValue = String(textInput?.value || '').trim();
+                    const iconValue = sanitizeIconClass(iconInput?.value || '');
+                    const mediaValue = mediaPreview?.querySelector('img')?.getAttribute('src') || '';
+                    const source = getServiceIconSource(item);
+                    const fallbackTitle = `${serviceItemLabel} ${Number(index ?? 0) + 1}`;
+
+                    if (title) {
+                        title.textContent = textValue || fallbackTitle;
+                    }
+
+                    if (summary) {
+                        summary.textContent = source === 'media'
+                            ? (mediaValue ? @json(__('SVG from media library')) : serviceItemHint)
+                            : (iconValue ? @json(__('Tabler icon selected')) : (textValue ? @json(__('Uses the default service marker')) : serviceItemHint));
+                    }
+                };
+
+                const reindexItems = () => {
+                    const items = Array.from(list.querySelectorAll('[data-service-item]'));
+
+                    items.forEach((item, index) => {
+                        item.querySelectorAll('[data-name-template]').forEach((field) => {
+                            const templateName = field.dataset.nameTemplate || '';
+                            if (templateName) {
+                                field.name = templateName.replace(/__INDEX__/g, String(index));
+                            }
+                        });
+
+                        refreshServiceItemMeta(item, index);
+                    });
+
+                    if (emptyState) {
+                        emptyState.classList.toggle('hidden', items.length > 0);
+                    }
+
+                    const hasExpandedItem = items.some((item) => {
+                        const body = item.querySelector('[data-service-item-body]');
+                        return body && !body.classList.contains('hidden');
+                    });
+
+                    if (!hasExpandedItem && items[0]) {
+                        setServiceExpanded(items[0], true, false);
+                    }
+                };
+
+                const bindServiceItem = (item) => {
+                    if (!(item instanceof HTMLElement) || item.dataset.serviceItemBound === '1') {
+                        return;
+                    }
+
+                    const textInput = item.querySelector('[data-service-field="text"]');
+                    const iconInput = item.querySelector('[data-service-field="icon"]');
+                    const iconSourceInput = item.querySelector('[data-service-field="icon_source"]');
+                    const iconMediaInput = item.querySelector('[data-service-field="icon_media"]');
+                    const mediaPreview = item.querySelector('[data-service-icon-media-preview]');
+                    const removeButton = item.querySelector('[data-remove-service-item]');
+                    const duplicateButton = item.querySelector('[data-duplicate-service-item]');
+                    const toggleButton = item.querySelector('[data-service-toggle]');
+
+                    ensureServiceIconMediaTargets(item);
+
+                    textInput?.addEventListener('input', function () {
+                        refreshServiceItemMeta(item);
+                    });
+
+                    iconInput?.addEventListener('input', function () {
+                        renderServiceIconPreview(item);
+                        refreshServiceItemMeta(item);
+                    });
+
+                    iconSourceInput?.addEventListener('change', function () {
+                        toggleServiceIconPanels(item, getServiceIconSource(item));
+                        renderServiceIconPreview(item);
+                        refreshServiceItemMeta(item);
+                    });
+
+                    iconMediaInput?.addEventListener('input', function () {
+                        renderServiceIconPreview(item);
+                        refreshServiceItemMeta(item);
+                    });
+
+                    iconMediaInput?.addEventListener('change', function () {
+                        renderServiceIconPreview(item);
+                        refreshServiceItemMeta(item);
+                    });
+
+                    removeButton?.addEventListener('click', function () {
+                        item.remove();
+                        reindexItems();
+                    });
+
+                    duplicateButton?.addEventListener('click', function () {
+                        const createdItem = createServiceItem({
+                            text: textInput?.value || '',
+                            icon: iconInput?.value || '',
+                            iconSource: getServiceIconSource(item),
+                            iconMedia: iconMediaInput?.value || '',
+                            mediaPreviewUrl: mediaPreview?.querySelector('img')?.getAttribute('src') || '',
+                        });
+
+                        setServiceExpanded(createdItem, true, true);
+                    });
+
+                    toggleButton?.addEventListener('click', function () {
+                        const body = item.querySelector('[data-service-item-body]');
+                        const shouldExpand = body?.classList.contains('hidden') ?? true;
+                        setServiceExpanded(item, shouldExpand, shouldExpand);
+                    });
+
+                    toggleServiceIconPanels(item, getServiceIconSource(item));
+                    renderServiceIconPreview(item);
+                    refreshServiceItemMeta(item);
+                    item.dataset.serviceItemBound = '1';
+                };
+
+                const createServiceItem = (seed = {}) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = template.innerHTML.trim();
+
+                    const item = wrapper.firstElementChild;
+                    if (!(item instanceof HTMLElement)) {
+                        return null;
+                    }
+
+                    list.appendChild(item);
+                    bindServiceItem(item);
+
+                    const textInput = item.querySelector('[data-service-field="text"]');
+                    const iconInput = item.querySelector('[data-service-field="icon"]');
+                    const iconSourceInput = item.querySelector('[data-service-field="icon_source"]');
+                    const iconMediaInput = item.querySelector('[data-service-field="icon_media"]');
+                    const mediaPreview = item.querySelector('[data-service-icon-media-preview]');
+
+                    if (textInput && typeof seed.text === 'string') {
+                        textInput.value = seed.text;
+                    }
+
+                    if (iconInput && typeof seed.icon === 'string') {
+                        iconInput.value = sanitizeIconClass(seed.icon);
+                    }
+
+                    if (iconSourceInput && typeof seed.iconSource === 'string') {
+                        iconSourceInput.value = ['class', 'media'].includes(seed.iconSource) ? seed.iconSource : 'class';
+                    }
+
+                    if (iconMediaInput && typeof seed.iconMedia === 'string') {
+                        iconMediaInput.value = seed.iconMedia;
+                    }
+
+                    renderMediaPreview(mediaPreview, typeof seed.mediaPreviewUrl === 'string' && seed.mediaPreviewUrl ? [seed.mediaPreviewUrl] : []);
+                    toggleServiceIconPanels(item, getServiceIconSource(item));
+                    renderServiceIconPreview(item);
+                    reindexItems();
+                    setServiceExpanded(item, true, true);
+
+                    return item;
+                };
+
+                addButtons.forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const item = createServiceItem();
+                        const textInput = item?.querySelector('[data-service-field="text"]');
+
+                        if (textInput instanceof HTMLElement) {
+                            window.setTimeout(() => textInput.focus(), 30);
+                        }
+                    });
+                });
+
+                Array.from(list.querySelectorAll('[data-service-item]')).forEach(bindServiceItem);
+
+                if (typeof Sortable !== 'undefined' && list.dataset.serviceSortableBound !== '1') {
+                    Sortable.create(list, {
+                        animation: 160,
+                        handle: '[data-service-drag-handle]',
+                        ghostClass: 'sections-sortable-ghost',
+                        chosenClass: 'sections-sortable-chosen',
+                        dragClass: 'sections-sortable-drag',
+                        onEnd: reindexItems,
+                    });
+
+                    list.dataset.serviceSortableBound = '1';
+                }
+
+                reindexItems();
+                repeater.dataset.serviceRepeaterBound = '1';
+            });
+        };
+
         window.initBuildStepRepeaters = function (scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
             const repeaters = root.matches?.('[data-build-step-repeater]')
@@ -1610,6 +1965,8 @@
                 const template = repeater.querySelector('template[data-build-step-item-template]');
                 const emptyState = repeater.querySelector('[data-build-step-empty]');
                 const addButtons = Array.from(repeater.querySelectorAll('[data-add-build-step]'));
+                const buildStepItemLabel = repeater.dataset.buildStepItemLabel || 'Step';
+                const buildStepItemHint = repeater.dataset.buildStepItemHint || 'Click to edit this step';
 
                 if (!list || !template) {
                     repeater.dataset.buildStepRepeaterBound = '1';
@@ -1741,6 +2098,77 @@
                     preview.appendChild(icon);
                 };
 
+                const setBuildStepExpanded = (item, expanded, collapseOthers = false) => {
+                    if (!(item instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    if (collapseOthers) {
+                        Array.from(list.querySelectorAll('[data-build-step-item]')).forEach((entry) => {
+                            if (entry !== item) {
+                                setBuildStepExpanded(entry, false, false);
+                            }
+                        });
+                    }
+
+                    const body = item.querySelector('[data-build-step-item-body]');
+                    const toggle = item.querySelector('[data-build-step-toggle]');
+                    const toggleIcon = item.querySelector('[data-build-step-toggle-icon]');
+
+                    if (body) {
+                        body.classList.toggle('hidden', !expanded);
+                    }
+
+                    if (toggle) {
+                        toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                    }
+
+                    if (toggleIcon) {
+                        toggleIcon.classList.toggle('rotate-180', expanded);
+                    }
+                };
+
+                const refreshBuildStepMeta = (item, index = null) => {
+                    if (!(item instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    const titleInput = item.querySelector('[data-build-step-field="title"]');
+                    const iconInput = item.querySelector('[data-build-step-field="icon"]');
+                    const iconSvgInput = item.querySelector('[data-build-step-field="icon_svg"]');
+                    const iconMediaPreview = item.querySelector('[data-build-step-icon-media-preview]');
+                    const accentInput = item.querySelector('[data-build-step-field="accent"]');
+                    const title = item.querySelector('[data-build-step-item-title]');
+                    const summary = item.querySelector('[data-build-step-item-summary]');
+                    const titleValue = String(titleInput?.value || '').trim();
+                    const iconValue = sanitizeIconClass(iconInput?.value || '');
+                    const svgValue = sanitizeInlineSvg(iconSvgInput?.value || '');
+                    const mediaValue = iconMediaPreview?.querySelector('img')?.getAttribute('src') || '';
+                    const source = getBuildStepIconSource(item);
+                    const isAccent = accentInput?.checked || false;
+                    const fallbackTitle = `${buildStepItemLabel} ${Number(index ?? 0) + 1}`;
+
+                    if (title) {
+                        title.textContent = titleValue || fallbackTitle;
+                    }
+
+                    if (summary) {
+                        let summaryText = source === 'svg'
+                            ? (svgValue ? @json(__('Custom SVG icon')) : buildStepItemHint)
+                            : source === 'media'
+                                ? (mediaValue ? @json(__('SVG from media library')) : buildStepItemHint)
+                                : (iconValue ? @json(__('Tabler icon selected')) : buildStepItemHint);
+
+                        if (isAccent) {
+                            summaryText = summaryText === buildStepItemHint
+                                ? @json(__('Highlighted in red'))
+                                : `${summaryText} • ${@json(__('Highlighted in red'))}`;
+                        }
+
+                        summary.textContent = summaryText;
+                    }
+                };
+
                 const reindexItems = () => {
                     const items = Array.from(list.querySelectorAll('[data-build-step-item]'));
 
@@ -1751,10 +2179,21 @@
                                 field.name = templateName.replace(/__INDEX__/g, String(index));
                             }
                         });
+
+                        refreshBuildStepMeta(item, index);
                     });
 
                     if (emptyState) {
                         emptyState.classList.toggle('hidden', items.length > 0);
+                    }
+
+                    const hasExpandedItem = items.some((item) => {
+                        const body = item.querySelector('[data-build-step-item-body]');
+                        return body && !body.classList.contains('hidden');
+                    });
+
+                    if (!hasExpandedItem && items[0]) {
+                        setBuildStepExpanded(items[0], true, false);
                     }
                 };
 
@@ -1773,26 +2212,40 @@
                     const mediaPreview = item.querySelector('[data-build-step-icon-media-preview]');
                     const removeButton = item.querySelector('[data-remove-build-step]');
                     const duplicateButton = item.querySelector('[data-duplicate-build-step]');
+                    const toggleButton = item.querySelector('[data-build-step-toggle]');
 
                     iconInput?.addEventListener('input', function () {
                         renderIconPreview(item);
+                        refreshBuildStepMeta(item);
                     });
 
                     iconSourceInput?.addEventListener('change', function () {
                         toggleBuildStepIconPanels(item, getBuildStepIconSource(item));
                         renderIconPreview(item);
+                        refreshBuildStepMeta(item);
                     });
 
                     iconSvgInput?.addEventListener('input', function () {
                         renderIconPreview(item);
+                        refreshBuildStepMeta(item);
                     });
 
                     iconMediaInput?.addEventListener('input', function () {
                         renderIconPreview(item);
+                        refreshBuildStepMeta(item);
                     });
 
                     iconMediaInput?.addEventListener('change', function () {
                         renderIconPreview(item);
+                        refreshBuildStepMeta(item);
+                    });
+
+                    titleInput?.addEventListener('input', function () {
+                        refreshBuildStepMeta(item);
+                    });
+
+                    item.querySelector('[data-build-step-field="accent"]')?.addEventListener('change', function () {
+                        refreshBuildStepMeta(item);
                     });
 
                     removeButton?.addEventListener('click', function () {
@@ -1810,10 +2263,19 @@
                             mediaPreviewUrl: mediaPreview?.querySelector('img')?.getAttribute('src') || '',
                             isAccent: item.querySelector('[data-build-step-field="accent"]')?.checked || false,
                         });
+
+                        setBuildStepExpanded(createdItem, true, true);
+                    });
+
+                    toggleButton?.addEventListener('click', function () {
+                        const body = item.querySelector('[data-build-step-item-body]');
+                        const shouldExpand = body?.classList.contains('hidden') ?? true;
+                        setBuildStepExpanded(item, shouldExpand, shouldExpand);
                     });
 
                     toggleBuildStepIconPanels(item, getBuildStepIconSource(item));
                     renderIconPreview(item);
+                    refreshBuildStepMeta(item);
                     item.dataset.buildStepItemBound = '1';
                 };
 
@@ -1865,6 +2327,7 @@
                     toggleBuildStepIconPanels(item, getBuildStepIconSource(item));
                     renderIconPreview(item);
                     reindexItems();
+                    setBuildStepExpanded(item, true, true);
 
                     return item;
                 };

@@ -1124,10 +1124,28 @@ class SectionController extends Controller
         $servicesRaw = $content['services_textarea'] ?? ($content['services'] ?? '');
 
         if (is_array($servicesRaw)) {
-            $services = array_values(array_filter(array_map(
-                static fn ($item) => is_scalar($item) ? trim((string) $item) : '',
-                $servicesRaw
-            )));
+            $services = collect($servicesRaw)
+                ->map(function ($item): ?array {
+                    if (is_array($item)) {
+                        $text = trim((string) ($item['text'] ?? $item['title'] ?? $item['label'] ?? ''));
+                    } elseif (is_scalar($item)) {
+                        $text = trim((string) $item);
+                    } else {
+                        return null;
+                    }
+
+                    if ($text === '') {
+                        return null;
+                    }
+
+                    return [
+                        'text' => $text,
+                        ...$this->normalizeStructuredIconPayload(is_array($item) ? $item : []),
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all();
         } else {
             $services = array_values(array_filter(
                 array_map('trim', preg_split("/\r\n|\r|\n/", (string) $servicesRaw))
@@ -1145,6 +1163,11 @@ class SectionController extends Controller
                     ?? ($content['primary_button']['label'] ?? null),
                 'url' => $content['primary_button_url']
                     ?? ($content['primary_button']['url'] ?? null),
+                'new_tab' => filter_var(
+                    $content['primary_button_new_tab']
+                        ?? ($content['primary_button']['new_tab'] ?? false),
+                    FILTER_VALIDATE_BOOLEAN
+                ),
             ],
             'image_one' => $content['image_one'] ?? null,
             'image_two' => $content['image_two'] ?? null,
@@ -1163,10 +1186,28 @@ class SectionController extends Controller
         $servicesRaw = $content['services_textarea'] ?? ($content['services'] ?? '');
 
         if (is_array($servicesRaw)) {
-            $services = array_values(array_filter(array_map(
-                static fn ($item) => is_scalar($item) ? trim((string) $item) : '',
-                $servicesRaw
-            )));
+            $services = collect($servicesRaw)
+                ->map(function ($item): ?array {
+                    if (is_array($item)) {
+                        $text = trim((string) ($item['text'] ?? $item['title'] ?? $item['label'] ?? ''));
+                    } elseif (is_scalar($item)) {
+                        $text = trim((string) $item);
+                    } else {
+                        return null;
+                    }
+
+                    if ($text === '') {
+                        return null;
+                    }
+
+                    return [
+                        'text' => $text,
+                        ...$this->normalizeStructuredIconPayload(is_array($item) ? $item : []),
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all();
         } else {
             $services = array_values(array_filter(
                 array_map('trim', preg_split("/\r\n|\r|\n/", (string) $servicesRaw))

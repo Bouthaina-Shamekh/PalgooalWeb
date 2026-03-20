@@ -10,6 +10,7 @@
     $primaryButton = is_array($content['primary_button'] ?? null) ? $content['primary_button'] : [];
     $primaryLabel = $primaryButton['label'] ?? null;
     $primaryUrl = $primaryButton['url'] ?? null;
+    $primaryNewTab = filter_var($primaryButton['new_tab'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
     $resolveMediaUrl = static function ($value): ?string {
         if (is_numeric($value)) {
@@ -27,8 +28,46 @@
         return null;
     };
 
+    $sanitizeIconClass = static function ($value): ?string {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        $value = preg_replace('/[^A-Za-z0-9\-_ ]/', '', $value) ?? '';
+        $value = trim(preg_replace('/\s+/', ' ', $value) ?? '');
+
+        return $value !== '' ? $value : null;
+    };
+
     $serviceItems = collect(is_array($content['services'] ?? null) ? $content['services'] : [])
-        ->map(fn ($item) => is_scalar($item) ? trim((string) $item) : '')
+        ->map(function ($item) use ($sanitizeIconClass, $resolveMediaUrl) {
+            if (is_scalar($item)) {
+                $text = trim((string) $item);
+
+                return $text !== '' ? ['text' => $text, 'icon_source' => 'class', 'icon' => null, 'icon_media_url' => null] : null;
+            }
+
+            if (! is_array($item)) {
+                return null;
+            }
+
+            $text = trim((string) ($item['text'] ?? $item['title'] ?? $item['label'] ?? ''));
+            if ($text === '') {
+                return null;
+            }
+
+            $iconSource = in_array(($item['icon_source'] ?? 'class'), ['class', 'media'], true)
+                ? (string) ($item['icon_source'] ?? 'class')
+                : 'class';
+
+            return [
+                'text' => $text,
+                'icon_source' => $iconSource,
+                'icon' => $sanitizeIconClass($item['icon'] ?? null),
+                'icon_media_url' => $resolveMediaUrl($item['icon_media'] ?? null),
+            ];
+        })
         ->filter()
         ->values();
 
@@ -67,12 +106,22 @@
                     <ul class="mb-10 inline-block w-full space-y-2">
                         @foreach ($serviceItems as $serviceItem)
                             <li class="flex items-center justify-start gap-3 text-lg text-purple-brand transition-colors duration-300 hover:text-red-brand md:text-xl">
-                                <span class="text-sm text-red-brand rtl:rotate-180">
-                                    <svg width="10" height="13" viewBox="0 0 10 13" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                        <path d="M9.75 6.49512L0 12.9903V-7.34329e-05L9.75 6.49512Z" fill="#BA112C" />
-                                    </svg>
-                                </span>
-                                <span>{{ $serviceItem }}</span>
+                                @if (($serviceItem['icon_source'] ?? 'class') === 'media' && ! empty($serviceItem['icon_media_url']))
+                                    <span class="flex h-5 w-5 flex-shrink-0 items-center justify-center text-red-brand">
+                                        <img src="{{ $serviceItem['icon_media_url'] }}" alt="" class="h-5 w-5 object-contain">
+                                    </span>
+                                @elseif (! empty($serviceItem['icon']))
+                                    <span class="flex h-5 w-5 flex-shrink-0 items-center justify-center text-red-brand">
+                                        <i class="{{ $serviceItem['icon'] }} text-base leading-none" aria-hidden="true"></i>
+                                    </span>
+                                @else
+                                    <span class="text-sm text-red-brand rtl:rotate-180">
+                                        <svg width="10" height="13" viewBox="0 0 10 13" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                            <path d="M9.75 6.49512L0 12.9903V-7.34329e-05L9.75 6.49512Z" fill="#BA112C" />
+                                        </svg>
+                                    </span>
+                                @endif
+                                <span>{{ $serviceItem['text'] }}</span>
                             </li>
                         @endforeach
                     </ul>
@@ -81,6 +130,8 @@
                 @if ($primaryLabel && $primaryUrl)
                     <a
                         href="{{ $primaryUrl }}"
+                        target="{{ $primaryNewTab ? '_blank' : '_self' }}"
+                        @if ($primaryNewTab) rel="noopener noreferrer" @endif
                         class="inline-flex items-center justify-center rounded-xl bg-red-brand px-14 py-4 text-lg text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl md:text-xl"
                     >
                         {{ $primaryLabel }}
