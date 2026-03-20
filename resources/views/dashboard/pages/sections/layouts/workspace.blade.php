@@ -620,6 +620,7 @@
             window.initSectionEditorTabs?.(document);
             window.initSectionIconLibrary?.();
             window.initSectionFeatureRepeaters?.(document);
+            window.initSectionOutputRepeaters?.(document);
             window.initBuildStepRepeaters?.(document);
             window.initReviewRepeaters?.(document);
         });
@@ -1233,6 +1234,362 @@
 
                 reindexItems();
                 repeater.dataset.featureRepeaterBound = '1';
+            });
+        };
+
+        window.initSectionOutputRepeaters = function (scope) {
+            const root = scope instanceof Element || scope instanceof Document ? scope : document;
+            const repeaters = root.matches?.('[data-output-repeater]')
+                ? [root]
+                : Array.from(root.querySelectorAll('[data-output-repeater]'));
+
+            const createUniqueId = () => `output_icon_${Math.random().toString(36).slice(2, 10)}`;
+
+            repeaters.forEach((repeater) => {
+                if (repeater.dataset.outputRepeaterBound === '1') {
+                    return;
+                }
+
+                const list = repeater.querySelector('[data-output-items]');
+                const template = repeater.querySelector('template[data-output-item-template]');
+                const emptyState = repeater.querySelector('[data-output-empty]');
+                const addButtons = Array.from(repeater.querySelectorAll('[data-add-output-item]'));
+                const outputItemLabel = repeater.dataset.outputItemLabel || 'Output';
+                const outputItemHint = repeater.dataset.outputItemHint || 'Click to edit this output';
+
+                if (!list || !template) {
+                    repeater.dataset.outputRepeaterBound = '1';
+                    return;
+                }
+
+                const sanitizeIconClass = (value) => String(value || '')
+                    .replace(/[^A-Za-z0-9\-_ ]/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                const renderMediaPreview = (container, urls = []) => {
+                    if (!(container instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    container.innerHTML = '';
+                    urls.filter(Boolean).forEach((url) => {
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'relative h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-50';
+
+                        const image = document.createElement('img');
+                        image.src = url;
+                        image.alt = '';
+                        image.className = 'h-full w-full object-contain p-2';
+
+                        wrapper.appendChild(image);
+                        container.appendChild(wrapper);
+                    });
+                };
+
+                const getOutputIconSource = (item) => {
+                    const sourceInput = item.querySelector('[data-output-field="icon_source"]');
+                    const source = String(sourceInput?.value || 'class').trim();
+
+                    return ['class', 'media'].includes(source) ? source : 'class';
+                };
+
+                const ensureOutputIconMediaTargets = (item) => {
+                    const mediaInput = item.querySelector('[data-output-field="icon_media"]');
+                    const mediaButton = item.querySelector('[data-output-icon-media-button]');
+                    const mediaPreview = item.querySelector('[data-output-icon-media-preview]');
+
+                    if (!(mediaInput instanceof HTMLInputElement) || !(mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    if (!mediaInput.id) {
+                        mediaInput.id = `${createUniqueId()}_input`;
+                    }
+
+                    if (!mediaPreview.id) {
+                        mediaPreview.id = `${createUniqueId()}_preview`;
+                    }
+
+                    mediaButton.dataset.targetInput = mediaInput.id;
+                    mediaButton.dataset.targetPreview = mediaPreview.id;
+                    mediaButton.dataset.multiple = 'false';
+                    mediaButton.dataset.storeValue = 'id';
+                };
+
+                const toggleOutputIconPanels = (item, source = null) => {
+                    const activeSource = source || getOutputIconSource(item);
+                    item.querySelectorAll('[data-output-icon-panel]').forEach((panel) => {
+                        panel.classList.toggle('hidden', panel.dataset.outputIconPanel !== activeSource);
+                    });
+                };
+
+                const renderOutputIconPreview = (item) => {
+                    const preview = item.querySelector('[data-output-icon-preview]');
+                    const classInput = item.querySelector('[data-output-field="icon"]');
+                    const mediaPreview = item.querySelector('[data-output-icon-media-preview]');
+                    const source = getOutputIconSource(item);
+
+                    if (!(preview instanceof HTMLElement) || !(classInput instanceof HTMLInputElement)) {
+                        return;
+                    }
+
+                    const iconClass = sanitizeIconClass(classInput.value);
+                    if (classInput.value !== iconClass) {
+                        classInput.value = iconClass;
+                    }
+
+                    const mediaUrl = mediaPreview?.querySelector('img')?.getAttribute('src') || '';
+                    preview.innerHTML = '';
+
+                    if (source === 'media' && mediaUrl) {
+                        const image = document.createElement('img');
+                        image.src = mediaUrl;
+                        image.alt = '';
+                        image.className = 'h-full w-full object-contain';
+                        preview.appendChild(image);
+                        return;
+                    }
+
+                    if (iconClass) {
+                        const icon = document.createElement('i');
+                        icon.className = `${iconClass} text-xl leading-none`;
+                        icon.setAttribute('aria-hidden', 'true');
+                        preview.appendChild(icon);
+                        return;
+                    }
+
+                    const line = document.createElement('span');
+                    line.className = 'h-0.5 w-5 rounded-full bg-red-brand';
+                    preview.appendChild(line);
+                };
+
+                const setOutputExpanded = (item, expanded, collapseOthers = false) => {
+                    if (!(item instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    if (collapseOthers) {
+                        Array.from(list.querySelectorAll('[data-output-item]')).forEach((entry) => {
+                            if (entry !== item) {
+                                setOutputExpanded(entry, false, false);
+                            }
+                        });
+                    }
+
+                    const body = item.querySelector('[data-output-item-body]');
+                    const toggle = item.querySelector('[data-output-toggle]');
+                    const toggleIcon = item.querySelector('[data-output-toggle-icon]');
+
+                    if (body) {
+                        body.classList.toggle('hidden', !expanded);
+                    }
+
+                    if (toggle) {
+                        toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+                    }
+
+                    if (toggleIcon) {
+                        toggleIcon.classList.toggle('rotate-180', expanded);
+                    }
+                };
+
+                const refreshOutputItemMeta = (item, index = null) => {
+                    if (!(item instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    const textInput = item.querySelector('[data-output-field="text"]');
+                    const iconInput = item.querySelector('[data-output-field="icon"]');
+                    const mediaPreview = item.querySelector('[data-output-icon-media-preview]');
+                    const title = item.querySelector('[data-output-item-title]');
+                    const summary = item.querySelector('[data-output-item-summary]');
+                    const textValue = String(textInput?.value || '').trim();
+                    const iconValue = sanitizeIconClass(iconInput?.value || '');
+                    const mediaValue = mediaPreview?.querySelector('img')?.getAttribute('src') || '';
+                    const source = getOutputIconSource(item);
+                    const fallbackTitle = `${outputItemLabel} ${Number(index ?? 0) + 1}`;
+
+                    if (title) {
+                        title.textContent = textValue || fallbackTitle;
+                    }
+
+                    if (summary) {
+                        summary.textContent = source === 'media'
+                            ? (mediaValue ? @json(__('SVG from media library')) : outputItemHint)
+                            : (iconValue ? @json(__('Tabler icon selected')) : (textValue ? @json(__('Visible in the outputs list')) : outputItemHint));
+                    }
+                };
+
+                const reindexItems = () => {
+                    const items = Array.from(list.querySelectorAll('[data-output-item]'));
+
+                    items.forEach((item, index) => {
+                        item.querySelectorAll('[data-name-template]').forEach((field) => {
+                            const templateName = field.dataset.nameTemplate || '';
+                            if (templateName) {
+                                field.name = templateName.replace(/__INDEX__/g, String(index));
+                            }
+                        });
+
+                        refreshOutputItemMeta(item, index);
+                    });
+
+                    if (emptyState) {
+                        emptyState.classList.toggle('hidden', items.length > 0);
+                    }
+
+                    const hasExpandedItem = items.some((item) => {
+                        const body = item.querySelector('[data-output-item-body]');
+                        return body && !body.classList.contains('hidden');
+                    });
+
+                    if (!hasExpandedItem && items[0]) {
+                        setOutputExpanded(items[0], true, false);
+                    }
+                };
+
+                const bindOutputItem = (item) => {
+                    if (!(item instanceof HTMLElement) || item.dataset.outputItemBound === '1') {
+                        return;
+                    }
+
+                    const textInput = item.querySelector('[data-output-field="text"]');
+                    const iconInput = item.querySelector('[data-output-field="icon"]');
+                    const iconSourceInput = item.querySelector('[data-output-field="icon_source"]');
+                    const iconMediaInput = item.querySelector('[data-output-field="icon_media"]');
+                    const mediaPreview = item.querySelector('[data-output-icon-media-preview]');
+                    const removeButton = item.querySelector('[data-remove-output-item]');
+                    const duplicateButton = item.querySelector('[data-duplicate-output-item]');
+                    const toggleButton = item.querySelector('[data-output-toggle]');
+
+                    ensureOutputIconMediaTargets(item);
+
+                    textInput?.addEventListener('input', function () {
+                        refreshOutputItemMeta(item);
+                    });
+
+                    iconInput?.addEventListener('input', function () {
+                        renderOutputIconPreview(item);
+                        refreshOutputItemMeta(item);
+                    });
+
+                    iconSourceInput?.addEventListener('change', function () {
+                        toggleOutputIconPanels(item, getOutputIconSource(item));
+                        renderOutputIconPreview(item);
+                        refreshOutputItemMeta(item);
+                    });
+
+                    iconMediaInput?.addEventListener('input', function () {
+                        renderOutputIconPreview(item);
+                        refreshOutputItemMeta(item);
+                    });
+
+                    iconMediaInput?.addEventListener('change', function () {
+                        renderOutputIconPreview(item);
+                        refreshOutputItemMeta(item);
+                    });
+
+                    removeButton?.addEventListener('click', function () {
+                        item.remove();
+                        reindexItems();
+                    });
+
+                    duplicateButton?.addEventListener('click', function () {
+                        const createdItem = createOutputItem({
+                            text: textInput?.value || '',
+                            icon: iconInput?.value || '',
+                            iconSource: getOutputIconSource(item),
+                            iconMedia: iconMediaInput?.value || '',
+                            mediaPreviewUrl: mediaPreview?.querySelector('img')?.getAttribute('src') || '',
+                        });
+
+                        setOutputExpanded(createdItem, true, true);
+                    });
+
+                    toggleButton?.addEventListener('click', function () {
+                        const body = item.querySelector('[data-output-item-body]');
+                        const shouldExpand = body?.classList.contains('hidden') ?? true;
+                        setOutputExpanded(item, shouldExpand, shouldExpand);
+                    });
+
+                    toggleOutputIconPanels(item, getOutputIconSource(item));
+                    renderOutputIconPreview(item);
+                    refreshOutputItemMeta(item);
+                    item.dataset.outputItemBound = '1';
+                };
+
+                const createOutputItem = (seed = {}) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = template.innerHTML.trim();
+
+                    const item = wrapper.firstElementChild;
+                    if (!(item instanceof HTMLElement)) {
+                        return null;
+                    }
+
+                    list.appendChild(item);
+                    bindOutputItem(item);
+
+                    const textInput = item.querySelector('[data-output-field="text"]');
+                    const iconInput = item.querySelector('[data-output-field="icon"]');
+                    const iconSourceInput = item.querySelector('[data-output-field="icon_source"]');
+                    const iconMediaInput = item.querySelector('[data-output-field="icon_media"]');
+                    const mediaPreview = item.querySelector('[data-output-icon-media-preview]');
+
+                    if (textInput && typeof seed.text === 'string') {
+                        textInput.value = seed.text;
+                    }
+
+                    if (iconInput && typeof seed.icon === 'string') {
+                        iconInput.value = sanitizeIconClass(seed.icon);
+                    }
+
+                    if (iconSourceInput && typeof seed.iconSource === 'string') {
+                        iconSourceInput.value = ['class', 'media'].includes(seed.iconSource) ? seed.iconSource : 'class';
+                    }
+
+                    if (iconMediaInput && typeof seed.iconMedia === 'string') {
+                        iconMediaInput.value = seed.iconMedia;
+                    }
+
+                    renderMediaPreview(mediaPreview, typeof seed.mediaPreviewUrl === 'string' && seed.mediaPreviewUrl ? [seed.mediaPreviewUrl] : []);
+                    toggleOutputIconPanels(item, getOutputIconSource(item));
+                    renderOutputIconPreview(item);
+                    reindexItems();
+                    setOutputExpanded(item, true, true);
+
+                    return item;
+                };
+
+                addButtons.forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const item = createOutputItem();
+                        const textInput = item?.querySelector('[data-output-field="text"]');
+
+                        if (textInput instanceof HTMLElement) {
+                            window.setTimeout(() => textInput.focus(), 30);
+                        }
+                    });
+                });
+
+                Array.from(list.querySelectorAll('[data-output-item]')).forEach(bindOutputItem);
+
+                if (typeof Sortable !== 'undefined' && list.dataset.outputSortableBound !== '1') {
+                    Sortable.create(list, {
+                        animation: 160,
+                        handle: '[data-output-drag-handle]',
+                        ghostClass: 'sections-sortable-ghost',
+                        chosenClass: 'sections-sortable-chosen',
+                        dragClass: 'sections-sortable-drag',
+                        onEnd: reindexItems,
+                    });
+
+                    list.dataset.outputSortableBound = '1';
+                }
+
+                reindexItems();
+                repeater.dataset.outputRepeaterBound = '1';
             });
         };
 

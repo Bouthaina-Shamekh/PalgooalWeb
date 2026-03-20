@@ -46,8 +46,9 @@
     <div class="container mx-auto">
         <div class="flex flex-col items-center gap-12 lg:flex-row lg:gap-20">
             <div class="flex w-full flex-col items-center text-center ltr:lg:items-start ltr:lg:text-left rtl:lg:items-start rtl:lg:text-right lg:w-1/3">
-                <p class="text-lg md:text-xl">
-                    <span class="text-red-brand">{{ $brandPrefix }}</span><span class="text-purple-brand">{{ $brandSuffix }}</span>
+                <p class="inline-flex items-center gap-1 text-lg md:text-xl">
+                    <span class="text-red-brand">{{ $brandPrefix }}</span>
+                    <span class="text-purple-brand">{{ $brandSuffix }}</span>
                 </p>
 
                 @if ($sectionTitle)

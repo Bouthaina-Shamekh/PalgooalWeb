@@ -8,34 +8,80 @@
     $sectionDescription = $content['description'] ?? '';
     $outputsHeading = $content['outputs_heading'] ?? __('What Are Our Outputs?');
 
+    $resolveMediaUrl = static function ($value): ?string {
+        if (is_numeric($value)) {
+            $media = \App\Models\Media::find((int) $value);
+
+            return $media?->url ?? ($media?->file_url ?? null);
+        }
+
+        if (is_string($value) && $value !== '') {
+            return \Illuminate\Support\Str::startsWith($value, ['http://', 'https://', '//', '/', 'data:'])
+                ? $value
+                : asset($value);
+        }
+
+        return null;
+    };
+
+    $sanitizeIconClass = static function ($value): ?string {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        $value = preg_replace('/[^A-Za-z0-9\-_ ]/', '', $value) ?? '';
+        $value = trim(preg_replace('/\s+/', ' ', $value) ?? '');
+
+        return $value !== '' ? $value : null;
+    };
+
     $outputs = collect(is_array($content['outputs'] ?? null) ? $content['outputs'] : [])
-        ->map(fn ($item) => is_scalar($item) ? trim((string) $item) : '')
+        ->map(function ($item) use ($sanitizeIconClass, $resolveMediaUrl) {
+            if (is_string($item)) {
+                $text = trim($item);
+                return $text !== '' ? ['text' => $text, 'icon_source' => 'class', 'icon' => null, 'icon_media_url' => null] : null;
+            }
+
+            if (! is_array($item)) {
+                return null;
+            }
+
+            $text = trim((string) ($item['text'] ?? $item['title'] ?? $item['label'] ?? ''));
+            if ($text === '') {
+                return null;
+            }
+
+            $iconSource = in_array(($item['icon_source'] ?? 'class'), ['class', 'media'], true)
+                ? (string) ($item['icon_source'] ?? 'class')
+                : 'class';
+
+            return [
+                'text' => $text,
+                'icon_source' => $iconSource,
+                'icon' => $sanitizeIconClass($item['icon'] ?? null),
+                'icon_media_url' => $resolveMediaUrl($item['icon_media'] ?? null),
+            ];
+        })
         ->filter()
         ->values();
 
     $primaryButton = is_array($content['primary_button'] ?? null) ? $content['primary_button'] : [];
     $primaryLabel = $primaryButton['label'] ?? null;
     $primaryUrl = $primaryButton['url'] ?? null;
+    $primaryNewTab = filter_var($primaryButton['new_tab'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
     $rawMediaValue = $content['media_url'] ?? null;
-    $mediaUrl = null;
-
-    if (is_numeric($rawMediaValue)) {
-        $media = \App\Models\Media::find((int) $rawMediaValue);
-        $mediaUrl = $media?->url ?? ($media?->file_url ?? null);
-    } elseif (is_string($rawMediaValue) && $rawMediaValue !== '') {
-        $mediaUrl = \Illuminate\Support\Str::startsWith($rawMediaValue, ['http://', 'https://', '//', '/', 'data:'])
-            ? $rawMediaValue
-            : asset($rawMediaValue);
-    }
+    $mediaUrl = $resolveMediaUrl($rawMediaValue);
 @endphp
 
 <section id="programming" class="{{ $paddingY }} overflow-hidden bg-white px-4 sm:px-6 lg:px-12">
     <div class="container mx-auto">
         <div class="flex flex-col gap-12 lg:flex-row lg:items-stretch lg:gap-24">
             <div class="flex w-full flex-col items-center text-center ltr:lg:items-start ltr:lg:text-left rtl:lg:items-start rtl:lg:text-right lg:w-1/2">
-                <p class="text-lg md:text-xl">
-                    <span class="text-red-brand">{{ $brandPrefix }}</span><span class="text-purple-brand">{{ $brandSuffix }}</span>
+                <p class="inline-flex items-center gap-1 text-lg md:text-xl">
+                    <span class="text-red-brand">{{ $brandPrefix }}</span>
+                    <span class="text-purple-brand">{{ $brandSuffix }}</span>
                 </p>
 
                 @if ($sectionTitle)
@@ -61,8 +107,18 @@
                         <ul class="inline-block w-full space-y-3">
                             @foreach ($outputs as $output)
                                 <li class="flex items-center justify-start gap-3 text-lg font-medium text-gray-700 transition-colors duration-300 hover:text-red-brand">
-                                    <span class="h-0.5 w-4 flex-shrink-0 rounded-full bg-red-brand"></span>
-                                    <span>{{ $output }}</span>
+                                    @if (($output['icon_source'] ?? 'class') === 'media' && ! empty($output['icon_media_url']))
+                                        <span class="flex h-5 w-5 flex-shrink-0 items-center justify-center text-red-brand">
+                                            <img src="{{ $output['icon_media_url'] }}" alt="" class="h-5 w-5 object-contain">
+                                        </span>
+                                    @elseif (! empty($output['icon']))
+                                        <span class="flex h-5 w-5 flex-shrink-0 items-center justify-center text-red-brand">
+                                            <i class="{{ $output['icon'] }} text-base leading-none" aria-hidden="true"></i>
+                                        </span>
+                                    @else
+                                        <span class="h-0.5 w-4 flex-shrink-0 rounded-full bg-red-brand"></span>
+                                    @endif
+                                    <span>{{ $output['text'] }}</span>
                                 </li>
                             @endforeach
                         </ul>
@@ -72,6 +128,8 @@
                 @if ($primaryLabel && $primaryUrl)
                     <a
                         href="{{ $primaryUrl }}"
+                        target="{{ $primaryNewTab ? '_blank' : '_self' }}"
+                        @if ($primaryNewTab) rel="noopener noreferrer" @endif
                         class="inline-flex items-center justify-center rounded-xl bg-red-brand px-6 py-3 text-lg text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl md:px-10 md:py-4 md:text-xl"
                     >
                         {{ $primaryLabel }}

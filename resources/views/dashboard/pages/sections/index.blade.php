@@ -824,6 +824,7 @@
 
                 runEditorInitializer(window.initSectionEditorTabs);
                 runEditorInitializer(window.initSectionFeatureRepeaters);
+                runEditorInitializer(window.initSectionOutputRepeaters);
                 runEditorInitializer(window.initBuildStepRepeaters);
                 runEditorInitializer(window.initReviewRepeaters);
 

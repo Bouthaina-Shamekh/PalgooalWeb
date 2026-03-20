@@ -999,13 +999,36 @@ class SectionController extends Controller
      */
     protected function normalizeProgrammingContent(array $content): array
     {
-        $outputsRaw = $content['outputs_textarea'] ?? ($content['outputs'] ?? '');
+        $outputsRaw = $content['outputs'] ?? ($content['outputs_textarea'] ?? '');
 
         if (is_array($outputsRaw)) {
-            $outputs = array_values(array_filter(array_map(
-                static fn ($item) => is_scalar($item) ? trim((string) $item) : '',
-                $outputsRaw
-            )));
+            $outputs = collect($outputsRaw)
+                ->map(function ($item): ?array {
+                    if (is_string($item)) {
+                        $text = trim($item);
+
+                        return $text !== ''
+                            ? ['text' => $text, 'icon' => null, 'icon_source' => 'class', 'icon_media' => null]
+                            : null;
+                    }
+
+                    if (! is_array($item)) {
+                        return null;
+                    }
+
+                    $text = trim((string) ($item['text'] ?? $item['title'] ?? $item['label'] ?? ''));
+                    if ($text === '') {
+                        return null;
+                    }
+
+                    return [
+                        'text' => $text,
+                        ...$this->normalizeStructuredIconPayload($item),
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all();
         } else {
             $outputs = array_values(array_filter(
                 array_map('trim', preg_split("/\r\n|\r|\n/", (string) $outputsRaw))
@@ -1024,6 +1047,11 @@ class SectionController extends Controller
                     ?? ($content['primary_button']['label'] ?? null),
                 'url' => $content['primary_button_url']
                     ?? ($content['primary_button']['url'] ?? null),
+                'new_tab' => filter_var(
+                    $content['primary_button_new_tab']
+                        ?? ($content['primary_button']['new_tab'] ?? false),
+                    FILTER_VALIDATE_BOOLEAN
+                ),
             ],
             'media_type' => $content['media_type'] ?? 'image',
             'media_url' => $content['media_url'] ?? null,
@@ -1045,6 +1073,11 @@ class SectionController extends Controller
                     ?? ($content['primary_button']['label'] ?? null),
                 'url' => $content['primary_button_url']
                     ?? ($content['primary_button']['url'] ?? null),
+                'new_tab' => filter_var(
+                    $content['primary_button_new_tab']
+                        ?? ($content['primary_button']['new_tab'] ?? false),
+                    FILTER_VALIDATE_BOOLEAN
+                ),
             ],
             'image_one' => $content['image_one'] ?? null,
             'image_two' => $content['image_two'] ?? null,

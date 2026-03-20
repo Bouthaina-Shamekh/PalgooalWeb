@@ -73,9 +73,10 @@
 <section id="reviews" class="overflow-hidden bg-gray-50 px-4 py-16 relative sm:px-6 lg:px-12 lg:py-24">
     <div class="container mx-auto">
         <div class="mb-12 text-center">
-            <p class="text-lg md:text-xl">
-                <span class="text-red-brand">{{ $brandPrefix }}</span><span class="text-purple-brand">{{ $brandSuffix }}</span>
-            </p>
+                <p class="inline-flex items-center gap-1 text-lg md:text-xl">
+                    <span class="text-red-brand">{{ $brandPrefix }}</span>
+                    <span class="text-purple-brand">{{ $brandSuffix }}</span>
+                </p>
 
             @if ($sectionTitle)
                 <h2 class="text-3xl font-extrabold uppercase leading-tight text-purple-brand md:text-[40px]">
