@@ -1224,9 +1224,6 @@
   .h-100 {
     height: calc(var(--spacing) * 100);
   }
-  .h-\[4\.5rem\] {
-    height: 4.5rem;
-  }
   .h-\[5px\] {
     height: 5px;
   }
@@ -1467,9 +1464,6 @@
   }
   .w-96 {
     width: calc(var(--spacing) * 96);
-  }
-  .w-\[4\.5rem\] {
-    width: 4.5rem;
   }
   .w-\[18px\] {
     width: 18px;
@@ -1890,9 +1884,6 @@
   }
   .grid-cols-\[1fr_auto_1fr\] {
     grid-template-columns: 1fr auto 1fr;
-  }
-  .grid-cols-\[4\.5rem_minmax\(0\,1fr\)\] {
-    grid-template-columns: 4.5rem minmax(0,1fr);
   }
   .grid-cols-\[4rem_minmax\(0\,1fr\)\] {
     grid-template-columns: 4rem minmax(0,1fr);

@@ -1,9 +1,32 @@
+@php
+    $adminLogoPath = $settings?->admin_logo ?: $settings?->logo;
+    $adminDarkLogoPath = $settings?->admin_dark_logo ?: $settings?->admin_logo ?: $settings?->logo;
+    $adminLogoSrc = !empty($adminLogoPath)
+        ? (\Illuminate\Support\Str::startsWith($adminLogoPath, ['http://', 'https://', '//'])
+            ? $adminLogoPath
+            : asset('storage/' . ltrim(preg_replace('#^storage/#', '', $adminLogoPath), '/')))
+        : asset('assets/tamplate/images/logo.svg');
+    $adminDarkLogoSrc = !empty($adminDarkLogoPath)
+        ? (\Illuminate\Support\Str::startsWith($adminDarkLogoPath, ['http://', 'https://', '//'])
+            ? $adminDarkLogoPath
+            : asset('storage/' . ltrim(preg_replace('#^storage/#', '', $adminDarkLogoPath), '/')))
+        : $adminLogoSrc;
+@endphp
+
 <nav class="pc-sidebar">
     <div class="navbar-wrapper">
         <div class="m-header flex items-center py-4 px-6 h-header-height">
             <a href="/" class="b-brand flex items-center gap-3">
                 <!-- ========   Change your logo from here   ============ -->
-                <img src="{{$settings?->admin_logo ? asset(path: 'storage/' . $settings->admin_logo) : asset('assets/tamplate/images/logo.svg') }}" alt="Palgoals Logo" class="img-fluid logo-lg" itemprop="logo" loading="lazy" />
+                <img
+                    src="{{ $adminLogoSrc }}"
+                    data-logo-light="{{ $adminLogoSrc }}"
+                    data-logo-dark="{{ $adminDarkLogoSrc }}"
+                    alt="Palgoals Logo"
+                    class="img-fluid logo-lg"
+                    itemprop="logo"
+                    loading="lazy"
+                />
             </a>
         </div>
         <div class="navbar-content h-[calc(100vh_-_74px)] py-2.5">

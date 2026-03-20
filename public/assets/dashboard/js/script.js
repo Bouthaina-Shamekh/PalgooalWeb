@@ -14,6 +14,24 @@ Description:  this file will contains behavior, properties,
 'use strict';
 var flg = '0';
 
+function getDashboardLogoSource(element, mode) {
+  var defaultLightLogoSrc = '../assets/images/logo-dark.svg';
+  var defaultDarkLogoSrc = '../assets/images/logo-white.svg';
+
+  if (!element) {
+    return mode === 'dark' ? defaultDarkLogoSrc : defaultLightLogoSrc;
+  }
+
+  var lightLogoSrc = element.getAttribute('data-logo-light') || '';
+  var darkLogoSrc = element.getAttribute('data-logo-dark') || lightLogoSrc || '';
+
+  if (mode === 'dark') {
+    return darkLogoSrc || defaultDarkLogoSrc;
+  }
+
+  return lightLogoSrc || darkLogoSrc || defaultLightLogoSrc;
+}
+
 // Function to handle menu click events (collpase menus and it's submenu also collapse)
 
 function menu_click() {
@@ -250,8 +268,9 @@ function setLayout() {
       document.body.appendChild(script);
     } else if (layout === 'color-header') {
       // Change logo color for color-header layout
-      if (document.querySelector('.pc-sidebar .m-header .logo-lg')) {
-        document.querySelector('.pc-sidebar .m-header .logo-lg').setAttribute('src', '../assets/images/logo-white.svg');
+      var sidebarLogo = document.querySelector('.pc-sidebar .m-header .logo-lg');
+      if (sidebarLogo) {
+        sidebarLogo.setAttribute('src', getDashboardLogoSource(sidebarLogo, 'dark'));
       }
     } else if (layout === 'compact') {
       script.src = '../assets/js/layout-compact.js'; // Load script for compact layout
@@ -358,7 +377,7 @@ for (var l = 0; l < elem.length; l++) {
 
 // Change authentication logo
 document.querySelectorAll('.auth-main.v2 .img-brand').forEach((img) => {
-  img.setAttribute('src', '../assets/images/logo-white.svg');
+  img.setAttribute('src', getDashboardLogoSource(img, 'dark'));
 });
 
 // Function to remove CSS classes with a given prefix from a DOM node

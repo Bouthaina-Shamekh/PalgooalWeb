@@ -43,8 +43,7 @@
     {{-- Favicons --}}
     <link
         rel="icon"
-        href="{{ $settings?->favicon ? asset('storage/' . $settings->favicon) : asset('assets/images/favicon.ico') }}"
-        type="image/x-icon"
+        href="{{ $settings?->favicon ? asset('storage/' . $settings->favicon) : asset('assets/tamplate/images/logo.svg') }}"
     >
 
     {{-- مهم: لا نضيف <title> ثاني هنا حتى لا يتكرر العنوان --}}

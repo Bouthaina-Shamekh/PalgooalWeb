@@ -4,8 +4,8 @@
 <script src="{{asset('assets/dashboard/js/icon/custom-icon.js')}}"></script>
 <script src="{{asset('assets/dashboard/js/plugins/feather.min.js')}}"></script>
 <script src="{{asset('assets/dashboard/js/component.js')}}"></script>
-<script src="{{asset('assets/dashboard/js/theme.js')}}"></script>
-<script src="{{asset('assets/dashboard/js/script.js')}}"></script>
+<script src="{{ asset('assets/dashboard/js/theme.js') }}?v={{ filemtime(public_path('assets/dashboard/js/theme.js')) }}"></script>
+<script src="{{ asset('assets/dashboard/js/script.js') }}?v={{ filemtime(public_path('assets/dashboard/js/script.js')) }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>

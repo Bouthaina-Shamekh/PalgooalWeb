@@ -231,13 +231,29 @@ function layout_change(layout) {
   dark_flag = isDark;
 
   // Update the logos to match the selected layout
-  var logoSrc = isDark ? '../assets/images/logo-white.svg' : '../assets/images/logo-dark.svg';
+  var defaultLightLogoSrc = '../assets/images/logo-dark.svg';
+  var defaultDarkLogoSrc = '../assets/images/logo-white.svg';
+
+  function getLogoSrc(element) {
+    if (!element) {
+      return isDark ? defaultDarkLogoSrc : defaultLightLogoSrc;
+    }
+
+    var lightLogoSrc = element.getAttribute('data-logo-light') || '';
+    var darkLogoSrc = element.getAttribute('data-logo-dark') || lightLogoSrc || '';
+
+    if (isDark) {
+      return darkLogoSrc || defaultDarkLogoSrc;
+    }
+
+    return lightLogoSrc || darkLogoSrc || defaultLightLogoSrc;
+  }
 
   // Helper function to update a specific element's logo if it exists
   function updateLogo(selector) {
     var element = document.querySelector(selector);
     if (element) {
-      element.setAttribute('src', logoSrc);
+      element.setAttribute('src', getLogoSrc(element));
     }
   }
 

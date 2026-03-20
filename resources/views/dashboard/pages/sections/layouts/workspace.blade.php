@@ -4,6 +4,12 @@
     $frontUrl = $page->is_home ? url('/') : ($translation?->slug ? url($translation->slug) : url('/'));
     $workspaceLanguages = collect($languages ?? [])->filter(fn ($language) => filled($language->code))->values();
     $hasMultipleWorkspaceLanguages = $workspaceLanguages->count() > 1;
+    $adminLogoPath = $settings?->admin_logo ?: $settings?->logo;
+    $adminLogoHref = ! empty($adminLogoPath)
+        ? (\Illuminate\Support\Str::startsWith($adminLogoPath, ['http://', 'https://', '//'])
+            ? $adminLogoPath
+            : asset('storage/' . ltrim(preg_replace('#^storage/#', '', $adminLogoPath), '/')))
+        : asset('assets/tamplate/images/logo.svg');
     $sectionsIconLibrary = [
         ['label' => __('Template'), 'value' => 'ti ti-layout-grid', 'keywords' => 'template layout grid blocks cards'],
         ['label' => __('Hosting'), 'value' => 'ti ti-server', 'keywords' => 'hosting server infrastructure cloud'],
@@ -46,6 +52,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>{{ $pageTitle }} - {{ __('Sections Workspace') }}</title>
+    <link rel="icon" href="{{ $adminLogoHref }}">
 
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}" id="palgoals-app-css">
     <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/tabler-icons.min.css') }}">

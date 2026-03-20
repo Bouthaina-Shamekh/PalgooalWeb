@@ -1,5 +1,11 @@
 @php
     $url = url()->current();
+    $adminLogoPath = $settings?->admin_logo ?: $settings?->logo;
+    $adminLogoHref = !empty($adminLogoPath)
+        ? (\Illuminate\Support\Str::startsWith($adminLogoPath, ['http://', 'https://', '//'])
+            ? $adminLogoPath
+            : asset('storage/' . ltrim(preg_replace('#^storage/#', '', $adminLogoPath), '/')))
+        : asset('assets/tamplate/images/logo.svg');
 @endphp
 <!doctype html>
 <html lang="{{ app()->getLocale() }}" class="preset-1" data-pc-sidebar-caption="false" data-pc-layout="vertical"
@@ -17,9 +23,7 @@
     <meta name="author" content="Phoenixcoded" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <!-- [Favicon] icon -->
-    <link rel="icon"
-        href="{{ $settings?->favicon ? asset('storage/' . $settings->favicon) : asset('assets/images/favicon.ico') }}"
-        type="image/x-icon">
+    <link rel="icon" href="{{ $adminLogoHref }}">
     <!-- [Font] Family -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

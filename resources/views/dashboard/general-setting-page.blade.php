@@ -134,7 +134,7 @@
     if (!empty($logoPath)) {
         $previewLogo = \Illuminate\Support\Str::startsWith($logoPath, ['http://', 'https://', '//'])
             ? $logoPath
-            : asset('storage/' . ltrim($logoPath, '/'));
+            : asset('storage/' . ltrim(preg_replace('#^storage/#', '', $logoPath), '/'));
     }
 @endphp
 
@@ -384,7 +384,7 @@
                                     if (\Illuminate\Support\Str::startsWith($currentPath, ['http://', 'https://', '//'])) {
                                         $previewUrl = $currentPath;
                                     } else {
-                                        $previewUrl = asset('storage/' . ltrim($currentPath, '/'));
+                                        $previewUrl = asset('storage/' . ltrim(preg_replace('#^storage/#', '', $currentPath), '/'));
                                     }
                                 }
                             @endphp
