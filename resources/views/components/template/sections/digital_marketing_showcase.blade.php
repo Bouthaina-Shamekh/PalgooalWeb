@@ -9,6 +9,7 @@
     $primaryButton = is_array($content['primary_button'] ?? null) ? $content['primary_button'] : [];
     $primaryLabel = $primaryButton['label'] ?? null;
     $primaryUrl = $primaryButton['url'] ?? null;
+    $primaryNewTab = filter_var($primaryButton['new_tab'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
     $resolveMediaUrl = static function ($value): ?string {
         if (is_numeric($value)) {
@@ -140,6 +141,8 @@
                 @if ($primaryLabel && $primaryUrl)
                     <a
                         href="{{ $primaryUrl }}"
+                        target="{{ $primaryNewTab ? '_blank' : '_self' }}"
+                        @if ($primaryNewTab) rel="noopener noreferrer" @endif
                         class="inline-flex items-center justify-center rounded-xl bg-red-brand px-6 py-3 text-lg text-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl md:px-14 md:py-4 md:text-xl"
                     >
                         {{ $primaryLabel }}

@@ -721,6 +721,8 @@
 
                 const container =
                     trigger.closest('[data-feature-item]') ||
+                    trigger.closest('[data-output-item]') ||
+                    trigger.closest('[data-service-item]') ||
                     trigger.closest('[data-build-step-item]') ||
                     trigger.closest('[data-section-editor-form]') ||
                     document;

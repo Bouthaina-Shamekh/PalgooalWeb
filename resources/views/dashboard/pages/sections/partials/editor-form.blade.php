@@ -487,12 +487,6 @@
                             </div>
                         @endif
 
-                        @if ($isDigitalMarketingShowcase)
-                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                {{ __('This section uses a brand label, one main heading, a services list, one CTA button, and a two-image marketing gallery.') }}
-                            </div>
-                        @endif
-
                         @if ($isTechStackShowcase)
                             <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 {{ __('This section renders a horizontally scrollable strip of technology logos. Only the internal label and media library logos are needed.') }}
@@ -530,7 +524,7 @@
                         @endif
 
                         @if ($showBrandFields)
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">{{ __('Brand Prefix') }}</label>
                                 <input
                                     type="text"
@@ -541,7 +535,7 @@
                                 >
                             </div>
 
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">{{ __('Brand Suffix') }}</label>
                                 <input
                                     type="text"
@@ -554,7 +548,7 @@
                         @endif
 
                         @if ($showMainTitleField)
-                            <div class="{{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
                                     {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('Section Title') : __('Main Title')) }}
                                 </label>
@@ -1741,7 +1735,7 @@
                         @endif
 
                         @if ($showPrimaryButtonFields && ! $isHeroCampaign)
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
                                     {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('CTA Button Label') : __('Primary Button Label') }}
                                 </label>
@@ -1753,7 +1747,7 @@
                                 >
                             </div>
 
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
                                     {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('CTA Button URL') : __('Primary Button URL') }}
                                 </label>
@@ -1765,7 +1759,7 @@
                                 >
                             </div>
 
-                            @if ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase)
+                            @if ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase)
                                 <div class="lg:col-span-2">
                                     <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
                                         <input
