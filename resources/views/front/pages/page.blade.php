@@ -165,6 +165,7 @@
         'search-domain' => 'search-domain',
         'templates-pages' => 'templates-pages',
         'hosting-plans' => 'hosting-plans',
+        'hosting_pricing_showcase' => 'hosting_pricing_showcase',
         'faq' => 'faq',
     ];
 

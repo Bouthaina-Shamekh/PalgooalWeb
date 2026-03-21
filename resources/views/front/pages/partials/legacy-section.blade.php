@@ -73,6 +73,12 @@
         'visit_label' => $content['visit_label'] ?? __('Visit'),
         'limit' => $content['limit'] ?? null,
     ]);
+
+    $hostingPricingData = \App\Support\Sections\SectionQueryResolver::resolve('hosting_pricing_showcase', [
+        'title' => $content['title'] ?? ($fallbackTranslation?->title ?? $typeLabel),
+        'description' => $content['description'] ?? '',
+        'button_label' => $content['button_label'] ?? __('Choose Now'),
+    ]);
 @endphp
 
 @switch($section->type)
@@ -158,6 +164,13 @@
     @case('our_work_showcase')
         @include('components.template.sections.our_work_showcase', [
             'data' => $ourWorkData,
+        ])
+        @break
+
+    @case('hosting_pricing_showcase')
+        @include('components.template.sections.hosting_pricing_showcase', [
+            'section' => $section,
+            'data' => $hostingPricingData,
         ])
         @break
 

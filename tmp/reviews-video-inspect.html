@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Reviews Video Inspect</title>
+    <style>
+        body {
+            margin: 0;
+            background: #111;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: grid;
+            place-items: center;
+            min-height: 100vh;
+        }
+
+        .wrap {
+            width: min(1200px, 100vw);
+            text-align: center;
+        }
+
+        video,
+        canvas {
+            max-width: 100%;
+            max-height: 90vh;
+            background: #000;
+        }
+
+        #meta {
+            margin: 12px 0;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div id="meta">loading...</div>
+        <video id="video" muted playsinline preload="auto"></video>
+        <canvas id="canvas" hidden></canvas>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(location.search);
+        const requestedTime = Number(params.get('t') || '0');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const meta = document.getElementById('meta');
+
+        video.src = 'file:///C:/Users/lenovo/Desktop/recording%20(1).webm';
+
+        function markReady(text) {
+            document.body.dataset.ready = '1';
+            meta.textContent = text;
+        }
+
+        video.addEventListener('loadedmetadata', () => {
+            const time = Math.max(0, Math.min(requestedTime, Math.max(0, video.duration - 0.05)));
+            meta.textContent = `duration=${video.duration.toFixed(2)}s, seek=${time.toFixed(2)}s`;
+            video.currentTime = time;
+        });
+
+        video.addEventListener('seeked', () => {
+            try {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            } catch (error) {
+            }
+
+            markReady(meta.textContent);
+        });
+
+        video.addEventListener('error', () => {
+            markReady('video-error');
+        });
+    </script>
+</body>
+</html>

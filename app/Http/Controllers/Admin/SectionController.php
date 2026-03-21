@@ -10,6 +10,7 @@ use App\Models\SectionTranslation;
 use App\Models\Template;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -568,6 +569,14 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
+            'hosting_pricing_showcase' => [
+                'type'        => 'hosting_pricing_showcase',
+                'label'       => 'Hosting Pricing',
+                'description' => 'Tabbed hosting plans with editable categories, feature lists, and per-plan CTAs.',
+                'category'    => 'pricing',
+                'preview'     => null,
+            ],
+
             'features_grid' => [
                 'type'        => 'features_grid',
                 'label'       => 'Features Grid',
@@ -630,6 +639,9 @@ class SectionController extends Controller
 
             case 'our_work_showcase':
                 return $this->normalizeOurWorkShowcaseContent($content);
+
+            case 'hosting_pricing_showcase':
+                return $this->normalizeHostingPricingShowcaseContent($content);
 
             default:
                 return $content;
@@ -846,6 +858,12 @@ class SectionController extends Controller
                 'limit' => 6,
             ],
 
+            'hosting_pricing_showcase' => [
+                'title' => 'HOSTING',
+                'description' => 'Pricing Details & What Included In This Pricing Package',
+                'button_label' => 'Choose Now',
+            ],
+
             'services_grid' => [
                 'title'    => 'Services',
                 'subtitle' => 'Highlight your core services.',
@@ -902,6 +920,9 @@ class SectionController extends Controller
             ],
             'our_work_showcase' => [
                 'padding_y' => 'py-16 lg:py-24',
+            ],
+            'hosting_pricing_showcase' => [
+                'padding_y' => 'py-12 lg:py-20',
             ],
             default => [],
         };
@@ -1294,6 +1315,151 @@ class SectionController extends Controller
             'visit_label' => $content['visit_label'] ?? null,
             'limit' => $limit,
         ];
+    }
+
+    /**
+     * Normalize the hosting pricing showcase payload.
+     */
+    protected function normalizeHostingPricingShowcaseContent(array $content): array
+    {
+        return [
+            'title' => $content['title'] ?? null,
+            'description' => $content['description'] ?? null,
+            'button_label' => trim((string) ($content['button_label'] ?? __('Choose Now'))),
+        ];
+    }
+
+    /**
+     * Normalize pricing category tabs.
+     *
+     * @return array<int, array{label:string,key:string}>
+     */
+    protected function normalizeHostingPricingCategories(mixed $categoriesRaw): array
+    {
+        if (! is_array($categoriesRaw)) {
+            return [];
+        }
+
+        return collect($categoriesRaw)
+            ->map(function ($item): ?array {
+                if (is_string($item)) {
+                    $label = trim($item);
+                    $key = $this->sanitizeHostingPricingCategoryKey($label);
+                } elseif (is_array($item)) {
+                    $label = trim((string) ($item['label'] ?? $item['title'] ?? $item['name'] ?? ''));
+                    $key = $this->sanitizeHostingPricingCategoryKey(
+                        $item['key'] ?? $item['slug'] ?? $item['value'] ?? $label
+                    );
+                } else {
+                    return null;
+                }
+
+                if ($label === '' || $key === '') {
+                    return null;
+                }
+
+                return [
+                    'label' => $label,
+                    'key' => $key,
+                ];
+            })
+            ->filter()
+            ->unique('key')
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Normalize pricing plans with stable CTA and feature payloads.
+     *
+     * @return array<int, array{category:string,title:string,features:array<int,string>,button:array{label:?string,url:?string,new_tab:bool}}>
+     */
+    protected function normalizeHostingPricingPlans(mixed $plansRaw): array
+    {
+        if (! is_array($plansRaw)) {
+            return [];
+        }
+
+        return collect($plansRaw)
+            ->map(function ($item): ?array {
+                if (! is_array($item)) {
+                    return null;
+                }
+
+                $title = trim((string) ($item['title'] ?? $item['name'] ?? $item['label'] ?? ''));
+                $category = $this->sanitizeHostingPricingCategoryKey(
+                    $item['category'] ?? $item['category_key'] ?? $item['tab'] ?? ''
+                );
+
+                if ($title === '' || $category === '') {
+                    return null;
+                }
+
+                $button = is_array($item['button'] ?? null) ? $item['button'] : [];
+
+                return [
+                    'category' => $category,
+                    'title' => $title,
+                    'features' => $this->normalizeHostingPricingPlanFeatures(
+                        $item['features'] ?? ($item['features_textarea'] ?? [])
+                    ),
+                    'button' => [
+                        'label' => $item['button_label'] ?? ($button['label'] ?? null),
+                        'url' => $item['button_url'] ?? ($button['url'] ?? null),
+                        'new_tab' => filter_var(
+                            $item['button_new_tab'] ?? ($button['new_tab'] ?? false),
+                            FILTER_VALIDATE_BOOLEAN
+                        ),
+                    ],
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Normalize line-based plan features.
+     *
+     * @return array<int, string>
+     */
+    protected function normalizeHostingPricingPlanFeatures(mixed $featuresRaw): array
+    {
+        if (is_array($featuresRaw)) {
+            return collect($featuresRaw)
+                ->map(function ($item): string {
+                    if (is_array($item)) {
+                        return trim((string) ($item['text'] ?? $item['title'] ?? $item['label'] ?? ''));
+                    }
+
+                    return is_scalar($item) ? trim((string) $item) : '';
+                })
+                ->filter()
+                ->values()
+                ->all();
+        }
+
+        return collect(preg_split("/\r\n|\r|\n/", (string) $featuresRaw))
+            ->map(fn ($item) => trim((string) $item))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Create a stable key for a pricing category.
+     */
+    protected function sanitizeHostingPricingCategoryKey(mixed $value): string
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return '';
+        }
+
+        return (string) Str::of($value)
+            ->lower()
+            ->replaceMatches('/[^a-z0-9]+/', '-')
+            ->trim('-');
     }
 
     /**

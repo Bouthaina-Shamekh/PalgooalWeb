@@ -53,20 +53,24 @@
         $isTechStackShowcase = $selectedType === 'tech_stack_showcase';
         $isReviewsShowcase = $selectedType === 'reviews_showcase';
         $isOurWorkShowcase = $selectedType === 'our_work_showcase';
-        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isTechStackShowcase || $isReviewsShowcase || $isOurWorkShowcase;
+        $isHostingPricingShowcase = $selectedType === 'hosting_pricing_showcase';
+        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isTechStackShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isHostingPricingShowcase;
         $showEyebrowField = $selectedType === 'hero_default';
-        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isReviewsShowcase || $isOurWorkShowcase;
+        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isHostingPricingShowcase;
         $showFeaturesHeadingField = $isHeroCampaign;
         $showOutputsHeadingField = $isProgrammingShowcase;
         $showOutputsTextareaField = $isProgrammingShowcase;
         $showServicesTextareaField = $isDesignShowcase || $isDigitalMarketingShowcase;
         $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase;
-        $showPrimaryButtonFields = ! in_array($selectedType, ['how_we_build', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase'], true);
+        $showPrimaryButtonFields = ! in_array($selectedType, ['how_we_build', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase', 'hosting_pricing_showcase'], true);
         $showSecondaryButtonFields = $selectedType === 'hero_default';
         $showFeatureRepeaterField = $isHeroCampaign;
         $showBuildStepsRepeaterField = $selectedType === 'how_we_build';
         $showReviewsDatabaseField = $isReviewsShowcase;
         $showOurWorkDatabaseField = $isOurWorkShowcase;
+        $showHostingPricingCategoriesField = false;
+        $showHostingPricingPlansField = false;
+        $showHostingPricingDatabaseField = $isHostingPricingShowcase;
         $showFeaturesTextareaField = in_array($selectedType, ['hero_default', 'features_grid'], true);
         $showMobileAppGalleryField = $isMobileAppShowcase;
         $showDesignGalleryField = $isDesignShowcase;
@@ -74,7 +78,7 @@
         $showTechStackMediaField = $isTechStackShowcase;
         $showMediaTypeField = $selectedType === 'hero_default';
         $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign', 'programming_showcase'], true);
-        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase'], true);
+        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase', 'hosting_pricing_showcase'], true);
         $showMainTitleField = ! $isTechStackShowcase;
     @endphp
 
@@ -168,6 +172,8 @@
                     $outputItems = [];
                     $servicesTextarea = old("translations.$code.content.services_textarea");
                     $serviceItems = [];
+                    $pricingCategoryItems = [];
+                    $pricingPlanItems = [];
 
                     if ($featuresTextarea === null) {
                         if (!empty($content['features']) && is_array($content['features'])) {
@@ -367,6 +373,83 @@
                             ->all();
                     }
 
+                    if ($isHostingPricingShowcase) {
+                        $oldPricingCategories = old("translations.$code.content.categories");
+                        $pricingCategoriesSource = is_array($oldPricingCategories)
+                            ? $oldPricingCategories
+                            : (is_array($content['categories'] ?? null) ? $content['categories'] : []);
+
+                        $pricingCategoryItems = collect($pricingCategoriesSource)
+                            ->map(function ($item) {
+                                if (! is_array($item)) {
+                                    return null;
+                                }
+
+                                $label = trim((string) ($item['label'] ?? $item['title'] ?? ''));
+                                $key = trim((string) ($item['key'] ?? $item['slug'] ?? ''));
+
+                                if ($label === '' && $key === '') {
+                                    return null;
+                                }
+
+                                return [
+                                    'label' => $label,
+                                    'key' => $key,
+                                ];
+                            })
+                            ->filter()
+                            ->values()
+                            ->all();
+
+                        $oldPricingPlans = old("translations.$code.content.plans");
+                        $pricingPlansSource = is_array($oldPricingPlans)
+                            ? $oldPricingPlans
+                            : (is_array($content['plans'] ?? null) ? $content['plans'] : []);
+
+                        $pricingPlanItems = collect($pricingPlansSource)
+                            ->map(function ($item) {
+                                if (! is_array($item)) {
+                                    return null;
+                                }
+
+                                $title = trim((string) ($item['title'] ?? $item['name'] ?? ''));
+                                $category = trim((string) ($item['category'] ?? $item['category_key'] ?? ''));
+                                $button = is_array($item['button'] ?? null) ? $item['button'] : [];
+                                $features = $item['features'] ?? ($item['features_textarea'] ?? []);
+
+                                if (is_array($features)) {
+                                    $featuresTextareaValue = collect($features)
+                                        ->map(function ($feature) {
+                                            if (is_array($feature)) {
+                                                return trim((string) ($feature['text'] ?? $feature['title'] ?? $feature['label'] ?? ''));
+                                            }
+
+                                            return is_scalar($feature) ? trim((string) $feature) : '';
+                                        })
+                                        ->filter()
+                                        ->implode("\n");
+                                } else {
+                                    $featuresTextareaValue = trim((string) $features);
+                                }
+
+                                if ($title === '' && $category === '' && $featuresTextareaValue === '') {
+                                    return null;
+                                }
+
+                                return [
+                                    'title' => $title,
+                                    'category' => $category,
+                                    'features_textarea' => $featuresTextareaValue,
+                                    'button_label' => trim((string) ($item['button_label'] ?? ($button['label'] ?? ''))),
+                                    'button_url' => trim((string) ($item['button_url'] ?? ($button['url'] ?? ''))),
+                                    'button_new_tab' => filter_var($item['button_new_tab'] ?? ($button['new_tab'] ?? false), FILTER_VALIDATE_BOOLEAN),
+                                ];
+                            })
+                            ->filter()
+                            ->values()
+                            ->all();
+                    }
+
                     $sectionTitleValue = $stringifyValue(old("translations.$code.title", $translation->title ?? ''));
                     $eyebrowValue = $stringifyValue(old("translations.$code.content.eyebrow", $content['eyebrow'] ?? ''));
                     $heroTitleValue = $stringifyValue(old("translations.$code.content.title", $content['title'] ?? ''));
@@ -374,6 +457,7 @@
                     $brandSuffixValue = $stringifyValue(old("translations.$code.content.brand_suffix", $content['brand_suffix'] ?? ''));
                     $subtitleValue = $stringifyValue(old("translations.$code.content.subtitle", $content['subtitle'] ?? ''));
                     $descriptionValue = $stringifyValue(old("translations.$code.content.description", $content['description'] ?? ''));
+                    $hostingPricingButtonLabelValue = $stringifyValue(old("translations.$code.content.button_label", $content['button_label'] ?? __('Choose Now')));
                     $featuresHeadingValue = $stringifyValue(old("translations.$code.content.features_heading", $content['features_heading'] ?? ''));
                     $outputsHeadingValue = $stringifyValue(old("translations.$code.content.outputs_heading", $content['outputs_heading'] ?? ''));
                     $primaryButtonLabelValue = $stringifyValue(old("translations.$code.content.primary_button.label", $primaryButton['label'] ?? ''));
@@ -384,6 +468,7 @@
                     $reviewsLimitValue = $stringifyValue(old("translations.$code.content.limit", $content['limit'] ?? ''));
                     $ourWorkLimitValue = $stringifyValue(old("translations.$code.content.limit", $content['limit'] ?? ''));
                     $ourWorkVisitLabelValue = $stringifyValue(old("translations.$code.content.visit_label", $content['visit_label'] ?? ''));
+                    $pricingCategoryDatalistId = 'pricing-category-keys-' . $section->id . '-' . $code;
                     $mediaUrlValue = $stringifyValue(old("translations.$code.content.media_url", $content['media_url'] ?? ''));
                     $mediaTypeOld = old("translations.$code.content.media_type", $content['media_type'] ?? 'image');
                     $campaignIllustrationValue = old("translations.$code.content.media_url", $content['media_url'] ?? null);
@@ -487,12 +572,6 @@
                             </div>
                         @endif
 
-                        @if ($isReviewsShowcase)
-                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                {{ __('This section uses a brand label, one main heading, a short intro, and approved testimonial cards pulled automatically from the Testimonials module.') }}
-                            </div>
-                        @endif
-
                         @if ($isOurWorkShowcase)
                             <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 {{ __('This section uses a brand label, one main heading, a short intro, and portfolio cards pulled automatically from the Portfolios module.') }}
@@ -518,7 +597,7 @@
                         @endif
 
                         @if ($showBrandFields)
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">{{ __('Brand Prefix') }}</label>
                                 <input
                                     type="text"
@@ -529,7 +608,7 @@
                                 >
                             </div>
 
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">{{ __('Brand Suffix') }}</label>
                                 <input
                                     type="text"
@@ -542,15 +621,16 @@
                         @endif
 
                         @if ($showMainTitleField)
-                            <div class="{{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('Section Title') : __('Main Title')) }}
+                                    {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase) ? __('Section Title') : __('Main Title')) }}
                                 </label>
                                 <input
                                     type="text"
                                     name="translations[{{ $code }}][content][title]"
                                     value="{{ $heroTitleValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    @if ($isReviewsShowcase) placeholder="{{ __('REVIEWS') }}" @endif
                                 >
                             </div>
                         @endif
@@ -577,6 +657,258 @@
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >{{ $descriptionValue }}</textarea>
                             </div>
+                        @endif
+
+                        @if ($showHostingPricingDatabaseField)
+                            <div class="lg:col-span-2 rounded-[1.75rem] bg-slate-50/80 px-5 py-4 text-sm text-slate-600">
+                                <p class="font-medium text-slate-900">{{ __('Plans Grid') }}</p>
+                                <p class="mt-1 leading-6">{{ __('Tabs and plan cards are loaded automatically from the Plans and Plan Categories modules. Manage the actual plans there, and use this section only for the heading and shared CTA label.') }}</p>
+                            </div>
+
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('CTA Button Label') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][button_label]"
+                                    value="{{ $hostingPricingButtonLabelValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    placeholder="{{ __('Choose Now') }}"
+                                >
+                            </div>
+                        @endif
+
+                        @if ($showHostingPricingCategoriesField)
+                            <div class="lg:col-span-2">
+                                <div
+                                    data-pricing-category-repeater
+                                    data-category-item-label="{{ __('Category') }}"
+                                    data-category-item-hint="{{ __('Click to edit this pricing tab') }}"
+                                    data-category-datalist-id="{{ $pricingCategoryDatalistId }}"
+                                >
+                                    <div class="flex flex-wrap items-start justify-between gap-3">
+                                        <div>
+                                            <label class="block text-sm font-medium text-slate-700">{{ __('Pricing Categories') }}</label>
+                                            <p class="mt-1 text-xs text-slate-500">{{ __('Create the tabs shown above the plans grid. Each tab needs a label and a stable category key.') }}</p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            data-add-pricing-category
+                                            class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                        >
+                                            <i class="ti ti-plus text-base leading-none" aria-hidden="true"></i>
+                                            <span>{{ __('Add Category') }}</span>
+                                        </button>
+                                    </div>
+
+                                    <div class="mt-3">
+                                        <div class="space-y-3" data-pricing-category-items>
+                                            @foreach ($pricingCategoryItems as $categoryIndex => $categoryItem)
+                                                <article data-pricing-category-item class="overflow-hidden rounded-[1.75rem] bg-white p-4 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.28),0_8px_18px_rgba(15,23,42,0.05)]">
+                                                    <div class="space-y-3">
+                                                        <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                                            <button
+                                                                type="button"
+                                                                data-pricing-category-drag-handle
+                                                                class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
+                                                                aria-label="{{ __('Reorder category') }}"
+                                                            >
+                                                                <i class="ti ti-grip-vertical text-lg leading-none" aria-hidden="true"></i>
+                                                            </button>
+
+                                                            <div class="flex shrink-0 items-center gap-2 rtl:flex-row-reverse">
+                                                                <button
+                                                                    type="button"
+                                                                    data-duplicate-pricing-category
+                                                                    class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                                                                    aria-label="{{ __('Duplicate category') }}"
+                                                                >
+                                                                    <i class="ti ti-copy text-base leading-none" aria-hidden="true"></i>
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    data-remove-pricing-category
+                                                                    class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                                                                    aria-label="{{ __('Remove category') }}"
+                                                                >
+                                                                    <i class="ti ti-trash text-base leading-none" aria-hidden="true"></i>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+
+                                                        <button
+                                                            type="button"
+                                                            data-pricing-category-toggle
+                                                            aria-expanded="{{ $loop->first ? 'true' : 'false' }}"
+                                                            class="flex w-full min-w-0 items-start justify-between gap-3 rounded-2xl bg-slate-50/80 px-3 py-3 text-left transition hover:bg-slate-100 rtl:flex-row-reverse rtl:text-right"
+                                                        >
+                                                            <div class="min-w-0 flex-1">
+                                                                <p dir="auto" data-pricing-category-title class="text-sm font-semibold leading-5 text-slate-900 break-words">
+                                                                    {{ filled($categoryItem['label'] ?? '') ? $categoryItem['label'] : __('Category') . ' ' . ($categoryIndex + 1) }}
+                                                                </p>
+                                                                <p dir="auto" data-pricing-category-summary class="mt-1 text-xs leading-5 text-slate-500 break-words">
+                                                                    {{ filled($categoryItem['key'] ?? '') ? __('Key') . ': ' . $categoryItem['key'] : __('Click to edit this pricing tab') }}
+                                                                </p>
+                                                            </div>
+
+                                                            <span class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500">
+                                                                <i data-pricing-category-toggle-icon class="ti ti-chevron-down text-base leading-none {{ $loop->first ? 'rotate-180' : '' }}" aria-hidden="true"></i>
+                                                            </span>
+                                                        </button>
+                                                    </div>
+
+                                                    <div data-pricing-category-body class="mt-4 space-y-4 {{ $loop->first ? '' : 'hidden' }}">
+                                                        <div>
+                                                            <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                                                <label class="block text-sm font-medium text-slate-700">{{ __('Tab Label') }}</label>
+                                                                <span class="text-xs text-slate-400">{{ __('Visible to visitors') }}</span>
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                name="translations[{{ $code }}][content][categories][{{ $categoryIndex }}][label]"
+                                                                data-name-template="translations[{{ $code }}][content][categories][__INDEX__][label]"
+                                                                data-pricing-category-field="label"
+                                                                value="{{ $categoryItem['label'] ?? '' }}"
+                                                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                                placeholder="{{ __('Shared') }}"
+                                                            >
+                                                        </div>
+
+                                                        <div>
+                                                            <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                                                <label class="block text-sm font-medium text-slate-700">{{ __('Category Key') }}</label>
+                                                                <span class="text-xs text-slate-400">{{ __('Used to match plans with this tab') }}</span>
+                                                            </div>
+                                                            <input
+                                                                type="text"
+                                                                name="translations[{{ $code }}][content][categories][{{ $categoryIndex }}][key]"
+                                                                data-name-template="translations[{{ $code }}][content][categories][__INDEX__][key]"
+                                                                data-pricing-category-field="key"
+                                                                value="{{ $categoryItem['key'] ?? '' }}"
+                                                                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                                placeholder="shared"
+                                                            >
+                                                            <p class="mt-2 text-xs text-slate-500">{{ __('Use simple lowercase keys like shared, store, or dedicated. Plans connect to tabs through this key.') }}</p>
+                                                        </div>
+                                                    </div>
+                                                </article>
+                                            @endforeach
+                                        </div>
+
+                                        <div data-pricing-category-empty class="{{ count($pricingCategoryItems) ? 'hidden ' : '' }}mt-3 rounded-2xl border border-dashed border-slate-300 bg-white/80 px-4 py-6 text-center text-sm text-slate-500">
+                                            {{ __('No pricing categories yet. Add the first tab to start building the section.') }}
+                                        </div>
+                                    </div>
+
+                                    <template data-pricing-category-template>
+                                        <article data-pricing-category-item class="overflow-hidden rounded-[1.75rem] bg-white p-4 shadow-[0_18px_38px_-30px_rgba(15,23,42,0.28),0_8px_18px_rgba(15,23,42,0.05)]">
+                                            <div class="space-y-3">
+                                                <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                                    <button
+                                                        type="button"
+                                                        data-pricing-category-drag-handle
+                                                        class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
+                                                        aria-label="{{ __('Reorder category') }}"
+                                                    >
+                                                        <i class="ti ti-grip-vertical text-lg leading-none" aria-hidden="true"></i>
+                                                    </button>
+
+                                                    <div class="flex shrink-0 items-center gap-2 rtl:flex-row-reverse">
+                                                        <button
+                                                            type="button"
+                                                            data-duplicate-pricing-category
+                                                            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
+                                                            aria-label="{{ __('Duplicate category') }}"
+                                                        >
+                                                            <i class="ti ti-copy text-base leading-none" aria-hidden="true"></i>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            data-remove-pricing-category
+                                                            class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
+                                                            aria-label="{{ __('Remove category') }}"
+                                                        >
+                                                            <i class="ti ti-trash text-base leading-none" aria-hidden="true"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    data-pricing-category-toggle
+                                                    aria-expanded="false"
+                                                    class="flex w-full min-w-0 items-start justify-between gap-3 rounded-2xl bg-slate-50/80 px-3 py-3 text-left transition hover:bg-slate-100 rtl:flex-row-reverse rtl:text-right"
+                                                >
+                                                    <div class="min-w-0 flex-1">
+                                                        <p dir="auto" data-pricing-category-title class="text-sm font-semibold leading-5 text-slate-900 break-words">{{ __('New Category') }}</p>
+                                                        <p dir="auto" data-pricing-category-summary class="mt-1 text-xs leading-5 text-slate-500 break-words">{{ __('Click to edit this pricing tab') }}</p>
+                                                    </div>
+
+                                                    <span class="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500">
+                                                        <i data-pricing-category-toggle-icon class="ti ti-chevron-down text-base leading-none" aria-hidden="true"></i>
+                                                    </span>
+                                                </button>
+                                            </div>
+
+                                            <div data-pricing-category-body class="mt-4 hidden space-y-4">
+                                                <div>
+                                                    <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                                        <label class="block text-sm font-medium text-slate-700">{{ __('Tab Label') }}</label>
+                                                        <span class="text-xs text-slate-400">{{ __('Visible to visitors') }}</span>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        name="translations[{{ $code }}][content][categories][__INDEX__][label]"
+                                                        data-name-template="translations[{{ $code }}][content][categories][__INDEX__][label]"
+                                                        data-pricing-category-field="label"
+                                                        value=""
+                                                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                        placeholder="{{ __('Shared') }}"
+                                                    >
+                                                </div>
+
+                                                <div>
+                                                    <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                                        <label class="block text-sm font-medium text-slate-700">{{ __('Category Key') }}</label>
+                                                        <span class="text-xs text-slate-400">{{ __('Used to match plans with this tab') }}</span>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        name="translations[{{ $code }}][content][categories][__INDEX__][key]"
+                                                        data-name-template="translations[{{ $code }}][content][categories][__INDEX__][key]"
+                                                        data-pricing-category-field="key"
+                                                        value=""
+                                                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                        placeholder="shared"
+                                                    >
+                                                    <p class="mt-2 text-xs text-slate-500">{{ __('Use simple lowercase keys like shared, store, or dedicated. Plans connect to tabs through this key.') }}</p>
+                                                </div>
+                                            </div>
+                                        </article>
+                                    </template>
+
+                                    <div class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-50/80 px-4 py-3 text-xs text-slate-500 rtl:flex-row-reverse">
+                                        <span>{{ __('Keep the tab labels localized, but use stable keys so each plan always appears under the right tab.') }}</span>
+                                        <button
+                                            type="button"
+                                            data-add-pricing-category
+                                            class="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                                        >
+                                            <i class="ti ti-plus text-base leading-none" aria-hidden="true"></i>
+                                            <span>{{ __('Add Category') }}</span>
+                                        </button>
+                                    </div>
+
+                                    <datalist id="{{ $pricingCategoryDatalistId }}" data-pricing-category-datalist></datalist>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($showHostingPricingPlansField)
+                            @include('dashboard.pages.sections.partials.hosting-pricing-plans', [
+                                'code' => $code,
+                                'pricingPlanItems' => $pricingPlanItems,
+                                'pricingCategoryDatalistId' => $pricingCategoryDatalistId,
+                            ])
                         @endif
 
                         @if ($showOutputsHeadingField)
@@ -1666,8 +1998,8 @@
                                     </a>
                                 </div>
 
-                                <div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-                                    <div>
+                                <div class="mt-5">
+                                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
                                         <label class="block text-sm font-medium text-slate-700">{{ __('Items Limit') }}</label>
                                         <input
                                             type="number"
@@ -1675,9 +2007,9 @@
                                             name="translations[{{ $code }}][content][limit]"
                                             value="{{ $reviewsLimitValue }}"
                                             class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="{{ __('Leave empty to show all approved testimonials') }}"
+                                            placeholder="6"
                                         >
-                                        <p class="mt-2 text-xs text-slate-500">{{ __('Optional. Use this to show only the first approved testimonials ordered from the Testimonials module.') }}</p>
+                                        <p class="mt-2 text-xs text-slate-500">{{ __('Optional. Leave this empty to show all approved testimonials from the Testimonials module.') }}</p>
                                     </div>
                                 </div>
                             </div>

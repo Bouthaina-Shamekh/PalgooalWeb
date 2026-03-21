@@ -2,6 +2,8 @@
 
 namespace App\Support\Sections;
 
+use App\Models\Plan;
+use App\Models\PlanCategory;
 use App\Models\Portfolio;
 use App\Models\Service;
 use App\Models\Testimonial;
@@ -24,6 +26,7 @@ class SectionQueryResolver
             'testimonials' => self::testimonials($data),
             'reviews_showcase' => self::testimonials($data),
             'our_work_showcase' => self::portfolios($data),
+            'hosting_pricing_showcase' => self::hostingPricingShowcase($data),
             'search-domain' => self::searchDomain($data),
             default => $data,
         };
@@ -79,6 +82,42 @@ class SectionQueryResolver
         if ($limit) $q->limit($limit);
 
         $data['portfolios'] = $q->get();
+
+        return $data;
+    }
+
+    protected static function hostingPricingShowcase(array $data): array
+    {
+        $buttonLabel = trim((string) ($data['button_label'] ?? ''));
+        if ($buttonLabel === '') {
+            $buttonLabel = __('Choose Now');
+        }
+
+        $hostingPlansExist = Plan::query()
+            ->where('is_active', true)
+            ->where('plan_type', Plan::TYPE_HOSTING)
+            ->exists();
+
+        $categories = PlanCategory::query()
+            ->active()
+            ->ordered()
+            ->with([
+                'translations',
+                'plans' => function ($query) use ($hostingPlansExist) {
+                    $query->active()
+                        ->when($hostingPlansExist, function ($plansQuery) {
+                            $plansQuery->where('plan_type', Plan::TYPE_HOSTING);
+                        })
+                        ->with('translations')
+                        ->orderBy('id');
+                },
+            ])
+            ->get()
+            ->filter(fn ($category) => $category->plans->isNotEmpty())
+            ->values();
+
+        $data['button_label'] = $buttonLabel;
+        $data['plan_categories'] = $categories;
 
         return $data;
     }
