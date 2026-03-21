@@ -55,14 +55,15 @@
         $isReviewsShowcase = $selectedType === 'reviews_showcase';
         $isOurWorkShowcase = $selectedType === 'our_work_showcase';
         $isHostingPricingShowcase = $selectedType === 'hosting_pricing_showcase';
-        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isTechStackShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isHostingPricingShowcase;
+        $isDomainsShowcase = $selectedType === 'domains_showcase';
+        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isTechStackShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isHostingPricingShowcase || $isDomainsShowcase;
         $showEyebrowField = $selectedType === 'hero_default';
-        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isHostingPricingShowcase;
+        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isHostingPricingShowcase || $isDomainsShowcase;
         $showFeaturesHeadingField = $isHeroCampaign;
         $showOutputsHeadingField = $isProgrammingShowcase;
         $showOutputsTextareaField = $isProgrammingShowcase;
         $showServicesTextareaField = $isDesignShowcase || $isDigitalMarketingShowcase;
-        $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase;
+        $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase;
         $showPrimaryButtonFields = ! in_array($selectedType, ['how_we_build', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase', 'hosting_pricing_showcase'], true);
         $showSecondaryButtonFields = $selectedType === 'hero_default';
         $showFeatureRepeaterField = $isHeroCampaign;
@@ -79,8 +80,10 @@
         $showTechStackMediaField = $isTechStackShowcase;
         $showMediaTypeField = $selectedType === 'hero_default';
         $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign', 'programming_showcase'], true);
-        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase', 'hosting_pricing_showcase'], true);
+        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase', 'hosting_pricing_showcase', 'domains_showcase'], true);
         $showMainTitleField = ! $isTechStackShowcase;
+        $showDomainsSearchHeadingField = $isDomainsShowcase;
+        $showDomainsPlaceholderField = $isDomainsShowcase;
         $hostingPricingAvailableCategories = $isHostingPricingShowcase
             ? PlanCategory::query()->active()->ordered()->with('translations')->get()
             : collect();
@@ -462,6 +465,8 @@
                     $subtitleValue = $stringifyValue(old("translations.$code.content.subtitle", $content['subtitle'] ?? ''));
                     $descriptionValue = $stringifyValue(old("translations.$code.content.description", $content['description'] ?? ''));
                     $hostingPricingButtonLabelValue = $stringifyValue(old("translations.$code.content.button_label", $content['button_label'] ?? __('Choose Now')));
+                    $domainsSearchHeadingValue = $stringifyValue(old("translations.$code.content.search_heading", $content['search_heading'] ?? __('Find your perfect Domain name')));
+                    $domainsInputPlaceholderValue = $stringifyValue(old("translations.$code.content.input_placeholder", $content['input_placeholder'] ?? __('enter your domain here...')));
                     $hostingPricingVisibleCategoryIds = collect(old("translations.$code.content.visible_category_ids", $content['visible_category_ids'] ?? []))
                         ->map(function ($id) {
                             if (is_array($id)) {
@@ -614,7 +619,7 @@
                         @endif
 
                         @if ($showBrandFields)
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isDomainsShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">{{ __('Brand Prefix') }}</label>
                                 <input
                                     type="text"
@@ -625,7 +630,7 @@
                                 >
                             </div>
 
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isDomainsShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">{{ __('Brand Suffix') }}</label>
                                 <input
                                     type="text"
@@ -638,9 +643,9 @@
                         @endif
 
                         @if ($showMainTitleField)
-                            <div class="{{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isDomainsShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase) ? __('Section Title') : __('Main Title')) }}
+                                    {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isDomainsShowcase) ? __('Section Title') : __('Main Title')) }}
                                 </label>
                                 <input
                                     type="text"
@@ -648,6 +653,19 @@
                                     value="{{ $heroTitleValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                     @if ($isReviewsShowcase) placeholder="{{ __('REVIEWS') }}" @endif
+                                >
+                            </div>
+                        @endif
+
+                        @if ($showDomainsSearchHeadingField)
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Search Box Title') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][search_heading]"
+                                    value="{{ $domainsSearchHeadingValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    placeholder="{{ __('Find your perfect Domain name') }}"
                                 >
                             </div>
                         @endif
@@ -667,12 +685,25 @@
 
                         @if ($showDescriptionField)
                             <div class="lg:col-span-2">
-                                <label class="block text-sm font-medium text-slate-700">{{ __('Description') }}</label>
+                                <label class="block text-sm font-medium text-slate-700">{{ $isDomainsShowcase ? __('Search Box Description') : __('Description') }}</label>
                                 <textarea
                                     name="translations[{{ $code }}][content][description]"
                                     rows="4"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                 >{{ $descriptionValue }}</textarea>
+                            </div>
+                        @endif
+
+                        @if ($showDomainsPlaceholderField)
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Input Placeholder') }}</label>
+                                <input
+                                    type="text"
+                                    name="translations[{{ $code }}][content][input_placeholder]"
+                                    value="{{ $domainsInputPlaceholderValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    placeholder="{{ __('enter your domain here...') }}"
+                                >
                             </div>
                         @endif
 
@@ -2112,9 +2143,9 @@
                         @endif
 
                         @if ($showPrimaryButtonFields && ! $isHeroCampaign)
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isDomainsShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('CTA Button Label') : __('Primary Button Label') }}
+                                    {{ $isDomainsShowcase ? __('Search Button Label') : (($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('CTA Button Label') : __('Primary Button Label')) }}
                                 </label>
                                 <input
                                     type="text"
@@ -2124,9 +2155,9 @@
                                 >
                             </div>
 
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isDomainsShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('CTA Button URL') : __('Primary Button URL') }}
+                                    {{ $isDomainsShowcase ? __('Search Page URL') : (($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase) ? __('CTA Button URL') : __('Primary Button URL')) }}
                                 </label>
                                 <input
                                     type="text"

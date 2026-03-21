@@ -577,6 +577,14 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
+            'domains_showcase' => [
+                'type'        => 'domains_showcase',
+                'label'       => 'Domains Showcase',
+                'description' => 'Domain search teaser with brand heading, search card, and search form CTA.',
+                'category'    => 'domains',
+                'preview'     => null,
+            ],
+
             'features_grid' => [
                 'type'        => 'features_grid',
                 'label'       => 'Features Grid',
@@ -642,6 +650,9 @@ class SectionController extends Controller
 
             case 'hosting_pricing_showcase':
                 return $this->normalizeHostingPricingShowcaseContent($content);
+
+            case 'domains_showcase':
+                return $this->normalizeDomainsShowcaseContent($content);
 
             default:
                 return $content;
@@ -865,6 +876,20 @@ class SectionController extends Controller
                 'visible_category_ids' => [],
             ],
 
+            'domains_showcase' => [
+                'brand_prefix' => 'PAL',
+                'brand_suffix' => 'GOALS',
+                'title' => 'DOMAINS',
+                'search_heading' => 'Find your perfect Domain name',
+                'description' => 'Welcome to our domain hosting platform, where your online journey begins.',
+                'input_placeholder' => 'enter your domain here...',
+                'primary_button' => [
+                    'label' => 'Search',
+                    'url' => route('domains.page', [], false),
+                    'new_tab' => false,
+                ],
+            ],
+
             'services_grid' => [
                 'title'    => 'Services',
                 'subtitle' => 'Highlight your core services.',
@@ -924,6 +949,9 @@ class SectionController extends Controller
             ],
             'hosting_pricing_showcase' => [
                 'padding_y' => 'py-12 lg:py-20',
+            ],
+            'domains_showcase' => [
+                'padding_y' => 'py-20',
             ],
             default => [],
         };
@@ -1340,6 +1368,28 @@ class SectionController extends Controller
                 ->filter(fn ($id) => $id && $id > 0)
                 ->values()
                 ->all(),
+        ];
+    }
+
+    /**
+     * Normalize the domains showcase payload.
+     */
+    protected function normalizeDomainsShowcaseContent(array $content): array
+    {
+        return [
+            'brand_prefix' => $content['brand_prefix'] ?? null,
+            'brand_suffix' => $content['brand_suffix'] ?? null,
+            'title' => $content['title'] ?? null,
+            'search_heading' => trim((string) ($content['search_heading'] ?? '')),
+            'description' => $content['description'] ?? null,
+            'input_placeholder' => trim((string) ($content['input_placeholder'] ?? '')),
+            'primary_button' => [
+                'label' => $content['primary_button_label']
+                    ?? ($content['primary_button']['label'] ?? __('Search')),
+                'url' => $content['primary_button_url']
+                    ?? ($content['primary_button']['url'] ?? route('domains.page', [], false)),
+                'new_tab' => false,
+            ],
         ];
     }
 

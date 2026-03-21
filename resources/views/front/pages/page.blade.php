@@ -166,6 +166,7 @@
         'templates-pages' => 'templates-pages',
         'hosting-plans' => 'hosting-plans',
         'hosting_pricing_showcase' => 'hosting_pricing_showcase',
+        'domains_showcase' => 'domains_showcase',
         'faq' => 'faq',
     ];
 
