@@ -388,31 +388,46 @@ class SectionController extends Controller
     {
         $validated = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['required', 'integer', 'distinct'],
+            'ids.*' => ['required'],
         ]);
 
         $orderedIds = collect($validated['ids'])
             ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
             ->values();
 
-        $pageSectionIds = Section::where('page_id', $page->id)
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->values();
-
-        if (
-            $orderedIds->count() !== $pageSectionIds->count()
-            || $orderedIds->diff($pageSectionIds)->isNotEmpty()
-            || $pageSectionIds->diff($orderedIds)->isNotEmpty()
-        ) {
+        if ($orderedIds->isEmpty()) {
             return response()->json([
                 'ok' => false,
                 'message' => 'Invalid reorder payload.',
             ], 422);
         }
 
-        DB::transaction(function () use ($page, $orderedIds): void {
-            foreach ($orderedIds as $index => $id) {
+        $pageSectionIds = Section::where('page_id', $page->id)
+            ->orderBy('order')
+            ->orderBy('id')
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        if ($orderedIds->diff($pageSectionIds)->isNotEmpty()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Invalid reorder payload.',
+            ], 422);
+        }
+
+        $missingIds = $pageSectionIds
+            ->reject(fn ($id) => $orderedIds->contains($id))
+            ->values();
+
+        $finalOrder = $orderedIds
+            ->concat($missingIds)
+            ->values();
+
+        DB::transaction(function () use ($page, $finalOrder): void {
+            foreach ($finalOrder as $index => $id) {
                 Section::where('page_id', $page->id)
                     ->where('id', $id)
                     ->update(['order' => $index + 1]);
@@ -585,6 +600,14 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
+            'templates_slider_showcase' => [
+                'type'        => 'templates_slider_showcase',
+                'label'       => 'Templates Slider Showcase',
+                'description' => 'Template cards slider with buy and live preview actions loaded from the Templates module.',
+                'category'    => 'templates',
+                'preview'     => null,
+            ],
+
             'features_grid' => [
                 'type'        => 'features_grid',
                 'label'       => 'Features Grid',
@@ -653,6 +676,9 @@ class SectionController extends Controller
 
             case 'domains_showcase':
                 return $this->normalizeDomainsShowcaseContent($content);
+
+            case 'templates_slider_showcase':
+                return $this->normalizeTemplatesSliderShowcaseContent($content);
 
             default:
                 return $content;
@@ -890,6 +916,16 @@ class SectionController extends Controller
                 ],
             ],
 
+            'templates_slider_showcase' => [
+                'brand_prefix' => 'PAL',
+                'brand_suffix' => 'GOALS',
+                'title' => 'TEMPLATE',
+                'description' => 'Choose from a range of templates and publish them instantly',
+                'buy_label' => 'Buy Now',
+                'preview_label' => 'Live Preview',
+                'limit' => 6,
+            ],
+
             'services_grid' => [
                 'title'    => 'Services',
                 'subtitle' => 'Highlight your core services.',
@@ -951,6 +987,9 @@ class SectionController extends Controller
                 'padding_y' => 'py-12 lg:py-20',
             ],
             'domains_showcase' => [
+                'padding_y' => 'py-20',
+            ],
+            'templates_slider_showcase' => [
                 'padding_y' => 'py-20',
             ],
             default => [],
@@ -1390,6 +1429,28 @@ class SectionController extends Controller
                     ?? ($content['primary_button']['url'] ?? route('domains.page', [], false)),
                 'new_tab' => false,
             ],
+        ];
+    }
+
+    /**
+     * Normalize the templates slider showcase payload.
+     */
+    protected function normalizeTemplatesSliderShowcaseContent(array $content): array
+    {
+        $limit = isset($content['limit']) && is_numeric($content['limit']) ? (int) $content['limit'] : 6;
+
+        if ($limit <= 0) {
+            $limit = 6;
+        }
+
+        return [
+            'brand_prefix' => $content['brand_prefix'] ?? null,
+            'brand_suffix' => $content['brand_suffix'] ?? null,
+            'title' => $content['title'] ?? null,
+            'description' => $content['description'] ?? null,
+            'buy_label' => trim((string) ($content['buy_label'] ?? __('Buy Now'))),
+            'preview_label' => trim((string) ($content['preview_label'] ?? __('Live Preview'))),
+            'limit' => $limit,
         ];
     }
 

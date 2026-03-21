@@ -80,6 +80,16 @@
         'button_label' => $content['button_label'] ?? __('Choose Now'),
         'visible_category_ids' => is_array($content['visible_category_ids'] ?? null) ? $content['visible_category_ids'] : [],
     ]);
+
+    $templatesSliderData = \App\Support\Sections\SectionQueryResolver::resolve('templates_slider_showcase', [
+        'brand_prefix' => $content['brand_prefix'] ?? 'PAL',
+        'brand_suffix' => $content['brand_suffix'] ?? 'GOALS',
+        'title' => $content['title'] ?? ($fallbackTranslation?->title ?? $typeLabel),
+        'description' => $content['description'] ?? '',
+        'buy_label' => $content['buy_label'] ?? __('Buy Now'),
+        'preview_label' => $content['preview_label'] ?? __('Live Preview'),
+        'limit' => $content['limit'] ?? 6,
+    ]);
 @endphp
 
 @switch($section->type)
@@ -181,6 +191,13 @@
             'title' => $fallbackTranslation?->title,
             'content' => $content,
             'variant' => $section->variant,
+        ])
+        @break
+
+    @case('templates_slider_showcase')
+        @include('components.template.sections.templates_slider_showcase', [
+            'section' => $section,
+            'data' => $templatesSliderData,
         ])
         @break
 

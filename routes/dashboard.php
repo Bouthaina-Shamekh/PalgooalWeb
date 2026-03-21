@@ -226,26 +226,38 @@ Route::group([
             // Store a new section
             Route::post('sections', [SectionController::class, 'store'])->name('store');
             Route::post('sections/quick-store', [SectionController::class, 'quickStore'])->name('quick-store');
+            Route::post('sections/reorder', [SectionController::class, 'reorder'])->name('reorder');
 
             // Edit an existing section
-            Route::get('sections/{section}/editor', [SectionController::class, 'editor'])->name('editor');
-            Route::get('sections/{section}/edit', [SectionController::class, 'edit'])->name('edit');
+            Route::get('sections/{section}/editor', [SectionController::class, 'editor'])
+                ->whereNumber('section')
+                ->name('editor');
+            Route::get('sections/{section}/edit', [SectionController::class, 'edit'])
+                ->whereNumber('section')
+                ->name('edit');
             // Update section
             Route::match(['post', 'put', 'patch'], 'sections/{section}', [SectionController::class, 'update'])
+                ->whereNumber('section')
                 ->name('update');
 
             // Quick actions from the sections workspace
             Route::post('sections/{section}/toggle-active', [SectionController::class, 'toggleActive'])
+                ->whereNumber('section')
                 ->name('toggle-active');
             Route::post('sections/{section}/rename', [SectionController::class, 'rename'])
+                ->whereNumber('section')
                 ->name('rename');
-            Route::post('sections/reorder', [SectionController::class, 'reorder'])->name('reorder');
-            Route::post('sections/{section}/move', [SectionController::class, 'move'])->name('move');
+            Route::post('sections/{section}/move', [SectionController::class, 'move'])
+                ->whereNumber('section')
+                ->name('move');
             Route::post('sections/{section}/duplicate', [SectionController::class, 'duplicate'])
+                ->whereNumber('section')
                 ->name('duplicate');
 
             // Delete section
-            Route::delete('sections/{section}', [SectionController::class, 'destroy'])->name('destroy');
+            Route::delete('sections/{section}', [SectionController::class, 'destroy'])
+                ->whereNumber('section')
+                ->name('destroy');
         });
 
     // -------------------------------------------------------------------------

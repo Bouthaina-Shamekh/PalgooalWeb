@@ -167,6 +167,7 @@
         'hosting-plans' => 'hosting-plans',
         'hosting_pricing_showcase' => 'hosting_pricing_showcase',
         'domains_showcase' => 'domains_showcase',
+        'templates_slider_showcase' => 'templates_slider_showcase',
         'faq' => 'faq',
     ];
 

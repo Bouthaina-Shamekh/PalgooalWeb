@@ -1146,9 +1146,16 @@
             });
 
             if (typeof Sortable !== 'undefined' && reorderUrl) {
-                const collectIds = (list) => Array.from(list.querySelectorAll('[data-section-id]'))
-                    .map((item) => item.getAttribute('data-section-id'))
-                    .filter(Boolean);
+                const collectIds = (list) => {
+                    if (!list) {
+                        return [];
+                    }
+
+                    return Array.from(list.children)
+                        .filter((item) => item instanceof HTMLElement && item.matches('[data-section-id]'))
+                        .map((item) => Number(item.getAttribute('data-section-id') || 0))
+                        .filter((id, index, ids) => id > 0 && ids.indexOf(id) === index);
+                };
 
                 const syncListOrder = (list, ids) => {
                     if (!list) return;
@@ -1173,16 +1180,19 @@
                         headers: {
                             'Content-Type': 'application/json',
                             'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
                             'X-CSRF-TOKEN': csrfToken,
                         },
                         body: JSON.stringify({ ids }),
                     });
 
+                    const payload = await response.json().catch(() => ({}));
+
                     if (!response.ok) {
-                        throw new Error('reorder_failed');
+                        throw new Error(payload.message || 'reorder_failed');
                     }
 
-                    return response.json().catch(() => ({}));
+                    return payload;
                 };
 
                 const handleSortEnd = async (sourceList) => {
@@ -1198,7 +1208,15 @@
                     } catch (error) {
                         syncListOrder(mainSortableList, committedOrder);
                         syncListOrder(sidebarSortableList, committedOrder);
-                        showSectionsAlert('error', [reorderFailedMessage], errorAlertTitle);
+                        showSectionsAlert(
+                            'error',
+                            [
+                                error?.message && error.message !== 'reorder_failed'
+                                    ? error.message
+                                    : reorderFailedMessage,
+                            ],
+                            errorAlertTitle
+                        );
                     }
                 };
 

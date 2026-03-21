@@ -6,6 +6,7 @@ use App\Models\Plan;
 use App\Models\PlanCategory;
 use App\Models\Portfolio;
 use App\Models\Service;
+use App\Models\Template;
 use App\Models\Testimonial;
 use App\Models\DomainTld;
 use App\Models\DomainTldPrice;
@@ -27,6 +28,7 @@ class SectionQueryResolver
             'reviews_showcase' => self::testimonials($data),
             'our_work_showcase' => self::portfolios($data),
             'hosting_pricing_showcase' => self::hostingPricingShowcase($data),
+            'templates_slider_showcase' => self::templatesSliderShowcase($data),
             'search-domain' => self::searchDomain($data),
             default => $data,
         };
@@ -168,6 +170,26 @@ class SectionQueryResolver
         $data['default_tlds'] = $data['default_tlds'] ?? $defaultTlds;
         $data['fallback_prices'] = $data['fallback_prices'] ?? $fallbackPrices;
         $data['currency'] = $data['currency'] ?? 'USD';
+
+        return $data;
+    }
+
+    protected static function templatesSliderShowcase(array $data): array
+    {
+        $limit = isset($data['limit']) && is_numeric($data['limit']) ? (int) $data['limit'] : 6;
+
+        if ($limit <= 0) {
+            $limit = 6;
+        }
+
+        $data['buy_label'] = trim((string) ($data['buy_label'] ?? '')) ?: __('Buy Now');
+        $data['preview_label'] = trim((string) ($data['preview_label'] ?? '')) ?: __('Live Preview');
+        $data['limit'] = $limit;
+        $data['templates'] = Template::query()
+            ->with(['translations', 'categoryTemplate.translation', 'categoryTemplate.translations'])
+            ->latest('id')
+            ->limit($limit)
+            ->get();
 
         return $data;
     }
