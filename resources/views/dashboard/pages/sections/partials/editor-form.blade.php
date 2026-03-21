@@ -1,5 +1,6 @@
 @php
     use App\Models\Media;
+    use App\Models\PlanCategory;
 
     $formId = $formId ?? 'section-edit-form';
     $formAction = $formAction ?? route('dashboard.pages.sections.update', [$page, $section], false);
@@ -80,6 +81,9 @@
         $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign', 'programming_showcase'], true);
         $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase', 'hosting_pricing_showcase'], true);
         $showMainTitleField = ! $isTechStackShowcase;
+        $hostingPricingAvailableCategories = $isHostingPricingShowcase
+            ? PlanCategory::query()->active()->ordered()->with('translations')->get()
+            : collect();
     @endphp
 
     <div
@@ -458,6 +462,19 @@
                     $subtitleValue = $stringifyValue(old("translations.$code.content.subtitle", $content['subtitle'] ?? ''));
                     $descriptionValue = $stringifyValue(old("translations.$code.content.description", $content['description'] ?? ''));
                     $hostingPricingButtonLabelValue = $stringifyValue(old("translations.$code.content.button_label", $content['button_label'] ?? __('Choose Now')));
+                    $hostingPricingVisibleCategoryIds = collect(old("translations.$code.content.visible_category_ids", $content['visible_category_ids'] ?? []))
+                        ->map(function ($id) {
+                            if (is_array($id)) {
+                                return null;
+                            }
+
+                            $id = is_string($id) ? trim($id) : $id;
+
+                            return is_numeric($id) ? (int) $id : null;
+                        })
+                        ->filter(fn ($id) => $id && $id > 0)
+                        ->values()
+                        ->all();
                     $featuresHeadingValue = $stringifyValue(old("translations.$code.content.features_heading", $content['features_heading'] ?? ''));
                     $outputsHeadingValue = $stringifyValue(old("translations.$code.content.outputs_heading", $content['outputs_heading'] ?? ''));
                     $primaryButtonLabelValue = $stringifyValue(old("translations.$code.content.primary_button.label", $primaryButton['label'] ?? ''));
@@ -674,6 +691,40 @@
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                     placeholder="{{ __('Choose Now') }}"
                                 >
+                            </div>
+
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Visible Categories') }}</label>
+                                <p class="mt-1 text-xs leading-5 text-slate-500">{{ __('Choose only the plan categories you want to show in this section. Leave all unchecked to show every active category.') }}</p>
+
+                                <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                    @forelse ($hostingPricingAvailableCategories as $availableCategory)
+                                        @php
+                                            $availableCategoryTranslation = $availableCategory->translation($code) ?? $availableCategory->translations->first();
+                                            $availableCategoryLabel = trim((string) ($availableCategoryTranslation?->title ?? __('Category') . ' #' . $availableCategory->id));
+                                            $availableCategoryKey = trim((string) ($availableCategoryTranslation?->slug ?? ('category-' . $availableCategory->id)));
+                                            $isVisibleCategoryChecked = in_array((int) $availableCategory->id, $hostingPricingVisibleCategoryIds, true);
+                                        @endphp
+
+                                        <label class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 transition hover:border-slate-300">
+                                            <input
+                                                type="checkbox"
+                                                name="translations[{{ $code }}][content][visible_category_ids][]"
+                                                value="{{ $availableCategory->id }}"
+                                                @checked($isVisibleCategoryChecked)
+                                                class="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                                            >
+                                            <span class="min-w-0 flex-1">
+                                                <span dir="auto" class="block font-medium text-slate-900 break-words">{{ $availableCategoryLabel }}</span>
+                                                <span dir="ltr" class="mt-1 block text-xs text-slate-500 break-all">{{ $availableCategoryKey }}</span>
+                                            </span>
+                                        </label>
+                                    @empty
+                                        <div class="sm:col-span-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                                            {{ __('No active plan categories found.') }}
+                                        </div>
+                                    @endforelse
+                                </div>
                             </div>
                         @endif
 

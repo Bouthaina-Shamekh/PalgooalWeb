@@ -78,6 +78,7 @@
         'title' => $content['title'] ?? ($fallbackTranslation?->title ?? $typeLabel),
         'description' => $content['description'] ?? '',
         'button_label' => $content['button_label'] ?? __('Choose Now'),
+        'visible_category_ids' => is_array($content['visible_category_ids'] ?? null) ? $content['visible_category_ids'] : [],
     ]);
 @endphp
 

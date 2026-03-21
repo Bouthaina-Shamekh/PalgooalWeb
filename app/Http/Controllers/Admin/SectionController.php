@@ -862,6 +862,7 @@ class SectionController extends Controller
                 'title' => 'HOSTING',
                 'description' => 'Pricing Details & What Included In This Pricing Package',
                 'button_label' => 'Choose Now',
+                'visible_category_ids' => [],
             ],
 
             'services_grid' => [
@@ -1326,6 +1327,19 @@ class SectionController extends Controller
             'title' => $content['title'] ?? null,
             'description' => $content['description'] ?? null,
             'button_label' => trim((string) ($content['button_label'] ?? __('Choose Now'))),
+            'visible_category_ids' => collect($content['visible_category_ids'] ?? [])
+                ->map(function ($id) {
+                    if (is_array($id)) {
+                        return null;
+                    }
+
+                    $id = is_string($id) ? trim($id) : $id;
+
+                    return is_numeric($id) ? (int) $id : null;
+                })
+                ->filter(fn ($id) => $id && $id > 0)
+                ->values()
+                ->all(),
         ];
     }
 

@@ -93,6 +93,20 @@ class SectionQueryResolver
             $buttonLabel = __('Choose Now');
         }
 
+        $visibleCategoryIds = collect($data['visible_category_ids'] ?? [])
+            ->map(function ($id) {
+                if (is_array($id)) {
+                    return null;
+                }
+
+                $id = is_string($id) ? trim($id) : $id;
+
+                return is_numeric($id) ? (int) $id : null;
+            })
+            ->filter(fn ($id) => $id && $id > 0)
+            ->values()
+            ->all();
+
         $hostingPlansExist = Plan::query()
             ->where('is_active', true)
             ->where('plan_type', Plan::TYPE_HOSTING)
@@ -100,6 +114,9 @@ class SectionQueryResolver
 
         $categories = PlanCategory::query()
             ->active()
+            ->when($visibleCategoryIds !== [], function ($query) use ($visibleCategoryIds) {
+                $query->whereIn('id', $visibleCategoryIds);
+            })
             ->ordered()
             ->with([
                 'translations',
@@ -117,6 +134,7 @@ class SectionQueryResolver
             ->values();
 
         $data['button_label'] = $buttonLabel;
+        $data['visible_category_ids'] = $visibleCategoryIds;
         $data['plan_categories'] = $categories;
 
         return $data;
