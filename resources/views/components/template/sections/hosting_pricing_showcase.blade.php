@@ -8,6 +8,8 @@
     $sectionDescription = trim((string) ($payload['description'] ?? ''));
     $buttonLabel = trim((string) ($payload['button_label'] ?? __('Choose Now')));
     $buttonLabel = $buttonLabel !== '' ? $buttonLabel : __('Choose Now');
+    $isRtl = current_dir() === 'rtl';
+    $doneIconPath = asset('assets/imgs/icons/icon-material-done.svg');
 
     $categories = collect($payload['plan_categories'] ?? [])
         ->map(function ($category) use ($buttonLabel) {
@@ -30,19 +32,41 @@
                     }
 
                     $translation = $plan->translation(app()->getLocale()) ?? $plan->translations->first();
-                    $features = collect(is_array($translation?->features ?? null) ? $translation->features : [])
-                        ->map(function ($feature) {
+                    $rawFeatures = is_array($translation?->features ?? null) ? $translation->features : [];
+                    $hasBillingSplit = array_intersect(array_keys($rawFeatures), ['monthly', 'annual']) !== [];
+
+                    $billingPeriod = $plan->monthly_price_cents !== null ? 'monthly' : 'annually';
+                    $featureBucket = match (true) {
+                        $hasBillingSplit && ! empty($rawFeatures['monthly']) => $rawFeatures['monthly'],
+                        $hasBillingSplit && ! empty($rawFeatures['annual']) => $rawFeatures['annual'],
+                        default => $rawFeatures,
+                    };
+
+                    $features = collect(is_array($featureBucket) ? $featureBucket : [])
+                        ->map(function ($feature): ?array {
                             if (is_array($feature)) {
-                                return trim((string) ($feature['text'] ?? $feature['title'] ?? $feature['label'] ?? ''));
+                                $text = trim((string) ($feature['text'] ?? $feature['title'] ?? $feature['label'] ?? ''));
+                                $available = array_key_exists('available', $feature)
+                                    ? filter_var($feature['available'], FILTER_VALIDATE_BOOLEAN)
+                                    : true;
+                            } else {
+                                $text = trim((string) $feature);
+                                $available = true;
                             }
 
-                            return trim((string) $feature);
+                            if ($text === '') {
+                                return null;
+                            }
+
+                            return [
+                                'text' => $text,
+                                'available' => (bool) $available,
+                            ];
                         })
                         ->filter()
                         ->values()
                         ->all();
 
-                    $billingPeriod = $plan->monthly_price_cents !== null ? 'monthly' : 'annually';
                     $planTitle = trim((string) ($translation?->title ?? $plan->name ?? $plan->slug ?? __('Plan')));
 
                     if ($planTitle === '') {
@@ -86,34 +110,34 @@
     $indicatorId = $sectionInstanceKey . '-indicator';
 @endphp
 
-{{-- Hosting pricing section --}}
-<section id="price" class="bg-gray-light px-4 py-12 sm:px-6 lg:px-12 lg:py-20">
-    {{-- Section header --}}
-    <div class="mb-12 text-center">
+{{-- Plans Section --}}
+<section id="price" dir="{{ $isRtl ? 'rtl' : 'ltr' }}" class="bg-gray-light py-12 lg:py-20 px-4 sm:px-6 lg:px-12">
+    {{-- Section Header --}}
+    <div class="text-center mb-12">
         @if ($sectionTitle !== '')
             <h3 class="text-4xl font-extrabold text-purple-brand md:text-5xl">{{ $sectionTitle }}</h3>
         @endif
 
         @if ($sectionDescription !== '')
-            <p class="mb-8 text-base text-gray-500 md:text-lg">
+            <p class="text-gray-500 text-base md:text-lg mb-8">
                 {{ $sectionDescription }}
             </p>
         @endif
 
         @if ($categories->isNotEmpty())
-            {{-- Category filter tabs --}}
-            <div class="mb-8 flex justify-center">
+            {{-- Category Filter Tabs --}}
+            <div class="flex justify-center mb-8">
                 <div
                     id="{{ $tabsWrapperId }}"
                     data-hosting-pricing-tabs
-                    class="relative flex flex-wrap justify-center gap-6 text-lg md:gap-12 md:text-xl"
+                    class="relative flex flex-wrap justify-center gap-6 md:gap-12 text-lg md:text-xl"
                 >
                     @foreach ($categories as $category)
                         <button
                             type="button"
                             data-pricing-category-tab
                             data-category="{{ $category['key'] }}"
-                            class="{{ $category['key'] === $activeCategoryKey ? 'border-purple-brand text-purple-brand font-bold' : 'border-transparent text-gray-400 hover:text-purple-brand' }} relative border-b-2 pb-2 transition-colors duration-300 hover:font-bold md:border-b-0"
+                            class="{{ $category['key'] === $activeCategoryKey ? 'text-purple-brand border-purple-brand font-bold' : 'text-gray-400 border-transparent hover:text-purple-brand' }} category-tab relative pb-2 cursor-pointer transition-colors duration-300 border-b-2 md:border-b-0 hover:font-bold"
                         >
                             {{ $category['label'] }}
                         </button>
@@ -123,41 +147,45 @@
                     <span
                         id="{{ $indicatorId }}"
                         data-pricing-tab-indicator
-                        class="absolute bottom-0 hidden h-1 rounded-full bg-red-brand transition-all duration-300 ease-out md:block"
+                        class="hidden md:block absolute bottom-0 h-1 bg-red-brand transition-all duration-300 ease-out rounded-full"
                     ></span>
                 </div>
             </div>
         @endif
     </div>
 
-    {{-- Plans grid --}}
-    <div id="{{ $gridId }}" data-pricing-plans-grid class="container mx-auto grid max-w-7xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
+    {{-- Plans Grid --}}
+    <div id="{{ $gridId }}" data-pricing-plans-grid class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto container">
         @forelse ($flattenedPlans as $plan)
-            {{-- Pricing card --}}
+            {{-- Pricing Card --}}
             <article
                 data-pricing-plan-card
                 data-category="{{ $plan['category'] }}"
-                class="pricing-card {{ $plan['category'] !== $activeCategoryKey ? 'hidden ' : '' }}flex flex-col overflow-hidden rounded-[24px] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
+                class="pricing-card bg-white rounded-[24px] overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-1 {{ $plan['category'] !== $activeCategoryKey ? 'hidden ' : '' }}flex flex-col"
             >
                 <div class="bg-purple-brand py-5 text-center text-2xl font-bold uppercase tracking-wide text-white">
                     {{ $plan['title'] }}
                 </div>
 
-                <div class="flex-1 px-7 pb-7 pt-6 md:px-8 ltr:text-left rtl:text-right">
-                    <ul class="mb-7 space-y-4 text-[19px] leading-[1.25] text-[#3f3155]">
+                <div class="px-7 md:px-8 pt-6 pb-7 flex-1 {{ $isRtl ? 'text-right' : 'text-left' }}">
+                    <ul class="space-y-4 text-[#3f3155] text-[19px] leading-[1.25] mb-7">
                         @foreach ($plan['features'] as $feature)
-                            <li class="flex items-start gap-3 rtl:flex-row-reverse">
-                                <svg class="mt-0.5 w-5 flex-shrink-0" viewBox="0 0 27 21" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                    <path d="M8.4 15.9L2.1 9.6L0 11.7L8.4 20.1L26.4 2.1L24.3 0L8.4 15.9Z" fill="#BA112C" />
-                                </svg>
-                                <span>{{ $feature }}</span>
+                            <li class="flex items-start gap-3">
+                                <img
+                                    src="{{ $doneIconPath }}"
+                                    class="w-5 mt-0.5 flex-shrink-0 {{ ! empty($feature['available']) ? '' : 'opacity-35 grayscale' }}"
+                                    alt="Done"
+                                >
+                                <span dir="auto" style="unicode-bidi: plaintext;" class="flex-1 {{ $isRtl ? 'text-right' : 'text-left' }} {{ ! empty($feature['available']) ? '' : 'text-slate-400 line-through' }}">
+                                    {{ $feature['text'] }}
+                                </span>
                             </li>
                         @endforeach
                     </ul>
 
                     <a
                         href="{{ $plan['button_url'] }}"
-                        class="mx-auto block min-w-[190px] rounded-xl bg-red-brand px-8 py-3.5 text-center text-lg font-medium leading-none text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-opacity-90 hover:shadow-lg md:text-2xl"
+                        class="flex w-fit items-center justify-center mx-auto min-w-[190px] bg-red-brand text-white py-3.5 px-8 rounded-xl text-lg md:text-2xl leading-none font-medium hover:bg-opacity-90 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
                     >
                         {{ $buttonLabel }}
                     </a>
