@@ -599,12 +599,6 @@
                             </div>
                         @endif
 
-                        @if ($isOurWorkShowcase)
-                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                {{ __('This section uses a brand label, one main heading, a short intro, and portfolio cards pulled automatically from the Portfolios module.') }}
-                            </div>
-                        @endif
-
                         @if ($selectedType === 'how_we_build')
                             <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 {{ __('This section uses a heading, a short subtitle, and a build-process timeline made of editable step cards.') }}
@@ -624,7 +618,7 @@
                         @endif
 
                         @if ($showBrandFields)
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">{{ __('Brand Prefix') }}</label>
                                 <input
                                     type="text"
@@ -635,7 +629,7 @@
                                 >
                             </div>
 
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">{{ __('Brand Suffix') }}</label>
                                 <input
                                     type="text"
@@ -648,9 +642,9 @@
                         @endif
 
                         @if ($showMainTitleField)
-                            <div class="{{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase) ? __('Section Title') : __('Main Title')) }}
+                                    {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase) ? __('Section Title') : __('Main Title')) }}
                                 </label>
                                 <input
                                     type="text"
@@ -658,6 +652,7 @@
                                     value="{{ $heroTitleValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                     @if ($isReviewsShowcase) placeholder="{{ __('REVIEWS') }}" @endif
+                                    @if ($isOurWorkShowcase) placeholder="{{ __('OUR WORK') }}" @endif
                                 >
                             </div>
                         @endif
@@ -2175,8 +2170,8 @@
                                     </a>
                                 </div>
 
-                                <div class="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-                                    <div>
+                                <div class="mt-5 space-y-4">
+                                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
                                         <label class="block text-sm font-medium text-slate-700">{{ __('Items Limit') }}</label>
                                         <input
                                             type="number"
@@ -2184,12 +2179,12 @@
                                             name="translations[{{ $code }}][content][limit]"
                                             value="{{ $ourWorkLimitValue }}"
                                             class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="{{ __('Leave empty to show all portfolio items') }}"
+                                            placeholder="6"
                                         >
                                         <p class="mt-2 text-xs text-slate-500">{{ __('Optional. Use this to show only the first portfolio items ordered from the Portfolios module.') }}</p>
                                     </div>
 
-                                    <div>
+                                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
                                         <label class="block text-sm font-medium text-slate-700">{{ __('Visit Button Label') }}</label>
                                         <input
                                             type="text"

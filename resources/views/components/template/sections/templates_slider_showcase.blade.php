@@ -160,8 +160,8 @@
 @if ($templates->count() > 1)
     <script>
         (function () {
-            const slider = document.getElementById(@json($sliderId));
-            const indicatorsContainer = document.getElementById(@json($indicatorsId));
+            const slider = document.querySelector(@json('#' . $sliderId));
+            const indicatorsContainer = document.querySelector(@json('#' . $indicatorsId));
 
             if (!slider || !indicatorsContainer || slider.dataset.templatesSliderBound === '1') {
                 return;
@@ -185,7 +185,6 @@
             let startX = 0;
             let startScrollLeft = 0;
             let hasDragged = false;
-            let suppressClick = false;
 
             slider.style.scrollBehavior = 'auto';
             slider.style.touchAction = 'pan-y';
@@ -237,12 +236,14 @@
                     return raw;
                 }
 
+                const max = getMaxScroll();
+
                 if (rtlScrollType === 'negative') {
-                    return Math.abs(raw);
+                    return -raw;
                 }
 
                 if (rtlScrollType === 'reverse') {
-                    return getMaxScroll() - raw;
+                    return max - raw;
                 }
 
                 return raw;
@@ -277,18 +278,28 @@
                 });
             }
 
+            function toDisplayIndex(cardIndex) {
+                return isRtl ? (cards.length - 1 - cardIndex) : cardIndex;
+            }
+
+            function toCardIndex(displayIndex) {
+                return isRtl ? (cards.length - 1 - displayIndex) : displayIndex;
+            }
+
             function rebuildIndicators() {
                 indicatorsContainer.innerHTML = '';
 
-                cards.forEach((card, index) => {
+                cards.forEach((card, displayIndex) => {
+                    const cardIndex = toCardIndex(displayIndex);
                     const indicator = document.createElement('button');
                     indicator.type = 'button';
-                    indicator.dataset.index = String(index);
+                    indicator.dataset.index = String(cardIndex);
+                    indicator.dataset.displayIndex = String(displayIndex);
                     indicator.className = 'indicator-dot h-2 rounded-full transition-all duration-300 cursor-pointer w-12 bg-gray-300';
-                    indicator.setAttribute('aria-label', `Go to template ${index + 1}`);
+                    indicator.setAttribute('aria-label', `Go to template ${displayIndex + 1}`);
 
                     indicator.addEventListener('click', function () {
-                        scrollToCard(index);
+                        scrollToCard(cardIndex);
                     });
 
                     indicatorsContainer.appendChild(indicator);
@@ -296,16 +307,19 @@
             }
 
             function getClosestIndex() {
+                if (!cards.length) {
+                    return 0;
+                }
+
                 const sliderRect = slider.getBoundingClientRect();
-                const sliderCenter = sliderRect.left + (sliderRect.width / 2);
+                const edge = sliderRect.left;
 
                 let closestIndex = 0;
                 let minDistance = Infinity;
 
                 cards.forEach((card, index) => {
                     const cardRect = card.getBoundingClientRect();
-                    const cardCenter = cardRect.left + (cardRect.width / 2);
-                    const distance = Math.abs(cardCenter - sliderCenter);
+                    const distance = Math.abs(cardRect.left - edge);
 
                     if (distance < minDistance) {
                         minDistance = distance;
@@ -318,10 +332,11 @@
 
             function updateActiveIndicator() {
                 const indicators = indicatorsContainer.querySelectorAll('.indicator-dot');
-                const activeIndex = getClosestIndex();
+                const closestIndex = getClosestIndex();
+                const activeDisplayIndex = toDisplayIndex(closestIndex);
 
                 indicators.forEach((indicator, index) => {
-                    if (index === activeIndex) {
+                    if (index === activeDisplayIndex) {
                         indicator.classList.remove('w-12', 'bg-gray-300');
                         indicator.classList.add('w-32', 'bg-purple-brand');
                     } else {
@@ -339,10 +354,11 @@
 
                 const sliderRect = slider.getBoundingClientRect();
                 const cardRect = targetCard.getBoundingClientRect();
-                const delta = (cardRect.left + (cardRect.width / 2)) - (sliderRect.left + (sliderRect.width / 2));
+                const delta = cardRect.left - sliderRect.left;
 
                 smoothScrollToNormalized(getNormalizedScrollLeft() + delta);
-                window.setTimeout(updateActiveIndicator, 320);
+
+                window.setTimeout(updateActiveIndicator, 300);
             }
 
             function onPointerUp(event) {
@@ -363,11 +379,7 @@
                 }
 
                 if (hasDragged) {
-                    suppressClick = true;
                     scrollToCard(getClosestIndex());
-                    window.setTimeout(function () {
-                        suppressClick = false;
-                    }, 120);
                 }
             }
 
@@ -416,18 +428,9 @@
                 setNormalizedScrollLeft(startScrollLeft - (deltaX * dragSensitivity));
             });
 
+            slider.addEventListener('mouseleave', onPointerUp);
             slider.addEventListener('pointerup', onPointerUp);
             slider.addEventListener('pointercancel', onPointerUp);
-
-            slider.addEventListener('click', function (event) {
-                if (!suppressClick) {
-                    return;
-                }
-
-                event.preventDefault();
-                event.stopPropagation();
-            }, true);
-
             window.addEventListener('resize', updateActiveIndicator);
 
             rebuildIndicators();
