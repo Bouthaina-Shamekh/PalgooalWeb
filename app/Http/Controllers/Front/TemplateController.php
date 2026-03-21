@@ -41,6 +41,29 @@ class TemplateController extends Controller
     /**
      * صفحة الـ Preview للقالب
      */
+    public function showRedesign(string $slug)
+    {
+        $locale = app()->getLocale();
+
+        $template = $this->findBySlugWithFallback($slug, $locale);
+
+        abort_if(!$template, 404);
+
+        $translation = $this->resolveTranslationForLocale($template, $locale);
+
+        if ($translation && $translation->slug && $translation->slug !== $slug) {
+            return redirect()->route('template.show.redesign', $translation->slug);
+        }
+
+        $template->load([
+            'reviews' => fn($q) => $q->approved()->latest()->take(10),
+            'reviews.client:id,first_name,last_name,avatar',
+            'reviews.user:id,name',
+        ]);
+
+        return view('front.pages.template-show-redesign', compact('template', 'translation'));
+    }
+
     public function preview(string $slug)
     {
         $locale = app()->getLocale();
@@ -52,11 +75,16 @@ class TemplateController extends Controller
 
         $translation = $this->resolveTranslationForLocale($template, $locale);
 
-        if (!$translation || empty($translation->preview_url)) {
+        if (!$translation) {
             abort(404);
         }
 
-        $previewUrl  = $translation->preview_url;
+        $previewUrl = $this->normalizePreviewUrl($translation->preview_url);
+
+        if (!$previewUrl) {
+            abort(404);
+        }
+
         $previewHost = strtolower(parse_url($previewUrl, PHP_URL_HOST) ?? '');
         $appHost     = strtolower(parse_url(config('app.url'), PHP_URL_HOST) ?? request()->getHost());
 
@@ -101,5 +129,24 @@ class TemplateController extends Controller
         return $template->translations->firstWhere('locale', $locale)
             ?? $template->translations->firstWhere('locale', 'ar')
             ?? $template->translations->first(); // آخر fallback لو ما في عربية
+    }
+
+    private function normalizePreviewUrl(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+
+        if (str_starts_with($value, '//')) {
+            return request()->getScheme() . ':' . $value;
+        }
+
+        return null;
     }
 }

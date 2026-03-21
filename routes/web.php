@@ -120,6 +120,9 @@ Route::middleware(['setLocale'])->group(function () {
     Route::get('/templates/{slug}', [FrontTemplateController::class, 'show'])
         ->name('template.show');
 
+    Route::get('/templates/{slug}/redesign', [FrontTemplateController::class, 'showRedesign'])
+        ->name('template.show.redesign');
+
     Route::get('/templates/{slug}/preview', [FrontTemplateController::class, 'preview'])
         ->name('template.preview');
 

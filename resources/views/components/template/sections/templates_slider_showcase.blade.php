@@ -40,7 +40,10 @@
             }
 
             $detailsUrl = $slug !== '' ? route('template.show', $slug, false) : '#';
-            $previewUrl = ($slug !== '' && $previewSource !== '')
+            $redesignUrl = $slug !== '' ? route('template.show.redesign', $slug, false) : $detailsUrl;
+            $hasValidPreviewSource = $previewSource !== ''
+                && (filter_var($previewSource, FILTER_VALIDATE_URL) || str_starts_with($previewSource, '//'));
+            $previewUrl = ($slug !== '' && $hasValidPreviewSource)
                 ? route('template.preview', $slug, false)
                 : $detailsUrl;
 
@@ -48,7 +51,7 @@
                 'id' => $template->id,
                 'name' => $name,
                 'image' => $image,
-                'buy_url' => route('checkout.cart', ['template_id' => $template->id], false),
+                'buy_url' => $redesignUrl,
                 'preview_url' => $previewUrl,
             ];
         })
@@ -179,6 +182,7 @@
                 || window.getComputedStyle(slider).direction === 'rtl';
             const rtlScrollType = isRtl ? detectRtlScrollType() : 'default';
             const dragSensitivity = 1.05;
+            const interactiveSelector = 'a, button, input, textarea, select, summary, [role="button"]';
 
             let scrollRaf = null;
             let isDown = false;
@@ -276,6 +280,10 @@
                     left: toRawScrollLeft(normalized),
                     behavior: 'smooth'
                 });
+            }
+
+            function startedFromInteractiveTarget(target) {
+                return !!target?.closest?.(interactiveSelector);
             }
 
             function toDisplayIndex(cardIndex) {
@@ -396,6 +404,10 @@
 
             slider.addEventListener('pointerdown', function (event) {
                 if (event.pointerType === 'mouse' && event.button !== 0) {
+                    return;
+                }
+
+                if (startedFromInteractiveTarget(event.target)) {
                     return;
                 }
 

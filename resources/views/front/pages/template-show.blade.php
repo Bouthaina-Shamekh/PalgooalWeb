@@ -118,7 +118,12 @@
                         @endif
                     </div>
                     <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        @if ($translation?->preview_url)
+                        @php
+                            $previewSource = trim((string) ($translation?->preview_url ?? ''));
+                            $hasValidPreviewSource = $previewSource !== ''
+                                && (filter_var($previewSource, FILTER_VALIDATE_URL) || str_starts_with($previewSource, '//'));
+                        @endphp
+                        @if ($hasValidPreviewSource)
                             <a href="{{ route('template.preview', $translation->slug) }}" target="_blank"
                                 rel="noopener"
                                 class="flex items-center justify-center gap-2.5 text-center bg-primary hover:bg-primary/90 text-white py-3 rounded-lg font-bold shadow-lg shadow-primary/30 hover:shadow-primary/40 transition-all duration-300 transform hover:-translate-y-0.5">
