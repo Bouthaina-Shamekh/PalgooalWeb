@@ -487,12 +487,6 @@
                             </div>
                         @endif
 
-                        @if ($isTechStackShowcase)
-                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                {{ __('This section renders a horizontally scrollable strip of technology logos. Only the internal label and media library logos are needed.') }}
-                            </div>
-                        @endif
-
                         @if ($isReviewsShowcase)
                             <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 {{ __('This section uses a brand label, one main heading, a short intro, and approved testimonial cards pulled automatically from the Testimonials module.') }}
