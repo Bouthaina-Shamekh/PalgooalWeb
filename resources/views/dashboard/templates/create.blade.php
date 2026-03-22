@@ -276,6 +276,28 @@
                                             return \Illuminate\Support\Facades\Storage::disk('public')->url($path);
                                         })
                                         ->all();
+                                    $initialDashboardPayload = is_array($initialDetailsDecoded['specs'] ?? null)
+                                        ? ($initialDetailsDecoded['specs'] ?? [])
+                                        : [];
+                                    $initialDashboardDescription = trim((string) ($initialDashboardPayload['description'] ?? ''));
+                                    $initialDashboardPaths = collect(is_array($initialDashboardPayload['images'] ?? null) ? ($initialDashboardPayload['images'] ?? []) : [])
+                                        ->map(fn($item) => is_array($item) ? trim((string) ($item['src'] ?? '')) : '')
+                                        ->filter()
+                                        ->values()
+                                        ->all();
+                                    $initialDashboardPreviewUrls = collect($initialDashboardPaths)
+                                        ->map(function ($path) {
+                                            if (filter_var($path, FILTER_VALIDATE_URL)) {
+                                                return $path;
+                                            }
+
+                                            if (str_starts_with($path, '/')) {
+                                                return $path;
+                                            }
+
+                                            return \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+                                        })
+                                        ->all();
                                 @endphp
 
                                 <div data-locale-panel="{{ $locale }}"
@@ -395,13 +417,13 @@
                                         <div class="rounded-[22px] border border-slate-200 bg-white p-4 sm:p-5" data-details-wrapper>
                                             <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                                                 <div>
-                                                    <h4 class="text-base font-black text-slate-900">تفاصيل إضافية</h4>
-                                                    <p class="mt-1 text-xs text-slate-500">مثل آخر تحديث أو المتصفحات المتوافقة أو أي حقول وصفية أخرى.</p>
+                                                    <h4 class="text-base font-black text-slate-900">الأدوات المستخدمة في التطوير</h4>
+                                                    <p class="mt-1 text-xs text-slate-500">أضف اسم الأداة أو التقنية مع شعارها من مكتبة الميديا ليتم عرضها في قسم Used in development.</p>
                                                 </div>
                                                 <div class="flex items-center gap-2">
                                                     <button type="button"
                                                         class="add-detail btn btn-sm btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold shadow-sm">
-                                                        إضافة تفصيلة
+                                                        إضافة أداة
                                                     </button>
                                                     <button type="button"
                                                         class="clear-details btn btn-sm btn-light inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm">
@@ -415,22 +437,37 @@
                                         <div class="rounded-[22px] border border-slate-200 bg-white p-4 sm:p-5" data-specs-wrapper>
                                             <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                                                 <div>
-                                                    <h4 class="text-base font-black text-slate-900">المواصفات</h4>
-                                                    <p class="mt-1 text-xs text-slate-500">قيم تقنية أو تجارية مثل المنصة أو المجال أو نوع المتجر.</p>
+                                                    <h4 class="text-base font-black text-slate-900">Dashboard</h4>
+                                                    <p class="mt-1 text-xs text-slate-500">أضف وصفًا وصورًا متعددة لعرضها داخل قسم Dashboard في صفحة القالب.</p>
                                                 </div>
                                                 <div class="flex items-center gap-2">
-                                                    <button type="button"
-                                                        class="add-spec btn btn-sm btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold shadow-sm">
-                                                        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                                            <path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" />
-                                                        </svg>
-                                                        إضافة مواصفة
-                                                    </button>
                                                     <button type="button"
                                                         class="clear-specs btn btn-sm btn-light inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm">
                                                         تفريغ الكل
                                                     </button>
                                                 </div>
+                                            </div>
+                                            <div class="mb-4">
+                                                <textarea
+                                                    class="dashboard-description w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                                                    rows="4"
+                                                    placeholder="وصف قسم Dashboard">{{ $initialDashboardDescription }}</textarea>
+                                            </div>
+                                            <div class="mb-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                                                <x-dashboard.media-picker
+                                                    id="dashboard_picker_{{ $i }}"
+                                                    name="dashboard_picker_helper_{{ $i }}"
+                                                    label="اختيار صور الـ Dashboard من مكتبة الميديا"
+                                                    :value="$initialDashboardPaths"
+                                                    :preview-urls="$initialDashboardPreviewUrls"
+                                                    :multiple="true"
+                                                    store-value="path"
+                                                    button-text="اختيار متعدد من Media Picker"
+                                                    class="col-span-12"
+                                                />
+                                                <p class="mt-3 text-xs leading-6 text-slate-500">
+                                                    يمكنك اختيار عدة صور دفعة واحدة، وسيتم استخدامها داخل قسم Dashboard مع الحفاظ على شكل الصفحة.
+                                                </p>
                                             </div>
                                             <div class="space-y-3" data-specs-list></div>
                                         </div>
@@ -464,7 +501,7 @@
                                     <input type="hidden" name="translations[{{ $i }}][details]" class="details-json"
                                         value="{{ old("translations.$i.details", '') }}">
                                     <p class="mt-4 text-xs leading-6 text-slate-500">
-                                        يتم توليد بيانات المميزات والمعرض والمواصفات والتفاصيل والوسوم تلقائيًا داخل حقل JSON
+                                        يتم توليد بيانات المميزات والمعرض وDashboard والتفاصيل والوسوم تلقائيًا داخل حقل JSON
                                         موحد وقت الحفظ.
                                     </p>
                                 </div>
@@ -650,8 +687,12 @@
                     : null;
 
                 const listSpecs = section.querySelector('[data-specs-list]');
-                const addSpec = section.querySelector('.add-spec');
                 const clearSpecs = section.querySelector('.clear-specs');
+                const dashboardDescriptionInput = section.querySelector('.dashboard-description');
+                const dashboardPickerInput = section.querySelector('[id^="dashboard_picker_"]');
+                const dashboardPickerPreview = dashboardPickerInput
+                    ? document.getElementById(`${dashboardPickerInput.id}_preview`)
+                    : null;
 
                 const listDetails = section.querySelector('[data-details-list]');
                 const addDetail = section.querySelector('.add-detail');
@@ -663,6 +704,7 @@
                 const tagsList = section.querySelector('[data-tags-list]');
 
                 const detailsInp = section.querySelector('.details-json');
+                let detailMediaCounter = 0;
 
                 function escapeHtml(str) {
                     return (str || '')
@@ -747,6 +789,63 @@
                     syncJson();
                 }
 
+                function renderDashboardPickerPreview(paths = []) {
+                    if (!dashboardPickerPreview) return;
+
+                    dashboardPickerPreview.innerHTML = '';
+
+                    paths.forEach((path) => {
+                        const previewUrl = galleryPreviewUrl(path);
+                        if (!previewUrl) return;
+
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'relative h-20 w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-50';
+                        wrapper.innerHTML = `<img src="${escapeHtml(previewUrl)}" alt="" class="h-full w-full object-cover">`;
+                        dashboardPickerPreview.appendChild(wrapper);
+                    });
+                }
+
+                function syncDashboardPickerFromRows() {
+                    if (!dashboardPickerInput) return;
+
+                    const paths = Array.from(listSpecs?.querySelectorAll('.spec-row .spec-img-src') || [])
+                        .map((input) => input.value.trim())
+                        .filter(Boolean);
+
+                    dashboardPickerInput.value = paths.join(',');
+                    renderDashboardPickerPreview(paths);
+                }
+
+                function applyDashboardPickerSelection() {
+                    if (!dashboardPickerInput || !listSpecs) return;
+
+                    const selectedPaths = dashboardPickerInput.value
+                        .split(',')
+                        .map((value) => value.trim())
+                        .filter(Boolean);
+
+                    const existingAltByPath = Object.fromEntries(
+                        Array.from(listSpecs.querySelectorAll('.spec-row'))
+                            .map((row) => [
+                                row.querySelector('.spec-img-src')?.value.trim() || '',
+                                row.querySelector('.spec-img-alt')?.value.trim() || '',
+                            ])
+                            .filter(([src]) => src)
+                    );
+
+                    listSpecs.innerHTML = '';
+
+                    selectedPaths.forEach((path) => {
+                        listSpecs.appendChild(specRow({
+                            src: path,
+                            alt: existingAltByPath[path] || '',
+                        }));
+                    });
+
+                    renderDashboardPickerPreview(selectedPaths);
+                    syncJson();
+                }
+
                 function featureRow(item = {
                     title: '',
                     icon: ''
@@ -814,47 +913,83 @@
                 }
 
                 function specRow(item = {
-                    name: '',
-                    value: ''
+                    src: '',
+                    alt: ''
                 }) {
                     const row = document.createElement('div');
-                    row.className = 'spec-row grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 p-3 sm:grid-cols-[1fr_1fr_auto]';
+                    row.className = 'spec-row grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 p-3 sm:grid-cols-[88px_1fr_auto] sm:items-center';
                     row.innerHTML = `
+                        <input type="hidden"
+                               class="spec-img-src"
+                               value="${escapeHtml(item.src)}">
+                        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                            <div class="h-[88px] w-full overflow-hidden bg-slate-100">
+                                <img src="${escapeHtml(galleryPreviewUrl(item.src))}"
+                                     alt=""
+                                     class="h-full w-full object-cover">
+                            </div>
+                            <div class="border-t border-slate-200 px-3 py-2">
+                                <div class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Image</div>
+                                <div class="mt-1 truncate text-xs font-semibold text-slate-700">${escapeHtml(galleryFileName(item.src))}</div>
+                            </div>
+                        </div>
                         <input type="text"
-                               class="spec-name w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary"
-                               placeholder="الاسم"
-                               value="${escapeHtml(item.name)}">
-                        <input type="text"
-                               class="spec-value w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary"
-                               placeholder="القيمة"
-                               value="${escapeHtml(item.value)}">
+                               class="spec-img-alt w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary"
+                               placeholder="ALT"
+                               value="${escapeHtml(item.alt || '')}">
                         <button type="button"
                                 class="remove-spec inline-flex items-center justify-center rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-100">
                             حذف
                         </button>`;
                     row.querySelector('.remove-spec').addEventListener('click', () => {
                         row.remove();
+                        syncDashboardPickerFromRows();
                         syncJson();
                     });
-                    row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncJson));
+                    row.querySelector('.spec-img-alt')?.addEventListener('input', syncJson);
                     return row;
                 }
 
                 function detailRow(item = {
+                    src: '',
+                    alt: '',
                     name: '',
                     value: ''
                 }) {
+                    const initialSrc = (item.src || item.image || item.value || '').trim();
+                    const initialAlt = (item.alt || item.name || '').trim();
+                    const mediaInputId = `detail_media_${Date.now()}_${detailMediaCounter++}`;
                     const row = document.createElement('div');
-                    row.className = 'detail-row grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 p-3 sm:grid-cols-[1fr_1fr_auto]';
+                    row.className = 'detail-row grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 p-3 sm:grid-cols-[88px_minmax(0,1fr)_auto] sm:items-center';
                     row.innerHTML = `
-                        <input type="text"
-                               class="detail-name w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary"
-                               placeholder="العنصر"
-                               value="${escapeHtml(item.name)}">
-                        <input type="text"
-                               class="detail-value w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary"
-                               placeholder="القيمة"
-                               value="${escapeHtml(item.value)}">
+                        <input type="hidden"
+                               class="detail-src"
+                               id="${mediaInputId}"
+                               value="${escapeHtml(initialSrc)}">
+                        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                            <div class="detail-preview h-[88px] w-full overflow-hidden bg-slate-100">
+                                ${initialSrc ? `<img src="${escapeHtml(galleryPreviewUrl(initialSrc))}" alt="" class="h-full w-full object-cover">` : '<div class="flex h-full items-center justify-center text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">No image</div>'}
+                            </div>
+                            <div class="border-t border-slate-200 px-3 py-2">
+                                <div class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Image</div>
+                                <div class="detail-file mt-1 truncate text-xs font-semibold text-slate-700">${escapeHtml(initialSrc ? galleryFileName(initialSrc) : 'لم يتم اختيار صورة بعد')}</div>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <button type="button"
+                                        class="btn-open-media-picker inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+                                        data-target-input="${mediaInputId}"
+                                        data-multiple="false"
+                                        data-store-value="path">
+                                    اختيار صورة من المكتبة
+                                </button>
+                            </div>
+                            <input type="text"
+                                   class="detail-alt w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary"
+                                   placeholder="ALT / اسم العرض"
+                                   value="${escapeHtml(initialAlt)}">
+                        </div>
                         <button type="button"
                                 class="remove-detail inline-flex items-center justify-center rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-100">
                             حذف
@@ -863,7 +998,25 @@
                         row.remove();
                         syncJson();
                     });
-                    row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncJson));
+                    const detailSrcInput = row.querySelector('.detail-src');
+                    const detailFileLabel = row.querySelector('.detail-file');
+                    const detailAltInput = row.querySelector('.detail-alt');
+                    const detailPreview = row.querySelector('.detail-preview');
+                    const syncDetailImage = () => {
+                        const src = detailSrcInput?.value.trim() || '';
+                        if (detailFileLabel) {
+                            detailFileLabel.textContent = src ? galleryFileName(src) : 'لم يتم اختيار صورة بعد';
+                        }
+                        if (detailPreview) {
+                            detailPreview.innerHTML = src
+                                ? `<img src="${escapeHtml(galleryPreviewUrl(src))}" alt="" class="h-full w-full object-cover">`
+                                : '<div class="flex h-full items-center justify-center text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">No image</div>';
+                        }
+                        syncJson();
+                    };
+                    detailAltInput?.addEventListener('input', syncJson);
+                    detailSrcInput?.addEventListener('input', syncDetailImage);
+                    detailSrcInput?.addEventListener('change', syncDetailImage);
                     return row;
                 }
 
@@ -905,19 +1058,30 @@
                         }))
                         .filter(x => x.src.length);
 
-                    const specs = Array.from(listSpecs?.querySelectorAll('.spec-row') || [])
-                        .map(r => ({
-                            name: r.querySelector('.spec-name')?.value.trim() || '',
-                            value: r.querySelector('.spec-value')?.value.trim() || '',
-                        }))
-                        .filter(x => x.name && x.value);
+                    const specs = {
+                        description: dashboardDescriptionInput?.value.trim() || '',
+                        images: Array.from(listSpecs?.querySelectorAll('.spec-row') || [])
+                            .map(r => ({
+                                src: r.querySelector('.spec-img-src')?.value.trim() || '',
+                                alt: r.querySelector('.spec-img-alt')?.value.trim() || '',
+                            }))
+                            .filter(x => x.src),
+                    };
 
                     const details = Array.from(listDetails?.querySelectorAll('.detail-row') || [])
-                        .map(r => ({
-                            name: r.querySelector('.detail-name')?.value.trim() || '',
-                            value: r.querySelector('.detail-value')?.value.trim() || '',
-                        }))
-                        .filter(x => x.name && x.value);
+                        .map(r => {
+                            const src = r.querySelector('.detail-src')?.value.trim() || '';
+                            const alt = r.querySelector('.detail-alt')?.value.trim() || '';
+                            const derivedName = alt || (src ? galleryFileName(src).replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim() : '');
+
+                            return {
+                                name: derivedName,
+                                alt,
+                                value: src,
+                                src,
+                            };
+                        })
+                        .filter(x => x.src);
 
                     const tags = Array.from(tagsList?.querySelectorAll('[data-tag]') || [])
                         .map(el => (el.dataset.tag || '').trim())
@@ -966,11 +1130,15 @@
                     }
 
                     if (listSpecs) {
-                        if (Array.isArray(existing.specs) && existing.specs.length) {
-                            existing.specs.forEach(s => listSpecs.appendChild(specRow(s)));
-                        } else {
-                            listSpecs.appendChild(specRow());
+                        const dashboardSpecs = existing.specs && !Array.isArray(existing.specs) ? existing.specs : {};
+                        const dashboardImages = Array.isArray(dashboardSpecs.images) ? dashboardSpecs.images : [];
+
+                        if (dashboardDescriptionInput && typeof dashboardSpecs.description === 'string') {
+                            dashboardDescriptionInput.value = dashboardSpecs.description;
                         }
+
+                        dashboardImages.forEach((item) => listSpecs.appendChild(specRow(item)));
+                        syncDashboardPickerFromRows();
                     }
 
                     if (listDetails) {
@@ -1011,14 +1179,17 @@
                     galleryPickerInput?.addEventListener('input', applyGalleryPickerSelection);
                     galleryPickerInput?.addEventListener('change', applyGalleryPickerSelection);
 
-                    addSpec?.addEventListener('click', () => {
-                        listSpecs.appendChild(specRow());
-                        syncJson();
-                    });
+                    dashboardDescriptionInput?.addEventListener('input', syncJson);
                     clearSpecs?.addEventListener('click', () => {
                         listSpecs.innerHTML = '';
+                        if (dashboardPickerInput) {
+                            dashboardPickerInput.value = '';
+                        }
+                        renderDashboardPickerPreview([]);
                         syncJson();
                     });
+                    dashboardPickerInput?.addEventListener('input', applyDashboardPickerSelection);
+                    dashboardPickerInput?.addEventListener('change', applyDashboardPickerSelection);
 
                     addDetail?.addEventListener('click', () => {
                         listDetails.appendChild(detailRow());

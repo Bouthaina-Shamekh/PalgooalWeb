@@ -32,6 +32,36 @@
         return asset(($storage ? 'storage/' : '') . ltrim($normalized, '/'));
     };
 
+    $looksLikeImageAsset = static function (?string $value): bool {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return false;
+        }
+
+        if (Str::startsWith($value, 'data:image/')) {
+            return true;
+        }
+
+        $normalized = str_replace('\\', '/', $value);
+
+        return (bool) preg_match('/\.(png|jpe?g|gif|svg|webp|avif|bmp|ico)(?:$|[?#])/i', $normalized);
+    };
+
+    $mediaLabelFromPath = static function (?string $value): string {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return '';
+        }
+
+        $path = parse_url($value, PHP_URL_PATH);
+        $filename = basename($path ?: str_replace('\\', '/', $value));
+        $label = preg_replace('/\.[^.]+$/', '', $filename);
+
+        return trim(str_replace(['-', '_'], ' ', (string) $label));
+    };
+
     $templateName = trim((string) ($translation?->name ?? __('Template')));
     $templateImageUrl = $resolveMediaUrl($template->image, true);
     $shortDesc = Str::limit(Str::of(strip_tags($translation?->description ?? ''))->squish()->toString(), 160);
@@ -39,6 +69,101 @@
     $payload = is_array($translation?->details)
         ? $translation->details
         : (json_decode($translation->details ?? '[]', true) ?: []);
+
+    $resolveGalleryItems = static function (array $details, callable $urlResolver, string $name) {
+        return collect($details['gallery'] ?? [])
+            ->filter(fn ($item) => is_array($item) && filled($item['src'] ?? null))
+            ->map(function ($item) use ($urlResolver, $name) {
+                $src = $urlResolver($item['src'] ?? null);
+
+                if (! $src) {
+                    return null;
+                }
+
+                return [
+                    'src' => $src,
+                    'alt' => trim((string) ($item['alt'] ?? ($name . ' screenshot'))),
+                ];
+            })
+            ->filter()
+            ->values();
+    };
+
+    $resolveDevelopmentItems = static function (array $details, callable $urlResolver, callable $imageDetector) use ($mediaLabelFromPath) {
+        return collect($details['details'] ?? [])
+            ->filter(function ($item) use ($imageDetector) {
+                if (! is_array($item)) {
+                    return false;
+                }
+
+                $source = trim((string) ($item['src'] ?? ($item['image'] ?? ($item['value'] ?? ''))));
+
+                return $source !== '' && $imageDetector($source);
+            })
+            ->map(function ($item) use ($urlResolver, $mediaLabelFromPath) {
+                $label = trim((string) ($item['alt'] ?? ($item['name'] ?? ($item['label'] ?? ''))));
+                $source = trim((string) ($item['src'] ?? ($item['image'] ?? ($item['value'] ?? ''))));
+                $src = $urlResolver($source);
+
+                if (! $src) {
+                    return null;
+                }
+
+                if ($label === '') {
+                    $label = $mediaLabelFromPath($source);
+                }
+
+                return [
+                    'name' => $label,
+                    'src' => $src,
+                    'alt' => trim((string) ($item['alt'] ?? ($label !== '' ? $label : __('Development tool')))),
+                ];
+            })
+            ->filter()
+            ->values();
+    };
+
+    $resolveDashboardItems = static function (array $details, callable $urlResolver, string $name) {
+        $dashboardPayload = is_array($details['specs'] ?? null) ? ($details['specs'] ?? []) : [];
+
+        return collect(is_array($dashboardPayload['images'] ?? null) ? ($dashboardPayload['images'] ?? []) : [])
+            ->filter(fn ($item) => is_array($item) && filled($item['src'] ?? null))
+            ->map(function ($item) use ($urlResolver, $name) {
+                $src = $urlResolver($item['src'] ?? null);
+
+                if (! $src) {
+                    return null;
+                }
+
+                return [
+                    'src' => $src,
+                    'alt' => trim((string) ($item['alt'] ?? ($name . ' dashboard image'))),
+                ];
+            })
+            ->filter()
+            ->values();
+    };
+
+    $hasDevelopmentItems = static function (array $details) use ($looksLikeImageAsset) {
+        return collect($details['details'] ?? [])->contains(function ($item) use ($looksLikeImageAsset) {
+            if (! is_array($item)) {
+                return false;
+            }
+
+            $source = trim((string) ($item['src'] ?? ($item['image'] ?? ($item['value'] ?? ''))));
+
+            return $source !== '' && $looksLikeImageAsset($source);
+        });
+    };
+
+    $hasDashboardItems = static function (array $details) {
+        $dashboardPayload = is_array($details['specs'] ?? null) ? ($details['specs'] ?? []) : [];
+        $description = trim((string) ($dashboardPayload['description'] ?? ''));
+        $hasImages = collect(is_array($dashboardPayload['images'] ?? null) ? ($dashboardPayload['images'] ?? []) : [])
+            ->contains(fn ($item) => is_array($item) && filled($item['src'] ?? null));
+
+        return $description !== '' || $hasImages;
+    };
 
     $features = collect($payload['features'] ?? [])
         ->filter(fn ($feature) => is_array($feature) && filled($feature['title'] ?? null))
@@ -48,24 +173,86 @@
         ])
         ->values();
 
-    $gallery = collect($payload['gallery'] ?? [])
-        ->filter(fn ($item) => is_array($item) && filled($item['src'] ?? null))
-        ->map(function ($item) use ($resolveMediaUrl, $templateName) {
-            $src = $resolveMediaUrl($item['src'] ?? null);
+    $gallery = $resolveGalleryItems($payload, fn ($value) => $resolveMediaUrl($value, true), $templateName);
 
-            if (! $src) {
-                return null;
-            }
+    if ($gallery->isEmpty()) {
+        $fallbackTranslationWithGallery = $template->translations
+            ->first(function ($candidate) use ($translation) {
+                if (! $candidate || ($translation && $candidate->is($translation))) {
+                    return false;
+                }
 
-            return [
-                'src' => $src,
-                'alt' => trim((string) ($item['alt'] ?? ($templateName . ' screenshot'))),
-            ];
-        })
-        ->filter()
-        ->values();
+                $candidatePayload = is_array($candidate->details)
+                    ? $candidate->details
+                    : (json_decode($candidate->details ?? '[]', true) ?: []);
 
-    $specs = collect($payload['specs'] ?? [])
+                return ! empty($candidatePayload['gallery']) && is_array($candidatePayload['gallery']);
+            });
+
+        if ($fallbackTranslationWithGallery) {
+            $fallbackPayload = is_array($fallbackTranslationWithGallery->details)
+                ? $fallbackTranslationWithGallery->details
+                : (json_decode($fallbackTranslationWithGallery->details ?? '[]', true) ?: []);
+
+            $gallery = $resolveGalleryItems($fallbackPayload, fn ($value) => $resolveMediaUrl($value, true), $templateName);
+        }
+    }
+
+    $developmentTools = $resolveDevelopmentItems($payload, fn ($value) => $resolveMediaUrl($value, true), $looksLikeImageAsset);
+
+    if ($developmentTools->isEmpty()) {
+        $fallbackTranslationWithDevelopmentTools = $template->translations
+            ->first(function ($candidate) use ($translation, $hasDevelopmentItems) {
+                if (! $candidate || ($translation && $candidate->is($translation))) {
+                    return false;
+                }
+
+                $candidatePayload = is_array($candidate->details)
+                    ? $candidate->details
+                    : (json_decode($candidate->details ?? '[]', true) ?: []);
+
+                return $hasDevelopmentItems($candidatePayload);
+            });
+
+        if ($fallbackTranslationWithDevelopmentTools) {
+            $fallbackPayload = is_array($fallbackTranslationWithDevelopmentTools->details)
+                ? $fallbackTranslationWithDevelopmentTools->details
+                : (json_decode($fallbackTranslationWithDevelopmentTools->details ?? '[]', true) ?: []);
+
+            $developmentTools = $resolveDevelopmentItems($fallbackPayload, fn ($value) => $resolveMediaUrl($value, true), $looksLikeImageAsset);
+        }
+    }
+
+    $dashboardPayload = is_array($payload['specs'] ?? null) ? ($payload['specs'] ?? []) : [];
+    $dashboardDescription = trim((string) ($dashboardPayload['description'] ?? ''));
+    $dashboardImages = $resolveDashboardItems($payload, fn ($value) => $resolveMediaUrl($value, true), $templateName);
+
+    if ($dashboardDescription === '' && $dashboardImages->isEmpty()) {
+        $fallbackTranslationWithDashboard = $template->translations
+            ->first(function ($candidate) use ($translation, $hasDashboardItems) {
+                if (! $candidate || ($translation && $candidate->is($translation))) {
+                    return false;
+                }
+
+                $candidatePayload = is_array($candidate->details)
+                    ? $candidate->details
+                    : (json_decode($candidate->details ?? '[]', true) ?: []);
+
+                return $hasDashboardItems($candidatePayload);
+            });
+
+        if ($fallbackTranslationWithDashboard) {
+            $fallbackPayload = is_array($fallbackTranslationWithDashboard->details)
+                ? $fallbackTranslationWithDashboard->details
+                : (json_decode($fallbackTranslationWithDashboard->details ?? '[]', true) ?: []);
+
+            $fallbackDashboardPayload = is_array($fallbackPayload['specs'] ?? null) ? ($fallbackPayload['specs'] ?? []) : [];
+            $dashboardDescription = trim((string) ($fallbackDashboardPayload['description'] ?? ''));
+            $dashboardImages = $resolveDashboardItems($fallbackPayload, fn ($value) => $resolveMediaUrl($value, true), $templateName);
+        }
+    }
+
+    $specs = collect(is_array($payload['specs'] ?? null) && ! array_key_exists('description', $dashboardPayload) && ! array_key_exists('images', $dashboardPayload) ? ($payload['specs'] ?? []) : [])
         ->filter(fn ($item) => is_array($item) && filled($item['name'] ?? null) && filled($item['value'] ?? null))
         ->map(fn ($item) => [
             'name' => trim((string) ($item['name'] ?? '')),
@@ -74,15 +261,16 @@
         ->values();
 
     $detailsList = collect($payload['details'] ?? [])
-        ->filter(function ($item) {
+        ->filter(function ($item) use ($looksLikeImageAsset) {
             if (! is_array($item)) {
                 return false;
             }
 
             $label = trim((string) ($item['name'] ?? ($item['label'] ?? '')));
             $value = trim((string) ($item['value'] ?? ''));
+            $source = trim((string) ($item['src'] ?? ($item['image'] ?? $value)));
 
-            return $label !== '' && $value !== '';
+            return $label !== '' && $value !== '' && ! $looksLikeImageAsset($source);
         })
         ->map(fn ($item) => [
             'name' => trim((string) ($item['name'] ?? ($item['label'] ?? ''))),
@@ -117,17 +305,16 @@
         $productDetailsText = $shortDesc;
     }
 
-    $templateScreens = $gallery->take(3)->values();
-    $dashboardImageItem = $gallery->slice(3, 1)->first();
-    $secondaryScreen = $templateScreens->get(1);
+    // Use all gallery items from the admin "gallery" field for the Template Screens section.
+    $templateScreens = $gallery->values();
     $dashboardDetail = $detailsList->first(fn ($item) => Str::contains(Str::lower($item['name']), ['dashboard', 'panel']));
+    $dashboardImage = $dashboardImages->first()['src'] ?? $gallery->last()['src'] ?? $templateImageUrl;
+    $dashboardText = $dashboardDescription !== '' ? $dashboardDescription : ($dashboardDetail['value'] ?? Str::limit($productDetailsText, 220));
+    $dashboardGallery = $dashboardImages->slice(1)->values();
 
-    $dashboardImage = $dashboardImageItem['src'] ?? $secondaryScreen['src'] ?? $templateImageUrl;
-    $dashboardText = $dashboardDetail['value'] ?? Str::limit($productDetailsText, 220);
-
-    $usedInDevelopment = $tags->take(6)->values();
-    if ($usedInDevelopment->isEmpty() && $categoryName !== '') {
-        $usedInDevelopment = collect([$categoryName]);
+    $usedInDevelopmentFallback = $tags->take(6)->values();
+    if ($usedInDevelopmentFallback->isEmpty() && $categoryName !== '') {
+        $usedInDevelopmentFallback = collect([$categoryName]);
     }
 
     $lastUpdateValue = $template->updated_at
@@ -283,9 +470,9 @@
                             <h2 class="mb-4 text-xl font-bold text-purple-brand">{{ __('Template Screens') }}</h2>
                             <div class="scrollbar-hide flex select-none gap-3 overflow-x-auto pb-2">
                                 @foreach ($templateScreens as $screen)
-                                    <div class="relative h-75 w-64 shrink-0">
+                                    <div class="relative aspect-[3/4] w-64 shrink-0 overflow-hidden rounded-xl bg-slate-100">
                                         <div class="absolute inset-0 z-10 transition-colors duration-300"></div>
-                                        <img src="{{ $screen['src'] }}" class="h-full rounded-xl object-cover" alt="{{ $screen['alt'] }}">
+                                        <img src="{{ $screen['src'] }}" class="h-full w-full object-cover" alt="{{ $screen['alt'] }}">
                                     </div>
                                 @endforeach
                             </div>
@@ -299,6 +486,15 @@
                                 {{ $dashboardText }}
                             </p>
                             <img src="{{ $dashboardImage }}" class="h-64 w-full rounded-[20px] object-cover md:h-96 lg:h-auto" alt="{{ __('Dashboard Preview') }}">
+                            @if ($dashboardGallery->isNotEmpty())
+                                <div class="mt-4 flex gap-3 overflow-x-auto pb-2">
+                                    @foreach ($dashboardGallery as $image)
+                                        <div class="h-32 w-44 shrink-0 overflow-hidden rounded-[20px]">
+                                            <img src="{{ $image['src'] }}" class="h-full w-full object-cover" alt="{{ $image['alt'] }}">
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
                     @endif
 
@@ -318,11 +514,22 @@
                         </div>
                     @endif
 
-                    @if ($usedInDevelopment->isNotEmpty())
+                    @if ($developmentTools->isNotEmpty())
                         <div class="animate-from-left border-b border-gray-200 pb-8">
                             <h2 class="mb-2 text-xl font-bold text-purple-brand">{{ __('Used in development') }}</h2>
                             <div class="flex flex-wrap gap-3">
-                                @foreach ($usedInDevelopment as $tool)
+                                @foreach ($developmentTools as $tool)
+                                    <div class="h-18 w-25 shrink-0 overflow-hidden rounded-[20px] transition-all duration-300 hover:-translate-y-1" title="{{ $tool['name'] }}">
+                                        <img src="{{ $tool['src'] }}" class="h-full w-full object-cover" alt="{{ $tool['alt'] }}">
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                    @elseif ($usedInDevelopmentFallback->isNotEmpty())
+                        <div class="animate-from-left border-b border-gray-200 pb-8">
+                            <h2 class="mb-2 text-xl font-bold text-purple-brand">{{ __('Used in development') }}</h2>
+                            <div class="flex flex-wrap gap-3">
+                                @foreach ($usedInDevelopmentFallback as $tool)
                                     <div class="flex h-18 min-w-[100px] shrink-0 items-center justify-center rounded-[20px] border border-gray-200 bg-white px-4 text-center transition-all duration-300 hover:-translate-y-1">
                                         <span class="text-sm font-semibold text-purple-brand md:text-base">{{ $tool }}</span>
                                     </div>

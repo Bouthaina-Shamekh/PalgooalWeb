@@ -1108,6 +1108,9 @@
   .table-row {
     display: table-row;
   }
+  .aspect-\[3\/4\] {
+    aspect-ratio: 3/4;
+  }
   .aspect-\[4\/3\] {
     aspect-ratio: 4/3;
   }
@@ -1450,6 +1453,9 @@
   .w-24 {
     width: calc(var(--spacing) * 24);
   }
+  .w-25 {
+    width: calc(var(--spacing) * 25);
+  }
   .w-28 {
     width: calc(var(--spacing) * 28);
   }
@@ -1512,6 +1518,9 @@
   }
   .w-\[95\%\] {
     width: 95%;
+  }
+  .w-\[110px\] {
+    width: 110px;
   }
   .w-\[168px\] {
     width: 168px;
@@ -2223,6 +2232,9 @@
   }
   .rounded-\[2rem\] {
     border-radius: 2rem;
+  }
+  .rounded-\[16px\] {
+    border-radius: 16px;
   }
   .rounded-\[20px\] {
     border-radius: 20px;
@@ -6986,6 +6998,11 @@
       grid-template-columns: 88px 1fr auto;
     }
   }
+  .sm\:grid-cols-\[88px_minmax\(0\,1fr\)_auto\] {
+    @media (width >= 40rem) {
+      grid-template-columns: 88px minmax(0,1fr) auto;
+    }
+  }
   .sm\:flex-row {
     @media (width >= 40rem) {
       flex-direction: row;
@@ -7533,6 +7550,12 @@
     @media (width >= 48rem) {
       font-size: var(--text-lg);
       line-height: var(--tw-leading, var(--text-lg--line-height));
+    }
+  }
+  .md\:text-sm {
+    @media (width >= 48rem) {
+      font-size: var(--text-sm);
+      line-height: var(--tw-leading, var(--text-sm--line-height));
     }
   }
   .md\:text-xl {
