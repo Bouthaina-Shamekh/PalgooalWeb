@@ -7,6 +7,7 @@ use App\Models\Template;
 use App\Models\TemplateTranslation;
 use App\Models\CategoryTemplate;
 use App\Models\Language;
+use App\Models\Media;
 use App\Models\Plan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,13 +18,85 @@ class TemplateController extends Controller
     /**
      * قائمة القوالب مع الترجمة والفئة.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $templates = Template::with(['categoryTemplate.translation', 'translations'])
-            ->latest()
-            ->paginate(10);
+        $search = trim((string) $request->query('q', ''));
+        $selectedCategory = $request->filled('category')
+            ? (int) $request->query('category')
+            : null;
 
-        return view('dashboard.templates.index', compact('templates'));
+        $templatesQuery = Template::query()
+            ->with([
+                'translations',
+                'categoryTemplate.translations',
+                'plan.translations',
+            ]);
+
+        if ($search !== '') {
+            $templatesQuery->where(function ($query) use ($search) {
+                if (ctype_digit($search)) {
+                    $query->orWhere('id', (int) $search);
+                }
+
+                $query->orWhereHas('translations', function ($translationQuery) use ($search) {
+                    $translationQuery
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('slug', 'like', "%{$search}%")
+                        ->orWhere('description', 'like', "%{$search}%");
+                });
+
+                $query->orWhereHas('categoryTemplate.translations', function ($categoryQuery) use ($search) {
+                    $categoryQuery->where('name', 'like', "%{$search}%");
+                });
+
+                $query->orWhereHas('plan', function ($planQuery) use ($search) {
+                    $planQuery
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('slug', 'like', "%{$search}%");
+                });
+
+                $query->orWhereHas('plan.translations', function ($planTranslationQuery) use ($search) {
+                    $planTranslationQuery->where('title', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        if ($selectedCategory) {
+            $templatesQuery->where('category_template_id', $selectedCategory);
+        }
+
+        $templates = $templatesQuery
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
+
+        $categories = CategoryTemplate::with('translations')->get();
+
+        $stats = [
+            'total' => Template::count(),
+            'visible' => $templates->total(),
+            'discounted' => Template::query()
+                ->whereNotNull('discount_price')
+                ->where('discount_price', '>', 0)
+                ->whereColumn('discount_price', '<', 'price')
+                ->count(),
+            'with_preview' => Template::query()
+                ->whereHas('translations', function ($query) {
+                    $query
+                        ->whereNotNull('preview_url')
+                        ->where('preview_url', '!=', '');
+                })
+                ->count(),
+            'categories' => $categories->count(),
+        ];
+
+        return view('dashboard.templates.index', compact(
+            'templates',
+            'categories',
+            'search',
+            'selectedCategory',
+            'stats',
+        ));
     }
 
     /**
@@ -50,7 +123,8 @@ class TemplateController extends Controller
             'rating'               => ['nullable', 'numeric', 'min:0', 'max:5'],
             'category_template_id' => ['required', 'exists:category_templates,id'],
             'plan_id'              => ['required', 'exists:plans,id'],
-            'image'                => ['required', 'image'],
+            'image'                => ['nullable', 'image'],
+            'image_media_id'       => ['required_without:image', 'nullable', 'integer', 'exists:media,id'],
 
             'translations'                 => ['required', 'array', 'min:1'],
             'translations.*.locale'        => ['required', 'string'],
@@ -65,7 +139,15 @@ class TemplateController extends Controller
 
         try {
             // رفع الصورة
-            $imagePath = $request->file('image')->store('templates', 'public');
+            $imagePath = null;
+
+            if ($request->hasFile('image')) {
+                $imagePath = $request->file('image')->store('templates', 'public');
+            } elseif ($request->filled('image_media_id')) {
+                $imagePath = Media::query()
+                    ->whereKey((int) $request->input('image_media_id'))
+                    ->value('file_path');
+            }
 
             // إنشاء القالب
             $template = Template::create([
