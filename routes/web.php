@@ -16,7 +16,6 @@ use App\Http\Controllers\Front\PageController as FrontPageController;
 use App\Http\Controllers\Admin\Management\DomainSearchController;
 
 // Models
-use App\Models\Language;
 use App\Models\Plan;
 use App\Models\Portfolio;
 use App\Models\Tenancy\Subscription;
@@ -236,23 +235,6 @@ Route::middleware(['setLocale'])->group(function () {
             ]);
         })->name('tenant.preview.page');
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Locale Switching
-    |--------------------------------------------------------------------------
-    */
-    Route::get('/change-locale/{locale}', function (string $locale) {
-        $language = Language::where('code', $locale)
-            ->where('is_active', true)
-            ->first();
-
-        if ($language) {
-            session(['locale' => $locale]);
-        }
-
-        return redirect()->back();
-    })->name('change_locale');
 
     /*
     |--------------------------------------------------------------------------

@@ -45,7 +45,7 @@
         $feedbackClasses = $feedbackTone === 'error'
             ? 'border-red-200 bg-red-50 text-red-800'
             : 'border-emerald-200 bg-emerald-50 text-emerald-800';
-        $selectedType = old('type', $section->type);
+        $selectedType = old('type', $section->type === 'templates-pages' ? 'templates_listing_showcase' : $section->type);
         $isHeroCampaign = $selectedType === 'hero_campaign';
         $isProgrammingShowcase = $selectedType === 'programming_showcase';
         $isMobileAppShowcase = $selectedType === 'mobile_app_showcase';
@@ -57,15 +57,16 @@
         $isHostingPricingShowcase = $selectedType === 'hosting_pricing_showcase';
         $isDomainsShowcase = $selectedType === 'domains_showcase';
         $isTemplatesSliderShowcase = $selectedType === 'templates_slider_showcase';
-        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isTechStackShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isHostingPricingShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase;
+        $isTemplatesListingShowcase = $selectedType === 'templates_listing_showcase';
+        $usesInternalLabel = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isTechStackShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isHostingPricingShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase;
         $showEyebrowField = $selectedType === 'hero_default';
-        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isHostingPricingShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase;
+        $showDescriptionField = $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isHostingPricingShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase;
         $showFeaturesHeadingField = $isHeroCampaign;
         $showOutputsHeadingField = $isProgrammingShowcase;
         $showOutputsTextareaField = $isProgrammingShowcase;
         $showServicesTextareaField = $isDesignShowcase || $isDigitalMarketingShowcase;
         $showBrandFields = $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase;
-        $showPrimaryButtonFields = ! in_array($selectedType, ['how_we_build', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase', 'hosting_pricing_showcase', 'templates_slider_showcase'], true);
+        $showPrimaryButtonFields = ! in_array($selectedType, ['how_we_build', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase', 'hosting_pricing_showcase', 'templates_slider_showcase', 'templates_listing_showcase', 'templates-pages'], true);
         $showSecondaryButtonFields = $selectedType === 'hero_default';
         $showFeatureRepeaterField = $isHeroCampaign;
         $showBuildStepsRepeaterField = $selectedType === 'how_we_build';
@@ -75,6 +76,7 @@
         $showHostingPricingPlansField = false;
         $showHostingPricingDatabaseField = $isHostingPricingShowcase;
         $showTemplatesSliderDatabaseField = $isTemplatesSliderShowcase;
+        $showTemplatesListingDatabaseField = $isTemplatesListingShowcase;
         $showFeaturesTextareaField = in_array($selectedType, ['hero_default', 'features_grid'], true);
         $showMobileAppGalleryField = $isMobileAppShowcase;
         $showDesignGalleryField = $isDesignShowcase;
@@ -82,7 +84,7 @@
         $showTechStackMediaField = $isTechStackShowcase;
         $showMediaTypeField = $selectedType === 'hero_default';
         $showMediaUrlField = in_array($selectedType, ['hero_default', 'hero_campaign', 'programming_showcase'], true);
-        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase', 'hosting_pricing_showcase', 'domains_showcase', 'templates_slider_showcase'], true);
+        $showSubtitleField = ! in_array($selectedType, ['programming_showcase', 'mobile_app_showcase', 'design_showcase', 'digital_marketing_showcase', 'tech_stack_showcase', 'reviews_showcase', 'our_work_showcase', 'hosting_pricing_showcase', 'domains_showcase', 'templates_slider_showcase', 'templates_listing_showcase', 'templates-pages'], true);
         $showMainTitleField = ! $isTechStackShowcase;
         $showDomainsSearchHeadingField = $isDomainsShowcase;
         $showDomainsPlaceholderField = $isDomainsShowcase;
@@ -108,7 +110,7 @@
 
     <div class="{{ $surfaceClass }}">
         <div class="{{ $sectionBodyClass }}">
-            <input type="hidden" name="type" value="{{ old('type', $section->type) }}">
+            <input type="hidden" name="type" value="{{ $selectedType }}">
             <input type="hidden" name="variant" value="{{ old('variant', $section->variant) }}">
 
             <div class="{{ $settingsGridClass }}">
@@ -461,7 +463,19 @@
 
                     $sectionTitleValue = $stringifyValue(old("translations.$code.title", $translation->title ?? ''));
                     $eyebrowValue = $stringifyValue(old("translations.$code.content.eyebrow", $content['eyebrow'] ?? ''));
-                    $heroTitleValue = $stringifyValue(old("translations.$code.content.title", $content['title'] ?? ''));
+                    $templatesListingLegacyTitle = trim((string) ($translation?->title ?? ''));
+                    $templatesListingInitialTitle = trim((string) ($content['title'] ?? ''));
+
+                    if ($isTemplatesListingShowcase && $templatesListingInitialTitle === '') {
+                        $templatesListingInitialTitle = $templatesListingLegacyTitle !== '' && $templatesListingLegacyTitle !== $typeLabel
+                            ? $templatesListingLegacyTitle
+                            : (string) __('TEMPLATE');
+                    }
+
+                    $heroTitleValue = $stringifyValue(old(
+                        "translations.$code.content.title",
+                        $isTemplatesListingShowcase ? $templatesListingInitialTitle : ($content['title'] ?? '')
+                    ));
                     $brandPrefixValue = $stringifyValue(old("translations.$code.content.brand_prefix", $content['brand_prefix'] ?? ''));
                     $brandSuffixValue = $stringifyValue(old("translations.$code.content.brand_suffix", $content['brand_suffix'] ?? ''));
                     $subtitleValue = $stringifyValue(old("translations.$code.content.subtitle", $content['subtitle'] ?? ''));
@@ -472,6 +486,14 @@
                     $templatesSliderBuyLabelValue = $stringifyValue(old("translations.$code.content.buy_label", $content['buy_label'] ?? __('Buy Now')));
                     $templatesSliderPreviewLabelValue = $stringifyValue(old("translations.$code.content.preview_label", $content['preview_label'] ?? __('Live Preview')));
                     $templatesSliderLimitValue = $stringifyValue(old("translations.$code.content.limit", $content['limit'] ?? ''));
+                    $templatesListingBreadcrumbLabelValue = $stringifyValue(old("translations.$code.content.breadcrumb_label", $content['breadcrumb_label'] ?? __('Templates')));
+                    $templatesListingAllCategoriesLabelValue = $stringifyValue(old("translations.$code.content.all_categories_label", $content['all_categories_label'] ?? __('All Hosting')));
+                    $templatesListingTypeLabelValue = $stringifyValue(old("translations.$code.content.type_label", $content['type_label'] ?? __('Type')));
+                    $templatesListingBestSellersLabelValue = $stringifyValue(old("translations.$code.content.best_sellers_label", $content['best_sellers_label'] ?? __('Best Sellers')));
+                    $templatesListingPriceLabelValue = $stringifyValue(old("translations.$code.content.price_label", $content['price_label'] ?? __('Price')));
+                    $templatesListingBuyLabelValue = $stringifyValue(old("translations.$code.content.buy_label", $content['buy_label'] ?? __('Buy Now')));
+                    $templatesListingPreviewLabelValue = $stringifyValue(old("translations.$code.content.preview_label", $content['preview_label'] ?? __('Live Preview')));
+                    $templatesListingItemsPerPageValue = $stringifyValue(old("translations.$code.content.items_per_page", $content['items_per_page'] ?? ''));
                     $hostingPricingVisibleCategoryIds = collect(old("translations.$code.content.visible_category_ids", $content['visible_category_ids'] ?? []))
                         ->map(function ($id) {
                             if (is_array($id)) {
@@ -618,7 +640,7 @@
                         @endif
 
                         @if ($showBrandFields)
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">{{ __('Brand Prefix') }}</label>
                                 <input
                                     type="text"
@@ -629,7 +651,7 @@
                                 >
                             </div>
 
-                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">{{ __('Brand Suffix') }}</label>
                                 <input
                                     type="text"
@@ -642,9 +664,9 @@
                         @endif
 
                         @if ($showMainTitleField)
-                            <div class="{{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase) ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase) ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase) ? __('Section Title') : __('Main Title')) }}
+                                    {{ $isHeroCampaign ? __('Main Title - Line 1') : (($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase) ? __('Section Title') : __('Main Title')) }}
                                 </label>
                                 <input
                                     type="text"
@@ -2116,6 +2138,116 @@
                                             placeholder="6"
                                         >
                                         <p class="mt-2 text-xs text-slate-500">{{ __('Optional. Leave this empty to use the default number of template cards for the slider.') }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
+                        @if ($showTemplatesListingDatabaseField)
+                            <div class="lg:col-span-2 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+                                <div class="flex flex-wrap items-start justify-between gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Templates Source') }}</label>
+                                        <p class="mt-1 text-sm text-slate-500">{{ __('This section builds the templates archive from the Templates module automatically. Use these fields only for the breadcrumb text, filter labels, card button labels, and items shown per page.') }}</p>
+                                    </div>
+                                    <a
+                                        href="{{ route('dashboard.templates.index') }}"
+                                        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                    >
+                                        <i class="ti ti-layout-grid text-base leading-none" aria-hidden="true"></i>
+                                        <span>{{ __('Open Templates') }}</span>
+                                    </a>
+                                </div>
+
+                                <div class="mt-5 grid grid-cols-1 gap-5">
+                                    <div class="lg:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Breadcrumb Label') }}</label>
+                                        <input
+                                            type="text"
+                                            name="translations[{{ $code }}][content][breadcrumb_label]"
+                                            value="{{ $templatesListingBreadcrumbLabelValue }}"
+                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                            placeholder="{{ __('Templates') }}"
+                                        >
+                                    </div>
+
+                                    <div class="lg:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('All Categories Label') }}</label>
+                                        <input
+                                            type="text"
+                                            name="translations[{{ $code }}][content][all_categories_label]"
+                                            value="{{ $templatesListingAllCategoriesLabelValue }}"
+                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                            placeholder="{{ __('All Hosting') }}"
+                                        >
+                                    </div>
+
+                                    <div class="lg:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Type Filter Label') }}</label>
+                                        <input
+                                            type="text"
+                                            name="translations[{{ $code }}][content][type_label]"
+                                            value="{{ $templatesListingTypeLabelValue }}"
+                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                            placeholder="{{ __('Type') }}"
+                                        >
+                                    </div>
+
+                                    <div class="lg:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Best Sellers Filter Label') }}</label>
+                                        <input
+                                            type="text"
+                                            name="translations[{{ $code }}][content][best_sellers_label]"
+                                            value="{{ $templatesListingBestSellersLabelValue }}"
+                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                            placeholder="{{ __('Best Sellers') }}"
+                                        >
+                                    </div>
+
+                                    <div class="lg:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Price Filter Label') }}</label>
+                                        <input
+                                            type="text"
+                                            name="translations[{{ $code }}][content][price_label]"
+                                            value="{{ $templatesListingPriceLabelValue }}"
+                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                            placeholder="{{ __('Price') }}"
+                                        >
+                                    </div>
+
+                                    <div class="lg:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Buy Button Label') }}</label>
+                                        <input
+                                            type="text"
+                                            name="translations[{{ $code }}][content][buy_label]"
+                                            value="{{ $templatesListingBuyLabelValue }}"
+                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                            placeholder="{{ __('Buy Now') }}"
+                                        >
+                                    </div>
+
+                                    <div class="lg:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Preview Button Label') }}</label>
+                                        <input
+                                            type="text"
+                                            name="translations[{{ $code }}][content][preview_label]"
+                                            value="{{ $templatesListingPreviewLabelValue }}"
+                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                            placeholder="{{ __('Live Preview') }}"
+                                        >
+                                    </div>
+
+                                    <div class="lg:col-span-2">
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Items Per Page') }}</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            name="translations[{{ $code }}][content][items_per_page]"
+                                            value="{{ $templatesListingItemsPerPageValue }}"
+                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                            placeholder="12"
+                                        >
+                                        <p class="mt-2 text-xs text-slate-500">{{ __('This controls how many template cards appear before the pagination switches to the next page.') }}</p>
                                     </div>
                                 </div>
                             </div>

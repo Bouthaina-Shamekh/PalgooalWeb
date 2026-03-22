@@ -101,10 +101,12 @@ class PageController extends Controller
                 ->firstOrFail();
         }
 
-        // Canonical redirect if the slug for this locale differs
+        // Canonical redirect if the slug for this locale differs.
+        // This must stay temporary because the canonical slug depends on
+        // the current session locale and can legitimately change per request.
         $canonicalSlug = $page->translation($locale)?->slug;
         if ($canonicalSlug && $canonicalSlug !== $slug) {
-            return redirect()->to('/' . ltrim($canonicalSlug, '/'), 301);
+            return redirect()->to('/' . ltrim($canonicalSlug, '/'));
         }
 
         return view('front.pages.page', [

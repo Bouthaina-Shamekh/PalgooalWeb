@@ -168,6 +168,7 @@
         'hosting_pricing_showcase' => 'hosting_pricing_showcase',
         'domains_showcase' => 'domains_showcase',
         'templates_slider_showcase' => 'templates_slider_showcase',
+        'templates_listing_showcase' => 'templates_listing_showcase',
         'faq' => 'faq',
     ];
 

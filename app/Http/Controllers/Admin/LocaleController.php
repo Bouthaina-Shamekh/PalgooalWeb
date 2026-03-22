@@ -8,6 +8,7 @@ use App\Models\Portfolio;
 use App\Models\Template;
 use App\Models\TranslationValue;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class LocaleController extends Controller
 {
@@ -20,13 +21,21 @@ class LocaleController extends Controller
             session(['locale' => $locale]);
         }
 
+        $redirect = trim((string) request()->query('redirect', ''));
+        $safeRedirect = $this->normalizeRedirectUrl($redirect);
+
+        if ($safeRedirect) {
+            return redirect()->to($safeRedirect);
+        }
+
         $previousUrl = url()->previous();
         $parsed = parse_url($previousUrl);
         $path = $parsed['path'] ?? '/';
 
         // التحقق من صفحة قالب Template
-        if (preg_match('#/template/([^/]+)#', $path, $matches)) {
+        if (preg_match('#^/templates/([^/]+)(?:/(redesign|preview))?$#', $path, $matches)) {
             $currentSlug = $matches[1];
+            $variant = $matches[2] ?? null;
 
             $template = Template::whereHas('translations', function ($q) use ($currentSlug) {
                 $q->where('slug', $currentSlug);
@@ -35,7 +44,11 @@ class LocaleController extends Controller
             if ($template) {
                 $translated = $template->getTranslation($locale);
                 if ($translated) {
-                    return redirect()->route('template.show', ['slug' => $translated->slug]);
+                    return match ($variant) {
+                        'redesign' => redirect()->route('template.show.redesign', ['slug' => $translated->slug]),
+                        'preview' => redirect()->route('template.preview', ['slug' => $translated->slug]),
+                        default => redirect()->route('template.show', ['slug' => $translated->slug]),
+                    };
                 }
             }
         }
@@ -84,6 +97,32 @@ class LocaleController extends Controller
         }
 
         return preg_match('/\.(?:css|js|map|png|jpe?g|svg|gif|webp|ico|woff2?|ttf|eot)$/', $normalizedPath) === 1;
+    }
+
+    private function normalizeRedirectUrl(?string $redirect): ?string
+    {
+        $redirect = trim((string) $redirect);
+
+        if ($redirect === '') {
+            return null;
+        }
+
+        if (Str::startsWith($redirect, '/')) {
+            return url($redirect);
+        }
+
+        if (! filter_var($redirect, FILTER_VALIDATE_URL)) {
+            return null;
+        }
+
+        $redirectHost = strtolower((string) parse_url($redirect, PHP_URL_HOST));
+        $appHost = strtolower((string) parse_url(config('app.url') ?: url('/'), PHP_URL_HOST));
+
+        if ($redirectHost === '' || $appHost === '' || $redirectHost !== $appHost) {
+            return null;
+        }
+
+        return $redirect;
     }
 }
 

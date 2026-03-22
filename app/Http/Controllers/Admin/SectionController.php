@@ -608,6 +608,14 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
+            'templates_listing_showcase' => [
+                'type'        => 'templates_listing_showcase',
+                'label'       => 'Templates Listing Showcase',
+                'description' => 'Templates archive grid with category filters, sort buttons, and client-side pagination from the Templates module.',
+                'category'    => 'templates',
+                'preview'     => null,
+            ],
+
             'features_grid' => [
                 'type'        => 'features_grid',
                 'label'       => 'Features Grid',
@@ -679,6 +687,9 @@ class SectionController extends Controller
 
             case 'templates_slider_showcase':
                 return $this->normalizeTemplatesSliderShowcaseContent($content);
+
+            case 'templates_listing_showcase':
+                return $this->normalizeTemplatesListingShowcaseContent($content);
 
             default:
                 return $content;
@@ -926,6 +937,19 @@ class SectionController extends Controller
                 'limit' => 6,
             ],
 
+            'templates_listing_showcase' => [
+                'breadcrumb_label' => 'Templates',
+                'title' => 'TEMPLATE',
+                'description' => 'Choose from a range of templates and publish them instantly',
+                'all_categories_label' => 'All Hosting',
+                'type_label' => 'Type',
+                'best_sellers_label' => 'Best Sellers',
+                'price_label' => 'Price',
+                'buy_label' => 'Buy Now',
+                'preview_label' => 'Live Preview',
+                'items_per_page' => 12,
+            ],
+
             'services_grid' => [
                 'title'    => 'Services',
                 'subtitle' => 'Highlight your core services.',
@@ -991,6 +1015,9 @@ class SectionController extends Controller
             ],
             'templates_slider_showcase' => [
                 'padding_y' => 'py-20',
+            ],
+            'templates_listing_showcase' => [
+                'padding_y' => 'py-4',
             ],
             default => [],
         };
@@ -1451,6 +1478,33 @@ class SectionController extends Controller
             'buy_label' => trim((string) ($content['buy_label'] ?? __('Buy Now'))),
             'preview_label' => trim((string) ($content['preview_label'] ?? __('Live Preview'))),
             'limit' => $limit,
+        ];
+    }
+
+    /**
+     * Normalize the templates listing showcase payload.
+     */
+    protected function normalizeTemplatesListingShowcaseContent(array $content): array
+    {
+        $itemsPerPage = isset($content['items_per_page']) && is_numeric($content['items_per_page'])
+            ? (int) $content['items_per_page']
+            : 12;
+
+        if ($itemsPerPage <= 0) {
+            $itemsPerPage = 12;
+        }
+
+        return [
+            'breadcrumb_label' => trim((string) ($content['breadcrumb_label'] ?? __('Templates'))),
+            'title' => $content['title'] ?? null,
+            'description' => $content['description'] ?? null,
+            'all_categories_label' => trim((string) ($content['all_categories_label'] ?? __('All Hosting'))),
+            'type_label' => trim((string) ($content['type_label'] ?? __('Type'))),
+            'best_sellers_label' => trim((string) ($content['best_sellers_label'] ?? __('Best Sellers'))),
+            'price_label' => trim((string) ($content['price_label'] ?? __('Price'))),
+            'buy_label' => trim((string) ($content['buy_label'] ?? __('Buy Now'))),
+            'preview_label' => trim((string) ($content['preview_label'] ?? __('Live Preview'))),
+            'items_per_page' => $itemsPerPage,
         ];
     }
 

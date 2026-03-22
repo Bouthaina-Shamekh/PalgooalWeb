@@ -17,9 +17,7 @@
     $sharedPage = View::shared('currentPage', null);
     $currentUrl = $request->fullUrlWithoutQuery(['change-locale']);
     $buildLocaleUrl = static function (string $url, string $locale): string {
-        $separator = str_contains($url, '?') ? '&' : '?';
-
-        return $url . $separator . 'change-locale=' . urlencode($locale);
+        return route('change_locale', ['locale' => $locale], false) . '?redirect=' . urlencode($url);
     };
 
     $defaultButtonClass = match ($variant) {
@@ -124,6 +122,30 @@
 
                     if ($translatedSlug) {
                         $redirectUrl = $buildLocaleUrl(route('template.show', ['slug' => $translatedSlug]), $lang->code);
+                    }
+                } elseif ($currentRoute === 'template.show.redesign' && $slug && $lang->code !== $currentLocale) {
+                    $template = \App\Models\Template::with('translations')
+                        ->whereHas('translations', function ($q) use ($slug) {
+                            $q->where('slug', $slug);
+                        })
+                        ->first();
+
+                    $translatedSlug = $template?->translations->firstWhere('locale', $lang->code)?->slug;
+
+                    if ($translatedSlug) {
+                        $redirectUrl = $buildLocaleUrl(route('template.show.redesign', ['slug' => $translatedSlug]), $lang->code);
+                    }
+                } elseif ($currentRoute === 'template.preview' && $slug && $lang->code !== $currentLocale) {
+                    $template = \App\Models\Template::with('translations')
+                        ->whereHas('translations', function ($q) use ($slug) {
+                            $q->where('slug', $slug);
+                        })
+                        ->first();
+
+                    $translatedSlug = $template?->translations->firstWhere('locale', $lang->code)?->slug;
+
+                    if ($translatedSlug) {
+                        $redirectUrl = $buildLocaleUrl(route('template.preview', ['slug' => $translatedSlug]), $lang->code);
                     }
                 } elseif ($currentRoute === 'portfolio.show' && $slug && $lang->code !== $currentLocale) {
                     $portfolio = \App\Models\Portfolio::with('translations')

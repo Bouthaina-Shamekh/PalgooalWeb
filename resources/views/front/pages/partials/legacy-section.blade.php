@@ -90,6 +90,27 @@
         'preview_label' => $content['preview_label'] ?? __('Live Preview'),
         'limit' => $content['limit'] ?? 6,
     ]);
+
+    $templatesListingStoredTitle = trim((string) ($content['title'] ?? ''));
+    $templatesListingLegacyTitle = trim((string) ($fallbackTranslation?->title ?? ''));
+    $templatesListingResolvedTitle = $templatesListingStoredTitle !== ''
+        ? $templatesListingStoredTitle
+        : (($templatesListingLegacyTitle !== '' && $templatesListingLegacyTitle !== $typeLabel)
+            ? $templatesListingLegacyTitle
+            : __('TEMPLATE'));
+
+    $templatesListingData = \App\Support\Sections\SectionQueryResolver::resolve('templates_listing_showcase', [
+        'breadcrumb_label' => filled($content['breadcrumb_label'] ?? null) ? $content['breadcrumb_label'] : __('Templates'),
+        'title' => $templatesListingResolvedTitle,
+        'description' => filled($content['description'] ?? null) ? $content['description'] : __('Choose from a range of templates and publish them instantly'),
+        'all_categories_label' => filled($content['all_categories_label'] ?? null) ? $content['all_categories_label'] : __('All Hosting'),
+        'type_label' => filled($content['type_label'] ?? null) ? $content['type_label'] : __('Type'),
+        'best_sellers_label' => filled($content['best_sellers_label'] ?? null) ? $content['best_sellers_label'] : __('Best Sellers'),
+        'price_label' => filled($content['price_label'] ?? null) ? $content['price_label'] : __('Price'),
+        'buy_label' => filled($content['buy_label'] ?? null) ? $content['buy_label'] : __('Buy Now'),
+        'preview_label' => filled($content['preview_label'] ?? null) ? $content['preview_label'] : __('Live Preview'),
+        'items_per_page' => $content['items_per_page'] ?? 12,
+    ]);
 @endphp
 
 @switch($section->type)
@@ -198,6 +219,14 @@
         @include('components.template.sections.templates_slider_showcase', [
             'section' => $section,
             'data' => $templatesSliderData,
+        ])
+        @break
+
+    @case('templates_listing_showcase')
+    @case('templates-pages')
+        @include('components.template.sections.templates_listing_showcase', [
+            'section' => $section,
+            'data' => $templatesListingData,
         ])
         @break
 

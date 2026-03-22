@@ -1288,6 +1288,9 @@
   .h-\[200px\] {
     height: 200px;
   }
+  .h-\[220px\] {
+    height: 220px;
+  }
   .h-\[400px\] {
     height: 400px;
   }
@@ -1669,6 +1672,9 @@
   .min-w-0 {
     min-width: calc(var(--spacing) * 0);
   }
+  .min-w-10 {
+    min-width: calc(var(--spacing) * 10);
+  }
   .min-w-40 {
     min-width: calc(var(--spacing) * 40);
   }
@@ -1689,6 +1695,9 @@
   }
   .min-w-\[190px\] {
     min-width: 190px;
+  }
+  .min-w-\[195px\] {
+    min-width: 195px;
   }
   .min-w-\[200px\] {
     min-width: 200px;
@@ -5832,6 +5841,13 @@
       }
     }
   }
+  .hover\:bg-purple-brand {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-purple-brand);
+      }
+    }
+  }
   .hover\:bg-red-50 {
     &:hover {
       @media (hover: hover) {
@@ -6846,6 +6862,11 @@
       color: var(--color-gray-700);
     }
   }
+  .disabled\:pointer-events-none {
+    &:disabled {
+      pointer-events: none;
+    }
+  }
   .disabled\:cursor-not-allowed {
     &:disabled {
       cursor: not-allowed;
@@ -7296,6 +7317,11 @@
       grid-column: span 12 / span 12;
     }
   }
+  .md\:mt-16 {
+    @media (width >= 48rem) {
+      margin-top: calc(var(--spacing) * 16);
+    }
+  }
   .md\:mb-8 {
     @media (width >= 48rem) {
       margin-bottom: calc(var(--spacing) * 8);
@@ -7531,6 +7557,11 @@
   .md\:p-5 {
     @media (width >= 48rem) {
       padding: calc(var(--spacing) * 5);
+    }
+  }
+  .md\:p-6 {
+    @media (width >= 48rem) {
+      padding: calc(var(--spacing) * 6);
     }
   }
   .md\:p-8 {
@@ -7804,6 +7835,11 @@
   .lg\:h-64 {
     @media (width >= 64rem) {
       height: calc(var(--spacing) * 64);
+    }
+  }
+  .lg\:h-\[300px\] {
+    @media (width >= 64rem) {
+      height: 300px;
     }
   }
   .lg\:h-\[320px\] {
@@ -8385,6 +8421,16 @@
       scale: var(--tw-scale-x) var(--tw-scale-y);
     }
   }
+  .ltr\:rotate-0 {
+    &:where(:dir(ltr), [dir="ltr"], [dir="ltr"] *) {
+      rotate: 0deg;
+    }
+  }
+  .ltr\:rotate-180 {
+    &:where(:dir(ltr), [dir="ltr"], [dir="ltr"] *) {
+      rotate: 180deg;
+    }
+  }
   .ltr\:rotate-\[40deg\] {
     &:where(:dir(ltr), [dir="ltr"], [dir="ltr"] *) {
       rotate: 40deg;
@@ -8552,6 +8598,11 @@
     &:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
       --tw-scale-x: 100%;
       scale: var(--tw-scale-x) var(--tw-scale-y);
+    }
+  }
+  .rtl\:rotate-0 {
+    &:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
+      rotate: 0deg;
     }
   }
   .rtl\:rotate-180 {

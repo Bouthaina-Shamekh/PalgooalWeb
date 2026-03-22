@@ -29,6 +29,8 @@ class SectionQueryResolver
             'our_work_showcase' => self::portfolios($data),
             'hosting_pricing_showcase' => self::hostingPricingShowcase($data),
             'templates_slider_showcase' => self::templatesSliderShowcase($data),
+            'templates_listing_showcase' => self::templatesListingShowcase($data),
+            'templates-pages' => self::templatesListingShowcase($data),
             'search-domain' => self::searchDomain($data),
             default => $data,
         };
@@ -189,6 +191,34 @@ class SectionQueryResolver
             ->with(['translations', 'categoryTemplate.translation', 'categoryTemplate.translations'])
             ->latest('id')
             ->limit($limit)
+            ->get();
+
+        return $data;
+    }
+
+    protected static function templatesListingShowcase(array $data): array
+    {
+        $itemsPerPage = isset($data['items_per_page']) && is_numeric($data['items_per_page'])
+            ? (int) $data['items_per_page']
+            : 12;
+
+        if ($itemsPerPage <= 0) {
+            $itemsPerPage = 12;
+        }
+
+        $data['breadcrumb_label'] = trim((string) ($data['breadcrumb_label'] ?? '')) ?: __('Templates');
+        $data['title'] = trim((string) ($data['title'] ?? '')) ?: __('TEMPLATE');
+        $data['description'] = trim((string) ($data['description'] ?? '')) ?: __('Choose from a range of templates and publish them instantly');
+        $data['all_categories_label'] = trim((string) ($data['all_categories_label'] ?? '')) ?: __('All Hosting');
+        $data['type_label'] = trim((string) ($data['type_label'] ?? '')) ?: __('Type');
+        $data['best_sellers_label'] = trim((string) ($data['best_sellers_label'] ?? '')) ?: __('Best Sellers');
+        $data['price_label'] = trim((string) ($data['price_label'] ?? '')) ?: __('Price');
+        $data['buy_label'] = trim((string) ($data['buy_label'] ?? '')) ?: __('Buy Now');
+        $data['preview_label'] = trim((string) ($data['preview_label'] ?? '')) ?: __('Live Preview');
+        $data['items_per_page'] = $itemsPerPage;
+        $data['templates'] = Template::query()
+            ->with(['translations', 'categoryTemplate.translation', 'categoryTemplate.translations'])
+            ->latest('id')
             ->get();
 
         return $data;
