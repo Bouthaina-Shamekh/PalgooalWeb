@@ -62,7 +62,7 @@
         return trim(str_replace(['-', '_'], ' ', (string) $label));
     };
 
-    $templateName = trim((string) ($translation?->name ?? __('Template')));
+    $templateName = trim((string) ($translation?->name ?? t('Frontend.Template', 'Template')));
     $templateImageUrl = $resolveMediaUrl($template->image, true);
     $shortDesc = Str::limit(Str::of(strip_tags($translation?->description ?? ''))->squish()->toString(), 160);
 
@@ -116,7 +116,7 @@
                 return [
                     'name' => $label,
                     'src' => $src,
-                    'alt' => trim((string) ($item['alt'] ?? ($label !== '' ? $label : __('Development tool')))),
+                    'alt' => trim((string) ($item['alt'] ?? ($label !== '' ? $label : t('Frontend.Development_Tool', 'Development tool')))),
                 ];
             })
             ->filter()
@@ -405,9 +405,9 @@
         : 'IE11, Firefox, Safari, Opera, Chrome, Edge';
 
     $sidebarHighlights = collect([
-        $featureOne['title'] ?? __('12 months support'),
-        $featureTwo['title'] ?? __('Included Dashboard'),
-        $featureThree['title'] ?? __('Free upgrades'),
+        $featureOne['title'] ?? t('Frontend.Months_Support', '12 months support'),
+        $featureTwo['title'] ?? t('Frontend.Included_Dashboard', 'Included Dashboard'),
+        $featureThree['title'] ?? t('Frontend.Free_Upgrades', 'Free upgrades'),
     ])->filter()->take(3)->values();
 
     $relatedTemplates = TemplateModel::query()
@@ -439,7 +439,7 @@
             }
 
             return [
-                'name' => trim((string) ($itemTranslation->name ?? __('Template'))),
+                'name' => trim((string) ($itemTranslation->name ?? t('Frontend.Template', 'Template'))),
                 'slug' => $itemTranslation->slug,
                 'image' => $resolveMediaUrl($item->image, true),
             ];
@@ -514,7 +514,7 @@
                         rel="noopener"
                         class="rounded-xl bg-red-brand px-6 py-2.5 text-base text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-opacity-90 hover:shadow-lg md:text-xl"
                     >
-                        {{ __('Live Preview') }}
+                        {{ t('Frontend.Live_Preview', 'Live Preview') }}
                     </a>
                 @endif
             </div>
@@ -534,7 +534,7 @@
                     </div>
 
                     <div class="animate-from-left border-b border-gray-200 pb-8">
-                        <h2 class="mb-1 text-xl font-bold text-purple-brand">{{ __('Product details') }}</h2>
+                        <h2 class="mb-1 text-xl font-bold text-purple-brand">{{ t('Frontend.Product_Details', 'Product details') }}</h2>
                         <p class="text-base leading-relaxed text-purple-brand md:text-xl">
                             {{ $productDetailsText }}
                         </p>
@@ -542,7 +542,7 @@
 
                     @if ($templateScreens->isNotEmpty())
                         <div class="animate-from-right border-b border-gray-200 pb-8">
-                            <h2 class="mb-4 text-xl font-bold text-purple-brand">{{ __('Template Screens') }}</h2>
+                            <h2 class="mb-4 text-xl font-bold text-purple-brand">{{ t('Frontend.Template_Screens', 'Template Screens') }}</h2>
                             <div class="scrollbar-hide flex select-none gap-3 overflow-x-auto pb-2">
                                 @foreach ($templateScreens as $screen)
                                     <div class="relative aspect-[3/4] w-64 shrink-0 overflow-hidden rounded-xl bg-slate-100">
@@ -556,11 +556,11 @@
 
                     @if ($dashboardImage)
                         <div class="animate-from-left border-b border-gray-200 pb-8">
-                            <h2 class="mb-1 text-xl font-bold text-purple-brand">{{ __('Dashboard') }}</h2>
+                            <h2 class="mb-1 text-xl font-bold text-purple-brand">{{ t('Frontend.Dashboard', 'Dashboard') }}</h2>
                             <p class="mb-4 text-base leading-relaxed text-purple-brand md:text-xl">
                                 {{ $dashboardText }}
                             </p>
-                            <img src="{{ $dashboardImage }}" class="h-64 w-full rounded-[20px] object-cover md:h-96 lg:h-auto" alt="{{ __('Dashboard Preview') }}">
+                            <img src="{{ $dashboardImage }}" class="h-64 w-full rounded-[20px] object-cover md:h-96 lg:h-auto" alt="{{ t('Frontend.Dashboard_Preview', 'Dashboard Preview') }}">
                             @if ($dashboardGallery->isNotEmpty())
                                 <div class="mt-4 flex gap-3 overflow-x-auto pb-2">
                                     @foreach ($dashboardGallery as $image)
@@ -575,7 +575,7 @@
 
                     @if ($features->isNotEmpty())
                         <div class="animate-from-right border-b border-gray-200 pb-8">
-                            <h2 class="mb-1 text-xl font-bold text-purple-brand">{{ __('Features') }}</h2>
+                            <h2 class="mb-1 text-xl font-bold text-purple-brand">{{ t('Frontend.Features', 'Features') }}</h2>
                             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                                 @foreach ($features as $feature)
                                     <div class="flex items-center gap-2">
@@ -591,7 +591,7 @@
 
                     @if ($developmentTools->isNotEmpty())
                         <div class="animate-from-left border-b border-gray-200 pb-8">
-                            <h2 class="mb-2 text-xl font-bold text-purple-brand">{{ __('Used in development') }}</h2>
+                            <h2 class="mb-2 text-xl font-bold text-purple-brand">{{ t('Frontend.Used_In_Development', 'Used in development') }}</h2>
                             <div class="flex flex-wrap gap-3">
                                 @foreach ($developmentTools as $tool)
                                     <div class="h-18 w-25 shrink-0 overflow-hidden rounded-[20px] transition-all duration-300 hover:-translate-y-1" title="{{ $tool['name'] }}">
@@ -602,7 +602,7 @@
                         </div>
                     @elseif ($usedInDevelopmentFallback->isNotEmpty())
                         <div class="animate-from-left border-b border-gray-200 pb-8">
-                            <h2 class="mb-2 text-xl font-bold text-purple-brand">{{ __('Used in development') }}</h2>
+                            <h2 class="mb-2 text-xl font-bold text-purple-brand">{{ t('Frontend.Used_In_Development', 'Used in development') }}</h2>
                             <div class="flex flex-wrap gap-3">
                                 @foreach ($usedInDevelopmentFallback as $tool)
                                     <div class="flex h-18 min-w-[100px] shrink-0 items-center justify-center rounded-[20px] border border-gray-200 bg-white px-4 text-center transition-all duration-300 hover:-translate-y-1">
@@ -615,19 +615,19 @@
 
                     @if ($lastUpdateValue)
                         <div class="animate-from-left border-b border-gray-200 pb-8">
-                            <h2 class="mb-2 text-xl font-bold text-purple-brand">{{ __('Last Update') }}</h2>
+                            <h2 class="mb-2 text-xl font-bold text-purple-brand">{{ t('Frontend.Last_Update', 'Last Update') }}</h2>
                             <p class="text-base leading-relaxed text-purple-brand md:text-xl">{{ $lastUpdateValue }}</p>
                         </div>
                     @endif
 
                     <div class="animate-from-right border-b border-gray-200 pb-8">
-                        <h2 class="mb-2 text-xl font-bold text-purple-brand">{{ __('Compatible Browsers') }}</h2>
+                        <h2 class="mb-2 text-xl font-bold text-purple-brand">{{ t('Frontend.Compatible_Browsers', 'Compatible Browsers') }}</h2>
                         <p class="text-base leading-relaxed text-purple-brand md:text-xl">{{ $browsersValue }}</p>
                     </div>
 
                     @if ($relatedTemplates->isNotEmpty())
                         <div class="animate-from-right pt-4">
-                            <h2 class="mb-3 text-xl font-bold text-purple-brand">{{ __('Other Templates') }}</h2>
+                            <h2 class="mb-3 text-xl font-bold text-purple-brand">{{ t('Frontend.Other_Templates', 'Other Templates') }}</h2>
                             <div id="other-templates-grid" class="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 @foreach ($relatedTemplates as $relatedTemplate)
                                     <a
@@ -663,7 +663,7 @@
                         data-base-price="{{ $basePrice }}"
                     >
                         <div class="flex items-center justify-between border-b border-gray-200 px-2 pb-4">
-                            <h2 class="text-xl font-bold text-purple-brand">{{ __('Subscription price') }}</h2>
+                            <h2 class="text-xl font-bold text-purple-brand">{{ t('Frontend.Subscription_Price', 'Subscription price') }}</h2>
                             <div class="text-end" dir="ltr">
                                 <p id="template-price-value" class="text-3xl font-bold text-red-brand">${{ number_format($finalPrice, 2) }}</p>
                                 @if ($hasDiscount)
@@ -688,7 +688,7 @@
                         </div>
 
                         <div class="mb-6 border-t border-gray-200 px-2 pt-4">
-                            <p class="mb-3 text-xl font-bold text-purple-brand">{{ __('Period') }}</p>
+                            <p class="mb-3 text-xl font-bold text-purple-brand">{{ t('Frontend.Period', 'Period') }}</p>
                             <div class="flex gap-2">
                                 <button
                                     type="button"
@@ -746,13 +746,13 @@
                                 data-base-url="{{ route('checkout.cart') }}"
                                 data-domain="{{ request('domain') }}"
                             >
-                                {{ __('Buy Now') }}
+                                {{ t('Frontend.Buy_Now', 'Buy Now') }}
                             </a>
                         </div>
 
                         @if ($endsAt)
                             <p class="mt-4 text-center text-xs text-slate-500" dir="ltr">
-                                {{ __('Offer ends on') }} {{ $endsAt->locale(app()->getLocale())->translatedFormat('j F Y') }}
+                                {{ t('Frontend.Offer_Ends_On', 'Offer ends on') }} {{ $endsAt->locale(app()->getLocale())->translatedFormat('j F Y') }}
                             </p>
                         @endif
                     </div>
