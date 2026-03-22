@@ -124,6 +124,7 @@ class TemplateController extends Controller
             'category_template_id' => ['required', 'exists:category_templates,id'],
             'plan_id'              => ['required', 'exists:plans,id'],
             'image'                => ['nullable', 'image'],
+            'image_media_id'       => ['nullable', 'integer', 'exists:media,id'],
             'image_media_id'       => ['required_without:image', 'nullable', 'integer', 'exists:media,id'],
 
             'translations'                 => ['required', 'array', 'min:1'],
@@ -236,6 +237,14 @@ class TemplateController extends Controller
                 }
 
                 $template->image = $request->file('image')->store('templates', 'public');
+            } elseif ($request->filled('image_media_id')) {
+                $selectedImagePath = Media::query()
+                    ->whereKey((int) $request->input('image_media_id'))
+                    ->value('file_path');
+
+                if (!empty($selectedImagePath)) {
+                    $template->image = ltrim((string) $selectedImagePath, '/');
+                }
             }
 
             // تحديث بيانات القالب الأساسية
@@ -243,7 +252,7 @@ class TemplateController extends Controller
                 'price'                => $request->price,
                 'discount_price'       => $request->discount_price,
                 'discount_ends_at'     => $request->discount_ends_at,
-                'rating'               => $request->rating ?? 0,
+                'rating'               => $request->filled('rating') ? $request->rating : $template->rating,
                 'category_template_id' => $request->category_template_id,
                 'plan_id'              => $request->plan_id,
                 'image'                => $template->image, // في حال تم تغييرها بالأعلى

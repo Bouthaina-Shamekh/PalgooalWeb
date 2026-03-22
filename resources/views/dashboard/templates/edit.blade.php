@@ -1,398 +1,595 @@
 <x-dashboard-layout>
+    <style>
+        [x-cloak] {
+            display: none !important;
+        }
+    </style>
 
-    <style>[x-cloak]{ display:none !important; }</style>
+    @php
+        $firstLocale = $languages->first()->code ?? null;
+        $templateName = $template->translation()?->name ?? ('Template #' . $template->id);
+        $selectedImageMediaId = old('image_media_id');
+        $selectedImageMedia = $selectedImageMediaId ? \App\Models\Media::find($selectedImageMediaId) : null;
+        $selectedImagePreviewUrls = $selectedImageMedia?->url
+            ? [$selectedImageMedia->url]
+            : ($template->image ? [asset('storage/' . ltrim($template->image, '/'))] : []);
+    @endphp
 
-    <div class="container mx-auto py-6 max-w-5xl">
-        <h1 class="text-2xl font-bold mb-6">✏️ تعديل القالب: {{ $template->translation()?->name ?? 'Template #'.$template->id }}</h1>
+    <div class="min-h-screen bg-slate-50">
+        <div class="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+            <section class="relative overflow-hidden rounded-[32px] bg-slate-950 px-6 py-8 text-white shadow-2xl shadow-slate-900/10 sm:px-8 lg:px-10">
+                <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(168,85,247,0.35),_transparent_35%),radial-gradient(circle_at_bottom_left,_rgba(59,130,246,0.22),_transparent_28%)]"></div>
+                <div class="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                    <div class="max-w-3xl text-right">
+                        <span class="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold tracking-[0.24em] text-violet-100">
+                            TEMPLATE EDITOR
+                        </span>
+                        <h1 class="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">
+                            تعديل القالب
+                        </h1>
+                        <p class="mt-3 max-w-2xl text-sm leading-7 text-slate-300 sm:text-base">
+                            حدّث بيانات القالب الحالية، وراجع الترجمات والمعرض والمميزات من نفس الواجهة الاحترافية المستخدمة في صفحة الإنشاء.
 
-        @if ($errors->any())
-            <div class="bg-red-100 text-red-800 p-4 mb-6 rounded">
-                <ul class="list-disc ps-6">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
-
-        @if (session('success'))
-            <div class="bg-green-100 text-green-800 p-4 mb-6 rounded">
-                {{ session('success') }}
-            </div>
-        @endif
-
-        <form
-            action="{{ route('dashboard.templates.update', $template->id) }}"
-            method="POST"
-            enctype="multipart/form-data"
-            class="space-y-6 bg-white p-6 shadow rounded-lg"
-        >
-            @csrf
-            @method('PUT')
-
-            {{-- التصنيف --}}
-            <div>
-                <label class="block font-bold mb-1">تصنيف القالب:</label>
-                <select name="category_template_id" required class="w-full border border-gray-300 rounded p-2">
-                    <option value="">اختر التصنيف</option>
-                    @foreach ($categories as $category)
-                        <option
-                            value="{{ $category->id }}"
-                            @selected(old('category_template_id', $template->category_template_id) == $category->id)
-                        >
-                            {{ $category->translation?->name ?? 'بدون اسم' }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            {{-- خطة الاستضافة --}}
-            <div>
-                <label class="block font-bold mb-1">خطة الاستضافة المرتبطة:</label>
-                <select name="plan_id" required class="w-full border border-gray-300 rounded p-2">
-                    <option value="">اختر الخطة</option>
-                    @foreach ($plans as $plan)
-                        <option
-                            value="{{ $plan->id }}"
-                            @selected(old('plan_id', $template->plan_id) == $plan->id)
-                        >
-                            {{ $plan->name }} ({{ number_format($plan->price_cents / 100, 2) }} $)
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            {{-- السعر والخصم --}}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label class="block font-bold mb-1">السعر ($):</label>
-                    <input
-                        type="number"
-                        name="price"
-                        step="0.01"
-                        required
-                        class="w-full border p-2 rounded"
-                        value="{{ old('price', $template->price) }}"
-                    />
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">سعر الخصم ($):</label>
-                    <input
-                        type="number"
-                        name="discount_price"
-                        step="0.01"
-                        class="w-full border p-2 rounded"
-                        value="{{ old('discount_price', $template->discount_price) }}"
-                    />
-                </div>
-                <div>
-                    <label class="block font-bold mb-1">تاريخ انتهاء الخصم:</label>
-                    <input
-                        type="datetime-local"
-                        name="discount_ends_at"
-                        class="w-full border p-2 rounded"
-                        value="{{ old('discount_ends_at', $template->discount_ends_at ? $template->discount_ends_at->format('Y-m-d\TH:i') : '') }}"
-                    />
-                </div>
-            </div>
-
-            {{-- صورة القالب --}}
-            <div class="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4 items-start">
-                <div>
-                    <label class="block font-bold mb-1">صورة القالب (يمكن تركها فارغة للإبقاء على الحالية):</label>
-                    <input
-                        type="file"
-                        name="image"
-                        accept="image/*"
-                        class="w-full border p-2 rounded"
-                    />
-                    <p class="mt-1 text-xs text-gray-500">
-                        إذا لم تقم برفع صورة جديدة، ستبقى الصورة الحالية كما هي.
-                    </p>
-                </div>
-                @if ($template->image)
-                    <div class="text-center">
-                        <span class="block text-sm font-semibold mb-2">المعاينة الحالية:</span>
-                        <img
-                            src="{{ asset('storage/'.$template->image) }}"
-                            class="h-24 w-32 object-cover rounded mx-auto border"
-                            alt="صورة القالب الحالية"
-                        >
+                        </p>
                     </div>
-                @endif
-            </div>
 
-            {{-- الترجمة + التابات --}}
-            @php
-                $firstLocale = $languages->first()->code ?? null;
-            @endphp
-
-            <div x-data="{ activeLocale: '{{ $firstLocale }}' }" class="mt-6">
-                <h3 class="text-lg font-bold mb-3 text-gray-900">الترجمات:</h3>
-
-                {{-- Tabs Header --}}
-                <div class="inline-flex flex-wrap items-center gap-2 border-b border-gray-200 pb-2 mb-4">
-                    @foreach ($languages as $language)
-                        @php $locale = $language->code; @endphp
-                        <button
-                            type="button"
-                            @click="activeLocale = '{{ $locale }}'"
-                            :class="activeLocale === '{{ $locale }}'
-                                ? 'bg-primary text-white shadow-sm'
-                                : 'bg-gray-100 text-gray-700'"
-                            class="px-3 py-1.5 rounded-full text-sm font-semibold border border-transparent hover:border-primary/40 transition-colors"
-                        >
-                            {{ $language->name }} ({{ $locale }})
-                        </button>
-                    @endforeach
+                    <div class="grid gap-3 sm:grid-cols-3 lg:min-w-[360px]">
+                        <div class="rounded-2xl border border-white/10 bg-white/10 px-4 py-4 backdrop-blur">
+                            <p class="text-xs font-medium text-slate-300">معرّف القالب</p>
+                            <p class="mt-2 text-2xl font-black text-white">#{{ $template->id }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-white/10 bg-white/10 px-4 py-4 backdrop-blur">
+                            <p class="text-xs font-medium text-slate-300">اللغات الحالية</p>
+                            <p class="mt-2 text-2xl font-black text-white">{{ number_format($template->translations->count()) }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-white/10 bg-white/10 px-4 py-4 backdrop-blur">
+                            <p class="text-xs font-medium text-slate-300">التصنيفات / الخطط</p>
+                            <p class="mt-2 text-2xl font-black text-white">{{ number_format($categories->count()) }}/{{ number_format($plans->count()) }}</p>
+                        </div>
+                    </div>
                 </div>
+            </section>
 
-                {{-- Tabs Content --}}
-                <div class="space-y-6">
-                    @foreach ($languages as $language)
-                        @php
-                            $locale = $language->code;
-                            $i      = $loop->index;
-                            $existing = $template->translations->firstWhere('locale', $locale);
+            @if ($errors->any())
+                <div class="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-800 shadow-sm">
+                    <div class="flex items-start gap-3">
+                        <div class="mt-0.5 rounded-full bg-rose-100 p-2 text-rose-600">
+                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M18 10A8 8 0 1 1 2 10a8 8 0 0 1 16 0Zm-8.75-3a.75.75 0 0 0 1.5 0 .75.75 0 0 0-1.5 0ZM10 8.75a.75.75 0 0 0-.75.75v4a.75.75 0 0 0 1.5 0v-4A.75.75 0 0 0 10 8.75Z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="font-bold">تعذر حفظ القالب. راجع الحقول التالية ثم أعد المحاولة.</p>
+                            <ul class="mt-2 list-disc space-y-1 pe-5 text-sm">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            @endif
 
-                            // معالجة الـ details الموجودة في قاعدة البيانات (array أو JSON)
-                            $existingPayload = $existing?->details;
-                            if (!is_array($existingPayload)) {
-                                $existingPayload = $existingPayload
-                                    ? (json_decode($existingPayload, true) ?: [])
-                                    : [];
-                            }
-                        @endphp
+            <form action="{{ route('dashboard.templates.update', $template->id) }}" method="POST" enctype="multipart/form-data"
+                class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
+                @csrf
+                @method('PUT')
 
-                        <div
-                            x-show="activeLocale === '{{ $locale }}'"
-                            x-cloak
-                            class="border border-gray-200 rounded-xl p-4 sm:p-5 bg-gray-50/60"
-                            data-locale-section
-                        >
-                            <div class="flex items-center justify-between gap-2 mb-3">
-                                <h4 class="font-bold text-primary text-base sm:text-lg">
-                                    [{{ $language->name }}] ({{ $locale }})
-                                </h4>
-                                <span class="text-xs text-gray-500">
-                                    بيانات هذه اللغة فقط.
-                                </span>
-                            </div>
-
-                            <input type="hidden" name="translations[{{ $i }}][locale]" value="{{ $locale }}">
-
-                            {{-- الاسم --}}
-                            <div class="mb-3">
-                                <label class="block font-semibold mb-1 text-gray-800">الاسم:</label>
-                                <input
-                                    type="text"
-                                    name="translations[{{ $i }}][name]"
-                                    class="name-input w-full border border-gray-300 p-2.5 rounded-lg bg-white text-sm focus:ring-primary focus:border-primary"
-                                    required
-                                    value="{{ old("translations.$i.name", $existing->name ?? '') }}"
-                                />
-                            </div>
-
-                            {{-- slug --}}
-                            <div class="mb-3">
-                                <label class="block font-semibold mb-1 flex justify-between items-center text-gray-800">
-                                    <span>الرابط (slug):</span>
-                                    <button
-                                        type="button"
-                                        class="generate-slug text-xs sm:text-sm text-blue-600 hover:underline"
-                                        title="توليد تلقائي من الاسم"
-                                    >
-                                        🔁 توليد تلقائي
-                                    </button>
-                                </label>
-                                <input
-                                    type="text"
-                                    name="translations[{{ $i }}][slug]"
-                                    class="slug-input w-full border border-gray-300 p-2.5 rounded-lg bg-white text-sm focus:ring-primary focus:border-primary"
-                                    required
-                                    value="{{ old("translations.$i.slug", $existing->slug ?? '') }}"
-                                />
-                                <p class="mt-1 text-xs text-gray-500">
-                                    يُستخدم هذا الحقل في الرابط: مثال: <code>my-store-template</code>
-                                </p>
-                            </div>
-
-                            {{-- رابط المعاينة --}}
-                            <div class="mb-3">
-                                <label class="block font-semibold mb-1 text-gray-800">
-                                    رابط المعاينة (اختياري):
-                                </label>
-                                <input
-                                    type="url"
-                                    name="translations[{{ $i }}][preview_url]"
-                                    class="w-full border border-gray-300 p-2.5 rounded-lg bg-white text-sm focus:ring-primary focus:border-primary"
-                                    value="{{ old("translations.$i.preview_url", $existing->preview_url ?? '') }}"
-                                />
-                            </div>
-
-                            {{-- الوصف --}}
-                            <div class="mb-4">
-                                <label class="block font-semibold mb-1 text-gray-800">الوصف:</label>
-                                <textarea
-                                    name="translations[{{ $i }}][description]"
-                                    rows="4"
-                                    class="w-full border border-gray-300 p-2.5 rounded-lg bg-white text-sm focus:ring-primary focus:border-primary"
-                                    required
-                                >{{ old("translations.$i.description", $existing->description ?? '') }}</textarea>
-                            </div>
-
-                            {{-- المميزات (Features) --}}
-                            <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white"
-                                 data-features-wrapper>
-                                <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">
-                                        المميزات (Features)
-                                    </h4>
-                                    <div class="flex items-center gap-2">
-                                        <button type="button"
-                                                class="add-feature inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">
-                                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                <path
-                                                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" />
-                                            </svg>
-                                            إضافة ميزة
-                                        </button>
-                                        <button type="button"
-                                                class="clear-features inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200">
-                                            مسح الكل
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="space-y-3" data-features-list></div>
-                            </div>
-
-                            {{-- المعرض (Gallery) --}}
-                            <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white"
-                                 data-gallery-wrapper>
-                                <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">
-                                        صور من القالب (Gallery)
-                                    </h4>
-                                    <div class="flex items-center gap-2">
-                                        <button type="button"
-                                                class="add-image inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">
-                                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                <path
-                                                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" />
-                                            </svg>
-                                            إضافة صورة
-                                        </button>
-                                        <button type="button"
-                                                class="clear-images inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200">
-                                            مسح الكل
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="space-y-3" data-images-list></div>
-                            </div>
-
-                            {{-- التفاصيل (Details) --}}
-                            <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white"
-                                 data-details-wrapper>
-                                <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">
-                                        تفاصيل إضافية (Details)
-                                    </h4>
-                                    <div class="flex items-center gap-2">
-                                        <button type="button"
-                                                class="add-detail inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">
-                                            إضافة سطر
-                                        </button>
-                                        <button type="button"
-                                                class="clear-details inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200">
-                                            مسح الكل
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="space-y-3" data-details-list></div>
-                            </div>
-
-                            {{-- المواصفات (Specs) --}}
-                            <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white"
-                                 data-specs-wrapper>
-                                <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">
-                                        مواصفات القالب (Specs)
-                                    </h4>
-                                    <div class="flex items-center gap-2">
-                                        <button type="button"
-                                                class="add-spec inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">
-                                            <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                <path
-                                                    d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" />
-                                            </svg>
-                                            إضافة سطر
-                                        </button>
-                                        <button type="button"
-                                                class="clear-specs inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200">
-                                            مسح الكل
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="space-y-3" data-specs-list></div>
-                            </div>
-
-                            {{-- الوسوم (Tags) --}}
-                            <div class="mb-6 rounded-xl border border-gray-200 p-4 sm:p-5 bg-white"
-                                 data-tags-wrapper>
-                                <div class="flex items-center justify-between flex-wrap gap-3 mb-4">
-                                    <h4 class="text-base sm:text-lg font-bold text-gray-800">
-                                        الوسوم (Tags)
-                                    </h4>
-                                </div>
-                                <div class="flex items-center gap-2 mb-3">
-                                    <input
-                                        type="text"
-                                        class="tag-input w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                                        placeholder="اكتب الوسم ثم اضغط إضافة (مثال: متجر)"
-                                    >
-                                    <button type="button"
-                                            class="add-tag inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-white hover:bg-primary/90 shadow">
-                                        إضافة
-                                    </button>
-                                    <button type="button"
-                                            class="clear-tags inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-gray-700 hover:bg-gray-200">
-                                        مسح الكل
-                                    </button>
-                                </div>
-                                <div class="flex flex-wrap gap-2" data-tags-list></div>
-                            </div>
-
-                            {{-- الحقل المخفي الموحّد (JSON) --}}
-                            @php
-                                $oldDetails = old("translations.$i.details");
-                            @endphp
-                            <input
-                                type="hidden"
-                                name="translations[{{ $i }}][details]"
-                                class="details-json"
-                                value="{{ $oldDetails ? $oldDetails : '' }}"
-                                @if(!$oldDetails && !empty($existingPayload))
-                                    data-existing='@json($existingPayload, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)'
-                                @endif
-                            >
-                            <p class="mt-2 text-xs text-gray-500">
-                                يتم حفظ المميزات + المعرض + المواصفات + التفاصيل + الوسوم كـ JSON تلقائيًا.
+                <div class="space-y-8">
+                    <section class="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
+                        <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+                            <span class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-bold tracking-[0.18em] text-slate-600">
+                                CORE SETUP
+                            </span>
+                            <h2 class="mt-3 text-2xl font-black tracking-tight text-slate-900">الإعدادات الأساسية</h2>
+                            <p class="mt-2 text-sm leading-7 text-slate-500">
+                                اختر التصنيف والخطة ثم اضبط التسعير وصورة الغلاف قبل الانتقال إلى بيانات الترجمة.
                             </p>
                         </div>
-                    @endforeach
-                </div>
-            </div>
 
-            <div>
-                <button type="submit" class="bg-primary hover:bg-primary/80 text-white font-bold py-2 px-4 rounded">
-                    💾 حفظ التعديلات
-                </button>
-            </div>
-        </form>
+                        <div class="grid gap-6 px-6 py-6 sm:px-8 lg:grid-cols-2">
+                            <label class="block">
+                                <span class="mb-2 block text-sm font-semibold text-slate-700">تصنيف القالب</span>
+                                <select name="category_template_id" required
+                                    class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100">
+                                    <option value="">اختر التصنيف</option>
+                                    @foreach ($categories as $category)
+                                        <option value="{{ $category->id }}" @selected(old('category_template_id', $template->category_template_id) == $category->id)>
+                                            {{ $category->translation?->name ?? ('#' . $category->id) }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </label>
+
+                            <label class="block">
+                                <span class="mb-2 block text-sm font-semibold text-slate-700">الخطة المرتبطة</span>
+                                <select name="plan_id" required
+                                    class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100">
+                                    <option value="">اختر الخطة</option>
+                                    @foreach ($plans as $plan)
+                                        <option value="{{ $plan->id }}" @selected(old('plan_id', $template->plan_id) == $plan->id)>
+                                            {{ $plan->title ?: ($plan->name ?? ('#' . $plan->id)) }}
+                                            @if ($plan->monthly_price_formatted || $plan->annual_price_formatted)
+                                                (
+                                                @if ($plan->monthly_price_formatted)
+                                                    شهري {{ $plan->monthly_price_formatted }}
+                                                @endif
+                                                @if ($plan->monthly_price_formatted && $plan->annual_price_formatted)
+                                                    /
+                                                @endif
+                                                @if ($plan->annual_price_formatted)
+                                                    سنوي {{ $plan->annual_price_formatted }}
+                                                @endif
+                                                )
+                                            @endif
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </label>
+
+                            <label class="block">
+                                <span class="mb-2 block text-sm font-semibold text-slate-700">السعر الأساسي ($)</span>
+                                <input type="number" name="price" step="0.01" required value="{{ old('price', $template->price) }}"
+                                    class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                                    placeholder="99.00" />
+                            </label>
+
+                            <label class="block">
+                                <span class="mb-2 block text-sm font-semibold text-slate-700">سعر الخصم ($)</span>
+                                <input type="number" name="discount_price" step="0.01" value="{{ old('discount_price', $template->discount_price) }}"
+                                    class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                                    placeholder="اختياري" />
+                            </label>
+
+                            <label class="block lg:col-span-2">
+                                <span class="mb-2 block text-sm font-semibold text-slate-700">تاريخ انتهاء الخصم</span>
+                                <input type="datetime-local" name="discount_ends_at" value="{{ old('discount_ends_at', $template->discount_ends_at ? $template->discount_ends_at->format('Y-m-d\TH:i') : '') }}"
+                                    class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100" />
+                            </label>
+
+                            <div class="lg:col-span-2 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 px-5 py-5">
+                                <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-center">
+                                    <div>
+                                        <p class="text-sm font-semibold text-slate-900">صورة القالب الرئيسية</p>
+                                        <p class="mt-2 text-sm leading-7 text-slate-500">
+                                            ارفع صورة غلاف واضحة بنسبة قريبة من 16:9 أو 5:3 لتظهر بشكل مناسب في صفحة
+                                            العرض وفي قوائم القوالب.
+                                        </p>
+                                    </div>
+                                    <div class="block">
+                                        <span class="sr-only">صورة القالب</span>
+                                        <x-dashboard.media-picker
+                                            id="template_image_media_id"
+                                            name="image_media_id"
+                                            label="اختر صورة القالب من مكتبة الميديا"
+                                            :value="$selectedImageMediaId"
+                                            :preview-urls="$selectedImagePreviewUrls"
+                                            button-text="اختيار من Media Picker"
+                                            class="col-span-12"
+                                        />
+                                        @error('image_media_id')
+                                            <p class="mt-2 text-sm text-rose-600">{{ $message }}</p>
+                                        @enderror
+                                        <p class="mt-3 text-xs leading-6 text-slate-500">
+                                            سيتم استخدام الصورة المختارة من Media Picker كغلاف رئيسي للقالب.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
+                        <div class="border-b border-slate-200 px-6 py-5 sm:px-8">
+                            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                                <div>
+                                    <span class="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-bold tracking-[0.18em] text-violet-700">
+                                        TRANSLATIONS
+                                    </span>
+                                    <h2 class="mt-3 text-2xl font-black tracking-tight text-slate-900">بيانات الترجمة والمحتوى</h2>
+                                    <p class="mt-2 text-sm leading-7 text-slate-500">
+                                        لكل لغة اسم ورابط ووصف مستقل، مع مميزات ومعرض وصور وتفاصيل إضافية محفوظة تلقائيًا
+                                        بصيغة JSON.
+                                    </p>
+                                </div>
+
+                                <div class="w-full lg:w-auto lg:min-w-[440px]">
+                                    <p class="mb-3 text-xs font-bold tracking-[0.18em] text-slate-500">
+                                        اختر اللغة التي تريد تعديلها
+                                    </p>
+                                    <div class="grid gap-2 sm:grid-cols-2">
+                                    @foreach ($languages as $language)
+                                        @php
+                                            $locale = $language->code;
+                                            $isActiveLocale = $locale === $firstLocale;
+                                        @endphp
+                                        <button type="button"
+                                            data-locale-tab="{{ $locale }}"
+                                            aria-pressed="{{ $isActiveLocale ? 'true' : 'false' }}"
+                                            class="flex items-center gap-3 rounded-2xl border px-4 py-3 text-start transition {{ $isActiveLocale ? 'border-violet-300 bg-violet-50 text-violet-950 shadow-sm ring-2 ring-violet-100' : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50' }}">
+                                            <span class="flex flex-1 items-center gap-3">
+                                                <span data-locale-badge="{{ $locale }}"
+                                                    class="inline-flex h-10 w-10 items-center justify-center rounded-full text-xs font-black {{ $isActiveLocale ? 'bg-violet-600 text-white' : 'bg-slate-100 text-slate-700' }}">
+                                                    {{ strtoupper($locale) }}
+                                                </span>
+                                                <span class="min-w-0 flex-1 text-right">
+                                                    <span class="block text-sm font-black">{{ $language->name }}</span>
+                                                    <span data-locale-meta="{{ $locale }}"
+                                                        class="mt-1 block text-xs {{ $isActiveLocale ? 'text-violet-700' : 'text-slate-500' }}">بيانات هذه اللغة</span>
+                                                </span>
+                                            </span>
+                                            <span data-locale-check="{{ $locale }}"
+                                                class="inline-flex h-8 w-8 items-center justify-center rounded-full {{ $isActiveLocale ? 'bg-violet-100 text-violet-700' : 'hidden bg-slate-100 text-slate-400' }}">
+                                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                    <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.2 7.261a1 1 0 0 1-1.42-.008L4.3 10.08a1 1 0 1 1 1.4-1.428l2.998 2.94 6.5-6.55a1 1 0 0 1 1.414-.006Z" clip-rule="evenodd" />
+                                                </svg>
+                                            </span>
+                                        </button>
+                                    @endforeach
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6 px-6 py-6 sm:px-8">
+                            @foreach ($languages as $language)
+                                @php
+                                    $locale = $language->code;
+                                    $i = $loop->index;
+                                    $existing = $template->translations->firstWhere('locale', $locale);
+                                    $existingPayload = $existing?->details;
+                                    if (!is_array($existingPayload)) {
+                                        $existingPayload = $existingPayload
+                                            ? (json_decode($existingPayload, true) ?: [])
+                                            : [];
+                                    }
+                                    $initialDetailsRaw = old("translations.$i.details", '');
+                                    $initialDetailsDecoded = is_string($initialDetailsRaw) && $initialDetailsRaw !== ''
+                                        ? (json_decode($initialDetailsRaw, true) ?: [])
+                                        : $existingPayload;
+                                    $initialGalleryPaths = collect(is_array($initialDetailsDecoded) ? ($initialDetailsDecoded['gallery'] ?? []) : [])
+                                        ->map(fn($item) => is_array($item) ? trim((string) ($item['src'] ?? '')) : '')
+                                        ->filter()
+                                        ->values()
+                                        ->all();
+                                    $initialGalleryPreviewUrls = collect($initialGalleryPaths)
+                                        ->map(function ($path) {
+                                            if (filter_var($path, FILTER_VALIDATE_URL)) {
+                                                return $path;
+                                            }
+
+                                            if (str_starts_with($path, '/')) {
+                                                return $path;
+                                            }
+
+                                            return \Illuminate\Support\Facades\Storage::disk('public')->url($path);
+                                        })
+                                        ->all();
+                                @endphp
+
+                                <div data-locale-panel="{{ $locale }}"
+                                    class="rounded-[26px] border border-slate-200 bg-slate-50/80 p-5 sm:p-6 {{ $locale === $firstLocale ? '' : 'hidden' }}"
+                                    data-locale-section>
+                                    <div class="mb-6 flex flex-col gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <h3 class="text-xl font-black text-slate-900">{{ $language->name }}</h3>
+                                            <p class="mt-1 text-sm text-slate-500">جميع الحقول أدناه تخص لغة {{ $language->name }} فقط.</p>
+                                        </div>
+                                        <span class="inline-flex items-center self-start rounded-full bg-white px-3 py-1 text-xs font-bold tracking-[0.18em] text-slate-600">
+                                            {{ strtoupper($locale) }}
+                                        </span>
+                                    </div>
+
+                                    <input type="hidden" name="translations[{{ $i }}][locale]" value="{{ $locale }}">
+
+                                    <div class="grid gap-5 lg:grid-cols-2">
+                                        <label class="block">
+                                            <span class="mb-2 block text-sm font-semibold text-slate-700">اسم القالب</span>
+                                            <input type="text" name="translations[{{ $i }}][name]"
+                                                class="name-input w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                                                required value="{{ old("translations.$i.name", $existing->name ?? '') }}" placeholder="Single Product Ecommerce" />
+                                        </label>
+
+                                        <div class="block">
+                                            <label class="mb-2 flex items-center justify-between gap-3 text-sm font-semibold text-slate-700">
+                                                <span>الرابط المختصر (slug)</span>
+                                                <button type="button" class="generate-slug text-xs font-bold text-violet-700 transition hover:text-violet-900">
+                                                    توليد تلقائي
+                                                </button>
+                                            </label>
+                                            <input type="text" name="translations[{{ $i }}][slug]"
+                                                class="slug-input w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                                                required value="{{ old("translations.$i.slug", $existing->slug ?? '') }}" placeholder="single-product-ecommerce" />
+                                            <p class="mt-2 text-xs text-slate-500">يستخدم هذا الرابط في المسار العام لصفحة القالب.</p>
+                                        </div>
+
+                                        <label class="block lg:col-span-2">
+                                            <span class="mb-2 block text-sm font-semibold text-slate-700">رابط المعاينة</span>
+                                            <input type="url" name="translations[{{ $i }}][preview_url]"
+                                                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                                                value="{{ old("translations.$i.preview_url", $existing->preview_url ?? '') }}" placeholder="https://example.com/demo" />
+                                        </label>
+
+                                        <label class="block lg:col-span-2">
+                                            <span class="mb-2 block text-sm font-semibold text-slate-700">الوصف</span>
+                                            <textarea name="translations[{{ $i }}][description]" rows="5"
+                                                class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                                                required placeholder="اكتب وصفًا مختصرًا يشرح وظيفة القالب وأبرز ما يقدمه.">{{ old("translations.$i.description", $existing->description ?? '') }}</textarea>
+                                        </label>
+                                    </div>
+
+                                    <div class="mt-6 grid gap-6 2xl:grid-cols-2">
+                                        <div class="rounded-[22px] border border-slate-200 bg-white p-4 sm:p-5" data-features-wrapper>
+                                            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                                <div>
+                                                    <h4 class="text-base font-black text-slate-900">المميزات</h4>
+                                                    <p class="mt-1 text-xs text-slate-500">أضف نقاط البيع الأساسية التي ستظهر للمستخدم.</p>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <button type="button"
+                                                        class="add-feature btn btn-sm btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold shadow-sm">
+                                                        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                            <path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" />
+                                                        </svg>
+                                                        إضافة ميزة
+                                                    </button>
+                                                    <button type="button"
+                                                        class="clear-features btn btn-sm btn-light inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm">
+                                                        تفريغ الكل
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="space-y-3" data-features-list></div>
+                                        </div>
+
+                                        <div class="rounded-[22px] border border-slate-200 bg-white p-4 sm:p-5" data-gallery-wrapper>
+                                            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                                <div>
+                                                    <h4 class="text-base font-black text-slate-900">المعرض</h4>
+                                                    <p class="mt-1 text-xs text-slate-500">روابط صور الشاشات أو الأمثلة الخاصة بالقالب.</p>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <button type="button"
+                                                        class="add-image hidden btn btn-sm btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold shadow-sm">
+                                                        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                            <path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" />
+                                                        </svg>
+                                                        إضافة صورة
+                                                    </button>
+                                                    <button type="button"
+                                                        class="clear-images btn btn-sm btn-light inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm">
+                                                        تفريغ الكل
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="mb-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                                                <x-dashboard.media-picker
+                                                    id="gallery_picker_{{ $i }}"
+                                                    name="gallery_picker_helper_{{ $i }}"
+                                                    label="اختيار صور من مكتبة الميديا"
+                                                    :value="$initialGalleryPaths"
+                                                    :preview-urls="$initialGalleryPreviewUrls"
+                                                    :multiple="true"
+                                                    store-value="path"
+                                                    button-text="اختيار متعدد من Media Picker"
+                                                    class="col-span-12"
+                                                />
+                                                <p class="mt-3 text-xs leading-6 text-slate-500">
+                                                    يمكنك اختيار عدة صور دفعة واحدة من مكتبة الميديا، وستتم إضافتها تلقائيًا إلى المعرض أدناه.
+                                                </p>
+                                            </div>
+                                            <div class="space-y-3" data-images-list></div>
+                                        </div>
+
+                                        <div class="rounded-[22px] border border-slate-200 bg-white p-4 sm:p-5" data-details-wrapper>
+                                            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                                <div>
+                                                    <h4 class="text-base font-black text-slate-900">تفاصيل إضافية</h4>
+                                                    <p class="mt-1 text-xs text-slate-500">مثل آخر تحديث أو المتصفحات المتوافقة أو أي حقول وصفية أخرى.</p>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <button type="button"
+                                                        class="add-detail btn btn-sm btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold shadow-sm">
+                                                        إضافة تفصيلة
+                                                    </button>
+                                                    <button type="button"
+                                                        class="clear-details btn btn-sm btn-light inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm">
+                                                        تفريغ الكل
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="space-y-3" data-details-list></div>
+                                        </div>
+
+                                        <div class="rounded-[22px] border border-slate-200 bg-white p-4 sm:p-5" data-specs-wrapper>
+                                            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                                <div>
+                                                    <h4 class="text-base font-black text-slate-900">المواصفات</h4>
+                                                    <p class="mt-1 text-xs text-slate-500">قيم تقنية أو تجارية مثل المنصة أو المجال أو نوع المتجر.</p>
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <button type="button"
+                                                        class="add-spec btn btn-sm btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold shadow-sm">
+                                                        <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                            <path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" />
+                                                        </svg>
+                                                        إضافة مواصفة
+                                                    </button>
+                                                    <button type="button"
+                                                        class="clear-specs btn btn-sm btn-light inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm">
+                                                        تفريغ الكل
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="space-y-3" data-specs-list></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mt-6 rounded-[22px] border border-slate-200 bg-white p-4 sm:p-5" data-tags-wrapper>
+                                        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                            <div>
+                                                <h4 class="text-base font-black text-slate-900">الوسوم</h4>
+                                                <p class="mt-1 text-xs text-slate-500">أضف كلمات مفتاحية قصيرة تساعد في تنظيم القالب وعرضه.</p>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3 flex flex-col gap-3 sm:flex-row">
+                                            <input type="text"
+                                                class="tag-input w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                                                placeholder="اكتب الوسم ثم اضغط إضافة" />
+                                            <div class="flex gap-2">
+                                                <button type="button"
+                                                    class="add-tag btn btn-sm btn-primary inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-bold shadow-sm">
+                                                    إضافة وسم
+                                                </button>
+                                                <button type="button"
+                                                    class="clear-tags btn btn-sm btn-light inline-flex items-center justify-center rounded-xl border px-4 py-3 text-sm font-bold shadow-sm">
+                                                    تفريغ الكل
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-wrap gap-2" data-tags-list></div>
+                                    </div>
+
+                                    <input type="hidden" name="translations[{{ $i }}][details]" class="details-json"
+                                        value="{{ $initialDetailsRaw }}"
+                                        @if(!$initialDetailsRaw && !empty($existingPayload))
+                                            data-existing='@json($existingPayload, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)'
+                                        @endif>
+                                    <p class="mt-4 text-xs leading-6 text-slate-500">
+                                        يتم توليد بيانات المميزات والمعرض والمواصفات والتفاصيل والوسوم تلقائيًا داخل حقل JSON
+                                        موحد وقت الحفظ.
+                                    </p>
+                                </div>
+                            @endforeach
+                        </div>
+                    </section>
+                </div>
+
+                <aside class="space-y-6 xl:sticky xl:top-8 xl:self-start">
+                    <section class="overflow-hidden rounded-[28px] bg-slate-950 text-white shadow-2xl shadow-slate-900/10">
+                        <div class="border-b border-white/10 px-6 py-5">
+                            <span class="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-violet-100">
+                                READY TO SAVE
+                            </span>
+                            <h2 class="mt-3 text-2xl font-black tracking-tight">إجراءات الحفظ</h2>
+                            <p class="mt-2 text-sm leading-7 text-slate-300">
+                                بعد الحفظ يمكنك الرجوع للتعديل، إضافة صور أكثر، أو مراجعة صفحة العرض العامة.
+                            </p>
+                        </div>
+
+                        <div class="space-y-5 px-6 py-6">
+                            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+                                <p class="text-xs font-semibold tracking-[0.18em] text-slate-300">ملخص سريع</p>
+                                <div class="mt-4 space-y-3 text-sm text-slate-200">
+                                    <div class="flex items-center justify-between gap-3">
+                                        <span>القالب</span>
+                                        <span class="rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold">{{ $templateName }}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-3">
+                                        <span>اللغات الحالية</span>
+                                        <span class="rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold">{{ number_format($template->translations->count()) }}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between gap-3">
+                                        <span>رقم القالب</span>
+                                        <span class="rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold">#{{ $template->id }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-500 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-violet-400">
+                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path d="M10 2a1 1 0 0 1 1 1v1.293l4.854 4.853a.5.5 0 0 1 .146.354V16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9.5a.5.5 0 0 1 .146-.354L9 4.293V3a1 1 0 0 1 1-1Z" />
+                                </svg>
+                                حفظ التعديلات
+                            </button>
+
+                            <a href="{{ route('dashboard.templates.index') }}"
+                                class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10">
+                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.56l3.22 3.22a.75.75 0 1 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06l4.5-4.5a.75.75 0 0 1 1.06 1.06L5.56 9.25h10.69A.75.75 0 0 1 17 10Z" clip-rule="evenodd" />
+                                </svg>
+                                العودة إلى القائمة
+                            </a>
+                        </div>
+                    </section>
+
+                    <section class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm shadow-slate-200/60">
+                        <h3 class="text-lg font-black text-slate-900">قبل الحفظ</h3>
+                        <div class="mt-4 space-y-4 text-sm leading-7 text-slate-600">
+                            <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                                تأكد من أن لكل لغة اسمًا و`slug` ووصفًا على الأقل، لأن هذه الحقول مطلوبة.
+                            </div>
+                            <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                                إذا أضفت `Preview URL` فاستخدم رابطًا كاملاً وصحيحًا مثل `https://example.com/demo`.
+                            </div>
+                            <div class="rounded-2xl bg-slate-50 px-4 py-3">
+                                الوسوم والمميزات والمواصفات تحفظ تلقائيًا بمجرد تعبئة الحقول، ولا تحتاج أي خطوة إضافية.
+                            </div>
+                        </div>
+                    </section>
+                </aside>
+            </form>
+        </div>
     </div>
 
-    {{-- نفس سكربت create: توليد slug + details JSON --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabs = Array.from(document.querySelectorAll('[data-locale-tab]'));
+            const panels = Array.from(document.querySelectorAll('[data-locale-panel]'));
+
+            if (!tabs.length || !panels.length) {
+                return;
+            }
+
+            const activeClasses = ['border-violet-300', 'bg-violet-50', 'text-violet-950', 'shadow-sm', 'ring-2', 'ring-violet-100'];
+            const inactiveClasses = ['border-slate-200', 'bg-white', 'text-slate-700', 'hover:border-slate-300', 'hover:bg-slate-50'];
+            const activeBadgeClasses = ['bg-violet-600', 'text-white'];
+            const inactiveBadgeClasses = ['bg-slate-100', 'text-slate-700'];
+            const activeMetaClasses = ['text-violet-700'];
+            const inactiveMetaClasses = ['text-slate-500'];
+
+            function activateLocale(locale) {
+                tabs.forEach((tab) => {
+                    const isActive = tab.dataset.localeTab === locale;
+                    const badge = tab.querySelector('[data-locale-badge]');
+                    const meta = tab.querySelector('[data-locale-meta]');
+                    const check = tab.querySelector('[data-locale-check]');
+
+                    tab.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                    tab.classList.remove(...activeClasses, ...inactiveClasses);
+                    tab.classList.add(...(isActive ? activeClasses : inactiveClasses));
+
+                    if (badge) {
+                        badge.classList.remove(...activeBadgeClasses, ...inactiveBadgeClasses);
+                        badge.classList.add(...(isActive ? activeBadgeClasses : inactiveBadgeClasses));
+                    }
+
+                    if (meta) {
+                        meta.classList.remove(...activeMetaClasses, ...inactiveMetaClasses);
+                        meta.classList.add(...(isActive ? activeMetaClasses : inactiveMetaClasses));
+                    }
+
+                    if (check) {
+                        check.classList.toggle('hidden', !isActive);
+                    }
+                });
+
+                panels.forEach((panel) => {
+                    panel.classList.toggle('hidden', panel.dataset.localePanel !== locale);
+                });
+            }
+
+            tabs.forEach((tab) => {
+                tab.addEventListener('click', function() {
+                    activateLocale(tab.dataset.localeTab);
+                });
+            });
+
+            activateLocale(tabs.find((tab) => tab.getAttribute('aria-pressed') === 'true')?.dataset.localeTab || tabs[0].dataset.localeTab);
+        });
+    </script>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const sections = document.querySelectorAll('[data-locale-section]');
@@ -410,20 +607,19 @@
 
                 if (slugInput) {
                     slugInput.addEventListener('input', function() {
-                        this.value = generateSlug(this.value, true);
+                        this.value = generateSlug(this.value);
                     });
                 }
             });
 
-            function generateSlug(input, isManual = false) {
-                let slug = (input || '')
+            function generateSlug(input) {
+                return (input || '')
                     .toLowerCase()
                     .trim()
                     .replace(/[\s_]+/g, '-')
                     .replace(/[^a-zA-Z0-9\u0600-\u06FF\-]+/g, '')
                     .replace(/\-\-+/g, '-')
                     .replace(/^-+|-+$/g, '');
-                return slug;
             }
         });
     </script>
@@ -438,6 +634,10 @@
                 const listImages = section.querySelector('[data-images-list]');
                 const addImage = section.querySelector('.add-image');
                 const clearImages = section.querySelector('.clear-images');
+                const galleryPickerInput = section.querySelector('[id^="gallery_picker_"]');
+                const galleryPickerPreview = galleryPickerInput
+                    ? document.getElementById(`${galleryPickerInput.id}_preview`)
+                    : null;
 
                 const listSpecs = section.querySelector('[data-specs-list]');
                 const addSpec = section.querySelector('.add-spec');
@@ -455,21 +655,107 @@
                 const detailsInp = section.querySelector('.details-json');
 
                 function escapeHtml(str) {
-                    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+                    return (str || '')
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
                         .replace(/'/g, '&#039;');
                 }
 
-                function featureRow(item = { title: '', icon: '' }) {
+                function galleryPreviewUrl(path) {
+                    const value = (path || '').trim();
+                    if (!value) return '';
+                    if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:')) return value;
+                    if (value.startsWith('/')) return value;
+                    return `/storage/${value.replace(/^storage\//i, '').replace(/^\/+/, '')}`;
+                }
+
+                function galleryFileName(path) {
+                    const value = (path || '').trim();
+                    if (!value) return 'Untitled image';
+
+                    const normalized = value.split('?')[0].split('#')[0];
+                    const parts = normalized.split('/').filter(Boolean);
+                    return parts[parts.length - 1] || value;
+                }
+
+                function renderGalleryPickerPreview(paths = []) {
+                    if (!galleryPickerPreview) return;
+
+                    galleryPickerPreview.innerHTML = '';
+
+                    paths.forEach((path) => {
+                        const previewUrl = galleryPreviewUrl(path);
+                        if (!previewUrl) return;
+
+                        const wrapper = document.createElement('div');
+                        wrapper.className = 'relative h-20 w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-50';
+                        wrapper.innerHTML = `<img src="${escapeHtml(previewUrl)}" alt="" class="h-full w-full object-cover">`;
+                        galleryPickerPreview.appendChild(wrapper);
+                    });
+                }
+
+                function syncGalleryPickerFromRows() {
+                    if (!galleryPickerInput) return;
+
+                    const paths = Array.from(listImages?.querySelectorAll('.image-row .img-src') || [])
+                        .map((input) => input.value.trim())
+                        .filter(Boolean);
+
+                    galleryPickerInput.value = paths.join(',');
+                    renderGalleryPickerPreview(paths);
+                }
+
+                function applyGalleryPickerSelection() {
+                    if (!galleryPickerInput || !listImages) return;
+
+                    const selectedPaths = galleryPickerInput.value
+                        .split(',')
+                        .map((value) => value.trim())
+                        .filter(Boolean);
+
+                    const existingAltByPath = Object.fromEntries(
+                        Array.from(listImages.querySelectorAll('.image-row'))
+                            .map((row) => [
+                                row.querySelector('.img-src')?.value.trim() || '',
+                                row.querySelector('.img-alt')?.value.trim() || '',
+                            ])
+                            .filter(([src]) => src)
+                    );
+
+                    listImages.innerHTML = '';
+
+                    selectedPaths.forEach((path) => {
+                        listImages.appendChild(imageRow({
+                            src: path,
+                            alt: existingAltByPath[path] || '',
+                        }));
+                    });
+
+                    renderGalleryPickerPreview(selectedPaths);
+                    syncJson();
+                }
+
+                function featureRow(item = {
+                    title: '',
+                    icon: ''
+                }) {
                     const row = document.createElement('div');
-                    row.className =
-                        'feature-row grid grid-cols-1 sm:grid-cols-[1fr_160px_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
+                    row.className = 'feature-row grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 p-3 sm:grid-cols-[1fr_160px_auto]';
                     row.innerHTML = `
-                        <input type="text" class="feat-title w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                               placeholder="عنوان الميزة" value="${escapeHtml(item.title)}">
-                        <input type="text" class="feat-icon w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                               placeholder="🎨 أيقونة (اختياري)" value="${escapeHtml(item.icon || '')}">
-                        <button type="button" class="remove-feature inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>`;
+                        <input type="text"
+                               class="feat-title w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary"
+                               placeholder="عنوان الميزة"
+                               value="${escapeHtml(item.title)}">
+                        <input type="text"
+                               class="feat-icon w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary"
+                               placeholder="أيقونة أو رمز"
+                               value="${escapeHtml(item.icon || '')}">
+                        <button type="button"
+                                class="remove-feature inline-flex items-center justify-center rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-100">
+                            حذف
+                        </button>`;
                     row.querySelector('.remove-feature').addEventListener('click', () => {
                         row.remove();
                         syncJson();
@@ -478,34 +764,64 @@
                     return row;
                 }
 
-                function imageRow(item = { src: '', alt: '' }) {
+                function imageRow(item = {
+                    src: '',
+                    alt: ''
+                }) {
                     const row = document.createElement('div');
-                    row.className =
-                        'image-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
+                    row.className = 'image-row grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 p-3 sm:grid-cols-[88px_1fr_auto] sm:items-center';
                     row.innerHTML = `
-                        <input type="text" class="img-src w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                               placeholder="رابط الصورة" value="${escapeHtml(item.src)}">
-                        <input type="text" class="img-alt w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                               placeholder="نص بديل (ALT)" value="${escapeHtml(item.alt || '')}">
-                        <button type="button" class="remove-image inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>`;
+                        <input type="hidden"
+                               class="img-src"
+                               placeholder="رابط الصورة"
+                               value="${escapeHtml(item.src)}">
+                        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                            <div class="h-[88px] w-full overflow-hidden bg-slate-100">
+                                <img src="${escapeHtml(galleryPreviewUrl(item.src))}"
+                                     alt=""
+                                     class="h-full w-full object-cover">
+                            </div>
+                            <div class="border-t border-slate-200 px-3 py-2">
+                                <div class="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-400">Image</div>
+                                <div class="mt-1 truncate text-xs font-semibold text-slate-700">${escapeHtml(galleryFileName(item.src))}</div>
+                            </div>
+                        </div>
+                        <input type="text"
+                               class="img-alt w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary"
+                               placeholder="ALT"
+                               value="${escapeHtml(item.alt || '')}">
+                        <button type="button"
+                                class="remove-image inline-flex items-center justify-center rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-100">
+                            حذف
+                        </button>`;
                     row.querySelector('.remove-image').addEventListener('click', () => {
                         row.remove();
+                        syncGalleryPickerFromRows();
                         syncJson();
                     });
-                    row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncJson));
+                    row.querySelector('.img-alt')?.addEventListener('input', syncJson);
                     return row;
                 }
 
-                function specRow(item = { name: '', value: '' }) {
+                function specRow(item = {
+                    name: '',
+                    value: ''
+                }) {
                     const row = document.createElement('div');
-                    row.className =
-                        'spec-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
+                    row.className = 'spec-row grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 p-3 sm:grid-cols-[1fr_1fr_auto]';
                     row.innerHTML = `
-                        <input type="text" class="spec-name w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                               placeholder="الاسم" value="${escapeHtml(item.name)}">
-                        <input type="text" class="spec-value w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                               placeholder="القيمة" value="${escapeHtml(item.value)}">
-                        <button type="button" class="remove-spec inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>`;
+                        <input type="text"
+                               class="spec-name w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary"
+                               placeholder="الاسم"
+                               value="${escapeHtml(item.name)}">
+                        <input type="text"
+                               class="spec-value w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary"
+                               placeholder="القيمة"
+                               value="${escapeHtml(item.value)}">
+                        <button type="button"
+                                class="remove-spec inline-flex items-center justify-center rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-100">
+                            حذف
+                        </button>`;
                     row.querySelector('.remove-spec').addEventListener('click', () => {
                         row.remove();
                         syncJson();
@@ -514,16 +830,25 @@
                     return row;
                 }
 
-                function detailRow(item = { name: '', value: '' }) {
+                function detailRow(item = {
+                    name: '',
+                    value: ''
+                }) {
                     const row = document.createElement('div');
-                    row.className =
-                        'detail-row grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 rounded-lg border border-gray-200 p-3 bg-white';
+                    row.className = 'detail-row grid grid-cols-1 gap-2 rounded-2xl border border-slate-200 p-3 sm:grid-cols-[1fr_1fr_auto]';
                     row.innerHTML = `
-                        <input type="text" class="detail-name w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                               placeholder="العنصر (مثال: آخر تحديث)" value="${escapeHtml(item.name)}">
-                        <input type="text" class="detail-value w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                               placeholder="القيمة (مثال: يوليو 2025)" value="${escapeHtml(item.value)}">
-                        <button type="button" class="remove-detail inline-flex items-center justify-center rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100">حذف</button>`;
+                        <input type="text"
+                               class="detail-name w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary"
+                               placeholder="العنصر"
+                               value="${escapeHtml(item.name)}">
+                        <input type="text"
+                               class="detail-value w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-sm text-slate-900 focus:border-primary focus:ring-primary"
+                               placeholder="القيمة"
+                               value="${escapeHtml(item.value)}">
+                        <button type="button"
+                                class="remove-detail inline-flex items-center justify-center rounded-xl bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-100">
+                            حذف
+                        </button>`;
                     row.querySelector('.remove-detail').addEventListener('click', () => {
                         row.remove();
                         syncJson();
@@ -535,16 +860,18 @@
                 function addTagChip(label) {
                     const text = (label || '').trim();
                     if (!text || !tagsList) return;
+
                     const exists = Array.from(tagsList.querySelectorAll('[data-tag]'))
                         .some(el => (el.dataset.tag || '').toLowerCase() === text.toLowerCase());
                     if (exists) return;
 
                     const chip = document.createElement('span');
-                    chip.className =
-                        'inline-flex items-center gap-1 bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full';
+                    chip.className = 'inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary';
                     chip.setAttribute('data-tag', text);
-                    chip.innerHTML = `${escapeHtml(text)}
-                        <button type="button" class="remove-tag ml-1 text-primary hover:text-primary/70">×</button>`;
+                    chip.innerHTML = `
+                        ${escapeHtml(text)}
+                        <button type="button" class="remove-tag ml-1 text-primary transition hover:text-primary/70">&times;</button>
+                    `;
                     chip.querySelector('.remove-tag').addEventListener('click', () => {
                         chip.remove();
                         syncJson();
@@ -554,27 +881,33 @@
                 }
 
                 function syncJson() {
-                    const features = Array.from(listFeatures?.querySelectorAll('.feature-row') || []).map(
-                        r => ({
+                    const features = Array.from(listFeatures?.querySelectorAll('.feature-row') || [])
+                        .map(r => ({
                             title: r.querySelector('.feat-title')?.value.trim() || '',
-                            icon: r.querySelector('.feat-icon')?.value.trim() || ''
-                        })
-                    ).filter(x => x.title.length);
+                            icon: r.querySelector('.feat-icon')?.value.trim() || '',
+                        }))
+                        .filter(x => x.title.length);
 
-                    const gallery = Array.from(listImages?.querySelectorAll('.image-row') || []).map(r => ({
-                        src: r.querySelector('.img-src')?.value.trim() || '',
-                        alt: r.querySelector('.img-alt')?.value.trim() || ''
-                    })).filter(x => x.src.length);
+                    const gallery = Array.from(listImages?.querySelectorAll('.image-row') || [])
+                        .map(r => ({
+                            src: r.querySelector('.img-src')?.value.trim() || '',
+                            alt: r.querySelector('.img-alt')?.value.trim() || '',
+                        }))
+                        .filter(x => x.src.length);
 
-                    const specs = Array.from(listSpecs?.querySelectorAll('.spec-row') || []).map(r => ({
-                        name: r.querySelector('.spec-name')?.value.trim() || '',
-                        value: r.querySelector('.spec-value')?.value.trim() || ''
-                    })).filter(x => x.name && x.value);
+                    const specs = Array.from(listSpecs?.querySelectorAll('.spec-row') || [])
+                        .map(r => ({
+                            name: r.querySelector('.spec-name')?.value.trim() || '',
+                            value: r.querySelector('.spec-value')?.value.trim() || '',
+                        }))
+                        .filter(x => x.name && x.value);
 
-                    const details = Array.from(listDetails?.querySelectorAll('.detail-row') || []).map(r => ({
-                        name: r.querySelector('.detail-name')?.value.trim() || '',
-                        value: r.querySelector('.detail-value')?.value.trim() || ''
-                    })).filter(x => x.name && x.value);
+                    const details = Array.from(listDetails?.querySelectorAll('.detail-row') || [])
+                        .map(r => ({
+                            name: r.querySelector('.detail-name')?.value.trim() || '',
+                            value: r.querySelector('.detail-value')?.value.trim() || '',
+                        }))
+                        .filter(x => x.name && x.value);
 
                     const tags = Array.from(tagsList?.querySelectorAll('[data-tag]') || [])
                         .map(el => (el.dataset.tag || '').trim())
@@ -583,16 +916,15 @@
                     let payload = {};
                     try {
                         if (detailsInp.value) payload = JSON.parse(detailsInp.value) || {};
-                        else if (detailsInp.dataset.existing) payload = JSON.parse(detailsInp.dataset.existing) || {};
                     } catch (e) {
                         payload = {};
                     }
 
                     payload.features = features;
-                    payload.gallery  = gallery;
-                    payload.specs    = specs;
-                    payload.details  = details;
-                    payload.tags     = tags;
+                    payload.gallery = gallery;
+                    payload.specs = specs;
+                    payload.details = details;
+                    payload.tags = tags;
 
                     detailsInp.value = JSON.stringify(payload);
                 }
@@ -620,8 +952,6 @@
                     if (listImages) {
                         if (Array.isArray(existing.gallery) && existing.gallery.length) {
                             existing.gallery.forEach(img => listImages.appendChild(imageRow(img)));
-                        } else {
-                            listImages.appendChild(imageRow());
                         }
                     }
 
@@ -656,12 +986,20 @@
 
                     addImage?.addEventListener('click', () => {
                         listImages.appendChild(imageRow());
+                        syncGalleryPickerFromRows();
                         syncJson();
                     });
                     clearImages?.addEventListener('click', () => {
                         listImages.innerHTML = '';
+                        if (galleryPickerInput) {
+                            galleryPickerInput.value = '';
+                        }
+                        renderGalleryPickerPreview([]);
                         syncJson();
                     });
+
+                    galleryPickerInput?.addEventListener('input', applyGalleryPickerSelection);
+                    galleryPickerInput?.addEventListener('change', applyGalleryPickerSelection);
 
                     addSpec?.addEventListener('click', () => {
                         listSpecs.appendChild(specRow());
@@ -698,10 +1036,10 @@
                         syncJson();
                     });
 
+                    syncGalleryPickerFromRows();
                     syncJson();
                 })();
             });
         });
     </script>
-
 </x-dashboard-layout>
