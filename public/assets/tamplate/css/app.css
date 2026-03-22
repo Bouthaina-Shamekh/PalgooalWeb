@@ -2874,6 +2874,12 @@
       background-color: color-mix(in oklab, currentcolor 5%, transparent);
     }
   }
+  .bg-cyan-500\/10 {
+    background-color: color-mix(in srgb, oklch(71.5% 0.143 215.221) 10%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-cyan-500) 10%, transparent);
+    }
+  }
   .bg-cyan-700 {
     background-color: var(--color-cyan-700);
   }
@@ -5686,6 +5692,13 @@
       }
     }
   }
+  .hover\:border-violet-300 {
+    &:hover {
+      @media (hover: hover) {
+        border-color: var(--color-violet-300);
+      }
+    }
+  }
   .hover\:bg-\[\#240B36\] {
     &:hover {
       @media (hover: hover) {
@@ -6103,6 +6116,13 @@
       }
     }
   }
+  .hover\:bg-violet-50 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-violet-50);
+      }
+    }
+  }
   .hover\:bg-violet-400 {
     &:hover {
       @media (hover: hover) {
@@ -6310,6 +6330,13 @@
     &:hover {
       @media (hover: hover) {
         color: var(--color-cyan-700);
+      }
+    }
+  }
+  .hover\:text-cyan-900 {
+    &:hover {
+      @media (hover: hover) {
+        color: var(--color-cyan-900);
       }
     }
   }
@@ -7950,6 +7977,11 @@
       grid-column: span 8 / span 8;
     }
   }
+  .lg\:row-start-1 {
+    @media (width >= 64rem) {
+      grid-row-start: 1;
+    }
+  }
   .lg\:-mx-6 {
     @media (width >= 64rem) {
       margin-inline: calc(var(--spacing) * -6);
@@ -8770,6 +8802,20 @@
       }
     }
   }
+  .ltr\:lg\:col-start-1 {
+    &:where(:dir(ltr), [dir="ltr"], [dir="ltr"] *) {
+      @media (width >= 64rem) {
+        grid-column-start: 1;
+      }
+    }
+  }
+  .ltr\:lg\:col-start-5 {
+    &:where(:dir(ltr), [dir="ltr"], [dir="ltr"] *) {
+      @media (width >= 64rem) {
+        grid-column-start: 5;
+      }
+    }
+  }
   .ltr\:lg\:flex-row {
     &:where(:dir(ltr), [dir="ltr"], [dir="ltr"] *) {
       @media (width >= 64rem) {
@@ -8974,6 +9020,20 @@
     &:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
       @media (width >= 64rem) {
         order: 2;
+      }
+    }
+  }
+  .rtl\:lg\:col-start-1 {
+    &:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
+      @media (width >= 64rem) {
+        grid-column-start: 1;
+      }
+    }
+  }
+  .rtl\:lg\:col-start-9 {
+    &:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
+      @media (width >= 64rem) {
+        grid-column-start: 9;
       }
     }
   }

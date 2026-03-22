@@ -165,6 +165,56 @@
         return $description !== '' || $hasImages;
     };
 
+    $resolveBrowsers = static function (array $details) {
+        $browsers = collect($details['browsers'] ?? [])
+            ->filter(fn ($browser) => is_string($browser) && trim($browser) !== '')
+            ->map(fn ($browser) => trim($browser))
+            ->unique()
+            ->values();
+
+        if ($browsers->isNotEmpty()) {
+            return $browsers;
+        }
+
+        $legacyFromDetails = collect($details['details'] ?? [])
+            ->first(function ($item) {
+                if (! is_array($item)) {
+                    return false;
+                }
+
+                return Str::contains(Str::lower(trim((string) ($item['name'] ?? ($item['label'] ?? '')))), ['browser', 'browsers']);
+            });
+
+        if (is_array($legacyFromDetails) && filled($legacyFromDetails['value'] ?? null)) {
+            return collect(explode(',', (string) $legacyFromDetails['value']))
+                ->map(fn ($browser) => trim($browser))
+                ->filter()
+                ->unique()
+                ->values();
+        }
+
+        $legacySpecs = $details['specs'] ?? [];
+        if (is_array($legacySpecs) && array_is_list($legacySpecs)) {
+            $legacyFromSpecs = collect($legacySpecs)->first(function ($item) {
+                if (! is_array($item)) {
+                    return false;
+                }
+
+                return Str::contains(Str::lower(trim((string) ($item['name'] ?? ''))), ['browser', 'browsers']);
+            });
+
+            if (is_array($legacyFromSpecs) && filled($legacyFromSpecs['value'] ?? null)) {
+                return collect(explode(',', (string) $legacyFromSpecs['value']))
+                    ->map(fn ($browser) => trim($browser))
+                    ->filter()
+                    ->unique()
+                    ->values();
+            }
+        }
+
+        return collect();
+    };
+
     $features = collect($payload['features'] ?? [])
         ->filter(fn ($feature) => is_array($feature) && filled($feature['title'] ?? null))
         ->map(fn ($feature) => [
@@ -278,6 +328,31 @@
         ])
         ->values();
 
+    $browserList = $resolveBrowsers($payload);
+
+    if ($browserList->isEmpty()) {
+        $fallbackTranslationWithBrowsers = $template->translations
+            ->first(function ($candidate) use ($translation, $resolveBrowsers) {
+                if (! $candidate || ($translation && $candidate->is($translation))) {
+                    return false;
+                }
+
+                $candidatePayload = is_array($candidate->details)
+                    ? $candidate->details
+                    : (json_decode($candidate->details ?? '[]', true) ?: []);
+
+                return $resolveBrowsers($candidatePayload)->isNotEmpty();
+            });
+
+        if ($fallbackTranslationWithBrowsers) {
+            $fallbackPayload = is_array($fallbackTranslationWithBrowsers->details)
+                ? $fallbackTranslationWithBrowsers->details
+                : (json_decode($fallbackTranslationWithBrowsers->details ?? '[]', true) ?: []);
+
+            $browserList = $resolveBrowsers($fallbackPayload);
+        }
+    }
+
     $tags = collect($payload['tags'] ?? [])
         ->filter(fn ($tag) => is_string($tag) && trim($tag) !== '')
         ->map(fn ($tag) => trim($tag))
@@ -321,13 +396,13 @@
         ? $template->updated_at->locale(app()->getLocale())->translatedFormat('j F Y')
         : null;
 
-    $browserDetail = $detailsList->first(fn ($item) => Str::contains(Str::lower($item['name']), ['browser', 'browsers']));
-    $browserSpec = $specs->first(fn ($item) => Str::contains(Str::lower($item['name']), ['browser', 'browsers']));
     $featureOne = $features->get(0);
     $featureTwo = $features->get(1);
     $featureThree = $features->get(2);
 
-    $browsersValue = $browserDetail['value'] ?? $browserSpec['value'] ?? 'IE11, Firefox, Safari, Opera, Chrome, Edge';
+    $browsersValue = $browserList->isNotEmpty()
+        ? $browserList->implode(', ')
+        : 'IE11, Firefox, Safari, Opera, Chrome, Edge';
 
     $sidebarHighlights = collect([
         $featureOne['title'] ?? __('12 months support'),
@@ -445,7 +520,7 @@
             </div>
 
             <div class="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start lg:gap-4">
-                <div class="order-1 space-y-10 lg:col-span-8">
+                <div class="order-1 space-y-10 lg:col-span-8 lg:row-start-1 ltr:lg:col-start-5 rtl:lg:col-start-1">
                     <div class="animate-from-right relative overflow-hidden rounded-[20px] bg-white p-2 md:p-4">
                         <div class="relative">
                             @if ($templateImageUrl)
@@ -580,7 +655,7 @@
                     @endif
                 </div>
 
-                <div id="subscription-sidebar" class="order-2 sticky top-6 z-20 self-start lg:col-span-4 lg:top-24 lg:self-start">
+                <div id="subscription-sidebar" class="order-2 sticky top-6 z-20 self-start lg:col-span-4 lg:row-start-1 lg:top-24 lg:self-start ltr:lg:col-start-1 rtl:lg:col-start-9">
                     <div
                         class="animate-from-left rounded-[20px] border border-gray-100 bg-white p-6"
                         data-template-price-box

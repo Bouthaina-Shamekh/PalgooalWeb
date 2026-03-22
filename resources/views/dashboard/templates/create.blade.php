@@ -473,6 +473,38 @@
                                         </div>
                                     </div>
 
+                                    <div class="mt-6 rounded-[22px] border border-slate-200 bg-white p-4 sm:p-5" data-browsers-wrapper>
+                                        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                            <div>
+                                                <h4 class="text-base font-black text-slate-900">Compatible Browsers</h4>
+                                                <p class="mt-1 text-xs text-slate-500">اختر المتصفحات المتوافقة مع القالب، ويمكنك إضافة متصفح مخصص إذا لزم.</p>
+                                            </div>
+                                            <button type="button"
+                                                class="clear-browsers btn btn-sm btn-light inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-bold shadow-sm">
+                                                تفريغ الكل
+                                            </button>
+                                        </div>
+                                        <div class="mb-4 flex flex-wrap gap-2">
+                                            @foreach (['Chrome', 'Firefox', 'Safari', 'Edge', 'Opera', 'IE11'] as $browserPreset)
+                                                <button type="button"
+                                                    class="browser-preset inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700"
+                                                    data-browser-preset="{{ $browserPreset }}">
+                                                    {{ $browserPreset }}
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                        <div class="mb-3 flex flex-col gap-3 sm:flex-row">
+                                            <input type="text"
+                                                class="browser-input w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100"
+                                                placeholder="أضف متصفحًا مخصصًا ثم اضغط إضافة" />
+                                            <button type="button"
+                                                class="add-browser btn btn-sm btn-primary inline-flex items-center justify-center rounded-xl px-4 py-3 text-sm font-bold shadow-sm">
+                                                إضافة متصفح
+                                            </button>
+                                        </div>
+                                        <div class="flex flex-wrap gap-2" data-browsers-list></div>
+                                    </div>
+
                                     <div class="mt-6 rounded-[22px] border border-slate-200 bg-white p-4 sm:p-5" data-tags-wrapper>
                                         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
                                             <div>
@@ -501,7 +533,7 @@
                                     <input type="hidden" name="translations[{{ $i }}][details]" class="details-json"
                                         value="{{ old("translations.$i.details", '') }}">
                                     <p class="mt-4 text-xs leading-6 text-slate-500">
-                                        يتم توليد بيانات المميزات والمعرض وDashboard والتفاصيل والوسوم تلقائيًا داخل حقل JSON
+                                        يتم توليد بيانات المميزات والمعرض وDashboard والتفاصيل والمتصفحات والوسوم تلقائيًا داخل حقل JSON
                                         موحد وقت الحفظ.
                                     </p>
                                 </div>
@@ -697,6 +729,12 @@
                 const listDetails = section.querySelector('[data-details-list]');
                 const addDetail = section.querySelector('.add-detail');
                 const clearDetails = section.querySelector('.clear-details');
+
+                const browserInput = section.querySelector('.browser-input');
+                const addBrowserBtn = section.querySelector('.add-browser');
+                const clearBrowsersBtn = section.querySelector('.clear-browsers');
+                const browsersList = section.querySelector('[data-browsers-list]');
+                const browserPresetButtons = Array.from(section.querySelectorAll('[data-browser-preset]'));
 
                 const tagsInput = section.querySelector('.tag-input');
                 const addTagBtn = section.querySelector('.add-tag');
@@ -1020,6 +1058,58 @@
                     return row;
                 }
 
+                function deriveLegacyBrowsers(existing = {}) {
+                    if (Array.isArray(existing.browsers) && existing.browsers.length) {
+                        return existing.browsers;
+                    }
+
+                    const fromText = (value) => (value || '')
+                        .split(',')
+                        .map((item) => item.trim())
+                        .filter(Boolean);
+
+                    const legacyDetail = Array.isArray(existing.details)
+                        ? existing.details.find((item) => /browser/i.test((item?.name || item?.label || '').toLowerCase()) && typeof item?.value === 'string')
+                        : null;
+
+                    if (legacyDetail?.value) {
+                        return fromText(legacyDetail.value);
+                    }
+
+                    const legacySpec = Array.isArray(existing.specs)
+                        ? existing.specs.find((item) => /browser/i.test((item?.name || '').toLowerCase()) && typeof item?.value === 'string')
+                        : null;
+
+                    if (legacySpec?.value) {
+                        return fromText(legacySpec.value);
+                    }
+
+                    return [];
+                }
+
+                function addBrowserChip(label) {
+                    const text = (label || '').trim();
+                    if (!text || !browsersList) return;
+
+                    const exists = Array.from(browsersList.querySelectorAll('[data-browser]'))
+                        .some((el) => (el.dataset.browser || '').toLowerCase() === text.toLowerCase());
+                    if (exists) return;
+
+                    const chip = document.createElement('span');
+                    chip.className = 'inline-flex items-center gap-1 rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-bold text-cyan-700';
+                    chip.setAttribute('data-browser', text);
+                    chip.innerHTML = `
+                        ${escapeHtml(text)}
+                        <button type="button" class="remove-browser ml-1 text-cyan-700 transition hover:text-cyan-900">&times;</button>
+                    `;
+                    chip.querySelector('.remove-browser').addEventListener('click', () => {
+                        chip.remove();
+                        syncJson();
+                    });
+                    browsersList.appendChild(chip);
+                    syncJson();
+                }
+
                 function addTagChip(label) {
                     const text = (label || '').trim();
                     if (!text || !tagsList) return;
@@ -1083,6 +1173,10 @@
                         })
                         .filter(x => x.src);
 
+                    const browsers = Array.from(browsersList?.querySelectorAll('[data-browser]') || [])
+                        .map((el) => (el.dataset.browser || '').trim())
+                        .filter(Boolean);
+
                     const tags = Array.from(tagsList?.querySelectorAll('[data-tag]') || [])
                         .map(el => (el.dataset.tag || '').trim())
                         .filter(Boolean);
@@ -1098,6 +1192,7 @@
                     payload.gallery = gallery;
                     payload.specs = specs;
                     payload.details = details;
+                    payload.browsers = browsers;
                     payload.tags = tags;
 
                     detailsInp.value = JSON.stringify(payload);
@@ -1149,6 +1244,10 @@
                         }
                     }
 
+                    if (browsersList) {
+                        deriveLegacyBrowsers(existing).forEach((browser) => addBrowserChip(browser));
+                    }
+
                     if (tagsList && Array.isArray(existing.tags) && existing.tags.length) {
                         existing.tags.forEach(t => addTagChip(t));
                     }
@@ -1197,6 +1296,29 @@
                     });
                     clearDetails?.addEventListener('click', () => {
                         listDetails.innerHTML = '';
+                        syncJson();
+                    });
+
+                    addBrowserBtn?.addEventListener('click', () => {
+                        addBrowserChip(browserInput?.value || '');
+                        if (browserInput) {
+                            browserInput.value = '';
+                            browserInput.focus();
+                        }
+                    });
+                    browserInput?.addEventListener('keydown', (event) => {
+                        if (event.key !== 'Enter') return;
+                        event.preventDefault();
+                        addBrowserChip(browserInput.value);
+                        browserInput.value = '';
+                    });
+                    browserPresetButtons.forEach((button) => {
+                        button.addEventListener('click', () => addBrowserChip(button.dataset.browserPreset || ''));
+                    });
+                    clearBrowsersBtn?.addEventListener('click', () => {
+                        if (browsersList) {
+                            browsersList.innerHTML = '';
+                        }
                         syncJson();
                     });
 
