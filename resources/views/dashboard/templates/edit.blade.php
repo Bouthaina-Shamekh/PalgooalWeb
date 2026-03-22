@@ -3,6 +3,28 @@
         [x-cloak] {
             display: none !important;
         }
+
+        .template-save-button {
+            background: linear-gradient(135deg, #240b36 0%, #6d28d9 100%) !important;
+            border: 1px solid #240b36 !important;
+            color: #fff !important;
+            box-shadow: 0 16px 32px -20px rgba(36, 11, 54, 0.55);
+        }
+
+        .template-save-button:hover {
+            background: linear-gradient(135deg, #1b0829 0%, #5b21b6 100%) !important;
+        }
+
+        .template-back-button {
+            background: #fff !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #1e293b !important;
+        }
+
+        .template-back-button:hover {
+            background: #f8fafc !important;
+            border-color: #94a3b8 !important;
+        }
     </style>
 
     @php
@@ -466,51 +488,53 @@
                 </div>
 
                 <aside class="space-y-6 xl:sticky xl:top-8 xl:self-start">
-                    <section class="overflow-hidden rounded-[28px] bg-slate-950 text-white shadow-2xl shadow-slate-900/10">
-                        <div class="border-b border-white/10 px-6 py-5">
-                            <span class="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-violet-100">
+                    <section class="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm shadow-slate-200/60">
+                        <div class="border-b border-slate-200 px-6 py-5">
+                            <span class="inline-flex items-center rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-violet-700">
                                 READY TO SAVE
                             </span>
-                            <h2 class="mt-3 text-2xl font-black tracking-tight">إجراءات الحفظ</h2>
-                            <p class="mt-2 text-sm leading-7 text-slate-300">
+                            <h2 class="mt-3 text-2xl font-black tracking-tight text-slate-900">إجراءات الحفظ</h2>
+                            <p class="mt-2 text-sm leading-7 text-slate-600">
                                 بعد الحفظ يمكنك الرجوع للتعديل، إضافة صور أكثر، أو مراجعة صفحة العرض العامة.
                             </p>
                         </div>
 
                         <div class="space-y-5 px-6 py-6">
-                            <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
-                                <p class="text-xs font-semibold tracking-[0.18em] text-slate-300">ملخص سريع</p>
-                                <div class="mt-4 space-y-3 text-sm text-slate-200">
+                            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <p class="text-xs font-semibold tracking-[0.18em] text-slate-500">ملخص سريع</p>
+                                <div class="mt-4 space-y-3 text-sm text-slate-700">
                                     <div class="flex items-center justify-between gap-3">
                                         <span>القالب</span>
-                                        <span class="rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold">{{ $templateName }}</span>
+                                        <span class="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-slate-900 shadow-sm ring-1 ring-slate-200">{{ $templateName }}</span>
                                     </div>
                                     <div class="flex items-center justify-between gap-3">
                                         <span>اللغات الحالية</span>
-                                        <span class="rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold">{{ number_format($template->translations->count()) }}</span>
+                                        <span class="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-slate-900 shadow-sm ring-1 ring-slate-200">{{ number_format($template->translations->count()) }}</span>
                                     </div>
                                     <div class="flex items-center justify-between gap-3">
                                         <span>رقم القالب</span>
-                                        <span class="rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold">#{{ $template->id }}</span>
+                                        <span class="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-slate-900 shadow-sm ring-1 ring-slate-200">#{{ $template->id }}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <button type="submit"
-                                class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-500 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-violet-400">
-                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path d="M10 2a1 1 0 0 1 1 1v1.293l4.854 4.853a.5.5 0 0 1 .146.354V16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9.5a.5.5 0 0 1 .146-.354L9 4.293V3a1 1 0 0 1 1-1Z" />
-                                </svg>
-                                حفظ التعديلات
-                            </button>
+                            <div class="grid gap-4 pt-3">
+                                <button type="submit"
+                                    class="template-save-button inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold transition hover:-translate-y-0.5">
+                                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <path d="M10 2a1 1 0 0 1 1 1v1.293l4.854 4.853a.5.5 0 0 1 .146.354V16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9.5a.5.5 0 0 1 .146-.354L9 4.293V3a1 1 0 0 1 1-1Z" />
+                                    </svg>
+                                    حفظ التعديلات
+                                </button>
 
-                            <a href="{{ route('dashboard.templates.index') }}"
-                                class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-bold text-white transition hover:bg-white/10">
-                                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fill-rule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.56l3.22 3.22a.75.75 0 1 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06l4.5-4.5a.75.75 0 0 1 1.06 1.06L5.56 9.25h10.69A.75.75 0 0 1 17 10Z" clip-rule="evenodd" />
-                                </svg>
-                                العودة إلى القائمة
-                            </a>
+                                <a href="{{ route('dashboard.templates.index') }}"
+                                    class="template-back-button inline-flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3.5 text-sm font-bold transition">
+                                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.56l3.22 3.22a.75.75 0 1 1-1.06 1.06l-4.5-4.5a.75.75 0 0 1 0-1.06l4.5-4.5a.75.75 0 0 1 1.06 1.06L5.56 9.25h10.69A.75.75 0 0 1 17 10Z" clip-rule="evenodd" />
+                                    </svg>
+                                    العودة إلى القائمة
+                                </a>
+                            </div>
                         </div>
                     </section>
 
