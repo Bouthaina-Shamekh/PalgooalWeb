@@ -110,54 +110,80 @@
         }
     </style>
 @endpush
-{{-- الصورة --}}
-<div class="col-span-6">
-    <label class="block text-sm font-medium">الصورة الافتراضية</label>
+{{-- الصورة الافتراضية --}}
+@php
+    // إذا كانت البيانات نصية (من قاعدة البيانات القديمة بمسارات)، احفظها
+    // إذا كانت رقمية (من media picker)، استخدمها مباشرة
+    $rawDefaultImage = old('default_image', $portfolio->default_image ?? null);
+    $defaultImageId = null;
+    $defaultImagePreviewUrls = [];
+    
+    // إذا كانت القيمة رقمية، هذا ID من media picker
+    if (is_numeric($rawDefaultImage)) {
+        $defaultImageId = (int)$rawDefaultImage;
+        $media = \App\Models\Media::find($defaultImageId);
+        if ($media && $media->file_path) {
+            $defaultImagePreviewUrls = [asset('storage/' . $media->file_path)];
+        }
+    } elseif (is_string($rawDefaultImage) && !empty($rawDefaultImage)) {
+        // نصية = مسار قديم، استخدمها للمعاينة فقط
+        $defaultImagePreviewUrls = [asset('storage/' . $rawDefaultImage)];
+        // سنحفظها كنص حالياً (للتوافقية للخلف)
+        $defaultImageId = $rawDefaultImage;
+    }
+@endphp
+<x-dashboard.media-picker 
+    id="default_image_picker"
+    name="default_image" 
+    label="الصورة الافتراضية"
+    :value="$defaultImageId"
+    :previewUrls="$defaultImagePreviewUrls"
+    buttonText="اختر صورة من المكتبة"
+/>
 
-    <div class="flex items-center gap-2">
-        <input type="hidden" id="imageInput" name="default_image"
-            value="{{ old('default_image', $portfolio->default_image ?? '') }}">
-        <button type="button" data-mode="single"
-            class="openMediaModal bg-primary text-white px-2 py-1 rounded text-sm">
-            اختر من الوسائط
-        </button>
-    </div>
 
-    @if (!empty($portfolio->default_image))
-        <img src="{{ asset('storage/' . $portfolio->default_image) }}" class="mt-2 w-12 h-12">
-    @endif
-
-    @error('default_image')
-        <span class="text-red-600">{{ $message }}</span>
-    @enderror
-</div>
-
-
-{{-- الصور --}}
-<div class="col-span-6">
-    <label class="block text-sm font-medium">الصور المتعددة</label>
-
-    <div class="flex items-center gap-2">
-        <input type="hidden" id="imagesInput" name="images"
-            value="{{ old('images', isset($portfolio->images) ? implode(',', json_decode($portfolio->images)) : '') }}">
-        <button type="button" data-mode="multiple"
-            class="openMediaModal bg-primary text-white px-2 py-1 rounded text-sm">
-            اختر من الوسائط
-        </button>
-    </div>
-
-    @if (!empty($portfolio->images))
-        <div class="flex flex-wrap gap-2 mt-2">
-            @foreach (json_decode($portfolio->images) as $image)
-                <img src="{{ asset('storage/' . $image) }}" class="w-12 h-12 object-cover rounded">
-            @endforeach
-        </div>
-    @endif
-
-    @error('images')
-        <span class="text-red-600">{{ $message }}</span>
-    @enderror
-</div>
+{{-- الصور المتعددة --}}
+@php
+    $rawImages = old('images', $portfolio->images ?? null);
+    $imagesArray = [];
+    $imagesPreviewUrls = [];
+    
+    if ($rawImages) {
+        // تحويل JSON إلى array إذا لزم الأمر
+        if (is_string($rawImages)) {
+            $decoded = json_decode($rawImages, true);
+            $imagesArray = (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) ? $decoded : [];
+        } elseif (is_array($rawImages)) {
+            $imagesArray = $rawImages;
+        }
+        
+        // إذا كانت العناصر أرقام (IDs من media picker)
+        if (!empty($imagesArray) && is_numeric($imagesArray[0] ?? null)) {
+            $mediaRecords = \App\Models\Media::whereIn('id', $imagesArray)->get();
+            foreach ($mediaRecords as $media) {
+                if ($media->file_path) {
+                    $imagesPreviewUrls[] = asset('storage/' . $media->file_path);
+                }
+            }
+        } else {
+            // مسارات قديمة (للتوافقية للخلف)
+            foreach ($imagesArray as $path) {
+                if (!empty($path)) {
+                    $imagesPreviewUrls[] = asset('storage/' . $path);
+                }
+            }
+        }
+    }
+@endphp
+<x-dashboard.media-picker 
+    id="images_picker"
+    name="images" 
+    label="الصور المتعددة"
+    multiple="true"
+    :value="implode(',', array_filter($imagesArray))"
+    :previewUrls="$imagesPreviewUrls"
+    buttonText="اختر صورًا من المكتبة"
+/>
 
 
 {{-- مدة التنفيذ بالأيام --}}

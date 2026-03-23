@@ -537,6 +537,11 @@
                     $techStackLogosValue = old("translations.$code.content.logos", $content['logos'] ?? []);
                     $techStackLogoPreviewUrls = [];
 
+                       // تحويل array إلى CSV string للاستخدام في media-picker
+                       $techStackLogosValueForComponent = is_array($techStackLogosValue)
+                           ? implode(',', array_filter(array_map('strval', $techStackLogosValue)))
+                           : (is_string($techStackLogosValue) ? $techStackLogosValue : '');
+
                     $buildMediaPreviewUrls = static function ($value): array {
                         if (is_numeric($value)) {
                             $mediaItem = Media::find((int) $value);
@@ -2986,7 +2991,7 @@
                                     :name="'translations['.$code.'][content][logos]'"
                                     :label="__('Stack Logos')"
                                     :button-text="__('Choose From Media Library')"
-                                    :value="$techStackLogosValue"
+                                       :value="$techStackLogosValueForComponent"
                                     :preview-urls="$techStackLogoPreviewUrls"
                                     :multiple="true"
                                     store-value="id"

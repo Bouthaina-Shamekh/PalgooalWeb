@@ -111,6 +111,37 @@ class PortfolioController extends Controller
         return view('dashboard.portfolios.create', compact('portfolio', 'portfolioTranslations', 'languages', 'typeSuggestions', 'statusSuggestions'));
     }
 
+    /**
+     * Convert Media IDs to file paths
+     */
+    private function resolveMediaIdsToPaths($input)
+    {
+        if (!$input) {
+            return null;
+        }
+
+        if (is_numeric($input)) {
+            // Single ID
+            $media = \App\Models\Media::find($input);
+            return $media?->file_path;
+        }
+
+        if (is_string($input)) {
+            // CSV of IDs
+            $ids = array_filter(explode(',', $input));
+            if (!empty($ids)) {
+                $paths = \App\Models\Media::whereIn('id', $ids)
+                    ->pluck('file_path')
+                    ->filter()
+                    ->values()
+                    ->toArray();
+                return !empty($paths) ? json_encode($paths) : null;
+            }
+        }
+
+        return null;
+    }
+
     public function store(Request $request)
     {
         $baseRules = [
@@ -118,6 +149,8 @@ class PortfolioController extends Controller
             'delivery_date' => 'required|date',
             'implementation_period_days' => 'required|integer',
             'client' => 'nullable|string',
+            'default_image' => 'nullable|integer|exists:media,id',
+            'images' => 'nullable|string',
         ];
 
         $translationRules = $this->buildTranslationRules($request);
@@ -135,9 +168,15 @@ class PortfolioController extends Controller
                 ?? (collect($translations)->firstWhere('title')['title'] ?? 'portfolio');
 
             $slug = $this->generateUniqueSlug($titleForSlug);
-            $request->merge(['slug' => $slug]);
+
+            // Convert media IDs to paths
+            $portfolioData = $request->except(['translations']);
+            $portfolioData['slug'] = $slug;
+            $portfolioData['default_image'] = $this->resolveMediaIdsToPaths($request->input('default_image'));
+            $portfolioData['images'] = $this->resolveMediaIdsToPaths($request->input('images'));
+
             // حفظ البيانات
-            $portfolio = Portfolio::create($request->all());
+            $portfolio = Portfolio::create($portfolioData);
 
             // حفظ الترجمات
             foreach ($request->translations as $translation) {
@@ -194,6 +233,8 @@ class PortfolioController extends Controller
             'delivery_date' => 'required|date',
             'implementation_period_days' => 'required|integer',
             'client' => 'nullable|string',
+            'default_image' => 'nullable|integer|exists:media,id',
+            'images' => 'nullable|string',
         ];
         $translationRules = $this->buildTranslationRules($request);
         $request->validate($baseRules + $translationRules);
@@ -209,8 +250,13 @@ class PortfolioController extends Controller
                 })['title']
                 ?? (collect($translations)->firstWhere('title')['title'] ?? 'portfolio');
 
-            $request->merge(['slug' => $this->generateUniqueSlug($titleForSlug, $id)]);
-            $portfolio->update($request->all());
+            // Convert media IDs to paths
+            $portfolioData = $request->except(['translations']);
+            $portfolioData['slug'] = $this->generateUniqueSlug($titleForSlug, $id);
+            $portfolioData['default_image'] = $this->resolveMediaIdsToPaths($request->input('default_image'));
+            $portfolioData['images'] = $this->resolveMediaIdsToPaths($request->input('images'));
+
+            $portfolio->update($portfolioData);
 
             // إعادة إدخال الترجمات
             foreach ($request->translations as $translation) {
@@ -246,4 +292,3 @@ class PortfolioController extends Controller
         return redirect()->route('dashboard.portfolios.index')->with('success', 'تم حذف القالب بنجاح.');
     }
 }
-

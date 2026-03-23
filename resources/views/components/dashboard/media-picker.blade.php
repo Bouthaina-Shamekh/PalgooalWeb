@@ -16,18 +16,53 @@
     $isMultiple = (bool) $multiple;
     $buttonText = $buttonText ?: __('Choose From Media Library');
 
+    $extractScalarValue = static function ($item): ?string {
+        if (is_scalar($item)) {
+            $value = trim((string) $item);
+            return $value !== '' ? $value : null;
+        }
+
+        if (is_array($item)) {
+            foreach (['id', 'media_id', 'value', 'file_path', 'path', 'url'] as $key) {
+                if (array_key_exists($key, $item) && is_scalar($item[$key])) {
+                    $value = trim((string) $item[$key]);
+                    if ($value !== '') {
+                        return $value;
+                    }
+                }
+            }
+
+            foreach ($item as $nested) {
+                if (is_scalar($nested)) {
+                    $value = trim((string) $nested);
+                    if ($value !== '') {
+                        return $value;
+                    }
+                }
+            }
+        }
+
+        return null;
+    };
+
     if ($isMultiple) {
         if (is_string($value)) {
-            $idsArray = array_filter(explode(',', $value));
+            $idsArray = array_values(array_filter(array_map('trim', explode(',', $value))));
         } elseif (is_array($value)) {
-            $idsArray = $value;
+            $idsArray = collect($value)
+                ->map($extractScalarValue)
+                ->filter()
+                ->values()
+                ->all();
         } else {
             $idsArray = [];
         }
 
         $inputValue = implode(',', $idsArray);
     } else {
-        $inputValue = is_array($value) ? (reset($value) ?: '') : ($value ?? '');
+        $inputValue = is_array($value)
+            ? ($extractScalarValue($value) ?? '')
+            : (is_scalar($value) ? (string) $value : '');
     }
 
     if ($previewUrls instanceof \Illuminate\Support\Collection) {
