@@ -128,7 +128,7 @@
                 </button>
 
                 <button type="button" id="media-picker-confirm"
-                    class="rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700
+                    class="rounded-full bg-primary px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700
                            disabled:opacity-60 disabled:cursor-not-allowed">
                     استخدام العناصر المحددة
                 </button>
