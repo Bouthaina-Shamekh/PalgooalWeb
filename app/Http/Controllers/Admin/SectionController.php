@@ -8,6 +8,7 @@ use App\Models\Page;
 use App\Models\Section;
 use App\Models\SectionTranslation;
 use App\Models\Template;
+use App\Support\Sections\SectionEditorDataFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -167,17 +168,26 @@ class SectionController extends Controller
             );
         });
 
+        if (! $createdSection instanceof Section) {
+            abort(500, 'Section could not be created.');
+        }
+
+        $createdSection->refresh()->load('translations');
+
         $redirectUrl = route('dashboard.pages.sections.index', [
             'page' => $page,
             'highlight' => $createdSection->id,
             'edit' => $createdSection->id,
         ]);
+        $editorUrl = route('dashboard.pages.sections.editor', [$page, $createdSection], false);
 
         if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'ok' => true,
                 'redirect_url' => $redirectUrl,
+                'editor_url' => $editorUrl,
                 'section_id' => $createdSection->id,
+                'section_card_html' => $this->renderSectionOutlineItem($page, $createdSection),
                 'message' => 'Section added. Continue customizing it in the editor.',
             ]);
         }
@@ -392,8 +402,8 @@ class SectionController extends Controller
         ]);
 
         $orderedIds = collect($validated['ids'])
-            ->map(fn ($id) => (int) $id)
-            ->filter(fn ($id) => $id > 0)
+            ->map(fn($id) => (int) $id)
+            ->filter(fn($id) => $id > 0)
             ->unique()
             ->values();
 
@@ -408,7 +418,7 @@ class SectionController extends Controller
             ->orderBy('order')
             ->orderBy('id')
             ->pluck('id')
-            ->map(fn ($id) => (int) $id)
+            ->map(fn($id) => (int) $id)
             ->values();
 
         if ($orderedIds->diff($pageSectionIds)->isNotEmpty()) {
@@ -419,7 +429,7 @@ class SectionController extends Controller
         }
 
         $missingIds = $pageSectionIds
-            ->reject(fn ($id) => $orderedIds->contains($id))
+            ->reject(fn($id) => $orderedIds->contains($id))
             ->values();
 
         $finalOrder = $orderedIds
@@ -469,6 +479,10 @@ class SectionController extends Controller
                 ]);
             }
         });
+
+        if (! $duplicate instanceof Section) {
+            abort(500, 'Section could not be duplicated.');
+        }
 
         return redirect()
             ->route('dashboard.pages.sections.index', ['page' => $page, 'highlight' => $duplicate->id])
@@ -774,7 +788,7 @@ class SectionController extends Controller
                     'url' => '#',
                     'new_tab' => false,
                 ],
-            'features' => [
+                'features' => [
                     ['text' => 'Choose Your Template', 'icon_source' => 'class', 'icon' => 'ti ti-layout-grid'],
                     ['text' => 'Website Hosting', 'icon_source' => 'class', 'icon' => 'ti ti-server'],
                     ['text' => 'Control Panel', 'icon_source' => 'class', 'icon' => 'ti ti-settings'],
@@ -1032,7 +1046,7 @@ class SectionController extends Controller
 
         if (is_array($featuresRaw)) {
             $features = array_values(array_filter(array_map(
-                static fn ($item) => is_scalar($item) ? trim((string) $item) : '',
+                static fn($item) => is_scalar($item) ? trim((string) $item) : '',
                 $featuresRaw
             )));
         } else {
@@ -1365,7 +1379,7 @@ class SectionController extends Controller
             )));
         } elseif (is_array($logosRaw)) {
             $logos = array_values(array_filter(array_map(
-                static fn ($item) => is_scalar($item) ? trim((string) $item) : '',
+                static fn($item) => is_scalar($item) ? trim((string) $item) : '',
                 $logosRaw
             )));
         } else {
@@ -1431,7 +1445,7 @@ class SectionController extends Controller
 
                     return is_numeric($id) ? (int) $id : null;
                 })
-                ->filter(fn ($id) => $id && $id > 0)
+                ->filter(fn($id) => $id && $id > 0)
                 ->values()
                 ->all(),
         ];
@@ -1619,7 +1633,7 @@ class SectionController extends Controller
         }
 
         return collect(preg_split("/\r\n|\r|\n/", (string) $featuresRaw))
-            ->map(fn ($item) => trim((string) $item))
+            ->map(fn($item) => trim((string) $item))
             ->filter()
             ->values()
             ->all();
@@ -1650,10 +1664,10 @@ class SectionController extends Controller
     {
         if (! is_array($featuresRaw)) {
             return collect(preg_split("/\r\n|\r|\n/", (string) $featuresRaw))
-                ->map(fn ($item) => trim((string) $item))
+                ->map(fn($item) => trim((string) $item))
                 ->filter()
                 ->values()
-                ->map(fn ($item) => [
+                ->map(fn($item) => [
                     'text' => $item,
                     'icon_source' => 'class',
                     'icon' => null,
@@ -1818,8 +1832,8 @@ class SectionController extends Controller
 
         foreach ($sharedKeys as $sharedKey) {
             $sharedValue = collect($translations)
-                ->map(fn ($translation) => data_get($translation, "content.$sharedKey"))
-                ->first(fn ($value) => ! is_null($value) && $value !== '');
+                ->map(fn($translation) => data_get($translation, "content.$sharedKey"))
+                ->first(fn($value) => ! is_null($value) && $value !== '');
 
             if ($sharedValue === null || $sharedValue === '') {
                 continue;
@@ -1875,6 +1889,20 @@ class SectionController extends Controller
     }
 
     /**
+     * Render the shared sidebar outline card for async quick-add responses.
+     */
+    protected function renderSectionOutlineItem(Page $page, Section $section): string
+    {
+        return view('dashboard.pages.sections.partials.outline-item', [
+            'page' => $page,
+            'section' => $section,
+            'sectionTypes' => $this->availableSectionTypes(),
+            'currentLocale' => app()->getLocale(),
+            'selectedSectionId' => $section->id,
+        ])->render();
+    }
+
+    /**
      * Return the next display order for a page.
      */
     protected function nextOrderForPage(Page $page): int
@@ -1911,11 +1939,15 @@ class SectionController extends Controller
             ->orderBy('id')
             ->get();
 
+        $sectionTypes = $this->availableSectionTypes();
+        $editorState = app(SectionEditorDataFactory::class)->make($section, $languages, $sectionTypes);
+
         return [
             'page' => $page,
             'section' => $section,
             'languages' => $languages,
-            'sectionTypes' => $this->availableSectionTypes(),
+            'sectionTypes' => $sectionTypes,
+            'editorState' => $editorState,
         ];
     }
 }
