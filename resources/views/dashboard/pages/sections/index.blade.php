@@ -196,7 +196,7 @@
 @endsection
 
 @section('workspace-main')
-    <div class="-mx-4 lg:-mx-6 sections-preview-shell-host">
+    <div id="sections-preview-shell-host" class="-mx-4 lg:-mx-6 sections-preview-shell-host">
         @if ($sections->isEmpty())
             <div
                 class="mx-4 rounded-[2rem] border border-dashed border-slate-300 bg-white/80 px-6 py-16 text-center lg:mx-6">
@@ -440,8 +440,9 @@
             const sidebarEmptyState = document.querySelector('[data-sections-empty-state]');
             const sidebarOutlinePanel = document.querySelector('[data-sections-sidebar-outline]');
             const sidebarEditorPanel = document.querySelector('[data-sections-sidebar-editor]');
-            const previewFrame = document.getElementById('sections-preview-frame');
-            const previewViewport = document.getElementById('sections-preview-viewport');
+            const previewShellHost = document.getElementById('sections-preview-shell-host');
+            let previewFrame = document.getElementById('sections-preview-frame');
+            let previewViewport = document.getElementById('sections-preview-viewport');
             const previewDeviceButtons = Array.from(document.querySelectorAll('[data-preview-device]'));
             const previewRefreshButtons = Array.from(document.querySelectorAll('[data-refresh-sections-preview]'));
             const sidebarOpenButton = document.getElementById('sections-sidebar-open-btn');
@@ -460,7 +461,8 @@
             const activeStatusLabel = @json(__('Active'));
             const hiddenStatusLabel = @json(__('Hidden'));
             const autoEditSectionId = Number(@json($autoEditSectionId));
-            const frameBaseUrl = previewFrame?.dataset.baseUrl || '';
+            const frameBaseUrl = @json($previewBaseUrl);
+            const previewFrameTitle = @json(__('Live sections preview'));
             let currentSelectedSectionId = Number(@json($selectedSectionId));
 
             const showSectionsAlert = (tone, messages, title = '') => {
@@ -654,8 +656,54 @@
                 }, window.location.origin);
             };
 
+            const bindPreviewFrameLoadHandler = () => {
+                if (!previewFrame || previewFrame.dataset.previewLoadBound === '1') {
+                    return;
+                }
+
+                previewFrame.addEventListener('load', function() {
+                    if (currentSelectedSectionId) {
+                        window.setTimeout(() => postPreviewHighlight(currentSelectedSectionId), 120);
+                    }
+                });
+
+                previewFrame.dataset.previewLoadBound = '1';
+            };
+
+            const getActivePreviewDevice = () => {
+                return previewViewport?.dataset.device
+                    || previewDeviceButtons.find((button) => button.classList.contains('is-active'))?.dataset.previewDevice
+                    || 'desktop';
+            };
+
+            const ensurePreviewFrame = () => {
+                if (previewFrame && previewViewport) {
+                    return true;
+                }
+
+                if (!previewShellHost || !frameBaseUrl) {
+                    return false;
+                }
+
+                const activeDevice = getActivePreviewDevice();
+                previewShellHost.innerHTML = `
+                    <div id="sections-preview-stage" class="sections-preview-stage">
+                        <div id="sections-preview-viewport" class="sections-preview-viewport" data-device="${activeDevice}">
+                            <iframe id="sections-preview-frame" class="sections-preview-frame" data-base-url="${frameBaseUrl}" title="${previewFrameTitle}"></iframe>
+                        </div>
+                    </div>
+                `;
+
+                previewFrame = document.getElementById('sections-preview-frame');
+                previewViewport = document.getElementById('sections-preview-viewport');
+                bindPreviewFrameLoadHandler();
+                applyPreviewDevice(activeDevice);
+
+                return Boolean(previewFrame && previewViewport);
+            };
+
             const refreshPreviewFrame = () => {
-                if (!previewFrame || !frameBaseUrl) {
+                if (!frameBaseUrl || !ensurePreviewFrame() || !previewFrame) {
                     return;
                 }
 
@@ -1061,13 +1109,7 @@
                 });
             });
 
-            if (previewFrame) {
-                previewFrame.addEventListener('load', function() {
-                    if (currentSelectedSectionId) {
-                        window.setTimeout(() => postPreviewHighlight(currentSelectedSectionId), 120);
-                    }
-                });
-            }
+            bindPreviewFrameLoadHandler();
 
             window.addEventListener('message', function(event) {
                 if (event.origin !== window.location.origin) {
@@ -1166,9 +1208,10 @@
 
                         closeDrawer();
                         ensureSidebarVisible();
+                        refreshPreviewFrame();
                         await openSectionEditor(payload.section_id, payload.editor_url, payload
                             .redirect_url, true);
-                        focusSectionPreview(Number(payload.section_id), true);
+                        focusSectionPreview(Number(payload.section_id));
 
                         if (payload.message) {
                             showSectionsAlert('success', [payload.message], successAlertTitle);
