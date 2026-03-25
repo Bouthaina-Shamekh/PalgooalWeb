@@ -44,11 +44,20 @@
     $showLoginButton = (bool) ($variantSettings['show_login_button'] ?? true);
     $loginLabel = $resolveLocalizedText($variantSettings['login_label'] ?? null, 'Login');
     $loginUrl = trim((string) ($variantSettings['login_url'] ?? '/client/login'));
-    $usesClientDashboardLogin = trim($loginUrl, '/') === 'client/login';
-    $canAccessClientDashboard = auth('client')->check();
-    $resolvedLoginUrl = $usesClientDashboardLogin && $canAccessClientDashboard ? route('client.home') : $loginUrl;
-    $resolvedLoginLabel =
-        $usesClientDashboardLogin && $canAccessClientDashboard ? t('frontend.Client_Area', 'Client Area') : $loginLabel;
+    $clientUser = auth('client')->user();
+    $canAccessClientDashboard = (bool) $clientUser;
+    $clientDisplayName = trim((string) (($clientUser->first_name ?? '') . ' ' . ($clientUser->last_name ?? '')));
+    if ($clientDisplayName === '') {
+        $clientDisplayName = trim((string) ($clientUser->company_name ?? ''));
+    }
+    if ($clientDisplayName === '') {
+        $clientDisplayName = trim((string) ($clientUser->email ?? ''));
+    }
+    if ($clientDisplayName === '') {
+        $clientDisplayName = t('frontend.Client_Area', 'Client Area');
+    }
+    $resolvedLoginUrl = $canAccessClientDashboard ? route('client.home') : $loginUrl;
+    $resolvedLoginLabel = $canAccessClientDashboard ? $clientDisplayName : $loginLabel;
     $shouldRenderLoginButton = $showLoginButton;
     $showLanguageSwitcher = (bool) ($variantSettings['show_language_switcher'] ?? true);
     $contactButtonLabel = $resolveLocalizedText($variantSettings['contact_button_label'] ?? null, 'Contact us');

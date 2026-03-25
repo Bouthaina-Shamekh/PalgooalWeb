@@ -91,6 +91,22 @@ Responsibilities:
 - normalize content before save
 - manage reorder, move, duplicate, toggle, rename, and delete operations
 
+### Editor Support Classes
+
+Primary files:
+
+- `app/Support/Sections/SectionEditorDataFactory.php`
+- `app/Support/Sections/SectionEditorRepeaterFactory.php`
+- `app/Support/Sections/SectionMediaPreviewBuilder.php`
+
+Responsibilities today:
+
+- `SectionEditorDataFactory` builds the top-level `editorState` payload, including selected type handling, field visibility flags, locale scalar values, and preload datasets
+- `SectionEditorRepeaterFactory` prepares normalized locale repeater rows for features, outputs, services, build steps, and pricing structures
+- `SectionMediaPreviewBuilder` resolves preview URLs from media IDs, relative asset paths, and absolute URLs
+
+These classes now hold most read-time editor preparation that previously lived directly in Blade.
+
 ### Shared Editor Form
 
 Primary file:
@@ -100,13 +116,11 @@ Primary file:
 Responsibilities today:
 
 - render the input markup
-- calculate which fields are visible for a section type
-- merge `old()` input with saved values
-- shape repeater data for UI rendering
-- prepare media preview URLs
-- load some admin-only option data
+- consume prepared `editorState` from the support layer
+- preserve the shared input and `data-*` contract for both editor surfaces
+- resolve view-time media previews through `SectionMediaPreviewBuilder`
 
-This file is the main maintenance hotspot.
+This file remains the main shared UI surface, but it is no longer the primary place for editor state preparation.
 
 ### Wrapper Views
 
@@ -151,23 +165,18 @@ The controller loads:
 - active languages
 - section type metadata
 
-Today, `sectionEditorViewData()` returns a deliberately thin payload.
-
-That is good for controller simplicity, but it pushes too much preparation into Blade.
+`sectionEditorViewData()` now delegates read-time editor preparation to `SectionEditorDataFactory`, which returns the shared `editorState` payload used by both editor surfaces.
 
 ### 2. Render Shared Form
 
-The shared form partial computes render-time editor state.
+The shared form partial now primarily renders the prepared editor state.
 
 Current responsibilities inside Blade include:
 
-- selected type canonicalization
-- alias handling such as `templates-pages`
-- field visibility booleans
-- locale-specific field defaults
-- nested repeater preparation
-- media preview URL generation
-- admin-only preload queries
+- rendering fields from precomputed flags and locale values
+- preserving the shared input naming contract
+- rendering repeater rows from prepared arrays
+- generating preview image lists through `SectionMediaPreviewBuilder`
 
 ### 3. Submit Update
 
@@ -194,13 +203,14 @@ That means one change can break:
 
 ### Mixed Responsibilities In Blade
 
-The shared partial is doing too many jobs:
+The shared partial is still a high-risk contract surface, but the heaviest preparation work has moved out of Blade.
+
+The remaining Blade responsibilities are mainly:
 
 - view rendering
-- editor state computation
-- value fallback handling
-- content normalization for UI display
-- direct data loading in some cases
+- shared input structure
+- `data-*` integration with admin JavaScript
+- view-time preview rendering
 
 ### Contract Coupling With JavaScript
 
@@ -222,9 +232,11 @@ Production warning:
 
 ## Current Blade Responsibilities In Detail
 
+Most read-time preparation now happens in support classes before the shared form renders.
+
 ### Section Type Rules
 
-The form decides which fields should render based on the section type.
+`SectionEditorDataFactory` decides which fields should render based on the section type.
 
 Examples:
 
@@ -236,17 +248,17 @@ Examples:
 
 ### Locale Value Preparation
 
-The form merges:
+`SectionEditorDataFactory` merges:
 
 - request `old()` values
 - translation content values
 - fallback defaults
 
-This is why the current form reloads well after validation errors, but it also means the fallback logic is hard to test.
+This keeps validation error reloads stable while moving the fallback logic into a testable support class.
 
 ### Repeater Preparation
 
-The form currently prepares nested editor arrays for:
+`SectionEditorRepeaterFactory` prepares nested editor arrays for:
 
 - campaign features
 - programming outputs
@@ -264,7 +276,7 @@ Typical preparation tasks:
 
 ### Media Preparation
 
-The form builds preview URLs for:
+`SectionMediaPreviewBuilder` builds preview URLs for:
 
 - single media fields
 - gallery-like image groups
@@ -273,11 +285,11 @@ The form builds preview URLs for:
 
 ### Admin Option Queries
 
-The form currently loads some DB-backed option sets directly in Blade, such as plan categories for hosting pricing visibility.
+`SectionEditorDataFactory` currently preloads DB-backed option sets needed by the editor, such as plan categories for hosting pricing visibility.
 
 Production warning:
 
-- database queries inside Blade are especially risky in a large shared partial because they hide performance and dependency assumptions.
+- do not move these queries back into Blade, because that hides performance and dependency assumptions inside the shared UI layer
 
 ## Real-World Example
 
@@ -347,16 +359,15 @@ The editor should be improved incrementally, not rewritten.
 
 Recommended order:
 
-1. extract top-level editor state and visibility flags
-2. extract admin preload queries
-3. extract media preview preparation
-4. extract locale scalar fallback preparation
-5. extract repeater preparation one family at a time
-6. keep save-time normalization unchanged until read-time extraction is stable
+1. keep extending `SectionEditorDataFactory` for top-level editor state and preload data
+2. keep repeater shaping inside `SectionEditorRepeaterFactory`
+3. keep preview URL resolution inside `SectionMediaPreviewBuilder`
+4. preserve the shared Blade and JavaScript contract while iterating
+5. keep save-time normalization unchanged unless the persistence contract is intentionally changing
 
 ## Example Target Contract
 
-Future controller payload shape could look like this:
+The current controller payload follows this shape:
 
 ```php
 return [
@@ -370,8 +381,9 @@ return [
 
 In that shape:
 
-- the controller or support layer prepares editor state
-- Blade renders the prepared data
+- `SectionEditorDataFactory` prepares editor state
+- `SectionEditorRepeaterFactory` contributes normalized nested collections within that state
+- Blade renders the prepared data and uses `SectionMediaPreviewBuilder` for preview output
 - JavaScript contracts remain unchanged
 
 ## Rules For Developers Working Here
@@ -380,7 +392,7 @@ In that shape:
 - Do not change `data-*` hooks unless you have traced the related JavaScript.
 - Do not mix save-time normalization refactors with read-time preparation refactors in one risky step.
 - Keep both editor entry points working in every change.
-- Prefer support classes over Blade for new preparation logic.
+- Prefer `SectionEditorDataFactory`, `SectionEditorRepeaterFactory`, and `SectionMediaPreviewBuilder` over new Blade-side preparation logic.
 
 ## Related Documents
 

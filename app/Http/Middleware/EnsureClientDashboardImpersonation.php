@@ -18,6 +18,11 @@ class EnsureClientDashboardImpersonation
         }
 
         $isImpersonated = $this->sessionBoolean($request, 'client_impersonated_by_admin');
+
+        if (!$isImpersonated) {
+            return $next($request);
+        }
+
         $impersonatorAdminId = (int) $request->session()->get('client_impersonator_admin_id', 0);
         $currentAdminId = (int) $adminGuard->id();
 

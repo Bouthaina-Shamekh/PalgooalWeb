@@ -122,6 +122,7 @@ Typical flow:
 Real-world example:
 
 - Quick-adding `hero_default` creates a section and seeds title, subtitle, button, and media defaults so the section is not visually empty.
+- In the workspace quick-add flow, the server also returns the new section ID, sidebar card HTML, and editor URL so the sidebar and preview can update immediately without a full page reload.
 
 Edge case:
 
@@ -136,6 +137,8 @@ Editing is supported through two admin surfaces:
 - inline workspace sidebar editor
 
 Both use the same shared form partial and the same persistence logic.
+
+Read-time editor preparation is now split between `SectionEditorDataFactory`, `SectionEditorRepeaterFactory`, and `SectionMediaPreviewBuilder`, while Blade remains the shared rendering surface.
 
 ### 3. Normalize On Save
 

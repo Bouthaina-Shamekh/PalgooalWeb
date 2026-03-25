@@ -208,9 +208,17 @@ Good candidates for extraction out of Blade or controllers:
 - media preview preparation
 - reusable value normalization
 
+Current editor examples:
+
+- `SectionEditorDataFactory` for top-level editor state and locale scalar values
+- `SectionEditorRepeaterFactory` for normalized repeater rows
+- `SectionMediaPreviewBuilder` for preview URL resolution
+
 ### 5. Avoid Heavy Blade Logic
 
 Blade should ideally render prepared data.
+
+In the section editor specifically, Blade should primarily consume `editorState` and preserve the shared input and `data-*` contract.
 
 Avoid adding new:
 
@@ -258,6 +266,9 @@ Example:
 Start with:
 
 - `SectionController`
+- `app/Support/Sections/SectionEditorDataFactory.php`
+- `app/Support/Sections/SectionEditorRepeaterFactory.php`
+- `app/Support/Sections/SectionMediaPreviewBuilder.php` when media preview behavior is involved
 - the shared editor partial
 - the wrapper views
 
@@ -268,6 +279,7 @@ Safety checklist:
 - keep `data-*` hooks stable
 - verify validation re-render behavior
 - verify both full-page and sidebar editing
+- verify quick-add updates the sidebar and preview without a full page reload
 
 ## Testing And Verification Checklist
 
@@ -276,6 +288,9 @@ When changing sections or builders, verify at minimum:
 - admin page list loads
 - sections workspace loads
 - inline editor opens
+- quick-add inserts the section into the sidebar immediately
+- preview refresh shows its loading state and finishes cleanly
+- saved or newly created sidebar items still highlight and stay in sync with the preview
 - standalone editor opens
 - saving works in at least one locale and preferably two
 - validation errors repopulate fields correctly
@@ -343,7 +358,7 @@ Check in this order:
 
 1. input names in the shared form
 2. `old()` fallback logic
-3. repeater preparation logic
+3. `SectionEditorRepeaterFactory` preparation logic
 4. JavaScript template row naming
 
 ### A Page Change Has No Visible Effect

@@ -223,6 +223,12 @@ Important example:
 
 - the standalone section edit page and the inline workspace sidebar both render the same editor form partial
 
+Current implementation note:
+
+- `SectionController` prepares `editorState` through `SectionEditorDataFactory`
+- repeater data is delegated to `SectionEditorRepeaterFactory`
+- media preview resolution is handled by `SectionMediaPreviewBuilder`
+
 This is useful, but it introduces a strong contract between:
 
 - controller payloads
@@ -293,8 +299,8 @@ Real-world example:
 Typical flow:
 
 1. The admin route resolves a page and section.
-2. `SectionController` supplies editor payload data.
-3. Shared Blade partial renders the edit UI.
+2. `SectionController` loads the base context and asks `SectionEditorDataFactory` to prepare `editorState`.
+3. Shared Blade partial renders the edit UI for both editing surfaces, using the prepared state and `SectionMediaPreviewBuilder` for preview output.
 4. On submit, the controller validates request input.
 5. The controller normalizes content by section type.
 6. `SectionTranslation` rows are created or updated.
@@ -302,7 +308,7 @@ Typical flow:
 Production warning:
 
 - Save-time normalization is currently the most stable source of truth for section content shape.
-- Read-time editor preparation is more fragmented and should be treated carefully during refactors.
+- Read-time editor preparation is now centralized in support classes, but the shared Blade and JavaScript contract still must be treated carefully during refactors.
 
 ## Data Model Summary
 
@@ -380,11 +386,11 @@ Mitigation:
 
 Risk:
 
-- business rules hidden in Blade are harder to test and easier to duplicate
+- business rules hidden in Blade are harder to test and easier to duplicate, especially in shared admin forms
 
 Mitigation:
 
-- move preparation logic into support or service classes incrementally
+- extend existing support classes such as `SectionEditorDataFactory`, `SectionEditorRepeaterFactory`, and `SectionMediaPreviewBuilder` before adding new Blade-side preparation
 
 ## Practical Guidance
 
