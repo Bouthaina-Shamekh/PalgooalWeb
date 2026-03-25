@@ -13,7 +13,7 @@
 
 <article data-section-id="{{ $section->id }}" data-edit-section-url="{{ $editorUrl }}"
     data-edit-section-fallback-url="{{ $fallbackEditUrl }}"
-    class="sections-outline-item rounded-2xl px-4 py-3 transition {{ $selectedSectionId === $section->id ? 'is-selected' : '' }}">
+    class="sections-outline-item group rounded-2xl border border-transparent bg-white px-4 py-3 shadow-sm transform-gpu transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-200 hover:bg-slate-50/70 hover:shadow-md focus-within:-translate-y-0.5 focus-within:border-slate-300 focus-within:shadow-md active:scale-[0.99] {{ $selectedSectionId === $section->id ? 'is-selected border-slate-300 bg-slate-50 shadow-lg -translate-y-0.5' : '' }}">
     <div class="flex items-center justify-between gap-3">
         <div class="min-w-0 flex-1 ltr:text-left rtl:text-right">
             <p data-section-title class="truncate text-sm font-semibold text-slate-900">
@@ -28,9 +28,9 @@
         </div>
 
         <div
-            class="flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white/90 p-1 shadow-sm rtl:flex-row-reverse">
+            class="flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white/90 p-1 shadow-sm transition duration-200 group-hover:border-slate-300 group-hover:bg-white group-hover:shadow rtl:flex-row-reverse">
             <button type="button" data-edit-section-button
-                class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                 aria-label="{{ __('Edit section') }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor" stroke-width="1.8">
@@ -41,7 +41,7 @@
             <div class="relative">
                 <button type="button" data-section-menu-button aria-expanded="false"
                     aria-label="{{ __('Open section actions') }}"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-900">
+                    class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor" stroke-width="1.8">
                         <path stroke-linecap="round" stroke-linejoin="round"
@@ -107,7 +107,7 @@
                 </div>
             </div>
             <button type="button" data-drag-handle
-                class="sections-drag-handle inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                class="sections-drag-handle inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition duration-200 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
                 aria-label="{{ __('Drag to reorder') }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor" stroke-width="1.8">
@@ -128,14 +128,14 @@
                     class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 ltr:text-left rtl:text-right">{{ __('Section Name') }}</label>
                 <input id="rename-section-{{ $section->id }}" name="title" value="{{ $sidebarTitle }}"
                     data-rename-input type="text"
-                    class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition focus:border-slate-400 ltr:text-left rtl:text-right"
+                    class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition duration-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 ltr:text-left rtl:text-right"
                     required>
             </div>
             <div class="flex items-center justify-end gap-2 rtl:flex-row-reverse">
                 <button type="button" data-rename-cancel
-                    class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">{{ __('Cancel') }}</button>
+                    class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition duration-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">{{ __('Cancel') }}</button>
                 <button type="submit"
-                    class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">{{ __('Save Name') }}</button>
+                    class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition duration-200 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">{{ __('Save Name') }}</button>
             </div>
         </form>
     </div>

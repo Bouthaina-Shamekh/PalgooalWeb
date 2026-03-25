@@ -172,7 +172,7 @@
 
 @section('workspace-header-actions')
     <button type="button" data-open-section-library
-        class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
+        class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition duration-200 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">
         {{ __('Add Section') }}
     </button>
 @endsection
@@ -189,41 +189,52 @@
         </div>
 
         <button type="button" data-refresh-sections-preview
-            class="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-200">
+            class="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition duration-200 hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:pointer-events-none disabled:opacity-70">
             {{ __('Refresh Preview') }}
         </button>
     </div>
 @endsection
 
 @section('workspace-main')
-    <div id="sections-preview-shell-host" class="-mx-4 lg:-mx-6 sections-preview-shell-host">
-        @if ($sections->isEmpty())
-            <div
-                class="mx-4 rounded-[2rem] border border-dashed border-slate-300 bg-white/80 px-6 py-16 text-center lg:mx-6">
+    <div class="relative -mx-4 flex min-h-0 flex-1 flex-col lg:-mx-6">
+        <div id="sections-preview-shell-host" class="sections-preview-shell-host">
+            @if ($sections->isEmpty())
                 <div
-                    class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor" stroke-width="1.7">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
+                    class="mx-4 rounded-[2rem] border border-dashed border-slate-300 bg-white/80 px-6 py-16 text-center lg:mx-6">
+                    <div
+                        class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="1.7">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                    </div>
+                    <h3 class="mt-4 text-lg font-semibold text-slate-900">{{ __('Start by adding your first section') }}</h3>
+                    <p class="mx-auto mt-2 max-w-2xl text-sm text-slate-500">
+                        {{ __('Use the section library to create a ready-to-edit block instantly, then fine-tune it in the editor.') }}
+                    </p>
+                    <div class="mt-6 flex flex-wrap items-center justify-center gap-3 rtl:flex-row-reverse">
+                        <button type="button" data-open-section-library
+                            class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition duration-200 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">{{ __('Open Section Library') }}</button>
+                    </div>
                 </div>
-                <h3 class="mt-4 text-lg font-semibold text-slate-900">{{ __('Start by adding your first section') }}</h3>
-                <p class="mx-auto mt-2 max-w-2xl text-sm text-slate-500">
-                    {{ __('Use the section library to create a ready-to-edit block instantly, then fine-tune it in the editor.') }}
-                </p>
-                <div class="mt-6 flex flex-wrap items-center justify-center gap-3 rtl:flex-row-reverse">
-                    <button type="button" data-open-section-library
-                        class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">{{ __('Open Section Library') }}</button>
+            @else
+                <div id="sections-preview-stage" class="sections-preview-stage">
+                    <div id="sections-preview-viewport" class="sections-preview-viewport" data-device="desktop">
+                        <iframe id="sections-preview-frame" class="sections-preview-frame" src="{{ $previewUrl }}"
+                            data-base-url="{{ $previewBaseUrl }}" title="{{ __('Live sections preview') }}"></iframe>
+                    </div>
                 </div>
+            @endif
+        </div>
+
+        <div id="sections-preview-loading-overlay"
+            class="absolute inset-0 z-20 hidden items-center justify-center bg-slate-100/80 backdrop-blur-sm">
+            <div
+                class="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-lg">
+                <span class="inline-flex h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900"></span>
+                <span>{{ __('Refreshing preview...') }}</span>
             </div>
-        @else
-            <div id="sections-preview-stage" class="sections-preview-stage">
-                <div id="sections-preview-viewport" class="sections-preview-viewport" data-device="desktop">
-                    <iframe id="sections-preview-frame" class="sections-preview-frame" src="{{ $previewUrl }}"
-                        data-base-url="{{ $previewBaseUrl }}" title="{{ __('Live sections preview') }}"></iframe>
-                </div>
-            </div>
-        @endif
+        </div>
     </div>
 
     <div id="section-library-overlay" class="fixed inset-0 z-[60] hidden bg-slate-950/55"></div>
@@ -285,7 +296,7 @@
                                     @csrf
                                     <input type="hidden" name="type" value="{{ $type }}">
                                     <button type="submit"
-                                        class="group flex h-full w-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md ltr:text-left rtl:text-right">
+                                        class="group flex h-full w-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white transform-gpu transition duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 active:scale-[0.99] disabled:translate-y-0 disabled:shadow-none ltr:text-left rtl:text-right">
                                         @if ($previewAsset)
                                             <div class="aspect-[16/10] overflow-hidden bg-slate-100"><img
                                                     src="{{ $previewAsset }}" alt="{{ $meta['label'] }}"
@@ -318,7 +329,7 @@
                                             </div>
                                             <div class="mt-4 flex items-center justify-between text-xs text-slate-500">
                                                 <span>{{ __('Creates a draft instantly') }}</span><span
-                                                    class="js-library-submit-label font-semibold text-slate-900">{{ __('Add') }}</span>
+                                                    class="js-library-submit-label inline-flex items-center gap-2 font-semibold text-slate-900">{{ __('Add') }}</span>
                                             </div>
                                         </div>
                                     </button>
@@ -441,6 +452,7 @@
             const sidebarOutlinePanel = document.querySelector('[data-sections-sidebar-outline]');
             const sidebarEditorPanel = document.querySelector('[data-sections-sidebar-editor]');
             const previewShellHost = document.getElementById('sections-preview-shell-host');
+            const previewLoadingOverlay = document.getElementById('sections-preview-loading-overlay');
             let previewFrame = document.getElementById('sections-preview-frame');
             let previewViewport = document.getElementById('sections-preview-viewport');
             const previewDeviceButtons = Array.from(document.querySelectorAll('[data-preview-device]'));
@@ -455,6 +467,7 @@
             const editorSaveFailedMessage = @json(__('Section could not be updated. Please review the form and try again.'));
             const editorLoadingLabel = @json(__('Loading editor...'));
             const editorSaveSuccessMessage = @json(__('Section has been updated successfully.'));
+            const editorSavedLabel = @json(__('Saved'));
             const successAlertTitle = @json(__('Success'));
             const errorAlertTitle = @json(__('Error'));
             const validationAlertTitle = @json(__('Please review the form'));
@@ -464,6 +477,7 @@
             const frameBaseUrl = @json($previewBaseUrl);
             const previewFrameTitle = @json(__('Live sections preview'));
             let currentSelectedSectionId = Number(@json($selectedSectionId));
+            let previewRefreshFallbackTimer = null;
 
             const showSectionsAlert = (tone, messages, title = '') => {
                 const safeMessages = Array.isArray(messages) ? messages.filter(Boolean) : [];
@@ -499,10 +513,50 @@
                 }
             };
 
+            const setSidebarItemSelectedState = (item, isSelected) => {
+                if (!(item instanceof HTMLElement)) {
+                    return;
+                }
+
+                item.classList.toggle('is-selected', isSelected);
+                item.classList.toggle('border-slate-300', isSelected);
+                item.classList.toggle('bg-slate-50', isSelected);
+                item.classList.toggle('shadow-lg', isSelected);
+                item.classList.toggle('-translate-y-0.5', isSelected);
+            };
+
+            const clearSidebarItemFeedback = (item) => {
+                if (!(item instanceof HTMLElement)) {
+                    return;
+                }
+
+                item.classList.remove('ring-2', 'ring-emerald-200', 'ring-sky-200', 'ring-offset-2', 'shadow-xl');
+            };
+
+            const flashSidebarItem = (item, tone = 'created') => {
+                if (!(item instanceof HTMLElement)) {
+                    return;
+                }
+
+                const flashClasses = tone === 'saved'
+                    ? ['ring-2', 'ring-sky-200', 'ring-offset-2', 'shadow-xl']
+                    : ['ring-2', 'ring-emerald-200', 'ring-offset-2', 'shadow-xl'];
+
+                clearSidebarItemFeedback(item);
+
+                if (item.__sectionsFeedbackTimer) {
+                    window.clearTimeout(item.__sectionsFeedbackTimer);
+                }
+
+                item.classList.add(...flashClasses);
+                item.__sectionsFeedbackTimer = window.setTimeout(() => {
+                    item.classList.remove(...flashClasses);
+                }, 1800);
+            };
+
             const applySidebarSelection = (sectionId) => {
                 getSidebarSectionItems().forEach((item) => {
-                    item.classList.toggle('is-selected', Number(item.dataset.sectionId || 0) ===
-                        sectionId);
+                    setSidebarItemSelectedState(item, Number(item.dataset.sectionId || 0) === sectionId);
                 });
             };
 
@@ -607,13 +661,13 @@
 
             const updateSidebarSectionCard = (sectionData) => {
                 if (!sectionData?.id) {
-                    return;
+                    return null;
                 }
 
                 const article = document.querySelector(
                     `#sections-outline-list [data-section-id="${sectionData.id}"]`);
                 if (!article) {
-                    return;
+                    return null;
                 }
 
                 const title = article.querySelector('[data-section-title]');
@@ -634,6 +688,8 @@
                     status.classList.add(sectionData.is_active ? 'bg-emerald-50' : 'bg-rose-50');
                     status.classList.add(sectionData.is_active ? 'text-emerald-700' : 'text-rose-700');
                 }
+
+                return article;
             };
 
             const createSidebarSectionItem = (sectionCardHtml) => {
@@ -656,15 +712,40 @@
                 }, window.location.origin);
             };
 
+            const setPreviewRefreshing = (isRefreshing) => {
+                if (previewRefreshFallbackTimer) {
+                    window.clearTimeout(previewRefreshFallbackTimer);
+                    previewRefreshFallbackTimer = null;
+                }
+
+                if (previewLoadingOverlay) {
+                    previewLoadingOverlay.classList.toggle('hidden', !isRefreshing);
+                    previewLoadingOverlay.classList.toggle('flex', isRefreshing);
+                }
+
+                previewRefreshButtons.forEach((button) => {
+                    button.disabled = isRefreshing;
+                    button.classList.toggle('opacity-70', isRefreshing);
+                    button.classList.toggle('pointer-events-none', isRefreshing);
+                });
+
+            };
+
             const bindPreviewFrameLoadHandler = () => {
                 if (!previewFrame || previewFrame.dataset.previewLoadBound === '1') {
                     return;
                 }
 
                 previewFrame.addEventListener('load', function() {
+                    setPreviewRefreshing(false);
+
                     if (currentSelectedSectionId) {
                         window.setTimeout(() => postPreviewHighlight(currentSelectedSectionId), 120);
                     }
+                });
+
+                previewFrame.addEventListener('error', function() {
+                    setPreviewRefreshing(false);
                 });
 
                 previewFrame.dataset.previewLoadBound = '1';
@@ -703,7 +784,10 @@
             };
 
             const refreshPreviewFrame = () => {
+                setPreviewRefreshing(true);
+
                 if (!frameBaseUrl || !ensurePreviewFrame() || !previewFrame) {
+                    setPreviewRefreshing(false);
                     return;
                 }
 
@@ -712,6 +796,9 @@
                     url.searchParams.set('highlight', String(currentSelectedSectionId));
                 }
 
+                previewRefreshFallbackTimer = window.setTimeout(() => {
+                    setPreviewRefreshing(false);
+                }, 12000);
                 previewFrame.src = url.toString();
             };
 
@@ -739,6 +826,50 @@
                 updateWorkspaceUrl(null);
             };
 
+            const resetEditorSubmitButtons = (buttons) => {
+                buttons.forEach((button) => {
+                    if (!(button instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    if (!button.dataset.defaultLabelHtml) {
+                        button.dataset.defaultLabelHtml = button.innerHTML;
+                    }
+
+                    if (button.__editorSuccessTimer) {
+                        window.clearTimeout(button.__editorSuccessTimer);
+                        button.__editorSuccessTimer = null;
+                    }
+
+                    button.innerHTML = button.dataset.defaultLabelHtml;
+                    button.classList.remove('bg-emerald-600', 'hover:bg-emerald-600', 'shadow-lg');
+                    button.classList.add('bg-slate-900', 'hover:bg-slate-800');
+                });
+            };
+
+            const flashEditorSaveSuccess = (root) => {
+                Array.from(root?.querySelectorAll('[data-section-editor-submit]') || []).forEach((button) => {
+                    if (!(button instanceof HTMLElement)) {
+                        return;
+                    }
+
+                    if (!button.dataset.defaultLabelHtml) {
+                        button.dataset.defaultLabelHtml = button.innerHTML;
+                    }
+
+                    if (button.__editorSuccessTimer) {
+                        window.clearTimeout(button.__editorSuccessTimer);
+                    }
+
+                    button.innerHTML = editorSavedLabel;
+                    button.classList.remove('bg-slate-900', 'hover:bg-slate-800');
+                    button.classList.add('bg-emerald-600', 'hover:bg-emerald-600', 'shadow-lg');
+                    button.__editorSuccessTimer = window.setTimeout(() => {
+                        resetEditorSubmitButtons([button]);
+                    }, 1600);
+                });
+            };
+
             const bindSectionEditor = (root, sectionId) => {
                 if (!root) {
                     return;
@@ -758,6 +889,7 @@
                     isSavingEditor = true;
                     const submitButtons = Array.from(root.querySelectorAll(
                         '[data-section-editor-submit]'));
+                    resetEditorSubmitButtons(submitButtons);
                     submitButtons.forEach((button) => {
                         button.disabled = true;
                         button.classList.add('opacity-70', 'pointer-events-none');
@@ -797,7 +929,9 @@
                         renderEditorFeedback(root, 'success', [payload.message ||
                             editorSaveSuccessMessage
                         ]);
-                        updateSidebarSectionCard(payload.section || {});
+                        const updatedSidebarItem = updateSidebarSectionCard(payload.section || {});
+                        flashSidebarItem(updatedSidebarItem, 'saved');
+                        flashEditorSaveSuccess(root);
                         focusSectionPreview(Number(payload.section?.id || sectionId), true);
 
                         const editorHeading = root.querySelector('[data-section-editor-heading]');
@@ -1059,6 +1193,7 @@
 
                 bindSidebarSectionItem(nextItem);
                 syncSidebarOutlineState();
+                flashSidebarItem(nextItem, existingItem ? 'saved' : 'created');
 
                 return nextItem;
             };
@@ -1165,16 +1300,24 @@
                     const submitButton = form.querySelector('button[type="submit"]');
                     const submitLabel = submitButton?.querySelector('.js-library-submit-label');
                     const originalButtonHtml = submitButton?.innerHTML || '';
+                    const loadingIndicator = `
+                        <span class="inline-flex items-center gap-2">
+                            <span class="inline-flex h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900"></span>
+                            <span>${quickAddLoadingLabel}</span>
+                        </span>
+                    `;
 
                     if (submitButton) {
                         submitButton.disabled = true;
-                        submitButton.classList.add('opacity-70', 'pointer-events-none');
+                        submitButton.classList.add('opacity-70', 'pointer-events-none', 'border-slate-300',
+                            'bg-slate-50', 'shadow-lg');
+                        submitButton.setAttribute('aria-busy', 'true');
                     }
 
                     if (submitLabel) {
-                        submitLabel.textContent = quickAddLoadingLabel;
+                        submitLabel.innerHTML = loadingIndicator;
                     } else if (submitButton) {
-                        submitButton.innerHTML = quickAddLoadingLabel;
+                        submitButton.innerHTML = loadingIndicator;
                     }
 
                     try {
@@ -1229,7 +1372,9 @@
                     } finally {
                         if (submitButton) {
                             submitButton.disabled = false;
-                            submitButton.classList.remove('opacity-70', 'pointer-events-none');
+                            submitButton.classList.remove('opacity-70', 'pointer-events-none',
+                                'border-slate-300', 'bg-slate-50', 'shadow-lg');
+                            submitButton.removeAttribute('aria-busy');
                             submitButton.innerHTML = originalButtonHtml;
                         }
                     }
