@@ -9,6 +9,9 @@ use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
+/**
+ * @deprecated deprecated - do not use. Legacy admin Livewire component retained only for fallback safety.
+ */
 class Pages extends Component
 {
     protected $listeners = ['deleteConfirmed' => 'deleteConfirmed'];
@@ -217,3 +220,4 @@ class Pages extends Component
         return view("livewire.admin.pages.{$this->view}");
     }
 }
+

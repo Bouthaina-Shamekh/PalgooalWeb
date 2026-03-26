@@ -5,6 +5,9 @@ namespace App\Livewire\Admin\Sections;
 use App\Models\SectionTranslation;
 use Illuminate\Support\Arr;
 
+/**
+ * @deprecated deprecated - do not use. Legacy admin Livewire component retained only for fallback safety.
+ */
 class CtaSection extends BaseSectionComponent
 {
     public function mount(): void
@@ -58,4 +61,5 @@ class CtaSection extends BaseSectionComponent
         return view('livewire.admin.sections.cta-section');
     }
 }
+
 

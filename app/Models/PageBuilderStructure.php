@@ -5,6 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Visual builder persistence and publish-output layer for `Page`.
+ *
+ * Architectural note:
+ * - This model stores GrapesJS project data, generated HTML/CSS, and
+ *   published snapshots.
+ * - It is not the canonical authored content model; marketing content
+ *   ownership still lives in `Page` + `Section`.
+ * - Normalized builder sections exposed here are a compatibility/output
+ *   mechanism for frontend rendering, not a replacement for structured
+ *   section authoring.
+ */
 class PageBuilderStructure extends Model
 {
     protected $table = 'page_builder_structures';
@@ -73,6 +85,10 @@ class PageBuilderStructure extends Model
      *
      * These are later consumed in front/pages/page.blade.php
      * by the $builderSections loop.
+     *
+     * Important:
+     * This is a derived output path from builder storage, not the
+     * canonical authored content source for marketing pages.
      */
     public function normalizedSections(): array
     {

@@ -1,3 +1,4 @@
+{{-- Canonical controller-driven admin sections workspace. Deprecated admin Livewire section editors are retained only for fallback safety and are not routed. --}}
 @php
     $translation = $page->translation();
     $pageTitle = $translation?->title ?? __('Sections Workspace');

@@ -1,3 +1,4 @@
+﻿{{-- deprecated - do not use. Legacy admin Livewire view retained only for fallback safety. --}}
 <div>
     <div class="page-header">
         <div class="page-block">
@@ -193,3 +194,4 @@
         </div>
     </div>
 </div>
+

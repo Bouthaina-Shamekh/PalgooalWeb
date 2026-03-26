@@ -1,3 +1,4 @@
+﻿{{-- deprecated - do not use. Legacy admin Livewire view retained only for fallback safety. --}}
 <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg mb-8 border border-gray-200 dark:border-gray-700 space-y-6">
     @if (session()->has('success'))
         <div class="flex items-center gap-3 bg-green-100 text-green-900 border border-green-300 dark:bg-green-800/20 dark:text-green-100 dark:border-green-600 px-4 py-3 rounded-lg shadow transition-all duration-300" role="alert">
@@ -95,3 +96,4 @@
         </button>
     </div>
 </div>
+

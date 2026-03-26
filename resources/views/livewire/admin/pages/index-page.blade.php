@@ -1,3 +1,4 @@
+﻿{{-- deprecated - do not use. Legacy admin Livewire view retained only for fallback safety. --}}
 <div>
     <!-- [ breadcrumb ] start -->
     <div class="page-header">
@@ -197,3 +198,4 @@
         });
     </script>
 @endpush
+

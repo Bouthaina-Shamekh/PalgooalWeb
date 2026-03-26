@@ -5,6 +5,9 @@ namespace App\Livewire\Admin\Sections;
 use App\Models\SectionTranslation;
 use Illuminate\Support\Arr;
 
+/**
+ * @deprecated deprecated - do not use. Legacy admin Livewire component retained only for fallback safety.
+ */
 class FaqSection extends BaseSectionComponent
 {
     public function mount(): void
@@ -85,7 +88,7 @@ class FaqSection extends BaseSectionComponent
 
         $message = __('section.faq_updated');
         if ($message === 'section.faq_updated') {
-            $message = 'تم تحديث قسم الأسئلة الشائعة بنجاح.';
+            $message = 'طھظ… طھط­ط¯ظٹط« ظ‚ط³ظ… ط§ظ„ط£ط³ط¦ظ„ط© ط§ظ„ط´ط§ط¦ط¹ط© ط¨ظ†ط¬ط§ط­.';
         }
 
         session()->flash('success', $message);
@@ -119,4 +122,5 @@ class FaqSection extends BaseSectionComponent
         return view('livewire.admin.sections.faq-section');
     }
 }
+
 

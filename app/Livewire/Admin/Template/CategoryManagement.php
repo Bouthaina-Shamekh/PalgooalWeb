@@ -7,6 +7,9 @@ use App\Models\CategoryTemplate;
 use App\Models\Language;
 use Illuminate\Validation\Rule;
 
+/**
+ * @deprecated deprecated - do not use. Legacy admin Livewire component retained only for fallback safety.
+ */
 class CategoryManagement extends Component
 {
     public $categories = [];
@@ -40,13 +43,13 @@ class CategoryManagement extends Component
     }
 
     protected $messages = [
-        'translations.*.name.required' => 'الاسم مطلوب.',
-        'translations.*.name.max' => 'يجب ألا يتجاوز الاسم 255 حرفًا.',
-        'translations.*.slug.required' => 'الرابط (slug) مطلوب.',
-        'translations.*.slug.alpha_dash' => 'يجب أن يحتوي الرابط على أحرف وأرقام وشرطات فقط.',
-        'translations.*.slug.unique' => 'هذا الرابط مستخدم بالفعل.',
-        'translations.*.slug.max' => 'الرابط طويل جدًا.',
-        'translations.*.description.string' => 'الوصف غير صالح.',
+        'translations.*.name.required' => 'ط§ظ„ط§ط³ظ… ظ…ط·ظ„ظˆط¨.',
+        'translations.*.name.max' => 'ظٹط¬ط¨ ط£ظ„ط§ ظٹطھط¬ط§ظˆط² ط§ظ„ط§ط³ظ… 255 ط­ط±ظپظ‹ط§.',
+        'translations.*.slug.required' => 'ط§ظ„ط±ط§ط¨ط· (slug) ظ…ط·ظ„ظˆط¨.',
+        'translations.*.slug.alpha_dash' => 'ظٹط¬ط¨ ط£ظ† ظٹط­طھظˆظٹ ط§ظ„ط±ط§ط¨ط· ط¹ظ„ظ‰ ط£ط­ط±ظپ ظˆط£ط±ظ‚ط§ظ… ظˆط´ط±ط·ط§طھ ظپظ‚ط·.',
+        'translations.*.slug.unique' => 'ظ‡ط°ط§ ط§ظ„ط±ط§ط¨ط· ظ…ط³طھط®ط¯ظ… ط¨ط§ظ„ظپط¹ظ„.',
+        'translations.*.slug.max' => 'ط§ظ„ط±ط§ط¨ط· ط·ظˆظٹظ„ ط¬ط¯ظ‹ط§.',
+        'translations.*.description.string' => 'ط§ظ„ظˆطµظپ ط؛ظٹط± طµط§ظ„ط­.',
     ];
 
     protected function getTranslationId($langCode)
@@ -80,7 +83,7 @@ class CategoryManagement extends Component
             : CategoryTemplate::create();
 
         if (!$category) {
-            session()->flash('error', 'حدث خطأ غير متوقع.');
+            session()->flash('error', 'ط­ط¯ط« ط®ط·ط£ ط؛ظٹط± ظ…طھظˆظ‚ط¹.');
             return;
         }
 
@@ -96,7 +99,7 @@ class CategoryManagement extends Component
             );
         }
 
-        session()->flash('success', $this->mode === 'edit' ? 'تم تحديث الفئة بنجاح.' : 'تمت إضافة الفئة بنجاح.');
+        session()->flash('success', $this->mode === 'edit' ? 'طھظ… طھط­ط¯ظٹط« ط§ظ„ظپط¦ط© ط¨ظ†ط¬ط§ط­.' : 'طھظ…طھ ط¥ط¶ط§ظپط© ط§ظ„ظپط¦ط© ط¨ظ†ط¬ط§ط­.');
         $this->resetForm();
         $this->loadCategories();
     }
@@ -126,7 +129,7 @@ class CategoryManagement extends Component
     public function delete($id)
     {
         CategoryTemplate::find($id)?->delete();
-        session()->flash('success', 'تم حذف الفئة بنجاح.');
+        session()->flash('success', 'طھظ… ط­ط°ظپ ط§ظ„ظپط¦ط© ط¨ظ†ط¬ط§ط­.');
         $this->loadCategories();
     }
 
@@ -149,4 +152,5 @@ class CategoryManagement extends Component
         return view('livewire.admin.template.category-management');
     }
 }
+
 

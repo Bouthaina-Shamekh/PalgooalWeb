@@ -4,6 +4,9 @@ namespace App\Livewire\Admin\Sections;
 
 use App\Models\SectionTranslation;
 
+/**
+ * @deprecated deprecated - do not use. Legacy admin Livewire component retained only for fallback safety.
+ */
 class Features2Section extends BaseSectionComponent
 {
     public string $activeTab = 'content';
@@ -197,4 +200,5 @@ class Features2Section extends BaseSectionComponent
         return 'white';
     }
 }
+
 

@@ -15,6 +15,11 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
+/**
+ * Canonical controller-driven section management entrypoint.
+ * Deprecated admin Livewire section editors are retained only for fallback
+ * safety and must not be used for active routing.
+ */
 class SectionController extends Controller
 {
     /**

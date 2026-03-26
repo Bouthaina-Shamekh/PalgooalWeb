@@ -1,3 +1,4 @@
+﻿{{-- deprecated - do not use. Legacy admin Livewire view retained only for fallback safety. --}}
     <!-- [ breadcrumb ] start -->
     <div class="page-header">
         <div class="page-block">
@@ -256,10 +257,10 @@
                                     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
                                         <h6 class="font-medium text-gray-900 mb-2">Upload Instructions:</h6>
                                         <ul class="text-sm text-gray-600 space-y-1">
-                                            <li>• Recommended size: 200x200 pixels</li>
-                                            <li>• Supported formats: JPG, PNG, GIF</li>
-                                            <li>• Maximum file size: 2MB</li>
-                                            <li>• Square images work best</li>
+                                            <li>â€¢ Recommended size: 200x200 pixels</li>
+                                            <li>â€¢ Supported formats: JPG, PNG, GIF</li>
+                                            <li>â€¢ Maximum file size: 2MB</li>
+                                            <li>â€¢ Square images work best</li>
                                         </ul>
                                     </div>
                                 </div>
@@ -281,3 +282,4 @@
         </div>
     </div>
     <!-- [ Main Content ] end -->
+

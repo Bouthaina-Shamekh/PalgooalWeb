@@ -22,6 +22,7 @@ class HomeController extends Controller
 
     public function testimonials()
     {
+        // deprecated - do not use. This legacy Livewire wrapper is retained only for fallback safety.
         return view('dashboard.testimonials');
     }
 

@@ -1,3 +1,4 @@
+﻿{{-- deprecated - do not use. Legacy admin Livewire view retained only for fallback safety. --}}
 <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg mb-8 border border-gray-200 dark:border-gray-700 space-y-6">
     <!-- Success Message -->
     @if (session()->has('success'))
@@ -60,3 +61,4 @@
         </button>
     </div>
 </div>
+

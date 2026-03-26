@@ -1,3 +1,4 @@
+﻿{{-- deprecated - do not use. Legacy admin Livewire view retained only for fallback safety. --}}
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- [ breadcrumb ] start -->
     <div class="page-header col-span-3">
@@ -248,3 +249,4 @@
         </div>
     @endif
 </div>
+

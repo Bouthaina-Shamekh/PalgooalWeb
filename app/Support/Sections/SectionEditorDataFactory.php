@@ -9,6 +9,10 @@ use Illuminate\Support\Str;
 
 class SectionEditorDataFactory
 {
+    protected const LEGACY_TYPE_ALIASES = [
+        'templates-pages' => 'templates_listing_showcase',
+    ];
+
     public function __construct(protected SectionEditorRepeaterFactory $repeaterFactory)
     {
     }
@@ -98,7 +102,6 @@ class SectionEditorDataFactory
                         'hosting_pricing_showcase',
                         'templates_slider_showcase',
                         'templates_listing_showcase',
-                        'templates-pages',
                     ],
                     true,
                 ),
@@ -137,7 +140,6 @@ class SectionEditorDataFactory
                         'domains_showcase',
                         'templates_slider_showcase',
                         'templates_listing_showcase',
-                        'templates-pages',
                     ],
                     true,
                 ),
@@ -375,9 +377,7 @@ class SectionEditorDataFactory
             return 'hero_default';
         }
 
-        return $selectedType === 'templates-pages'
-            ? 'templates_listing_showcase'
-            : $selectedType;
+        return self::LEGACY_TYPE_ALIASES[$selectedType] ?? $selectedType;
     }
 
     protected function resolveDefaultLocale(iterable $languages): string

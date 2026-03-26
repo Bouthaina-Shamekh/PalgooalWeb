@@ -44,9 +44,10 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 @stack('scripts')
 @stack('modals')
-@unless (request()->routeIs('dashboard.general_settings', 'dashboard.menus', 'dashboard.headers'))
+{{-- Deprecated admin Livewire assets are opt-in only for retained legacy views. --}}
+@if (!empty($enableLegacyAdminLivewire))
     @livewireScripts
-@endunless
+@endif
     <script>
       localStorage.setItem('layout', 'vertical');
     </script>

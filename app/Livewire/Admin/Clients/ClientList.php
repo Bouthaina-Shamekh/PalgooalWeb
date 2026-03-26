@@ -12,6 +12,9 @@ use Livewire\WithPagination;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * @deprecated deprecated - do not use. Legacy admin Livewire component retained only for fallback safety.
+ */
 class ClientList extends Component
 {
     use WithFileUploads;
@@ -38,7 +41,7 @@ class ClientList extends Component
     public $perPage = 10;
     public $clientId = null;
 
-    // بيانات العميل الأساسية
+    // ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¹ظ…ظٹظ„ ط§ظ„ط£ط³ط§ط³ظٹط©
     public $client = [
         'first_name' => '',
         'last_name' => '',
@@ -57,7 +60,7 @@ class ClientList extends Component
         'zip_code' => '',
     ];
 
-    // بيانات جهة الاتصال الجديدة
+    // ط¨ظٹط§ظ†ط§طھ ط¬ظ‡ط© ط§ظ„ط§طھطµط§ظ„ ط§ظ„ط¬ط¯ظٹط¯ط©
     public $contact = [
         'name' => '',
         'email' => '',
@@ -67,12 +70,12 @@ class ClientList extends Component
         'password_hash' => '',
     ];
 
-    // بيانات الملاحظة الجديدة
+    // ط¨ظٹط§ظ†ط§طھ ط§ظ„ظ…ظ„ط§ط­ط¸ط© ط§ظ„ط¬ط¯ظٹط¯ط©
     public $note = [
         'note' => '',
     ];
 
-    // للتحكم في عرض الأقسام في صفحة العرض
+    // ظ„ظ„طھط­ظƒظ… ظپظٹ ط¹ط±ط¶ ط§ظ„ط£ظ‚ط³ط§ظ… ظپظٹ طµظپط­ط© ط§ظ„ط¹ط±ط¶
     public $activeTab = 'details'; // details, contacts, notes, activities
 
     public function showAdd()
@@ -233,7 +236,7 @@ class ClientList extends Component
 
             $client->update($clientValidated);
 
-            // تسجيل النشاط
+            // طھط³ط¬ظٹظ„ ط§ظ„ظ†ط´ط§ط·
             ActivityLog::create([
                 'actor_type' => 'admin',
                 'actor_id' => Auth::id(),
@@ -265,7 +268,7 @@ class ClientList extends Component
 
             $client = Client::create($clientValidated);
 
-            // تسجيل النشاط
+            // طھط³ط¬ظٹظ„ ط§ظ„ظ†ط´ط§ط·
             ActivityLog::create([
                 'actor_type' => 'admin',
                 'actor_id' => Auth::id(),
@@ -284,7 +287,7 @@ class ClientList extends Component
         $this->mode = 'index';
     }
 
-    // إضافة جهة اتصال جديدة
+    // ط¥ط¶ط§ظپط© ط¬ظ‡ط© ط§طھطµط§ظ„ ط¬ط¯ظٹط¯ط©
     public function addContact()
     {
         $validated = $this->validate([
@@ -308,7 +311,7 @@ class ClientList extends Component
 
         ClientContact::create($contactData);
 
-        // تسجيل النشاط
+        // طھط³ط¬ظٹظ„ ط§ظ„ظ†ط´ط§ط·
         ActivityLog::create([
             'actor_type' => 'admin',
             'actor_id' => Auth::id(),
@@ -332,12 +335,12 @@ class ClientList extends Component
         $this->showAlert('Contact added successfully.', 'success');
     }
 
-    // حذف جهة اتصال
+    // ط­ط°ظپ ط¬ظ‡ط© ط§طھطµط§ظ„
     public function deleteContact($contactId)
     {
         $contact = ClientContact::findOrFail($contactId);
 
-        // تسجيل النشاط قبل الحذف
+        // طھط³ط¬ظٹظ„ ط§ظ„ظ†ط´ط§ط· ظ‚ط¨ظ„ ط§ظ„ط­ط°ظپ
         ActivityLog::create([
             'actor_type' => 'admin',
             'actor_id' => Auth::id(),
@@ -353,7 +356,7 @@ class ClientList extends Component
         $this->showAlert('Contact deleted successfully.', 'success');
     }
 
-    // إضافة ملاحظة جديدة
+    // ط¥ط¶ط§ظپط© ظ…ظ„ط§ط­ط¸ط© ط¬ط¯ظٹط¯ط©
     public function addNote()
     {
         $validated = $this->validate([
@@ -366,7 +369,7 @@ class ClientList extends Component
             'note' => $validated['note']['note'],
         ]);
 
-        // تسجيل النشاط
+        // طھط³ط¬ظٹظ„ ط§ظ„ظ†ط´ط§ط·
         ActivityLog::create([
             'actor_type' => 'admin',
             'actor_id' => Auth::id(),
@@ -380,12 +383,12 @@ class ClientList extends Component
         $this->showAlert('Note added successfully.', 'success');
     }
 
-    // حذف ملاحظة
+    // ط­ط°ظپ ظ…ظ„ط§ط­ط¸ط©
     public function deleteNote($noteId)
     {
         $note = ClientNote::findOrFail($noteId);
 
-        // تسجيل النشاط
+        // طھط³ط¬ظٹظ„ ط§ظ„ظ†ط´ط§ط·
         ActivityLog::create([
             'actor_type' => 'admin',
             'actor_id' => Auth::id(),
@@ -403,7 +406,7 @@ class ClientList extends Component
     {
         $client = Client::findOrFail($id);
 
-        // تسجيل النشاط قبل الحذف
+        // طھط³ط¬ظٹظ„ ط§ظ„ظ†ط´ط§ط· ظ‚ط¨ظ„ ط§ظ„ط­ط°ظپ
         ActivityLog::create([
             'actor_type' => 'admin',
             'actor_id' => Auth::id(),
@@ -469,7 +472,7 @@ class ClientList extends Component
     public function render()
     {
         $clients = Client::query()
-            ->withCount(['subscriptions', 'domains']) // إضافة العدادات
+            ->withCount(['subscriptions', 'domains']) // ط¥ط¶ط§ظپط© ط§ظ„ط¹ط¯ط§ط¯ط§طھ
             ->where(function ($query) {
                 $query->where('first_name', 'like', '%' . $this->search . '%')
                     ->orWhere('last_name', 'like', '%' . $this->search . '%')
@@ -480,7 +483,7 @@ class ClientList extends Component
             ->orderBy('created_at', 'desc')
             ->paginate($this->perPage);
 
-        // للصفحة show - جلب بيانات العميل مع العلاقات
+        // ظ„ظ„طµظپط­ط© show - ط¬ظ„ط¨ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط¹ظ…ظٹظ„ ظ…ط¹ ط§ظ„ط¹ظ„ط§ظ‚ط§طھ
         $currentClient = null;
         $clientContacts = collect();
         $clientNotes = collect();
@@ -511,4 +514,5 @@ class ClientList extends Component
         ));
     }
 }
+
 

@@ -1,3 +1,4 @@
+﻿{{-- deprecated - do not use. Legacy admin Livewire view retained only for fallback safety. --}}
 <div class="space-y-6">
     <!-- [ breadcrumb ] start -->
     <div class="page-header">
@@ -18,10 +19,10 @@
             {{ session('success') }}
         </div>
     @endif
-    {{-- ==================== كود التشخيص: ابدأ ==================== --}}
+    {{-- ==================== ظƒظˆط¯ ط§ظ„طھط´ط®ظٹطµ: ط§ط¨ط¯ط£ ==================== --}}
 @if ($errors->any())
     <div class="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg border border-red-400" role="alert">
-        <span class="font-bold">حدث خطأ في التحقق من الصحة!</span>
+        <span class="font-bold">ط­ط¯ط« ط®ط·ط£ ظپظٹ ط§ظ„طھط­ظ‚ظ‚ ظ…ظ† ط§ظ„طµط­ط©!</span>
         <ul class="mt-2 list-disc list-inside">
             @foreach ($errors->all() as $error)
                 <li>{{ $error }}</li>
@@ -29,7 +30,7 @@
         </ul>
     </div>
 @endif
-{{-- ===================== كود التشخيص: انتهى ===================== --}}
+{{-- ===================== ظƒظˆط¯ ط§ظ„طھط´ط®ظٹطµ: ط§ظ†طھظ‡ظ‰ ===================== --}}
 
 
     <!-- [ Main Content ] start -->
@@ -41,7 +42,7 @@
                     <h5>{{ $mode === 'edit' ? t('dashboard.Edit_Template', 'Edit Template') : t('dashboard.Add_New_Template', 'Add New Template') }}</h5>
                 </div>
                 <div class="card-body">
-                    {{-- القسم الأول: البيانات الأساسية --}}
+                    {{-- ط§ظ„ظ‚ط³ظ… ط§ظ„ط£ظˆظ„: ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„ط£ط³ط§ط³ظٹط© --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="space-y-4">
                             <div class="mb-3">
@@ -79,7 +80,7 @@
 
                     <hr class="my-6">
 
-                    {{-- القسم الثاني: تفاصيل العرض --}}
+                    {{-- ط§ظ„ظ‚ط³ظ… ط§ظ„ط«ط§ظ†ظٹ: طھظپط§طµظٹظ„ ط§ظ„ط¹ط±ط¶ --}}
                     <h6 class="mb-4 text-lg font-semibold">{{ t('dashboard.Offer_Details', 'Offer Details') }}</h6>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div class="mb-3">
@@ -93,11 +94,11 @@
                             @error('discount_ends_at') <small class="text-red-500 form-text">{{ $message }}</small> @enderror
                         </div>
                     </div>
-                    {{-- حقل رابط المعاينة تم حذفه من هنا --}}
+                    {{-- ط­ظ‚ظ„ ط±ط§ط¨ط· ط§ظ„ظ…ط¹ط§ظٹظ†ط© طھظ… ط­ط°ظپظ‡ ظ…ظ† ظ‡ظ†ط§ --}}
 
                     <hr class="my-6">
 
-                    {{-- القسم الثالث: الترجمات --}}
+                    {{-- ط§ظ„ظ‚ط³ظ… ط§ظ„ط«ط§ظ„ط«: ط§ظ„طھط±ط¬ظ…ط§طھ --}}
                     <h6 class="mb-4 text-lg font-semibold">{{ t('dashboard.Translations', 'Translations') }}</h6>
                     <ul class="flex mb-4 border-b space-x-2 rtl:space-x-reverse">
                         @foreach($languages as $lang)
@@ -139,7 +140,7 @@
                                     <div class="space-y-3">
                                         @foreach($translations[$lang->code]['details']['features'] ?? [] as $index => $feature)
                                             <div wire:key="feature-{{ $lang->code }}-{{ $index }}" class="flex items-center gap-2 p-2 border rounded bg-white">
-                                                <input type="text" wire:model="translations.{{ $lang->code }}.details.features.{{ $index }}.icon" class="w-16 form-control" placeholder="🎨">
+                                                <input type="text" wire:model="translations.{{ $lang->code }}.details.features.{{ $index }}.icon" class="w-16 form-control" placeholder="ًںژ¨">
                                                 <input type="text" wire:model="translations.{{ $lang->code }}.details.features.{{ $index }}.title" class="w-full form-control" placeholder="{{ t('dashboard.Feature_Title', 'Feature Title') }}">
                                                 <button type="button" wire:click="removeFeature('{{ $lang->code }}', {{ $index }})" class="text-red-500 hover:text-red-700">
                                                     <i class="ti ti-trash"></i>
@@ -212,7 +213,7 @@
                                     <button wire:click="edit({{ $template->id }})" class="w-8 h-8 inline-flex items-center justify-center text-yellow-600 rounded-xl hover:bg-yellow-100">
                                         <i class="ti ti-edit text-xl leading-none"></i>
                                     </button>
-                                    <button onclick="confirm('هل أنت متأكد من الحذف؟') || event.stopImmediatePropagation()" wire:click="confirmDelete({{ $template->id }})" class="w-8 h-8 inline-flex items-center justify-center text-red-600 rounded-xl hover:bg-red-100">
+                                    <button onclick="confirm('ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط§ظ„ط­ط°ظپطں') || event.stopImmediatePropagation()" wire:click="confirmDelete({{ $template->id }})" class="w-8 h-8 inline-flex items-center justify-center text-red-600 rounded-xl hover:bg-red-100">
                                         <i class="ti ti-trash text-xl"></i>
                                     </button>
                                 </div>
@@ -230,3 +231,4 @@
 </div>
     </div>
 </div>
+

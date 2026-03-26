@@ -1,4 +1,5 @@
-﻿<div class="p-6">
+﻿{{-- deprecated - do not use. Legacy admin Livewire view retained only for fallback safety. --}}
+<div class="p-6">
     <style>
         .masonry {
             column-count: 4;
@@ -459,5 +460,6 @@
         });
     });
 </script>
+
 
 

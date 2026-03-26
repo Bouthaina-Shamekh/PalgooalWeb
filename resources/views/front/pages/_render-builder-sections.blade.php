@@ -1,10 +1,14 @@
 @php
     $sectionComponents = $sectionComponents ?? [];
+    $legacyBuilderTypeAliases = [
+        'templates-pages' => 'templates_listing_showcase',
+    ];
 @endphp
 
 @foreach ($builderSections as $builderSection)
     @php
-        $type = $builderSection['type'] ?? null;
+        $rawType = $builderSection['type'] ?? null;
+        $type = $legacyBuilderTypeAliases[$rawType] ?? $rawType;
         $component = $sectionComponents[$type] ?? null;
 
         $data = is_array($builderSection['data'] ?? null) ? $builderSection['data'] : [];

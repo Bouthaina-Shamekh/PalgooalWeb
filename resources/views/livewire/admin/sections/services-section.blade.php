@@ -1,5 +1,6 @@
+﻿{{-- deprecated - do not use. Legacy admin Livewire view retained only for fallback safety. --}}
 <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg mb-8 border border-gray-200 dark:border-gray-700 space-y-6">
-    {{-- ✅ رسالة النجاح --}}
+    {{-- âœ… ط±ط³ط§ظ„ط© ط§ظ„ظ†ط¬ط§ط­ --}}
     @if (session()->has('success'))
         <div class="flex items-center gap-3 bg-green-100 text-green-900 border border-green-300 dark:bg-green-800/20 dark:text-green-100 dark:border-green-600 px-4 py-3 rounded-lg shadow transition-all duration-300" role="alert">
             <svg class="w-5 h-5 text-green-600 dark:text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -10,7 +11,7 @@
     @endif
     <div class="flex justify-between items-center">
         <h3 class="text-xl font-semibold text-gray-800 dark:text-white">{{ ucfirst($section->key) }}</h3>
-        {{-- <button wire:click="deleteMySection" onclick="return confirm('هل أنت متأكد من حذف هذا السكشن؟')" class="text-red-600 hover:underline text-sm">{{ t('section.Delete', 'Delete')}}</button> --}}
+        {{-- <button wire:click="deleteMySection" onclick="return confirm('ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط­ط°ظپ ظ‡ط°ط§ ط§ظ„ط³ظƒط´ظ†طں')" class="text-red-600 hover:underline text-sm">{{ t('section.Delete', 'Delete')}}</button> --}}
         <button onclick="confirmDeleteSection({{ $section->id }})" class="text-red-600 hover:underline text-sm">{{ t('section.Delete', 'Delete')}}</button> 
     </div>
 
@@ -52,4 +53,5 @@
         </button>
     </div>
 </div>
+
 

@@ -3228,6 +3228,9 @@
     --tw-gradient-position: to top right in oklab;
     background-image: linear-gradient(var(--tw-gradient-stops));
   }
+  .bg-\[radial-gradient\(circle_at_top_right\,_rgba\(16\,185\,129\,0\.28\)\,_transparent_35\%\)\,radial-gradient\(circle_at_bottom_left\,_rgba\(59\,130\,246\,0\.2\)\,_transparent_30\%\)\] {
+    background-image: radial-gradient(circle at top right, rgba(16,185,129,0.28), transparent 35%),radial-gradient(circle at bottom left, rgba(59,130,246,0.2), transparent 30%);
+  }
   .bg-\[radial-gradient\(circle_at_top_right\,_rgba\(168\,85\,247\,0\.35\)\,_transparent_35\%\)\,radial-gradient\(circle_at_bottom_left\,_rgba\(59\,130\,246\,0\.22\)\,_transparent_28\%\)\] {
     background-image: radial-gradient(circle at top right, rgba(168,85,247,0.35), transparent 35%),radial-gradient(circle at bottom left, rgba(59,130,246,0.22), transparent 28%);
   }
@@ -3739,6 +3742,9 @@
   .pr-4 {
     padding-right: calc(var(--spacing) * 4);
   }
+  .pr-5 {
+    padding-right: calc(var(--spacing) * 5);
+  }
   .pr-6 {
     padding-right: calc(var(--spacing) * 6);
   }
@@ -4122,6 +4128,9 @@
   }
   .text-emerald-50 {
     color: var(--color-emerald-50);
+  }
+  .text-emerald-100 {
+    color: var(--color-emerald-100);
   }
   .text-emerald-500 {
     color: var(--color-emerald-500);
@@ -6029,6 +6038,16 @@
       }
     }
   }
+  .hover\:bg-white\/15 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: color-mix(in srgb, #fff 15%, transparent);
+        @supports (color: color-mix(in lab, red, red)) {
+          background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
+        }
+      }
+    }
+  }
   .hover\:bg-white\/20 {
     &:hover {
       @media (hover: hover) {
@@ -6557,6 +6576,11 @@
       border-color: var(--color-blue-500);
     }
   }
+  .focus\:border-emerald-400 {
+    &:focus {
+      border-color: var(--color-emerald-400);
+    }
+  }
   .focus\:border-indigo-400 {
     &:focus {
       border-color: var(--color-indigo-400);
@@ -6667,6 +6691,11 @@
       @supports (color: color-mix(in lab, red, red)) {
         --tw-ring-color: color-mix(in oklab, var(--color-blue-500) 20%, transparent);
       }
+    }
+  }
+  .focus\:ring-emerald-100 {
+    &:focus {
+      --tw-ring-color: var(--color-emerald-100);
     }
   }
   .focus\:ring-emerald-400 {
@@ -7097,6 +7126,11 @@
       min-width: 16rem;
     }
   }
+  .sm\:min-w-\[180px\] {
+    @media (width >= 40rem) {
+      min-width: 180px;
+    }
+  }
   .sm\:min-w-\[320px\] {
     @media (width >= 40rem) {
       min-width: 320px;
@@ -7140,6 +7174,11 @@
   .sm\:items-center {
     @media (width >= 40rem) {
       align-items: center;
+    }
+  }
+  .sm\:items-end {
+    @media (width >= 40rem) {
+      align-items: flex-end;
     }
   }
   .sm\:items-start {
@@ -8357,6 +8396,11 @@
   .xl\:grid-cols-8 {
     @media (width >= 80rem) {
       grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
+  }
+  .xl\:grid-cols-\[minmax\(0\,1\.05fr\)_minmax\(360px\,0\.95fr\)\] {
+    @media (width >= 80rem) {
+      grid-template-columns: minmax(0,1.05fr) minmax(360px,0.95fr);
     }
   }
   .xl\:grid-cols-\[minmax\(0\,1\.6fr\)_minmax\(220px\,0\.7fr\)_auto\] {

@@ -8,6 +8,19 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\PageBuilderStructure;
 
+/**
+ * Canonical content aggregate for marketing pages.
+ *
+ * Architectural note:
+ * - `Page` + `Section` is the primary authored content model for the
+ *   marketing site and the admin sections workspace.
+ * - `PageBuilderStructure` is a companion storage/output layer for the
+ *   visual builder, published HTML snapshots, and normalized builder data.
+ * - The tenant runtime currently uses `SubscriptionPage` /
+ *   `SubscriptionSection`, so `context=tenant` and `subscription_id`
+ *   on this model remain transitional and must not be treated as the
+ *   active tenant page system.
+ */
 class Page extends Model
 {
     use HasFactory;
@@ -48,7 +61,11 @@ class Page extends Model
     /**
      * Relationship: all sections belonging to this page.
      *
-     * Each section represents a content block in the Page Builder.
+     * Each section represents a structured marketing content block.
+     *
+     * This relation is part of the canonical authored content model.
+     * It should remain the source of truth when documenting or cleaning
+     * up the marketing rendering system.
      */
     public function sections()
     {
@@ -59,6 +76,9 @@ class Page extends Model
 
     /**
      * Relationship: single builder structure JSON blob (GrapesJS).
+     *
+     * This is a storage/output companion for the visual builder and not
+     * the canonical authored content model.
      */
     public function builderStructure()
     {
@@ -67,6 +87,10 @@ class Page extends Model
 
     /**
      * Relationship: all builder structure snapshots/records for this page.
+     *
+     * These records support builder persistence and publish output, and
+     * are intentionally separate from the primary `Page` + `Section`
+     * content model.
      */
     public function builderStructures()
     {

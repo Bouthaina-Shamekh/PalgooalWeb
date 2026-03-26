@@ -84,11 +84,5 @@ class AppServiceProvider extends ServiceProvider
             'label' => 'Services',
             'group' => 'content',
         ]);
-
-        SectionRegistry::register('templates', [
-            'view'  => 'components.template.sections.templates',
-            'label' => 'Templates',
-            'group' => 'content',
-        ]);
     }
 }

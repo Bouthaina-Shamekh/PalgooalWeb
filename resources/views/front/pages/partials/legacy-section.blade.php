@@ -4,11 +4,13 @@
     $currentLocale = $currentLocale ?? app()->getLocale();
     $sectionTypes = $sectionTypes ?? [];
     $templates = $templates ?? collect();
+    $resolvedSectionType = $section->type === 'templates-pages' ? 'templates_listing_showcase' : $section->type;
 
     $translation = method_exists($section, 'translation') ? $section->translation($currentLocale) : null;
     $fallbackTranslation = $translation ?? $section->translations->first();
     $content = is_array($fallbackTranslation?->content ?? null) ? $fallbackTranslation->content : [];
-    $typeLabel = $sectionTypes[$section->type]['label'] ?? Str::headline(str_replace(['_', '-'], ' ', $section->type));
+    $typeLabel = $sectionTypes[$resolvedSectionType]['label']
+        ?? Str::headline(str_replace(['_', '-'], ' ', $resolvedSectionType));
 
     $featureItems = collect(is_array($content['features'] ?? null) ? $content['features'] : [])
         ->map(function ($item) {
@@ -113,7 +115,7 @@
     ]);
 @endphp
 
-@switch($section->type)
+@switch($resolvedSectionType)
     @case('hero_default')
     @case('hero_minimal')
         @include('components.template.sections.hero_default', [
@@ -223,7 +225,6 @@
         @break
 
     @case('templates_listing_showcase')
-    @case('templates-pages')
         @include('components.template.sections.templates_listing_showcase', [
             'section' => $section,
             'data' => $templatesListingData,

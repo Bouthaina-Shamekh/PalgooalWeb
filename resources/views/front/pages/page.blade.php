@@ -1,14 +1,9 @@
 ﻿{{-- resources/views/front/pages/page.blade.php --}}
 @php
-    use App\Models\Service;
-    use App\Models\Testimonial;
-    use App\Models\DomainTld;
-    use App\Models\DomainTldPrice;
     use App\Models\Media;
     use App\Models\Template;
     use Illuminate\Support\Str;
     use App\Support\SeoMeta;
-    use App\Support\Sections\SectionRenderer;
 
     /**
      * ------------------------------------------------------------------
@@ -140,6 +135,12 @@
      * Used for:
      *  - builderSections (GrapesJS → normalizedSections())
      *  - legacy $page->sections from admin module
+     *
+     * Architectural note:
+     * - The canonical marketing content model is `Page` + `Section`.
+     * - Builder-derived sections and published HTML are alternative
+     *   render outputs from `PageBuilderStructure`, not the primary
+     *   authored content source.
      * ------------------------------------------------------------------
      */
     $sectionComponents = [
@@ -156,20 +157,21 @@
         'features-3' => 'features-3',
         'cta' => 'cta',
         'services' => 'services',
-        'templates' => 'templates',
         'works' => 'works',
         'home-works' => 'home-works',
         'testimonials' => 'testimonials',
-        'blog' => 'blog',
+        'blog' => 'blog', // Legacy builder-only type. Keep supported, but do not extend.
         'banner' => 'banner',
         'search-domain' => 'search-domain',
-        'templates-pages' => 'templates-pages',
-        'hosting-plans' => 'hosting-plans',
         'hosting_pricing_showcase' => 'hosting_pricing_showcase',
         'domains_showcase' => 'domains_showcase',
         'templates_slider_showcase' => 'templates_slider_showcase',
         'templates_listing_showcase' => 'templates_listing_showcase',
         'faq' => 'faq',
+    ];
+
+    $legacyBuilderTypeAliases = [
+        'templates-pages' => 'templates_listing_showcase',
     ];
 
     /**
@@ -178,6 +180,10 @@
      * ------------------------------------------------------------------
      * - $publishedHtml / $publishedCss: snapshot from "Publish" action
      * - $builderSections: normalized sections array from project JSON
+     *
+     * These values come from the builder storage/output layer and are
+     * intentionally resolved separately from the canonical `Page` +
+     * `Section` content model.
      * ------------------------------------------------------------------
      */
     $builder = \App\Models\PageBuilderStructure::query()
@@ -208,14 +214,20 @@
      */
     $dynamicSections = collect($builderSections)
         ->filter(fn ($s) => isset($s['type'], $s['data']))
-        ->mapWithKeys(function ($s) {
-            $type = $s['type'];
+        ->mapWithKeys(function ($s) use ($legacyBuilderTypeAliases) {
+            $rawType = $s['type'];
+            $type = $legacyBuilderTypeAliases[$rawType] ?? $rawType;
             $data = is_array($s['data']) ? $s['data'] : [];
 
-            // Resolve DB-backed data (services, templates, etc.)
+            // Resolve DB-backed data for the canonical runtime section type.
             $data = \App\Support\Sections\SectionQueryResolver::resolve($type, $data);
 
-            return [$type => $data];
+            return $type === $rawType
+                ? [$type => $data]
+                : [
+                    $rawType => $data,
+                    $type => $data,
+                ];
         });
 
     $legacySections = $page->sections
@@ -271,8 +283,15 @@
             $pattern = '/<[^>]*data-pg-dynamic=["\']'.preg_quote($type, '/').'["\'][^>]*>(.*?)<\/[^>]+>/s';
 
             if (preg_match($pattern, $html)) {
+                $componentType = $legacyBuilderTypeAliases[$type] ?? $type;
+                $component = $sectionComponents[$componentType] ?? null;
+
+                if (! $component) {
+                    continue;
+                }
+
                 $replacement = view(
-                    'components.template.sections.' . $type,
+                    'components.template.sections.' . $component,
                     ['data' => $data]
                 )->render();
 
@@ -293,9 +312,10 @@
 
     @foreach ($builderSections as $builderSection)
         @php
-            $type = $builderSection['type'] ?? null;
+            $rawType = $builderSection['type'] ?? null;
+            $type = $legacyBuilderTypeAliases[$rawType] ?? $rawType;
             $component = $sectionComponents[$type] ?? null;
-            $data = $dynamicSections[$type] ?? [];
+            $data = $dynamicSections[$type] ?? $dynamicSections[$rawType] ?? [];
         @endphp
 
         @if ($component)

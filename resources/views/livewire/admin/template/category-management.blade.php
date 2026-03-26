@@ -1,3 +1,4 @@
+﻿{{-- deprecated - do not use. Legacy admin Livewire view retained only for fallback safety. --}}
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <!-- [ breadcrumb ] start -->
@@ -28,7 +29,7 @@
                     <h5>{{ $mode === 'edit' ? t('dashboard.Edit_Category', 'Edit Category') : t('dashboard.Add_New_Category', 'Add New Category') }}</h5>
                 </div>
                 <div class="card-body">
-                    <!-- تبويبات اللغات -->
+                    <!-- طھط¨ظˆظٹط¨ط§طھ ط§ظ„ظ„ط؛ط§طھ -->
                     <ul class="flex mb-4 border-b space-x-2 rtl:space-x-reverse">
                         @foreach($languages as $lang)
                             <li>
@@ -39,7 +40,7 @@
                             </li>
                         @endforeach
                     </ul>
-                    <!-- الحقول داخل التبويبات -->
+                    <!-- ط§ظ„ط­ظ‚ظˆظ„ ط¯ط§ط®ظ„ ط§ظ„طھط¨ظˆظٹط¨ط§طھ -->
                     @foreach($languages as $lang)
                         <div wire:key="trans-{{ $lang->code }}" @if($activeLang !== $lang->code) style="display: none;" @endif>
                             <div class="space-y-4">
@@ -99,7 +100,7 @@
                                     <i class="ti ti-edit text-xl leading-none"></i>
                                 </button>
                                 <button
-                                    onclick="confirm('هل أنت متأكد من رغبتك في الحذف؟') || event.stopImmediatePropagation()"
+                                    onclick="confirm('ظ‡ظ„ ط£ظ†طھ ظ…طھط£ظƒط¯ ظ…ظ† ط±ط؛ط¨طھظƒ ظپظٹ ط§ظ„ط­ط°ظپطں') || event.stopImmediatePropagation()"
                                     wire:click="delete({{ $category->id }})"
                                     class="w-8 h-8 inline-flex items-center justify-center text-red-600 rounded-xl hover:bg-red-100">
                                     <i class="ti ti-trash text-xl"></i>
@@ -116,3 +117,4 @@
     <!-- [ list-element ] end -->
     </div>
 </div>
+

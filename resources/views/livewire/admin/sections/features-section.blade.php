@@ -1,3 +1,4 @@
+﻿{{-- deprecated - do not use. Legacy admin Livewire view retained only for fallback safety. --}}
 <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg mb-8 border border-gray-200 dark:border-gray-700 space-y-6">
     <!-- Success Message -->
     @if (session()->has('success'))
@@ -45,19 +46,19 @@
         <div class="col-span-12 md:col-span-12 mb-4">
 
  
-        {{-- المميزات --}}
+        {{-- ط§ظ„ظ…ظ…ظٹط²ط§طھ --}}
             @foreach ($translationsData[$activeLang]['features'] ?? [] as $index => $feature)
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start border p-4 rounded relative">
                     <input type="text" wire:model="translationsData.{{ $activeLang }}.features.{{ $index }}.icon"
-                        placeholder="كود SVG أو اسم الأيقونة"
+                        placeholder="ظƒظˆط¯ SVG ط£ظˆ ط§ط³ظ… ط§ظ„ط£ظٹظ‚ظˆظ†ط©"
                         class="form-input w-full px-4 py-2 rounded border" />
 
                     <input type="text" wire:model="translationsData.{{ $activeLang }}.features.{{ $index }}.title"
-                        placeholder="عنوان الميزة"
+                        placeholder="ط¹ظ†ظˆط§ظ† ط§ظ„ظ…ظٹط²ط©"
                         class="form-input w-full px-4 py-2 rounded border" />
 
                     <input type="text" wire:model="translationsData.{{ $activeLang }}.features.{{ $index }}.description"
-                        placeholder="وصف مختصر"
+                        placeholder="ظˆطµظپ ظ…ط®طھطµط±"
                         class="form-input w-full px-4 py-2 rounded border" />
 
                     <button wire:click="removeFeature('{{ $activeLang }}', {{ $index }})"
@@ -67,15 +68,15 @@
                 </div>
                 {{-- <div class="col-span-12 md:col-span-6 mb-4">
                     <label class="form-label">{{ t('section.icon', 'icon')}}</label>
-                    <input type="text" wire:model="translationsData.{{ $activeLang }}.features.{{ $index }}.icon" class="form-control" placeholder="كود SVG أو اسم الأيقونة" />
+                    <input type="text" wire:model="translationsData.{{ $activeLang }}.features.{{ $index }}.icon" class="form-control" placeholder="ظƒظˆط¯ SVG ط£ظˆ ط§ط³ظ… ط§ظ„ط£ظٹظ‚ظˆظ†ط©" />
                 </div>
                 <div class="col-span-12 md:col-span-6 mb-4">
                     <label class="form-label">{{ t('section.icon', 'icon')}}</label>
-                    <input type="text" wire:model="translationsData.{{ $activeLang }}.features.{{ $index }}.title" class="form-control"  placeholder="عنوان الميزة" />
+                    <input type="text" wire:model="translationsData.{{ $activeLang }}.features.{{ $index }}.title" class="form-control"  placeholder="ط¹ظ†ظˆط§ظ† ط§ظ„ظ…ظٹط²ط©" />
                 </div>
                 <div class="col-span-12 md:col-span-6 mb-4">
                     <label class="form-label">{{ t('section.icon', 'icon')}}</label>
-                    <input type="text" wire:model="translationsData.{{ $activeLang }}.features.{{ $index }}.description" class="form-control"  placeholder="وصف مختصر" />
+                    <input type="text" wire:model="translationsData.{{ $activeLang }}.features.{{ $index }}.description" class="form-control"  placeholder="ظˆطµظپ ظ…ط®طھطµط±" />
                 </div>
                 <button wire:click="removeFeature('{{ $activeLang }}', {{ $index }})"
                         class="absolute -top-2 -left-2 bg-red-500 text-white text-sm rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition">
@@ -99,3 +100,4 @@
         </button>
     </div>
 </div>
+

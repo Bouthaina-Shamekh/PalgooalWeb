@@ -4,6 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Canonical structured content block for marketing pages.
+ *
+ * Architectural note:
+ * - `Section` belongs to the primary authored content system used by
+ *   `Page` and the admin sections workspace.
+ * - Tenant content is modeled separately through
+ *   `SubscriptionSection`, so this model should not absorb tenant
+ *   responsibilities during cleanup work.
+ */
 class Section extends Model
 {
     /**

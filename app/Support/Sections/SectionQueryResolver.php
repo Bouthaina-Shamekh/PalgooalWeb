@@ -11,6 +11,16 @@ use App\Models\Testimonial;
 use App\Models\DomainTld;
 use App\Models\DomainTldPrice;
 
+/**
+ * Primary runtime resolver for dynamic section payloads.
+ *
+ * Architectural note:
+ * - This is the active resolver used by the current frontend rendering
+ *   paths (`front.pages.page` and legacy section rendering).
+ * - All active resolver work belongs here.
+ * - Legacy builder type aliases are normalized into canonical types
+ *   before reaching this resolver for backward-safe rendering.
+ */
 class SectionQueryResolver
 {
     /**
@@ -30,7 +40,6 @@ class SectionQueryResolver
             'hosting_pricing_showcase' => self::hostingPricingShowcase($data),
             'templates_slider_showcase' => self::templatesSliderShowcase($data),
             'templates_listing_showcase' => self::templatesListingShowcase($data),
-            'templates-pages' => self::templatesListingShowcase($data),
             'search-domain' => self::searchDomain($data),
             default => $data,
         };

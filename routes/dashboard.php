@@ -207,10 +207,11 @@ Route::group([
 
     // -------------------------------------------------------------------------
     // Page Sections (Page Builder blocks per page)
-    // Example:
-    //   - /admin/pages/5/sections
-    //   - /admin/pages/5/sections/create
-    //   - /admin/pages/5/sections/{section}/edit
+    // Canonical admin section management surface:
+    //   - controller: App\Http\Controllers\Admin\SectionController
+    //   - UI: dashboard.pages.sections.layouts.workspace
+    // Deprecated admin Livewire section editors are retained only for fallback
+    // safety and must not be routed here.
     // -------------------------------------------------------------------------
     Route::prefix('pages/{page}')
         ->name('pages.sections.')
@@ -303,11 +304,17 @@ Route::group([
 
     // -------------------------------------------------------------------------
     // WordPress Templates (Products)
+    // Template category management is controller + Blade. The deprecated admin
+    // Livewire category manager is retained only as an unrouted fallback.
     // -------------------------------------------------------------------------
-    Route::get('templates/category', function () {
-        // Dedicated Blade page for template categories (UI only)
-        return view('dashboard.templates.CategoryTemplats');
-    })->name('category');
+    Route::get('templates/category', [TemplateController::class, 'categories'])->name('category');
+    Route::post('templates/category', [TemplateController::class, 'storeCategory'])->name('category.store');
+    Route::get('templates/category/{category}/edit', [TemplateController::class, 'editCategory'])
+        ->name('category.edit');
+    Route::match(['put', 'patch'], 'templates/category/{category}', [TemplateController::class, 'updateCategory'])
+        ->name('category.update');
+    Route::delete('templates/category/{category}', [TemplateController::class, 'destroyCategory'])
+        ->name('category.destroy');
 
     Route::resource('templates', TemplateController::class);
 

@@ -5,11 +5,14 @@ namespace App\Livewire\Admin\Sections;
 use App\Models\SectionTranslation;
 use Livewire\Component;
 
+/**
+ * @deprecated deprecated - do not use. Legacy admin Livewire component retained only for fallback safety.
+ */
 class BlogsSection extends BaseSectionComponent
 {
     public function mount()
     {
-        parent::mount(); // استدعاء mount من BaseSectionComponent
+        parent::mount(); // ط§ط³طھط¯ط¹ط§ط، mount ظ…ظ† BaseSectionComponent
 
         foreach ($this->languages as $lang) {
             $translation = $this->section->translations->firstWhere('locale', $lang->code);
@@ -46,7 +49,7 @@ class BlogsSection extends BaseSectionComponent
             $translation->save();
         }
 
-        session()->flash('success', 'تم تحديث قسم الهيرو بنجاح.');
+        session()->flash('success', 'طھظ… طھط­ط¯ظٹط« ظ‚ط³ظ… ط§ظ„ظ‡ظٹط±ظˆ ط¨ظ†ط¬ط§ط­.');
     }
 
     public function removeblogs($locale, $index)
@@ -64,4 +67,5 @@ class BlogsSection extends BaseSectionComponent
         return view('livewire.admin.sections.blogs-section');
     }
 }
+
 

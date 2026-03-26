@@ -1,5 +1,6 @@
+﻿{{-- deprecated - do not use. Legacy admin Livewire view retained only for fallback safety. --}}
 @php
-    // تحديد RTL: نحاول من جدول اللغات ثم نعمل fallback حسب كود اللغة
+    // طھط­ط¯ظٹط¯ RTL: ظ†ط­ط§ظˆظ„ ظ…ظ† ط¬ط¯ظˆظ„ ط§ظ„ظ„ط؛ط§طھ ط«ظ… ظ†ط¹ظ…ظ„ fallback ط­ط³ط¨ ظƒظˆط¯ ط§ظ„ظ„ط؛ط©
     $active = $activeLang ?? app()->getLocale();
     $isRtl = optional(
         $languages instanceof \Illuminate\Support\Collection
@@ -12,9 +13,9 @@
 @endphp
 
 <div class="space-y-6" dir="{{ $isRtl ? 'rtl' : 'ltr' }}">
-    <h2 class="text-xl font-bold mb-4">إدارة سكشنات الصفحة</h2>
+    <h2 class="text-xl font-bold mb-4">ط¥ط¯ط§ط±ط© ط³ظƒط´ظ†ط§طھ ط§ظ„طµظپط­ط©</h2>
 
-    {{-- رسائل --}}
+    {{-- ط±ط³ط§ط¦ظ„ --}}
     @if (session()->has('success'))
         <div class="bg-green-100 text-green-800 px-4 py-2 rounded">{{ session('success') }}</div>
     @endif
@@ -22,7 +23,7 @@
         <div class="bg-red-100 text-red-800 px-4 py-2 rounded">{{ session('error') }}</div>
     @endif
 
-    {{-- عرض السكشنات الحالية --}}
+    {{-- ط¹ط±ط¶ ط§ظ„ط³ظƒط´ظ†ط§طھ ط§ظ„ط­ط§ظ„ظٹط© --}}
     @foreach ($sections as $section)
         @switch($section->key)
             @case('hero')
@@ -61,10 +62,6 @@
                 <livewire:admin.sections.home-works-section :section="$section" wire:key="home-works-{{ $section->id }}" />
             @break
 
-            @case('templates')
-                <livewire:admin.sections.templates-section :section="$section" wire:key="templates-{{ $section->id }}" />
-            @break
-
             @case('testimonials')
                 <livewire:admin.sections.testimonials-section :section="$section"
                     wire:key="testimonials-{{ $section->id }}" />
@@ -79,34 +76,24 @@
                     wire:key="search-domain-{{ $section->id }}" />
             @break
 
-            @case('hosting-plans')
-                <livewire:admin.sections.hosting-plan-section :section="$section"
-                    wire:key="hosting-plans-{{ $section->id }}" />
-            @break
-
             @case('faq')
                 <livewire:admin.sections.faq-section :section="$section" wire:key="faq-{{ $section->id }}" />
             @break
 
-            @case('templates-pages')
-                <livewire:admin.sections.templates-pages-section :section="$section"
-                    wire:key="templates-pages-{{ $section->id }}" />
-            @break
-
             @default
-                <div class="p-4 bg-gray-100 rounded shadow">سكشن غير مدعوم حالياً: {{ $section->key }}</div>
+                <div class="p-4 bg-gray-100 rounded shadow">ط³ظƒط´ظ† ط؛ظٹط± ظ…ط¯ط¹ظˆظ… ط­ط§ظ„ظٹط§ظ‹: {{ $section->key }}</div>
         @endswitch
     @endforeach
 
-    {{-- زر فتح الودجتس (سايدبار) --}}
+    {{-- ط²ط± ظپطھط­ ط§ظ„ظˆط¯ط¬طھط³ (ط³ط§ظٹط¯ط¨ط§ط±) --}}
     <div class="mt-10 border-t pt-6 flex items-center gap-3">
         <button type="button" wire:click="openPalette"
             class="bg-primary text-white px-6 py-2 rounded hover:bg-primary/90 transition">
-            + أضف سكشن
+            + ط£ط¶ظپ ط³ظƒط´ظ†
         </button>
     </div>
 
-    {{-- الشريط الجانبي (Widget Palette) --}}
+    {{-- ط§ظ„ط´ط±ظٹط· ط§ظ„ط¬ط§ظ†ط¨ظٹ (Widget Palette) --}}
     <div wire:key="sections-palette"
          class="fixed inset-y-0 z-50 w-[380px] max-w-[90vw] bg-white dark:bg-gray-900 shadow-2xl
                transition-transform duration-300
@@ -118,23 +105,23 @@
                 ? 'transform: translateX(-105%);'
                 : 'transform: translateX(105%);') }}"
         aria-hidden="{{ $showPalette ? 'false' : 'true' }}">
-        {{-- رأس اللوحة --}}
+        {{-- ط±ط£ط³ ط§ظ„ظ„ظˆط­ط© --}}
         <div class="shrink-0 flex items-center justify-between px-4 py-3 border-b">
-            <h3 class="text-base font-semibold">أضف سكشن</h3>
+            <h3 class="text-base font-semibold">ط£ط¶ظپ ط³ظƒط´ظ†</h3>
             <button type="button" class="text-gray-500 hover:text-gray-700" wire:click="closePalette"
-                aria-label="إغلاق">✕</button>
+                aria-label="ط¥ط؛ظ„ط§ظ‚">âœ•</button>
         </div>
 
-        {{-- أدوات --}}
+        {{-- ط£ط¯ظˆط§طھ --}}
         <div class="shrink-0 p-4 space-y-3 border-b">
             <input type="search" wire:model.live.debounce.300ms="paletteSearch" class="w-full border rounded px-3 py-2"
-                placeholder="ابحث (مثال: hero, features, blog)">
+                placeholder="ط§ط¨ط­ط« (ظ…ط«ط§ظ„: hero, features, blog)">
 
             <input type="number" wire:model="paletteOrder" class="w-full border rounded px-3 py-2"
-                placeholder="الترتيب (اختياري)">
+                placeholder="ط§ظ„طھط±طھظٹط¨ (ط§ط®طھظٹط§ط±ظٹ)">
         </div>
 
-        {{-- شبكة الودجتس (هي التي تتمدّد وتسكرول) --}}
+        {{-- ط´ط¨ظƒط© ط§ظ„ظˆط¯ط¬طھط³ (ظ‡ظٹ ط§ظ„طھظٹ طھطھظ…ط¯ظ‘ط¯ ظˆطھط³ظƒط±ظˆظ„) --}}
         <div class="flex-1 min-h-0 overflow-y-auto p-4">
             <div class="grid grid-cols-1 gap-3">
                 @forelse ($paletteKeys as $k)
@@ -160,7 +147,7 @@
                                     @if (!empty($meta['unique']))
                                         <span
                                             class="inline-block mt-2 text-[11px] px-2 py-0.5 rounded bg-amber-100 text-amber-800">
-                                            فريد (مرة واحدة)
+                                            ظپط±ظٹط¯ (ظ…ط±ط© ظˆط§ط­ط¯ط©)
                                         </span>
                                     @endif
                                 </div>
@@ -170,22 +157,23 @@
                                 <button type="button" wire:click.stop="addFromPalette('{{ $k }}')"
                                     wire:loading.attr="disabled" wire:target="addFromPalette"
                                     class="px-3 py-1.5 rounded bg-primary text-white text-sm hover:bg-primary/90">
-                                    إضافة
+                                    ط¥ط¶ط§ظپط©
                                 </button>
                             </div>
                         </div>
                     </div>
                 @empty
-                    <div class="text-center text-gray-500 py-8">لا توجد نتائج مطابقة لبحثك.</div>
+                    <div class="text-center text-gray-500 py-8">ظ„ط§ طھظˆط¬ط¯ ظ†طھط§ط¦ط¬ ظ…ط·ط§ط¨ظ‚ط© ظ„ط¨ط­ط«ظƒ.</div>
                 @endforelse
             </div>
         </div>
     </div>
 
 
-    {{-- خلفية لإغلاق اللوحة عند الضغط خارجها --}}
+    {{-- ط®ظ„ظپظٹط© ظ„ط¥ط؛ظ„ط§ظ‚ ط§ظ„ظ„ظˆط­ط© ط¹ظ†ط¯ ط§ظ„ط¶ط؛ط· ط®ط§ط±ط¬ظ‡ط§ --}}
     @if ($showPalette)
         <button type="button" class="fixed inset-0 z-40 bg-black/40" wire:click="closePalette"
-            aria-label="إغلاق اللوحة"></button>
+            aria-label="ط¥ط؛ظ„ط§ظ‚ ط§ظ„ظ„ظˆط­ط©"></button>
     @endif
 </div>
+

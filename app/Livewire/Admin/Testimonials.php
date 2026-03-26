@@ -9,6 +9,9 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
+/**
+ * @deprecated deprecated - do not use. Legacy admin Livewire component retained only for fallback safety.
+ */
 class Testimonials extends Component
 {
     use WithPagination, WithFileUploads;
@@ -131,10 +134,10 @@ class Testimonials extends Component
         if ($this->testimonialId) {
             $testimonial = Testimonial::findOrFail($this->testimonialId);
             $testimonial->update($data);
-            $this->showAlert('Êã ÊÍÏíË ÇáÔåÇÏÉ ÈäÌÇÍ.', 'success');
+            $this->showAlert('ØªÙ… ØªØ­Ø¯ÙŠØ« Ø§Ù„Ø´Ù‡Ø§Ø¯Ø© Ø¨Ù†Ø¬Ø§Ø­.', 'success');
         } else {
             $testimonial = Testimonial::create($data);
-            $this->showAlert('Êã ÅÖÇÝÉ ÇáÔåÇÏÉ ÈäÌÇÍ.', 'success');
+            $this->showAlert('ØªÙ… Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø´Ù‡Ø§Ø¯Ø© Ø¨Ù†Ø¬Ø§Ø­.', 'success');
         }
 
         foreach ($this->testimonialTranslations as $translation) {
@@ -161,11 +164,11 @@ class Testimonials extends Component
             $testimonial->delete();
 
             $this->dispatch('testimonial-deleted-success');
-            $this->showAlert('Êã ÍÐÝ ÇáÔåÇÏÉ ÈäÌÇÍ.', 'success');
+            $this->showAlert('ØªÙ… Ø­Ø°Ù Ø§Ù„Ø´Ù‡Ø§Ø¯Ø© Ø¨Ù†Ø¬Ø§Ø­.', 'success');
         } catch (\Exception $e) {
-            logger()->error('ÎØÃ ÃËäÇÁ ÍÐÝ ÇáÔåÇÏÉ: ' . $e->getMessage());
+            logger()->error('Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø­Ø°Ù Ø§Ù„Ø´Ù‡Ø§Ø¯Ø©: ' . $e->getMessage());
             $this->dispatch('testimonial-delete-failed');
-            $this->showAlert('ÊÚÐÑ ÍÐÝ ÇáÔåÇÏÉ¡ ÍÇæá ãÑÉ ÃÎÑì.', 'danger');
+            $this->showAlert('ØªØ¹Ø°Ø± Ø­Ø°Ù Ø§Ù„Ø´Ù‡Ø§Ø¯Ø©ØŒ Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.', 'danger');
         }
 
         $this->resetPage();
@@ -177,4 +180,5 @@ class Testimonials extends Component
         return view('livewire.admin.testimonials', compact('testimonials'));
     }
 }
+
 

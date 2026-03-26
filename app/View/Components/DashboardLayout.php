@@ -10,12 +10,14 @@ use Illuminate\View\Component;
 class DashboardLayout extends Component
 {
     public $title;
+    public $enableLegacyAdminLivewire;
     /**
      * Create a new component instance.
      */
-    public function __construct($title = null)
+    public function __construct($title = null, bool $enableLegacyAdminLivewire = false)
     {
         $this->title = $title ?? Config::get('app.name');
+        $this->enableLegacyAdminLivewire = $enableLegacyAdminLivewire;
     }
 
     /**
@@ -25,6 +27,7 @@ class DashboardLayout extends Component
     {
         return view('dashboard.layouts.app', [
             'title' => $this->title,
+            'enableLegacyAdminLivewire' => $this->enableLegacyAdminLivewire,
         ]);
     }
 }

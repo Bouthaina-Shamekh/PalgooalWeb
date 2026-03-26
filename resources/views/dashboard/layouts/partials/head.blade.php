@@ -46,9 +46,10 @@
     <!-- [Dashboard Custom CSS] -->
     <link rel="stylesheet" href="{{ mix('assets/dashboard/css/dashboard.css') }}" />
     @stack('styles')
-    @unless (request()->routeIs('dashboard.general_settings', 'dashboard.menus', 'dashboard.headers'))
+    {{-- Deprecated admin Livewire assets are opt-in only for retained legacy views. --}}
+    @if (!empty($enableLegacyAdminLivewire))
         @livewireStyles
-    @endunless
+    @endif
 </head>
 <!-- [Head] end -->
 <!-- [Body] Start -->

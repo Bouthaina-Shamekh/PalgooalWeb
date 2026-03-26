@@ -6,6 +6,9 @@ use App\Models\Language;
 use App\Models\Section;
 use Livewire\Component;
 
+/**
+ * @deprecated deprecated - do not use. Legacy admin Livewire component retained only for fallback safety.
+ */
 class BaseSectionComponent extends Component
 {
     public Section $section;
@@ -42,14 +45,14 @@ class BaseSectionComponent extends Component
     {
         $this->section->delete();
 
-        session()->flash('success', 'تم حذف السكشن بنجاح.');
+        session()->flash('success', 'طھظ… ط­ط°ظپ ط§ظ„ط³ظƒط´ظ† ط¨ظ†ط¬ط§ط­.');
 
-        // إعادة التوجيه مع Livewire
+        // ط¥ط¹ط§ط¯ط© ط§ظ„طھظˆط¬ظٹظ‡ ظ…ط¹ Livewire
         $this->redirect(request()->header('Referer'), navigate: true);
     }
 
     /**
-     * دوال مساعدة للسكشنات يمكن استدعاؤها من أي سكشن يرث BaseSectionComponent
+     * ط¯ظˆط§ظ„ ظ…ط³ط§ط¹ط¯ط© ظ„ظ„ط³ظƒط´ظ†ط§طھ ظٹظ…ظƒظ† ط§ط³طھط¯ط¹ط§ط¤ظ‡ط§ ظ…ظ† ط£ظٹ ط³ظƒط´ظ† ظٹط±ط« BaseSectionComponent
      */
     public function flashSuccess($message)
     {
@@ -61,4 +64,5 @@ class BaseSectionComponent extends Component
         session()->flash('error', $message);
     }
 }
+
 
