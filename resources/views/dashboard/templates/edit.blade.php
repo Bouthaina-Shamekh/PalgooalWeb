@@ -715,7 +715,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const i18n = @json([
+            @php
+                $templateEditI18n = [
                 'untitledImage' => t('dashboard.templates.form.js.untitled_image', 'Untitled image'),
                 'featureTitlePlaceholder' => t('dashboard.templates.form.js.feature_title_placeholder', 'عنوان الميزة'),
                 'featureIconPlaceholder' => t('dashboard.templates.form.js.feature_icon_placeholder', 'أيقونة أو رمز'),
@@ -727,7 +728,9 @@
                 'noImage' => t('dashboard.templates.form.js.no_image', 'No image'),
                 'noImageSelected' => t('dashboard.templates.form.js.no_image_selected', 'لم يتم اختيار صورة بعد'),
                 'chooseImageFromLibrary' => t('dashboard.templates.form.js.choose_image_from_library', 'اختيار صورة من المكتبة'),
-            ], JSON_UNESCAPED_UNICODE);
+                ];
+            @endphp
+            const i18n = @json($templateEditI18n, JSON_UNESCAPED_UNICODE);
 
             document.querySelectorAll('[data-locale-section]').forEach(section => {
                 const listFeatures = section.querySelector('[data-features-list]');

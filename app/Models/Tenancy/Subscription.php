@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\Coupon;
 use App\Models\Domain;
 use App\Models\InvoiceItem;
+use App\Models\Page;
 use App\Models\Plan;
 use App\Models\Template;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -76,9 +77,12 @@ class Subscription extends Model
         return $this->belongsTo(Plan::class);
     }
 
-    public function pages(): HasMany
+    /**
+     * Canonical tenant pages cloned into the shared Page + Section system.
+     */
+    public function canonicalPages(): HasMany
     {
-        return $this->hasMany(SubscriptionPage::class);
+        return $this->hasMany(Page::class, 'tenant_id');
     }
 
     public function template(): BelongsTo

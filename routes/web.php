@@ -14,12 +14,12 @@ use App\Http\Controllers\Front\PageController as FrontPageController;
 
 // Admin / Management Controllers (used in frontend routes)
 use App\Http\Controllers\Admin\Management\DomainSearchController;
+use App\Http\Middleware\ServeTenantSite;
 
 // Models
 use App\Models\Plan;
 use App\Models\Portfolio;
 use App\Models\Tenancy\Subscription;
-use App\Models\Tenancy\SubscriptionPage;
 
 Route::middleware(['setLocale'])->group(function () {
 
@@ -193,10 +193,12 @@ Route::middleware(['setLocale'])->group(function () {
                 abort(404, 'Subscription is not an active multi-tenant.');
             }
 
-            $page = SubscriptionPage::with(['translations', 'sections.translations'])
-                ->where('subscription_id', $subscription->id)
-                ->where('is_home', true)
-                ->firstOrFail();
+            $page = app(ServeTenantSite::class)
+                ->resolveTenantPage($subscription, '', app()->getLocale(), false);
+
+            if (! $page) {
+                abort(404, 'Page not found for this tenant.');
+            }
 
             View::share('tenantSubscription', $subscription);
 
@@ -217,15 +219,12 @@ Route::middleware(['setLocale'])->group(function () {
                 abort(404, 'Subscription is not an active multi-tenant.');
             }
 
-            $page = SubscriptionPage::with(['translations', 'sections.translations'])
-                ->where('subscription_id', $subscription->id)
-                ->where(function ($query) use ($slug) {
-                    $query->where('slug', $slug)
-                        ->orWhereHas('translations', function ($translationQuery) use ($slug) {
-                            $translationQuery->where('slug', $slug);
-                        });
-                })
-                ->firstOrFail();
+            $page = app(ServeTenantSite::class)
+                ->resolveTenantPage($subscription, $slug, app()->getLocale(), false);
+
+            if (! $page) {
+                abort(404, 'Page not found for this tenant.');
+            }
 
             View::share('tenantSubscription', $subscription);
 

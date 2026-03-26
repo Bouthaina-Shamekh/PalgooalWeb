@@ -2,11 +2,13 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Page;
 use App\Models\Tenancy\Subscription;
-use App\Models\Tenancy\SubscriptionPage;
 use App\Models\Plan;
+use App\Services\Tenancy\TenantRuntimeUsageRecorder;
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 
 class ServeTenantSite
@@ -33,7 +35,7 @@ class ServeTenantSite
             return $next($request);
         }
 
-        $page = $this->resolvePage($subscription, $request);
+        $page = $this->resolveTenantPage($subscription, $request->path(), app()->getLocale());
 
         if (! $page) {
             abort(404, 'Page not found for this tenant.');
@@ -47,26 +49,68 @@ class ServeTenantSite
         ]);
     }
 
-    protected function resolvePage(Subscription $subscription, Request $request): ?SubscriptionPage
+    public function resolveTenantPage(
+        Subscription $subscription,
+        ?string $path = null,
+        ?string $locale = null,
+        bool $recordUsage = true,
+    ): ?Page
     {
-        $path = trim($request->path(), '/');
-        $locale = app()->getLocale();
+        $path = trim((string) $path, '/');
+        $locale = $locale ?? app()->getLocale();
 
-        $baseQuery = $subscription->pages()
-            ->with(['translations', 'sections.translations'])
+        $canonicalPage = $this->resolveCanonicalPage($subscription, $path, $locale);
+
+        if ($canonicalPage) {
+            if ($recordUsage) {
+                app(TenantRuntimeUsageRecorder::class)->record(
+                    subscription: $subscription,
+                    source: 'canonical',
+                    page: $canonicalPage,
+                    path: $path,
+                    locale: $locale,
+                );
+            }
+
+            Log::info('Tenant runtime resolved page from canonical Page + Section.', [
+                'subscription_id' => $subscription->id,
+                'tenant_id' => $subscription->id,
+                'path' => $path,
+                'page_id' => $canonicalPage->id,
+                'source' => 'canonical',
+            ]);
+
+            return $canonicalPage;
+        }
+
+        return null;
+    }
+
+    protected function resolveCanonicalPage(Subscription $subscription, string $path, string $locale): ?Page
+    {
+        $baseQuery = Page::query()
+            ->with([
+                'translations',
+                'sections' => function ($query) {
+                    $query->where('is_active', true)
+                        ->orderBy('order');
+                },
+                'sections.translations',
+            ])
+            ->where('context', 'tenant')
+            ->where('tenant_id', $subscription->id)
             ->where('is_active', true)
-            ->orderByDesc('is_home');
+            ->orderByDesc('is_home')
+            ->orderBy('id');
 
-        if ($path === '' || $path === null) {
+        if ($path === '') {
             return (clone $baseQuery)
                 ->where('is_home', true)
                 ->first()
                 ?? $baseQuery->first();
         }
 
-        $page = $subscription->pages()
-            ->with(['translations', 'sections.translations'])
-            ->where('is_active', true)
+        return (clone $baseQuery)
             ->whereHas('translations', function ($query) use ($path, $locale) {
                 $query->where('slug', $path)
                     ->where(function ($q) use ($locale) {
@@ -75,11 +119,5 @@ class ServeTenantSite
                     });
             })
             ->first();
-
-        if ($page) {
-            return $page;
-        }
-
-        return null;
     }
 }

@@ -6,6 +6,7 @@ use App\Models\Tenancy\Subscription;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use App\Models\PageBuilderStructure;
 
 /**
@@ -13,13 +14,12 @@ use App\Models\PageBuilderStructure;
  *
  * Architectural note:
  * - `Page` + `Section` is the primary authored content model for the
- *   marketing site and the admin sections workspace.
+ *   marketing site, tenant runtime, and the admin sections workspace.
  * - `PageBuilderStructure` is a companion storage/output layer for the
  *   visual builder, published HTML snapshots, and normalized builder data.
- * - The tenant runtime currently uses `SubscriptionPage` /
- *   `SubscriptionSection`, so `context=tenant` and `subscription_id`
- *   on this model remain transitional and must not be treated as the
- *   active tenant page system.
+ * - `tenant_id` is an opt-in ownership field for future canonical tenancy
+ *   support. It is nullable so existing marketing pages continue to work
+ *   without any query or rendering changes.
  */
 class Page extends Model
 {
@@ -30,11 +30,13 @@ class Page extends Model
      *
      * We include the new Page Builder context fields:
      * - context: defines where the page is used (marketing / tenant / ...)
-     * - subscription_id: links tenant pages to a specific subscription (future use)
+     * - subscription_id: optional legacy linkage retained for backward-safe data access
+     * - tenant_id: optional tenant ownership for the canonical Page + Section system
      */
     protected $fillable = [
         'context',
         'subscription_id',
+        'tenant_id',
         'builder_mode',
         'is_active',
         'is_home',
@@ -102,9 +104,21 @@ class Page extends Model
      *
      * For marketing pages, `subscription_id` will be null.
      */
-    public function subscription()
+    public function subscription(): BelongsTo
     {
         return $this->belongsTo(Subscription::class);
+    }
+
+    /**
+     * Relationship: optional canonical tenant ownership.
+     *
+     * This deliberately points at the existing subscription tenancy record.
+     * No global scope is applied, so `tenant_id = null` marketing pages
+     * continue to behave exactly as they do today.
+     */
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Subscription::class, 'tenant_id');
     }
 
     /**
@@ -154,11 +168,23 @@ class Page extends Model
     }
 
     /**
-     * Scope: only tenant/client pages (for subscriptions).
+     * Scope: filter pages by tenant ownership when a tenant is provided.
+     *
+     * Backward compatibility:
+     * - Calling `tenant()` with no argument preserves the older
+     *   `context = tenant` behavior.
+     * - Calling `tenant($subscriptionOrId)` uses the new nullable
+     *   `tenant_id` column without applying any global scope.
      */
-    public function scopeTenant(Builder $query): Builder
+    public function scopeTenant(Builder $query, Subscription|int|string|null $tenant = null): Builder
     {
-        return $query->where('context', 'tenant');
+        if ($tenant === null) {
+            return $query->where('context', 'tenant');
+        }
+
+        $tenantId = $tenant instanceof Subscription ? $tenant->getKey() : $tenant;
+
+        return $query->where('tenant_id', $tenantId);
     }
 
     /**

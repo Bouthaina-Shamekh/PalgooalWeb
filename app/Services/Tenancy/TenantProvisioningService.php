@@ -2,12 +2,13 @@
 
 namespace App\Services\Tenancy;
 
+use App\Models\Page;
 use App\Models\Plan;
 use App\Models\Tenancy\Subscription;
 use App\Models\User;
 use App\Notifications\Tenancy\AdminSubscriptionProvisioned;
 use App\Notifications\Tenancy\SubscriptionProvisionedNotification;
-use App\Services\Templates\TemplateBlueprintService;
+use App\Services\Templates\TemplateCloner;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
@@ -17,12 +18,12 @@ class TenantProvisioningService
 {
     public function __construct(
         protected SubscriptionSyncService $syncService,
-        protected TemplateBlueprintService $blueprintService
+        protected TemplateCloner $templateCloner,
     ) {
     }
 
     /**
-     * Provision subscription tenant (WHM + blueprint cloning).
+     * Provision subscription tenant (WHM + canonical content cloning).
      */
     public function provision(Subscription $subscription, bool $force = false): Subscription
     {
@@ -148,19 +149,66 @@ class TenantProvisioningService
 
     protected function provisionMultiTenant(Subscription $subscription): string
     {
-        $this->cloneTemplateBlueprint($subscription);
+        $messages = [];
 
-        return 'Multi-tenant instance initialized.';
+        $messages[] = $this->cloneCanonicalTemplateContent($subscription);
+
+        $messages = array_values(array_filter($messages));
+
+        return $messages !== []
+            ? implode(' ', $messages)
+            : 'Multi-tenant instance initialized.';
     }
 
-    protected function cloneTemplateBlueprint(Subscription $subscription): void
+    protected function cloneCanonicalTemplateContent(Subscription $subscription): string
     {
-        $message = $this->blueprintService->seedSubscription($subscription);
+        if (! $subscription->template_id) {
+            $message = 'Canonical tenant content skipped: no template is assigned to this subscription.';
+
+            Log::info($message, [
+                'subscription_id' => $subscription->id,
+            ]);
+
+            return $message;
+        }
+
+        if ($this->hasCanonicalTenantContent($subscription)) {
+            $message = 'Canonical tenant content already exists; skipping duplicate clone.';
+
+            Log::info($message, [
+                'subscription_id' => $subscription->id,
+                'tenant_id' => $subscription->id,
+            ]);
+
+            return $message;
+        }
+
+        $pages = $this->templateCloner->cloneToTenant(
+            template: $subscription->template ?? $subscription->template_id,
+            tenant: $subscription,
+            replaceExisting: false,
+        );
+
+        $message = sprintf(
+            'Canonical tenant content cloned into Page + Section (%d pages).',
+            $pages->count()
+        );
 
         Log::info($message, [
             'subscription_id' => $subscription->id,
+            'tenant_id' => $subscription->id,
             'template_id' => $subscription->template_id,
+            'page_count' => $pages->count(),
         ]);
+
+        return $message;
+    }
+
+    protected function hasCanonicalTenantContent(Subscription $subscription): bool
+    {
+        return Page::query()
+            ->where('tenant_id', $subscription->id)
+            ->exists();
     }
 
     protected function notifyClient(Subscription $subscription): void

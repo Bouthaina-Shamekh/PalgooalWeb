@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\Admin\Management;
 
 use App\Http\Controllers\Controller;
-use App\Models\{Invoice, InvoiceItem, Client, Subscription, Domain, Order};
+use App\Models\{Invoice, InvoiceItem, Client, Domain, Order};
+use App\Models\Tenancy\Subscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{DB, Log, Mail};
 use Illuminate\Validation\Rule;

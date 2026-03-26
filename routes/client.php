@@ -37,16 +37,6 @@ Route::group([
 
     Route::get('subscriptions', [HomeController::class, 'subscriptions'])->name('subscriptions');
     Route::get('subscriptions/{subscription}', [SubscriptionController::class, 'show'])->name('subscriptions.show');
-    Route::post('subscriptions/{subscription}/sections/{section}', [SubscriptionController::class, 'updateSection'])
-        ->name('subscriptions.sections.update');
-    Route::get('subscriptions/{subscription}/pages/{page}/builder', [\App\Http\Controllers\Client\PageBuilderController::class, 'builder'])
-        ->name('subscriptions.pages.builder');
-    Route::post('subscriptions/{subscription}/pages/{page}/sections/reorder', [\App\Http\Controllers\Client\PageBuilderController::class, 'reorder'])
-        ->name('subscriptions.pages.sections.reorder');
-    Route::post('subscriptions/{subscription}/pages/{page}/sections/add', [\App\Http\Controllers\Client\PageBuilderController::class, 'addSection'])
-        ->name('subscriptions.pages.sections.add');
-    Route::post('subscriptions/{subscription}/sections/{section}/update', [\App\Http\Controllers\Client\PageBuilderController::class, 'updateSection'])
-        ->name('client.subscriptions.sections.update');
     Route::get('invoices/{invoice}/checkout', [InvoiceCheckoutController::class, 'show'])->name('invoices.checkout');
     Route::post('invoices/{invoice}/checkout', [InvoiceCheckoutController::class, 'process'])->name('invoices.checkout.process');
     Route::get('invoices', [HomeController::class, 'invoices'])->name('invoices');

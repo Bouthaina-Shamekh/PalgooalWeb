@@ -2,17 +2,19 @@
 
 namespace App\Models;
 
+use App\Models\Tenancy\Subscription;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Canonical structured content block for marketing pages.
  *
  * Architectural note:
  * - `Section` belongs to the primary authored content system used by
- *   `Page` and the admin sections workspace.
- * - Tenant content is modeled separately through
- *   `SubscriptionSection`, so this model should not absorb tenant
- *   responsibilities during cleanup work.
+ *   `Page`, the tenant runtime, and the admin sections workspace.
+ * - `tenant_id` is intentionally nullable and opt-in so existing
+ *   marketing sections continue to render unchanged.
  */
 class Section extends Model
 {
@@ -27,6 +29,7 @@ class Section extends Model
      */
     protected $fillable = [
         'page_id',
+        'tenant_id',
         'type',
         'variant',
         'style',
@@ -76,9 +79,20 @@ class Section extends Model
     /**
      * Relationship: the page this section belongs to.
      */
-    public function page()
+    public function page(): BelongsTo
     {
         return $this->belongsTo(Page::class);
+    }
+
+    /**
+     * Relationship: optional canonical tenant ownership.
+     *
+     * No global scope is applied, so sections with `tenant_id = null`
+     * remain part of the default marketing content path.
+     */
+    public function tenant(): BelongsTo
+    {
+        return $this->belongsTo(Subscription::class, 'tenant_id');
     }
 
     /**
@@ -87,8 +101,25 @@ class Section extends Model
      * NOTE: This assumes there is an `image_id` column on the `sections` table
      * and a `Media` model that stores uploaded media files.
      */
-    public function image()
+    public function image(): BelongsTo
     {
         return $this->belongsTo(Media::class, 'image_id');
+    }
+
+    /**
+     * Scope: optionally filter sections by tenant ownership.
+     *
+     * Passing no tenant leaves the query unchanged, which keeps existing
+     * rendering and admin behavior stable until tenant-aware queries are added.
+     */
+    public function scopeTenant(Builder $query, Subscription|int|string|null $tenant = null): Builder
+    {
+        if ($tenant === null) {
+            return $query;
+        }
+
+        $tenantId = $tenant instanceof Subscription ? $tenant->getKey() : $tenant;
+
+        return $query->where('tenant_id', $tenantId);
     }
 }
