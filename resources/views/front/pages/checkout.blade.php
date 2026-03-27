@@ -834,7 +834,7 @@
                 </a>
                 <button id="sx-dashboard"
                     class="inline-flex items-center justify-center rounded-xl px-5 py-2.5 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">
-                    Manage subscriptions
+                    Manage this site
                 </button>
                 <button id="sx-print"
                     class="rounded-xl px-5 py-2.5 font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 active:scale-95 transition">
@@ -1325,6 +1325,7 @@
             const dashboardButton = document.getElementById('sx-dashboard');
             const visitSiteLink = document.getElementById('sx-visit-site');
             const hint = document.getElementById('sx-hint');
+            const subscriptionShowUrlTemplate = @json(route('client.subscriptions.show', ['subscription' => '__SUBSCRIPTION__']));
 
             const toneClasses = {
                 emerald: 'bg-emerald-500/10 text-emerald-600',
@@ -1363,8 +1364,13 @@
             }
 
             if (dashboardButton) {
+                const subscriptionId = String(data.subscription_id || '').trim();
+                const siteManagementUrl = subscriptionId
+                    ? subscriptionShowUrlTemplate.replace('__SUBSCRIPTION__', encodeURIComponent(subscriptionId))
+                    : (data.dashboard_url || '{{ route('client.subscriptions') }}');
+
                 dashboardButton.onclick = function() {
-                    window.location.href = data.dashboard_url || '{{ route('client.subscriptions') }}';
+                    window.location.href = siteManagementUrl;
                 };
             }
 
@@ -2481,6 +2487,7 @@
                 fillSuccessState({
                     success_title: urlParams.get('success_title') || '',
                     success_message: urlParams.get('success_message') || '',
+                    subscription_id: urlParams.get('subscription_id') || '',
                     payment_status_label: urlParams.get('payment_status_label') || '',
                     payment_status_tone: urlParams.get('payment_status_tone') || '',
                     provisioning_status_label: urlParams.get('provisioning_status_label') || '',
