@@ -1,14 +1,23 @@
 @php
     $currentLocale = $currentLocale ?? app()->getLocale();
     $selectedSectionId = (int) ($selectedSectionId ?? 0);
+    $workspaceRoutePrefix = $workspaceRoutePrefix ?? 'dashboard.pages.sections.';
+    $workspaceRouteBaseParameters = $workspaceRouteBaseParameters ?? ['page' => $page];
+    $workspaceRouteFor =
+        $workspaceRouteFor
+        ?? fn(string $name, array $extra = [], bool $absolute = true) => route(
+            $workspaceRoutePrefix . $name,
+            array_merge($workspaceRouteBaseParameters, $extra),
+            $absolute,
+        );
     $sidebarTranslation = method_exists($section, 'translation') ? $section->translation($currentLocale) : null;
     $sidebarFallbackTranslation = $sidebarTranslation ?? $section->translations->first();
     $sidebarTypeMeta = $sectionTypes[$section->type] ?? null;
     $sidebarTypeLabel =
         $sidebarTypeMeta['label'] ?? \Illuminate\Support\Str::headline(str_replace(['_', '-'], ' ', $section->type));
     $sidebarTitle = $sidebarFallbackTranslation?->title ?: $sidebarTypeLabel;
-    $editorUrl = route('dashboard.pages.sections.editor', [$page, $section], false);
-    $fallbackEditUrl = route('dashboard.pages.sections.edit', [$page, $section], false);
+    $editorUrl = $workspaceRouteFor('editor', ['section' => $section], false);
+    $fallbackEditUrl = $workspaceRouteFor('edit', ['section' => $section], false);
 @endphp
 
 <article data-section-id="{{ $section->id }}" data-edit-section-url="{{ $editorUrl }}"
@@ -51,7 +60,7 @@
 
                 <div data-section-menu
                     class="absolute top-full z-20 mt-2 hidden w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl ltr:right-0 ltr:left-auto rtl:left-0 rtl:right-auto">
-                    <form action="{{ route('dashboard.pages.sections.toggle-active', [$page, $section], false) }}"
+                    <form action="{{ $workspaceRouteFor('toggle-active', ['section' => $section], false) }}"
                         method="POST">
                         @csrf
                         <button type="submit"
@@ -65,7 +74,7 @@
                         </button>
                     </form>
 
-                    <form action="{{ route('dashboard.pages.sections.duplicate', [$page, $section], false) }}"
+                    <form action="{{ $workspaceRouteFor('duplicate', ['section' => $section], false) }}"
                         method="POST">
                         @csrf
                         <button type="submit"
@@ -89,7 +98,7 @@
                         </svg>
                     </button>
 
-                    <form action="{{ route('dashboard.pages.sections.destroy', [$page, $section], false) }}"
+                    <form action="{{ $workspaceRouteFor('destroy', ['section' => $section], false) }}"
                         method="POST"
                         onsubmit="return confirm('{{ __('Are you sure you want to delete this section? This action cannot be undone.') }}')">
                         @csrf
@@ -119,7 +128,7 @@
     </div>
 
     <div data-rename-panel class="mt-3 hidden border-t border-slate-200 pt-3">
-        <form action="{{ route('dashboard.pages.sections.rename', [$page, $section], false) }}" method="POST"
+        <form action="{{ $workspaceRouteFor('rename', ['section' => $section], false) }}" method="POST"
             class="space-y-3">
             @csrf
             <input type="hidden" name="locale" value="{{ $currentLocale }}">

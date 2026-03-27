@@ -2,7 +2,12 @@
 @php
     $translation = $page->translation();
     $pageTitle = $translation?->title ?? __('Sections Workspace');
-    $frontUrl = $page->is_home ? url('/') : ($translation?->slug ? url($translation->slug) : url('/'));
+    $frontUrl = $workspaceFrontUrl ?? ($page->is_home ? url('/') : ($translation?->slug ? url($translation->slug) : url('/')));
+    $workspaceShellBackUrl = $workspaceShellBackUrl ?? route('dashboard.pages.index');
+    $workspaceShellBackLabel = $workspaceShellBackLabel ?? __('Back to pages');
+    $workspaceVisualBuilderUrl = $workspaceVisualBuilderUrl ?? route('dashboard.pages.builder', $page);
+    $workspaceMode = $workspaceMode ?? 'admin';
+    $workspaceModeLabel = $workspaceModeLabel ?? ($workspaceMode === 'client' ? __('Client homepage editor') : __('Admin workspace'));
     $workspaceLanguages = collect($languages ?? [])->filter(fn ($language) => filled($language->code))->values();
     $hasMultipleWorkspaceLanguages = $workspaceLanguages->count() > 1;
     $adminLogoPath = $settings?->admin_logo ?: $settings?->logo;
@@ -235,9 +240,10 @@
                 <div class="flex flex-wrap items-center justify-between gap-2 xl:flex-nowrap">
                     <div class="flex min-w-0 items-center gap-3 rtl:flex-row-reverse">
                         <a
-                            href="{{ route('dashboard.pages.index') }}"
+                            href="{{ $workspaceShellBackUrl }}"
                             class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md"
-                            aria-label="{{ __('Back to pages') }}"
+                            aria-label="{{ $workspaceShellBackLabel }}"
+                            title="{{ $workspaceShellBackLabel }}"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12l7.5-7.5M3 12h18" />
@@ -252,6 +258,11 @@
                                 @if ($page->is_home)
                                     <span class="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
                                         {{ __('Home') }}
+                                    </span>
+                                @endif
+                                @if (filled($workspaceModeLabel))
+                                    <span class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+                                        {{ $workspaceModeLabel }}
                                     </span>
                                 @endif
                             </div>
@@ -286,16 +297,18 @@
                                 {{ __('Preview') }}
                             </a>
 
-                            <a
-                                href="{{ route('dashboard.pages.builder', $page) }}"
-                                class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-white hover:shadow-sm"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5v10.5H3.75V5.25Z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 18.75h6M12 15.75v3" />
-                                </svg>
-                                {{ __('Visual Builder') }}
-                            </a>
+                            @if (filled($workspaceVisualBuilderUrl))
+                                <a
+                                    href="{{ $workspaceVisualBuilderUrl }}"
+                                    class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-white hover:shadow-sm"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5v10.5H3.75V5.25Z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 18.75h6M12 15.75v3" />
+                                    </svg>
+                                    {{ __('Visual Builder') }}
+                                </a>
+                            @endif
                         </div>
 
                         @hasSection('workspace-header-actions')

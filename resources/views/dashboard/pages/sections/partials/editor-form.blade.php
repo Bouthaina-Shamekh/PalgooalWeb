@@ -1,8 +1,17 @@
 @php
     use App\Support\Sections\SectionMediaPreviewBuilder;
 
+    $workspaceRoutePrefix = $workspaceRoutePrefix ?? 'dashboard.pages.sections.';
+    $workspaceRouteBaseParameters = $workspaceRouteBaseParameters ?? ['page' => $page];
+    $workspaceRouteFor =
+        $workspaceRouteFor
+        ?? fn(string $name, array $extra = [], bool $absolute = true) => route(
+            $workspaceRoutePrefix . $name,
+            array_merge($workspaceRouteBaseParameters, $extra),
+            $absolute,
+        );
     $formId = $formId ?? 'section-edit-form';
-    $formAction = $formAction ?? route('dashboard.pages.sections.update', [$page, $section], false);
+    $formAction = $formAction ?? $workspaceRouteFor('update', ['section' => $section], false);
     $saveAction = $saveAction ?? $formAction;
     $formClass = $formClass ?? 'space-y-6';
     $formMethod = $formMethod ?? 'POST';

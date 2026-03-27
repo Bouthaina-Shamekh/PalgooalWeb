@@ -2,6 +2,18 @@
     $pageTranslation = method_exists($page, 'translation') ? $page->translation() : null;
     $pageTitle = $pageTranslation?->title ?? ($page->slug ?? '#' . $page->id);
     $frontUrl = $page->is_home ? url('/') : ($pageTranslation?->slug ?? null ? url($pageTranslation->slug) : url('/'));
+    $workspaceRoutePrefix = $workspaceRoutePrefix ?? 'dashboard.pages.sections.';
+    $workspaceRouteBaseParameters = $workspaceRouteBaseParameters ?? ['page' => $page];
+    $workspaceRouteFor =
+        $workspaceRouteFor
+        ?? fn(string $name, array $extra = [], bool $absolute = true) => route(
+            $workspaceRoutePrefix . $name,
+            array_merge($workspaceRouteBaseParameters, $extra),
+            $absolute,
+        );
+    $workspaceBuilderModeUrl = $workspaceBuilderModeUrl ?? route('dashboard.pages.builder-mode', $page);
+    $workspaceMode = $workspaceMode ?? 'admin';
+    $isClientWorkspace = $workspaceMode === 'client';
     $currentLocale = app()->getLocale();
     $groupedTypes = collect($sectionTypes ?? [])->groupBy(fn($meta) => $meta['category'] ?? 'other', true);
     $highlightSectionId = (int) request('highlight');
@@ -9,7 +21,7 @@
     $pageBuilderMode = in_array($page->builder_mode, ['visual', 'sections'], true) ? $page->builder_mode : 'sections';
     $isRtl = current_dir() === 'rtl';
     $drawerClosedTranslateClass = $isRtl ? '-translate-x-full' : 'translate-x-full';
-    $previewBaseUrl = route('dashboard.pages.sections.preview', $page, false);
+    $previewBaseUrl = $workspaceRouteFor('preview', [], false);
     $previewUrl = $previewBaseUrl . ($selectedSectionId ? '?highlight=' . $selectedSectionId : '');
     $autoEditSectionId = (int) request('edit');
     $editingSection = $autoEditSectionId > 0 ? $sections->firstWhere('id', $autoEditSectionId) : null;
@@ -290,7 +302,7 @@
                                             ? asset($meta['preview'])
                                             : null;
                                 @endphp
-                                <form action="{{ route('dashboard.pages.sections.quick-store', $page, false) }}"
+                                <form action="{{ $workspaceRouteFor('quick-store', [], false) }}"
                                     method="POST" data-library-item
                                     data-library-text="{{ \Illuminate\Support\Str::lower($meta['label'] . ' ' . ($meta['description'] ?? '') . ' ' . $category) }}">
                                     @csrf
@@ -345,19 +357,30 @@
 
 @section('workspace-sidebar')
     <div data-sections-sidebar-outline class="space-y-5 {{ $editingSection ? 'hidden' : '' }}">
-        @if ($pageBuilderMode !== 'sections')
+        @if ($pageBuilderMode !== 'sections' && ! $isClientWorkspace)
             <div class="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
                 <h3 class="text-base font-semibold text-slate-900">{{ __('Sections are not the active builder yet') }}
                 </h3>
                 <p class="mt-2 text-sm leading-6 text-slate-600">
                     {{ __('This page still renders from the Visual Builder. Switch the page mode if you want these sections to appear on the frontend.') }}
                 </p>
-                <form action="{{ route('dashboard.pages.builder-mode', $page) }}" method="POST" class="mt-4">
-                    @csrf
-                    <input type="hidden" name="builder_mode" value="sections">
-                    <button type="submit"
-                        class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">{{ __('Switch to Sections Builder') }}</button>
-                </form>
+                @if (filled($workspaceBuilderModeUrl))
+                    <form action="{{ $workspaceBuilderModeUrl }}" method="POST" class="mt-4">
+                        @csrf
+                        <input type="hidden" name="builder_mode" value="sections">
+                        <button type="submit"
+                            class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">{{ __('Switch to Sections Builder') }}</button>
+                    </form>
+                @endif
+            </div>
+        @endif
+
+        @if ($isClientWorkspace)
+            <div class="rounded-3xl border border-sky-200 bg-sky-50/70 p-5 shadow-sm">
+                <h3 class="text-base font-semibold text-slate-900">{{ __('You are editing the homepage only') }}</h3>
+                <p class="mt-2 text-sm leading-6 text-slate-600">
+                    {{ __('This workspace is scoped to your site homepage and its sections only. Admin-only builder controls stay hidden here.') }}
+                </p>
             </div>
         @endif
 
@@ -378,7 +401,7 @@
         <div class="border-t border-slate-200 pt-5">
             <div class="space-y-4">
                 <div class="flex items-center justify-between gap-3">
-                    <h4 class="text-lg font-semibold text-slate-900">{{ __('Page Elements') }}</h4>
+                    <h4 class="text-lg font-semibold text-slate-900">{{ $isClientWorkspace ? __('Homepage Elements') : __('Page Elements') }}</h4>
                     <span data-sections-count
                         class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{{ $sections->count() }}</span>
                 </div>
@@ -393,7 +416,7 @@
                 </button>
 
                 <div id="sections-outline-list" class="space-y-3" data-sections-sortable-sidebar
-                    data-reorder-url="{{ route('dashboard.pages.sections.reorder', $page, false) }}">
+                    data-reorder-url="{{ $workspaceRouteFor('reorder', [], false) }}">
                     @forelse ($sections as $section)
                         @include('dashboard.pages.sections.partials.outline-item', [
                             'page' => $page,

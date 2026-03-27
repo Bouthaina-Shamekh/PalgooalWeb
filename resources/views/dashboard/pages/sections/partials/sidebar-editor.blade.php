@@ -1,5 +1,14 @@
 @php
     $currentLocale = app()->getLocale();
+    $workspaceRoutePrefix = $workspaceRoutePrefix ?? 'dashboard.pages.sections.';
+    $workspaceRouteBaseParameters = $workspaceRouteBaseParameters ?? ['page' => $page];
+    $workspaceRouteFor =
+        $workspaceRouteFor
+        ?? fn(string $name, array $extra = [], bool $absolute = true) => route(
+            $workspaceRoutePrefix . $name,
+            array_merge($workspaceRouteBaseParameters, $extra),
+            $absolute,
+        );
     $sectionTranslation = method_exists($section, 'translation') ? $section->translation($currentLocale) : null;
     $fallbackTranslation = $sectionTranslation ?? $section->translations->first();
     $sectionTypeMeta = $sectionTypes[$section->type] ?? null;
@@ -42,7 +51,7 @@
         @include('dashboard.pages.sections.partials.editor-form', [
             'formId' => 'sidebar-section-edit-form',
             'formAction' => '#',
-            'saveAction' => route('dashboard.pages.sections.update', [$page, $section], false),
+            'saveAction' => $workspaceRouteFor('update', ['section' => $section], false),
             'formMethod' => 'GET',
             'formClass' => 'space-y-0',
             'preventNativeSubmit' => true,

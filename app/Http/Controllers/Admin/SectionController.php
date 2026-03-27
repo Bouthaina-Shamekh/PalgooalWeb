@@ -44,7 +44,7 @@ class SectionController extends Controller
             'sections'     => $sections,
             'languages'    => $languages,
             'sectionTypes' => $this->availableSectionTypes(),
-        ]);
+        ] + $this->workspaceViewData($page));
     }
 
     /**
@@ -76,7 +76,7 @@ class SectionController extends Controller
             'sectionTypes' => $this->availableSectionTypes(),
             'previewTemplates' => $previewTemplates,
             'highlightSectionId' => $request->integer('highlight'),
-        ]);
+        ] + $this->workspaceViewData($page));
     }
 
     /**
@@ -95,7 +95,7 @@ class SectionController extends Controller
             'languages'    => $languages,
             'sectionTypes' => $this->availableSectionTypes(),
             'nextOrder'    => $this->nextOrderForPage($page),
-        ]);
+        ] + $this->workspaceViewData($page));
     }
 
     /**
@@ -148,7 +148,7 @@ class SectionController extends Controller
         $this->normalizePageSectionOrders($page);
 
         return redirect()
-            ->route('dashboard.pages.sections.index', $page)
+            ->to($this->workspaceRoute('index', $page))
             ->with('success', 'Section has been created successfully.');
     }
 
@@ -179,12 +179,11 @@ class SectionController extends Controller
 
         $createdSection->refresh()->load('translations');
 
-        $redirectUrl = route('dashboard.pages.sections.index', [
-            'page' => $page,
+        $redirectUrl = $this->workspaceRoute('index', $page, null, [
             'highlight' => $createdSection->id,
             'edit' => $createdSection->id,
         ]);
-        $editorUrl = route('dashboard.pages.sections.editor', [$page, $createdSection], false);
+        $editorUrl = $this->workspaceRoute('editor', $page, $createdSection, [], false);
 
         if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -306,10 +305,9 @@ class SectionController extends Controller
         }
 
         return redirect()
-            ->route('dashboard.pages.sections.index', [
-                'page' => $page,
+            ->to($this->workspaceRoute('index', $page, null, [
                 'highlight' => $section->id,
-            ])
+            ]))
             ->with('success', 'Section has been updated successfully.');
     }
 
@@ -355,7 +353,7 @@ class SectionController extends Controller
         $translation->save();
 
         return redirect()
-            ->route('dashboard.pages.sections.index', ['page' => $page, 'highlight' => $section->id])
+            ->to($this->workspaceRoute('index', $page, null, ['highlight' => $section->id]))
             ->with('success', 'Section title has been updated.');
     }
 
@@ -490,7 +488,7 @@ class SectionController extends Controller
         }
 
         return redirect()
-            ->route('dashboard.pages.sections.index', ['page' => $page, 'highlight' => $duplicate->id])
+            ->to($this->workspaceRoute('index', $page, null, ['highlight' => $duplicate->id]))
             ->with('success', 'Section duplicated as a draft copy.');
     }
 
@@ -505,8 +503,142 @@ class SectionController extends Controller
         $this->normalizePageSectionOrders($page);
 
         return redirect()
-            ->route('dashboard.pages.sections.index', $page)
+            ->to($this->workspaceRoute('index', $page))
             ->with('success', 'Section has been deleted successfully.');
+    }
+
+    /**
+     * Route prefix used by the current sections workspace surface.
+     */
+    protected function workspaceRoutePrefix(): string
+    {
+        return 'dashboard.pages.sections.';
+    }
+
+    /**
+     * Current workspace consumer mode.
+     */
+    protected function workspaceMode(): string
+    {
+        return 'admin';
+    }
+
+    /**
+     * Small UI label for the current workspace mode.
+     */
+    protected function workspaceModeLabel(): ?string
+    {
+        return __('Admin workspace');
+    }
+
+    /**
+     * Base route parameters for the current workspace surface.
+     *
+     * @return array<string, mixed>
+     */
+    protected function workspaceBaseRouteParameters(Page $page): array
+    {
+        return ['page' => $page];
+    }
+
+    /**
+     * Build route parameters for workspace routes.
+     *
+     * @param  array<string, mixed>  $extra
+     * @return array<string, mixed>
+     */
+    protected function workspaceRouteParameters(Page $page, ?Section $section = null, array $extra = []): array
+    {
+        $parameters = $this->workspaceBaseRouteParameters($page);
+
+        if ($section instanceof Section) {
+            $parameters['section'] = $section;
+        }
+
+        return array_merge($parameters, $extra);
+    }
+
+    /**
+     * Resolve a workspace route URL.
+     *
+     * @param  array<string, mixed>  $extra
+     */
+    protected function workspaceRoute(
+        string $name,
+        Page $page,
+        ?Section $section = null,
+        array $extra = [],
+        bool $absolute = true
+    ): string {
+        return route(
+            $this->workspaceRoutePrefix() . $name,
+            $this->workspaceRouteParameters($page, $section, $extra),
+            $absolute
+        );
+    }
+
+    /**
+     * Back link for the workspace shell.
+     */
+    protected function workspaceShellBackUrl(Page $page): string
+    {
+        return route('dashboard.pages.index');
+    }
+
+    /**
+     * Back link label for the workspace shell.
+     */
+    protected function workspaceShellBackLabel(): string
+    {
+        return __('Back to pages');
+    }
+
+    /**
+     * Front preview URL for the current page.
+     */
+    protected function workspaceFrontUrl(Page $page): string
+    {
+        $translation = $page->translation();
+
+        return $page->is_home
+            ? url('/')
+            : ($translation?->slug ? url($translation->slug) : url('/'));
+    }
+
+    /**
+     * Optional visual builder URL for the workspace shell.
+     */
+    protected function workspaceVisualBuilderUrl(Page $page): ?string
+    {
+        return route('dashboard.pages.builder', $page);
+    }
+
+    /**
+     * Optional builder-mode toggle URL for the workspace sidebar.
+     */
+    protected function workspaceBuilderModeUrl(Page $page): ?string
+    {
+        return route('dashboard.pages.builder-mode', $page);
+    }
+
+    /**
+     * Shared view config for any workspace surface.
+     *
+     * @return array<string, mixed>
+     */
+    protected function workspaceViewData(Page $page): array
+    {
+        return [
+            'workspaceMode' => $this->workspaceMode(),
+            'workspaceModeLabel' => $this->workspaceModeLabel(),
+            'workspaceRoutePrefix' => $this->workspaceRoutePrefix(),
+            'workspaceRouteBaseParameters' => $this->workspaceBaseRouteParameters($page),
+            'workspaceShellBackUrl' => $this->workspaceShellBackUrl($page),
+            'workspaceShellBackLabel' => $this->workspaceShellBackLabel(),
+            'workspaceFrontUrl' => $this->workspaceFrontUrl($page),
+            'workspaceVisualBuilderUrl' => $this->workspaceVisualBuilderUrl($page),
+            'workspaceBuilderModeUrl' => $this->workspaceBuilderModeUrl($page),
+        ];
     }
 
     /**
@@ -1904,7 +2036,7 @@ class SectionController extends Controller
             'sectionTypes' => $this->availableSectionTypes(),
             'currentLocale' => app()->getLocale(),
             'selectedSectionId' => $section->id,
-        ])->render();
+        ] + $this->workspaceViewData($page))->render();
     }
 
     /**
@@ -1953,6 +2085,6 @@ class SectionController extends Controller
             'languages' => $languages,
             'sectionTypes' => $sectionTypes,
             'editorState' => $editorState,
-        ];
+        ] + $this->workspaceViewData($page);
     }
 }

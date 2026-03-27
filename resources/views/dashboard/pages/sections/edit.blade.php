@@ -2,13 +2,23 @@
     $pageTitle = $page->translation()?->title ?? $page->slug;
     $sectionTypeMeta = $sectionTypes[old('type', $section->type)] ?? ($sectionTypes[$section->type] ?? null);
     $sectionTypeLabel = $sectionTypeMeta['label'] ?? old('type', $section->type);
+    $workspaceRoutePrefix = $workspaceRoutePrefix ?? 'dashboard.pages.sections.';
+    $workspaceRouteBaseParameters = $workspaceRouteBaseParameters ?? ['page' => $page];
+    $workspaceRouteFor =
+        $workspaceRouteFor
+        ?? fn(string $name, array $extra = [], bool $absolute = true) => route(
+            $workspaceRoutePrefix . $name,
+            array_merge($workspaceRouteBaseParameters, $extra),
+            $absolute,
+        );
+    $workspaceVisualBuilderUrl = $workspaceVisualBuilderUrl ?? route('dashboard.pages.builder', $page);
 @endphp
 
 @extends('dashboard.pages.sections.layouts.workspace')
 
 @section('workspace-header-actions')
     <a
-        href="{{ route('dashboard.pages.sections.index', $page) }}"
+        href="{{ $workspaceRouteFor('index') }}"
         class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:shadow-sm"
     >
         {{ __('Back to Sections') }}
@@ -61,7 +71,7 @@
         <h3 class="text-base font-semibold text-slate-900">{{ __('Quick Links') }}</h3>
         <div class="mt-4 space-y-3">
             <a
-                href="{{ route('dashboard.pages.sections.index', $page) }}"
+                href="{{ $workspaceRouteFor('index') }}"
                 class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:bg-slate-50"
             >
                 <span>
@@ -71,16 +81,18 @@
                 <span class="text-sm font-semibold text-slate-500">{{ __('Open') }}</span>
             </a>
 
-            <a
-                href="{{ route('dashboard.pages.builder', $page) }}"
-                class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:bg-slate-50"
-            >
-                <span>
-                    <span class="block text-sm font-semibold text-slate-900">{{ __('Visual Builder') }}</span>
-                    <span class="block text-xs text-slate-500">{{ __('Switch to the visual page builder.') }}</span>
-                </span>
-                <span class="text-sm font-semibold text-slate-500">{{ __('Open') }}</span>
-            </a>
+            @if (filled($workspaceVisualBuilderUrl))
+                <a
+                    href="{{ $workspaceVisualBuilderUrl }}"
+                    class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:bg-slate-50"
+                >
+                    <span>
+                        <span class="block text-sm font-semibold text-slate-900">{{ __('Visual Builder') }}</span>
+                        <span class="block text-xs text-slate-500">{{ __('Switch to the visual page builder.') }}</span>
+                    </span>
+                    <span class="text-sm font-semibold text-slate-500">{{ __('Open') }}</span>
+                </a>
+            @endif
         </div>
     </div>
 @endsection

@@ -5,6 +5,8 @@ use App\Http\Controllers\Client\DomainDnsController;
 use App\Http\Controllers\Client\DomainRenewalController;
 use App\Http\Controllers\Client\HomeController;
 use App\Http\Controllers\Client\InvoiceCheckoutController;
+use App\Http\Controllers\Client\SubscriptionHomepageEditorController;
+use App\Http\Controllers\Client\SubscriptionPageEditorController;
 use App\Http\Controllers\Client\SubscriptionController;
 use App\Models\Client;
 use Illuminate\Http\Request;
@@ -36,6 +38,68 @@ Route::group([
     Route::resource('domains', DomainController::class)->names('domains');
 
     Route::get('subscriptions', [HomeController::class, 'subscriptions'])->name('subscriptions');
+    Route::get('subscriptions/{subscription}/site', [SubscriptionController::class, 'site'])->name('subscriptions.site');
+    Route::get('subscriptions/{subscription}/content', [SubscriptionController::class, 'content'])->name('subscriptions.content');
+    Route::get('subscriptions/{subscription}/pages', [SubscriptionPageEditorController::class, 'pages'])->name('subscriptions.pages');
+    Route::post('subscriptions/{subscription}/pages', [SubscriptionPageEditorController::class, 'storePage'])->name('subscriptions.pages.store');
+    Route::prefix('subscriptions/{subscription}/pages/{page}/editor')
+        ->name('subscriptions.pages.editor.')
+        ->group(function () {
+            Route::get('/', [SubscriptionPageEditorController::class, 'pageIndex'])->name('index');
+            Route::get('preview', [SubscriptionPageEditorController::class, 'pagePreview'])->name('preview');
+            Route::post('sections/quick-store', [SubscriptionPageEditorController::class, 'pageQuickStore'])->name('quick-store');
+            Route::post('sections/reorder', [SubscriptionPageEditorController::class, 'pageReorder'])->name('reorder');
+            Route::get('sections/{section}/editor', [SubscriptionPageEditorController::class, 'pageEditorPanel'])
+                ->whereNumber('section')
+                ->name('editor');
+            Route::get('sections/{section}/edit', [SubscriptionPageEditorController::class, 'pageEdit'])
+                ->whereNumber('section')
+                ->name('edit');
+            Route::match(['post', 'put', 'patch'], 'sections/{section}', [SubscriptionPageEditorController::class, 'pageUpdate'])
+                ->whereNumber('section')
+                ->name('update');
+            Route::post('sections/{section}/toggle-active', [SubscriptionPageEditorController::class, 'pageToggleActive'])
+                ->whereNumber('section')
+                ->name('toggle-active');
+            Route::post('sections/{section}/rename', [SubscriptionPageEditorController::class, 'pageRename'])
+                ->whereNumber('section')
+                ->name('rename');
+            Route::post('sections/{section}/duplicate', [SubscriptionPageEditorController::class, 'pageDuplicate'])
+                ->whereNumber('section')
+                ->name('duplicate');
+            Route::delete('sections/{section}', [SubscriptionPageEditorController::class, 'pageDestroy'])
+                ->whereNumber('section')
+                ->name('destroy');
+        });
+    Route::prefix('subscriptions/{subscription}/homepage/editor')
+        ->name('subscriptions.homepage-editor.')
+        ->group(function () {
+            Route::get('/', [SubscriptionHomepageEditorController::class, 'homepageIndex'])->name('index');
+            Route::get('preview', [SubscriptionHomepageEditorController::class, 'homepagePreview'])->name('preview');
+            Route::post('sections/quick-store', [SubscriptionHomepageEditorController::class, 'homepageQuickStore'])->name('quick-store');
+            Route::post('sections/reorder', [SubscriptionHomepageEditorController::class, 'homepageReorder'])->name('reorder');
+            Route::get('sections/{section}/editor', [SubscriptionHomepageEditorController::class, 'homepageEditorPanel'])
+                ->whereNumber('section')
+                ->name('editor');
+            Route::get('sections/{section}/edit', [SubscriptionHomepageEditorController::class, 'homepageEdit'])
+                ->whereNumber('section')
+                ->name('edit');
+            Route::match(['post', 'put', 'patch'], 'sections/{section}', [SubscriptionHomepageEditorController::class, 'homepageUpdate'])
+                ->whereNumber('section')
+                ->name('update');
+            Route::post('sections/{section}/toggle-active', [SubscriptionHomepageEditorController::class, 'homepageToggleActive'])
+                ->whereNumber('section')
+                ->name('toggle-active');
+            Route::post('sections/{section}/rename', [SubscriptionHomepageEditorController::class, 'homepageRename'])
+                ->whereNumber('section')
+                ->name('rename');
+            Route::post('sections/{section}/duplicate', [SubscriptionHomepageEditorController::class, 'homepageDuplicate'])
+                ->whereNumber('section')
+                ->name('duplicate');
+            Route::delete('sections/{section}', [SubscriptionHomepageEditorController::class, 'homepageDestroy'])
+                ->whereNumber('section')
+                ->name('destroy');
+        });
     Route::get('subscriptions/{subscription}', [SubscriptionController::class, 'show'])->name('subscriptions.show');
     Route::get('invoices/{invoice}/checkout', [InvoiceCheckoutController::class, 'show'])->name('invoices.checkout');
     Route::post('invoices/{invoice}/checkout', [InvoiceCheckoutController::class, 'process'])->name('invoices.checkout.process');

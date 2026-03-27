@@ -1325,7 +1325,7 @@
             const dashboardButton = document.getElementById('sx-dashboard');
             const visitSiteLink = document.getElementById('sx-visit-site');
             const hint = document.getElementById('sx-hint');
-            const subscriptionShowUrlTemplate = @json(route('client.subscriptions.show', ['subscription' => '__SUBSCRIPTION__']));
+            const subscriptionSiteUrlTemplate = @json(route('client.subscriptions.site', ['subscription' => '__SUBSCRIPTION__']));
 
             const toneClasses = {
                 emerald: 'bg-emerald-500/10 text-emerald-600',
@@ -1366,7 +1366,7 @@
             if (dashboardButton) {
                 const subscriptionId = String(data.subscription_id || '').trim();
                 const siteManagementUrl = subscriptionId
-                    ? subscriptionShowUrlTemplate.replace('__SUBSCRIPTION__', encodeURIComponent(subscriptionId))
+                    ? subscriptionSiteUrlTemplate.replace('__SUBSCRIPTION__', encodeURIComponent(subscriptionId))
                     : (data.dashboard_url || '{{ route('client.subscriptions') }}');
 
                 dashboardButton.onclick = function() {
