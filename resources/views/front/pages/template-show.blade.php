@@ -580,7 +580,7 @@
                     @endif
                     @php $finalPriceCents = (int) round($finalPrice * 100); @endphp
                     <a id="subscribeNow"
-                        href="{{ route('checkout.cart', ['template_id' => $template->id, 'review' => 1, 'domain' => request('domain')]) }}"
+                        href="{{ route('checkout', ['template_id' => $template->id, 'review' => 1, 'domain' => request('domain')]) }}"
                         data-template-id="{{ $template->id }}"
                         data-template-name="{{ $translation?->name ?? ($template->name ?? 'Template') }}"
                         data-price-cents="{{ $finalPriceCents }}"
@@ -693,16 +693,14 @@
     </section>
 
     <script>
-        // إن وُجد domain في الاستعلام، وجّه الاشتراك إلى checkout/cart مع template_id لعرضه ضمن السلة الموحدة
+        // إن وُجد domain في الاستعلام، حافظ على template checkout entrypoint مع تمرير domain كمعلومة مساعدة
         (function() {
             const qp = new URLSearchParams(window.location.search);
             const d = (qp.get('domain') || '').trim();
             const a = document.getElementById('subscribeNow');
-            const tplId = a?.getAttribute('data-template-id');
-            if (a && tplId) {
-                const base = "{{ route('checkout.cart') }}";
+            if (a) {
+                const base = "{{ route('checkout', ['template_id' => $template->id]) }}";
                 const url = new URL(base, window.location.origin);
-                url.searchParams.set('template_id', tplId);
                 url.searchParams.set('review', '1');
                 if (d) url.searchParams.set('domain', d);
                 a.href = url.pathname + url.search;

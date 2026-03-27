@@ -99,6 +99,7 @@ class OrderController extends Controller
     {
         $result = [
             'domain_registration' => null,
+            'subscriptions' => collect(),
         ];
 
         // فعّل الفواتير المرتبطة (اجعل status = unpaid)
@@ -112,6 +113,14 @@ class OrderController extends Controller
         $domain = $this->extractDomainData($order);
         $domainName   = $domain['domain_name'];
         $domainOption = $domain['domain_option'];
+        $subscriptionIds = $order->invoices
+            ->flatMap(fn ($invoice) => $invoice->items
+                ->filter(fn ($item) => $item->item_type === 'subscription' && filled($item->reference_id))
+                ->pluck('reference_id'))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
 
         // إذا كان الطلب يتعلق بدومين للـ "register" فقط، قم بالتسجيل مع المزود الافتراضي أولاً.
         if (!empty($domainName) && in_array(strtolower((string) $domainOption), ['register', 'renew'], true)) {
@@ -128,6 +137,54 @@ class OrderController extends Controller
         }
 
         // حدد إن كان الطلب يخص اشتراكًا (من أول عنصر فاتورة من نوع subscription)
+        if ($subscriptionIds->isNotEmpty()) {
+            $subscriptions = \App\Models\Tenancy\Subscription::with(['client', 'plan', 'server', 'template'])
+                ->whereIn('id', $subscriptionIds)
+                ->get()
+                ->keyBy('id');
+
+            $activated = collect();
+
+            foreach ($subscriptionIds as $subscriptionId) {
+                $subscriptionModel = $subscriptions->get($subscriptionId);
+
+                if (! $subscriptionModel) {
+                    continue;
+                }
+
+                $startsAt = now();
+                $billingCycle = strtolower((string) ($subscriptionModel->billing_cycle ?? 'annually'));
+                $nextDueDate = str_contains($billingCycle, 'month')
+                    ? $startsAt->copy()->addMonth()
+                    : $startsAt->copy()->addYear();
+
+                $updateData = [
+                    'status' => 'active',
+                    'starts_at' => $startsAt,
+                    'ends_at' => $nextDueDate,
+                    'next_due_date' => $nextDueDate,
+                ];
+
+                if (! empty($domainOption)) {
+                    $updateData['domain_option'] = $domainOption;
+                }
+
+                if (! empty($domainName)) {
+                    $updateData['domain_name'] = $domainName;
+                }
+
+                $subscriptionModel->fill($updateData)->save();
+
+                app(\App\Services\Tenancy\TenantProvisioningService::class)->provision($subscriptionModel);
+
+                $activated->push($subscriptionModel->fresh(['client', 'plan', 'server', 'template']));
+            }
+
+            $result['subscriptions'] = $activated;
+
+            return $result;
+        }
+
         $templateId = null;
         if ($order->invoices && $order->invoices->count()) {
             $firstInvoice = $order->invoices->first();

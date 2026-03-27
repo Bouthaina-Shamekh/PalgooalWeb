@@ -456,7 +456,7 @@
         ? route('template.preview', $translation->slug)
         : null;
 
-    $checkoutUrl = route('checkout.cart', [
+    $checkoutUrl = route('checkout', [
         'template_id' => $template->id,
         'review' => 1,
         'domain' => request('domain'),
@@ -743,7 +743,7 @@
                                 data-template-id="{{ $template->id }}"
                                 data-template-name="{{ $templateName }}"
                                 data-price-cents="{{ $finalPriceCents }}"
-                                data-base-url="{{ route('checkout.cart') }}"
+                                data-base-url="{{ route('checkout', ['template_id' => $template->id]) }}"
                                 data-domain="{{ request('domain') }}"
                             >
                                 {{ t('Frontend.Buy_Now', 'Buy Now') }}

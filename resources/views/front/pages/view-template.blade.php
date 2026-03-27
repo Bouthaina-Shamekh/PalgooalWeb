@@ -99,7 +99,7 @@
             <div class="flex items-center gap-4">
                 {{-- زر الشراء موحّد مع نظام السلة --}}
                 <a id="buyNow"
-                    href="{{ route('checkout.cart', ['template_id' => $template->id, 'review' => 1, 'domain' => request('domain')]) }}"
+                    href="{{ route('checkout', ['template_id' => $template->id, 'review' => 1, 'domain' => request('domain')]) }}"
                     data-template-id="{{ $template->id }}" data-template-name="{{ $translation->name }}"
                     data-price-cents="{{ $finalPriceCents }}" class="btn-primary">
                     🛒 اشترِ الآن

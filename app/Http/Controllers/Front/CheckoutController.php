@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Front;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\ProvisionSubscription;
+use App\Models\Invoice;
+use App\Models\Tenancy\Subscription;
+use App\Services\Billing\InvoiceSettlementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -14,8 +17,26 @@ class CheckoutController extends Controller
     {
         $template = \App\Models\Template::find($template_id);
         $translation = $template?->translations()->where('locale', app()->getLocale())->first();
+        $items = session('palgoals_cart_domains', []);
+        $plan_id = null;
+        $plan = null;
+        $plan_translation = null;
+        $plan_sub_type = null;
+        $checkout_mode = 'template';
+        $requires_domain_selection = false;
 
-        return view('front.pages.checkout', compact('template_id', 'template', 'translation'));
+        return view('front.pages.checkout', compact(
+            'template_id',
+            'template',
+            'translation',
+            'items',
+            'plan_id',
+            'plan',
+            'plan_translation',
+            'plan_sub_type',
+            'checkout_mode',
+            'requires_domain_selection'
+        ));
     }
 
     /**
@@ -41,8 +62,21 @@ class CheckoutController extends Controller
             $plan = \App\Models\Plan::find($plan_id);
             $plan_translation = $plan?->translations()->where('locale', app()->getLocale())->first();
         }
+        $checkout_mode = !empty($template_id) ? 'template' : 'hosting';
+        $requires_domain_selection = $checkout_mode === 'hosting';
 
-        return view('front.pages.checkout', compact('template_id', 'template', 'translation', 'items', 'plan_id', 'plan', 'plan_translation', 'plan_sub_type'));
+        return view('front.pages.checkout', compact(
+            'template_id',
+            'template',
+            'translation',
+            'items',
+            'plan_id',
+            'plan',
+            'plan_translation',
+            'plan_sub_type',
+            'checkout_mode',
+            'requires_domain_selection'
+        ));
     }
 
     /**
@@ -75,6 +109,8 @@ class CheckoutController extends Controller
         $isDomainOnly = empty($template_id) && empty($plan_id);
         $isNotTemplate = empty($template_id);
         $isNotPlan = empty($plan_id);
+        $isTemplateCheckout = !$isNotTemplate;
+        $requiresDomainSelection = !$isTemplateCheckout;
 
         // لو في عناصر قادمة من الطلب استخدمها؛ وإلا خذها من السيشن (لسيناريو الدومين فقط)
         $rawItems = $request->input('items', session('palgoals_cart_domains', []));
@@ -138,11 +174,15 @@ class CheckoutController extends Controller
         ];
         $normalizedOption = $rawOption ? ($optionMap[$rawOption] ?? $rawOption) : null;
 
+        if ($isTemplateCheckout && blank($normalizedOption)) {
+            $normalizedOption = 'subdomain';
+        }
+
         // إجمالي سلة الدومينات (في حالة الدومين فقط)
         $domainsTotalCents = array_reduce($items, fn($c, $it) => $c + ((int) ($it['price_cents'] ?? 0)), 0);
 
         // تحقق خاص بتدفّق القالب: يجب وجود دومين أساسي
-        if (!$isDomainOnly) {
+        if ($requiresDomainSelection && !$isDomainOnly) {
             $request->validate([
                 'domain'        => 'required|string|min:1',
                 'domain_option' => 'required|string|min:1',
@@ -151,9 +191,11 @@ class CheckoutController extends Controller
 
         try {
             $provisionQueue = [];
+            $createdSubscriptionIds = [];
 
             $result = DB::transaction(function () use (
                 &$provisionQueue,
+                &$createdSubscriptionIds,
                 $isDomainOnly,
                 $isNotTemplate,
                 $isNotPlan,
@@ -292,25 +334,37 @@ class CheckoutController extends Controller
                         $subscription = null;
 
                         if ($planModel) {
+                            $billingCycle = !empty($config['billing_cycle'])
+                                ? (string) $config['billing_cycle']
+                                : 'monthly';
+                            $nextDueDate = str_contains(strtolower($billingCycle), 'month')
+                                ? now()->addMonth()
+                                : now()->addYear();
                             $subscriptionData = [
                                 'client_id'     => $order->client_id,
                                 'plan_id'       => $planModel->id,
+                                'template_id'   => !$isNotTemplate && $template && $planModel->id === (int) $template->plan_id
+                                    ? $template->id
+                                    : null,
                                 'status'        => 'pending',
+                                'provisioning_status' => \App\Models\Tenancy\Subscription::PROVISIONING_PENDING,
                                 'price'         => $config['unit_cents'] / 100,
                                 'server_id'     => $planModel->server_id ?? null,
                                 'domain_option' => $normalizedOption ?? 'subdomain',
                                 'domain_name'   => $firstDomainItem->domain ?? $request->input('domain'),
                                 'starts_at'     => now(),
-                                'next_due_date' => now()->addMonth(),
+                                'next_due_date' => $nextDueDate,
                             ];
 
-                            if (!empty($config['billing_cycle'])) {
-                                $subscriptionData['billing_cycle'] = $config['billing_cycle'];
-                            }
+                            $subscriptionData['billing_cycle'] = $billingCycle;
 
                             $subscription = \App\Models\Tenancy\Subscription::create($subscriptionData);
                             if ($subscription) {
-                                $provisionQueue[] = $subscription;
+                                $createdSubscriptionIds[] = $subscription->id;
+
+                                if ($isNotTemplate) {
+                                    $provisionQueue[] = $subscription;
+                                }
                             }
                         }
 
@@ -348,17 +402,33 @@ class CheckoutController extends Controller
                     }
                 }
 
-                return $order;
+                return [
+                    'order_id' => $order->id,
+                    'invoice_id' => $invoice->id,
+                    'subscription_ids' => $createdSubscriptionIds,
+                ];
             });
 
-            foreach ($provisionQueue as $subscription) {
-                ProvisionSubscription::dispatch($subscription->id);
+            $order = \App\Models\Order::findOrFail($result['order_id']);
+            $invoice = Invoice::query()->findOrFail($result['invoice_id']);
+            $subscriptionIds = array_values(array_filter($result['subscription_ids'] ?? []));
+
+            if (!$isNotTemplate) {
+                app(InvoiceSettlementService::class)->markPaid($invoice, 'mock_gateway');
+            } else {
+                foreach ($provisionQueue as $subscription) {
+                    ProvisionSubscription::dispatch($subscription->id);
+                }
             }
+
+            $tenantRedirectUrl = !$isNotTemplate
+                ? $this->resolveTenantRedirectUrl($subscriptionIds)
+                : null;
 
             // احفظ مرجعًا في الجلسة
             session([
                 'palgoals_reserved'      => $items,
-                'palgoals_last_order_id' => $result->id,
+                'palgoals_last_order_id' => $order->id,
             ]);
 
             // البيانات المرجعة للواجهة (تأكد من تعريفها لجميع السيناريوهات)
@@ -370,12 +440,12 @@ class CheckoutController extends Controller
             // Default response (covers domain-only case)
             $responseData = [
                 'success'     => true,
-                'order_no'    => $result->order_number,
-                'order_id'    => $result->id,
+                'order_no'    => $order->order_number,
+                'order_id'    => $order->id,
                 'domain'      => $domainPicked,
                 'total_cents' => $totalCents,
                 'client_name' => $client_name,
-                'redirect'    => route('checkout.domains.success'),
+                'redirect'    => $tenantRedirectUrl ?: route('checkout.domains.success'),
             ];
 
             // Template-specific override
@@ -409,10 +479,14 @@ class CheckoutController extends Controller
 
             // Non-AJAX: redirect to a suitable checkout page depending on scenario
             if (!$isNotTemplate) {
+                if ($tenantRedirectUrl) {
+                    return redirect()->away($tenantRedirectUrl);
+                }
+
                 return redirect()->route('checkout', [
                     'template_id'   => $template_id,
                     'success'       => 1,
-                    'order_no'      => $result->order_number,
+                    'order_no'      => $order->order_number,
                     'domain'        => $domainPicked,
                     'total'         => $totalCents / 100,
                     'client_name'   => $client_name,
@@ -426,7 +500,7 @@ class CheckoutController extends Controller
                     'plan_id'     => $plan_id,
                     'plan_name'   => $plan_name,
                     'success'     => 1,
-                    'order_no'    => $result->order_number,
+                    'order_no'    => $order->order_number,
                     'domain'      => $domainPicked,
                     'total'       => $totalCentsPlan / 100,
                     'client_name' => $client_name,
@@ -436,7 +510,7 @@ class CheckoutController extends Controller
             // Domain-only fallback → cart-based checkout
             return redirect()->route('checkout.cart', [
                 'success'     => 1,
-                'order_no'    => $result->order_number,
+                'order_no'    => $order->order_number,
                 'domain'      => $domainPicked,
                 'total'       => $totalCents / 100,
                 'client_name' => $client_name,
@@ -450,6 +524,41 @@ class CheckoutController extends Controller
     /**
      * POST entry for cart checkout (domain-only). Validates items then forwards to process().
      */
+    protected function resolveTenantRedirectUrl(array $subscriptionIds): ?string
+    {
+        if ($subscriptionIds === []) {
+            return null;
+        }
+
+        $subscriptions = Subscription::query()
+            ->whereIn('id', $subscriptionIds)
+            ->get()
+            ->keyBy('id');
+
+        foreach ($subscriptionIds as $subscriptionId) {
+            $subscription = $subscriptions->get($subscriptionId);
+
+            if (! $subscription || blank($subscription->domain_name)) {
+                continue;
+            }
+
+            return $this->tenantUrl($subscription->domain_name);
+        }
+
+        return null;
+    }
+
+    protected function tenantUrl(string $domain): string
+    {
+        if (preg_match('#^https?://#i', $domain)) {
+            return $domain;
+        }
+
+        $scheme = parse_url(config('app.url'), PHP_URL_SCHEME) ?: request()->getScheme();
+
+        return $scheme . '://' . ltrim($domain, '/');
+    }
+
     public function processCart(Request $request)
     {
         $data = $request->validate([

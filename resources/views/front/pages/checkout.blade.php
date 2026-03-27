@@ -1,5 +1,17 @@
 @php
     use Carbon\Carbon;
+
+    $template_id = $template_id ?? null;
+    $template = $template ?? null;
+    $translation = $translation ?? null;
+    $items = $items ?? [];
+    $plan_id = $plan_id ?? null;
+    $plan = $plan ?? null;
+    $plan_translation = $plan_translation ?? null;
+    $plan_sub_type = $plan_sub_type ?? null;
+    $checkout_mode = $checkout_mode ?? ($template ? 'template' : 'hosting');
+    $requires_domain_selection = $requires_domain_selection ?? ! $template;
+
     // safe access: template may be null when rendering cart-based checkout
     $shortDesc = Str::limit(strip_tags($translation?->description ?? ''), 160);
     $basePrice = (float) ($template?->price ?? 0);
@@ -102,31 +114,39 @@
     <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-4 mt-6">
         <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-4">
             <div id="globalStepper" class="flex items-center justify-between gap-2">
-                <!-- Step 1 -->
-                <div class="flex items-center gap-3 step" data-index="0">
-                    <div
-                        class="h-9 w-9 rounded-full grid place-items-center border-2 border-[#240B36] text-[#240B36] font-extrabold step-circle">
-                        1</div>
-                    <div class="text-sm">حجز الدومين</div>
-                </div>
-                <div class="relative h-0.5 flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div id="stepperProgress"
-                        class="absolute inset-y-0 right-0 bg-[#240B36] transition-all duration-300" style="width:0%">
+                @if ($requires_domain_selection)
+                    <div class="flex items-center gap-3 step" data-index="0">
+                        <div
+                            class="h-9 w-9 rounded-full grid place-items-center border-2 border-[#240B36] text-[#240B36] font-extrabold step-circle">
+                            1</div>
+                        <div class="text-sm">حجز الدومين</div>
                     </div>
-                </div>
-                <!-- Step 2 -->
-                <div class="flex items-center gap-3 step" data-index="1">
-                    <div
-                        class="h-9 w-9 rounded-full grid place-items-center border-2 border-gray-200 dark:border-gray-700 text-gray-500 font-extrabold step-circle">
-                        2</div>
-                    <div class="text-sm">المراجعة والدفع</div>
-                </div>
+                    <div class="relative h-0.5 flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div id="stepperProgress"
+                            class="absolute inset-y-0 right-0 bg-[#240B36] transition-all duration-300" style="width:0%">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 step" data-index="1">
+                        <div
+                            class="h-9 w-9 rounded-full grid place-items-center border-2 border-gray-200 dark:border-gray-700 text-gray-500 font-extrabold step-circle">
+                            2</div>
+                        <div class="text-sm">المراجعة والدفع</div>
+                    </div>
+                @else
+                    <div class="flex items-center gap-3 step" data-index="0">
+                        <div
+                            class="h-9 w-9 rounded-full grid place-items-center border-2 border-[#240B36] text-[#240B36] font-extrabold step-circle">
+                            1</div>
+                        <div class="text-sm">المراجعة والدفع</div>
+                    </div>
+                @endif
             </div>
         </div>
     </section>
 
     <!-- ===== الصفحة 1: الدومين ===== -->
-    <main id="view-domain" class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
+    <main id="view-domain"
+        class="{{ $requires_domain_selection ? '' : 'hidden ' }}max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- العمود الرئيسي -->
             <div
@@ -311,7 +331,8 @@
     </main>
 
     <!-- ===== الصفحة 2: المراجعة والدفع ===== -->
-    <section id="view-review" class="hidden max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
+    <section id="view-review"
+        class="{{ $requires_domain_selection ? 'hidden ' : '' }}max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div
                 class="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-6">
@@ -319,6 +340,12 @@
                 <p class="text-gray-600 dark:text-gray-300 mb-6">راجع التفاصيل واكمل إنشاء الحساب/الدخول ثم اختر طريقة
                     الدفع.
                 </p>
+                @if (! $requires_domain_selection)
+                    <div
+                        class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800/80 dark:bg-emerald-900/20 dark:text-emerald-200">
+                        سيتم توليد Subdomain تلقائياً بعد الدفع إذا لم تضف دوميناً مع الطلب.
+                    </div>
+                @endif
 
                 <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 mb-6">
                     <div class="flex items-center justify-between mb-3">
@@ -655,8 +682,10 @@
                     <!-- حقول التسجيل ستنسخ هنا عند اختيار إنشاء حساب جديد -->
                     <div id="registerFieldsBox"></div>
                     <div class="flex items-center justify-end gap-3 mt-6">
-                        <button id="backToDomain2" type="button"
-                            class="rounded-xl px-4 py-2 font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 active:scale-95 transition">رجوع</button>
+                        @if ($requires_domain_selection)
+                            <button id="backToDomain2" type="button"
+                                class="rounded-xl px-4 py-2 font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 active:scale-95 transition">رجوع</button>
+                        @endif
                         <button id="placeOrderReal" type="submit" disabled
                             class="inline-flex items-center justify-center rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] opacity-50 cursor-not-allowed transition shadow-sm">إتمام
                             الطلب</button>
@@ -940,6 +969,8 @@
 
         // سعر القالب (بالسنت)
         const HAS_TEMPLATE = {{ $template ? 'true' : 'false' }};
+        const REQUIRES_DOMAIN_SELECTION = {{ $requires_domain_selection ? 'true' : 'false' }};
+        const REVIEW_STEP_INDEX = REQUIRES_DOMAIN_SELECTION ? 1 : 0;
         const USE_AJAX_LOGIN = false; // رجوع للسلوك السابق: تحديث الصفحة عند تسجيل الدخول
         const TEMPLATE_FINAL_CENTS = {{ (int) (($finalPrice ?? 0) * 100) }};
         let TEMPLATE_CENTS = TEMPLATE_FINAL_CENTS; // متغير قابل للتغيير عند إزالة القالب
@@ -1126,12 +1157,13 @@
         }
 
         // Stepper
-        const views = ['view-domain', 'view-review'];
+        const views = REQUIRES_DOMAIN_SELECTION ? ['view-domain', 'view-review'] : ['view-review'];
         const stepper = document.getElementById('globalStepper');
 
         function goto(stepIndex) {
+            const normalizedStep = REQUIRES_DOMAIN_SELECTION ? stepIndex : 0;
             // تبديل الشاشات
-            views.forEach((id, i) => document.getElementById(id)?.classList.toggle('hidden', i !== stepIndex));
+            views.forEach((id, i) => document.getElementById(id)?.classList.toggle('hidden', i !== normalizedStep));
             const circles = stepper?.querySelectorAll('.step-circle') || [];
             circles.forEach((c, i) => {
                 // نظّف جميع الحالات قبل التفعيل
@@ -1139,10 +1171,10 @@
                     'border-[#240B36]', 'text-[#240B36]', 'bg-[#240B36]', 'text-white',
                     'border-gray-200', 'dark:border-gray-700', 'text-gray-500'
                 );
-                if (i < stepIndex) {
+                if (i < normalizedStep) {
                     // مكتملة
                     c.classList.add('bg-[#240B36]', 'text-white', 'border-[#240B36]');
-                } else if (i === stepIndex) {
+                } else if (i === normalizedStep) {
                     // الحالية
                     c.classList.add('border-[#240B36]', 'text-[#240B36]');
                 } else {
@@ -1152,7 +1184,7 @@
             });
             // تقدّم الخط بين الخطوتين (RTL: من اليمين لليسار)
             const bar = document.getElementById('stepperProgress');
-            if (bar) bar.style.width = stepIndex === 0 ? '0%' : '100%';
+            if (bar) bar.style.width = normalizedStep === 0 ? '0%' : '100%';
             window.scrollTo({
                 top: 0,
                 behavior: 'smooth'
@@ -1265,10 +1297,12 @@
             };
 
             // تحديث السعر الأولي (احتياطي)
-            if (tldPrice && regTld) {
+            if (tldPrice && regTld && REQUIRES_DOMAIN_SELECTION) {
                 const p0 = getFallbackCents(regTld.value);
                 tldPrice.textContent = `${fmt(p0)}/سنة`;
                 updateTotals(p0);
+            } else if (!REQUIRES_DOMAIN_SELECTION) {
+                updateTotals(0);
             }
 
             // تغيير الامتداد (سعر احتياطي فقط)
@@ -1455,7 +1489,7 @@
                     setCartDomains([sel]);
                 } catch {}
                 savePrimarySelection(sel);
-                goto(1);
+                goto(REVIEW_STEP_INDEX);
             });
 
             // نقل نطاق — يفضّل transfer_price_cents من الخادم
@@ -1484,7 +1518,7 @@
                     setCartDomains([sel]);
                 } catch {}
                 savePrimarySelection(sel);
-                goto(1);
+                goto(REVIEW_STEP_INDEX);
             });
 
             // أمتلك نطاقًا — 0$
@@ -1512,7 +1546,7 @@
                     setCartDomains([sel]);
                 } catch {}
                 savePrimarySelection(sel);
-                goto(1);
+                goto(REVIEW_STEP_INDEX);
             });
 
             // Subdomain مجاني — 0$
@@ -1543,7 +1577,7 @@
                     setCartDomains([sel]);
                 } catch {}
                 savePrimarySelection(sel);
-                goto(1);
+                goto(REVIEW_STEP_INDEX);
             });
 
             // تبديل التبويبات (اعتمادًا على aria-selected + Tailwind aria-variant)
@@ -1555,7 +1589,9 @@
                 });
                 Object.values(panels).forEach(p => p?.classList.add('hidden'));
                 panels[name]?.classList.remove('hidden');
-                if (name === 'register') {
+                if (!REQUIRES_DOMAIN_SELECTION) {
+                    setReview('—', 0);
+                } else if (name === 'register') {
                     const cents = getFallbackCents(regTld?.value || '.com');
                     setReview('—', cents);
                 } else {
@@ -1710,7 +1746,7 @@
             }
 
             // اضبط الشريط على الخطوة الأولى افتراضيًا
-            goto(0);
+            goto(REVIEW_STEP_INDEX);
 
             // إذا تم تمرير domain عبر الاستعلام أو محفوظ محلياً (لتجربة تسجيل الدخول)، فعّل المراجعة مباشرة
             (async () => {
@@ -1736,7 +1772,7 @@
                             item_option: qOpt,
                             price_cents: cents
                         });
-                        goto(1);
+                        goto(REVIEW_STEP_INDEX);
                     } catch {}
                 } else if (saved) {
                     // استعادة الاختيار بعد تسجيل الدخول أو تحديث الصفحة
@@ -1746,9 +1782,9 @@
                     try {
                         setCartDomains([saved]);
                     } catch {}
-                    goto(1);
+                    goto(REVIEW_STEP_INDEX);
                 } else if (!HAS_TEMPLATE && window.location.search.includes('review=1')) {
-                    goto(1);
+                    goto(REVIEW_STEP_INDEX);
                 }
             })();
 
@@ -1769,7 +1805,7 @@
                     const first = merged[0];
                     activateTab(mapOptionToTab(first.item_option));
                     setCartDomains(merged);
-                    goto(1);
+                    goto(REVIEW_STEP_INDEX);
                 }
             } catch {}
 
@@ -1871,10 +1907,11 @@
             stepper?.querySelectorAll('.step').forEach((s, i) => {
                 s.classList.add('cursor-pointer');
                 s.addEventListener('click', () => {
+                    if (!REQUIRES_DOMAIN_SELECTION) return goto(REVIEW_STEP_INDEX);
                     if (i === 0) return goto(0);
                     const domainPicked = (reviewDomain?.textContent || '').trim();
                     if (domainPicked && domainPicked !== '—') {
-                        goto(1);
+                        goto(REVIEW_STEP_INDEX);
                     } else {
                         // بدون تنبيه مزعج؛ أبقِه على الخطوة الأولى
                         goto(0);
@@ -1889,8 +1926,8 @@
                 if (!placeOrderReal) return;
                 const agree = document.getElementById('agreeTos');
                 const domain = (document.getElementById('orderDomainInput')?.value || '').trim();
-                // في حالة وجود قالب: يجب اختيار دومين أساسي
-                const needPrimary = HAS_TEMPLATE;
+                // في تدفق الاستضافة يجب اختيار دومين، أما القالب فيمكنه الاعتماد على Subdomain تلقائي.
+                const needPrimary = REQUIRES_DOMAIN_SELECTION;
                 const domainOk = !needPrimary || (domain && domain !== '—');
                 const total = (document.getElementById('sumTotal2')?.textContent || '').trim();
                 placeOrderReal.disabled = !(agree && agree.checked && domainOk && total);
@@ -1928,11 +1965,22 @@
                     ensureRegisterFields();
                 } catch {}
                 try {
-                    updateDomainFieldsFromSelection(
-                        form.querySelector('input[name="domain_option"]')?.value || 'register',
-                        form.querySelector('input[name="domain"]')?.value || '',
-                        Number(form.querySelector('input[name="domain_price_cents"]')?.value || 0)
-                    );
+                    const selectedDomain = form.querySelector('input[name="domain"]')?.value || '';
+                    const selectedOption = form.querySelector('input[name="domain_option"]')?.value || '';
+                    const selectedPriceCents = Number(form.querySelector('input[name="domain_price_cents"]')?.value ||
+                        0);
+
+                    if (selectedDomain) {
+                        updateDomainFieldsFromSelection(
+                            selectedOption || 'register',
+                            selectedDomain,
+                            selectedPriceCents
+                        );
+                    } else if (!REQUIRES_DOMAIN_SELECTION) {
+                        form.querySelector('input[name="domain_option"]')?.remove();
+                        form.querySelector('input[name="domain_price_cents"]')?.remove();
+                        form.querySelectorAll('input[name^="items["]').forEach(node => node.remove());
+                    }
                 } catch {}
                 const data = new FormData(form);
                 fetch(form.action, {

@@ -60,7 +60,6 @@
 
     function updateCheckoutUrl() {
         const url = new URL(buyNowBtn.dataset.baseUrl, window.location.origin);
-        url.searchParams.set('template_id', buyNowBtn.dataset.templateId);
         url.searchParams.set('review', '1');
         url.searchParams.set('years', String(years));
 
