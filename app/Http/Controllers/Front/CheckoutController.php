@@ -424,6 +424,8 @@ class CheckoutController extends Controller
             $tenantRedirectUrl = !$isNotTemplate
                 ? $this->resolveTenantRedirectUrl($subscriptionIds)
                 : null;
+            $subscriptions = $this->loadCheckoutSubscriptions($subscriptionIds);
+            $primarySubscription = $subscriptions->first();
 
             // احفظ مرجعًا في الجلسة
             session([
@@ -436,17 +438,30 @@ class CheckoutController extends Controller
             $domainPicked = $items[0]['domain'] ?? $request->input('domain');
             $totalCents   = $isDomainOnly ? $domainsTotalCents : 0;
             $totalCentsPlan = $isDomainOnly ? $domainsTotalCents : 0;
+            $successState = $this->buildSuccessState(
+                $invoice,
+                $primarySubscription,
+                $domainPicked,
+                $normalizedOption,
+                $isTemplateCheckout,
+                $isDomainOnly,
+                $tenantRedirectUrl
+            );
 
             // Default response (covers domain-only case)
             $responseData = [
                 'success'     => true,
                 'order_no'    => $order->order_number,
                 'order_id'    => $order->id,
-                'domain'      => $domainPicked,
+                'domain'      => $successState['domain'] ?? $domainPicked,
                 'total_cents' => $totalCents,
+                'total'       => '$' . number_format(($invoice->total_cents ?? 0) / 100, 2),
                 'client_name' => $client_name,
-                'redirect'    => $tenantRedirectUrl ?: route('checkout.domains.success'),
+                'checkout_mode' => $isTemplateCheckout ? 'template' : 'hosting',
+                'dashboard_url' => route('client.subscriptions'),
             ];
+
+            $responseData = array_merge($responseData, $successState);
 
             // Template-specific override
             if (!$isNotTemplate) {
@@ -457,6 +472,7 @@ class CheckoutController extends Controller
                 $responseData = array_merge($responseData, [
                     'total_cents'   => $totalCents,
                     'template_name' => $template_name,
+                    'total'         => '$' . number_format($totalCents / 100, 2),
                 ]);
             }
 
@@ -469,6 +485,7 @@ class CheckoutController extends Controller
                 $responseData = array_merge($responseData, [
                     'total_cents' => $totalCentsPlan,
                     'plan_name'   => $plan_name,
+                    'total'       => '$' . number_format($totalCentsPlan / 100, 2),
                 ]);
             }
 
@@ -479,18 +496,24 @@ class CheckoutController extends Controller
 
             // Non-AJAX: redirect to a suitable checkout page depending on scenario
             if (!$isNotTemplate) {
-                if ($tenantRedirectUrl) {
-                    return redirect()->away($tenantRedirectUrl);
-                }
-
                 return redirect()->route('checkout', [
                     'template_id'   => $template_id,
                     'success'       => 1,
                     'order_no'      => $order->order_number,
-                    'domain'        => $domainPicked,
+                    'domain'        => $responseData['domain'] ?? $domainPicked,
                     'total'         => $totalCents / 100,
                     'client_name'   => $client_name,
                     'template_name' => $template_name,
+                    'checkout_mode' => 'template',
+                    'success_title' => $responseData['success_title'] ?? null,
+                    'success_message' => $responseData['success_message'] ?? null,
+                    'payment_status_label' => $responseData['payment_status_label'] ?? null,
+                    'payment_status_tone' => $responseData['payment_status_tone'] ?? null,
+                    'provisioning_status_label' => $responseData['provisioning_status_label'] ?? null,
+                    'provisioning_status_tone' => $responseData['provisioning_status_tone'] ?? null,
+                    'domain_status_label' => $responseData['domain_status_label'] ?? null,
+                    'domain_status_tone' => $responseData['domain_status_tone'] ?? null,
+                    'site_url' => $responseData['site_url'] ?? null,
                 ]);
             }
 
@@ -501,9 +524,19 @@ class CheckoutController extends Controller
                     'plan_name'   => $plan_name,
                     'success'     => 1,
                     'order_no'    => $order->order_number,
-                    'domain'      => $domainPicked,
+                    'domain'      => $responseData['domain'] ?? $domainPicked,
                     'total'       => $totalCentsPlan / 100,
                     'client_name' => $client_name,
+                    'checkout_mode' => 'hosting',
+                    'success_title' => $responseData['success_title'] ?? null,
+                    'success_message' => $responseData['success_message'] ?? null,
+                    'payment_status_label' => $responseData['payment_status_label'] ?? null,
+                    'payment_status_tone' => $responseData['payment_status_tone'] ?? null,
+                    'provisioning_status_label' => $responseData['provisioning_status_label'] ?? null,
+                    'provisioning_status_tone' => $responseData['provisioning_status_tone'] ?? null,
+                    'domain_status_label' => $responseData['domain_status_label'] ?? null,
+                    'domain_status_tone' => $responseData['domain_status_tone'] ?? null,
+                    'site_url' => $responseData['site_url'] ?? null,
                 ]);
             }
 
@@ -511,9 +544,19 @@ class CheckoutController extends Controller
             return redirect()->route('checkout.cart', [
                 'success'     => 1,
                 'order_no'    => $order->order_number,
-                'domain'      => $domainPicked,
+                'domain'      => $responseData['domain'] ?? $domainPicked,
                 'total'       => $totalCents / 100,
                 'client_name' => $client_name,
+                'checkout_mode' => 'hosting',
+                'success_title' => $responseData['success_title'] ?? null,
+                'success_message' => $responseData['success_message'] ?? null,
+                'payment_status_label' => $responseData['payment_status_label'] ?? null,
+                'payment_status_tone' => $responseData['payment_status_tone'] ?? null,
+                'provisioning_status_label' => $responseData['provisioning_status_label'] ?? null,
+                'provisioning_status_tone' => $responseData['provisioning_status_tone'] ?? null,
+                'domain_status_label' => $responseData['domain_status_label'] ?? null,
+                'domain_status_tone' => $responseData['domain_status_tone'] ?? null,
+                'site_url' => $responseData['site_url'] ?? null,
             ]);
         } catch (\Throwable $e) {
             Log::error('CheckoutController::process failed', ['error' => $e->getMessage()]);
@@ -557,6 +600,117 @@ class CheckoutController extends Controller
         $scheme = parse_url(config('app.url'), PHP_URL_SCHEME) ?: request()->getScheme();
 
         return $scheme . '://' . ltrim($domain, '/');
+    }
+
+    protected function loadCheckoutSubscriptions(array $subscriptionIds)
+    {
+        if ($subscriptionIds === []) {
+            return collect();
+        }
+
+        return Subscription::query()
+            ->with(['plan', 'template'])
+            ->whereIn('id', $subscriptionIds)
+            ->get()
+            ->sortBy(fn (Subscription $subscription) => array_search($subscription->id, $subscriptionIds, true))
+            ->values();
+    }
+
+    protected function buildSuccessState(
+        Invoice $invoice,
+        ?Subscription $subscription,
+        ?string $domainPicked,
+        ?string $normalizedOption,
+        bool $isTemplateCheckout,
+        bool $isDomainOnly,
+        ?string $tenantRedirectUrl
+    ): array {
+        $paymentMeta = $this->paymentStatusMeta((string) ($invoice->status ?? 'draft'));
+        $provisioningMeta = $this->provisioningStatusMeta(
+            $subscription?->provisioning_status,
+            $subscription !== null && ! $isDomainOnly
+        );
+        $domainMeta = $this->domainStatusMeta($subscription, $domainPicked, $normalizedOption, $isTemplateCheckout);
+
+        $siteReady = $isTemplateCheckout
+            && $subscription?->status === 'active'
+            && $subscription?->provisioning_status === Subscription::PROVISIONING_ACTIVE
+            && filled($subscription?->domain_name);
+
+        if ($isTemplateCheckout) {
+            $title = $siteReady ? 'Your website is ready' : 'We are preparing your site';
+            $message = $siteReady
+                ? 'Your website was provisioned successfully and is ready to open now.'
+                : 'Payment was received and provisioning has started. We will finish preparing your site shortly.';
+        } else {
+            $title = 'Order received successfully';
+            $message = 'Payment, provisioning, and domain status are shown below using the current backend flow.';
+        }
+
+        return [
+            'success_title' => $title,
+            'success_message' => $message,
+            'post_checkout_state' => $siteReady ? 'ready' : 'preparing',
+            'payment_status' => $paymentMeta['value'],
+            'payment_status_label' => $paymentMeta['label'],
+            'payment_status_tone' => $paymentMeta['tone'],
+            'provisioning_status' => $provisioningMeta['value'],
+            'provisioning_status_label' => $provisioningMeta['label'],
+            'provisioning_status_tone' => $provisioningMeta['tone'],
+            'domain_status' => $domainMeta['value'],
+            'domain_status_label' => $domainMeta['label'],
+            'domain_status_tone' => $domainMeta['tone'],
+            'domain' => $subscription?->domain_name ?: $domainPicked,
+            'site_url' => $siteReady
+                ? ($tenantRedirectUrl ?: (filled($subscription?->domain_name) ? $this->tenantUrl($subscription->domain_name) : null))
+                : null,
+        ];
+    }
+
+    protected function paymentStatusMeta(string $status): array
+    {
+        return match ($status) {
+            'paid' => ['value' => 'paid', 'label' => 'Payment confirmed', 'tone' => 'emerald'],
+            'unpaid' => ['value' => 'unpaid', 'label' => 'Awaiting payment confirmation', 'tone' => 'amber'],
+            default => ['value' => $status ?: 'draft', 'label' => 'Payment submitted', 'tone' => 'sky'],
+        };
+    }
+
+    protected function provisioningStatusMeta(?string $status, bool $hasProvisioning): array
+    {
+        if (! $hasProvisioning) {
+            return ['value' => 'not_applicable', 'label' => 'No site provisioning required', 'tone' => 'slate'];
+        }
+
+        return match ($status) {
+            Subscription::PROVISIONING_ACTIVE => ['value' => Subscription::PROVISIONING_ACTIVE, 'label' => 'Site provisioned', 'tone' => 'emerald'],
+            Subscription::PROVISIONING_IN_PROGRESS => ['value' => Subscription::PROVISIONING_IN_PROGRESS, 'label' => 'Provisioning in progress', 'tone' => 'sky'],
+            Subscription::PROVISIONING_FAILED => ['value' => Subscription::PROVISIONING_FAILED, 'label' => 'Provisioning failed', 'tone' => 'red'],
+            default => ['value' => $status ?: Subscription::PROVISIONING_PENDING, 'label' => 'Queued for provisioning', 'tone' => 'amber'],
+        };
+    }
+
+    protected function domainStatusMeta(
+        ?Subscription $subscription,
+        ?string $domainPicked,
+        ?string $normalizedOption,
+        bool $isTemplateCheckout
+    ): array {
+        $resolvedDomain = $subscription?->domain_name ?: $domainPicked;
+
+        if (filled($resolvedDomain)) {
+            if (($subscription?->domain_option ?: $normalizedOption) === 'subdomain' && $isTemplateCheckout) {
+                return ['value' => 'auto_subdomain', 'label' => 'Auto subdomain assigned', 'tone' => 'emerald'];
+            }
+
+            return ['value' => 'selected', 'label' => 'Domain selected', 'tone' => 'emerald'];
+        }
+
+        if ($isTemplateCheckout) {
+            return ['value' => 'auto_subdomain_pending', 'label' => 'Automatic subdomain will be assigned', 'tone' => 'sky'];
+        }
+
+        return ['value' => 'pending', 'label' => 'Domain status pending', 'tone' => 'amber'];
     }
 
     public function processCart(Request $request)

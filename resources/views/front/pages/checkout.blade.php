@@ -595,17 +595,30 @@
 
                 <!-- الدفع (مُحسَّن) -->
                 <div class="border border-gray-200 dark:border-gray-800 rounded-xl p-4" id="paymentBox">
-                    <h3 class="font-bold mb-3">طريقة الدفع</h3>
+                    <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h3 class="font-bold">طريقة الدفع</h3>
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                أدخل بيانات الدفع لإكمال الطلب. سنجري تحققاً فورياً من صحة الحقول قبل الإرسال.
+                            </p>
+                        </div>
+                        <span
+                            class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+                            اتصال آمن
+                        </span>
+                    </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                         <label
-                            class="border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center gap-3 cursor-pointer">
+                            data-gateway-option="card"
+                            class="border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition hover:border-[#240B36]/30 hover:bg-[#240B36]/[0.03]">
                             <input type="radio" name="gateway" value="card" class="scale-110" checked>
                             <span>بطاقة ائتمانية</span>
-                            <span class="ms-auto text-xs text-gray-500">Visa / MasterCard</span>
+                            <span id="gatewayCardMeta" class="ms-auto text-xs text-gray-500">Visa / MasterCard</span>
                         </label>
                         <label
-                            class="border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center gap-3 cursor-pointer">
+                            data-gateway-option="bank"
+                            class="border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition hover:border-[#240B36]/30 hover:bg-[#240B36]/[0.03]">
                             <input type="radio" name="gateway" value="bank" class="scale-110">
                             <span>تحويل بنكي</span>
                             <span class="ms-auto text-xs text-gray-500">تأكيد يدوي</span>
@@ -617,28 +630,38 @@
                         <div class="grid md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">رقم البطاقة *</label>
-                                <input id="ccNumber" inputmode="numeric" placeholder="4242 4242 4242 4242"
-                                    class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                <div class="relative">
+                                    <input id="ccNumber" inputmode="numeric" autocomplete="cc-number"
+                                        placeholder="4242 4242 4242 4242" maxlength="23"
+                                        class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 ltr:pr-24 rtl:pl-24 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                    <span id="ccBrandBadge"
+                                        class="pointer-events-none absolute inset-y-0 my-auto flex h-8 items-center rounded-full bg-gray-100 px-3 text-xs font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-300 ltr:right-3 rtl:left-3">
+                                        Card
+                                    </span>
+                                </div>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">اسم حامل البطاقة *</label>
-                                <input id="ccName" placeholder="Mohammed A."
+                                <input id="ccName" autocomplete="cc-name" placeholder="Mohammed A."
                                     class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
                             </div>
                         </div>
                         <div class="grid md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">تاريخ الانتهاء *</label>
-                                <input id="ccExp" inputmode="numeric" placeholder="MM/YY"
+                                <input id="ccExp" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY"
+                                    maxlength="5"
                                     class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">CVV *</label>
-                                <input id="ccCvv" inputmode="numeric" placeholder="123"
+                                <input id="ccCvv" inputmode="numeric" autocomplete="cc-csc" placeholder="123"
+                                    maxlength="4"
                                     class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
                             </div>
                             <div class="flex items-end">
-                                <div id="ccHint" class="text-xs text-gray-500">يتم التحقق محليًا لأغراض العرض.
+                                <div id="ccHint" class="text-xs text-gray-500">
+                                    أدخل بطاقة صالحة وسنوضح لك نوع البطاقة وحالة التحقق فوراً.
                                 </div>
                             </div>
                         </div>
@@ -646,6 +669,10 @@
 
                     <!-- نموذج تحويل بنكي -->
                     <form id="bankForm" class="space-y-4 hidden">
+                        <div
+                            class="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                            سيتم وضع الطلب بانتظار المراجعة حتى يتم تأكيد التحويل البنكي يدوياً.
+                        </div>
                         <div class="grid md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">البنك المحوَّل إليه</label>
@@ -654,7 +681,7 @@
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">رقم المعاملة *</label>
-                                <input id="bankRef" placeholder="TRX-123456"
+                                <input id="bankRef" placeholder="TRX-123456" maxlength="40"
                                     class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
                             </div>
                         </div>
@@ -664,6 +691,9 @@
                                 class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
                                 placeholder="ارفق أي تفاصيل مهمة عن التحويل..."></textarea>
                         </div>
+                        <p id="bankHint" class="text-xs text-gray-500">
+                            أدخل المرجع البنكي كما يظهر في إيصال التحويل لتمكين المراجعة السريعة.
+                        </p>
                     </form>
 
                     <div class="mt-4 flex items-start gap-2">
@@ -676,6 +706,8 @@
                 <form id="checkoutForm" method="POST" action="{{ $processActionUrl }}">
                     {{-- action="{{ $template_id ? route('checkout.process', ['template_id' => $template_id]) : route('checkout.cart.process') }}"> --}}
                     @csrf
+                    <input type="hidden" name="gateway" id="selectedGateway" value="card">
+                    <input type="hidden" name="bank_reference" id="selectedBankReference" value="">
                     <input type="hidden" name="domain" id="orderDomainInput" value="">
                     <input type="hidden" name="total" id="orderTotalInput" value="">
                     <input type="hidden" name="total_cents" id="orderTotalCents" value="">
@@ -742,9 +774,43 @@
             <div
                 class="mx-auto w-16 h-16 rounded-full grid place-items-center bg-green-100 text-green-700 mb-4 not-print">
                 ✓</div>
-            <h2 class="text-2xl font-extrabold mb-2" id="sx-success-msg">تم إنشاء الطلب بنجاح</h2>
-            <p class="text-gray-600 dark:text-gray-300 mb-6 not-print">سنرسل إليك فاتورة عبر البريد الإلكتروني. يمكنك
-                إدارة موقعك من لوحة التحكم.</p>
+            <h2 class="text-2xl font-extrabold mb-2" id="sx-success-msg">Order completed successfully</h2>
+            <p id="sx-success-subtitle" class="text-gray-600 dark:text-gray-300 mb-6 not-print">
+                Review the latest payment, provisioning, and domain status below.
+            </p>
+            <div id="sx-status-grid" class="mx-auto mb-6 grid max-w-4xl gap-3 text-left md:grid-cols-3 not-print">
+                <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-800 dark:bg-gray-800/60">
+                    <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Payment</p>
+                    <div class="flex items-center justify-between gap-2">
+                        <span id="sx-payment-status-label" class="font-semibold text-gray-900 dark:text-white">Pending</span>
+                        <span id="sx-payment-status-badge"
+                            class="inline-flex items-center rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-600">
+                            Submitted
+                        </span>
+                    </div>
+                </div>
+                <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-800 dark:bg-gray-800/60">
+                    <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Provisioning</p>
+                    <div class="flex items-center justify-between gap-2">
+                        <span id="sx-provisioning-status-label" class="font-semibold text-gray-900 dark:text-white">Pending</span>
+                        <span id="sx-provisioning-status-badge"
+                            class="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600">
+                            Queued
+                        </span>
+                    </div>
+                </div>
+                <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-800 dark:bg-gray-800/60">
+                    <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Domain</p>
+                    <div class="flex items-center justify-between gap-2">
+                        <span id="sx-domain-status-label" class="font-semibold text-gray-900 dark:text-white">Pending</span>
+                        <span id="sx-domain-status-badge"
+                            class="inline-flex items-center rounded-full bg-slate-500/10 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                            Pending
+                        </span>
+                    </div>
+                    <p id="sx-domain-value" class="mt-2 break-all text-sm text-gray-500 dark:text-gray-300">—</p>
+                </div>
+            </div>
             <!-- ملخص الفاتورة الاحترافي -->
             <div class="max-w-2xl mx-auto mb-8">
                 <table
@@ -762,9 +828,13 @@
                 </table>
             </div>
             <div class="flex flex-wrap items-center justify-center gap-3 not-print">
+                <a id="sx-visit-site" href="#" target="_blank" rel="noopener"
+                    class="hidden inline-flex items-center justify-center rounded-xl px-5 py-2.5 font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition shadow-sm">
+                    Visit website
+                </a>
                 <button id="sx-dashboard"
                     class="inline-flex items-center justify-center rounded-xl px-5 py-2.5 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">
-                    الذهاب للوحة التحكم
+                    Manage subscriptions
                 </button>
                 <button id="sx-print"
                     class="rounded-xl px-5 py-2.5 font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 active:scale-95 transition">
@@ -772,7 +842,7 @@
                 </button>
             </div>
             <div id="sx-hint" class="text-xs text-gray-500 mt-6 not-print">
-                إن كنت قد اخترت ربط نطاق تملكه، سنعرض لك سجلات DNS في صفحة الإعداد لاحقًا.
+                Your subscriptions dashboard will always show the latest provisioning and domain updates.
             </div>
         </div>
     </section>
@@ -1212,24 +1282,12 @@
         function fillSuccessInvoice(data) {
             const body = document.getElementById('sx-invoice-body');
             if (!body) return;
+            const checkoutMode = data.checkout_mode || (data.template_name ? 'template' : 'hosting');
 
             while (body.firstChild) body.removeChild(body.firstChild);
 
-            const textFromValue = (value) => {
-                if (value === null || value === undefined) return '';
-                const str = typeof value === 'string' ? value : String(value);
-                if (!str) return '';
-                if (!/[<&]/.test(str)) return str;
-                try {
-                    const doc = new DOMParser().parseFromString('<!doctype html><body>' + str, 'text/html');
-                    return (doc.body.textContent || '').trim();
-                } catch {
-                    return str.replace(/<[^>]*>/g, '').trim();
-                }
-            };
-
             const appendRow = (label, value, opts = {}) => {
-                const textValue = textFromValue(value);
+                const textValue = value === null || value === undefined ? '' : String(value).trim();
                 if (!textValue && !opts.allowEmpty) return;
                 const tr = document.createElement('tr');
                 if (opts.rowClass) tr.className = opts.rowClass;
@@ -1244,25 +1302,86 @@
                 body.appendChild(tr);
             };
 
-            appendRow('??? ????', data.order_no, {
+            appendRow('Order number', data.order_no, {
                 rowClass: 'bg-gray-50 dark:bg-gray-800',
                 valueClass: 'py-3 px-4 font-bold',
             });
-            appendRow('????', data.template_name);
-            appendRow('? ??????', '12 ??', { allowEmpty: true });
-            const templatePrice = data.template_price_html ?? data.template_price;
-            appendRow('?? ????', templatePrice);
-            appendRow('??????', data.domain);
-            appendRow('?? ??????', data.domain_price);
-            appendRow('???', data.discount ? '-' + data.discount : '', {
-                valueClass: 'py-3 px-4 text-green-700',
-            });
-            appendRow('????', data.tax);
-            appendRow('????? ?????', data.total, {
+            appendRow('Mode', checkoutMode === 'template' ? 'Template checkout' : 'Hosting checkout');
+            appendRow('Product', data.template_name || data.plan_name || '');
+            appendRow('Payment', data.payment_status_label || '');
+            appendRow('Provisioning', data.provisioning_status_label || '');
+            appendRow('Domain', data.domain || '');
+            appendRow('Total', data.total || '', {
                 rowClass: 'bg-green-50 dark:bg-green-900 font-extrabold text-lg',
                 labelClass: 'py-4 px-4',
                 valueClass: 'py-4 px-4 text-green-700',
             });
+        }
+
+        function fillSuccessState(data) {
+            const title = document.getElementById('sx-success-msg');
+            const subtitle = document.getElementById('sx-success-subtitle');
+            const domainValue = document.getElementById('sx-domain-value');
+            const dashboardButton = document.getElementById('sx-dashboard');
+            const visitSiteLink = document.getElementById('sx-visit-site');
+            const hint = document.getElementById('sx-hint');
+
+            const toneClasses = {
+                emerald: 'bg-emerald-500/10 text-emerald-600',
+                amber: 'bg-amber-500/10 text-amber-600',
+                sky: 'bg-sky-500/10 text-sky-600',
+                red: 'bg-red-500/10 text-red-600',
+                slate: 'bg-slate-500/10 text-slate-600',
+            };
+
+            const applyBadge = (badgeId, tone, fallbackLabel) => {
+                const badge = document.getElementById(badgeId);
+                if (!badge) return;
+                badge.className = 'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold';
+                badge.classList.add(...String(toneClasses[tone] || toneClasses.slate).split(' '));
+                badge.textContent = fallbackLabel || badge.textContent;
+            };
+
+            if (title) {
+                title.textContent = data.success_title || 'Order completed successfully';
+            }
+
+            if (subtitle) {
+                subtitle.textContent = data.success_message || 'Review the latest payment, provisioning, and domain status below.';
+            }
+
+            document.getElementById('sx-payment-status-label')?.replaceChildren(document.createTextNode(data.payment_status_label || 'Pending'));
+            document.getElementById('sx-provisioning-status-label')?.replaceChildren(document.createTextNode(data.provisioning_status_label || 'Pending'));
+            document.getElementById('sx-domain-status-label')?.replaceChildren(document.createTextNode(data.domain_status_label || 'Pending'));
+
+            applyBadge('sx-payment-status-badge', data.payment_status_tone, data.payment_status_label || 'Pending');
+            applyBadge('sx-provisioning-status-badge', data.provisioning_status_tone, data.provisioning_status_label || 'Pending');
+            applyBadge('sx-domain-status-badge', data.domain_status_tone, data.domain_status_label || 'Pending');
+
+            if (domainValue) {
+                domainValue.textContent = data.domain || 'Automatic subdomain';
+            }
+
+            if (dashboardButton) {
+                dashboardButton.onclick = function() {
+                    window.location.href = data.dashboard_url || '{{ route('client.subscriptions') }}';
+                };
+            }
+
+            if (visitSiteLink) {
+                if (data.site_url) {
+                    visitSiteLink.href = data.site_url;
+                    visitSiteLink.classList.remove('hidden');
+                } else {
+                    visitSiteLink.classList.add('hidden');
+                }
+            }
+
+            if (hint) {
+                hint.textContent = data.site_url
+                    ? 'Your website is live now. You can open it immediately or continue to your subscriptions dashboard.'
+                    : 'Your subscriptions dashboard will always show the latest provisioning and domain updates.';
+            }
         }
         /* ========================== منطق الصفحة ========================== */
         document.addEventListener('DOMContentLoaded', function() {
@@ -1929,8 +2048,11 @@
                 // في تدفق الاستضافة يجب اختيار دومين، أما القالب فيمكنه الاعتماد على Subdomain تلقائي.
                 const needPrimary = REQUIRES_DOMAIN_SELECTION;
                 const domainOk = !needPrimary || (domain && domain !== '—');
+                const paymentOk = typeof window.isCheckoutPaymentValid === 'function'
+                    ? window.isCheckoutPaymentValid()
+                    : true;
                 const total = (document.getElementById('sumTotal2')?.textContent || '').trim();
-                placeOrderReal.disabled = !(agree && agree.checked && domainOk && total);
+                placeOrderReal.disabled = !(agree && agree.checked && domainOk && paymentOk && total);
                 placeOrderReal.classList.toggle('opacity-50', placeOrderReal.disabled);
                 placeOrderReal.classList.toggle('cursor-not-allowed', placeOrderReal.disabled);
                 const orderDomainInput = document.getElementById('orderDomainInput');
@@ -1961,9 +2083,17 @@
             document.getElementById('checkoutForm')?.addEventListener('submit', function(e) {
                 e.preventDefault();
                 const form = this;
+                const submitButton = document.getElementById('placeOrderReal');
+                const originalSubmitText = submitButton?.dataset.originalText || submitButton?.textContent || '';
+                if (submitButton && !submitButton.dataset.originalText) {
+                    submitButton.dataset.originalText = originalSubmitText;
+                }
                 try {
                     ensureRegisterFields();
                 } catch {}
+                if (typeof window.validateCheckoutPayment === 'function' && !window.validateCheckoutPayment(true)) {
+                    return;
+                }
                 try {
                     const selectedDomain = form.querySelector('input[name="domain"]')?.value || '';
                     const selectedOption = form.querySelector('input[name="domain_option"]')?.value || '';
@@ -1982,6 +2112,11 @@
                         form.querySelectorAll('input[name^="items["]').forEach(node => node.remove());
                     }
                 } catch {}
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.classList.add('opacity-70', 'cursor-wait');
+                    submitButton.textContent = 'جارٍ تأكيد الدفع...';
+                }
                 const data = new FormData(form);
                 fetch(form.action, {
                         method: 'POST',
@@ -2002,23 +2137,19 @@
                                 localStorage.removeItem('palgoals_cart_domains'); // القديم
                                 clearPrimarySelection();
                             } catch {}
-                            if (response.redirect) {
-                                window.location.href = response.redirect;
-                                return;
-                            }
                             window.location.hash = '#view-success';
                             showSuccess();
+                            fillSuccessState(response);
                             fillSuccessInvoice({
                                 order_no: response.order_no || '—',
                                 domain: response.domain || '—',
                                 template_name: response.template_name || '',
-                                domain_price: response.domain_price || '',
-                                template_price_html: response.template_price_html || '',
-                                discount: response.discount || '',
-                                tax: response.tax || '',
+                                plan_name: response.plan_name || '',
+                                payment_status_label: response.payment_status_label || '',
+                                provisioning_status_label: response.provisioning_status_label || '',
                                 total: response.total || '—'
                             });
-                            if (response.client_name) {
+                            if (false && response.client_name) {
                                 const m = document.getElementById('sx-success-msg');
                                 if (m) m.textContent = 'تم إنشاء الطلب بنجاح يا ' + response
                                     .client_name;
@@ -2028,7 +2159,14 @@
                                 '\n') : response.errors));
                         }
                     })
-                    .catch(() => alert('حدث خطأ أثناء معالجة الطلب. حاول مرة أخرى.'));
+                    .catch(() => alert('حدث خطأ أثناء معالجة الطلب. حاول مرة أخرى.'))
+                    .finally(() => {
+                        if (submitButton) {
+                            submitButton.textContent = submitButton.dataset.originalText || originalSubmitText;
+                            submitButton.classList.remove('opacity-70', 'cursor-wait');
+                        }
+                        enableOrderIfValid();
+                    });
             });
 
             // كوبونات (تجريبيًا)
@@ -2062,8 +2200,211 @@
                 const cardForm = document.getElementById('cardForm');
                 const bankForm = document.getElementById('bankForm');
                 const agreeTos = document.getElementById('agreeTos');
+                const gatewayInput = document.getElementById('selectedGateway');
+                const bankReferenceInput = document.getElementById('selectedBankReference');
+                const gatewayOptions = document.querySelectorAll('[data-gateway-option]');
+                const gatewayCardMeta = document.getElementById('gatewayCardMeta');
+                const ccNumber = document.getElementById('ccNumber');
+                const ccName = document.getElementById('ccName');
+                const ccExp = document.getElementById('ccExp');
+                const ccCvv = document.getElementById('ccCvv');
+                const ccHint = document.getElementById('ccHint');
+                const ccBrandBadge = document.getElementById('ccBrandBadge');
+                const bankRef = document.getElementById('bankRef');
+                const bankHint = document.getElementById('bankHint');
+
+                const digitsOnly = (value) => String(value || '').replace(/\D/g, '');
+                const activeGateway = () => document.querySelector('input[name="gateway"]:checked')?.value || 'card';
+
+                const detectCardBrand = (value) => {
+                    const digits = digitsOnly(value);
+                    if (/^4/.test(digits)) return { key: 'visa', label: 'Visa' };
+                    if (/^(5[1-5]|2(2[2-9]|[3-6]\d|7[01]\d|720))/.test(digits)) {
+                        return { key: 'mastercard', label: 'MasterCard' };
+                    }
+                    if (/^3[47]/.test(digits)) return { key: 'amex', label: 'AmEx' };
+                    if (/^6(?:011|5)/.test(digits)) return { key: 'discover', label: 'Discover' };
+                    return { key: 'card', label: 'Card' };
+                };
+
+                const formatCardNumber = (value) => {
+                    const digits = digitsOnly(value).slice(0, 19);
+                    const brand = detectCardBrand(digits);
+                    if (brand.key === 'amex') {
+                        const p1 = digits.slice(0, 4);
+                        const p2 = digits.slice(4, 10);
+                        const p3 = digits.slice(10, 15);
+                        return [p1, p2, p3].filter(Boolean).join(' ');
+                    }
+
+                    return digits.match(/.{1,4}/g)?.join(' ') || '';
+                };
+
+                const formatExpiry = (value) => {
+                    const digits = digitsOnly(value).slice(0, 4);
+                    if (!digits) return '';
+                    if (digits.length === 1) {
+                        const month = Number(digits);
+                        return month > 1 ? `0${month}/` : digits;
+                    }
+
+                    const monthDigits = digits.slice(0, 2);
+                    const safeMonth = Math.min(Math.max(Number(monthDigits || 0), 1), 12);
+                    const month = String(safeMonth).padStart(2, '0');
+                    const year = digits.slice(2, 4);
+
+                    return year ? `${month}/${year}` : `${month}/`;
+                };
+
+                const isLuhnValid = (value) => {
+                    const digits = digitsOnly(value);
+                    if (digits.length < 13) return false;
+                    let sum = 0;
+                    let shouldDouble = false;
+                    for (let i = digits.length - 1; i >= 0; i -= 1) {
+                        let digit = Number(digits[i]);
+                        if (shouldDouble) {
+                            digit *= 2;
+                            if (digit > 9) digit -= 9;
+                        }
+                        sum += digit;
+                        shouldDouble = !shouldDouble;
+                    }
+                    return sum % 10 === 0;
+                };
+
+                const isExpiryValid = (value) => {
+                    const match = String(value || '').match(/^(\d{2})\/(\d{2})$/);
+                    if (!match) return false;
+                    const month = Number(match[1]);
+                    const year = Number(`20${match[2]}`);
+                    if (month < 1 || month > 12) return false;
+                    const now = new Date();
+                    const currentMonth = now.getMonth() + 1;
+                    const currentYear = now.getFullYear();
+                    return year > currentYear || (year === currentYear && month >= currentMonth);
+                };
+
+                const setFieldState = (input, state) => {
+                    if (!input) return;
+                    input.classList.remove('border-red-300', 'border-emerald-300', 'focus:ring-red-500/20', 'focus:ring-emerald-500/20');
+
+                    if (state === 'invalid') {
+                        input.classList.add('border-red-300', 'focus:ring-red-500/20');
+                    } else if (state === 'valid') {
+                        input.classList.add('border-emerald-300', 'focus:ring-emerald-500/20');
+                    }
+                };
+
+                const setGatewayOptionState = (value) => {
+                    gatewayOptions.forEach((option) => {
+                        const active = option.getAttribute('data-gateway-option') === value;
+                        option.classList.toggle('border-[#240B36]', active);
+                        option.classList.toggle('bg-[#240B36]/[0.05]', active);
+                        option.classList.toggle('shadow-sm', active);
+                    });
+                };
+
+                const updateCardMeta = () => {
+                    const brand = detectCardBrand(ccNumber?.value || '');
+                    if (ccBrandBadge) {
+                        ccBrandBadge.textContent = brand.label;
+                    }
+                    if (gatewayCardMeta) {
+                        gatewayCardMeta.textContent = brand.key === 'card' ? 'Visa / MasterCard' : brand.label;
+                    }
+                    return brand;
+                };
+
+                const validateCard = (visual = false) => {
+                    const brand = updateCardMeta();
+                    const numberDigits = digitsOnly(ccNumber?.value || '');
+                    const nameValue = String(ccName?.value || '').trim();
+                    const expValue = String(ccExp?.value || '').trim();
+                    const cvvDigits = digitsOnly(ccCvv?.value || '');
+                    const numberValid = numberDigits.length >= 15 && isLuhnValid(numberDigits);
+                    const nameValid = nameValue.length >= 5 && /\s/.test(nameValue);
+                    const expValid = isExpiryValid(expValue);
+                    const cvvLength = brand.key === 'amex' ? 4 : 3;
+                    const cvvValid = cvvDigits.length === cvvLength;
+
+                    if (visual) {
+                        setFieldState(ccNumber, numberDigits ? (numberValid ? 'valid' : 'invalid') : '');
+                        setFieldState(ccName, nameValue ? (nameValid ? 'valid' : 'invalid') : '');
+                        setFieldState(ccExp, expValue ? (expValid ? 'valid' : 'invalid') : '');
+                        setFieldState(ccCvv, cvvDigits ? (cvvValid ? 'valid' : 'invalid') : '');
+                    }
+
+                    if (ccHint) {
+                        if (!numberDigits && !nameValue && !expValue && !cvvDigits) {
+                            ccHint.textContent = 'أدخل بطاقة صالحة وسنوضح لك نوع البطاقة وحالة التحقق فوراً.';
+                            ccHint.className = 'text-xs text-gray-500';
+                        } else if (numberValid && nameValid && expValid && cvvValid) {
+                            ccHint.textContent = `تم التحقق من بيانات ${brand.label} وجاهزة للإرسال.`;
+                            ccHint.className = 'text-xs text-emerald-600';
+                        } else if (!numberValid && numberDigits.length >= 13) {
+                            ccHint.textContent = 'رقم البطاقة غير صالح. تحقق من الرقم وحاول مرة أخرى.';
+                            ccHint.className = 'text-xs text-red-600';
+                        } else if (!expValid && expValue.length === 5) {
+                            ccHint.textContent = 'تاريخ الانتهاء غير صالح أو البطاقة منتهية.';
+                            ccHint.className = 'text-xs text-red-600';
+                        } else if (!cvvValid && cvvDigits.length >= Math.min(cvvLength, 3)) {
+                            ccHint.textContent = `أدخل رمز CVV مكوّناً من ${cvvLength} أرقام.`;
+                            ccHint.className = 'text-xs text-red-600';
+                        } else {
+                            ccHint.textContent = 'أكمل بيانات البطاقة للمتابعة.';
+                            ccHint.className = 'text-xs text-gray-500';
+                        }
+                    }
+
+                    return numberValid && nameValid && expValid && cvvValid;
+                };
+
+                const validateBank = (visual = false) => {
+                    const refValue = String(bankRef?.value || '').trim();
+                    const refValid = refValue.length >= 6;
+
+                    if (bankReferenceInput) {
+                        bankReferenceInput.value = refValue;
+                    }
+
+                    if (visual) {
+                        setFieldState(bankRef, refValue ? (refValid ? 'valid' : 'invalid') : '');
+                    }
+
+                    if (bankHint) {
+                        if (!refValue) {
+                            bankHint.textContent = 'أدخل المرجع البنكي كما يظهر في إيصال التحويل لتمكين المراجعة السريعة.';
+                            bankHint.className = 'text-xs text-gray-500';
+                        } else if (refValid) {
+                            bankHint.textContent = 'تم تسجيل مرجع التحويل وسيبقى الطلب بانتظار التحقق اليدوي.';
+                            bankHint.className = 'text-xs text-emerald-600';
+                        } else {
+                            bankHint.textContent = 'رقم المرجع قصير جداً. أدخل رقم العملية أو المرجع البنكي الكامل.';
+                            bankHint.className = 'text-xs text-red-600';
+                        }
+                    }
+
+                    return refValid;
+                };
+
+                window.validateCheckoutPayment = function(visual = false) {
+                    const gateway = activeGateway();
+                    if (gatewayInput) {
+                        gatewayInput.value = gateway;
+                    }
+                    return gateway === 'bank' ? validateBank(visual) : validateCard(visual);
+                };
+
+                window.isCheckoutPaymentValid = function() {
+                    return window.validateCheckoutPayment(false);
+                };
 
                 function setGateway(v) {
+                    if (gatewayInput) {
+                        gatewayInput.value = v;
+                    }
+
                     if (v === 'card') {
                         cardForm?.classList.remove('hidden');
                         bankForm?.classList.add('hidden');
@@ -2071,10 +2412,53 @@
                         bankForm?.classList.remove('hidden');
                         cardForm?.classList.add('hidden');
                     }
+
+                    setGatewayOptionState(v);
+                    window.validateCheckoutPayment(false);
+                    enableOrderIfValid();
                 }
+
+                ccNumber?.addEventListener('input', function() {
+                    this.value = formatCardNumber(this.value);
+                    window.validateCheckoutPayment(true);
+                    enableOrderIfValid();
+                });
+
+                ccName?.addEventListener('input', function() {
+                    this.value = this.value.replace(/\s{2,}/g, ' ').replace(/^\s+/, '');
+                    window.validateCheckoutPayment(true);
+                    enableOrderIfValid();
+                });
+
+                ccExp?.addEventListener('input', function() {
+                    this.value = formatExpiry(this.value);
+                    window.validateCheckoutPayment(true);
+                    enableOrderIfValid();
+                });
+
+                ccCvv?.addEventListener('input', function() {
+                    this.value = digitsOnly(this.value).slice(0, 4);
+                    window.validateCheckoutPayment(true);
+                    enableOrderIfValid();
+                });
+
+                bankRef?.addEventListener('input', function() {
+                    if (bankReferenceInput) {
+                        bankReferenceInput.value = this.value.trim();
+                    }
+                    window.validateCheckoutPayment(true);
+                    enableOrderIfValid();
+                });
+
+                [ccNumber, ccName, ccExp, ccCvv, bankRef].forEach((input) => {
+                    input?.addEventListener('blur', () => {
+                        window.validateCheckoutPayment(true);
+                    });
+                });
+
                 gwRadios.forEach(r => r.addEventListener('change', () => setGateway(document.querySelector(
                     'input[name="gateway"]:checked')?.value)));
-                setGateway('card');
+                setGateway(activeGateway());
                 agreeTos?.addEventListener('input', () => {
                     /* keep validation on */
                 });
@@ -2094,18 +2478,30 @@
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('success') === '1' || window.location.hash === '#view-success') {
                 showSuccess();
+                fillSuccessState({
+                    success_title: urlParams.get('success_title') || '',
+                    success_message: urlParams.get('success_message') || '',
+                    payment_status_label: urlParams.get('payment_status_label') || '',
+                    payment_status_tone: urlParams.get('payment_status_tone') || '',
+                    provisioning_status_label: urlParams.get('provisioning_status_label') || '',
+                    provisioning_status_tone: urlParams.get('provisioning_status_tone') || '',
+                    domain_status_label: urlParams.get('domain_status_label') || '',
+                    domain_status_tone: urlParams.get('domain_status_tone') || '',
+                    domain: urlParams.get('domain') || '',
+                    site_url: urlParams.get('site_url') || '',
+                    dashboard_url: '{{ route('client.subscriptions') }}'
+                });
                 fillSuccessInvoice({
                     order_no: urlParams.get('order_no') || '—',
                     domain: urlParams.get('domain') || '—',
                     template_name: urlParams.get('template_name') || '',
-                    domain_price: urlParams.get('domain_price') || '',
-                    template_price: urlParams.get('template_price') || '',
-                    discount: urlParams.get('discount') || '',
-                    tax: urlParams.get('tax') || '',
+                    plan_name: urlParams.get('plan_name') || '',
+                    payment_status_label: urlParams.get('payment_status_label') || '',
+                    provisioning_status_label: urlParams.get('provisioning_status_label') || '',
                     total: (urlParams.get('total') ? decodeURIComponent(urlParams.get('total')) : '—')
                 });
                 const clientName = urlParams.get('client_name');
-                if (clientName) {
+                if (false && clientName) {
                     const m = document.getElementById('sx-success-msg');
                     if (m) m.textContent = 'تم إنشاء الطلب بنجاح يا ' + decodeURIComponent(clientName);
                 }

@@ -127,11 +127,93 @@ class HomeController extends Controller
             ->with('success', 'Account updated successfully.');
     }
 
-    public function subscriptions()
+    public function subscriptions(Request $request)
     {
-        $client = Client::find(Auth::guard('client')->user()->id);
-        $subscriptions = Subscription::with(['client', 'plan'])->where('client_id',$client->id)->latest()->paginate(20);
-        return view('client.subscriptions',compact('subscriptions'));
+        $client = Client::findOrFail(Auth::guard('client')->id());
+        $search = trim((string) $request->query('q', ''));
+        $status = trim((string) $request->query('status', 'all'));
+        $allowedStatuses = ['all', 'active', 'pending', 'suspended', 'cancelled'];
+
+        if (! in_array($status, $allowedStatuses, true)) {
+            $status = 'all';
+        }
+
+        $baseQuery = Subscription::query()
+            ->where('client_id', $client->id);
+
+        $subscriptionStats = [
+            'total' => (clone $baseQuery)->count(),
+            'active' => (clone $baseQuery)->where('status', 'active')->count(),
+            'provisioning' => (clone $baseQuery)
+                ->whereIn('provisioning_status', [
+                    Subscription::PROVISIONING_PENDING,
+                    Subscription::PROVISIONING_IN_PROGRESS,
+                ])->count(),
+            'renewing_soon' => (clone $baseQuery)
+                ->whereDate('next_due_date', '>=', now()->toDateString())
+                ->whereDate('next_due_date', '<=', now()->addDays(7)->toDateString())
+                ->count(),
+        ];
+
+        $subscriptions = Subscription::query()
+            ->with([
+                'plan.translations',
+                'template.translations',
+            ])
+            ->where('client_id', $client->id)
+            ->when($status !== 'all', function ($query) use ($status) {
+                $query->where('status', $status);
+            })
+            ->when($search !== '', function ($query) use ($search) {
+                $like = '%' . $search . '%';
+
+                $query->where(function ($nestedQuery) use ($like) {
+                    $nestedQuery
+                        ->where('domain_name', 'like', $like)
+                        ->orWhere('subdomain', 'like', $like)
+                        ->orWhere('username', 'like', $like)
+                        ->orWhere('cpanel_username', 'like', $like)
+                        ->orWhereHas('plan', function ($planQuery) use ($like) {
+                            $planQuery
+                                ->where('name', 'like', $like)
+                                ->orWhere('slug', 'like', $like)
+                                ->orWhereHas('translations', function ($translationQuery) use ($like) {
+                                    $translationQuery
+                                        ->where('name', 'like', $like)
+                                        ->orWhere('title', 'like', $like);
+                                });
+                        })
+                        ->orWhereHas('template', function ($templateQuery) use ($like) {
+                            $templateQuery
+                                ->where('name', 'like', $like)
+                                ->orWhere('slug', 'like', $like)
+                                ->orWhereHas('translations', function ($translationQuery) use ($like) {
+                                    $translationQuery
+                                        ->where('name', 'like', $like)
+                                        ->orWhere('title', 'like', $like);
+                                });
+                        });
+                });
+            })
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
+
+        $statusOptions = [
+            'all' => 'كل الاشتراكات',
+            'active' => 'النشطة',
+            'pending' => 'المعلقة',
+            'suspended' => 'الموقوفة',
+            'cancelled' => 'الملغية',
+        ];
+
+        return view('client.subscriptions', compact(
+            'subscriptions',
+            'subscriptionStats',
+            'statusOptions',
+            'status',
+            'search'
+        ));
     }
 
     public function invoices()
