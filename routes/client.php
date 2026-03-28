@@ -42,6 +42,9 @@ Route::group([
     Route::get('subscriptions/{subscription}/content', [SubscriptionController::class, 'content'])->name('subscriptions.content');
     Route::get('subscriptions/{subscription}/pages', [SubscriptionPageEditorController::class, 'pages'])->name('subscriptions.pages');
     Route::post('subscriptions/{subscription}/pages', [SubscriptionPageEditorController::class, 'storePage'])->name('subscriptions.pages.store');
+    Route::match(['put', 'patch'], 'subscriptions/{subscription}/pages/{page}', [SubscriptionPageEditorController::class, 'updatePageSettings'])->name('subscriptions.pages.update');
+    Route::post('subscriptions/{subscription}/pages/{page}/set-home', [SubscriptionPageEditorController::class, 'setHomePage'])->name('subscriptions.pages.set-home');
+    Route::delete('subscriptions/{subscription}/pages/{page}', [SubscriptionPageEditorController::class, 'destroyPage'])->name('subscriptions.pages.destroy');
     Route::prefix('subscriptions/{subscription}/pages/{page}/editor')
         ->name('subscriptions.pages.editor.')
         ->group(function () {

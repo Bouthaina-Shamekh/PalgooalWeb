@@ -10,12 +10,27 @@
             array_merge($workspaceRouteBaseParameters, $extra),
             $absolute,
         );
+    $workspaceMode = $workspaceMode ?? 'admin';
+    $isClientWorkspace = $workspaceMode === 'client';
     $sidebarTranslation = method_exists($section, 'translation') ? $section->translation($currentLocale) : null;
     $sidebarFallbackTranslation = $sidebarTranslation ?? $section->translations->first();
     $sidebarTypeMeta = $sectionTypes[$section->type] ?? null;
     $sidebarTypeLabel =
         $sidebarTypeMeta['label'] ?? \Illuminate\Support\Str::headline(str_replace(['_', '-'], ' ', $section->type));
     $sidebarTitle = $sidebarFallbackTranslation?->title ?: $sidebarTypeLabel;
+    $sectionStatusLabel = $section->is_active ? ($isClientWorkspace ? __('Visible') : __('Active')) : __('Hidden');
+    $editActionLabel = $isClientWorkspace ? __('Edit block') : __('Edit section');
+    $menuActionLabel = $isClientWorkspace ? __('Open block options') : __('Open section actions');
+    $toggleActionLabel = $section->is_active ? ($isClientWorkspace ? __('Hide block') : __('Hide')) : ($isClientWorkspace ? __('Show block') : __('Show'));
+    $duplicateActionLabel = $isClientWorkspace ? __('Duplicate block') : __('Duplicate');
+    $renameActionLabel = $isClientWorkspace ? __('Rename block') : __('Rename');
+    $deleteActionLabel = $isClientWorkspace ? __('Remove block') : __('Delete');
+    $dragActionLabel = $isClientWorkspace ? __('Drag to move block') : __('Drag to reorder');
+    $renameFieldLabel = $isClientWorkspace ? __('Block Name') : __('Section Name');
+    $renameSubmitLabel = $isClientWorkspace ? __('Save Block Name') : __('Save Name');
+    $deleteConfirmationMessage = $isClientWorkspace
+        ? __('Are you sure you want to remove this block from the page? This action cannot be undone.')
+        : __('Are you sure you want to delete this section? This action cannot be undone.');
     $editorUrl = $workspaceRouteFor('editor', ['section' => $section], false);
     $fallbackEditUrl = $workspaceRouteFor('edit', ['section' => $section], false);
 @endphp
@@ -31,7 +46,7 @@
                 <span data-section-type-label class="text-xs text-slate-500">{{ $sidebarTypeLabel }}</span>
                 <span data-section-status
                     class="rounded-full px-2 py-0.5 text-[11px] font-medium {{ $section->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' }}">
-                    {{ $section->is_active ? __('Active') : __('Hidden') }}
+                    {{ $sectionStatusLabel }}
                 </span>
             </div>
         </div>
@@ -40,7 +55,7 @@
             class="flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white/90 p-1 shadow-sm transition duration-200 group-hover:border-slate-300 group-hover:bg-white group-hover:shadow rtl:flex-row-reverse">
             <button type="button" data-edit-section-button
                 class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                aria-label="{{ __('Edit section') }}">
+                aria-label="{{ $editActionLabel }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round"
@@ -49,7 +64,7 @@
             </button>
             <div class="relative">
                 <button type="button" data-section-menu-button aria-expanded="false"
-                    aria-label="{{ __('Open section actions') }}"
+                    aria-label="{{ $menuActionLabel }}"
                     class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor" stroke-width="1.8">
@@ -65,7 +80,7 @@
                         @csrf
                         <button type="submit"
                             class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 ltr:text-left rtl:text-right rtl:flex-row-reverse">
-                            <span>{{ $section->is_active ? __('Hide') : __('Show') }}</span>
+                            <span>{{ $toggleActionLabel }}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -79,7 +94,7 @@
                         @csrf
                         <button type="submit"
                             class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 ltr:text-left rtl:text-right rtl:flex-row-reverse">
-                            <span>{{ __('Duplicate') }}</span>
+                            <span>{{ $duplicateActionLabel }}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -90,7 +105,7 @@
 
                     <button type="button" data-rename-toggle
                         class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 ltr:text-left rtl:text-right rtl:flex-row-reverse">
-                        <span>{{ __('Rename') }}</span>
+                        <span>{{ $renameActionLabel }}</span>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400" fill="none"
                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                             <path stroke-linecap="round" stroke-linejoin="round"
@@ -100,12 +115,12 @@
 
                     <form action="{{ $workspaceRouteFor('destroy', ['section' => $section], false) }}"
                         method="POST"
-                        onsubmit="return confirm('{{ __('Are you sure you want to delete this section? This action cannot be undone.') }}')">
+                        onsubmit="return confirm('{{ $deleteConfirmationMessage }}')">
                         @csrf
                         @method('DELETE')
                         <button type="submit"
                             class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50 ltr:text-left rtl:text-right rtl:flex-row-reverse">
-                            <span>{{ __('Delete') }}</span>
+                            <span>{{ $deleteActionLabel }}</span>
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-rose-400" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -117,7 +132,7 @@
             </div>
             <button type="button" data-drag-handle
                 class="sections-drag-handle inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition duration-200 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-                aria-label="{{ __('Drag to reorder') }}">
+                aria-label="{{ $dragActionLabel }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 6h8M8 12h8M8 18h8" />
@@ -134,7 +149,7 @@
             <input type="hidden" name="locale" value="{{ $currentLocale }}">
             <div>
                 <label for="rename-section-{{ $section->id }}"
-                    class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 ltr:text-left rtl:text-right">{{ __('Section Name') }}</label>
+                    class="mb-1 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 ltr:text-left rtl:text-right">{{ $renameFieldLabel }}</label>
                 <input id="rename-section-{{ $section->id }}" name="title" value="{{ $sidebarTitle }}"
                     data-rename-input type="text"
                     class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 outline-none transition duration-200 focus:border-slate-400 focus:ring-2 focus:ring-slate-200 ltr:text-left rtl:text-right"
@@ -144,7 +159,7 @@
                 <button type="button" data-rename-cancel
                     class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition duration-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">{{ __('Cancel') }}</button>
                 <button type="submit"
-                    class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition duration-200 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">{{ __('Save Name') }}</button>
+                    class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition duration-200 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">{{ $renameSubmitLabel }}</button>
             </div>
         </form>
     </div>

@@ -25,6 +25,96 @@
     $previewUrl = $previewBaseUrl . ($selectedSectionId ? '?highlight=' . $selectedSectionId : '');
     $autoEditSectionId = (int) request('edit');
     $editingSection = $autoEditSectionId > 0 ? $sections->firstWhere('id', $autoEditSectionId) : null;
+    $addSectionLabel = $isClientWorkspace ? __('Add Block') : __('Add Section');
+    $refreshPreviewLabel = $isClientWorkspace ? __('Reload Preview') : __('Refresh Preview');
+    $emptyStateTitle = $isClientWorkspace ? __('Start by adding your first block') : __('Start by adding your first section');
+    $emptyStateDescription = $isClientWorkspace
+        ? __('Choose a ready-made block such as a hero, features list, or call to action, then edit the content on the right.')
+        : __('Use the section library to create a ready-to-edit block instantly, then fine-tune it in the editor.');
+    $openLibraryLabel = $isClientWorkspace ? __('Browse Blocks') : __('Open Section Library');
+    $previewRefreshingLabel = $isClientWorkspace ? __('Updating preview...') : __('Refreshing preview...');
+    $libraryTitle = $isClientWorkspace ? __('Add a Block') : __('Add Section to Page');
+    $libraryDescription = $isClientWorkspace
+        ? __('Pick a block for this page. We will add it right away and open its settings so you can start editing.')
+        : __('Choose a block and we will add it instantly, then open the editor for final customization.');
+    $librarySearchPlaceholder = $isClientWorkspace ? __('Search blocks') : __('Search section types');
+    $libraryAddHint = $isClientWorkspace ? __('Adds to your page right away') : __('Creates a draft instantly');
+    $libraryAddActionLabel = $isClientWorkspace ? __('Use Block') : __('Add');
+    $clientLibraryIntroTitle = __('How block adding works');
+    $clientLibraryIntroSteps = [
+        __('1. Pick a block that matches the part of the page you want to create.'),
+        __('2. The block is added to this page immediately.'),
+        __('3. Its settings open right away so you can edit text, images, and buttons.'),
+    ];
+    $clientLibraryCategoryMeta = [
+        'hero' => [
+            'label' => __('Page Start'),
+            'description' => __('Opening blocks for your main headline, call to action, and first impression.'),
+        ],
+        'services' => [
+            'label' => __('What You Offer'),
+            'description' => __('Blocks that explain services, departments, or capabilities in a clear way.'),
+        ],
+        'process' => [
+            'label' => __('How It Works'),
+            'description' => __('Step-by-step blocks that explain your workflow or service journey.'),
+        ],
+        'testimonials' => [
+            'label' => __('Trust & Reviews'),
+            'description' => __('Blocks that show customer feedback and build confidence.'),
+        ],
+        'portfolio' => [
+            'label' => __('Work Examples'),
+            'description' => __('Blocks for featured projects, case studies, or portfolio highlights.'),
+        ],
+        'pricing' => [
+            'label' => __('Pricing'),
+            'description' => __('Blocks that help visitors compare plans and choose an offer.'),
+        ],
+        'domains' => [
+            'label' => __('Domain Search'),
+            'description' => __('A ready-made search block for domain-related pages or landing sections.'),
+        ],
+        'templates' => [
+            'label' => __('Templates & Catalog'),
+            'description' => __('Blocks for showcasing template cards, listings, and previews.'),
+        ],
+        'features' => [
+            'label' => __('Features'),
+            'description' => __('Simple feature grids for key benefits, highlights, or selling points.'),
+        ],
+        'other' => [
+            'label' => __('More Blocks'),
+            'description' => __('Additional page blocks you can add and customize.'),
+        ],
+    ];
+    $previewFrameTitleLabel = $isClientWorkspace ? __('Live page preview') : __('Live sections preview');
+    $sidebarIntroTitle = $isClientWorkspace
+        ? ($page->is_home ? __('You are editing your homepage') : __('You are editing this page'))
+        : null;
+    $sidebarIntroDescription = $isClientWorkspace
+        ? __('This workspace is focused on page blocks only. Add, reorder, rename, and edit blocks here without the extra admin controls.')
+        : null;
+    $pageStructureTitle = $isClientWorkspace ? __('Page Blocks') : __('Page Elements');
+    $pageStructureDescription = $isClientWorkspace
+        ? __('Tip: drag blocks to change the order, use the menu to rename them, and open any block to edit its content.')
+        : __('Customize this page sections and keep the structure organized.');
+    $addNewElementLabel = $isClientWorkspace ? __('Add Block') : __('Add New Element');
+    $noElementsLabel = $isClientWorkspace ? __('No blocks have been added yet.') : __('No elements have been added yet.');
+    $bottomTipLabel = $isClientWorkspace ? __('Tip: open any block to edit text, images, buttons, and other page content.') : __('Changes save automatically');
+    $previewDraftUrl = $workspaceRouteFor('preview');
+    $pageIsLive = (bool) $page->is_active;
+    $publishStateBadge = $pageIsLive ? __('Live') : __('Draft');
+    $publishStateLabel = $pageIsLive ? __('Visible on your site') : __('Saved as draft');
+    $publishStateDescription = $pageIsLive
+        ? __('Saved changes appear on the live page after you save. Use preview first if you want to double-check the page before sharing it.')
+        : __('This page is currently hidden from visitors. You can still preview changes here, then make the page visible from your pages manager when you are ready.');
+    $previewDraftLabel = __('Preview Draft');
+    $publishActionLabel = $pageIsLive ? __('Publish & View Live Page') : __('Hidden From Visitors');
+    $publishHelperLabel = $pageIsLive
+        ? __('Preview opens your in-progress version. Publish opens the live page your visitors can already see.')
+        : __('This page is hidden right now, so preview is the safest way to review it before making it visible.');
+    $reloadPreviewShortLabel = $isClientWorkspace ? __('Reload') : $refreshPreviewLabel;
 @endphp
 
 @extends('dashboard.pages.sections.layouts.workspace')
@@ -69,6 +159,8 @@
         }
 
         .sections-outline-item {
+            position: relative;
+            z-index: 0;
             cursor: pointer;
             background: #ffffff;
             box-shadow: 0 10px 24px -24px rgba(15, 23, 42, 0.18), 0 4px 10px rgba(15, 23, 42, 0.04);
@@ -82,6 +174,11 @@
         .sections-outline-item.is-selected {
             background: #ffffff;
             box-shadow: 0 18px 34px -28px rgba(15, 23, 42, 0.22), 0 8px 18px rgba(15, 23, 42, 0.06);
+        }
+
+        .sections-outline-item:focus-within,
+        .sections-outline-item.is-menu-open {
+            z-index: 30;
         }
 
         .sections-preview-stage {
@@ -183,9 +280,51 @@
 @endpush
 
 @section('workspace-header-actions')
+    @if ($isClientWorkspace)
+        <span
+            class="inline-flex items-center gap-2 rounded-full border {{ $pageIsLive ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700' }} px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em]"
+            aria-label="{{ $publishStateLabel }}"
+            title="{{ $publishStateLabel }}"
+        >
+            <span class="h-2.5 w-2.5 rounded-full {{ $pageIsLive ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
+            <span>{{ $publishStateBadge }}</span>
+        </span>
+        <a href="{{ $previewDraftUrl }}" target="_blank"
+            class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-300 bg-white text-slate-700 transition duration-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+            aria-label="{{ $previewDraftLabel }}"
+            title="{{ $previewDraftLabel }}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12S5.25 5.25 12 5.25 21.75 12 21.75 12 18.75 18.75 12 18.75 2.25 12 2.25 12Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" />
+            </svg>
+        </a>
+        @if ($pageIsLive)
+            <a href="{{ $frontUrl }}" target="_blank"
+                class="inline-flex h-11 w-11 items-center justify-center rounded-full bg-emerald-600 text-white transition duration-200 hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+                aria-label="{{ $publishActionLabel }}"
+                title="{{ $publishActionLabel }}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5H19.5M19.5 4.5V10.5M19.5 4.5L10.5 13.5" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 13.5V18.75A1.5 1.5 0 0 1 18 20.25H5.25A1.5 1.5 0 0 1 3.75 18.75V6A1.5 1.5 0 0 1 5.25 4.5H10.5" />
+                </svg>
+            </a>
+        @else
+            <span class="inline-flex h-11 w-11 items-center justify-center rounded-full border border-amber-200 bg-amber-50 text-amber-700"
+                aria-label="{{ $publishActionLabel }}"
+                title="{{ $publishActionLabel }}">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A3.75 3.75 0 0 0 8.25 5.25V9m-.75 0h9A1.5 1.5 0 0 1 18 10.5v7.5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 18V10.5A1.5 1.5 0 0 1 7.5 9Z" />
+                </svg>
+            </span>
+        @endif
+    @endif
+
     <button type="button" data-open-section-library
-        class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition duration-200 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">
-        {{ __('Add Section') }}
+        class="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition duration-200 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
+        <span>{{ $addSectionLabel }}</span>
     </button>
 @endsection
 
@@ -201,8 +340,15 @@
         </div>
 
         <button type="button" data-refresh-sections-preview
-            class="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition duration-200 hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:pointer-events-none disabled:opacity-70">
-            {{ __('Refresh Preview') }}
+            class="{{ $isClientWorkspace ? 'inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition duration-200 hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:pointer-events-none disabled:opacity-70' : 'inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 transition duration-200 hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 disabled:pointer-events-none disabled:opacity-70' }}"
+            aria-label="{{ $refreshPreviewLabel }}"
+            title="{{ $refreshPreviewLabel }}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 {{ $isClientWorkspace ? '' : 'ltr:mr-2 rtl:ml-2' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356m-1.636 14.287A9 9 0 0 1 5.106 5.36m13.788 13.283H13.9v-4.992" />
+            </svg>
+            @unless ($isClientWorkspace)
+                {{ $reloadPreviewShortLabel }}
+            @endunless
         </button>
     </div>
 @endsection
@@ -220,20 +366,29 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>
                     </div>
-                    <h3 class="mt-4 text-lg font-semibold text-slate-900">{{ __('Start by adding your first section') }}</h3>
+                    <h3 class="mt-4 text-lg font-semibold text-slate-900">{{ $emptyStateTitle }}</h3>
                     <p class="mx-auto mt-2 max-w-2xl text-sm text-slate-500">
-                        {{ __('Use the section library to create a ready-to-edit block instantly, then fine-tune it in the editor.') }}
+                        {{ $emptyStateDescription }}
                     </p>
+                    @if ($isClientWorkspace)
+                        <div class="mx-auto mt-5 grid max-w-3xl gap-3 text-left sm:grid-cols-3 rtl:text-right">
+                            @foreach ($clientLibraryIntroSteps as $step)
+                                <div class="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
+                                    {{ $step }}
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
                     <div class="mt-6 flex flex-wrap items-center justify-center gap-3 rtl:flex-row-reverse">
                         <button type="button" data-open-section-library
-                            class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition duration-200 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">{{ __('Open Section Library') }}</button>
+                            class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition duration-200 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300">{{ $openLibraryLabel }}</button>
                     </div>
                 </div>
             @else
                 <div id="sections-preview-stage" class="sections-preview-stage">
                     <div id="sections-preview-viewport" class="sections-preview-viewport" data-device="desktop">
                         <iframe id="sections-preview-frame" class="sections-preview-frame" src="{{ $previewUrl }}"
-                            data-base-url="{{ $previewBaseUrl }}" title="{{ __('Live sections preview') }}"></iframe>
+                            data-base-url="{{ $previewBaseUrl }}" title="{{ $previewFrameTitleLabel }}"></iframe>
                     </div>
                 </div>
             @endif
@@ -244,7 +399,7 @@
             <div
                 class="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-lg">
                 <span class="inline-flex h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900"></span>
-                <span>{{ __('Refreshing preview...') }}</span>
+                <span>{{ $previewRefreshingLabel }}</span>
             </div>
         </div>
     </div>
@@ -256,9 +411,9 @@
         <div class="border-b border-slate-200 px-5 py-4 lg:px-6">
             <div class="flex items-start justify-between gap-4 rtl:flex-row-reverse">
                 <div>
-                    <h3 class="text-lg font-semibold text-slate-900">{{ __('Add Section to Page') }}</h3>
+                    <h3 class="text-lg font-semibold text-slate-900">{{ $libraryTitle }}</h3>
                     <p class="mt-1 text-sm text-slate-500">
-                        {{ __('Choose a block and we will add it instantly, then open the editor for final customization.') }}
+                        {{ $libraryDescription }}
                     </p>
                 </div>
                 <button type="button" data-close-section-library
@@ -280,19 +435,42 @@
                         <path stroke-linecap="round" stroke-linejoin="round"
                             d="m21 21-4.35-4.35m0 0A7.5 7.5 0 1 0 6 6a7.5 7.5 0 0 0 10.65 10.65Z" />
                     </svg>
-                    <input id="section-library-search" type="text" placeholder="{{ __('Search section types') }}"
+                    <input id="section-library-search" type="text" placeholder="{{ $librarySearchPlaceholder }}"
                         class="w-full rounded-full border border-slate-200 bg-white py-2 text-sm text-slate-700 outline-none transition focus:border-slate-400 ltr:pl-10 ltr:pr-4 ltr:text-left rtl:pl-4 rtl:pr-10 rtl:text-right">
                 </div>
             </div>
+            @if ($isClientWorkspace)
+                <div class="mt-4 rounded-3xl border border-sky-200 bg-sky-50/70 p-4">
+                    <h4 class="text-sm font-semibold text-slate-900">{{ $clientLibraryIntroTitle }}</h4>
+                    <div class="mt-3 space-y-2">
+                        @foreach ($clientLibraryIntroSteps as $step)
+                            <p class="text-sm leading-6 text-slate-600">{{ $step }}</p>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </div>
         <div class="workspace-scrollbar flex-1 overflow-y-auto px-5 py-5 lg:px-6">
             <div class="space-y-6">
                 @foreach ($groupedTypes as $category => $items)
+                    @php
+                        $categoryMeta = $isClientWorkspace
+                            ? ($clientLibraryCategoryMeta[$category] ?? [
+                                'label' => \Illuminate\Support\Str::headline($category),
+                                'description' => __('Ready-made blocks for this part of your page.'),
+                            ])
+                            : null;
+                    @endphp
                     <section data-library-group>
                         <div class="mb-3 flex items-center justify-between gap-3">
-                            <h4 class="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">
-                                {{ \Illuminate\Support\Str::headline($category) }}</h4>
-                            <span class="text-xs text-slate-400">{{ count($items) }} {{ __('types') }}</span>
+                            <div>
+                                <h4 class="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">
+                                    {{ $isClientWorkspace ? $categoryMeta['label'] : \Illuminate\Support\Str::headline($category) }}</h4>
+                                @if ($isClientWorkspace)
+                                    <p class="mt-1 text-xs leading-5 text-slate-500">{{ $categoryMeta['description'] }}</p>
+                                @endif
+                            </div>
+                            <span class="text-xs text-slate-400">{{ count($items) }} {{ $isClientWorkspace ? __('blocks') : __('types') }}</span>
                         </div>
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             @foreach ($items as $type => $meta)
@@ -301,6 +479,7 @@
                                         !empty($meta['preview']) && file_exists(public_path($meta['preview']))
                                             ? asset($meta['preview'])
                                             : null;
+                                    $cardDescription = $meta['description'] ?? __('No description provided.');
                                 @endphp
                                 <form action="{{ $workspaceRouteFor('quick-store', [], false) }}"
                                     method="POST" data-library-item
@@ -334,14 +513,14 @@
                                                     <h5 class="text-sm font-semibold text-slate-900">{{ $meta['label'] }}
                                                     </h5>
                                                     <p class="mt-1 text-xs leading-5 text-slate-500">
-                                                        {{ $meta['description'] ?? __('No description provided.') }}</p>
+                                                        {{ $cardDescription }}</p>
                                                 </div>
                                                 <span
-                                                    class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">{{ \Illuminate\Support\Str::headline($category) }}</span>
+                                                    class="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">{{ $isClientWorkspace ? $categoryMeta['label'] : \Illuminate\Support\Str::headline($category) }}</span>
                                             </div>
                                             <div class="mt-4 flex items-center justify-between text-xs text-slate-500">
-                                                <span>{{ __('Creates a draft instantly') }}</span><span
-                                                    class="js-library-submit-label inline-flex items-center gap-2 font-semibold text-slate-900">{{ __('Add') }}</span>
+                                                <span>{{ $libraryAddHint }}</span><span
+                                                    class="js-library-submit-label inline-flex items-center gap-2 font-semibold text-slate-900">{{ $libraryAddActionLabel }}</span>
                                             </div>
                                         </div>
                                     </button>
@@ -377,9 +556,50 @@
 
         @if ($isClientWorkspace)
             <div class="rounded-3xl border border-sky-200 bg-sky-50/70 p-5 shadow-sm">
-                <h3 class="text-base font-semibold text-slate-900">{{ __('You are editing the homepage only') }}</h3>
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-slate-900">{{ $sidebarIntroTitle }}</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">
+                            {{ $sidebarIntroDescription }}
+                        </p>
+                    </div>
+                    <span class="inline-flex rounded-full border {{ $pageIsLive ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700' }} px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]">
+                        {{ $publishStateBadge }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="rounded-3xl border {{ $pageIsLive ? 'border-emerald-200 bg-emerald-50/70' : 'border-amber-200 bg-amber-50/70' }} p-5 shadow-sm">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.2em] {{ $pageIsLive ? 'text-emerald-700' : 'text-amber-700' }}">{{ __('Page status') }}</p>
+                        <h3 class="mt-2 text-base font-semibold text-slate-900">{{ $publishStateLabel }}</h3>
+                        <p class="mt-2 text-sm leading-6 text-slate-600">
+                            {{ $publishStateDescription }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap gap-3 rtl:flex-row-reverse">
+                    <a href="{{ $previewDraftUrl }}" target="_blank"
+                        class="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                        {{ $previewDraftLabel }}
+                    </a>
+
+                    @if ($pageIsLive)
+                        <a href="{{ $frontUrl }}" target="_blank"
+                            class="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
+                            {{ $publishActionLabel }}
+                        </a>
+                    @else
+                        <span class="inline-flex items-center rounded-full border border-amber-200 bg-white px-4 py-2 text-sm font-semibold text-amber-700">
+                            {{ $publishActionLabel }}
+                        </span>
+                    @endif
+                </div>
+
                 <p class="mt-2 text-sm leading-6 text-slate-600">
-                    {{ __('This workspace is scoped to your site homepage and its sections only. Admin-only builder controls stay hidden here.') }}
+                    {{ $publishHelperLabel }}
                 </p>
             </div>
         @endif
@@ -387,21 +607,21 @@
         <div class="ltr:text-left rtl:text-right">
             <h3 class="text-xl font-semibold text-slate-900">{{ $pageTitle }}</h3>
             <p class="mt-2 text-sm leading-6 text-slate-500">
-                {{ __('Customize this page sections and keep the structure organized.') }}</p>
+                {{ $pageStructureDescription }}</p>
             <button type="button" data-open-section-library
                 class="mt-3 inline-flex items-center gap-2 text-sm font-medium text-slate-700 transition hover:text-slate-900 rtl:flex-row-reverse">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-500 rtl:rotate-180" fill="none"
                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6 4.5 12l6 6M19.5 12h-15" />
                 </svg>
-                <span>{{ __('Need help? Open the section library') }}</span>
+                <span>{{ $isClientWorkspace ? __('Need a new block? Open the block library') : __('Need help? Open the section library') }}</span>
             </button>
         </div>
 
         <div class="border-t border-slate-200 pt-5">
             <div class="space-y-4">
                 <div class="flex items-center justify-between gap-3">
-                    <h4 class="text-lg font-semibold text-slate-900">{{ $isClientWorkspace ? __('Homepage Elements') : __('Page Elements') }}</h4>
+                    <h4 class="text-lg font-semibold text-slate-900">{{ $pageStructureTitle }}</h4>
                     <span data-sections-count
                         class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{{ $sections->count() }}</span>
                 </div>
@@ -412,7 +632,7 @@
                         stroke="currentColor" stroke-width="1.9">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                     </svg>
-                    <span>{{ __('Add New Element') }}</span>
+                    <span>{{ $addNewElementLabel }}</span>
                 </button>
 
                 <div id="sections-outline-list" class="space-y-3" data-sections-sortable-sidebar
@@ -428,7 +648,7 @@
                     @empty
                         <div data-sections-empty-state
                             class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                            {{ __('No elements have been added yet.') }}
+                            {{ $noElementsLabel }}
                         </div>
                     @endforelse
                 </div>
@@ -438,7 +658,7 @@
         <div class="border-t border-slate-200 pt-4">
             <div
                 class="flex items-center justify-center rounded-2xl bg-emerald-100 px-4 py-3 text-sm font-medium text-emerald-700">
-                {{ __('Changes save automatically') }}
+                {{ $bottomTipLabel }}
             </div>
         </div>
     </div>
@@ -483,22 +703,22 @@
             const sidebarOpenButton = document.getElementById('sections-sidebar-open-btn');
             const reorderUrl = sidebarSortableList?.dataset.reorderUrl || '';
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            const reorderFailedMessage = @json(__('Section order could not be updated. Please try again.'));
-            const quickAddFailedMessage = @json(__('Section could not be added. Please try again.'));
-            const quickAddLoadingLabel = @json(__('Adding...'));
-            const editorOpenFailedMessage = @json(__('Section editor could not be opened. Please try again.'));
-            const editorSaveFailedMessage = @json(__('Section could not be updated. Please review the form and try again.'));
-            const editorLoadingLabel = @json(__('Loading editor...'));
-            const editorSaveSuccessMessage = @json(__('Section has been updated successfully.'));
+            const reorderFailedMessage = @json($isClientWorkspace ? __('Block order could not be updated. Please try again.') : __('Section order could not be updated. Please try again.'));
+            const quickAddFailedMessage = @json($isClientWorkspace ? __('Block could not be added. Please try again.') : __('Section could not be added. Please try again.'));
+            const quickAddLoadingLabel = @json($isClientWorkspace ? __('Adding block...') : __('Adding...'));
+            const editorOpenFailedMessage = @json($isClientWorkspace ? __('Block settings could not be opened. Please try again.') : __('Section editor could not be opened. Please try again.'));
+            const editorSaveFailedMessage = @json($isClientWorkspace ? __('Block could not be updated. Please review the form and try again.') : __('Section could not be updated. Please review the form and try again.'));
+            const editorLoadingLabel = @json($isClientWorkspace ? __('Opening block settings...') : __('Loading editor...'));
+            const editorSaveSuccessMessage = @json($isClientWorkspace ? __('Block has been updated successfully.') : __('Section has been updated successfully.'));
             const editorSavedLabel = @json(__('Saved'));
             const successAlertTitle = @json(__('Success'));
             const errorAlertTitle = @json(__('Error'));
             const validationAlertTitle = @json(__('Please review the form'));
-            const activeStatusLabel = @json(__('Active'));
+            const activeStatusLabel = @json($isClientWorkspace ? __('Visible') : __('Active'));
             const hiddenStatusLabel = @json(__('Hidden'));
             const autoEditSectionId = Number(@json($autoEditSectionId));
             const frameBaseUrl = @json($previewBaseUrl);
-            const previewFrameTitle = @json(__('Live sections preview'));
+            const previewFrameTitle = @json($previewFrameTitleLabel);
             let currentSelectedSectionId = Number(@json($selectedSectionId));
             let previewRefreshFallbackTimer = null;
 
@@ -1098,6 +1318,10 @@
                     menu.classList.add('hidden');
                 });
 
+                document.querySelectorAll('[data-section-id].is-menu-open').forEach((item) => {
+                    item.classList.remove('is-menu-open');
+                });
+
                 document.querySelectorAll('[data-section-menu-button]').forEach((button) => {
                     button.setAttribute('aria-expanded', 'false');
                 });
@@ -1143,6 +1367,7 @@
 
                     if (isHidden) {
                         menu.classList.remove('hidden');
+                        item.classList.add('is-menu-open');
                         this.setAttribute('aria-expanded', 'true');
                     }
                 });
@@ -1168,6 +1393,8 @@
                     if (menuButton) {
                         menuButton.setAttribute('aria-expanded', 'false');
                     }
+
+                    item.classList.remove('is-menu-open');
 
                     panel.classList.remove('hidden');
 

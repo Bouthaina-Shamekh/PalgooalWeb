@@ -9,6 +9,8 @@
         $activePagesCount = $pages->where('is_active', true)->count();
         $hiddenPagesCount = $pages->where('is_active', false)->count();
         $homePage = $pages->firstWhere('is_home', true);
+        $createPageErrors = $errors->getBag('createPage');
+        $pageSettingsErrors = $errors->getBag('pageSettings');
         $domainName = trim((string) ($subscription->domain_name ?? ''));
         $siteUrl = $domainName !== ''
             ? (\Illuminate\Support\Str::startsWith($domainName, ['http://', 'https://'])
@@ -106,14 +108,14 @@
                         id="new-page-title"
                         name="title"
                         type="text"
-                        value="{{ old('title') }}"
+                        value="{{ $createPageErrors->any() ? old('title') : '' }}"
                         placeholder="About us"
                         class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
                         required
                     >
-                    @error('title')
-                        <p class="mt-2 text-sm font-medium text-rose-600">{{ $message }}</p>
-                    @enderror
+                    @if ($createPageErrors->has('title'))
+                        <p class="mt-2 text-sm font-medium text-rose-600">{{ $createPageErrors->first('title') }}</p>
+                    @endif
                 </div>
 
                 <div>
@@ -122,13 +124,13 @@
                         id="new-page-slug"
                         name="slug"
                         type="text"
-                        value="{{ old('slug') }}"
+                        value="{{ $createPageErrors->any() ? old('slug') : '' }}"
                         placeholder="about-us"
                         class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
                     >
-                    @error('slug')
-                        <p class="mt-2 text-sm font-medium text-rose-600">{{ $message }}</p>
-                    @enderror
+                    @if ($createPageErrors->has('slug'))
+                        <p class="mt-2 text-sm font-medium text-rose-600">{{ $createPageErrors->first('slug') }}</p>
+                    @endif
                 </div>
 
                 <button
@@ -162,6 +164,22 @@
                             'subscription' => $subscription,
                             'page' => $page,
                         ]);
+                        $pageUpdateUrl = route('client.subscriptions.pages.update', [
+                            'subscription' => $subscription,
+                            'page' => $page,
+                        ]);
+                        $pageSetHomeUrl = route('client.subscriptions.pages.set-home', [
+                            'subscription' => $subscription,
+                            'page' => $page,
+                        ]);
+                        $pageDeleteUrl = route('client.subscriptions.pages.destroy', [
+                            'subscription' => $subscription,
+                            'page' => $page,
+                        ]);
+                        $settingsFormHasErrors = $pageSettingsErrors->any() && (string) old('page_id') === (string) $page->id;
+                        $settingsTitleValue = $settingsFormHasErrors ? old('title', $pageTitle) : $pageTitle;
+                        $settingsSlugValue = $settingsFormHasErrors ? old('slug', $pageSlug) : $pageSlug;
+                        $canDeletePage = $pageCount > 1;
                     @endphp
 
                     <article class="rounded-[1.5rem] border border-slate-200 bg-slate-50/70 p-5">
@@ -200,6 +218,97 @@
                             <div class="rounded-2xl border border-slate-200 bg-white p-4">
                                 <p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Editing mode</p>
                                 <p class="mt-2 text-sm font-semibold text-slate-900">{{ $page->is_home ? 'Homepage shortcut available' : 'Standard page editor' }}</p>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 rounded-[1.25rem] border border-slate-200 bg-white p-4">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-semibold text-slate-900">Page settings</p>
+                                    <p class="mt-1 text-xs leading-5 text-slate-500">
+                                        Update the title and slug, promote this page to homepage, or remove it safely from your site.
+                                    </p>
+                                </div>
+                                @if ($page->is_home)
+                                    <span class="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                                        Current homepage
+                                    </span>
+                                @endif
+                            </div>
+
+                            <form method="POST" action="{{ $pageUpdateUrl }}" class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="page_id" value="{{ $page->id }}">
+
+                                <div>
+                                    <label class="mb-2 block text-sm font-semibold text-slate-700">Page title</label>
+                                    <input
+                                        type="text"
+                                        name="title"
+                                        value="{{ $settingsTitleValue }}"
+                                        class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                        required
+                                    >
+                                    @if ($settingsFormHasErrors && $pageSettingsErrors->has('title'))
+                                        <p class="mt-2 text-sm font-medium text-rose-600">{{ $pageSettingsErrors->first('title') }}</p>
+                                    @endif
+                                </div>
+
+                                <div>
+                                    <label class="mb-2 block text-sm font-semibold text-slate-700">Slug</label>
+                                    <input
+                                        type="text"
+                                        name="slug"
+                                        value="{{ $settingsSlugValue }}"
+                                        class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+                                        placeholder="about-us"
+                                    >
+                                    @if ($settingsFormHasErrors && $pageSettingsErrors->has('slug'))
+                                        <p class="mt-2 text-sm font-medium text-rose-600">{{ $pageSettingsErrors->first('slug') }}</p>
+                                    @endif
+                                </div>
+
+                                <div class="flex flex-wrap gap-3 lg:col-span-2">
+                                    <button
+                                        type="submit"
+                                        class="inline-flex items-center justify-center rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                                    >
+                                        Save settings
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div class="mt-4 flex flex-wrap gap-3 border-t border-slate-200 pt-4">
+                                @if (! $page->is_home)
+                                    <form method="POST" action="{{ $pageSetHomeUrl }}">
+                                        @csrf
+                                        <button
+                                            type="submit"
+                                            class="inline-flex items-center justify-center rounded-xl border border-sky-300 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-100"
+                                        >
+                                            Set as homepage
+                                        </button>
+                                    </form>
+                                @endif
+
+                                <form method="POST" action="{{ $pageDeleteUrl }}" onsubmit="return confirm('{{ $page->is_home ? __('Delete this homepage and promote another page automatically?') : __('Delete this page?') }}');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button
+                                        type="submit"
+                                        class="inline-flex items-center justify-center rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
+                                        @disabled(! $canDeletePage)
+                                    >
+                                        Delete page
+                                    </button>
+                                </form>
+
+                                @if (! $canDeletePage)
+                                    <p class="self-center text-xs text-slate-500">At least one page must remain on your site.</p>
+                                @elseif ($page->is_home)
+                                    <p class="self-center text-xs text-slate-500">If you delete the homepage, another page will be promoted automatically.</p>
+                                @endif
                             </div>
                         </div>
                     </article>

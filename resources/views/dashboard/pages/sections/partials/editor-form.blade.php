@@ -29,6 +29,15 @@
     $editorState = $editorState ?? [];
     $editorDefaultLocale = $editorState['defaultLocale'] ?? app()->getLocale();
     $mediaPreviewBuilder = app(SectionMediaPreviewBuilder::class);
+    $workspaceMode = $workspaceMode ?? 'admin';
+    $isClientWorkspace = $workspaceMode === 'client';
+    $displayOrderLabel = $isClientWorkspace ? __('Block Order') : __('Display Order');
+    $displayOrderHelp = $isClientWorkspace ? __('Lower numbers appear earlier on the page.') : null;
+    $activeToggleLabel = $isClientWorkspace ? __('Show this block on your website') : __('Active on frontend');
+    $contentSectionLabel = $isClientWorkspace ? __('Block Content') : __('Section Content');
+    $contentSectionHelp = $isClientWorkspace
+        ? __('Update the text, media, and settings for this block in each language.')
+        : __('Edit localized content for each language.');
 @endphp
 
 <form id="{{ $formId }}" method="{{ strtoupper($formMethod) }}" action="{{ $formAction }}"
@@ -115,9 +124,12 @@
             <div class="{{ $settingsGridClass }}">
                 @if ($showOrderField)
                     <div>
-                        <label class="block text-sm font-medium text-slate-700">{{ __('Display Order') }}</label>
+                        <label class="block text-sm font-medium text-slate-700">{{ $displayOrderLabel }}</label>
                         <input type="number" name="order" value="{{ old('order', $section->order ?? 1) }}"
                             class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
+                        @if (filled($displayOrderHelp))
+                            <p class="mt-2 text-xs text-slate-500">{{ $displayOrderHelp }}</p>
+                        @endif
                     </div>
                 @endif
 
@@ -126,7 +138,7 @@
                         class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
                         <input type="checkbox" name="is_active" value="1" class="rounded border-slate-300"
                             {{ old('is_active', $section->is_active) ? 'checked' : '' }}>
-                        {{ __('Active on frontend') }}
+                        {{ $activeToggleLabel }}
                     </label>
                 </div>
             </div>
@@ -135,8 +147,8 @@
 
     <div class="{{ $surfaceClass }}">
         <div class="{{ $sectionHeaderClass }}">
-            <h2 class="text-lg font-semibold text-slate-900">{{ __('Section Content') }}</h2>
-            <p class="mt-1 text-sm text-slate-500">{{ __('Edit localized content for each language.') }}</p>
+            <h2 class="text-lg font-semibold text-slate-900">{{ $contentSectionLabel }}</h2>
+            <p class="mt-1 text-sm text-slate-500">{{ $contentSectionHelp }}</p>
         </div>
 
         <div class="{{ $sectionBodyClass }}">

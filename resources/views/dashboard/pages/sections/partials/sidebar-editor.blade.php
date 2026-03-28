@@ -9,11 +9,19 @@
             array_merge($workspaceRouteBaseParameters, $extra),
             $absolute,
         );
+    $workspaceMode = $workspaceMode ?? 'admin';
+    $isClientWorkspace = $workspaceMode === 'client';
     $sectionTranslation = method_exists($section, 'translation') ? $section->translation($currentLocale) : null;
     $fallbackTranslation = $sectionTranslation ?? $section->translations->first();
     $sectionTypeMeta = $sectionTypes[$section->type] ?? null;
     $sectionTypeLabel = $sectionTypeMeta['label'] ?? \Illuminate\Support\Str::headline(str_replace(['_', '-'], ' ', $section->type));
     $editorTitle = $fallbackTranslation?->title ?: $sectionTypeLabel;
+    $backToElementsLabel = $isClientWorkspace ? __('Back to blocks') : __('Back to elements');
+    $editorDescription = $isClientWorkspace
+        ? __('Edit this block here, then preview the page right away.')
+        : __('Update this section without leaving the workspace.');
+    $editorStatusLabel = $section->is_active ? ($isClientWorkspace ? __('Visible') : __('Active')) : __('Hidden');
+    $saveChangesLabel = $isClientWorkspace ? __('Save Block Changes') : __('Save Changes');
 @endphp
 
 <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_60px_-36px_rgba(15,23,42,0.35)]" data-section-editor-root>
@@ -27,11 +35,11 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6 4.5 12l6 6M19.5 12h-15" />
                 </svg>
-                <span>{{ __('Back to elements') }}</span>
+                <span>{{ $backToElementsLabel }}</span>
             </button>
 
             <h3 class="mt-2 truncate text-lg font-semibold text-slate-900" data-section-editor-heading>{{ $editorTitle }}</h3>
-            <p class="mt-1 text-sm text-slate-500">{{ __('Update this section without leaving the workspace.') }}</p>
+            <p class="mt-1 text-sm text-slate-500">{{ $editorDescription }}</p>
 
             <div class="mt-3 flex flex-wrap items-center gap-2 rtl:flex-row-reverse">
                 <span data-section-editor-type class="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600">
@@ -41,7 +49,7 @@
                     data-section-editor-status
                     class="rounded-full px-3 py-1 text-xs font-medium {{ $section->is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700' }}"
                 >
-                    {{ $section->is_active ? __('Active') : __('Hidden') }}
+                    {{ $editorStatusLabel }}
                 </span>
             </div>
         </div>
@@ -70,7 +78,7 @@
             data-section-editor-submit
             class="inline-flex w-full items-center justify-center rounded-2xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
-            {{ __('Save Changes') }}
+            {{ $saveChangesLabel }}
         </button>
     </div>
 </div>

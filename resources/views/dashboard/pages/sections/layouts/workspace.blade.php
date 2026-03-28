@@ -7,7 +7,13 @@
     $workspaceShellBackLabel = $workspaceShellBackLabel ?? __('Back to pages');
     $workspaceVisualBuilderUrl = $workspaceVisualBuilderUrl ?? route('dashboard.pages.builder', $page);
     $workspaceMode = $workspaceMode ?? 'admin';
+    $isClientWorkspace = $workspaceMode === 'client';
     $workspaceModeLabel = $workspaceModeLabel ?? ($workspaceMode === 'client' ? __('Client homepage editor') : __('Admin workspace'));
+    $workspaceModeDisplayLabel = $isClientWorkspace ? __('Site Editor') : $workspaceModeLabel;
+    $workspaceTitleSuffix = $isClientWorkspace ? __('Page Editor') : __('Sections Workspace');
+    $workspacePreviewLabel = $isClientWorkspace ? __('View Page') : __('Preview');
+    $workspaceShowSidebarLabel = $isClientWorkspace ? __('Show Blocks') : __('Show Sidebar');
+    $workspaceHideSidebarLabel = $isClientWorkspace ? __('Hide Blocks') : __('Hide Sidebar');
     $workspaceLanguages = collect($languages ?? [])->filter(fn ($language) => filled($language->code))->values();
     $hasMultipleWorkspaceLanguages = $workspaceLanguages->count() > 1;
     $adminLogoPath = $settings?->admin_logo ?: $settings?->logo;
@@ -57,7 +63,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $pageTitle }} - {{ __('Sections Workspace') }}</title>
+    <title>{{ $pageTitle }} - {{ $workspaceTitleSuffix }}</title>
     <link rel="icon" href="{{ $adminLogoHref }}">
 
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}" id="palgoals-app-css">
@@ -260,9 +266,9 @@
                                         {{ __('Home') }}
                                     </span>
                                 @endif
-                                @if (filled($workspaceModeLabel))
+                                @if (filled($workspaceModeDisplayLabel))
                                     <span class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
-                                        {{ $workspaceModeLabel }}
+                                        {{ $workspaceModeDisplayLabel }}
                                     </span>
                                 @endif
                             </div>
@@ -288,13 +294,17 @@
                             <a
                                 href="{{ $frontUrl }}"
                                 target="_blank"
-                                class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-white hover:shadow-sm"
+                                class="{{ $isClientWorkspace ? 'inline-flex h-11 w-11 items-center justify-center rounded-full text-slate-700 transition hover:bg-white hover:shadow-sm' : 'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-white hover:shadow-sm' }}"
+                                aria-label="{{ $workspacePreviewLabel }}"
+                                title="{{ $workspacePreviewLabel }}"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12S5.25 5.25 12 5.25 21.75 12 21.75 12 18.75 18.75 12 18.75 2.25 12 2.25 12Z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" />
                                 </svg>
-                                {{ __('Preview') }}
+                                @unless ($isClientWorkspace)
+                                    {{ $workspacePreviewLabel }}
+                                @endunless
                             </a>
 
                             @if (filled($workspaceVisualBuilderUrl))
@@ -329,8 +339,8 @@
                     class="sections-sidebar-open-button"
                     aria-controls="sections-workspace-sidebar"
                     aria-expanded="false"
-                    aria-label="{{ __('Show Sidebar') }}"
-                    title="{{ __('Show Sidebar') }}"
+                    aria-label="{{ $workspaceShowSidebarLabel }}"
+                    title="{{ $workspaceShowSidebarLabel }}"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6" />
@@ -348,8 +358,8 @@
                         class="sections-sidebar-handle"
                         aria-controls="sections-workspace-sidebar"
                         aria-expanded="true"
-                        aria-label="{{ __('Hide Sidebar') }}"
-                        title="{{ __('Hide Sidebar') }}"
+                        aria-label="{{ $workspaceHideSidebarLabel }}"
+                        title="{{ $workspaceHideSidebarLabel }}"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6" />
@@ -524,8 +534,8 @@
             const hideButton = document.getElementById('sections-sidebar-hide-btn');
             const openButton = document.getElementById('sections-sidebar-open-btn');
             const storageKey = 'sections-workspace-sidebar-collapsed';
-            const showSidebarLabel = @json(__('Show Sidebar'));
-            const hideSidebarLabel = @json(__('Hide Sidebar'));
+            const showSidebarLabel = @json($workspaceShowSidebarLabel);
+            const hideSidebarLabel = @json($workspaceHideSidebarLabel);
 
             if (!shell || (!hideButton && !openButton)) {
                 return;

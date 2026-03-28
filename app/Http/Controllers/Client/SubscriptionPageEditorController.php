@@ -49,7 +49,7 @@ class SubscriptionPageEditorController extends SectionController
         $subscription = $this->resolveOwnedSubscription($request, $subscription);
         $locale = $this->creationLocale();
 
-        $validated = $request->validate([
+        $validated = $request->validateWithBag('createPage', [
             'title' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:255'],
         ]);
@@ -87,6 +87,95 @@ class SubscriptionPageEditorController extends SectionController
                 'page' => $page,
             ])
             ->with('success', __('Your new page is ready to edit.'));
+    }
+
+    public function updatePageSettings(Request $request, Subscription $subscription, Page $page)
+    {
+        $subscription = $this->resolveOwnedSubscription($request, $subscription);
+        $page = $this->resolveOwnedPage($request, $subscription, $page);
+        $locale = $this->creationLocale();
+
+        $validated = $request->validateWithBag('pageSettings', [
+            'page_id' => ['required', 'integer'],
+            'title' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        abort_unless((int) $validated['page_id'] === (int) $page->getKey(), 403);
+
+        DB::transaction(function () use ($page, $subscription, $validated, $locale) {
+            $title = trim((string) $validated['title']);
+            $slug = $this->makeUniqueSlug(
+                subscription: $subscription,
+                locale: $locale,
+                requestedSlug: $validated['slug'] ?? null,
+                fallbackTitle: $title,
+                ignorePageId: $page->getKey(),
+            );
+
+            $page->translations()->updateOrCreate(
+                ['locale' => $locale],
+                [
+                    'title' => $title,
+                    'slug' => $slug,
+                ]
+            );
+        });
+
+        return redirect()
+            ->route('client.subscriptions.pages', $subscription)
+            ->with('success', __('Page settings updated successfully.'));
+    }
+
+    public function setHomePage(Request $request, Subscription $subscription, Page $page)
+    {
+        $subscription = $this->resolveOwnedSubscription($request, $subscription);
+        $page = $this->resolveOwnedPage($request, $subscription, $page);
+
+        DB::transaction(function () use ($subscription, $page) {
+            $this->tenantPagesQuery($subscription)->update(['is_home' => false]);
+            $page->forceFill(['is_home' => true])->save();
+        });
+
+        return redirect()
+            ->route('client.subscriptions.pages', $subscription)
+            ->with('success', __('Homepage updated successfully.'));
+    }
+
+    public function destroyPage(Request $request, Subscription $subscription, Page $page)
+    {
+        $subscription = $this->resolveOwnedSubscription($request, $subscription);
+        $page = $this->resolveOwnedPage($request, $subscription, $page);
+
+        $pages = $this->tenantPagesQuery($subscription)
+            ->orderByDesc('is_home')
+            ->orderBy('id')
+            ->get();
+
+        if ($pages->count() <= 1) {
+            return redirect()
+                ->route('client.subscriptions.pages', $subscription)
+                ->with('error', __('You need to keep at least one page on your site.'));
+        }
+
+        DB::transaction(function () use ($subscription, $page, $pages) {
+            if ($page->is_home) {
+                $replacement = $pages->first(function (Page $candidate) use ($page) {
+                    return (int) $candidate->getKey() !== (int) $page->getKey();
+                });
+
+                if ($replacement instanceof Page) {
+                    $this->tenantPagesQuery($subscription)->update(['is_home' => false]);
+                    $replacement->forceFill(['is_home' => true])->save();
+                }
+            }
+
+            $page->delete();
+        });
+
+        return redirect()
+            ->route('client.subscriptions.pages', $subscription)
+            ->with('success', __('Page deleted successfully.'));
     }
 
     public function pageIndex(Request $request, Subscription $subscription, Page $page)
@@ -263,13 +352,14 @@ class SubscriptionPageEditorController extends SectionController
         Subscription $subscription,
         string $locale,
         ?string $requestedSlug,
-        string $fallbackTitle
+        string $fallbackTitle,
+        int|string|null $ignorePageId = null
     ): string {
         $baseSlug = $this->normalizeSlug($requestedSlug ?: $fallbackTitle);
         $candidate = $baseSlug;
         $suffix = 2;
 
-        while ($this->slugExists($candidate, $locale)) {
+        while ($this->slugExists($candidate, $locale, $ignorePageId)) {
             $candidate = $this->normalizeSlug(sprintf('%s-%d', $baseSlug, $suffix));
             $suffix++;
         }
@@ -277,12 +367,17 @@ class SubscriptionPageEditorController extends SectionController
         return $candidate;
     }
 
-    protected function slugExists(string $slug, string $locale): bool
+    protected function slugExists(string $slug, string $locale, int|string|null $ignorePageId = null): bool
     {
-        return PageTranslation::query()
+        $query = PageTranslation::query()
             ->where('locale', $locale)
-            ->where('slug', $slug)
-            ->exists();
+            ->where('slug', $slug);
+
+        if ($ignorePageId !== null) {
+            $query->where('page_id', '!=', $ignorePageId);
+        }
+
+        return $query->exists();
     }
 
     protected function normalizeSlug(?string $value): string
