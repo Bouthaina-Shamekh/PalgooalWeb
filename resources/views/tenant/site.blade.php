@@ -1,40 +1,42 @@
-﻿<!DOCTYPE html>
+@php
+    $pageTitle = $page->translations->firstWhere('locale', app()->getLocale())?->title
+        ?? $page->translations->first()?->title
+        ?? $page->slug
+        ?? 'Tenant Site';
+@endphp
+<!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $page->translations->firstWhere('locale', app()->getLocale())?->title ?? $page->slug ?? 'Tenant Site' }}</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet">
+    <title>{{ $pageTitle }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Cairo:wght@200..1000&display=swap"
+        rel="stylesheet"
+    >
+    <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/tabler-icons.min.css') }}">
 </head>
-<body class="bg-white text-gray-900">
-    <div class="min-h-screen">
-        <header class="border-b bg-gradient-to-r from-blue-50 to-blue-100/60">
-            <div class="max-w-5xl mx-auto px-6 py-6">
-                <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">{{ $tenantSubscription->domain_name }}</p>
-                <h1 class="text-3xl font-bold text-blue-900">
-                    {{ $page->translations->firstWhere('locale', app()->getLocale())?->title ?? $page->slug ?? 'صفحة' }}
-                </h1>
-            </div>
-        </header>
+<body class="m-0 bg-white text-purple-brand overflow-x-hidden font-Cairo">
+    <main>
+        @foreach ($page->sections as $section)
+            @php
+                $sectionTrans = $section->translations->firstWhere('locale', app()->getLocale())
+                    ?? $section->translations->first();
+                $content = $sectionTrans?->content ?? [];
+                $partial = 'tenant.sections.' . \Illuminate\Support\Str::slug($section->type ?? 'generic', '_');
+            @endphp
+            @includeFirst([
+                $partial,
+                'tenant.sections.generic'
+            ], [
+                'section' => $section,
+                'translation' => $sectionTrans,
+                'content' => $content,
+            ])
+        @endforeach
+    </main>
 
-        <main class="max-w-5xl mx-auto px-6 py-10 space-y-8">
-            @foreach ($page->sections as $section)
-                @php
-                    $sectionTrans = $section->translations->firstWhere('locale', app()->getLocale())
-                        ?? $section->translations->first();
-                    $content = $sectionTrans?->content ?? [];
-                    $partial = 'tenant.sections.' . \Illuminate\Support\Str::slug($section->type ?? 'generic', '_');
-                @endphp
-                @includeFirst([
-                    $partial,
-                    'tenant.sections.generic'
-                ], [
-                    'section' => $section,
-                    'translation' => $sectionTrans,
-                    'content' => $content,
-                ])
-            @endforeach
-        </main>
-    </div>
-</body>
-</html>
+    @include('front.layouts.partials.end')
