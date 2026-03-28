@@ -334,6 +334,9 @@ Route::group([
     Route::post('/subscriptions/{subscription}/provision', [SubscriptionController::class, 'provision'])
         ->name('subscriptions.provision');
 
+    Route::post('/subscriptions/{subscription}/verify-domain', [SubscriptionController::class, 'verifyDomain'])
+        ->name('subscriptions.verify-domain');
+
     Route::get('/subscriptions/{subscription}/cpanel-login', [SubscriptionController::class, 'cpanelLogin'])
         ->name('subscriptions.cpanel-login');
 

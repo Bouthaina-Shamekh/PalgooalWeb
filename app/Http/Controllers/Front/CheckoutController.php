@@ -585,11 +585,11 @@ class CheckoutController extends Controller
         foreach ($subscriptionIds as $subscriptionId) {
             $subscription = $subscriptions->get($subscriptionId);
 
-            if (! $subscription || blank($subscription->domain_name)) {
+            if (! $subscription || blank($subscription->activeSiteHost())) {
                 continue;
             }
 
-            return $this->tenantUrl($subscription->domain_name);
+            return $this->tenantUrl($subscription->activeSiteHost());
         }
 
         return null;
@@ -633,7 +633,7 @@ class CheckoutController extends Controller
         $siteReady = $isTemplateCheckout
             && $subscription?->status === 'active'
             && $subscription?->provisioning_status === Subscription::PROVISIONING_ACTIVE
-            && filled($subscription?->domain_name);
+            && filled($subscription?->activeSiteHost());
 
         if ($isTemplateCheckout) {
             $title = $siteReady ? 'Your website is ready' : 'We are preparing your site';
@@ -660,7 +660,7 @@ class CheckoutController extends Controller
             'domain_status_tone' => $domainMeta['tone'],
             'domain' => $subscription?->domain_name ?: $domainPicked,
             'site_url' => $siteReady
-                ? ($tenantRedirectUrl ?: (filled($subscription?->domain_name) ? $this->tenantUrl($subscription->domain_name) : null))
+                ? ($tenantRedirectUrl ?: $subscription?->activeSiteUrl())
                 : null,
         ];
     }
@@ -699,6 +699,16 @@ class CheckoutController extends Controller
         if (filled($resolvedDomain)) {
             if (($subscription?->domain_option ?: $normalizedOption) === 'subdomain' && $isTemplateCheckout) {
                 return ['value' => 'auto_subdomain', 'label' => 'Auto subdomain assigned', 'tone' => 'emerald'];
+            }
+
+            if ($subscription?->requiresDomainVerification()) {
+                return match ($subscription->effectiveDomainVerificationStatus()) {
+                    Subscription::DOMAIN_VERIFICATION_ACTIVE => ['value' => 'custom_domain_active', 'label' => 'Custom domain active', 'tone' => 'emerald'],
+                    Subscription::DOMAIN_VERIFICATION_SSL_PENDING => ['value' => 'custom_domain_ssl_pending', 'label' => 'Waiting for HTTPS (SSL not ready)', 'tone' => 'sky'],
+                    Subscription::DOMAIN_VERIFICATION_DNS_PENDING => ['value' => 'custom_domain_dns_pending', 'label' => 'Verification pending (DNS not detected yet)', 'tone' => 'amber'],
+                    Subscription::DOMAIN_VERIFICATION_FAILED => ['value' => 'custom_domain_failed', 'label' => 'Custom domain verification failed', 'tone' => 'red'],
+                    default => ['value' => 'custom_domain_pending', 'label' => 'Verification pending (DNS not detected yet)', 'tone' => 'amber'],
+                };
             }
 
             return ['value' => 'selected', 'label' => 'Domain selected', 'tone' => 'emerald'];

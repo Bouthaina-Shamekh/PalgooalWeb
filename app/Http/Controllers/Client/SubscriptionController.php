@@ -4,22 +4,22 @@ namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenancy\Subscription;
+use App\Services\Tenancy\DomainVerificationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class SubscriptionController extends Controller
 {
-    public function show(Request $request, Subscription $subscription)
+    public function show(Request $request, Subscription $subscription, DomainVerificationService $verification)
     {
-        return $this->renderContentManagement($request, $subscription);
+        return $this->renderContentManagement($request, $subscription, $verification);
     }
 
-    public function content(Request $request, Subscription $subscription)
+    public function content(Request $request, Subscription $subscription, DomainVerificationService $verification)
     {
-        return $this->renderContentManagement($request, $subscription);
+        return $this->renderContentManagement($request, $subscription, $verification);
     }
 
-    public function site(Request $request, Subscription $subscription)
+    public function site(Request $request, Subscription $subscription, DomainVerificationService $verification)
     {
         $subscription = $this->resolveOwnedSubscription($request, $subscription);
         $subscription->load([
@@ -45,14 +45,32 @@ class SubscriptionController extends Controller
             ?? 'Your website';
 
         $domainName = trim((string) ($subscription->domain_name ?? ''));
-        $siteUrl = $domainName !== '' ? tenant_url($domainName) : null;
+        $siteUrl = $subscription->activeSiteUrl();
 
         return view('client.subscriptions.site', [
             'subscription' => $subscription,
             'siteName' => $siteName,
             'siteUrl' => $siteUrl,
             'domainName' => $domainName,
+            'domainVerification' => $verification->detailsFor($subscription),
         ]);
+    }
+
+    public function verifyDomain(Request $request, Subscription $subscription, DomainVerificationService $verification)
+    {
+        $subscription = $this->resolveOwnedSubscription($request, $subscription);
+        $details = $verification->verify($subscription);
+
+        $message = $details['label'];
+
+        if (! empty($details['error'])) {
+            $message .= ': ' . $details['error'];
+        }
+
+        return back()->with(
+            $details['status'] === Subscription::DOMAIN_VERIFICATION_ACTIVE ? 'success' : 'info',
+            $message
+        );
     }
 
     protected function resolveOwnedSubscription(Request $request, Subscription $subscription): Subscription
@@ -64,7 +82,11 @@ class SubscriptionController extends Controller
         return $subscription;
     }
 
-    protected function renderContentManagement(Request $request, Subscription $subscription)
+    protected function renderContentManagement(
+        Request $request,
+        Subscription $subscription,
+        DomainVerificationService $verification
+    )
     {
         $subscription = $this->resolveOwnedSubscription($request, $subscription);
 
@@ -93,6 +115,8 @@ class SubscriptionController extends Controller
             'subscription' => $subscription,
             'locale' => $locale,
             'pages' => $pages,
+            'siteUrl' => $subscription->activeSiteUrl(),
+            'domainVerification' => $verification->detailsFor($subscription),
         ]);
     }
 }

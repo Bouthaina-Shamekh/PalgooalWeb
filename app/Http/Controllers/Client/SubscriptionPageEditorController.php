@@ -280,13 +280,13 @@ class SubscriptionPageEditorController extends SectionController
             return parent::workspaceFrontUrl($page);
         }
 
-        $domainName = trim((string) ($this->workspaceSubscription->domain_name ?? ''));
+        $baseUrl = $this->workspaceSubscription->activeSiteUrl();
 
-        if ($domainName === '') {
+        if ($baseUrl === null) {
             return route('client.subscriptions.pages', $this->workspaceSubscription);
         }
 
-        $baseUrl = rtrim(tenant_url($domainName), '/');
+        $baseUrl = rtrim($baseUrl, '/');
 
         $translation = $page->translation();
         $slug = trim((string) ($translation?->slug ?? ''), '/');

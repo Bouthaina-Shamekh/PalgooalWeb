@@ -137,6 +137,9 @@
                         <div class="rounded-2xl border border-secondary-200/60 px-4 py-3 text-sm text-muted">
                             {{ t('frontend.client_domains.buy.step_three', 'After successful payment, the domain appears in your account as an active domain.') }}
                         </div>
+                        <div class="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+                            Buying the domain adds it to your account first. You can then connect it to a website from the site dashboard, and the platform subdomain will remain active until the custom domain is fully verified.
+                        </div>
                     </div>
                 </div>
             </div>

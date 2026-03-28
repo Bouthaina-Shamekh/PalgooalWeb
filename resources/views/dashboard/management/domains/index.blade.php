@@ -1,11 +1,27 @@
 <x-dashboard-layout>
+    @php
+        $statusStyles = [
+            'active' => 'bg-emerald-100 text-emerald-800',
+            'pending' => 'bg-amber-100 text-amber-800',
+            'expired' => 'bg-red-100 text-red-800',
+        ];
+    @endphp
 
     <div class="container mx-auto py-6">
-        <h1 class="text-2xl font-bold mb-4">إدارة النطاقات</h1>
-
-        @can('create', \App\Models\Domain::class)
-            <a href="{{ route('dashboard.domains.create') }}" class="btn btn-primary mb-4">Add Domains</a>
-        @endcan
+        <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div class="max-w-3xl">
+                <h1 class="text-2xl font-bold mb-2">Domain portfolio</h1>
+                <p class="text-sm text-gray-500 mb-0">
+                    This page manages the registrar-side domain records in the account. Live website routing, platform subdomains, and custom-domain readiness are still tracked from subscriptions.
+                </p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <a href="{{ route('dashboard.subscriptions.index') }}" class="btn btn-light-primary">Open Subscriptions</a>
+                @can('create', \App\Models\Domain::class)
+                    <a href="{{ route('dashboard.domains.create') }}" class="btn btn-primary">Add Domains</a>
+                @endcan
+            </div>
+        </div>
 
         @if (session('success'))
             <div class="bg-green-100 text-green-800 p-4 rounded mb-4">
@@ -29,14 +45,27 @@
                 </thead>
                 <tbody>
                     @forelse ($domains as $domain)
+                        @php
+                            $statusKey = strtolower((string) $domain->status);
+                            $statusClass = $statusStyles[$statusKey] ?? 'bg-slate-100 text-slate-700';
+                        @endphp
                         <tr>
                             <td>{{ $loop->iteration }}</td>
                             <td>{{ $domain->client?->first_name ?? '-' }}</td>
-                            <td>{{ $domain->domain_name }}</td>
+                            <td>
+                                <div class="flex flex-col">
+                                    <span class="font-medium text-gray-900">{{ $domain->domain_name }}</span>
+                                    <span class="text-xs text-gray-500">Registrar asset</span>
+                                </div>
+                            </td>
                             <td>{{ $domain->registrar }}</td>
                             <td>{{ $domain->registration_date ? \Illuminate\Support\Carbon::parse($domain->registration_date)->format('d/m/Y') : '-' }}</td>
                             <td>{{ $domain->renewal_date ? \Illuminate\Support\Carbon::parse($domain->renewal_date)->format('d/m/Y') : '-' }}</td>
-                            <td>{{ $domain->status }}</td>
+                            <td>
+                                <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold {{ $statusClass }}">
+                                    {{ ucfirst($statusKey ?: 'unknown') }}
+                                </span>
+                            </td>
                             <td>
                                 <div class="flex flex-wrap items-center gap-2">
                                     @can('update', $domain)

@@ -11,8 +11,8 @@
         $homePage = $pages->firstWhere('is_home', true);
         $createPageErrors = $errors->getBag('createPage');
         $pageSettingsErrors = $errors->getBag('pageSettings');
-        $domainName = trim((string) ($subscription->domain_name ?? ''));
-        $siteUrl = $domainName !== '' ? rtrim(tenant_url($domainName), '/') : null;
+        $siteUrl = $subscription->activeSiteUrl();
+        $siteUrl = $siteUrl ? rtrim($siteUrl, '/') : null;
     @endphp
 
     <div class="mx-auto max-w-6xl space-y-6 px-1 pb-10">

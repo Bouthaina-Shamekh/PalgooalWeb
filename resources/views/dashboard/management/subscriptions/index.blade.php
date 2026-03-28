@@ -154,6 +154,18 @@
                             </thead>
                             <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
                                 @forelse ($subscriptions as $sub)
+                                    @php
+                                        $domainVerificationBadge = ! $sub->requiresDomainVerification()
+                                            ? ['label' => 'Platform subdomain active', 'class' => 'bg-emerald-100 text-emerald-800']
+                                            : match ($sub->effectiveDomainVerificationStatus()) {
+                                                \App\Models\Tenancy\Subscription::DOMAIN_VERIFICATION_ACTIVE => ['label' => 'Custom domain active', 'class' => 'bg-emerald-100 text-emerald-800'],
+                                                \App\Models\Tenancy\Subscription::DOMAIN_VERIFICATION_SSL_PENDING => ['label' => 'Waiting for HTTPS (SSL not ready)', 'class' => 'bg-sky-100 text-sky-800'],
+                                                \App\Models\Tenancy\Subscription::DOMAIN_VERIFICATION_DNS_PENDING => ['label' => 'Verification pending (DNS not detected yet)', 'class' => 'bg-yellow-100 text-yellow-800'],
+                                                \App\Models\Tenancy\Subscription::DOMAIN_VERIFICATION_FAILED => ['label' => 'Verification failed', 'class' => 'bg-red-100 text-red-800'],
+                                                default => ['label' => 'Verification pending (DNS not detected yet)', 'class' => 'bg-yellow-100 text-yellow-800'],
+                                            };
+                                        $domainLink = $sub->activeSiteUrl();
+                                    @endphp
                                     <tr data-subscription-row="{{ $sub->id }}"
                                         class="hover:bg-gray-50 dark:hover:bg-gray-900">
                                         <td class="px-4 py-2 text-sm text-gray-700 dark:text-gray-200">
@@ -184,6 +196,11 @@
                                                         class="text-blue-600 hover:underline">{{ $sub->domain_name }}</a>
                                                     <button type="button" data-copy-domain="{{ $sub->domain_name }}"
                                                         class="text-sm text-gray-500 hover:text-gray-800">نسخ</button>
+                                                </div>
+                                                <div class="mt-2">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ $domainVerificationBadge['class'] }}">
+                                                        {{ $domainVerificationBadge['label'] }}
+                                                    </span>
                                                 </div>
                                             @else
                                                 -
@@ -242,6 +259,17 @@
                                                             stroke="currentColor" stroke-width="2">
                                                             <path d="M21 12a9 9 0 1 0-3.2 6.6L21 12z"></path>
                                                             <path d="M21 3v6h-6"></path>
+                                                        </svg>
+                                                    </button>
+                                                </form>
+                                                <form action="{{ route('dashboard.subscriptions.verify-domain', $sub) }}"
+                                                    method="POST">
+                                                    @csrf
+                                                    <button type="submit" title="Verify custom domain"
+                                                        class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-white border border-gray-200 hover:bg-gray-50 text-gray-600">
+                                                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none"
+                                                            stroke="currentColor" stroke-width="2">
+                                                            <path d="M3 12h4l3 7 4-14 3 7h4"></path>
                                                         </svg>
                                                     </button>
                                                 </form>

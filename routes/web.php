@@ -11,6 +11,7 @@ use App\Http\Controllers\Front\TemplateReviewController;
 use App\Http\Controllers\Front\ThemeCssController;
 use App\Http\Controllers\Front\TestimonialSubmissionController;
 use App\Http\Controllers\Front\PageController as FrontPageController;
+use App\Http\Controllers\Tenancy\DomainVerificationProbeController;
 
 // Admin / Management Controllers (used in frontend routes)
 use App\Http\Controllers\Admin\Management\DomainSearchController;
@@ -36,6 +37,10 @@ Route::middleware(['setLocale'])->group(function () {
     */
     Route::get('/', [FrontPageController::class, 'home'])
         ->name('frontend.home');
+
+    Route::get(config('tenancy.domain_verification.path', '/.well-known/palgoals-domain-check'), DomainVerificationProbeController::class)
+        ->middleware('throttle:30,1')
+        ->name('tenant.domain-verification.probe');
 
     /*
     |--------------------------------------------------------------------------

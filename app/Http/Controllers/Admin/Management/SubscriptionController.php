@@ -7,6 +7,7 @@ use App\Jobs\ProvisionSubscription;
 use App\Models\Tenancy\Subscription;
 use App\Models\Client;
 use App\Models\Plan;
+use App\Services\Tenancy\DomainVerificationService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -242,7 +243,8 @@ class SubscriptionController extends Controller
             $data['server_package'] = null;
         }
 
-        Subscription::create($data);
+        $subscription = Subscription::create($data);
+        app(DomainVerificationService::class)->reset($subscription);
         return redirect()->route('dashboard.subscriptions.index')->with('ok', 'تم إضافة الاشتراك بنجاح');
     }
 
@@ -278,7 +280,23 @@ class SubscriptionController extends Controller
         }
 
         $subscription->update($data);
+        app(DomainVerificationService::class)->reset($subscription->fresh());
         return redirect()->route('dashboard.subscriptions.index')->with('ok', 'تم تحديث الاشتراك بنجاح');
+    }
+
+    public function verifyDomain(Subscription $subscription, DomainVerificationService $verification)
+    {
+        $details = $verification->verify($subscription);
+        $message = $details['label'];
+
+        if (! empty($details['error'])) {
+            $message .= ': ' . $details['error'];
+        }
+
+        return back()->with(
+            $details['status'] === Subscription::DOMAIN_VERIFICATION_ACTIVE ? 'success' : 'info',
+            $message
+        );
     }
 
     public function destroy(Subscription $subscription)

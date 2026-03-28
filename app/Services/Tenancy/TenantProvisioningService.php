@@ -19,6 +19,8 @@ class TenantProvisioningService
     public function __construct(
         protected SubscriptionSyncService $syncService,
         protected TemplateCloner $templateCloner,
+        protected TenantDomainHostService $hostService,
+        protected DomainVerificationService $domainVerificationService,
     ) {
     }
 
@@ -28,6 +30,17 @@ class TenantProvisioningService
     public function provision(Subscription $subscription, bool $force = false): Subscription
     {
         if (! $force && $subscription->provisioning_status === Subscription::PROVISIONING_ACTIVE) {
+            $subscription = $subscription->fresh(['client', 'plan', 'template']);
+
+            if ($subscription instanceof Subscription) {
+                $this->ensureDomain($subscription);
+                $this->domainVerificationService->reset($subscription);
+
+                if ($subscription->requiresDomainVerification()) {
+                    $this->domainVerificationService->verify($subscription);
+                }
+            }
+
             return $subscription;
         }
 
@@ -60,6 +73,12 @@ class TenantProvisioningService
                 'domain_name' => $domain,
             ])->save();
 
+            $this->domainVerificationService->reset($subscription);
+
+            if ($subscription->requiresDomainVerification()) {
+                $this->domainVerificationService->verify($subscription);
+            }
+
             $this->notifyClient($subscription);
             $this->notifyAdmins($subscription);
         } catch (Throwable $exception) {
@@ -91,6 +110,12 @@ class TenantProvisioningService
                 if (! empty($sub)) {
                     $updates['subdomain'] = $sub;
                 }
+            } elseif ($subscription->requiresDomainVerification()) {
+                $sub = $this->hostService->ensureFallbackSubdomain($subscription);
+
+                if (! empty($sub)) {
+                    $updates['subdomain'] = $sub;
+                }
             }
 
             if (count($updates) > 0) {
@@ -100,7 +125,7 @@ class TenantProvisioningService
             return $domainName;
         }
 
-        $subdomain = $subscription->subdomain ?: $this->generateSubdomain($subscription);
+        $subdomain = $subscription->subdomain ?: $this->hostService->generateSubdomain($subscription);
         $fqdn = tenant_fqdn($subdomain);
 
         $subscription->forceFill([
@@ -110,38 +135,6 @@ class TenantProvisioningService
         ])->save();
 
         return $fqdn;
-    }
-
-    protected function generateSubdomain(Subscription $subscription): string
-    {
-        $maxLength = (int) config('tenancy.subdomain_max_length', 24);
-        $base = $subscription->client?->company_name
-            ?? $subscription->client?->first_name
-            ?? $subscription->template?->translation()?->name
-            ?? 'site';
-        $base = Str::slug($base, '-');
-        if ($base === '') {
-            $base = 'site';
-        }
-
-        $base = Str::limit($base, max(8, $maxLength - 5), '');
-        $attempt = 0;
-        do {
-            $suffix = $attempt === 0 ? '' : '-' . Str::lower(Str::random(4));
-            $candidate = trim(Str::limit($base . $suffix, $maxLength, ''), '-');
-            $attempt++;
-        } while ($this->subdomainExists($candidate) && $attempt < 10);
-
-        if ($candidate === '' || $this->subdomainExists($candidate)) {
-            $candidate = Str::lower(Str::random(min(12, $maxLength)));
-        }
-
-        return $candidate;
-    }
-
-    protected function subdomainExists(string $candidate): bool
-    {
-        return Subscription::where('subdomain', $candidate)->exists();
     }
 
     protected function provisionMultiTenant(Subscription $subscription): string

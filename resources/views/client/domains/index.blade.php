@@ -5,6 +5,7 @@
             'pending' => 'bg-warning-500/10 text-warning-600',
             'expired' => 'bg-danger-500/10 text-danger-600',
         ];
+        $subscriptionsUrl = route('client.subscriptions');
     @endphp
 
     <div class="page-header">
@@ -49,6 +50,48 @@
     @endif
 
     <div class="grid grid-cols-12 gap-x-6 gap-y-6">
+        <div class="col-span-12">
+            <div class="card overflow-hidden">
+                <div class="card-body">
+                    <div class="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:items-center">
+                        <div>
+                            <span class="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                                Domain setup guidance
+                            </span>
+                            <h4 class="mt-3 mb-2">Use this page for your domains, and your site dashboard for live status</h4>
+                            <p class="mb-0 text-sm text-muted leading-6">
+                                This page manages the domains in your account. Your actual live website address and custom-domain verification state are shown inside each site dashboard. If you connect a branded domain later, your platform subdomain stays active until the custom domain is fully ready.
+                            </p>
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <a href="{{ route('client.domains.search') }}" class="btn btn-primary">
+                                    <i class="ti ti-search me-1"></i>
+                                    Search New Domain
+                                </a>
+                                <a href="{{ $subscriptionsUrl }}" class="btn btn-light-secondary">
+                                    <i class="ti ti-layout-dashboard me-1"></i>
+                                    Open Site Dashboards
+                                </a>
+                            </div>
+                        </div>
+                        <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                            <div class="rounded-2xl border border-theme-border dark:border-themedark-border p-4">
+                                <div class="text-xs uppercase tracking-wide text-muted mb-2">1. Add a domain</div>
+                                <p class="mb-0 text-sm text-body">Search, buy, or keep managing the domains already attached to your account.</p>
+                            </div>
+                            <div class="rounded-2xl border border-theme-border dark:border-themedark-border p-4">
+                                <div class="text-xs uppercase tracking-wide text-muted mb-2">2. Connect it to a site</div>
+                                <p class="mb-0 text-sm text-body">Open the correct site dashboard to see the live address, verification badge, and the next required step.</p>
+                            </div>
+                            <div class="rounded-2xl border border-theme-border dark:border-themedark-border p-4">
+                                <div class="text-xs uppercase tracking-wide text-muted mb-2">3. Keep sharing the fallback</div>
+                                <p class="mb-0 text-sm text-body">Until verification completes, visitors should keep using the platform subdomain.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="col-span-12 md:col-span-6 xl:col-span-3">
             <div class="card">
                 <div class="card-body">
@@ -113,6 +156,7 @@
                             <h5 class="mb-1">{{ t('frontend.client_domains.index.portfolio_title', 'Domain Portfolio') }}</h5>
                             <p class="mb-0 text-sm text-muted">
                                 {{ t('frontend.client_domains.index.portfolio_subtitle', 'All domains associated with your account are listed below.') }}
+                                Your live site address and custom-domain readiness are still tracked from the related subscription.
                             </p>
                         </div>
                         <span class="badge bg-light-primary text-primary px-3 py-2">
@@ -142,8 +186,15 @@
                                     @endphp
                                     <tr>
                                         <td>
-                                            <div class="flex flex-col">
-                                                <span class="font-semibold text-body">{{ $domain->domain_name }}</span>
+                                            <div class="flex flex-col gap-2">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <span class="font-semibold text-body break-all">{{ $domain->domain_name }}</span>
+                                                    <button type="button" data-copy-value="{{ $domain->domain_name }}"
+                                                        class="inline-flex items-center gap-1 rounded-full border border-theme-border dark:border-themedark-border px-2.5 py-1 text-xs font-semibold text-muted transition hover:text-body">
+                                                        <i class="ti ti-copy text-sm leading-none"></i>
+                                                        <span data-copy-label>Copy</span>
+                                                    </button>
+                                                </div>
                                                 <span class="text-xs text-muted">
                                                     {{ t('frontend.client_domains.index.domain_id', 'ID') }} #{{ $domain->id }}
                                                 </span>
@@ -239,4 +290,46 @@
             </div>
         @endif
     </div>
+
+    @push('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                document.querySelectorAll('[data-copy-value]').forEach((button) => {
+                    button.addEventListener('click', async function () {
+                        const value = button.getAttribute('data-copy-value');
+                        const label = button.querySelector('[data-copy-label]') || button;
+                        const originalLabel = label.textContent;
+
+                        if (!value) {
+                            return;
+                        }
+
+                        try {
+                            if (navigator.clipboard && window.isSecureContext) {
+                                await navigator.clipboard.writeText(value);
+                            } else {
+                                const textarea = document.createElement('textarea');
+                                textarea.value = value;
+                                textarea.setAttribute('readonly', 'readonly');
+                                textarea.style.position = 'absolute';
+                                textarea.style.left = '-9999px';
+                                document.body.appendChild(textarea);
+                                textarea.select();
+                                document.execCommand('copy');
+                                textarea.remove();
+                            }
+
+                            label.textContent = 'Copied';
+                        } catch (error) {
+                            label.textContent = 'Copy failed';
+                        }
+
+                        window.setTimeout(() => {
+                            label.textContent = originalLabel;
+                        }, 1600);
+                    });
+                });
+            });
+        </script>
+    @endpush
 </x-client-layout>

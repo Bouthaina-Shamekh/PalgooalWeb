@@ -45,4 +45,19 @@ return [
     |--------------------------------------------------------------------------
     */
     'primary_domain' => env('TENANCY_PRIMARY_DOMAIN', parse_url(env('APP_URL', 'http://localhost'), PHP_URL_HOST) ?? 'localhost'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom domain verification
+    |--------------------------------------------------------------------------
+    |
+    | The probe path is used to confirm that a custom domain reaches Laravel
+    | over HTTPS before we allow runtime tenant serving for that host.
+    |
+    */
+    'domain_verification' => [
+        'path' => env('TENANCY_DOMAIN_VERIFICATION_PATH', '/.well-known/palgoals-domain-check'),
+        'connect_timeout' => (float) env('TENANCY_DOMAIN_VERIFICATION_CONNECT_TIMEOUT', 4),
+        'timeout' => (float) env('TENANCY_DOMAIN_VERIFICATION_TIMEOUT', 8),
+    ],
 ];

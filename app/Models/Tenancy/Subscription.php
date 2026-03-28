@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Log;
 
 class Subscription extends Model
 {
@@ -23,6 +24,12 @@ class Subscription extends Model
     public const PROVISIONING_IN_PROGRESS = 'provisioning';
     public const PROVISIONING_ACTIVE = 'active';
     public const PROVISIONING_FAILED = 'failed';
+
+    public const DOMAIN_VERIFICATION_PENDING = 'pending';
+    public const DOMAIN_VERIFICATION_DNS_PENDING = 'dns_pending';
+    public const DOMAIN_VERIFICATION_SSL_PENDING = 'ssl_pending';
+    public const DOMAIN_VERIFICATION_ACTIVE = 'active';
+    public const DOMAIN_VERIFICATION_FAILED = 'failed';
 
     protected $fillable = [
         'client_id',
@@ -49,6 +56,10 @@ class Subscription extends Model
         'domain_name',
         'subdomain',
         'domain_id',
+        'domain_verification_status',
+        'domain_last_checked_at',
+        'domain_verified_at',
+        'domain_verification_error',
         'settings',
     ];
 
@@ -59,6 +70,8 @@ class Subscription extends Model
         'ends_at' => 'date',
         'provisioned_at' => 'datetime',
         'last_synced_at' => 'datetime',
+        'domain_last_checked_at' => 'datetime',
+        'domain_verified_at' => 'datetime',
         'settings' => 'array',
     ];
 
@@ -105,5 +118,149 @@ class Subscription extends Model
     {
         return $this->belongsToMany(Coupon::class)
             ->withTimestamps();
+    }
+
+    public function normalizedDomainName(): ?string
+    {
+        $domain = trim(strtolower((string) $this->domain_name), ". \t\n\r\0\x0B");
+
+        return $domain !== '' ? $domain : null;
+    }
+
+    public function requiresDomainVerification(): bool
+    {
+        $this->logDomainBindingMismatchIfNeeded();
+
+        $domain = $this->normalizedDomainName();
+
+        if ($domain === null) {
+            return false;
+        }
+
+        if ($this->domain_option === 'subdomain') {
+            return false;
+        }
+
+        return ! is_platform_tenant_host($domain);
+    }
+
+    public function customDomainHost(): ?string
+    {
+        return $this->requiresDomainVerification()
+            ? $this->normalizedDomainName()
+            : null;
+    }
+
+    public function fallbackSiteHost(): ?string
+    {
+        $subdomain = trim(strtolower((string) $this->subdomain), ". \t\n\r\0\x0B");
+
+        if ($subdomain !== '') {
+            return tenant_fqdn($subdomain);
+        }
+
+        $domain = $this->normalizedDomainName();
+
+        if ($domain !== null && ($this->domain_option === 'subdomain' || is_platform_tenant_host($domain))) {
+            return $domain;
+        }
+
+        return null;
+    }
+
+    public function effectiveDomainVerificationStatus(): string
+    {
+        if (! $this->requiresDomainVerification()) {
+            return self::DOMAIN_VERIFICATION_ACTIVE;
+        }
+
+        $status = trim((string) $this->domain_verification_status);
+
+        return $status !== '' ? $status : self::DOMAIN_VERIFICATION_PENDING;
+    }
+
+    public function customDomainIsReady(): bool
+    {
+        return $this->isCustomDomainVerified();
+    }
+
+    public function isCustomDomainVerified(): bool
+    {
+        return $this->requiresDomainVerification()
+            && $this->effectiveDomainVerificationStatus() === self::DOMAIN_VERIFICATION_ACTIVE;
+    }
+
+    public function activeSiteHost(): ?string
+    {
+        if ($this->customDomainIsReady()) {
+            return $this->customDomainHost();
+        }
+
+        $fallback = $this->fallbackSiteHost();
+
+        if ($fallback !== null) {
+            return $fallback;
+        }
+
+        if (! $this->requiresDomainVerification()) {
+            return $this->normalizedDomainName();
+        }
+
+        return null;
+    }
+
+    public function activeSiteUrl(?string $scheme = null): ?string
+    {
+        $host = $this->activeSiteHost();
+
+        return $host !== null ? tenant_url($host, $scheme) : null;
+    }
+
+    public function logDomainBindingMismatchIfNeeded(): void
+    {
+        if (! $this->domain_id) {
+            return;
+        }
+
+        $subscriptionDomain = $this->normalizedDomainName();
+
+        if ($subscriptionDomain === null) {
+            return;
+        }
+
+        static $checked = [];
+
+        $cacheKey = implode(':', [
+            (string) ($this->getKey() ?? 'new'),
+            (string) $this->domain_id,
+            $subscriptionDomain,
+        ]);
+
+        if (isset($checked[$cacheKey])) {
+            return;
+        }
+
+        $checked[$cacheKey] = true;
+
+        $domain = $this->relationLoaded('domain')
+            ? $this->getRelation('domain')
+            : $this->domain()->select(['id', 'domain_name'])->first();
+
+        if (! $domain instanceof Domain) {
+            return;
+        }
+
+        $linkedDomain = trim(strtolower((string) $domain->domain_name), ". \t\n\r\0\x0B");
+
+        if ($linkedDomain === '' || $linkedDomain === $subscriptionDomain) {
+            return;
+        }
+
+        Log::warning('Subscription domain binding mismatch detected', [
+            'subscription_id' => $this->getKey(),
+            'domain_id' => $this->domain_id,
+            'subscription_domain_name' => $subscriptionDomain,
+            'linked_domain_name' => $linkedDomain,
+        ]);
     }
 }

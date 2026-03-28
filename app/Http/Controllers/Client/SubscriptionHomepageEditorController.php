@@ -126,13 +126,13 @@ class SubscriptionHomepageEditorController extends SectionController
             return parent::workspaceFrontUrl($page);
         }
 
-        $domainName = trim((string) ($this->workspaceSubscription->domain_name ?? ''));
+        $activeSiteUrl = $this->workspaceSubscription->activeSiteUrl();
 
-        if ($domainName === '') {
+        if ($activeSiteUrl === null) {
             return route('client.subscriptions.site', $this->workspaceSubscription);
         }
 
-        return tenant_url($domainName);
+        return $activeSiteUrl;
     }
 
     protected function workspaceVisualBuilderUrl(Page $page): ?string

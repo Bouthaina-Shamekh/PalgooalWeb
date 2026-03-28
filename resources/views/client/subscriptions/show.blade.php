@@ -5,7 +5,7 @@
         $homeTrans = $homePage?->translations->firstWhere('locale', $locale) ?? $homePage?->translations->first();
         $siteName = $homeTrans?->title ?: ($templateName ?: 'Your website');
         $domainName = trim((string) ($subscription->domain_name ?? ''));
-        $siteUrl = $domainName !== '' ? tenant_url($domainName) : null;
+        $siteUrl = $siteUrl ?? $subscription->activeSiteUrl();
 
         $pageCount = $pages->count();
         $sectionCount = $pages->sum(fn ($page) => $page->sections->count());

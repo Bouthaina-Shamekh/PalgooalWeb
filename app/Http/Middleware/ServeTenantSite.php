@@ -19,6 +19,12 @@ class ServeTenantSite
             return $next($request);
         }
 
+        $probePath = trim((string) config('tenancy.domain_verification.path', '/.well-known/palgoals-domain-check'), '/');
+
+        if ($probePath !== '' && $request->is($probePath)) {
+            return $next($request);
+        }
+
         $host = strtolower($request->getHost());
         $primaryDomain = strtolower(config('tenancy.primary_domain', parse_url(config('app.url'), PHP_URL_HOST) ?? ''));
 
@@ -27,6 +33,19 @@ class ServeTenantSite
         }
 
         $tenantSubdomain = tenant_subdomain_from_host($host);
+        $exactHostSubscription = Subscription::with(['plan'])
+            ->where('domain_name', $host)
+            ->first();
+
+        if ($exactHostSubscription && ! is_platform_tenant_host($host)) {
+            if (
+                $exactHostSubscription->status !== 'active'
+                || ($exactHostSubscription->plan && $exactHostSubscription->plan->plan_type !== Plan::TYPE_MULTI_TENANT)
+                || ! $exactHostSubscription->customDomainIsReady()
+            ) {
+                abort(404, 'Domain is not ready for runtime serving yet.');
+            }
+        }
 
         $subscription = Subscription::with(['plan'])
             ->where(function ($query) use ($host, $tenantSubdomain) {
@@ -44,6 +63,10 @@ class ServeTenantSite
 
         if (! $subscription || ($subscription->plan && $subscription->plan->plan_type !== Plan::TYPE_MULTI_TENANT)) {
             return $next($request);
+        }
+
+        if (! is_platform_tenant_host($host) && ! $subscription->customDomainIsReady()) {
+            abort(404, 'Domain is not ready for runtime serving yet.');
         }
 
         $page = $this->resolveTenantPage($subscription, $request->path(), app()->getLocale());

@@ -17,6 +17,19 @@
             'failed' => ['label' => 'فشل التجهيز', 'class' => 'bg-red-500/10 text-red-600'],
             default => ['label' => $value ? ucfirst($value) : 'غير معروف', 'class' => 'bg-gray-200 text-gray-700'],
         };
+        $domainMeta = static function (\App\Models\Tenancy\Subscription $subscription) {
+            if (! $subscription->requiresDomainVerification()) {
+                return ['label' => 'Platform subdomain active', 'class' => 'bg-emerald-500/10 text-emerald-600'];
+            }
+
+            return match ($subscription->effectiveDomainVerificationStatus()) {
+                \App\Models\Tenancy\Subscription::DOMAIN_VERIFICATION_ACTIVE => ['label' => 'Custom domain active', 'class' => 'bg-emerald-500/10 text-emerald-600'],
+                \App\Models\Tenancy\Subscription::DOMAIN_VERIFICATION_SSL_PENDING => ['label' => 'Waiting for HTTPS (SSL not ready)', 'class' => 'bg-sky-500/10 text-sky-600'],
+                \App\Models\Tenancy\Subscription::DOMAIN_VERIFICATION_DNS_PENDING => ['label' => 'Verification pending (DNS not detected yet)', 'class' => 'bg-amber-500/10 text-amber-600'],
+                \App\Models\Tenancy\Subscription::DOMAIN_VERIFICATION_FAILED => ['label' => 'Verification failed', 'class' => 'bg-red-500/10 text-red-600'],
+                default => ['label' => 'Verification pending (DNS not detected yet)', 'class' => 'bg-amber-500/10 text-amber-600'],
+            };
+        };
     @endphp
 
     <div class="page-header">
@@ -223,9 +236,10 @@
                         @php
                             $statusBadge = $statusMeta($sub->status);
                             $provisioningBadge = $provisioningMeta($sub->provisioning_status);
+                            $domainBadge = $domainMeta($sub);
                             $planName = $sub->plan?->translation()?->name ?? $sub->plan?->name ?? 'بدون خطة';
                             $templateName = $sub->template?->translation()?->name ?? $sub->template?->name;
-                            $siteUrl = $sub->domain_name ? tenant_url($sub->domain_name) : null;
+                            $siteUrl = $sub->activeSiteUrl();
                             $nextDueLabel = $sub->next_due_date?->format('Y-m-d') ?? 'غير محدد';
                         @endphp
 
@@ -250,6 +264,9 @@
                                     <div class="rounded-xl bg-gray-50 px-3 py-3">
                                         <p class="mb-1 text-xs text-gray-400">الدومين</p>
                                         <p class="font-medium break-all text-gray-700">{{ $sub->domain_name ?: 'سيُولّد تلقائياً' }}</p>
+                                        <span class="mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $domainBadge['class'] }}">
+                                            {{ $domainBadge['label'] }}
+                                        </span>
                                     </div>
                                     <div class="rounded-xl bg-gray-50 px-3 py-3">
                                         <p class="mb-1 text-xs text-gray-400">التجديد القادم</p>
@@ -309,9 +326,10 @@
                                         @php
                                             $statusBadge = $statusMeta($sub->status);
                                             $provisioningBadge = $provisioningMeta($sub->provisioning_status);
+                                            $domainBadge = $domainMeta($sub);
                                             $planName = $sub->plan?->translation()?->name ?? $sub->plan?->name ?? 'بدون خطة';
                                             $templateName = $sub->template?->translation()?->name ?? $sub->template?->name;
-                                            $siteUrl = $sub->domain_name ? tenant_url($sub->domain_name) : null;
+                                            $siteUrl = $sub->activeSiteUrl();
                                             $isOverdue = $sub->next_due_date && $sub->next_due_date->lt(now()->startOfDay());
                                             $isDueSoon = $sub->next_due_date && ! $isOverdue && $sub->next_due_date->diffInDays(now()->startOfDay()) <= 7;
                                         @endphp
@@ -336,6 +354,11 @@
                                                 <div class="min-w-[14rem]">
                                                     <div class="font-medium text-gray-800 break-all">
                                                         {{ $sub->domain_name ?: 'سيُولّد تلقائياً' }}
+                                                    </div>
+                                                    <div class="mt-2">
+                                                        <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold {{ $domainBadge['class'] }}">
+                                                            {{ $domainBadge['label'] }}
+                                                        </span>
                                                     </div>
                                                     @if ($sub->username || $sub->cpanel_username)
                                                         <div class="mt-1 text-xs text-gray-500">

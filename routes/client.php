@@ -39,6 +39,7 @@ Route::group([
 
     Route::get('subscriptions', [HomeController::class, 'subscriptions'])->name('subscriptions');
     Route::get('subscriptions/{subscription}/site', [SubscriptionController::class, 'site'])->name('subscriptions.site');
+    Route::post('subscriptions/{subscription}/verify-domain', [SubscriptionController::class, 'verifyDomain'])->name('subscriptions.verify-domain');
     Route::get('subscriptions/{subscription}/content', [SubscriptionController::class, 'content'])->name('subscriptions.content');
     Route::get('subscriptions/{subscription}/pages', [SubscriptionPageEditorController::class, 'pages'])->name('subscriptions.pages');
     Route::post('subscriptions/{subscription}/pages', [SubscriptionPageEditorController::class, 'storePage'])->name('subscriptions.pages.store');

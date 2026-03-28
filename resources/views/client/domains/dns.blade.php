@@ -27,6 +27,8 @@
         $formSubtitleText = str_replace(':max', (string) $maxSlots, t('frontend.client_domains.dns.form_subtitle', 'Provide at least two nameservers. You can add up to :max nameservers.'));
         $validationMinText = str_replace(':n', (string) $requiredCount, t('frontend.client_domains.dns.validation_min', 'Please provide at least :n nameservers.'));
         $validationMaxText = str_replace(':n', (string) $maxSlots, t('frontend.client_domains.dns.validation_max', 'You can add up to :n nameservers.'));
+        $subscriptionsUrl = route('client.subscriptions');
+        $remoteNameservers = array_values(array_filter($remoteDns['nameservers'] ?? []));
     @endphp
 
     <div class="page-header">
@@ -47,14 +49,20 @@
                     <div class="page-header-title">
                         <h2 class="mb-1">{{ $headingText }}</h2>
                         <p class="mb-0 text-sm text-muted">
-                            {{ t('frontend.client_domains.dns.subtitle', 'Update your nameservers and sync them directly with the registrar.') }}
+                            {{ t('frontend.client_domains.dns.subtitle', 'Update the registrar nameservers for this domain. If you are connecting it to a website, the site dashboard still shows the exact live-domain verification status and target host.') }}
                         </p>
                     </div>
                 </div>
-                <a href="{{ route('client.domains.index') }}" class="btn btn-light-secondary">
-                    <i class="ti ti-arrow-left me-1"></i>
-                    {{ t('frontend.client_domains.dns.back', 'Back to Domains') }}
-                </a>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ $subscriptionsUrl }}" class="btn btn-light-primary">
+                        <i class="ti ti-layout-dashboard me-1"></i>
+                        Site Dashboards
+                    </a>
+                    <a href="{{ route('client.domains.index') }}" class="btn btn-light-secondary">
+                        <i class="ti ti-arrow-left me-1"></i>
+                        {{ t('frontend.client_domains.dns.back', 'Back to Domains') }}
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -74,12 +82,53 @@
     @endif
 
     <div class="grid grid-cols-12 gap-x-6 gap-y-6">
+        <div class="col-span-12">
+            <div class="rounded-3xl border border-sky-200 bg-sky-50/70 p-5">
+                <div class="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+                    <div>
+                        <p class="text-sm font-semibold text-sky-900">Use this page only for registrar DNS changes</p>
+                        <p class="mt-2 text-sm leading-6 text-sky-800">
+                            Most people only need to paste Nameserver 1 and Nameserver 2 from their hosting provider here. If your goal is to connect this domain to a website in your account, open the site dashboard to copy the exact target host and to see whether the custom domain is still pending or already active.
+                        </p>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                        <div class="rounded-2xl border border-sky-200 bg-white px-4 py-3">
+                            <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-700">1. Copy the right DNS values</p>
+                            <p class="mb-0 text-sm text-slate-600">Take nameservers from your hosting provider or the target host from the site dashboard.</p>
+                        </div>
+                        <div class="rounded-2xl border border-sky-200 bg-white px-4 py-3">
+                            <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-700">2. Save the registrar change</p>
+                            <p class="mb-0 text-sm text-slate-600">After the registrar accepts the update, DNS may still need time to propagate.</p>
+                        </div>
+                        <div class="rounded-2xl border border-sky-200 bg-white px-4 py-3">
+                            <p class="mb-1 text-xs font-semibold uppercase tracking-wide text-sky-700">3. Keep using the fallback</p>
+                            <p class="mb-0 text-sm text-slate-600">Your platform subdomain stays live until the custom domain is fully ready.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="col-span-12 xl:col-span-4">
             <div class="card">
                 <div class="card-header">
                     <h5 class="mb-0">{{ t('frontend.client_domains.dns.snapshot_title', 'Registrar Snapshot') }}</h5>
                 </div>
                 <div class="card-body space-y-4">
+                    <div class="rounded-2xl border border-theme-border dark:border-themedark-border p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <div class="text-xs uppercase tracking-wide text-muted mb-2">Domain</div>
+                                <div class="font-medium text-body break-all">{{ $domain->domain_name }}</div>
+                            </div>
+                            <button type="button" data-copy-value="{{ $domain->domain_name }}"
+                                class="inline-flex items-center gap-1 rounded-full border border-theme-border dark:border-themedark-border px-3 py-1.5 text-xs font-semibold text-muted transition hover:text-body">
+                                <i class="ti ti-copy text-sm leading-none"></i>
+                                <span data-copy-label>Copy</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="rounded-2xl border border-theme-border dark:border-themedark-border p-4">
                         <div class="text-xs uppercase tracking-wide text-muted mb-2">
                             {{ t('frontend.client_domains.dns.snapshot_provider', 'Provider') }}
@@ -106,9 +155,14 @@
                                 {{ t('frontend.client_domains.dns.snapshot_nameservers', 'Nameservers At Registrar') }}
                             </div>
                             <div class="space-y-2">
-                                @forelse (($remoteDns['nameservers'] ?? []) as $nameserver)
-                                    <div class="rounded-xl bg-theme-bodybg dark:bg-themedark-bodybg px-3 py-2 text-sm font-medium text-body">
-                                        {{ $nameserver }}
+                                @forelse ($remoteNameservers as $nameserver)
+                                    <div class="flex items-center justify-between gap-3 rounded-xl bg-theme-bodybg dark:bg-themedark-bodybg px-3 py-2">
+                                        <span class="text-sm font-medium text-body break-all">{{ $nameserver }}</span>
+                                        <button type="button" data-copy-value="{{ $nameserver }}"
+                                            class="inline-flex items-center gap-1 rounded-full border border-theme-border dark:border-themedark-border bg-white px-2.5 py-1 text-xs font-semibold text-muted transition hover:text-body">
+                                            <i class="ti ti-copy text-sm leading-none"></i>
+                                            <span data-copy-label>Copy</span>
+                                        </button>
                                     </div>
                                 @empty
                                     <div class="text-sm text-muted">
@@ -174,10 +228,10 @@
                     <div class="rounded-2xl border border-info-200 bg-info-50 p-4 text-sm text-info-800">
                         <div class="font-medium mb-1">{{ t('frontend.client_domains.dns.quick_guide_title', 'Quick Guide') }}</div>
                         <p class="mb-1">
-                            {{ t('frontend.client_domains.dns.quick_guide_nameservers', 'If your hosting company gave you ready-made nameservers, enter Nameserver 1 and Nameserver 2 only.') }}
+                            {{ t('frontend.client_domains.dns.quick_guide_nameservers', 'Most setups only need Nameserver 1 and Nameserver 2. Paste those first before adding anything else.') }}
                         </p>
                         <p class="mb-0">
-                            {{ t('frontend.client_domains.dns.quick_guide_personal_dns', 'Use "Personal DNS (Optional)" only when you are creating branded nameservers such as ns1.yourdomain.com and the registrar asks for an IP address.') }}
+                            {{ t('frontend.client_domains.dns.quick_guide_personal_dns', 'Use "Personal DNS (Optional)" only if the registrar specifically asks for an IP address for branded nameservers such as ns1.yourdomain.com.') }}
                         </p>
                     </div>
 
@@ -306,6 +360,42 @@
             const template = document.getElementById('ns-template');
             const errorsBox = document.getElementById('ns-errors');
             const counterEl = document.getElementById('ns-counter');
+
+            document.querySelectorAll('[data-copy-value]').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const value = button.getAttribute('data-copy-value');
+                    const label = button.querySelector('[data-copy-label]') || button;
+                    const originalLabel = label.textContent;
+
+                    if (!value) {
+                        return;
+                    }
+
+                    try {
+                        if (navigator.clipboard && window.isSecureContext) {
+                            await navigator.clipboard.writeText(value);
+                        } else {
+                            const textarea = document.createElement('textarea');
+                            textarea.value = value;
+                            textarea.setAttribute('readonly', 'readonly');
+                            textarea.style.position = 'absolute';
+                            textarea.style.left = '-9999px';
+                            document.body.appendChild(textarea);
+                            textarea.select();
+                            document.execCommand('copy');
+                            textarea.remove();
+                        }
+
+                        label.textContent = 'Copied';
+                    } catch (error) {
+                        label.textContent = 'Copy failed';
+                    }
+
+                    window.setTimeout(() => {
+                        label.textContent = originalLabel;
+                    }, 1600);
+                });
+            });
 
             if (!fieldsContainer || !template) {
                 return;
