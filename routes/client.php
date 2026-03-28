@@ -110,7 +110,80 @@ Route::group([
     Route::get('invoices', [HomeController::class, 'invoices'])->name('invoices');
 });
 
-Route::post('client/login', function (Request $request) {
+$resolveClientRedirectTarget = static function (Request $request): ?string {
+    $candidate = trim((string) $request->input('redirect_to', ''));
+
+    if ($candidate === '') {
+        $candidate = trim((string) $request->headers->get('referer', ''));
+    }
+
+    if ($candidate === '' || preg_match('/[\r\n]/', $candidate) === 1) {
+        return null;
+    }
+
+    if (str_starts_with($candidate, '//')) {
+        return null;
+    }
+
+    $path = '';
+
+    if (str_starts_with($candidate, '/')) {
+        $path = (string) parse_url($candidate, PHP_URL_PATH);
+    } else {
+        $parts = parse_url($candidate);
+
+        if ($parts === false) {
+            return null;
+        }
+
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        if ($scheme !== '' && !in_array($scheme, ['http', 'https'], true)) {
+            return null;
+        }
+
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        if ($host !== '' && $host !== strtolower($request->getHost())) {
+            return null;
+        }
+
+        $path = (string) ($parts['path'] ?? '/');
+    }
+
+    if ($path !== '' && preg_match('#^/(?:assets|build|storage)(?:/|$)#', $path) === 1) {
+        return null;
+    }
+
+    return $candidate;
+};
+
+$appendCheckoutReviewQuery = static function (string $target): string {
+    if (!str_contains($target, 'checkout')) {
+        return $target;
+    }
+
+    $query = (string) parse_url($target, PHP_URL_QUERY);
+    if (preg_match('/(?:^|&)review=/', $query) === 1) {
+        return $target;
+    }
+
+    return $target . (str_contains($target, '?') ? '&' : '?') . 'review=1';
+};
+
+$redirectClientResponse = static function (Request $request) use ($resolveClientRedirectTarget, $appendCheckoutReviewQuery) {
+    $redirectTarget = $resolveClientRedirectTarget($request);
+
+    if (!$redirectTarget) {
+        return redirect()->back();
+    }
+
+    if (str_contains($redirectTarget, 'checkout')) {
+        $redirectTarget = $appendCheckoutReviewQuery($redirectTarget);
+    }
+
+    return redirect()->to($redirectTarget);
+};
+
+Route::post('client/login', function (Request $request) use ($redirectClientResponse) {
     $credentials = $request->only('email', 'password');
     $client = Client::where('email', $credentials['email'] ?? '')->first();
 
@@ -122,7 +195,7 @@ Route::post('client/login', function (Request $request) {
             ], 403);
         }
 
-        return redirect()->back()
+        return $redirectClientResponse($request)
             ->withErrors(['email' => 'Login access has been disabled for this account.'])
             ->withInput();
     }
@@ -146,14 +219,7 @@ Route::post('client/login', function (Request $request) {
             ]);
         }
 
-        $referer = $request->headers->get('referer');
-
-        if ($referer && str_contains($referer, 'checkout')) {
-            return redirect()->to($referer . (str_contains($referer, '?') ? '&' : '?') . 'review=1')
-                ->with('success', 'Login successful.');
-        }
-
-        return redirect()->back()->with('success', 'Login successful.');
+        return $redirectClientResponse($request)->with('success', 'Login successful.');
     }
 
     if ($request->ajax() || $request->wantsJson() || $request->expectsJson()) {
@@ -163,12 +229,12 @@ Route::post('client/login', function (Request $request) {
         ], 422);
     }
 
-    return redirect()->back()
+    return $redirectClientResponse($request)
         ->withErrors(['email' => 'Invalid login credentials.'])
         ->withInput();
 })->name('login.store');
 
-Route::post('client/logout', function (Request $request) {
+Route::post('client/logout', function (Request $request) use ($redirectClientResponse) {
     Auth::guard('client')->logout();
     $request->session()->forget([
         'client_impersonated_by_admin',
@@ -177,11 +243,5 @@ Route::post('client/logout', function (Request $request) {
     $request->session()->regenerate();
     $request->session()->regenerateToken();
 
-    $referer = $request->headers->get('referer');
-
-    if ($referer && str_contains($referer, 'checkout')) {
-        return redirect()->to($referer . (str_contains($referer, '?') ? '&' : '?') . 'review=1');
-    }
-
-    return redirect()->back();
+    return $redirectClientResponse($request);
 })->name('client.logout');

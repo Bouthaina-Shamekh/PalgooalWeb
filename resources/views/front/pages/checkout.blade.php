@@ -504,6 +504,8 @@
                         <form id="logoutInline" class="hidden" method="POST" action="{{ route('client.logout') }}"
                             style="display:inline">
                             @csrf
+                            <input type="hidden" name="redirect_to"
+                                value="{{ request()->fullUrlWithQuery(['review' => 1]) }}">
                             <button type="submit"
                                 class="text-sm text-red-700 underline hover:text-red-900 font-bold bg-transparent border-0 p-0 cursor-pointer">تسجيل
                                 بحساب آخر</button>
@@ -515,6 +517,8 @@
                     <form id="login-form" class=" mb-2" role="tabpanel" method="POST"
                         action="{{ route('login.store') }}">
                         @csrf
+                        <input type="hidden" name="redirect_to"
+                            value="{{ request()->fullUrlWithQuery(['review' => 1]) }}">
                         <div class="grid md:grid-cols-3 gap-4 items-end">
                             <div>
                                 <label class="text-sm font-medium mb-1 block">البريد الإلكتروني *</label>
