@@ -1,6 +1,5 @@
 <x-client-layout>
     @php
-        $scheme = parse_url(config('app.url'), PHP_URL_SCHEME) ?: request()->getScheme();
         $hasFilters = $search !== '' || $status !== 'all';
 
         $statusMeta = static fn (?string $value) => match ((string) $value) {
@@ -226,11 +225,7 @@
                             $provisioningBadge = $provisioningMeta($sub->provisioning_status);
                             $planName = $sub->plan?->translation()?->name ?? $sub->plan?->name ?? 'بدون خطة';
                             $templateName = $sub->template?->translation()?->name ?? $sub->template?->name;
-                            $siteUrl = $sub->domain_name
-                                ? (\Illuminate\Support\Str::startsWith($sub->domain_name, ['http://', 'https://'])
-                                    ? $sub->domain_name
-                                    : $scheme . '://' . ltrim($sub->domain_name, '/'))
-                                : null;
+                            $siteUrl = $sub->domain_name ? tenant_url($sub->domain_name) : null;
                             $nextDueLabel = $sub->next_due_date?->format('Y-m-d') ?? 'غير محدد';
                         @endphp
 
@@ -316,11 +311,7 @@
                                             $provisioningBadge = $provisioningMeta($sub->provisioning_status);
                                             $planName = $sub->plan?->translation()?->name ?? $sub->plan?->name ?? 'بدون خطة';
                                             $templateName = $sub->template?->translation()?->name ?? $sub->template?->name;
-                                            $siteUrl = $sub->domain_name
-                                                ? (\Illuminate\Support\Str::startsWith($sub->domain_name, ['http://', 'https://'])
-                                                    ? $sub->domain_name
-                                                    : $scheme . '://' . ltrim($sub->domain_name, '/'))
-                                                : null;
+                                            $siteUrl = $sub->domain_name ? tenant_url($sub->domain_name) : null;
                                             $isOverdue = $sub->next_due_date && $sub->next_due_date->lt(now()->startOfDay());
                                             $isDueSoon = $sub->next_due_date && ! $isOverdue && $sub->next_due_date->diffInDays(now()->startOfDay()) <= 7;
                                         @endphp

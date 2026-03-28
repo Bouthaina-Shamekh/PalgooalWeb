@@ -1,5 +1,13 @@
 <?php
 
+$legacySubdomainRoots = array_values(array_unique(array_filter(array_map(
+    static fn ($value) => ltrim(strtolower(trim((string) $value)), '.'),
+    array_merge(
+        explode(',', (string) env('TENANCY_LEGACY_SUBDOMAIN_ROOTS', '')),
+        [env('TENANCY_SUBDOMAIN_ROOT', '')],
+    )
+))));
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -8,10 +16,21 @@ return [
     |
     | When a subscription uses the "subdomain" domain option we build the FQDN
     | by combining the generated slug with this root. Example result:
-    | {subdomain}.wpgoals.com
+    | {subdomain}.palgoals.wpgoals.com
     |
     */
-    'subdomain_root' => env('TENANCY_SUBDOMAIN_ROOT', 'wpgoals.com'),
+    'subdomain_root' => env('TENANT_DOMAIN', env('TENANCY_SUBDOMAIN_ROOT', 'palgoals.wpgoals.com')),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Legacy subdomain roots kept only for backwards-safe host recognition
+    |--------------------------------------------------------------------------
+    |
+    | Existing tenants may still have older platform-hosted domains. We keep
+    | those roots recognizable without using them for new provisioning.
+    |
+    */
+    'legacy_subdomain_roots' => $legacySubdomainRoots,
 
     /*
     |--------------------------------------------------------------------------

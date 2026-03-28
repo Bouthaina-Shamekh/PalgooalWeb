@@ -132,9 +132,7 @@ class SubscriptionHomepageEditorController extends SectionController
             return route('client.subscriptions.site', $this->workspaceSubscription);
         }
 
-        return Str::startsWith($domainName, ['http://', 'https://'])
-            ? $domainName
-            : (request()->isSecure() ? 'https://' : 'http://') . ltrim($domainName, '/');
+        return tenant_url($domainName);
     }
 
     protected function workspaceVisualBuilderUrl(Page $page): ?string

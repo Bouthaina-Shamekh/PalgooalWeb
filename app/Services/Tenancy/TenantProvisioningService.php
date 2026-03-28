@@ -101,10 +101,7 @@ class TenantProvisioningService
         }
 
         $subdomain = $subscription->subdomain ?: $this->generateSubdomain($subscription);
-        $root = ltrim(config('tenancy.subdomain_root'), '.');
-        $root = $root ?: 'wpgoals.com';
-
-        $fqdn = "{$subdomain}.{$root}";
+        $fqdn = tenant_fqdn($subdomain);
 
         $subscription->forceFill([
             'domain_option' => 'subdomain',

@@ -56,6 +56,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Tenant Base Domain
+    |--------------------------------------------------------------------------
+    |
+    | Platform-hosted tenant sites are generated under this configurable base
+    | domain. Example result: {subdomain}.palgoals.wpgoals.com
+    |
+    */
+
+    'tenant_domain' => env('TENANT_DOMAIN', env('TENANCY_SUBDOMAIN_ROOT', 'palgoals.wpgoals.com')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

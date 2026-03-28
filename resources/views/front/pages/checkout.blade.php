@@ -11,6 +11,7 @@
     $plan_sub_type = $plan_sub_type ?? null;
     $checkout_mode = $checkout_mode ?? ($template ? 'template' : 'hosting');
     $requires_domain_selection = $requires_domain_selection ?? ! $template;
+    $tenantBaseDomain = tenant_domain();
 
     // safe access: template may be null when rendering cart-based checkout
     $shortDesc = Str::limit(strip_tags($translation?->description ?? ''), 160);
@@ -251,10 +252,7 @@
                         <div class="flex items-center text-gray-500 px-2">.</div>
                         <select aria-label="الدومين الأساسي"
                             class="w-56 rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
-                            <option>palgoals.com</option>
-                            <option>palgoals.store</option>
-                            <option>wpgoals.com</option>
-                            <option>wpgoals.com</option>
+                            <option>{{ $tenantBaseDomain }}</option>
                         </select>
                     </div>
                     <p class="text-xs text-gray-500">سنوفر لك Subdomain مجاني لبدء مشروعك بسرعة (يمكن الترقيه لاحقاً

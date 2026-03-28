@@ -26,8 +26,19 @@ class ServeTenantSite
             return $next($request);
         }
 
+        $tenantSubdomain = tenant_subdomain_from_host($host);
+
         $subscription = Subscription::with(['plan'])
-            ->where('domain_name', $host)
+            ->where(function ($query) use ($host, $tenantSubdomain) {
+                $query->where('domain_name', $host);
+
+                if ($tenantSubdomain !== null) {
+                    $query->orWhere(function ($tenantQuery) use ($tenantSubdomain) {
+                        $tenantQuery->where('domain_option', 'subdomain')
+                            ->where('subdomain', $tenantSubdomain);
+                    });
+                }
+            })
             ->where('status', 'active')
             ->first();
 

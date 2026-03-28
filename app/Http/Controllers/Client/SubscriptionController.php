@@ -45,11 +45,7 @@ class SubscriptionController extends Controller
             ?? 'Your website';
 
         $domainName = trim((string) ($subscription->domain_name ?? ''));
-        $siteUrl = $domainName !== ''
-            ? (Str::startsWith($domainName, ['http://', 'https://'])
-                ? $domainName
-                : ($request->isSecure() ? 'https://' : 'http://') . ltrim($domainName, '/'))
-            : null;
+        $siteUrl = $domainName !== '' ? tenant_url($domainName) : null;
 
         return view('client.subscriptions.site', [
             'subscription' => $subscription,

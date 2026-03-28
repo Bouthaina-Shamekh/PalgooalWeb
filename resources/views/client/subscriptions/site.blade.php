@@ -18,7 +18,7 @@
         $pagesManagementUrl = route('client.subscriptions.pages', $subscription);
         $subscriptionUrl = route('client.subscriptions.show', $subscription);
         $viewUrl = $siteUrl ?: $subscriptionUrl;
-        $platformHosted = $domainName !== '' && (\Illuminate\Support\Str::endsWith(\Illuminate\Support\Str::lower($domainName), '.wpgoals.com') || \Illuminate\Support\Str::endsWith(\Illuminate\Support\Str::lower($domainName), '.palgoals.com'));
+        $platformHosted = is_platform_tenant_host($domainName);
         $domainStepBadge = $domainName === '' ? 'Subdomain pending' : ($platformHosted ? 'Starter domain active' : 'Custom domain connected');
         $domainStepTone = $domainName === '' ? 'border-amber-200 bg-amber-50 text-amber-700' : ($platformHosted ? 'border-sky-200 bg-sky-50 text-sky-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700');
 

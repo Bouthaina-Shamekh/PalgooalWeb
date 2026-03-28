@@ -5,11 +5,7 @@
         $homeTrans = $homePage?->translations->firstWhere('locale', $locale) ?? $homePage?->translations->first();
         $siteName = $homeTrans?->title ?: ($templateName ?: 'Your website');
         $domainName = trim((string) ($subscription->domain_name ?? ''));
-        $siteUrl = $domainName !== ''
-            ? (\Illuminate\Support\Str::startsWith($domainName, ['http://', 'https://'])
-                ? $domainName
-                : (request()->secure() ? 'https://' : 'http://') . ltrim($domainName, '/'))
-            : null;
+        $siteUrl = $domainName !== '' ? tenant_url($domainName) : null;
 
         $pageCount = $pages->count();
         $sectionCount = $pages->sum(fn ($page) => $page->sections->count());

@@ -1,4 +1,7 @@
 <div style="color: white;">
+    @php
+        $tenantBaseDomain = tenant_domain();
+    @endphp
     <div class="alert alert-{{ $alertType }} justify-between items-center {{ $alert === false ? 'hidden' : 'flex' }}">
         {{ $alertMessage }}
         <button type="button" class="btn-close" wire:click="closeModal">
@@ -144,9 +147,7 @@
                         <div class="flex items-center text-gray-500 px-2">.</div>
                         <select aria-label="الدومين الأساسي"
                             class="w-56 rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
-                            <option>palgoals.com</option>
-                            <option>palgoals.store</option>
-                                <option>wpgoals.com</option>
+                            <option>{{ $tenantBaseDomain }}</option>
                         </select>
                     </div>
                     <p class="text-xs text-gray-500">سنوفر لك Subdomain مجاني لبدء مشروعك بسرعة (يمكن الترقيه لاحقاً

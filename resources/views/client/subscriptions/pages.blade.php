@@ -12,11 +12,7 @@
         $createPageErrors = $errors->getBag('createPage');
         $pageSettingsErrors = $errors->getBag('pageSettings');
         $domainName = trim((string) ($subscription->domain_name ?? ''));
-        $siteUrl = $domainName !== ''
-            ? (\Illuminate\Support\Str::startsWith($domainName, ['http://', 'https://'])
-                ? rtrim($domainName, '/')
-                : rtrim((request()->secure() ? 'https://' : 'http://') . ltrim($domainName, '/'), '/'))
-            : null;
+        $siteUrl = $domainName !== '' ? rtrim(tenant_url($domainName), '/') : null;
     @endphp
 
     <div class="mx-auto max-w-6xl space-y-6 px-1 pb-10">

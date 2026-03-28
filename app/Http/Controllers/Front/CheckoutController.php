@@ -597,13 +597,7 @@ class CheckoutController extends Controller
 
     protected function tenantUrl(string $domain): string
     {
-        if (preg_match('#^https?://#i', $domain)) {
-            return $domain;
-        }
-
-        $scheme = parse_url(config('app.url'), PHP_URL_SCHEME) ?: request()->getScheme();
-
-        return $scheme . '://' . ltrim($domain, '/');
+        return tenant_url($domain);
     }
 
     protected function loadCheckoutSubscriptions(array $subscriptionIds)

@@ -286,9 +286,7 @@ class SubscriptionPageEditorController extends SectionController
             return route('client.subscriptions.pages', $this->workspaceSubscription);
         }
 
-        $baseUrl = Str::startsWith($domainName, ['http://', 'https://'])
-            ? rtrim($domainName, '/')
-            : rtrim((request()->isSecure() ? 'https://' : 'http://') . ltrim($domainName, '/'), '/');
+        $baseUrl = rtrim(tenant_url($domainName), '/');
 
         $translation = $page->translation();
         $slug = trim((string) ($translation?->slug ?? ''), '/');
