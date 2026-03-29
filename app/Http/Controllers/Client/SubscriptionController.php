@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenancy\Subscription;
+use App\Support\Sites\SiteOnboardingProgress;
 use App\Services\Tenancy\DomainVerificationService;
 use Illuminate\Http\Request;
 
@@ -19,7 +20,12 @@ class SubscriptionController extends Controller
         return $this->renderContentManagement($request, $subscription, $verification);
     }
 
-    public function site(Request $request, Subscription $subscription, DomainVerificationService $verification)
+    public function site(
+        Request $request,
+        Subscription $subscription,
+        DomainVerificationService $verification,
+        SiteOnboardingProgress $onboarding
+    )
     {
         $subscription = $this->resolveOwnedSubscription($request, $subscription);
         $subscription->load([
@@ -53,6 +59,7 @@ class SubscriptionController extends Controller
             'siteUrl' => $siteUrl,
             'domainName' => $domainName,
             'domainVerification' => $verification->detailsFor($subscription),
+            'siteOnboarding' => $onboarding->for($subscription),
         ]);
     }
 

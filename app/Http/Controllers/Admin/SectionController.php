@@ -647,6 +647,14 @@ class SectionController extends Controller
     protected function availableSectionTypes(): array
     {
         return [
+            'hero' => [
+                'type'        => 'hero',
+                'label'       => 'Hero',
+                'description' => 'Landing-page hero with headline, actions, highlights, and media.',
+                'category'    => 'hero',
+                'preview'     => null,
+            ],
+
             'hero_default' => [
                 'type'        => 'hero_default',
                 'label'       => 'Hero - Default',
@@ -775,6 +783,38 @@ class SectionController extends Controller
                 'preview'     => 'assets/admin/sections/features-grid.png',
             ],
 
+            'features' => [
+                'type'        => 'features',
+                'label'       => 'Features',
+                'description' => 'Simple landing-page features block with editable benefit bullets.',
+                'category'    => 'features',
+                'preview'     => null,
+            ],
+
+            'cta' => [
+                'type'        => 'cta',
+                'label'       => 'CTA',
+                'description' => 'Compact call-to-action strip with badge, copy, and one button.',
+                'category'    => 'other',
+                'preview'     => null,
+            ],
+
+            'testimonials' => [
+                'type'        => 'testimonials',
+                'label'       => 'Testimonials',
+                'description' => 'Manual testimonial cards for client landing pages.',
+                'category'    => 'testimonials',
+                'preview'     => null,
+            ],
+
+            'faq' => [
+                'type'        => 'faq',
+                'label'       => 'FAQ',
+                'description' => 'Question-and-answer list for client landing pages.',
+                'category'    => 'other',
+                'preview'     => null,
+            ],
+
             'services_grid' => [
                 'type'        => 'services_grid',
                 'label'       => 'Services Grid',
@@ -799,9 +839,23 @@ class SectionController extends Controller
     protected function normalizeContentByType(string $type, array $content): array
     {
         switch ($type) {
+            case 'hero':
             case 'hero_default':
             case 'hero_minimal':
                 return $this->normalizeHeroContent($content);
+
+            case 'features':
+            case 'features_grid':
+                return $this->normalizeSimpleFeaturesContent($content);
+
+            case 'cta':
+                return $this->normalizeSimpleCtaContent($content);
+
+            case 'testimonials':
+                return $this->normalizeManualTestimonialsContent($content);
+
+            case 'faq':
+                return $this->normalizeFaqContent($content);
 
             case 'hero_campaign':
                 return $this->normalizeHeroCampaignContent($content);
@@ -886,6 +940,28 @@ class SectionController extends Controller
     protected function defaultContentForType(string $type, string $pageTitle): array
     {
         return match ($type) {
+            'hero' => [
+                'eyebrow'  => 'New section',
+                'title'    => $pageTitle,
+                'subtitle' => 'Update this hero from the section editor.',
+                'primary_button' => [
+                    'label' => 'Get Started',
+                    'url'   => '#',
+                    'new_tab' => false,
+                ],
+                'secondary_button' => [
+                    'label' => 'Learn More',
+                    'url'   => '#',
+                ],
+                'features' => [
+                    'First benefit',
+                    'Second benefit',
+                    'Third benefit',
+                ],
+                'media_type' => 'image',
+                'media_url'  => null,
+            ],
+
             'hero_default' => [
                 'eyebrow'  => 'New section',
                 'title'    => $pageTitle,
@@ -943,6 +1019,26 @@ class SectionController extends Controller
                 'title'    => 'Why choose us',
                 'subtitle' => 'Add your key benefits here.',
                 'features' => [],
+            ],
+
+            'features' => [
+                'title'    => 'Why choose us',
+                'subtitle' => 'Add your key benefits here.',
+                'features' => [
+                    'First benefit',
+                    'Second benefit',
+                    'Third benefit',
+                ],
+            ],
+
+            'cta' => [
+                'eyebrow' => 'Ready to customize',
+                'subtitle' => 'Guide visitors toward one clear next step.',
+                'primary_button' => [
+                    'label' => 'Start Now',
+                    'url' => '#',
+                    'new_tab' => false,
+                ],
             ],
 
             'programming_showcase' => [
@@ -1046,6 +1142,22 @@ class SectionController extends Controller
                 'title' => 'REVIEWS',
                 'description' => 'Customer opinions drive innovation, trust, and growth',
                 'limit' => 8,
+            ],
+
+            'testimonials' => [
+                'subtitle' => 'Short proof points help build trust.',
+                'items' => [
+                    ['name' => 'Amina', 'text' => 'This block is ready to customize.', 'rating' => 5],
+                    ['name' => 'Omar', 'text' => 'Add your own testimonials here.', 'rating' => 5],
+                ],
+            ],
+
+            'faq' => [
+                'subtitle' => 'Answer the most common questions here.',
+                'items' => [
+                    ['question' => 'Can I edit this later?', 'answer' => 'Yes, you can update the content from the section editor any time.'],
+                    ['question' => 'Does this work on mobile?', 'answer' => 'Yes, the layout is responsive by default.'],
+                ],
             ],
 
             'our_work_showcase' => [
@@ -1221,6 +1333,198 @@ class SectionController extends Controller
             'features' => $features,
             'media_type' => $content['media_type'] ?? 'image',
             'media_url' => $content['media_url'] ?? null,
+        ];
+    }
+
+    /**
+     * Normalize simple feature blocks used by tenant landing pages.
+     */
+    protected function normalizeSimpleFeaturesContent(array $content): array
+    {
+        $itemsRaw = $content['features_textarea'] ?? ($content['items'] ?? ($content['features'] ?? []));
+
+        $items = is_array($itemsRaw)
+            ? collect($itemsRaw)
+                ->map(function ($item): ?array {
+                    if (is_scalar($item)) {
+                        $title = trim((string) $item);
+
+                        return $title !== ''
+                            ? ['icon' => '', 'title' => $title, 'description' => '']
+                            : null;
+                    }
+
+                    if (! is_array($item)) {
+                        return null;
+                    }
+
+                    $title = trim((string) ($item['title'] ?? $item['text'] ?? $item['label'] ?? ''));
+                    $description = trim((string) ($item['description'] ?? $item['subtitle'] ?? ''));
+                    $icon = trim((string) ($item['icon'] ?? ''));
+
+                    if ($title === '' && $description === '') {
+                        return null;
+                    }
+
+                    return [
+                        'icon' => $icon,
+                        'title' => $title,
+                        'description' => $description,
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all()
+            : collect(preg_split("/\r\n|\r|\n/", (string) $itemsRaw))
+                ->map(fn($item) => trim((string) $item))
+                ->filter()
+                ->values()
+                ->map(fn($item) => [
+                    'icon' => '',
+                    'title' => $item,
+                    'description' => '',
+                ])
+                ->all();
+
+        return [
+            'title' => $content['title'] ?? null,
+            'subtitle' => $content['subtitle'] ?? null,
+            'features' => $items,
+            'items' => $items,
+        ];
+    }
+
+    /**
+     * Normalize simple CTA blocks used by tenant landing pages.
+     */
+    protected function normalizeSimpleCtaContent(array $content): array
+    {
+        $buttonLabel = $content['primary_button_text']
+            ?? ($content['primary_button_label'] ?? ($content['primary_button']['label'] ?? null));
+        $buttonUrl = $content['primary_button_url']
+            ?? ($content['primary_button']['url'] ?? null);
+        $buttonNewTab = filter_var(
+            $content['primary_button_new_tab']
+                ?? ($content['primary_button']['new_tab'] ?? false),
+            FILTER_VALIDATE_BOOLEAN
+        );
+        $badge = trim((string) ($content['badge'] ?? ($content['eyebrow'] ?? '')));
+
+        return [
+            'eyebrow' => $badge !== '' ? $badge : null,
+            'badge' => $badge !== '' ? $badge : null,
+            'title' => $content['title'] ?? null,
+            'subtitle' => $content['subtitle'] ?? null,
+            'primary_button_text' => $buttonLabel,
+            'primary_button_url' => $buttonUrl,
+            'primary_button_new_tab' => $buttonNewTab,
+            'primary_button' => [
+                'label' => $buttonLabel,
+                'url' => $buttonUrl,
+                'new_tab' => $buttonNewTab,
+            ],
+        ];
+    }
+
+    /**
+     * Normalize manual testimonial cards for tenant landing pages.
+     */
+    protected function normalizeManualTestimonialsContent(array $content): array
+    {
+        $items = collect(is_array($content['items'] ?? null) ? $content['items'] : [])
+            ->map(function ($item): ?array {
+                if (! is_array($item)) {
+                    return null;
+                }
+
+                $name = trim((string) ($item['name'] ?? ''));
+                $role = trim((string) ($item['role'] ?? ''));
+                $text = trim((string) ($item['text'] ?? ($item['quote'] ?? '')));
+                $rating = max(0, min(5, (int) ($item['rating'] ?? 5)));
+
+                if ($name === '' && $role === '' && $text === '') {
+                    return null;
+                }
+
+                return [
+                    'name' => $name,
+                    'role' => $role,
+                    'text' => $text,
+                    'rating' => $rating,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        $description = trim((string) ($content['description'] ?? ($content['subtitle'] ?? '')));
+
+        return [
+            'eyebrow' => trim((string) ($content['eyebrow'] ?? '')) ?: null,
+            'title' => $content['title'] ?? null,
+            'description' => $description !== '' ? $description : null,
+            'subtitle' => $description !== '' ? $description : null,
+            'items' => $items,
+        ];
+    }
+
+    /**
+     * Normalize FAQ blocks with either textarea or structured items.
+     */
+    protected function normalizeFaqContent(array $content): array
+    {
+        $itemsRaw = $content['faq_textarea'] ?? ($content['items'] ?? ($content['faq'] ?? []));
+
+        $items = is_array($itemsRaw)
+            ? collect($itemsRaw)
+                ->map(function ($item): ?array {
+                    if (! is_array($item)) {
+                        $question = trim((string) $item);
+
+                        return $question === ''
+                            ? null
+                            : ['question' => $question, 'answer' => ''];
+                    }
+
+                    $question = trim((string) ($item['question'] ?? ''));
+                    $answer = trim((string) ($item['answer'] ?? ''));
+
+                    if ($question === '' && $answer === '') {
+                        return null;
+                    }
+
+                    return [
+                        'question' => $question,
+                        'answer' => $answer,
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all()
+            : collect(preg_split("/\r\n|\r|\n/", (string) $itemsRaw))
+                ->map(function ($line): ?array {
+                    $line = trim((string) $line);
+
+                    if ($line === '') {
+                        return null;
+                    }
+
+                    [$question, $answer] = array_pad(array_map('trim', explode('||', $line, 2)), 2, '');
+
+                    return [
+                        'question' => $question,
+                        'answer' => $answer,
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all();
+
+        return [
+            'title' => $content['title'] ?? null,
+            'subtitle' => $content['subtitle'] ?? null,
+            'items' => $items,
+            'faq' => $items,
         ];
     }
 

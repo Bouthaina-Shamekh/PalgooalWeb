@@ -35,6 +35,11 @@ class SectionEditorDataFactory
         $isDomainsShowcase = $selectedType === 'domains_showcase';
         $isTemplatesSliderShowcase = $selectedType === 'templates_slider_showcase';
         $isTemplatesListingShowcase = $selectedType === 'templates_listing_showcase';
+        $isSimpleHero = $selectedType === 'hero';
+        $isSimpleFeatures = $selectedType === 'features';
+        $isSimpleCta = $selectedType === 'cta';
+        $isSimpleTestimonials = $selectedType === 'testimonials';
+        $isSimpleFaq = $selectedType === 'faq';
 
         return [
             'selectedType' => $selectedType,
@@ -52,6 +57,11 @@ class SectionEditorDataFactory
                 'isDomainsShowcase' => $isDomainsShowcase,
                 'isTemplatesSliderShowcase' => $isTemplatesSliderShowcase,
                 'isTemplatesListingShowcase' => $isTemplatesListingShowcase,
+                'isSimpleHero' => $isSimpleHero,
+                'isSimpleFeatures' => $isSimpleFeatures,
+                'isSimpleCta' => $isSimpleCta,
+                'isSimpleTestimonials' => $isSimpleTestimonials,
+                'isSimpleFaq' => $isSimpleFaq,
             ],
             'usesInternalLabel' =>
             $isHeroCampaign ||
@@ -67,7 +77,7 @@ class SectionEditorDataFactory
                 $isTemplatesSliderShowcase ||
                 $isTemplatesListingShowcase,
             'flags' => [
-                'showEyebrowField' => $selectedType === 'hero_default',
+                'showEyebrowField' => in_array($selectedType, ['hero_default', 'hero', 'cta', 'testimonials'], true),
                 'showDescriptionField' =>
                 $isHeroCampaign ||
                     $isProgrammingShowcase ||
@@ -78,7 +88,8 @@ class SectionEditorDataFactory
                     $isHostingPricingShowcase ||
                     $isDomainsShowcase ||
                     $isTemplatesSliderShowcase ||
-                    $isTemplatesListingShowcase,
+                    $isTemplatesListingShowcase ||
+                    $isSimpleTestimonials,
                 'showFeaturesHeadingField' => $isHeroCampaign,
                 'showOutputsHeadingField' => $isProgrammingShowcase,
                 'showOutputsTextareaField' => $isProgrammingShowcase,
@@ -92,20 +103,23 @@ class SectionEditorDataFactory
                     $isOurWorkShowcase ||
                     $isDomainsShowcase ||
                     $isTemplatesSliderShowcase,
-                'showPrimaryButtonFields' => ! in_array(
+                'showPrimaryButtonFields' => in_array(
                     $selectedType,
                     [
-                        'how_we_build',
-                        'tech_stack_showcase',
-                        'reviews_showcase',
-                        'our_work_showcase',
-                        'hosting_pricing_showcase',
-                        'templates_slider_showcase',
-                        'templates_listing_showcase',
+                        'hero_default',
+                        'hero_minimal',
+                        'hero',
+                        'cta',
+                        'hero_campaign',
+                        'programming_showcase',
+                        'mobile_app_showcase',
+                        'design_showcase',
+                        'digital_marketing_showcase',
+                        'domains_showcase',
                     ],
                     true,
                 ),
-                'showSecondaryButtonFields' => $selectedType === 'hero_default',
+                'showSecondaryButtonFields' => in_array($selectedType, ['hero_default', 'hero'], true),
                 'showFeatureRepeaterField' => $isHeroCampaign,
                 'showBuildStepsRepeaterField' => $selectedType === 'how_we_build',
                 'showReviewsDatabaseField' => $isReviewsShowcase,
@@ -115,15 +129,15 @@ class SectionEditorDataFactory
                 'showHostingPricingDatabaseField' => $isHostingPricingShowcase,
                 'showTemplatesSliderDatabaseField' => $isTemplatesSliderShowcase,
                 'showTemplatesListingDatabaseField' => $isTemplatesListingShowcase,
-                'showFeaturesTextareaField' => in_array($selectedType, ['hero_default', 'features_grid'], true),
+                'showFeaturesTextareaField' => in_array($selectedType, ['hero_default', 'features_grid', 'hero', 'features'], true),
                 'showMobileAppGalleryField' => $isMobileAppShowcase,
                 'showDesignGalleryField' => $isDesignShowcase,
                 'showDigitalMarketingGalleryField' => $isDigitalMarketingShowcase,
                 'showTechStackMediaField' => $isTechStackShowcase,
-                'showMediaTypeField' => $selectedType === 'hero_default',
+                'showMediaTypeField' => in_array($selectedType, ['hero_default', 'hero'], true),
                 'showMediaUrlField' => in_array(
                     $selectedType,
-                    ['hero_default', 'hero_campaign', 'programming_showcase'],
+                    ['hero_default', 'hero', 'hero_campaign', 'programming_showcase'],
                     true,
                 ),
                 'showSubtitleField' => ! in_array(
@@ -140,12 +154,15 @@ class SectionEditorDataFactory
                         'domains_showcase',
                         'templates_slider_showcase',
                         'templates_listing_showcase',
+                        'testimonials',
                     ],
                     true,
                 ),
                 'showMainTitleField' => ! $isTechStackShowcase,
                 'showDomainsSearchHeadingField' => $isDomainsShowcase,
                 'showDomainsPlaceholderField' => $isDomainsShowcase,
+                'showFaqItemsTextareaField' => $isSimpleFaq,
+                'showReviewRepeaterField' => $isSimpleTestimonials,
             ],
             'hostingPricingAvailableCategories' => $isHostingPricingShowcase
                 ? PlanCategory::query()->active()->ordered()->with('translations')->get()

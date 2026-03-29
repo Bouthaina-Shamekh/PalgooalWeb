@@ -1,28 +1,78 @@
-N/A@N/ApN/AhN/ApN/A
-N/A N/A N/A N/A N/A$N/AiN/AtN/AeN/AmN/AsN/A N/A=N/A N/AdN/AaN/AtN/AaN/A_N/AgN/AeN/AtN/A(N/A$N/AcN/AoN/AnN/AtN/AeN/AnN/AtN/A,N/A N/A'N/AiN/AtN/AeN/AmN/AsN/A'N/A,N/A N/A[N/A]N/A)N/A;N/A
-N/A@N/AeN/AnN/AdN/ApN/AhN/ApN/A
-N/A<N/AsN/AeN/AcN/AtN/AiN/AoN/AnN/A N/AiN/AdN/A=N/A"N/AmN/AeN/AnN/AuN/A"N/A N/AcN/AlN/AaN/AsN/AsN/A=N/A"N/ArN/AoN/AuN/AnN/AdN/AeN/AdN/A-N/A2N/AxN/AlN/A N/AbN/AoN/ArN/AdN/AeN/ArN/A N/AbN/AgN/A-N/AwN/AhN/AiN/AtN/AeN/A N/AsN/AhN/AaN/AdN/AoN/AwN/A-N/AsN/AmN/A N/ApN/A-N/A8N/A"N/A>N/A
-N/A N/A N/A N/A N/A<N/AdN/AiN/AvN/A N/AcN/AlN/AaN/AsN/AsN/A=N/A"N/AfN/AlN/AeN/AxN/A N/AiN/AtN/AeN/AmN/AsN/A-N/AcN/AeN/AnN/AtN/AeN/ArN/A N/AjN/AuN/AsN/AtN/AiN/AfN/AyN/A-N/AbN/AeN/AtN/AwN/AeN/AeN/AnN/A N/AmN/AbN/A-N/A6N/A"N/A>N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/AdN/AiN/AvN/A>N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/ApN/A N/AcN/AlN/AaN/AsN/AsN/A=N/A"N/AtN/AeN/AxN/AtN/A-N/AxN/AsN/A N/AuN/ApN/ApN/AeN/ArN/AcN/AaN/AsN/AeN/A N/AtN/ArN/AaN/AcN/AkN/AiN/AnN/AgN/A-N/AwN/AiN/AdN/AeN/AsN/AtN/A N/AtN/AeN/AxN/AtN/A-N/AgN/ArN/AaN/AyN/A-N/A4N/A0N/A0N/A"N/A>N/A{N/A{N/A N/A_N/A_N/A(N/A'N/AMN/AeN/AnN/AuN/A'N/A)N/A N/A}N/A}N/A<N/A/N/ApN/A>N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/AhN/A2N/A N/AcN/AlN/AaN/AsN/AsN/A=N/A"N/AtN/AeN/AxN/AtN/A-N/A2N/AxN/AlN/A N/AfN/AoN/AnN/AtN/A-N/AbN/AoN/AlN/AdN/A N/AtN/AeN/AxN/AtN/A-N/AgN/ArN/AaN/AyN/A-N/A9N/A0N/A0N/A"N/A>N/A{N/A{N/A N/A$N/AtN/ArN/AaN/AnN/AsN/AlN/AaN/AtN/AiN/AoN/AnN/A-N/A>N/AtN/AiN/AtN/AlN/AeN/A N/A?N/A?N/A N/A_N/A_N/A(N/A'N/ASN/AiN/AgN/AnN/AaN/AtN/AuN/ArN/AeN/A N/AdN/AiN/AsN/AhN/AeN/AsN/A'N/A)N/A N/A}N/A}N/A<N/A/N/AhN/A2N/A>N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/A/N/AdN/AiN/AvN/A>N/A
-N/A N/A N/A N/A N/A<N/A/N/AdN/AiN/AvN/A>N/A
-N/A N/A N/A N/A N/A@N/AiN/AfN/A N/A(N/AeN/AmN/ApN/AtN/AyN/A(N/A$N/AiN/AtN/AeN/AmN/AsN/A)N/A)N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/ApN/A N/AcN/AlN/AaN/AsN/AsN/A=N/A"N/AtN/AeN/AxN/AtN/A-N/AgN/ArN/AaN/AyN/A-N/A5N/A0N/A0N/A N/AtN/AeN/AxN/AtN/A-N/AsN/AmN/A"N/A>N/A{N/A{N/A N/A_N/A_N/A(N/A'N/ANN/AoN/A N/AmN/AeN/AnN/AuN/A N/AiN/AtN/AeN/AmN/AsN/A N/AyN/AeN/AtN/A.N/A'N/A)N/A N/A}N/A}N/A<N/A/N/ApN/A>N/A
-N/A N/A N/A N/A N/A@N/AeN/AlN/AsN/AeN/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/AdN/AiN/AvN/A N/AcN/AlN/AaN/AsN/AsN/A=N/A"N/AgN/ArN/AiN/AdN/A N/AmN/AdN/A:N/AgN/ArN/AiN/AdN/A-N/AcN/AoN/AlN/AsN/A-N/A2N/A N/AgN/AaN/ApN/A-N/A6N/A"N/A>N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A@N/AfN/AoN/ArN/AeN/AaN/AcN/AhN/A N/A(N/A$N/AiN/AtN/AeN/AmN/AsN/A N/AaN/AsN/A N/A$N/AiN/AtN/AeN/AmN/A)N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/AdN/AiN/AvN/A N/AcN/AlN/AaN/AsN/AsN/A=N/A"N/AfN/AlN/AeN/AxN/A N/AfN/AlN/AeN/AxN/A-N/AcN/AoN/AlN/A N/AgN/AaN/ApN/A-N/A1N/A N/AbN/AoN/ArN/AdN/AeN/ArN/A N/ArN/AoN/AuN/AnN/AdN/AeN/AdN/A-N/AxN/AlN/A N/ApN/A-N/A4N/A N/AhN/AoN/AvN/AeN/ArN/A:N/AbN/AoN/ArN/AdN/AeN/ArN/A-N/AoN/ArN/AaN/AnN/AgN/AeN/A-N/A3N/A0N/A0N/A N/AtN/ArN/AaN/AnN/AsN/AiN/AtN/AiN/AoN/AnN/A"N/A>N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/AdN/AiN/AvN/A N/AcN/AlN/AaN/AsN/AsN/A=N/A"N/AfN/AlN/AeN/AxN/A N/AiN/AtN/AeN/AmN/AsN/A-N/AcN/AeN/AnN/AtN/AeN/ArN/A N/AjN/AuN/AsN/AtN/AiN/AfN/AyN/A-N/AbN/AeN/AtN/AwN/AeN/AeN/AnN/A"N/A>N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/AhN/A3N/A N/AcN/AlN/AaN/AsN/AsN/A=N/A"N/AtN/AeN/AxN/AtN/A-N/AlN/AgN/A N/AfN/AoN/AnN/AtN/A-N/AsN/AeN/AmN/AiN/AbN/AoN/AlN/AdN/A N/AtN/AeN/AxN/AtN/A-N/AgN/ArN/AaN/AyN/A-N/A9N/A0N/A0N/A"N/A>N/A{N/A{N/A N/AdN/AaN/AtN/AaN/A_N/AgN/AeN/AtN/A(N/A$N/AiN/AtN/AeN/AmN/A,N/A N/A'N/AnN/AaN/AmN/AeN/A'N/A)N/A N/A?N/A?N/A N/A_N/A_N/A(N/A'N/ADN/AiN/AsN/AhN/A'N/A)N/A N/A}N/A}N/A<N/A/N/AhN/A3N/A>N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/AsN/ApN/AaN/AnN/A N/AcN/AlN/AaN/AsN/AsN/A=N/A"N/AtN/AeN/AxN/AtN/A-N/AoN/ArN/AaN/AnN/AgN/AeN/A-N/A6N/A0N/A0N/A N/AfN/AoN/AnN/AtN/A-N/AbN/AoN/AlN/AdN/A"N/A>N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A{N/A{N/A N/AdN/AaN/AtN/AaN/A_N/AgN/AeN/AtN/A(N/A$N/AiN/AtN/AeN/AmN/A,N/A N/A'N/ApN/ArN/AiN/AcN/AeN/A'N/A)N/A N/A?N/A?N/A N/A'N/ANN/A/N/AAN/A'N/A N/A}N/A}N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/A/N/AsN/ApN/AaN/AnN/A>N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/A/N/AdN/AiN/AvN/A>N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/ApN/A N/AcN/AlN/AaN/AsN/AsN/A=N/A"N/AtN/AeN/AxN/AtN/A-N/AsN/AmN/A N/AtN/AeN/AxN/AtN/A-N/AgN/ArN/AaN/AyN/A-N/A5N/A0N/A0N/A"N/A>N/A{N/A{N/A N/AdN/AaN/AtN/AaN/A_N/AgN/AeN/AtN/A(N/A$N/AiN/AtN/AeN/AmN/A,N/A N/A'N/AdN/AeN/AsN/AcN/ArN/AiN/ApN/AtN/AiN/AoN/AnN/A'N/A)N/A N/A?N/A?N/A N/A_N/A_N/A(N/A'N/ATN/AaN/AsN/AtN/AyN/A N/AaN/AnN/AdN/A N/AfN/ArN/AeN/AsN/AhN/A.N/A'N/A)N/A N/A}N/A}N/A<N/A/N/ApN/A>N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/A/N/AdN/AiN/AvN/A>N/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A N/A@N/AeN/AnN/AdN/AfN/AoN/ArN/AeN/AaN/AcN/AhN/A
-N/A N/A N/A N/A N/A N/A N/A N/A N/A<N/A/N/AdN/AiN/AvN/A>N/A
-N/A N/A N/A N/A N/A@N/AeN/AnN/AdN/AiN/AfN/A
-N/A<N/A/N/AsN/AeN/AcN/AtN/AiN/AoN/AnN/A>N/A
+@php
+    $items = collect(data_get($content, 'items', []))
+        ->filter(fn ($item) => is_array($item))
+        ->values();
+
+    $eyebrow = data_get($content, 'eyebrow', __('Signature Menu'));
+    $description = data_get($content, 'description');
+    $note = data_get($content, 'note');
+    $variant = (string) ($section->variant ?? '');
+
+    $gridClass = match ($variant) {
+        'two-column' => 'grid gap-4 md:grid-cols-2',
+        'three-column' => 'grid gap-4 md:grid-cols-3',
+        default => 'space-y-4',
+    };
+@endphp
+
+<section class="rounded-3xl border border-orange-100 bg-white p-8 shadow-sm">
+    <div class="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div class="max-w-2xl">
+            <p class="text-xs font-semibold uppercase tracking-[0.3em] text-orange-500">
+                {{ $eyebrow }}
+            </p>
+            <h2 class="mt-3 text-3xl font-extrabold text-gray-900">
+                {{ $translation->title ?? __('Chef Selection') }}
+            </h2>
+            @if (!empty($description))
+                <p class="mt-3 text-sm leading-7 text-gray-600">
+                    {{ $description }}
+                </p>
+            @endif
+        </div>
+
+        @if (!empty($note))
+            <div class="rounded-2xl bg-orange-50 px-4 py-3 text-sm font-medium text-orange-700">
+                {{ $note }}
+            </div>
+        @endif
+    </div>
+
+    @if ($items->isEmpty())
+        <div class="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 py-6 text-sm text-gray-500">
+            {{ __('No menu items have been added yet.') }}
+        </div>
+    @else
+        <div class="{{ $gridClass }}">
+            @foreach ($items as $item)
+                @php
+                    $name = data_get($item, 'name', __('Menu Item'));
+                    $itemDescription = data_get($item, 'description');
+                    $price = data_get($item, 'price');
+                @endphp
+
+                <article class="rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-orange-50/40 p-5 shadow-sm">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-lg font-bold text-gray-900">
+                                {{ $name }}
+                            </h3>
+
+                            @if (!empty($itemDescription))
+                                <p class="mt-2 text-sm leading-6 text-gray-600">
+                                    {{ $itemDescription }}
+                                </p>
+                            @endif
+                        </div>
+
+                        @if (!empty($price))
+                            <span class="shrink-0 rounded-full bg-orange-500 px-3 py-1 text-sm font-bold text-white shadow-sm">
+                                {{ $price }}
+                            </span>
+                        @endif
+                    </div>
+                </article>
+            @endforeach
+        </div>
+    @endif
+</section>

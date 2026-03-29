@@ -57,6 +57,19 @@
         ->map(fn($t) => trim($t))
         ->unique()
         ->values();
+
+    $socialLinks = is_array($settings?->social_links ?? null) ? $settings->social_links : [];
+    $contactInfo = is_array($settings?->resolved_contact_info ?? null) ? $settings->resolved_contact_info : [];
+    $whatsappUrl = trim((string) ($socialLinks['whatsapp'] ?? ''));
+
+    if ($whatsappUrl === '') {
+        $phoneDigits = preg_replace('/\D+/', '', (string) ($contactInfo['phone'] ?? ''));
+        if ($phoneDigits !== '') {
+            $whatsappUrl = 'https://wa.me/' . $phoneDigits;
+        }
+    }
+
+    $hasWhatsappContact = $whatsappUrl !== '';
 @endphp
 
 <x-template.layouts.index-layouts
@@ -106,14 +119,16 @@
                 <div
                     class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 overflow-hidden">
                     <div class="relative w-full aspect-[5/3] group">
+                        <div class="absolute inset-x-[16%] bottom-3 z-0 h-10 rounded-full bg-slate-950/20 blur-2xl opacity-70"></div>
                         <img loading="lazy" src="{{ asset('storage/' . $template->image) }}"
                             alt="{{ $translation?->name }}"
-                            class="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105">
+                            class="absolute inset-0 z-10 w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent"></div>
                         @if ($hasDiscount)
                             <span
-                                class="absolute top-4 right-4 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                                -{{ $discountPerc }}%
+                                class="absolute right-4 top-4 z-20 inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-1.5 text-xs font-extrabold text-white shadow-xl shadow-red-600/30 ring-4 ring-white/70 dark:ring-gray-800/70">
+                                <span>-{{ $discountPerc }}%</span>
+                                <span class="rounded-full bg-white/20 px-2 py-0.5 text-[11px] uppercase tracking-wide">{{ t('Frontend.Limited_offer', 'Limited offer') }}</span>
                             </span>
                         @endif
                     </div>
@@ -137,14 +152,18 @@
                                 <span>{{ t('Frontend.View_Template', 'View Template') }}</span>
                             </a>
                         @endif
-                        <a href="#"
-                            class="flex items-center justify-center gap-2.5 text-center bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold shadow-lg shadow-green-500/30 hover:shadow-green-500/40 transition-all duration-300 transform hover:-translate-y-0.5">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
-                                fill="currentColor">
-                                <path
-                                    d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                            </svg>
-                            <span>{{ t('Frontend.Contact_us', 'Contact us') }}</span>
+                        <a href="{{ $hasWhatsappContact ? $whatsappUrl : '#' }}"
+                            @if ($hasWhatsappContact) target="_blank" rel="noopener" @endif
+                            class="relative flex items-center justify-center gap-2.5 overflow-hidden rounded-lg bg-green-500 py-3 text-center font-bold text-white shadow-lg shadow-green-500/30 transition-all duration-300 hover:-translate-y-0.5 hover:bg-green-600 hover:shadow-[0_0_34px_rgba(34,197,94,0.42)]">
+                            <span class="absolute inset-0 rounded-lg bg-green-400/30 opacity-70 blur-lg animate-pulse"></span>
+                            <span class="relative flex items-center gap-2.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
+                                    fill="currentColor">
+                                    <path
+                                        d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.198.297-.768.966-.941 1.164-.173.198-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.762-1.653-2.059-.173-.297-.018-.458.13-.606.133-.132.298-.347.446-.52.149-.174.198-.298.298-.496.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.273.297-1.04 1.015-1.04 2.479 0 1.463 1.065 2.877 1.213 3.075.149.198 2.095 3.2 5.077 4.487.71.307 1.263.49 1.694.627.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.414.248-.694.248-1.29.173-1.414-.074-.124-.272-.198-.57-.347Z" />
+                                </svg>
+                                <span>{{ t('Frontend.WhatsApp', 'WhatsApp') }}</span>
+                            </span>
                         </a>
                     </div>
                 </div>
@@ -502,22 +521,45 @@
                         <span class="font-semibold" aria-hidden="true">{{ number_format($avg, 1) }}</span>
                         <span class="sr-only">({{ number_format($avg, 1) }} من 5)</span>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <p class="text-base font-medium text-gray-600 dark:text-gray-300">
-                            {{ t('Frontend.Price', 'Price') }}:</p>
-                        <div class="flex items-baseline gap-2">
-                            <span class="text-4xl font-bold text-primary dark:text-primary-400"
-                                x-text="money(finalPrice())">
-                                ${{ number_format($finalPrice, 2) }}
-                            </span>
-                            <span class="text-xl text-gray-400 dark:text-gray-500 line-through" x-show="hasDiscount"
-                                style="display:none;">
-                                ${{ number_format($basePrice, 2) }}
-                            </span>
+                    <div
+                        class="rounded-2xl border border-red-100 bg-gradient-to-br from-red-50 via-white to-amber-50 p-4 shadow-inner shadow-red-100/40 dark:border-red-900/20 dark:from-red-950/20 dark:via-gray-800 dark:to-amber-950/10">
+                        @if ($hasDiscount)
+                            <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                <span
+                                    class="inline-flex items-center rounded-full bg-red-600 px-3 py-1 text-xs font-extrabold uppercase tracking-wide text-white shadow-lg shadow-red-600/25">
+                                    {{ t('Frontend.Save_today', 'Save today') }} {{ $discountPerc }}%
+                                </span>
+                                <span class="text-xs font-semibold text-red-600 dark:text-red-300">
+                                    {{ t('Frontend.Best_price_today', 'Best price today') }}
+                                </span>
+                            </div>
+                        @endif
+
+                        <div class="flex justify-between items-end gap-4">
+                            <p class="text-base font-semibold text-gray-700 dark:text-gray-200">
+                                {{ t('Frontend.Price', 'Price') }}:
+                            </p>
+                            <div class="text-end">
+                                <div class="flex items-baseline justify-end gap-2">
+                                    <span class="text-4xl font-black tracking-tight text-primary dark:text-primary-400"
+                                        x-text="money(finalPrice())">
+                                        ${{ number_format($finalPrice, 2) }}
+                                    </span>
+                                    <span class="text-xl text-gray-400 dark:text-gray-500 line-through" x-show="hasDiscount"
+                                        style="display:none;">
+                                        ${{ number_format($basePrice, 2) }}
+                                    </span>
+                                </div>
+                                @if ($hasDiscount)
+                                    <p class="mt-1 text-xs font-medium text-red-600 dark:text-red-300">
+                                        {{ t('Frontend.Discount_applied_at_checkout', 'Discount already applied') }}
+                                    </p>
+                                @endif
+                            </div>
                         </div>
                     </div>
                     @if ($endsAt)
-                        <div class="bg-red-100/50 dark:bg-red-900/20 text-sm p-3 rounded-lg text-red-700 dark:text-red-300 font-semibold text-center"
+                        <div class="bg-red-100/50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/30 text-sm p-3 rounded-xl text-red-700 dark:text-red-300 font-bold text-center shadow-sm"
                             x-show="hasDiscount && leftMs > 0" style="display:none;" aria-live="polite">
                             🔥 {{ t('Frontend.Offer_ends_in', 'Offer ends in') }}:
                             <span class="font-mono tracking-wider"
@@ -584,7 +626,7 @@
                         data-template-id="{{ $template->id }}"
                         data-template-name="{{ $translation?->name ?? ($template->name ?? 'Template') }}"
                         data-price-cents="{{ $finalPriceCents }}"
-                        class="w-full text-center bg-primary hover:bg-primary/90 text-white py-3.5 rounded-xl font-bold text-base shadow-xl shadow-primary/30 hover:shadow-primary/40 transition-all duration-300 transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                        class="w-full text-center bg-gradient-to-r from-primary to-red-brand hover:from-primary/95 hover:to-red-brand/95 text-white py-4 rounded-2xl font-extrabold text-lg shadow-2xl shadow-primary/35 hover:shadow-[0_18px_45px_rgba(36,11,54,0.35)] transition-all duration-300 transform hover:-translate-y-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary ring-1 ring-white/20"
                         aria-label="اشترك الآن في {{ $translation?->name }} بسعر {{ number_format($finalPrice, 2) }} دولار">
                         🛒 {{ t('Frontend.Subscribe_now', 'Subscribe now') }}
                     </a>
@@ -596,6 +638,11 @@
                         </svg>
                         <span>{{ t('Frontend.Money_back_30_days', '30-day money-back guarantee') }}</span>
                     </div>
+                    @if ($hasDiscount)
+                        <p class="text-center text-xs font-semibold text-red-600 dark:text-red-300">
+                            {{ t('Frontend.Lock_offer_before_ends', 'Lock in this discounted price before the offer ends') }}
+                        </p>
+                    @endif
                 </div>
                 <!-- صندوق تفاصيل القالب -->
                 <div

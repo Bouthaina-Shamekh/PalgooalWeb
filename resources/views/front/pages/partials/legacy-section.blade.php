@@ -116,6 +116,14 @@
 @endphp
 
 @switch($resolvedSectionType)
+    @case('hero')
+        @include('tenant.sections.hero', [
+            'section' => $section,
+            'translation' => $fallbackTranslation,
+            'content' => $content,
+        ])
+        @break
+
     @case('hero_default')
     @case('hero_minimal')
         @include('components.template.sections.hero_default', [
@@ -233,6 +241,38 @@
 
     @case('features_grid')
         <x-template.sections.features :data="$featuresData" />
+        @break
+
+    @case('features')
+        @include('tenant.sections.features', [
+            'section' => $section,
+            'translation' => $fallbackTranslation,
+            'content' => $content,
+        ])
+        @break
+
+    @case('cta')
+        @include('tenant.sections.cta', [
+            'section' => $section,
+            'translation' => $fallbackTranslation,
+            'content' => $content,
+        ])
+        @break
+
+    @case('testimonials')
+        @include('tenant.sections.testimonials', [
+            'section' => $section,
+            'translation' => $fallbackTranslation,
+            'content' => $content,
+        ])
+        @break
+
+    @case('faq')
+        @include('tenant.sections.faq', [
+            'section' => $section,
+            'translation' => $fallbackTranslation,
+            'content' => $content,
+        ])
         @break
 
     @case('services_grid')
