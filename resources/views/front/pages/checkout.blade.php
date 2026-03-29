@@ -567,9 +567,28 @@
                         <div class="grid md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">رقم الجوال *</label>
-                                <input name="phone"
-                                    class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
-                                    placeholder="590000000" required />
+                                <div class="flex gap-2">
+                                    <select id="registerPhoneCountryCode"
+                                        class="w-32 rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                        aria-label="Country calling code">
+                                        <option value="+970" selected>PS +970</option>
+                                        <option value="+962">JO +962</option>
+                                        <option value="+966">SA +966</option>
+                                        <option value="+971">AE +971</option>
+                                        <option value="+20">EG +20</option>
+                                        <option value="+965">KW +965</option>
+                                        <option value="+974">QA +974</option>
+                                        <option value="+973">BH +973</option>
+                                        <option value="+968">OM +968</option>
+                                        <option value="+90">TR +90</option>
+                                        <option value="+1">US +1</option>
+                                    </select>
+                                    <input id="registerPhoneLocal" type="tel"
+                                        class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                        placeholder="590000000" inputmode="tel" autocomplete="tel-national" required />
+                                </div>
+                                <input type="hidden" name="phone" id="registerPhoneFull" value="">
+                                <p class="mt-1 text-xs text-gray-500">سيتم حفظ الرقم مع مفتاح الدولة المختار.</p>
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">البريد الإلكتروني *</label>
@@ -1044,6 +1063,7 @@
         const REQUIRES_DOMAIN_SELECTION = {{ $requires_domain_selection ? 'true' : 'false' }};
         const REVIEW_STEP_INDEX = REQUIRES_DOMAIN_SELECTION ? 1 : 0;
         const USE_AJAX_LOGIN = false; // رجوع للسلوك السابق: تحديث الصفحة عند تسجيل الدخول
+        const HAS_CLIENT_AUTH = {{ auth('client')->check() ? 'true' : 'false' }};
         const TEMPLATE_FINAL_CENTS = {{ (int) (($finalPrice ?? 0) * 100) }};
         let TEMPLATE_CENTS = TEMPLATE_FINAL_CENTS; // متغير قابل للتغيير عند إزالة القالب
 
@@ -1777,17 +1797,85 @@
                 const regForm = registerFormEl;
                 const box = document.getElementById('registerFieldsBox');
                 if (!regForm || !box) return;
+                syncRegisterPhoneField();
                 box.innerHTML = '';
                 regForm.querySelectorAll('input').forEach(function(input) {
+                    if (!input.name) return;
                     const clone = input.cloneNode();
                     clone.value = input.value;
-                    clone.type = input.type;
+                    clone.type = 'hidden';
                     clone.name = input.name;
-                    clone.required = input.required;
+                    clone.required = false;
                     clone.placeholder = input.placeholder;
                     clone.className = 'hidden';
                     box.appendChild(clone);
                 });
+            }
+
+            function syncRegisterPhoneField() {
+                if (!registerFormEl) return;
+
+                const countryCode = document.getElementById('registerPhoneCountryCode');
+                const phoneLocal = document.getElementById('registerPhoneLocal');
+                const phoneFull = document.getElementById('registerPhoneFull');
+
+                if (!phoneFull) return;
+
+                const code = String(countryCode?.value || '').trim();
+                const local = String(phoneLocal?.value || '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                phoneFull.value = local ? `${code} ${local}`.trim() : '';
+            }
+
+            function activeAuthTabName() {
+                return document.querySelector('[data-auth-tab][aria-selected="true"]')?.dataset.authTab || 'login';
+            }
+
+            function validateRegisterBeforeCheckout() {
+                if (!registerFormEl) return true;
+
+                syncRegisterPhoneField();
+
+                const fields = Array.from(registerFormEl.querySelectorAll('input'));
+                const email = registerFormEl.querySelector('input[name="email"]');
+                const password = registerFormEl.querySelector('input[name="password"]');
+                const passwordConfirmation = registerFormEl.querySelector('input[name="password_confirmation"]');
+                const phoneLocal = document.getElementById('registerPhoneLocal');
+                const firstEmpty = fields.find((input) => input.required && !String(input.value || '').trim());
+
+                if (firstEmpty) {
+                    alert('يرجى إكمال بيانات إنشاء الحساب أولاً.');
+                    firstEmpty.focus();
+                    return false;
+                }
+
+                if (email && email.validity && !email.validity.valid) {
+                    alert('يرجى إدخال بريد إلكتروني صحيح.');
+                    email.focus();
+                    return false;
+                }
+
+                if (phoneLocal && !String(phoneLocal.value || '').trim()) {
+                    alert('يرجى إدخال رقم الجوال.');
+                    phoneLocal.focus();
+                    return false;
+                }
+
+                if (password && String(password.value || '').length < 6) {
+                    alert('كلمة المرور يجب أن تكون 6 أحرف على الأقل.');
+                    password.focus();
+                    return false;
+                }
+
+                if (password && passwordConfirmation && password.value !== passwordConfirmation.value) {
+                    alert('تأكيد كلمة المرور غير مطابق.');
+                    passwordConfirmation.focus();
+                    return false;
+                }
+
+                return true;
             }
 
             function activateAuthTab(name) {
@@ -1805,6 +1893,7 @@
             authTabs.forEach(b => b.addEventListener('click', () => activateAuthTab(b.dataset.authTab)));
             activateAuthTab(document.querySelector('[data-auth-tab][aria-selected="true"]')?.dataset.authTab ||
                 'login');
+            syncRegisterPhoneField();
 
             // إخفاء رابط "تسجيل بحساب آخر" بشكل افتراضي وإظهاره عند الطلب
             document.getElementById('toggleLogout')?.addEventListener('click', () => {
@@ -2078,10 +2167,20 @@
                     ensureRegisterFields();
                 } catch {}
             });
+            document.getElementById('registerPhoneCountryCode')?.addEventListener('change', function() {
+                syncRegisterPhoneField();
+                try {
+                    ensureRegisterFields();
+                } catch {}
+            });
             document.querySelectorAll('#register-form input').forEach(function(input) {
                 input.addEventListener('input', function() {
+                    if (input.id === 'registerPhoneLocal' || input.name === 'phone') {
+                        syncRegisterPhoneField();
+                    }
                     const box = document.getElementById('registerFieldsBox');
                     if (!box) return;
+                    if (!input.name) return;
                     const hidden = box.querySelector(`[name="${input.name}"]`);
                     if (hidden) hidden.value = input.value;
                 });
@@ -2095,6 +2194,17 @@
                 const originalSubmitText = submitButton?.dataset.originalText || submitButton?.textContent || '';
                 if (submitButton && !submitButton.dataset.originalText) {
                     submitButton.dataset.originalText = originalSubmitText;
+                }
+                if (!HAS_CLIENT_AUTH) {
+                    const activeAuthTab = activeAuthTabName();
+                    if (activeAuthTab !== 'register') {
+                        alert('يرجى تسجيل الدخول أو اختيار إنشاء حساب جديد أولاً.');
+                        return;
+                    }
+
+                    if (!validateRegisterBeforeCheckout()) {
+                        return;
+                    }
                 }
                 try {
                     ensureRegisterFields();

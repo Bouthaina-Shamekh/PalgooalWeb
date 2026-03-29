@@ -100,6 +100,7 @@ class CheckoutController extends Controller
             $client->email       = $request->email;
             $client->phone       = $request->phone;
             $client->company_name = $request->company_name ?? '-';
+            $client->can_login   = true;
             $client->password    = bcrypt($request->password);
             $client->save();
 
