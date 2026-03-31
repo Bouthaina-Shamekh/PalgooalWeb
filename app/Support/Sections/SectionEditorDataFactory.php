@@ -363,6 +363,10 @@ class SectionEditorDataFactory
                         'footerCopyrightValue' => $this->stringValue(
                             old("translations.$code.content.copyright", $content['copyright'] ?? ''),
                         ),
+                        'headerLogoValue' => old(
+                            "translations.$code.content.logo",
+                            $content['logo'] ?? null,
+                        ),
                         'mediaUrlValue' => $this->stringValue(
                             old("translations.$code.content.media_url", $content['media_url'] ?? ''),
                         ),

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The editor system is the admin-facing interface used to create, edit, reorder, and manage sections for a page.
+The editor system is the shared sections workspace used to create, edit, reorder, and manage sections for a page.
 
 It currently supports two main editing surfaces for section content:
 
@@ -64,12 +64,17 @@ Use it when you need to:
 
 ## Scope
 
-This document covers the page sections editor under the admin dashboard.
+This document covers the shared sections editor system across:
+
+- admin page sections workspace
+- client tenant homepage editor
+- client tenant page editor
+- client tenant site header editor
+- client tenant site footer editor
 
 It does not cover:
 
 - the GrapesJS visual builder implementation in depth
-- client-facing tenant editors
 - low-level media library implementation details
 
 ## Main Components
@@ -90,6 +95,20 @@ Responsibilities:
 - validate updates
 - normalize content before save
 - manage reorder, move, duplicate, toggle, rename, and delete operations
+
+Client wrappers around the shared controller pattern:
+
+- `app/Http/Controllers/Client/SubscriptionHomepageEditorController.php`
+- `app/Http/Controllers/Client/SubscriptionPageEditorController.php`
+- `app/Http/Controllers/Client/SubscriptionSiteShellEditorController.php`
+
+These wrappers:
+
+- enforce client ownership checks
+- adapt route generation
+- adapt workspace labels and back links
+- limit section types where needed
+- keep the same save/update logic through the shared base controller
 
 ### Editor Support Classes
 
@@ -154,6 +173,15 @@ Related operational routes:
 - duplicate
 - delete
 
+Client-facing editor routes live in `routes/client.php`.
+
+Important groups:
+
+- `subscriptions/{subscription}/homepage/editor`
+- `subscriptions/{subscription}/pages/{page}/editor`
+- `subscriptions/{subscription}/site-header/editor`
+- `subscriptions/{subscription}/site-footer/editor`
+
 ## Load And Save Flow
 
 ### 1. Load Editor
@@ -178,6 +206,14 @@ Current responsibilities inside Blade include:
 - rendering repeater rows from prepared arrays
 - generating preview image lists through `SectionMediaPreviewBuilder`
 
+For client shell editors, the same partial is reused with shell-specific flags so the form can render:
+
+- header brand name
+- header CTA fields
+- footer description
+- footer contact fields
+- footer copyright
+
 ### 3. Submit Update
 
 On save:
@@ -200,6 +236,14 @@ That means one change can break:
 - full-page editing
 - inline workspace editing
 - admin JavaScript repeaters and tab logic
+
+In current reality, the shared partial now supports multiple workspace wrappers:
+
+- admin pages
+- client homepage
+- client inner pages
+- client site header
+- client site footer
 
 ### Mixed Responsibilities In Blade
 
@@ -353,6 +397,10 @@ All cases must remain safe.
 
 Inactive sections must remain editable in admin while remaining hidden on the frontend.
 
+### Shell-Only Section Types
+
+`site_header` and `site_footer` must remain editable in dedicated client shell editors without leaking into the normal page block picker unless that product decision changes deliberately.
+
 ## Safe Refactor Direction
 
 The editor should be improved incrementally, not rewritten.
@@ -392,6 +440,7 @@ In that shape:
 - Do not change `data-*` hooks unless you have traced the related JavaScript.
 - Do not mix save-time normalization refactors with read-time preparation refactors in one risky step.
 - Keep both editor entry points working in every change.
+- Keep shell editors working too when changing shared workspace code.
 - Prefer `SectionEditorDataFactory`, `SectionEditorRepeaterFactory`, and `SectionMediaPreviewBuilder` over new Blade-side preparation logic.
 
 ## Related Documents

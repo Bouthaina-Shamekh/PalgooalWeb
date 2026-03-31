@@ -1049,6 +1049,7 @@ class SectionController extends Controller
 
             'site_header' => [
                 'title' => 'My Website',
+                'logo' => null,
                 'primary_button' => [
                     'label' => 'Contact us',
                     'url' => '#contact',
@@ -1455,6 +1456,7 @@ class SectionController extends Controller
 
         return [
             'title' => trim((string) ($content['title'] ?? __('My Website'))),
+            'logo' => $this->sanitizeMediaReference($content['logo'] ?? null),
             'primary_button' => [
                 'label' => trim((string) ($content['primary_button_label'] ?? ($primaryButton['label'] ?? ''))),
                 'url' => trim((string) ($content['primary_button_url'] ?? ($primaryButton['url'] ?? ''))),

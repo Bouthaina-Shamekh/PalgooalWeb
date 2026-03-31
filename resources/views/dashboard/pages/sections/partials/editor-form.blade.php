@@ -344,6 +344,7 @@
                     $footerContactEmailValue = $localeScalarValues['footerContactEmailValue'] ?? '';
                     $footerContactPhoneValue = $localeScalarValues['footerContactPhoneValue'] ?? '';
                     $footerCopyrightValue = $localeScalarValues['footerCopyrightValue'] ?? '';
+                    $headerLogoValue = $localeScalarValues['headerLogoValue'] ?? null;
                     $pricingCategoryDatalistId = 'pricing-category-keys-' . $section->id . '-' . $code;
                     $mediaUrlValue = $localeScalarValues['mediaUrlValue'] ?? '';
                     $mediaTypeOld = $localeScalarValues['mediaTypeOld'] ?? 'image';
@@ -361,6 +362,9 @@
                         $isHeroCampaign || $isProgrammingShowcase
                             ? $mediaPreviewBuilder->build($campaignIllustrationValue)
                             : [];
+                    $headerLogoPreviewUrls = $isSiteHeader
+                        ? $mediaPreviewBuilder->build($headerLogoValue)
+                        : [];
                     $mobileAppImageOnePreviewUrls =
                         $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase
                             ? $mediaPreviewBuilder->build($mobileAppImageOneValue)
@@ -452,7 +456,7 @@
 
                         @if ($showMainTitleField)
                             <div
-                                class="{{ $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase ? 'lg:col-span-2' : '' }}">
+                                class="{{ $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase || $isSiteHeader ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
                                     {{ $isSiteHeader || $isSiteFooter
                                         ? __('Brand Name')
@@ -467,6 +471,16 @@
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                     @if ($isReviewsShowcase) placeholder="{{ __('REVIEWS') }}" @endif
                                     @if ($isOurWorkShowcase) placeholder="{{ __('OUR WORK') }}" @endif>
+                            </div>
+                        @endif
+
+                        @if ($isSiteHeader)
+                            <div class="lg:col-span-2">
+                                <x-dashboard.media-picker :name="'translations[' . $code . '][content][logo]'" :label="__('Brand Image')" :button-text="__('Choose From Media Library')" :value="$headerLogoValue" :preview-urls="$headerLogoPreviewUrls"
+                                    :multiple="false" store-value="id" />
+                                <p class="mt-2 text-xs text-slate-500">
+                                    {{ __('Upload a brand image from your media library. If you leave this empty, the header will use the first letter of the brand name.') }}
+                                </p>
                             </div>
                         @endif
 
@@ -893,7 +907,7 @@
 
                         @if ($showPrimaryButtonFields && !$isHeroCampaign)
                             <div
-                                class="{{ $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isDomainsShowcase ? 'lg:col-span-2' : '' }}">
+                                class="{{ $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isDomainsShowcase || $isSiteHeader ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
                                     {{ $isSiteHeader
                                         ? __('Header Button Label')
@@ -910,7 +924,7 @@
                             </div>
 
                             <div
-                                class="{{ $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isDomainsShowcase ? 'lg:col-span-2' : '' }}">
+                                class="{{ $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isDomainsShowcase || $isSiteHeader ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
                                     {{ $isSiteHeader
                                         ? __('Header Button URL')

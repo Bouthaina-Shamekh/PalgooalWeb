@@ -11,6 +11,11 @@ Use it when you need to:
 - trace data from admin input to frontend output
 - avoid breaking existing section content contracts
 
+This document now also covers tenant-owned site shell content:
+
+- global site header
+- global site footer
+
 ## What A Section Is
 
 A section is a typed, ordered content block that belongs to a page.
@@ -31,11 +36,13 @@ Role:
 - owns many sections
 - owns many translations
 - decides which builder mode is active
+- carries a `context` that decides where the page is used
 
 Important implications:
 
 - sections do not exist independently of pages
 - any section workflow is page-scoped
+- tenant site shell content is page-scoped too, even when it behaves like a global header or footer
 
 ### Section
 
@@ -53,6 +60,7 @@ Important fields:
 - `style`
 - `order`
 - `is_active`
+- `tenant_id` when the section belongs to tenant-owned canonical content
 
 ### SectionTranslation
 
@@ -71,6 +79,56 @@ Important fields:
 Production warning:
 
 - The `content` payload is not schema-less in practice. It is type-specific and functions like an implicit contract.
+
+## Tenant Page Contexts
+
+The canonical page model is also used for tenant runtime content.
+
+Current important contexts:
+
+- `marketing`
+- `tenant`
+- `tenant_header`
+- `tenant_footer`
+
+Meaning:
+
+- `tenant` = normal tenant pages such as homepage and inner pages
+- `tenant_header` = tenant-global site header shell
+- `tenant_footer` = tenant-global site footer shell
+
+Important implication:
+
+- header and footer are not a separate storage system
+- they are canonical pages with dedicated contexts
+
+## Tenant Site Shells
+
+Tenant-global chrome is orchestrated through:
+
+- `app/Services/Tenancy/TenantSiteShellService.php`
+
+Current behavior:
+
+- ensures a tenant has one header shell page
+- ensures a tenant has one footer shell page
+- seeds default translations and starter section content when missing
+- allows blueprints to define:
+  - `site_header`
+  - `site_footer`
+
+Runtime behavior:
+
+- `app/Http/Middleware/ServeTenantSite.php` resolves the normal tenant page
+- then loads shell pages through `TenantSiteShellService`
+- `resources/views/tenant/site.blade.php` renders:
+  - header shell sections
+  - current page sections
+  - footer shell sections
+
+Production warning:
+
+- tenant shell pages must not be counted as normal `context = tenant` pages in provisioning checks or onboarding heuristics unless that is intentional
 
 ## Data Model Example
 
@@ -169,9 +227,16 @@ Sections can contribute to page rendering through multiple page rendering paths,
 4. enrich with dynamic data if needed
 5. render the Blade component or partial
 
+For tenant runtime pages, the practical render sequence is now:
+
+1. load the tenant page with `context = tenant`
+2. load `tenant_header` shell if present
+3. load `tenant_footer` shell if present
+4. render shell + page + shell in one page response
+
 ## Supported Section Types
 
-The admin controller currently exposes these section types:
+The main admin controller currently exposes these shared/admin section types:
 
 - `hero_default`
 - `hero_minimal`
@@ -192,9 +257,24 @@ The admin controller currently exposes these section types:
 - `services_grid`
 - `templates_showcase`
 
+The tenant page builder path also supports simpler tenant-facing section types:
+
+- `hero`
+- `features`
+- `cta`
+- `testimonials`
+- `faq`
+- `menu`
+
+The tenant shell editors additionally support shell-only section types:
+
+- `site_header`
+- `site_footer`
+
 Important note:
 
-- These are currently defined in controller metadata, not in a single dedicated section-type domain object.
+- not every section type is exposed in every editor surface
+- `site_header` and `site_footer` are intentionally limited to dedicated shell editors and are not part of the normal page block library
 
 ## Content Patterns By Section Family
 
@@ -343,6 +423,13 @@ Key admin routes live under `routes/dashboard.php` and include:
 - duplicate section
 - delete section
 
+Client-facing tenant section editors live under `routes/client.php` and currently include:
+
+- homepage editor
+- tenant page editor
+- tenant site header editor
+- tenant site footer editor
+
 Production note:
 
 - Ordering and visibility are managed independently of localized content. A translation edit should not change structural ordering behavior.
@@ -381,6 +468,18 @@ Expected behavior:
 - admin should still be able to edit it
 - frontend should not render it in the sections path
 
+### Missing Tenant Shell
+
+Scenario:
+
+- a tenant site has canonical pages
+- header or footer shell page has not been created yet
+
+Expected behavior:
+
+- the shell service should be able to create it safely
+- the live tenant site should not break if the shell is missing during rollout
+
 ### Empty Dynamic Data Source
 
 Scenario:
@@ -414,3 +513,4 @@ Expected behavior:
 - `docs/architecture.md`
 - `docs/editor-system.md`
 - `docs/refactor-plan.md`
+- `docs/adr/001-page-section-as-source-of-truth.md`
