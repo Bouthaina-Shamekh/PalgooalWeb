@@ -308,6 +308,75 @@ class SubscriptionPageEditorController extends SectionController
         return '';
     }
 
+    protected function workspaceViewData(Page $page): array
+    {
+        return array_merge(parent::workspaceViewData($page), [
+            'workspacePageSwitcher' => $this->workspacePageSwitcherData($page),
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function workspacePageSwitcherData(Page $currentPage): array
+    {
+        if (! $this->workspaceSubscription instanceof Subscription) {
+            return [];
+        }
+
+        $pages = $this->workspaceSubscription->canonicalPages()
+            ->with('translations')
+            ->where('context', 'tenant')
+            ->orderByDesc('is_home')
+            ->orderBy('id')
+            ->get()
+            ->map(function (Page $tenantPage) use ($currentPage) {
+                $translation = $tenantPage->translation();
+                $label = trim((string) ($translation?->title ?? ''));
+
+                if ($label === '') {
+                    $label = $tenantPage->is_home ? __('Homepage') : __('Untitled page');
+                }
+
+                return [
+                    'id' => $tenantPage->getKey(),
+                    'label' => $label,
+                    'is_home' => (bool) $tenantPage->is_home,
+                    'active' => (int) $tenantPage->getKey() === (int) $currentPage->getKey(),
+                    'url' => $tenantPage->is_home
+                        ? route('client.subscriptions.homepage-editor.index', ['subscription' => $this->workspaceSubscription])
+                        : route('client.subscriptions.pages.editor.index', [
+                            'subscription' => $this->workspaceSubscription,
+                            'page' => $tenantPage,
+                        ]),
+                ];
+            })
+            ->values()
+            ->all();
+
+        $pages[] = [
+            'id' => 'site-header',
+            'label' => __('Site Header'),
+            'is_home' => false,
+            'active' => false,
+            'url' => route('client.subscriptions.site-header-editor.index', ['subscription' => $this->workspaceSubscription]),
+        ];
+
+        $pages[] = [
+            'id' => 'site-footer',
+            'label' => __('Site Footer'),
+            'is_home' => false,
+            'active' => false,
+            'url' => route('client.subscriptions.site-footer-editor.index', ['subscription' => $this->workspaceSubscription]),
+        ];
+
+        return [
+            'label' => __('Page'),
+            'pages' => $pages,
+            'pages_index_url' => route('client.subscriptions.pages', $this->workspaceSubscription),
+        ];
+    }
+
     protected function resolveOwnedSubscription(Request $request, Subscription $subscription): Subscription
     {
         $client = $request->user('client');

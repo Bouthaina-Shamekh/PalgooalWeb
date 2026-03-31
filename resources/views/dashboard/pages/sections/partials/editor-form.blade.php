@@ -70,6 +70,8 @@
         $isDomainsShowcase = (bool) ($typeFlags['isDomainsShowcase'] ?? false);
         $isTemplatesSliderShowcase = (bool) ($typeFlags['isTemplatesSliderShowcase'] ?? false);
         $isTemplatesListingShowcase = (bool) ($typeFlags['isTemplatesListingShowcase'] ?? false);
+        $isSiteHeader = (bool) ($typeFlags['isSiteHeader'] ?? false);
+        $isSiteFooter = (bool) ($typeFlags['isSiteFooter'] ?? false);
         $usesInternalLabel = (bool) ($editorState['usesInternalLabel'] ?? false);
         $showEyebrowField = (bool) ($fieldFlags['showEyebrowField'] ?? false);
         $showDescriptionField = (bool) ($fieldFlags['showDescriptionField'] ?? false);
@@ -102,6 +104,7 @@
         $showDomainsPlaceholderField = (bool) ($fieldFlags['showDomainsPlaceholderField'] ?? false);
         $showFaqItemsTextareaField = (bool) ($fieldFlags['showFaqItemsTextareaField'] ?? false);
         $showReviewRepeaterField = (bool) ($fieldFlags['showReviewRepeaterField'] ?? false);
+        $showSiteFooterContactFields = (bool) ($fieldFlags['showSiteFooterContactFields'] ?? false);
         $hostingPricingAvailableCategories = $editorState['hostingPricingAvailableCategories'] ?? collect();
     @endphp
 
@@ -338,6 +341,9 @@
                     $reviewsLimitValue = $localeScalarValues['reviewsLimitValue'] ?? '';
                     $ourWorkLimitValue = $localeScalarValues['ourWorkLimitValue'] ?? '';
                     $ourWorkVisitLabelValue = $localeScalarValues['ourWorkVisitLabelValue'] ?? '';
+                    $footerContactEmailValue = $localeScalarValues['footerContactEmailValue'] ?? '';
+                    $footerContactPhoneValue = $localeScalarValues['footerContactPhoneValue'] ?? '';
+                    $footerCopyrightValue = $localeScalarValues['footerCopyrightValue'] ?? '';
                     $pricingCategoryDatalistId = 'pricing-category-keys-' . $section->id . '-' . $code;
                     $mediaUrlValue = $localeScalarValues['mediaUrlValue'] ?? '';
                     $mediaTypeOld = $localeScalarValues['mediaTypeOld'] ?? 'image';
@@ -448,7 +454,13 @@
                             <div
                                 class="{{ $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ $isHeroCampaign ? __('Main Title - Line 1') : ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase ? __('Section Title') : __('Main Title')) }}
+                                    {{ $isSiteHeader || $isSiteFooter
+                                        ? __('Brand Name')
+                                        : ($isHeroCampaign
+                                            ? __('Main Title - Line 1')
+                                            : ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase
+                                                ? __('Section Title')
+                                                : __('Main Title'))) }}
                                 </label>
                                 <input type="text" name="translations[{{ $code }}][content][title]"
                                     value="{{ $heroTitleValue }}"
@@ -883,7 +895,13 @@
                             <div
                                 class="{{ $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isDomainsShowcase ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ $isDomainsShowcase ? __('Search Button Label') : ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase ? __('CTA Button Label') : __('Primary Button Label')) }}
+                                    {{ $isSiteHeader
+                                        ? __('Header Button Label')
+                                        : ($isDomainsShowcase
+                                            ? __('Search Button Label')
+                                            : ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase
+                                                ? __('CTA Button Label')
+                                                : __('Primary Button Label'))) }}
                                 </label>
                                 <input type="text"
                                     name="translations[{{ $code }}][content][primary_button][label]"
@@ -894,7 +912,13 @@
                             <div
                                 class="{{ $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isDomainsShowcase ? 'lg:col-span-2' : '' }}">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ $isDomainsShowcase ? __('Search Page URL') : ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase ? __('CTA Button URL') : __('Primary Button URL')) }}
+                                    {{ $isSiteHeader
+                                        ? __('Header Button URL')
+                                        : ($isDomainsShowcase
+                                            ? __('Search Page URL')
+                                            : ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase
+                                                ? __('CTA Button URL')
+                                                : __('Primary Button URL'))) }}
                                 </label>
                                 <input type="text"
                                     name="translations[{{ $code }}][content][primary_button][url]"
@@ -902,7 +926,7 @@
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
                             </div>
 
-                            @if ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase)
+                            @if ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isSiteHeader)
                                 <div class="lg:col-span-2">
                                     <label
                                         class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
@@ -910,10 +934,42 @@
                                             name="translations[{{ $code }}][content][primary_button][new_tab]"
                                             value="1" class="rounded border-slate-300"
                                             {{ $primaryButtonNewTabValue ? 'checked' : '' }}>
-                                        {{ __('Open CTA in a new tab') }}
+                                        {{ $isSiteHeader ? __('Open header button in a new tab') : __('Open CTA in a new tab') }}
                                     </label>
                                 </div>
                             @endif
+                        @endif
+
+                        @if ($isSiteHeader)
+                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                {{ __('Navigation links are pulled automatically from your active site pages. Edit the button here if you want a highlighted action on the right side of the header.') }}
+                            </div>
+                        @endif
+
+                        @if ($showSiteFooterContactFields)
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Contact Email') }}</label>
+                                <input type="email" name="translations[{{ $code }}][content][contact_email]"
+                                    value="{{ $footerContactEmailValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Contact Phone') }}</label>
+                                <input type="text" name="translations[{{ $code }}][content][contact_phone]"
+                                    value="{{ $footerContactPhoneValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
+                            </div>
+
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Copyright Line') }}</label>
+                                <input type="text" name="translations[{{ $code }}][content][copyright]"
+                                    value="{{ $footerCopyrightValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
+                                <p class="mt-2 text-xs text-slate-500">
+                                    {{ __('Page links are shown automatically from your active site pages. Use this area for brand text and contact details only.') }}
+                                </p>
+                            </div>
                         @endif
 
                         @if ($showSecondaryButtonFields)

@@ -851,6 +851,12 @@ class SectionController extends Controller
             case 'cta':
                 return $this->normalizeSimpleCtaContent($content);
 
+            case 'site_header':
+                return $this->normalizeSiteHeaderContent($content);
+
+            case 'site_footer':
+                return $this->normalizeSiteFooterContent($content);
+
             case 'testimonials':
                 return $this->normalizeManualTestimonialsContent($content);
 
@@ -1039,6 +1045,23 @@ class SectionController extends Controller
                     'url' => '#',
                     'new_tab' => false,
                 ],
+            ],
+
+            'site_header' => [
+                'title' => 'My Website',
+                'primary_button' => [
+                    'label' => 'Contact us',
+                    'url' => '#contact',
+                    'new_tab' => false,
+                ],
+            ],
+
+            'site_footer' => [
+                'title' => 'My Website',
+                'description' => 'Add a short description of your business and how visitors can reach you.',
+                'contact_email' => '',
+                'contact_phone' => '',
+                'copyright' => sprintf('© %s My Website. All rights reserved.', now()->year),
             ],
 
             'programming_showcase' => [
@@ -1423,6 +1446,34 @@ class SectionController extends Controller
                 'url' => $buttonUrl,
                 'new_tab' => $buttonNewTab,
             ],
+        ];
+    }
+
+    protected function normalizeSiteHeaderContent(array $content): array
+    {
+        $primaryButton = is_array($content['primary_button'] ?? null) ? $content['primary_button'] : [];
+
+        return [
+            'title' => trim((string) ($content['title'] ?? __('My Website'))),
+            'primary_button' => [
+                'label' => trim((string) ($content['primary_button_label'] ?? ($primaryButton['label'] ?? ''))),
+                'url' => trim((string) ($content['primary_button_url'] ?? ($primaryButton['url'] ?? ''))),
+                'new_tab' => filter_var(
+                    $content['primary_button_new_tab'] ?? ($primaryButton['new_tab'] ?? false),
+                    FILTER_VALIDATE_BOOLEAN
+                ),
+            ],
+        ];
+    }
+
+    protected function normalizeSiteFooterContent(array $content): array
+    {
+        return [
+            'title' => trim((string) ($content['title'] ?? __('My Website'))),
+            'description' => trim((string) ($content['description'] ?? '')),
+            'contact_email' => trim((string) ($content['contact_email'] ?? '')),
+            'contact_phone' => trim((string) ($content['contact_phone'] ?? '')),
+            'copyright' => trim((string) ($content['copyright'] ?? '')),
         ];
     }
 

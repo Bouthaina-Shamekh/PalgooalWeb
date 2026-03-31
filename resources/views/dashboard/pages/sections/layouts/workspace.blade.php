@@ -16,6 +16,12 @@
     $workspaceHideSidebarLabel = $isClientWorkspace ? __('Hide Blocks') : __('Hide Sidebar');
     $workspaceLanguages = collect($languages ?? [])->filter(fn ($language) => filled($language->code))->values();
     $hasMultipleWorkspaceLanguages = $workspaceLanguages->count() > 1;
+    $workspacePageSwitcher = $workspacePageSwitcher ?? [];
+    $workspacePageOptions = collect(data_get($workspacePageSwitcher, 'pages', []))
+        ->filter(fn ($workspacePageOption) => filled(data_get($workspacePageOption, 'url')))
+        ->values();
+    $hasWorkspacePageSwitcher = $isClientWorkspace && $workspacePageOptions->isNotEmpty();
+    $workspacePageSwitcherLabel = data_get($workspacePageSwitcher, 'label', __('Page'));
     $adminLogoPath = $settings?->admin_logo ?: $settings?->logo;
     $adminLogoHref = ! empty($adminLogoPath)
         ? (\Illuminate\Support\Str::startsWith($adminLogoPath, ['http://', 'https://', '//'])
@@ -257,21 +263,51 @@
                         </a>
 
                         <div class="flex min-w-0 flex-wrap items-center gap-2 rtl:flex-row-reverse">
-                            <div class="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-slate-100/90 px-4 py-2 shadow-sm rtl:flex-row-reverse">
-                                <h1 class="truncate text-sm font-semibold text-slate-900 lg:text-[15px]">
-                                    {{ $pageTitle }}
-                                </h1>
-                                @if ($page->is_home)
-                                    <span class="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                                        {{ __('Home') }}
+                            <h1 class="sr-only">{{ $pageTitle }}</h1>
+                            @if ($hasWorkspacePageSwitcher)
+                                <div class="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-slate-100/90 px-2 py-2 shadow-sm rtl:flex-row-reverse">
+                                    <span class="shrink-0 px-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                                        {{ $workspacePageSwitcherLabel }}
                                     </span>
-                                @endif
-                                @if (filled($workspaceModeDisplayLabel))
-                                    <span class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
-                                        {{ $workspaceModeDisplayLabel }}
-                                    </span>
-                                @endif
-                            </div>
+                                    <div class="relative min-w-[11rem] max-w-[15rem] sm:max-w-[19rem]">
+                                        <select
+                                            onchange="if (this.value) { window.location.href = this.value; }"
+                                            class="h-10 w-full appearance-none rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 shadow-sm transition outline-none hover:border-slate-300 focus:border-sky-300 focus:ring-2 focus:ring-sky-100 rtl:pl-10 rtl:pr-4 ltr:pl-4 ltr:pr-10"
+                                            aria-label="{{ __('Switch page') }}"
+                                        >
+                                            @foreach ($workspacePageOptions as $workspacePageOption)
+                                                <option value="{{ $workspacePageOption['url'] }}" @selected(! empty($workspacePageOption['active']))>
+                                                    {{ $workspacePageOption['label'] }}@if (! empty($workspacePageOption['is_home'])) • {{ __('Home') }}@endif
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 rtl:left-3 ltr:right-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                        </svg>
+                                    </div>
+                                    @if (filled($workspaceModeDisplayLabel))
+                                        <span class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+                                            {{ $workspaceModeDisplayLabel }}
+                                        </span>
+                                    @endif
+                                </div>
+                            @else
+                                <div class="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-slate-100/90 px-4 py-2 shadow-sm rtl:flex-row-reverse">
+                                    <h1 class="truncate text-sm font-semibold text-slate-900 lg:text-[15px]">
+                                        {{ $pageTitle }}
+                                    </h1>
+                                    @if ($page->is_home)
+                                        <span class="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                                            {{ __('Home') }}
+                                        </span>
+                                    @endif
+                                    @if (filled($workspaceModeDisplayLabel))
+                                        <span class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+                                            {{ $workspaceModeDisplayLabel }}
+                                        </span>
+                                    @endif
+                                </div>
+                            @endif
 
                             @if ($hasMultipleWorkspaceLanguages)
                                 <x-lang.language-switcher

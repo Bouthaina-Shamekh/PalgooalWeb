@@ -1,7 +1,7 @@
 @php
     $pageTranslation = method_exists($page, 'translation') ? $page->translation() : null;
     $pageTitle = $pageTranslation?->title ?? ($page->slug ?? '#' . $page->id);
-    $frontUrl = $page->is_home ? url('/') : ($pageTranslation?->slug ?? null ? url($pageTranslation->slug) : url('/'));
+    $frontUrl = $workspaceFrontUrl ?? ($page->is_home ? url('/') : ($pageTranslation?->slug ?? null ? url($pageTranslation->slug) : url('/')));
     $workspaceRoutePrefix = $workspaceRoutePrefix ?? 'dashboard.pages.sections.';
     $workspaceRouteBaseParameters = $workspaceRouteBaseParameters ?? ['page' => $page];
     $workspaceRouteFor =
@@ -90,14 +90,14 @@
     ];
     $previewFrameTitleLabel = $isClientWorkspace ? __('Live page preview') : __('Live sections preview');
     $sidebarIntroTitle = $isClientWorkspace
-        ? ($page->is_home ? __('You are editing your homepage') : __('You are editing this page'))
+        ? ($workspaceContentLabel ?? ($page->is_home ? __('You are editing your homepage') : __('You are editing this page')))
         : null;
     $sidebarIntroDescription = $isClientWorkspace
         ? __('This workspace is focused on page blocks only. Add, reorder, rename, and edit blocks here without the extra admin controls.')
         : null;
     $pageStructureTitle = $isClientWorkspace ? __('Page Blocks') : __('Page Elements');
     $pageStructureDescription = $isClientWorkspace
-        ? __('Tip: drag blocks to change the order, use the menu to rename them, and open any block to edit its content.')
+        ? __('Drag to reorder blocks, then open any block to edit its content.')
         : __('Customize this page sections and keep the structure organized.');
     $addNewElementLabel = $isClientWorkspace ? __('Add Block') : __('Add New Element');
     $noElementsLabel = $isClientWorkspace ? __('No blocks have been added yet.') : __('No elements have been added yet.');
@@ -555,27 +555,18 @@
         @endif
 
         @if ($isClientWorkspace)
-            <div class="rounded-3xl border border-sky-200 bg-sky-50/70 p-5 shadow-sm">
+            <div class="rounded-3xl border {{ $pageIsLive ? 'border-emerald-200 bg-emerald-50/60' : 'border-amber-200 bg-amber-50/60' }} p-4 shadow-sm">
                 <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <h3 class="text-base font-semibold text-slate-900">{{ $sidebarIntroTitle }}</h3>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">
-                            {{ $sidebarIntroDescription }}
-                        </p>
-                    </div>
-                    <span class="inline-flex rounded-full border {{ $pageIsLive ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700' }} px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]">
-                        {{ $publishStateBadge }}
-                    </span>
-                </div>
-            </div>
-
-            <div class="rounded-3xl border {{ $pageIsLive ? 'border-emerald-200 bg-emerald-50/70' : 'border-amber-200 bg-amber-50/70' }} p-5 shadow-sm">
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.2em] {{ $pageIsLive ? 'text-emerald-700' : 'text-amber-700' }}">{{ __('Page status') }}</p>
-                        <h3 class="mt-2 text-base font-semibold text-slate-900">{{ $publishStateLabel }}</h3>
-                        <p class="mt-2 text-sm leading-6 text-slate-600">
-                            {{ $publishStateDescription }}
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-center gap-2 rtl:flex-row-reverse">
+                            <p class="text-xs font-semibold uppercase tracking-[0.2em] {{ $pageIsLive ? 'text-emerald-700' : 'text-amber-700' }}">{{ __('Editing') }}</p>
+                            <span class="inline-flex rounded-full border {{ $pageIsLive ? 'border-emerald-200 bg-white text-emerald-700' : 'border-amber-200 bg-white text-amber-700' }} px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
+                                {{ $publishStateBadge }}
+                            </span>
+                        </div>
+                        <h3 class="mt-2 text-base font-semibold text-slate-900">{{ $sidebarIntroTitle }}</h3>
+                        <p class="mt-1 text-sm text-slate-600">
+                            {{ $pageIsLive ? __('This page is already live. Save changes, then preview or open it when needed.') : __('This page is still in draft. Use preview to review it before making it visible.') }}
                         </p>
                     </div>
                 </div>
@@ -589,18 +580,10 @@
                     @if ($pageIsLive)
                         <a href="{{ $frontUrl }}" target="_blank"
                             class="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
-                            {{ $publishActionLabel }}
+                            {{ __('Open Live Page') }}
                         </a>
-                    @else
-                        <span class="inline-flex items-center rounded-full border border-amber-200 bg-white px-4 py-2 text-sm font-semibold text-amber-700">
-                            {{ $publishActionLabel }}
-                        </span>
                     @endif
                 </div>
-
-                <p class="mt-2 text-sm leading-6 text-slate-600">
-                    {{ $publishHelperLabel }}
-                </p>
             </div>
         @endif
 

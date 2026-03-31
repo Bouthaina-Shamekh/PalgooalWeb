@@ -3,6 +3,13 @@
         ?? $page->translations->first()?->title
         ?? $page->slug
         ?? 'Tenant Site';
+    $siteNavigationPages = $subscription->canonicalPages()
+        ->with('translations')
+        ->where('context', 'tenant')
+        ->where('is_active', true)
+        ->orderByDesc('is_home')
+        ->orderBy('id')
+        ->get();
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
@@ -21,22 +28,26 @@
 </head>
 <body class="m-0 bg-white text-purple-brand overflow-x-hidden font-Cairo">
     <main>
-        @foreach ($page->sections as $section)
-            @php
-                $sectionTrans = $section->translations->firstWhere('locale', app()->getLocale())
-                    ?? $section->translations->first();
-                $content = $sectionTrans?->content ?? [];
-                $partial = 'tenant.sections.' . \Illuminate\Support\Str::slug($section->type ?? 'generic', '_');
-            @endphp
-            @includeFirst([
-                $partial,
-                'tenant.sections.generic'
-            ], [
-                'section' => $section,
-                'translation' => $sectionTrans,
-                'content' => $content,
-            ])
-        @endforeach
+        @include('tenant.partials.render-sections', [
+            'page' => $headerPage ?? null,
+            'sections' => $headerPage?->sections ?? collect(),
+            'subscription' => $subscription,
+            'siteNavigationPages' => $siteNavigationPages,
+        ])
+
+        @include('tenant.partials.render-sections', [
+            'page' => $page,
+            'sections' => $page->sections,
+            'subscription' => $subscription,
+            'siteNavigationPages' => $siteNavigationPages,
+        ])
+
+        @include('tenant.partials.render-sections', [
+            'page' => $footerPage ?? null,
+            'sections' => $footerPage?->sections ?? collect(),
+            'subscription' => $subscription,
+            'siteNavigationPages' => $siteNavigationPages,
+        ])
     </main>
 
     @include('front.layouts.partials.end')

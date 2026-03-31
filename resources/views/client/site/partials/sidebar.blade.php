@@ -3,6 +3,8 @@
     $siteDashboardUrl = route('client.subscriptions.site', $subscription);
     $pagesUrl = route('client.subscriptions.pages', $subscription);
     $editorUrl = route('client.subscriptions.homepage-editor.index', $subscription);
+    $headerEditorUrl = route('client.subscriptions.site-header-editor.index', $subscription);
+    $footerEditorUrl = route('client.subscriptions.site-footer-editor.index', $subscription);
     $domainUrl = route('client.domains.index');
     $settingsUrl = route('client.subscriptions.show', $subscription);
     $accountUrl = route('client.subscriptions');
@@ -27,6 +29,18 @@
                 'href' => $editorUrl,
                 'active' => request()->routeIs('client.subscriptions.homepage-editor.*'),
                 'icon' => 'editor',
+            ],
+            [
+                'label' => 'Header',
+                'href' => $headerEditorUrl,
+                'active' => request()->routeIs('client.subscriptions.site-header-editor.*'),
+                'icon' => 'header',
+            ],
+            [
+                'label' => 'Footer',
+                'href' => $footerEditorUrl,
+                'active' => request()->routeIs('client.subscriptions.site-footer-editor.*'),
+                'icon' => 'footer',
             ],
         ],
         'Growth' => [
@@ -88,6 +102,14 @@
                                 @elseif ($item['icon'] === 'editor')
                                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L9.832 16.82a4.5 4.5 0 0 1-1.897 1.13l-3.094.885.885-3.094a4.5 4.5 0 0 1 1.13-1.897L16.862 4.487ZM18 14.25v4.125A1.125 1.125 0 0 1 16.875 19.5H5.625A1.125 1.125 0 0 1 4.5 18.375V7.125A1.125 1.125 0 0 1 5.625 6H9.75" />
+                                    </svg>
+                                @elseif ($item['icon'] === 'header')
+                                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 6.75h15M4.5 10.5h15M6.75 6.75v10.5m10.5-10.5v10.5M4.5 17.25h15" />
+                                    </svg>
+                                @elseif ($item['icon'] === 'footer')
+                                    <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 6.75h15m-15 10.5h15m-12-6h9m-9 3h6" />
                                     </svg>
                                 @elseif ($item['icon'] === 'domain')
                                     <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">

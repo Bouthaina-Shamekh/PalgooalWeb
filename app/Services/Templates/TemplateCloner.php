@@ -6,6 +6,7 @@ use App\Models\Page;
 use App\Models\PageTranslation;
 use App\Models\Template;
 use App\Models\Tenancy\Subscription;
+use App\Services\Tenancy\TenantSiteShellService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -23,6 +24,11 @@ use RuntimeException;
  */
 class TemplateCloner
 {
+    public function __construct(
+        protected TenantSiteShellService $siteShellService,
+    ) {
+    }
+
     /**
      * Clone the selected template into tenant-owned canonical pages.
      *
@@ -48,7 +54,7 @@ class TemplateCloner
             throw new RuntimeException('No template pages were found for cloning.');
         }
 
-        return DB::transaction(function () use ($pages, $tenant, $replaceExisting) {
+        return DB::transaction(function () use ($blueprint, $pages, $tenant, $replaceExisting) {
             if ($replaceExisting) {
                 Page::query()
                     ->where('tenant_id', $tenant->getKey())
@@ -128,6 +134,10 @@ class TemplateCloner
                 }
 
                 $clonedPages->push($page->load(['translations', 'sections.translations']));
+            }
+
+            foreach ($this->siteShellService->ensureShellPages($tenant, $blueprint) as $shellPage) {
+                $clonedPages->push($shellPage);
             }
 
             return $clonedPages;

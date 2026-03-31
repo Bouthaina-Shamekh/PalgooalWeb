@@ -2,6 +2,8 @@
     $templateName = $subscription->template?->translation()?->name ?? $subscription->template?->name ?? 'Template website';
     $pagesUrl = route('client.subscriptions.pages', $subscription);
     $editorUrl = route('client.subscriptions.homepage-editor.index', $subscription);
+    $headerEditorUrl = route('client.subscriptions.site-header-editor.index', $subscription);
+    $footerEditorUrl = route('client.subscriptions.site-footer-editor.index', $subscription);
     $subscriptionUrl = route('client.subscriptions.show', $subscription);
     $domainsUrl = route('client.domains.index');
     $previewUrl = $siteUrl ?: $subscriptionUrl;
@@ -277,6 +279,14 @@
 
             <section class="border-t border-slate-200 pt-6">
                 <div class="flex flex-wrap items-center gap-3">
+                    <a href="{{ $headerEditorUrl }}"
+                        class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                        {{ __('Edit header') }}
+                    </a>
+                    <a href="{{ $footerEditorUrl }}"
+                        class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                        {{ __('Edit footer') }}
+                    </a>
                     <a href="{{ $pagesUrl }}"
                         class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
                         {{ __('Manage pages') }}

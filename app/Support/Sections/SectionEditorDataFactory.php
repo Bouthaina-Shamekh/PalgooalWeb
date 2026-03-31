@@ -38,6 +38,8 @@ class SectionEditorDataFactory
         $isSimpleHero = $selectedType === 'hero';
         $isSimpleFeatures = $selectedType === 'features';
         $isSimpleCta = $selectedType === 'cta';
+        $isSiteHeader = $selectedType === 'site_header';
+        $isSiteFooter = $selectedType === 'site_footer';
         $isSimpleTestimonials = $selectedType === 'testimonials';
         $isSimpleFaq = $selectedType === 'faq';
 
@@ -60,6 +62,8 @@ class SectionEditorDataFactory
                 'isSimpleHero' => $isSimpleHero,
                 'isSimpleFeatures' => $isSimpleFeatures,
                 'isSimpleCta' => $isSimpleCta,
+                'isSiteHeader' => $isSiteHeader,
+                'isSiteFooter' => $isSiteFooter,
                 'isSimpleTestimonials' => $isSimpleTestimonials,
                 'isSimpleFaq' => $isSimpleFaq,
             ],
@@ -75,7 +79,9 @@ class SectionEditorDataFactory
                 $isHostingPricingShowcase ||
                 $isDomainsShowcase ||
                 $isTemplatesSliderShowcase ||
-                $isTemplatesListingShowcase,
+                $isTemplatesListingShowcase ||
+                $isSiteHeader ||
+                $isSiteFooter,
             'flags' => [
                 'showEyebrowField' => in_array($selectedType, ['hero_default', 'hero', 'cta', 'testimonials'], true),
                 'showDescriptionField' =>
@@ -89,6 +95,7 @@ class SectionEditorDataFactory
                     $isDomainsShowcase ||
                     $isTemplatesSliderShowcase ||
                     $isTemplatesListingShowcase ||
+                    $isSiteFooter ||
                     $isSimpleTestimonials,
                 'showFeaturesHeadingField' => $isHeroCampaign,
                 'showOutputsHeadingField' => $isProgrammingShowcase,
@@ -110,6 +117,7 @@ class SectionEditorDataFactory
                         'hero_minimal',
                         'hero',
                         'cta',
+                        'site_header',
                         'hero_campaign',
                         'programming_showcase',
                         'mobile_app_showcase',
@@ -155,6 +163,8 @@ class SectionEditorDataFactory
                         'templates_slider_showcase',
                         'templates_listing_showcase',
                         'testimonials',
+                        'site_header',
+                        'site_footer',
                     ],
                     true,
                 ),
@@ -163,6 +173,7 @@ class SectionEditorDataFactory
                 'showDomainsPlaceholderField' => $isDomainsShowcase,
                 'showFaqItemsTextareaField' => $isSimpleFaq,
                 'showReviewRepeaterField' => $isSimpleTestimonials,
+                'showSiteFooterContactFields' => $isSiteFooter,
             ],
             'hostingPricingAvailableCategories' => $isHostingPricingShowcase
                 ? PlanCategory::query()->active()->ordered()->with('translations')->get()
@@ -342,6 +353,15 @@ class SectionEditorDataFactory
                         ),
                         'ourWorkVisitLabelValue' => $this->stringValue(
                             old("translations.$code.content.visit_label", $content['visit_label'] ?? ''),
+                        ),
+                        'footerContactEmailValue' => $this->stringValue(
+                            old("translations.$code.content.contact_email", $content['contact_email'] ?? ''),
+                        ),
+                        'footerContactPhoneValue' => $this->stringValue(
+                            old("translations.$code.content.contact_phone", $content['contact_phone'] ?? ''),
+                        ),
+                        'footerCopyrightValue' => $this->stringValue(
+                            old("translations.$code.content.copyright", $content['copyright'] ?? ''),
                         ),
                         'mediaUrlValue' => $this->stringValue(
                             old("translations.$code.content.media_url", $content['media_url'] ?? ''),

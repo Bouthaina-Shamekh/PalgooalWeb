@@ -8,6 +8,7 @@ use App\Http\Controllers\Client\InvoiceCheckoutController;
 use App\Http\Controllers\Client\SubscriptionHomepageEditorController;
 use App\Http\Controllers\Client\SubscriptionPageEditorController;
 use App\Http\Controllers\Client\SubscriptionController;
+use App\Http\Controllers\Client\SubscriptionSiteShellEditorController;
 use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -101,6 +102,64 @@ Route::group([
                 ->whereNumber('section')
                 ->name('duplicate');
             Route::delete('sections/{section}', [SubscriptionHomepageEditorController::class, 'homepageDestroy'])
+                ->whereNumber('section')
+                ->name('destroy');
+        });
+    Route::prefix('subscriptions/{subscription}/site-header/editor')
+        ->name('subscriptions.site-header-editor.')
+        ->group(function () {
+            Route::get('/', [SubscriptionSiteShellEditorController::class, 'headerIndex'])->name('index');
+            Route::get('preview', [SubscriptionSiteShellEditorController::class, 'headerPreview'])->name('preview');
+            Route::post('sections/quick-store', [SubscriptionSiteShellEditorController::class, 'headerQuickStore'])->name('quick-store');
+            Route::post('sections/reorder', [SubscriptionSiteShellEditorController::class, 'headerReorder'])->name('reorder');
+            Route::get('sections/{section}/editor', [SubscriptionSiteShellEditorController::class, 'headerEditorPanel'])
+                ->whereNumber('section')
+                ->name('editor');
+            Route::get('sections/{section}/edit', [SubscriptionSiteShellEditorController::class, 'headerEdit'])
+                ->whereNumber('section')
+                ->name('edit');
+            Route::match(['post', 'put', 'patch'], 'sections/{section}', [SubscriptionSiteShellEditorController::class, 'headerUpdate'])
+                ->whereNumber('section')
+                ->name('update');
+            Route::post('sections/{section}/toggle-active', [SubscriptionSiteShellEditorController::class, 'headerToggleActive'])
+                ->whereNumber('section')
+                ->name('toggle-active');
+            Route::post('sections/{section}/rename', [SubscriptionSiteShellEditorController::class, 'headerRename'])
+                ->whereNumber('section')
+                ->name('rename');
+            Route::post('sections/{section}/duplicate', [SubscriptionSiteShellEditorController::class, 'headerDuplicate'])
+                ->whereNumber('section')
+                ->name('duplicate');
+            Route::delete('sections/{section}', [SubscriptionSiteShellEditorController::class, 'headerDestroy'])
+                ->whereNumber('section')
+                ->name('destroy');
+        });
+    Route::prefix('subscriptions/{subscription}/site-footer/editor')
+        ->name('subscriptions.site-footer-editor.')
+        ->group(function () {
+            Route::get('/', [SubscriptionSiteShellEditorController::class, 'footerIndex'])->name('index');
+            Route::get('preview', [SubscriptionSiteShellEditorController::class, 'footerPreview'])->name('preview');
+            Route::post('sections/quick-store', [SubscriptionSiteShellEditorController::class, 'footerQuickStore'])->name('quick-store');
+            Route::post('sections/reorder', [SubscriptionSiteShellEditorController::class, 'footerReorder'])->name('reorder');
+            Route::get('sections/{section}/editor', [SubscriptionSiteShellEditorController::class, 'footerEditorPanel'])
+                ->whereNumber('section')
+                ->name('editor');
+            Route::get('sections/{section}/edit', [SubscriptionSiteShellEditorController::class, 'footerEdit'])
+                ->whereNumber('section')
+                ->name('edit');
+            Route::match(['post', 'put', 'patch'], 'sections/{section}', [SubscriptionSiteShellEditorController::class, 'footerUpdate'])
+                ->whereNumber('section')
+                ->name('update');
+            Route::post('sections/{section}/toggle-active', [SubscriptionSiteShellEditorController::class, 'footerToggleActive'])
+                ->whereNumber('section')
+                ->name('toggle-active');
+            Route::post('sections/{section}/rename', [SubscriptionSiteShellEditorController::class, 'footerRename'])
+                ->whereNumber('section')
+                ->name('rename');
+            Route::post('sections/{section}/duplicate', [SubscriptionSiteShellEditorController::class, 'footerDuplicate'])
+                ->whereNumber('section')
+                ->name('duplicate');
+            Route::delete('sections/{section}', [SubscriptionSiteShellEditorController::class, 'footerDestroy'])
                 ->whereNumber('section')
                 ->name('destroy');
         });

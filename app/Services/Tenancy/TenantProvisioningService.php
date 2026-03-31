@@ -198,6 +198,7 @@ class TenantProvisioningService
     {
         return Page::query()
             ->where('tenant_id', $subscription->id)
+            ->where('context', 'tenant')
             ->exists();
     }
 

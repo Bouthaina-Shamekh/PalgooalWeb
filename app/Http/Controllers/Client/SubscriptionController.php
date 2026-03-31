@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Client;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenancy\Subscription;
+use App\Services\Tenancy\TenantSiteShellService;
 use App\Support\Sites\SiteOnboardingProgress;
 use App\Services\Tenancy\DomainVerificationService;
 use Illuminate\Http\Request;
@@ -24,7 +25,8 @@ class SubscriptionController extends Controller
         Request $request,
         Subscription $subscription,
         DomainVerificationService $verification,
-        SiteOnboardingProgress $onboarding
+        SiteOnboardingProgress $onboarding,
+        TenantSiteShellService $siteShellService,
     )
     {
         $subscription = $this->resolveOwnedSubscription($request, $subscription);
@@ -32,6 +34,7 @@ class SubscriptionController extends Controller
             'plan',
             'template.translations',
         ]);
+        $siteShellService->ensureShellPages($subscription);
 
         $locale = app()->getLocale();
         $homePage = $subscription->canonicalPages()

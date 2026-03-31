@@ -259,6 +259,22 @@
         ])
         @break
 
+    @case('site_header')
+        @include('tenant.sections.site_header', [
+            'section' => $section,
+            'translation' => $fallbackTranslation,
+            'content' => $content,
+        ])
+        @break
+
+    @case('site_footer')
+        @include('tenant.sections.site_footer', [
+            'section' => $section,
+            'translation' => $fallbackTranslation,
+            'content' => $content,
+        ])
+        @break
+
     @case('testimonials')
         @include('tenant.sections.testimonials', [
             'section' => $section,

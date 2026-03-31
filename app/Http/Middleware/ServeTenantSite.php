@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Page;
 use App\Models\Tenancy\Subscription;
 use App\Models\Plan;
+use App\Services\Tenancy\TenantSiteShellService;
 use App\Services\Tenancy\TenantRuntimeUsageRecorder;
 use Closure;
 use Illuminate\Http\Request;
@@ -77,9 +78,17 @@ class ServeTenantSite
 
         View::share('tenantSubscription', $subscription);
 
+        $siteShells = app(TenantSiteShellService::class)->pages(
+            $subscription,
+            ensure: true,
+            onlyActiveSections: true,
+        );
+
         return response()->view('tenant.site', [
             'subscription' => $subscription,
             'page' => $page,
+            'headerPage' => $siteShells[TenantSiteShellService::SHELL_HEADER] ?? null,
+            'footerPage' => $siteShells[TenantSiteShellService::SHELL_FOOTER] ?? null,
         ]);
     }
 

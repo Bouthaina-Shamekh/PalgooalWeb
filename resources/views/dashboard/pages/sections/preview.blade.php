@@ -1,8 +1,37 @@
 @php
+    use App\Models\Tenancy\Subscription;
+    use App\Services\Tenancy\TenantSiteShellService;
+
     $pageTranslation = method_exists($page, 'translation') ? $page->translation() : null;
     $pageTitle = $pageTranslation?->title ?? $page->slug ?? ('#' . $page->id);
     $previewTitle = $pageTitle . ' - ' . __('Sections Preview');
     $previewDescription = __('Live preview for the sections workspace.');
+    $pageContext = (string) ($page->context ?? '');
+    $isTenantShellPreview = in_array((string) ($page->context ?? ''), ['tenant_header', 'tenant_footer'], true);
+    $isTenantPagePreview = $pageContext === 'tenant';
+    $tenantSubscription = $page->tenant;
+    $tenantNavigationPages = collect();
+    $tenantHeaderPage = null;
+    $tenantFooterPage = null;
+
+    if ($isTenantPagePreview && $tenantSubscription instanceof Subscription) {
+        $tenantNavigationPages = $tenantSubscription->canonicalPages()
+            ->with('translations')
+            ->where('context', 'tenant')
+            ->where('is_active', true)
+            ->orderByDesc('is_home')
+            ->orderBy('id')
+            ->get();
+
+        $tenantShellPages = app(TenantSiteShellService::class)->pages(
+            $tenantSubscription,
+            ensure: false,
+            onlyActiveSections: true,
+        );
+
+        $tenantHeaderPage = $tenantShellPages[TenantSiteShellService::SHELL_HEADER] ?? null;
+        $tenantFooterPage = $tenantShellPages[TenantSiteShellService::SHELL_FOOTER] ?? null;
+    }
 @endphp
 
 @push('styles')
@@ -99,12 +128,23 @@
     ],
 ])
 
-@include('front.layouts.partials.header')
+@unless ($isTenantShellPreview || $isTenantPagePreview)
+    @include('front.layouts.partials.header')
+@endunless
 
 <div class="pc-container">
     <div class="pc-content">
         <div class="sections-preview-page">
             <div class="sections-preview-shell">
+                @if ($isTenantPagePreview)
+                    @include('tenant.partials.render-sections', [
+                        'page' => $tenantHeaderPage,
+                        'sections' => $tenantHeaderPage?->sections ?? collect(),
+                        'subscription' => $tenantSubscription,
+                        'siteNavigationPages' => $tenantNavigationPages,
+                    ])
+                @endif
+
                 @forelse ($sections as $section)
                     <div
                         id="preview-section-{{ $section->id }}"
@@ -129,12 +169,23 @@
                         </div>
                     </div>
                 @endforelse
+
+                @if ($isTenantPagePreview)
+                    @include('tenant.partials.render-sections', [
+                        'page' => $tenantFooterPage,
+                        'sections' => $tenantFooterPage?->sections ?? collect(),
+                        'subscription' => $tenantSubscription,
+                        'siteNavigationPages' => $tenantNavigationPages,
+                    ])
+                @endif
             </div>
         </div>
     </div>
 </div>
 
-@include('front.layouts.partials.footer')
+@unless ($isTenantShellPreview || $isTenantPagePreview)
+    @include('front.layouts.partials.footer')
+@endunless
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
