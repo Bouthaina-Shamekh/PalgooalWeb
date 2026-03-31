@@ -4,8 +4,8 @@
     $workspaceRoutePrefix = $workspaceRoutePrefix ?? 'dashboard.pages.sections.';
     $workspaceRouteBaseParameters = $workspaceRouteBaseParameters ?? ['page' => $page];
     $workspaceRouteFor =
-        $workspaceRouteFor
-        ?? fn(string $name, array $extra = [], bool $absolute = true) => route(
+        $workspaceRouteFor ??
+        fn(string $name, array $extra = [], bool $absolute = true) => route(
             $workspaceRoutePrefix . $name,
             array_merge($workspaceRouteBaseParameters, $extra),
             $absolute,
@@ -133,10 +133,12 @@
                         <label class="block text-sm font-medium text-slate-700">{{ __('Footer Layout') }}</label>
                         <select name="variant"
                             class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                            <option value="simple_social" {{ $selectedFooterVariant === 'simple_social' ? 'selected' : '' }}>
+                            <option value="simple_social"
+                                {{ $selectedFooterVariant === 'simple_social' ? 'selected' : '' }}>
                                 {{ __('Social icons + copyright') }}
                             </option>
-                            <option value="links_social" {{ $selectedFooterVariant === 'links_social' ? 'selected' : '' }}>
+                            <option value="links_social"
+                                {{ $selectedFooterVariant === 'links_social' ? 'selected' : '' }}>
                                 {{ __('Links + social icons + copyright') }}
                             </option>
                         </select>
@@ -199,119 +201,19 @@
                     $translation = $section->translations->firstWhere('locale', $code);
                     $content = $translation?->content ?? [];
                     $localeScalarValues = $editorState['localeScalarValues'][$code] ?? [];
+                    $localeViewData = $editorState['localeViewData'][$code] ?? [];
 
-                    $featuresTextarea = old("translations.$code.content.features_textarea");
                     $campaignFeatureItems = $editorState['localeCampaignFeatureItems'][$code] ?? [];
                     $buildStepItems = $editorState['localeBuildStepItems'][$code] ?? [];
-                    $outputsTextarea = old("translations.$code.content.outputs_textarea");
                     $outputItems = $editorState['localeOutputItems'][$code] ?? [];
-                    $servicesTextarea = old("translations.$code.content.services_textarea");
                     $serviceItems = $editorState['localeServiceItems'][$code] ?? [];
                     $pricingCategoryItems = $editorState['localePricingCategoryItems'][$code] ?? [];
                     $pricingPlanItems = $editorState['localePricingPlanItems'][$code] ?? [];
-
-                    if ($featuresTextarea === null) {
-                        if (!empty($content['features']) && is_array($content['features'])) {
-                            $featuresTextarea = collect($content['features'])
-                                ->map(function ($item) {
-                                    if (is_array($item)) {
-                                        return trim(
-                                            (string) ($item['text'] ?? ($item['title'] ?? ($item['label'] ?? ''))),
-                                        );
-                                    }
-
-                                    return is_scalar($item) ? trim((string) $item) : '';
-                                })
-                                ->filter()
-                                ->implode("\n");
-                        } else {
-                            $featuresTextarea = '';
-                        }
-                    }
-
-                    if ($outputsTextarea === null) {
-                        if (!empty($content['outputs']) && is_array($content['outputs'])) {
-                            $outputsTextarea = collect($content['outputs'])
-                                ->map(function ($item) {
-                                    if (is_array($item)) {
-                                        return trim((string) ($item['text'] ?? ($item['title'] ?? '')));
-                                    }
-
-                                    return is_scalar($item) ? trim((string) $item) : '';
-                                })
-                                ->filter()
-                                ->implode("\n");
-                        } else {
-                            $outputsTextarea = '';
-                        }
-                    }
-
-                    if ($servicesTextarea === null) {
-                        if (!empty($content['services']) && is_array($content['services'])) {
-                            $servicesTextarea = collect($content['services'])
-                                ->map(function ($item) {
-                                    if (is_array($item)) {
-                                        return trim(
-                                            (string) ($item['text'] ?? ($item['title'] ?? ($item['label'] ?? ''))),
-                                        );
-                                    }
-
-                                    return is_scalar($item) ? trim((string) $item) : '';
-                                })
-                                ->filter()
-                                ->implode("\n");
-                        } else {
-                            $servicesTextarea = '';
-                        }
-                    }
-
-                    $faqItemsTextarea = old("translations.$code.content.faq_textarea");
-                    if ($faqItemsTextarea === null) {
-                        $faqItemsTextarea = collect(
-                            is_array($content['items'] ?? null)
-                                ? $content['items']
-                                : (is_array($content['faq'] ?? null) ? $content['faq'] : []),
-                        )
-                            ->map(function ($item) {
-                                if (! is_array($item)) {
-                                    return trim((string) $item);
-                                }
-
-                                $question = trim((string) ($item['question'] ?? ''));
-                                $answer = trim((string) ($item['answer'] ?? ''));
-
-                                return trim($question . ($answer !== '' ? ' || ' . $answer : ''));
-                            })
-                            ->filter()
-                            ->implode("\n");
-                    }
-
-                    $reviewItems = old("translations.$code.content.items", $content['items'] ?? []);
-                    $reviewItems = collect(is_array($reviewItems) ? $reviewItems : [])
-                        ->map(function ($item) {
-                            if (! is_array($item)) {
-                                return null;
-                            }
-
-                            $name = trim((string) ($item['name'] ?? ''));
-                            $role = trim((string) ($item['role'] ?? ''));
-                            $text = trim((string) ($item['text'] ?? ''));
-                            $rating = max(1, min(5, (int) ($item['rating'] ?? 5)));
-
-                            if ($name === '' && $role === '' && $text === '') {
-                                return null;
-                            }
-
-                            return [
-                                'name' => $name,
-                                'role' => $role,
-                                'text' => $text,
-                                'rating' => $rating,
-                            ];
-                        })
-                        ->filter()
-                        ->values()
-                        ->all();
+                    $featuresTextarea = $localeViewData['featuresTextarea'] ?? '';
+                    $outputsTextarea = $localeViewData['outputsTextarea'] ?? '';
+                    $servicesTextarea = $localeViewData['servicesTextarea'] ?? '';
+                    $faqItemsTextarea = $localeViewData['faqItemsTextarea'] ?? '';
+                    $reviewItems = $localeViewData['reviewItems'] ?? [];
 
                     $sectionTitleValue = $localeScalarValues['sectionTitleValue'] ?? '';
                     $eyebrowValue = $localeScalarValues['eyebrowValue'] ?? '';
@@ -382,43 +284,15 @@
                     $designImageSixValue = $localeScalarValues['designImageSixValue'] ?? null;
                     $techStackLogosValue = $localeScalarValues['techStackLogosValue'] ?? [];
                     $techStackLogosValueForComponent = $localeScalarValues['techStackLogosValueForComponent'] ?? '';
-
-                    $campaignIllustrationPreviewUrls =
-                        $isHeroCampaign || $isProgrammingShowcase
-                            ? $mediaPreviewBuilder->build($campaignIllustrationValue)
-                            : [];
-                    $headerLogoPreviewUrls = $isSiteHeader
-                        ? $mediaPreviewBuilder->build($headerLogoValue)
-                        : [];
-                    $mobileAppImageOnePreviewUrls =
-                        $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase
-                            ? $mediaPreviewBuilder->build($mobileAppImageOneValue)
-                            : [];
-                    $mobileAppImageTwoPreviewUrls =
-                        $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase
-                            ? $mediaPreviewBuilder->build($mobileAppImageTwoValue)
-                            : [];
-                    $mobileAppImageThreePreviewUrls =
-                        $isMobileAppShowcase || $isDesignShowcase
-                            ? $mediaPreviewBuilder->build($mobileAppImageThreeValue)
-                            : [];
-                    $designImageFourPreviewUrls = $isDesignShowcase
-                        ? $mediaPreviewBuilder->build($designImageFourValue)
-                        : [];
-                    $designImageFivePreviewUrls = $isDesignShowcase
-                        ? $mediaPreviewBuilder->build($designImageFiveValue)
-                        : [];
-                    $designImageSixPreviewUrls = $isDesignShowcase
-                        ? $mediaPreviewBuilder->build($designImageSixValue)
-                        : [];
-                    $logoValues = is_string($techStackLogosValue)
-                        ? array_values(array_filter(array_map('trim', explode(',', $techStackLogosValue))))
-                        : (is_array($techStackLogosValue)
-                            ? $techStackLogosValue
-                            : []);
-                    $techStackLogoPreviewUrls = $isTechStackShowcase
-                        ? $mediaPreviewBuilder->buildMany($logoValues)
-                        : [];
+                    $campaignIllustrationPreviewUrls = $localeViewData['campaignIllustrationPreviewUrls'] ?? [];
+                    $headerLogoPreviewUrls = $localeViewData['headerLogoPreviewUrls'] ?? [];
+                    $mobileAppImageOnePreviewUrls = $localeViewData['mobileAppImageOnePreviewUrls'] ?? [];
+                    $mobileAppImageTwoPreviewUrls = $localeViewData['mobileAppImageTwoPreviewUrls'] ?? [];
+                    $mobileAppImageThreePreviewUrls = $localeViewData['mobileAppImageThreePreviewUrls'] ?? [];
+                    $designImageFourPreviewUrls = $localeViewData['designImageFourPreviewUrls'] ?? [];
+                    $designImageFivePreviewUrls = $localeViewData['designImageFivePreviewUrls'] ?? [];
+                    $designImageSixPreviewUrls = $localeViewData['designImageSixPreviewUrls'] ?? [];
+                    $techStackLogoPreviewUrls = $localeViewData['techStackLogoPreviewUrls'] ?? [];
                 @endphp
 
                 <div id="lang-{{ $code }}" data-editor-tab-panel
@@ -487,7 +361,15 @@
                                         ? __('Brand Name')
                                         : ($isHeroCampaign
                                             ? __('Main Title - Line 1')
-                                            : ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase
+                                            : ($isProgrammingShowcase ||
+                                            $isMobileAppShowcase ||
+                                            $isDesignShowcase ||
+                                            $isDigitalMarketingShowcase ||
+                                            $isReviewsShowcase ||
+                                            $isOurWorkShowcase ||
+                                            $isDomainsShowcase ||
+                                            $isTemplatesSliderShowcase ||
+                                            $isTemplatesListingShowcase
                                                 ? __('Section Title')
                                                 : __('Main Title'))) }}
                                 </label>
@@ -501,8 +383,8 @@
 
                         @if ($isSiteHeader)
                             <div class="lg:col-span-2">
-                                <x-dashboard.media-picker :name="'translations[' . $code . '][content][logo]'" :label="__('Brand Image')" :button-text="__('Choose From Media Library')" :value="$headerLogoValue" :preview-urls="$headerLogoPreviewUrls"
-                                    :multiple="false" store-value="id" />
+                                <x-dashboard.media-picker :name="'translations[' . $code . '][content][logo]'" :label="__('Brand Image')" :button-text="__('Choose From Media Library')"
+                                    :value="$headerLogoValue" :preview-urls="$headerLogoPreviewUrls" :multiple="false" store-value="id" />
                                 <p class="mt-2 text-xs text-slate-500">
                                     {{ __('Upload a brand image from your media library. If you leave this empty, the header will use the first letter of the brand name.') }}
                                 </p>
@@ -938,7 +820,11 @@
                                         ? __('Header Button Label')
                                         : ($isDomainsShowcase
                                             ? __('Search Button Label')
-                                            : ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase
+                                            : ($isHeroCampaign ||
+                                            $isProgrammingShowcase ||
+                                            $isMobileAppShowcase ||
+                                            $isDesignShowcase ||
+                                            $isDigitalMarketingShowcase
                                                 ? __('CTA Button Label')
                                                 : __('Primary Button Label'))) }}
                                 </label>
@@ -955,7 +841,11 @@
                                         ? __('Header Button URL')
                                         : ($isDomainsShowcase
                                             ? __('Search Page URL')
-                                            : ($isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase
+                                            : ($isHeroCampaign ||
+                                            $isProgrammingShowcase ||
+                                            $isMobileAppShowcase ||
+                                            $isDesignShowcase ||
+                                            $isDigitalMarketingShowcase
                                                 ? __('CTA Button URL')
                                                 : __('Primary Button URL'))) }}
                                 </label>
@@ -980,7 +870,8 @@
                         @endif
 
                         @if ($isSiteHeader)
-                            <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                            <div
+                                class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                                 {{ __('Navigation links are pulled automatically from your active site pages. Edit the button here if you want a highlighted action on the right side of the header.') }}
                             </div>
                         @endif
@@ -991,7 +882,8 @@
                                 data-footer-link-item-hint="{{ __('Add the label and destination for this footer link.') }}">
                                 <div class="mb-4 flex items-center justify-between gap-3 rtl:flex-row-reverse">
                                     <div>
-                                        <label class="block text-sm font-medium text-slate-700">{{ __('Footer Links') }}</label>
+                                        <label
+                                            class="block text-sm font-medium text-slate-700">{{ __('Footer Links') }}</label>
                                         <p class="mt-1 text-xs text-slate-500">
                                             {{ __('This is used in the links footer layout. Add each link with a label and URL.') }}
                                         </p>
@@ -1008,8 +900,10 @@
                                         <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
                                             data-footer-link-item>
                                             <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
-                                                <div class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-slate-400 rtl:flex-row-reverse">
-                                                    <span data-footer-link-title>{{ __('Link') }} {{ $footerLinkIndex + 1 }}</span>
+                                                <div
+                                                    class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-slate-400 rtl:flex-row-reverse">
+                                                    <span data-footer-link-title>{{ __('Link') }}
+                                                        {{ $footerLinkIndex + 1 }}</span>
                                                 </div>
 
                                                 <div class="flex items-center gap-2 rtl:flex-row-reverse">
@@ -1026,7 +920,8 @@
 
                                             <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
                                                 <div>
-                                                    <label class="block text-sm font-medium text-slate-700">{{ __('Label') }}</label>
+                                                    <label
+                                                        class="block text-sm font-medium text-slate-700">{{ __('Label') }}</label>
                                                     <input type="text" data-footer-link-field="label"
                                                         data-name-template="translations[{{ $code }}][content][footer_links][__INDEX__][label]"
                                                         value="{{ $footerLinkItem['label'] ?? '' }}"
@@ -1034,7 +929,8 @@
                                                 </div>
 
                                                 <div>
-                                                    <label class="block text-sm font-medium text-slate-700">{{ __('URL') }}</label>
+                                                    <label
+                                                        class="block text-sm font-medium text-slate-700">{{ __('URL') }}</label>
                                                     <input type="text" data-footer-link-field="url"
                                                         data-name-template="translations[{{ $code }}][content][footer_links][__INDEX__][url]"
                                                         value="{{ $footerLinkItem['url'] ?? '' }}"
@@ -1055,7 +951,8 @@
                                     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
                                         data-footer-link-item>
                                         <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
-                                            <div class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-slate-400 rtl:flex-row-reverse">
+                                            <div
+                                                class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-slate-400 rtl:flex-row-reverse">
                                                 <span data-footer-link-title>{{ __('Link') }}</span>
                                             </div>
 
@@ -1073,14 +970,16 @@
 
                                         <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
                                             <div>
-                                                <label class="block text-sm font-medium text-slate-700">{{ __('Label') }}</label>
+                                                <label
+                                                    class="block text-sm font-medium text-slate-700">{{ __('Label') }}</label>
                                                 <input type="text" data-footer-link-field="label"
                                                     data-name-template="translations[{{ $code }}][content][footer_links][__INDEX__][label]"
                                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
                                             </div>
 
                                             <div>
-                                                <label class="block text-sm font-medium text-slate-700">{{ __('URL') }}</label>
+                                                <label
+                                                    class="block text-sm font-medium text-slate-700">{{ __('URL') }}</label>
                                                 <input type="text" data-footer-link-field="url"
                                                     data-name-template="translations[{{ $code }}][content][footer_links][__INDEX__][url]"
                                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
@@ -1094,7 +993,8 @@
 
                         @if ($showSiteFooterSocialFields)
                             <div class="lg:col-span-2">
-                                <label class="block text-sm font-medium text-slate-700">{{ __('Copyright Line') }}</label>
+                                <label
+                                    class="block text-sm font-medium text-slate-700">{{ __('Copyright Line') }}</label>
                                 <input type="text" name="translations[{{ $code }}][content][copyright]"
                                     value="{{ $footerCopyrightValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
@@ -1104,16 +1004,20 @@
                             </div>
 
                             <div class="lg:col-span-2">
-                                <label class="block text-sm font-medium text-slate-700">{{ __('Facebook URL') }}</label>
-                                <input type="url" name="translations[{{ $code }}][content][social_links][facebook]"
+                                <label
+                                    class="block text-sm font-medium text-slate-700">{{ __('Facebook URL') }}</label>
+                                <input type="url"
+                                    name="translations[{{ $code }}][content][social_links][facebook]"
                                     value="{{ $footerFacebookUrlValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                     placeholder="https://facebook.com/your-page">
                             </div>
 
                             <div class="lg:col-span-2">
-                                <label class="block text-sm font-medium text-slate-700">{{ __('Instagram URL') }}</label>
-                                <input type="url" name="translations[{{ $code }}][content][social_links][instagram]"
+                                <label
+                                    class="block text-sm font-medium text-slate-700">{{ __('Instagram URL') }}</label>
+                                <input type="url"
+                                    name="translations[{{ $code }}][content][social_links][instagram]"
                                     value="{{ $footerInstagramUrlValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                     placeholder="https://instagram.com/your-page">
@@ -1121,23 +1025,28 @@
 
                             <div class="lg:col-span-2">
                                 <label class="block text-sm font-medium text-slate-700">{{ __('X URL') }}</label>
-                                <input type="url" name="translations[{{ $code }}][content][social_links][x]"
+                                <input type="url"
+                                    name="translations[{{ $code }}][content][social_links][x]"
                                     value="{{ $footerXUrlValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                     placeholder="https://x.com/your-page">
                             </div>
 
                             <div class="lg:col-span-2">
-                                <label class="block text-sm font-medium text-slate-700">{{ __('GitHub URL') }}</label>
-                                <input type="url" name="translations[{{ $code }}][content][social_links][github]"
+                                <label
+                                    class="block text-sm font-medium text-slate-700">{{ __('GitHub URL') }}</label>
+                                <input type="url"
+                                    name="translations[{{ $code }}][content][social_links][github]"
                                     value="{{ $footerGithubUrlValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                     placeholder="https://github.com/your-page">
                             </div>
 
                             <div class="lg:col-span-2">
-                                <label class="block text-sm font-medium text-slate-700">{{ __('YouTube URL') }}</label>
-                                <input type="url" name="translations[{{ $code }}][content][social_links][youtube]"
+                                <label
+                                    class="block text-sm font-medium text-slate-700">{{ __('YouTube URL') }}</label>
+                                <input type="url"
+                                    name="translations[{{ $code }}][content][social_links][youtube]"
                                     value="{{ $footerYoutubeUrlValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
                                     placeholder="https://youtube.com/@your-channel">
@@ -1229,7 +1138,8 @@
                                         <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
                                             data-review-item>
                                             <div class="flex items-center justify-between gap-3">
-                                                <div class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
+                                                <div
+                                                    class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
                                                     <button type="button"
                                                         class="sections-drag-handle rounded-xl border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-500"
                                                         data-review-drag-handle>
@@ -1300,7 +1210,8 @@
                                     <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
                                         data-review-item>
                                         <div class="flex items-center justify-between gap-3">
-                                            <div class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
+                                            <div
+                                                class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
                                                 <button type="button"
                                                     class="sections-drag-handle rounded-xl border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-500"
                                                     data-review-drag-handle>
