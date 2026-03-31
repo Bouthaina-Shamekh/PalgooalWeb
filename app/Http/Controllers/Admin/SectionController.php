@@ -1059,9 +1059,21 @@ class SectionController extends Controller
 
             'site_footer' => [
                 'title' => 'My Website',
-                'description' => 'Add a short description of your business and how visitors can reach you.',
-                'contact_email' => '',
-                'contact_phone' => '',
+                'footer_links' => [
+                    ['label' => 'About', 'url' => '#'],
+                    ['label' => 'Blog', 'url' => '#'],
+                    ['label' => 'Jobs', 'url' => '#'],
+                    ['label' => 'Press', 'url' => '#'],
+                    ['label' => 'Accessibility', 'url' => '#'],
+                    ['label' => 'Partners', 'url' => '#'],
+                ],
+                'social_links' => [
+                    'facebook' => '',
+                    'instagram' => '',
+                    'x' => '',
+                    'github' => '',
+                    'youtube' => '',
+                ],
                 'copyright' => sprintf('© %s My Website. All rights reserved.', now()->year),
             ],
 
@@ -1470,12 +1482,63 @@ class SectionController extends Controller
 
     protected function normalizeSiteFooterContent(array $content): array
     {
+        $socialLinks = is_array($content['social_links'] ?? null) ? $content['social_links'] : [];
+        $footerLinksRaw = $content['footer_links_textarea'] ?? ($content['footer_links'] ?? []);
+
+        $footerLinks = is_array($footerLinksRaw)
+            ? collect($footerLinksRaw)
+                ->map(function ($item): ?array {
+                    if (! is_array($item)) {
+                        return null;
+                    }
+
+                    $label = trim((string) ($item['label'] ?? ''));
+                    $url = trim((string) ($item['url'] ?? '#'));
+
+                    if ($label === '') {
+                        return null;
+                    }
+
+                    return [
+                        'label' => $label,
+                        'url' => $url !== '' ? $url : '#',
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all()
+            : collect(preg_split("/\r\n|\r|\n/", (string) $footerLinksRaw))
+                ->map(fn ($item) => trim((string) $item))
+                ->filter()
+                ->map(function (string $item): ?array {
+                    $parts = preg_split('/\s*\|\|\s*|\s*\|\s*/', $item, 2);
+                    $label = trim((string) ($parts[0] ?? ''));
+                    $url = trim((string) ($parts[1] ?? '#'));
+
+                    if ($label === '') {
+                        return null;
+                    }
+
+                    return [
+                        'label' => $label,
+                        'url' => $url !== '' ? $url : '#',
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all();
+
         return [
             'title' => trim((string) ($content['title'] ?? __('My Website'))),
-            'description' => trim((string) ($content['description'] ?? '')),
-            'contact_email' => trim((string) ($content['contact_email'] ?? '')),
-            'contact_phone' => trim((string) ($content['contact_phone'] ?? '')),
             'copyright' => trim((string) ($content['copyright'] ?? '')),
+            'footer_links' => $footerLinks,
+            'social_links' => [
+                'facebook' => trim((string) ($socialLinks['facebook'] ?? ($content['facebook_url'] ?? ''))),
+                'instagram' => trim((string) ($socialLinks['instagram'] ?? ($content['instagram_url'] ?? ''))),
+                'x' => trim((string) ($socialLinks['x'] ?? ($content['x_url'] ?? ''))),
+                'github' => trim((string) ($socialLinks['github'] ?? ($content['github_url'] ?? ''))),
+                'youtube' => trim((string) ($socialLinks['youtube'] ?? ($content['youtube_url'] ?? ''))),
+            ],
         ];
     }
 

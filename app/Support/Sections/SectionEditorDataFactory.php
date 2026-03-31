@@ -90,12 +90,11 @@ class SectionEditorDataFactory
                     $isMobileAppShowcase ||
                     $isDesignShowcase ||
                     $isReviewsShowcase ||
-                    $isOurWorkShowcase ||
+                $isOurWorkShowcase ||
                     $isHostingPricingShowcase ||
                     $isDomainsShowcase ||
                     $isTemplatesSliderShowcase ||
                     $isTemplatesListingShowcase ||
-                    $isSiteFooter ||
                     $isSimpleTestimonials,
                 'showFeaturesHeadingField' => $isHeroCampaign,
                 'showOutputsHeadingField' => $isProgrammingShowcase,
@@ -168,12 +167,13 @@ class SectionEditorDataFactory
                     ],
                     true,
                 ),
-                'showMainTitleField' => ! $isTechStackShowcase,
+                'showMainTitleField' => ! $isTechStackShowcase && ! $isSiteFooter,
                 'showDomainsSearchHeadingField' => $isDomainsShowcase,
                 'showDomainsPlaceholderField' => $isDomainsShowcase,
                 'showFaqItemsTextareaField' => $isSimpleFaq,
                 'showReviewRepeaterField' => $isSimpleTestimonials,
-                'showSiteFooterContactFields' => $isSiteFooter,
+                'showSiteFooterLinksTextareaField' => $isSiteFooter,
+                'showSiteFooterSocialFields' => $isSiteFooter,
             ],
             'hostingPricingAvailableCategories' => $isHostingPricingShowcase
                 ? PlanCategory::query()->active()->ordered()->with('translations')->get()
@@ -354,14 +354,63 @@ class SectionEditorDataFactory
                         'ourWorkVisitLabelValue' => $this->stringValue(
                             old("translations.$code.content.visit_label", $content['visit_label'] ?? ''),
                         ),
-                        'footerContactEmailValue' => $this->stringValue(
-                            old("translations.$code.content.contact_email", $content['contact_email'] ?? ''),
-                        ),
-                        'footerContactPhoneValue' => $this->stringValue(
-                            old("translations.$code.content.contact_phone", $content['contact_phone'] ?? ''),
-                        ),
                         'footerCopyrightValue' => $this->stringValue(
                             old("translations.$code.content.copyright", $content['copyright'] ?? ''),
+                        ),
+                        'footerLinkItems' => collect(
+                            is_array(old("translations.$code.content.footer_links"))
+                                ? old("translations.$code.content.footer_links")
+                                : (is_array($content['footer_links'] ?? null) ? $content['footer_links'] : [])
+                        )
+                            ->map(function ($item): ?array {
+                                if (! is_array($item)) {
+                                    return null;
+                                }
+
+                                $label = trim((string) ($item['label'] ?? ''));
+                                $url = trim((string) ($item['url'] ?? ''));
+
+                                if ($label === '' && $url === '') {
+                                    return null;
+                                }
+
+                                return [
+                                    'label' => $label,
+                                    'url' => $url,
+                                ];
+                            })
+                            ->filter()
+                            ->values()
+                            ->all(),
+                        'footerFacebookUrlValue' => $this->stringValue(
+                            old(
+                                "translations.$code.content.social_links.facebook",
+                                data_get($content, 'social_links.facebook', ''),
+                            ),
+                        ),
+                        'footerInstagramUrlValue' => $this->stringValue(
+                            old(
+                                "translations.$code.content.social_links.instagram",
+                                data_get($content, 'social_links.instagram', ''),
+                            ),
+                        ),
+                        'footerXUrlValue' => $this->stringValue(
+                            old(
+                                "translations.$code.content.social_links.x",
+                                data_get($content, 'social_links.x', ''),
+                            ),
+                        ),
+                        'footerGithubUrlValue' => $this->stringValue(
+                            old(
+                                "translations.$code.content.social_links.github",
+                                data_get($content, 'social_links.github', ''),
+                            ),
+                        ),
+                        'footerYoutubeUrlValue' => $this->stringValue(
+                            old(
+                                "translations.$code.content.social_links.youtube",
+                                data_get($content, 'social_links.youtube', ''),
+                            ),
                         ),
                         'headerLogoValue' => old(
                             "translations.$code.content.logo",

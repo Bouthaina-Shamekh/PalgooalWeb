@@ -104,7 +104,9 @@
         $showDomainsPlaceholderField = (bool) ($fieldFlags['showDomainsPlaceholderField'] ?? false);
         $showFaqItemsTextareaField = (bool) ($fieldFlags['showFaqItemsTextareaField'] ?? false);
         $showReviewRepeaterField = (bool) ($fieldFlags['showReviewRepeaterField'] ?? false);
-        $showSiteFooterContactFields = (bool) ($fieldFlags['showSiteFooterContactFields'] ?? false);
+        $showSiteFooterLinksTextareaField = (bool) ($fieldFlags['showSiteFooterLinksTextareaField'] ?? false);
+        $showSiteFooterSocialFields = (bool) ($fieldFlags['showSiteFooterSocialFields'] ?? false);
+        $selectedFooterVariant = old('variant', $section->variant ?: 'simple_social');
         $hostingPricingAvailableCategories = $editorState['hostingPricingAvailableCategories'] ?? collect();
     @endphp
 
@@ -124,9 +126,28 @@
     <div class="{{ $surfaceClass }}">
         <div class="{{ $sectionBodyClass }}">
             <input type="hidden" name="type" value="{{ $selectedType }}">
-            <input type="hidden" name="variant" value="{{ old('variant', $section->variant) }}">
 
             <div class="{{ $settingsGridClass }}">
+                @if ($isSiteFooter)
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700">{{ __('Footer Layout') }}</label>
+                        <select name="variant"
+                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
+                            <option value="simple_social" {{ $selectedFooterVariant === 'simple_social' ? 'selected' : '' }}>
+                                {{ __('Social icons + copyright') }}
+                            </option>
+                            <option value="links_social" {{ $selectedFooterVariant === 'links_social' ? 'selected' : '' }}>
+                                {{ __('Links + social icons + copyright') }}
+                            </option>
+                        </select>
+                        <p class="mt-2 text-xs text-slate-500">
+                            {{ __('Choose the footer style the client wants. The links field below is used only in the links layout.') }}
+                        </p>
+                    </div>
+                @else
+                    <input type="hidden" name="variant" value="{{ old('variant', $section->variant) }}">
+                @endif
+
                 @if ($showOrderField)
                     <div>
                         <label class="block text-sm font-medium text-slate-700">{{ $displayOrderLabel }}</label>
@@ -341,9 +362,13 @@
                     $reviewsLimitValue = $localeScalarValues['reviewsLimitValue'] ?? '';
                     $ourWorkLimitValue = $localeScalarValues['ourWorkLimitValue'] ?? '';
                     $ourWorkVisitLabelValue = $localeScalarValues['ourWorkVisitLabelValue'] ?? '';
-                    $footerContactEmailValue = $localeScalarValues['footerContactEmailValue'] ?? '';
-                    $footerContactPhoneValue = $localeScalarValues['footerContactPhoneValue'] ?? '';
                     $footerCopyrightValue = $localeScalarValues['footerCopyrightValue'] ?? '';
+                    $footerLinkItems = $localeScalarValues['footerLinkItems'] ?? [];
+                    $footerFacebookUrlValue = $localeScalarValues['footerFacebookUrlValue'] ?? '';
+                    $footerInstagramUrlValue = $localeScalarValues['footerInstagramUrlValue'] ?? '';
+                    $footerXUrlValue = $localeScalarValues['footerXUrlValue'] ?? '';
+                    $footerGithubUrlValue = $localeScalarValues['footerGithubUrlValue'] ?? '';
+                    $footerYoutubeUrlValue = $localeScalarValues['footerYoutubeUrlValue'] ?? '';
                     $headerLogoValue = $localeScalarValues['headerLogoValue'] ?? null;
                     $pricingCategoryDatalistId = 'pricing-category-keys-' . $section->id . '-' . $code;
                     $mediaUrlValue = $localeScalarValues['mediaUrlValue'] ?? '';
@@ -960,29 +985,162 @@
                             </div>
                         @endif
 
-                        @if ($showSiteFooterContactFields)
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700">{{ __('Contact Email') }}</label>
-                                <input type="email" name="translations[{{ $code }}][content][contact_email]"
-                                    value="{{ $footerContactEmailValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                            </div>
+                        @if ($showSiteFooterLinksTextareaField)
+                            <div class="lg:col-span-2" data-footer-link-repeater
+                                data-footer-link-item-label="{{ __('Link') }}"
+                                data-footer-link-item-hint="{{ __('Add the label and destination for this footer link.') }}">
+                                <div class="mb-4 flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                    <div>
+                                        <label class="block text-sm font-medium text-slate-700">{{ __('Footer Links') }}</label>
+                                        <p class="mt-1 text-xs text-slate-500">
+                                            {{ __('This is used in the links footer layout. Add each link with a label and URL.') }}
+                                        </p>
+                                    </div>
+                                    <button type="button" data-add-footer-link
+                                        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 rtl:flex-row-reverse">
+                                        <span class="text-sm leading-none">+</span>
+                                        <span>{{ __('Add link') }}</span>
+                                    </button>
+                                </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700">{{ __('Contact Phone') }}</label>
-                                <input type="text" name="translations[{{ $code }}][content][contact_phone]"
-                                    value="{{ $footerContactPhoneValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                            </div>
+                                <div class="space-y-3" data-footer-link-items>
+                                    @foreach ($footerLinkItems as $footerLinkIndex => $footerLinkItem)
+                                        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                                            data-footer-link-item>
+                                            <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                                <div class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-slate-400 rtl:flex-row-reverse">
+                                                    <span data-footer-link-title>{{ __('Link') }} {{ $footerLinkIndex + 1 }}</span>
+                                                </div>
 
+                                                <div class="flex items-center gap-2 rtl:flex-row-reverse">
+                                                    <button type="button" data-duplicate-footer-link
+                                                        class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900">
+                                                        {{ __('Duplicate') }}
+                                                    </button>
+                                                    <button type="button" data-remove-footer-link
+                                                        class="rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:border-red-300 hover:bg-red-100">
+                                                        {{ __('Remove') }}
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                                <div>
+                                                    <label class="block text-sm font-medium text-slate-700">{{ __('Label') }}</label>
+                                                    <input type="text" data-footer-link-field="label"
+                                                        data-name-template="translations[{{ $code }}][content][footer_links][__INDEX__][label]"
+                                                        value="{{ $footerLinkItem['label'] ?? '' }}"
+                                                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
+                                                </div>
+
+                                                <div>
+                                                    <label class="block text-sm font-medium text-slate-700">{{ __('URL') }}</label>
+                                                    <input type="text" data-footer-link-field="url"
+                                                        data-name-template="translations[{{ $code }}][content][footer_links][__INDEX__][url]"
+                                                        value="{{ $footerLinkItem['url'] ?? '' }}"
+                                                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                        placeholder="https://example.com/page">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+
+                                <div data-footer-link-empty
+                                    class="{{ count($footerLinkItems) > 0 ? 'hidden ' : '' }}rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
+                                    {{ __('No footer links added yet. Add your first link to show it in the links footer layout.') }}
+                                </div>
+
+                                <template data-footer-link-item-template>
+                                    <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                                        data-footer-link-item>
+                                        <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
+                                            <div class="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-slate-400 rtl:flex-row-reverse">
+                                                <span data-footer-link-title>{{ __('Link') }}</span>
+                                            </div>
+
+                                            <div class="flex items-center gap-2 rtl:flex-row-reverse">
+                                                <button type="button" data-duplicate-footer-link
+                                                    class="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-900">
+                                                    {{ __('Duplicate') }}
+                                                </button>
+                                                <button type="button" data-remove-footer-link
+                                                    class="rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:border-red-300 hover:bg-red-100">
+                                                    {{ __('Remove') }}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                            <div>
+                                                <label class="block text-sm font-medium text-slate-700">{{ __('Label') }}</label>
+                                                <input type="text" data-footer-link-field="label"
+                                                    data-name-template="translations[{{ $code }}][content][footer_links][__INDEX__][label]"
+                                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
+                                            </div>
+
+                                            <div>
+                                                <label class="block text-sm font-medium text-slate-700">{{ __('URL') }}</label>
+                                                <input type="text" data-footer-link-field="url"
+                                                    data-name-template="translations[{{ $code }}][content][footer_links][__INDEX__][url]"
+                                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                                    placeholder="https://example.com/page">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        @endif
+
+                        @if ($showSiteFooterSocialFields)
                             <div class="lg:col-span-2">
                                 <label class="block text-sm font-medium text-slate-700">{{ __('Copyright Line') }}</label>
                                 <input type="text" name="translations[{{ $code }}][content][copyright]"
                                     value="{{ $footerCopyrightValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
                                 <p class="mt-2 text-xs text-slate-500">
-                                    {{ __('Page links are shown automatically from your active site pages. Use this area for brand text and contact details only.') }}
+                                    {{ __('Only the links you fill in will appear in the footer. Leave any network empty to hide it.') }}
                                 </p>
+                            </div>
+
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Facebook URL') }}</label>
+                                <input type="url" name="translations[{{ $code }}][content][social_links][facebook]"
+                                    value="{{ $footerFacebookUrlValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    placeholder="https://facebook.com/your-page">
+                            </div>
+
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('Instagram URL') }}</label>
+                                <input type="url" name="translations[{{ $code }}][content][social_links][instagram]"
+                                    value="{{ $footerInstagramUrlValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    placeholder="https://instagram.com/your-page">
+                            </div>
+
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('X URL') }}</label>
+                                <input type="url" name="translations[{{ $code }}][content][social_links][x]"
+                                    value="{{ $footerXUrlValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    placeholder="https://x.com/your-page">
+                            </div>
+
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('GitHub URL') }}</label>
+                                <input type="url" name="translations[{{ $code }}][content][social_links][github]"
+                                    value="{{ $footerGithubUrlValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    placeholder="https://github.com/your-page">
+                            </div>
+
+                            <div class="lg:col-span-2">
+                                <label class="block text-sm font-medium text-slate-700">{{ __('YouTube URL') }}</label>
+                                <input type="url" name="translations[{{ $code }}][content][social_links][youtube]"
+                                    value="{{ $footerYoutubeUrlValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    placeholder="https://youtube.com/@your-channel">
                             </div>
                         @endif
 

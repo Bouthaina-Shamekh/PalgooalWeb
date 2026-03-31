@@ -15,7 +15,9 @@
     $workspaceMode = $workspaceMode ?? 'admin';
     $isClientWorkspace = $workspaceMode === 'client';
     $currentLocale = app()->getLocale();
-    $groupedTypes = collect($sectionTypes ?? [])->groupBy(fn($meta) => $meta['category'] ?? 'other', true);
+    $groupedTypes = collect($sectionTypes ?? [])
+        ->reject(fn($meta) => (bool) ($meta['library_hidden'] ?? false))
+        ->groupBy(fn($meta) => $meta['category'] ?? 'other', true);
     $highlightSectionId = (int) request('highlight');
     $selectedSectionId = $highlightSectionId > 0 ? $highlightSectionId : (int) ($sections->first()->id ?? 0);
     $pageBuilderMode = in_array($page->builder_mode, ['visual', 'sections'], true) ? $page->builder_mode : 'sections';
@@ -480,12 +482,17 @@
                                             ? asset($meta['preview'])
                                             : null;
                                     $cardDescription = $meta['description'] ?? __('No description provided.');
+                                    $cardType = $meta['type'] ?? $type;
+                                    $cardVariant = $meta['variant'] ?? null;
                                 @endphp
                                 <form action="{{ $workspaceRouteFor('quick-store', [], false) }}"
                                     method="POST" data-library-item
                                     data-library-text="{{ \Illuminate\Support\Str::lower($meta['label'] . ' ' . ($meta['description'] ?? '') . ' ' . $category) }}">
                                     @csrf
-                                    <input type="hidden" name="type" value="{{ $type }}">
+                                    <input type="hidden" name="type" value="{{ $cardType }}">
+                                    @if (filled($cardVariant))
+                                        <input type="hidden" name="variant" value="{{ $cardVariant }}">
+                                    @endif
                                     <button type="submit"
                                         class="group flex h-full w-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white transform-gpu transition duration-200 ease-out hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 active:scale-[0.99] disabled:translate-y-0 disabled:shadow-none ltr:text-left rtl:text-right">
                                         @if ($previewAsset)

@@ -319,6 +319,30 @@ class TenantSiteShellService
                     : 'Add a short description of your business and the main contact details visitors need.',
                 'contact_email' => trim((string) ($subscription->client?->email ?? '')),
                 'contact_phone' => trim((string) ($subscription->client?->phone ?? '')),
+                'footer_links' => $isArabic
+                    ? [
+                        ['label' => 'من نحن', 'url' => '#'],
+                        ['label' => 'المدونة', 'url' => '#'],
+                        ['label' => 'الوظائف', 'url' => '#'],
+                        ['label' => 'الصحافة', 'url' => '#'],
+                        ['label' => 'إمكانية الوصول', 'url' => '#'],
+                        ['label' => 'الشركاء', 'url' => '#'],
+                    ]
+                    : [
+                        ['label' => 'About', 'url' => '#'],
+                        ['label' => 'Blog', 'url' => '#'],
+                        ['label' => 'Jobs', 'url' => '#'],
+                        ['label' => 'Press', 'url' => '#'],
+                        ['label' => 'Accessibility', 'url' => '#'],
+                        ['label' => 'Partners', 'url' => '#'],
+                    ],
+                'social_links' => [
+                    'facebook' => '',
+                    'instagram' => '',
+                    'x' => '',
+                    'github' => '',
+                    'youtube' => '',
+                ],
                 'copyright' => $isArabic
                     ? sprintf('© %s %s. جميع الحقوق محفوظة.', now()->year, $brandName)
                     : sprintf('© %s %s. All rights reserved.', now()->year, $brandName),

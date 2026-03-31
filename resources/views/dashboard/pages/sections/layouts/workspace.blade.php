@@ -684,6 +684,7 @@
             window.initSectionServiceRepeaters?.(document);
             window.initBuildStepRepeaters?.(document);
             window.initReviewRepeaters?.(document);
+            window.initFooterLinkRepeaters?.(document);
         });
 
         window.initSectionIconLibrary = function () {
@@ -2610,6 +2611,119 @@
 
                 reindexItems();
                 repeater.dataset.reviewRepeaterBound = '1';
+            });
+        };
+
+        window.initFooterLinkRepeaters = function (scope) {
+            const root = scope instanceof Element || scope instanceof Document ? scope : document;
+            const repeaters = root.matches?.('[data-footer-link-repeater]')
+                ? [root]
+                : Array.from(root.querySelectorAll('[data-footer-link-repeater]'));
+
+            repeaters.forEach((repeater) => {
+                if (repeater.dataset.footerLinkRepeaterBound === '1') {
+                    return;
+                }
+
+                const list = repeater.querySelector('[data-footer-link-items]');
+                const template = repeater.querySelector('template[data-footer-link-item-template]');
+                const emptyState = repeater.querySelector('[data-footer-link-empty]');
+                const addButtons = Array.from(repeater.querySelectorAll('[data-add-footer-link]'));
+                const itemLabel = repeater.dataset.footerLinkItemLabel || 'Link';
+
+                if (!list || !template) {
+                    repeater.dataset.footerLinkRepeaterBound = '1';
+                    return;
+                }
+
+                const reindexItems = () => {
+                    const items = Array.from(list.querySelectorAll('[data-footer-link-item]'));
+
+                    items.forEach((item, index) => {
+                        item.querySelectorAll('[data-name-template]').forEach((field) => {
+                            const templateName = field.dataset.nameTemplate || '';
+                            if (templateName) {
+                                field.name = templateName.replace(/__INDEX__/g, String(index));
+                            }
+                        });
+
+                        const title = item.querySelector('[data-footer-link-title]');
+                        if (title) {
+                            title.textContent = `${itemLabel} ${index + 1}`;
+                        }
+                    });
+
+                    if (emptyState) {
+                        emptyState.classList.toggle('hidden', items.length > 0);
+                    }
+                };
+
+                const bindItem = (item) => {
+                    if (!(item instanceof HTMLElement) || item.dataset.footerLinkItemBound === '1') {
+                        return;
+                    }
+
+                    const removeButton = item.querySelector('[data-remove-footer-link]');
+                    const duplicateButton = item.querySelector('[data-duplicate-footer-link]');
+
+                    removeButton?.addEventListener('click', function () {
+                        item.remove();
+                        reindexItems();
+                    });
+
+                    duplicateButton?.addEventListener('click', function () {
+                        createItem({
+                            label: item.querySelector('[data-footer-link-field="label"]')?.value || '',
+                            url: item.querySelector('[data-footer-link-field="url"]')?.value || '',
+                        });
+                    });
+
+                    item.dataset.footerLinkItemBound = '1';
+                };
+
+                const createItem = (seed = {}) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = template.innerHTML.trim();
+
+                    const item = wrapper.firstElementChild;
+                    if (!(item instanceof HTMLElement)) {
+                        return null;
+                    }
+
+                    list.appendChild(item);
+                    bindItem(item);
+
+                    const labelInput = item.querySelector('[data-footer-link-field="label"]');
+                    const urlInput = item.querySelector('[data-footer-link-field="url"]');
+
+                    if (labelInput && typeof seed.label === 'string') {
+                        labelInput.value = seed.label;
+                    }
+
+                    if (urlInput && typeof seed.url === 'string') {
+                        urlInput.value = seed.url;
+                    }
+
+                    reindexItems();
+
+                    return item;
+                };
+
+                addButtons.forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const item = createItem();
+                        const labelInput = item?.querySelector('[data-footer-link-field="label"]');
+
+                        if (labelInput instanceof HTMLElement) {
+                            window.setTimeout(() => labelInput.focus(), 30);
+                        }
+                    });
+                });
+
+                Array.from(list.querySelectorAll('[data-footer-link-item]')).forEach(bindItem);
+
+                reindexItems();
+                repeater.dataset.footerLinkRepeaterBound = '1';
             });
         };
     </script>
