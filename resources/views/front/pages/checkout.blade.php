@@ -51,69 +51,20 @@
 
     <script>
         (function() {
-            const KEY = 'palgoals:theme';
             const root = document.documentElement;
-            const prefersDark = () => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-            function apply(mode) {
-                const isDark = mode === 'dark' ? true : (mode === 'light' ? false : prefersDark());
-                root.classList.toggle('dark', isDark);
-                root.style.colorScheme = isDark ? 'dark' : 'light';
-            }
-            try {
-                const saved = localStorage.getItem(KEY);
-                apply(saved || 'system');
-                // Sync with system when user didn't choose explicitly
-                if (!saved && window.matchMedia) {
-                    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-                    mq.addEventListener && mq.addEventListener('change', () => apply('system'));
-                }
-                // Expose toggler
-                window.__setTheme = function(mode) {
-                    if (mode === 'system') localStorage.removeItem(KEY);
-                    else localStorage.setItem(KEY, mode);
-                    apply(mode);
-                }
-            } catch (_) {}
+            const forceLight = () => {
+                root.classList.remove('dark');
+                root.style.colorScheme = 'light';
+            };
+            forceLight();
+            document.addEventListener('DOMContentLoaded', forceLight);
         })();
     </script>
 
-    <div class="fixed left-3 bottom-3 z-50">
-        <div
-            class="inline-flex overflow-hidden rounded-xl border border-gray-200 bg-white/95 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95 shadow">
-            <button type="button" data-theme-btn="light" onclick="window.__setTheme('light')"
-                class="px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 dark:text-gray-300 dark:hover:bg-gray-800"
-                title="وضع فاتح" aria-label="وضع فاتح">☀️</button>
-            <button type="button" data-theme-btn="dark" onclick="window.__setTheme('dark')"
-                class="px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 dark:text-gray-300 dark:hover:bg-gray-800 border-x border-gray-200 dark:border-gray-800"
-                title="وضع داكن" aria-label="وضع داكن">🌙</button>
-            <button type="button" data-theme-btn="system" onclick="window.__setTheme('system')"
-                class="px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary/30 dark:text-gray-300 dark:hover:bg-gray-800"
-                title="مطابق للنظام" aria-label="مطابق للنظام">🖥️</button>
-        </div>
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const KEY = 'palgoals:theme';
-                const saved = localStorage.getItem(KEY) || 'system';
-                const setActive = (mode) => {
-                    document.querySelectorAll('[data-theme-btn]').forEach(btn => {
-                        const active = btn.getAttribute('data-theme-btn') === mode;
-                        btn.classList.toggle('bg-gray-100', active);
-                        btn.classList.toggle('dark:bg-gray-800', active);
-                    });
-                };
-                setActive(saved);
-                window.__setTheme && ['light', 'dark', 'system'].forEach(mode => {
-                    const el = document.querySelector(`[data-theme-btn="${mode}"]`);
-                    el && el.addEventListener('click', () => setActive(mode));
-                });
-            });
-        </script>
-    </div>
-
     <!-- ===== شريط الخطوات (خطوتان) ===== -->
     <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-4 mt-6">
-        <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-4">
+        <div class="bg-white border border-gray-200 rounded-xl shadow p-4">
             <div id="globalStepper" class="flex items-center justify-between gap-2">
                 @if ($requires_domain_selection)
                     <div class="flex items-center gap-3 step" data-index="0">
@@ -122,14 +73,14 @@
                             1</div>
                         <div class="text-sm">حجز الدومين</div>
                     </div>
-                    <div class="relative h-0.5 flex-1 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="relative h-0.5 flex-1 bg-gray-200 rounded-full overflow-hidden">
                         <div id="stepperProgress"
                             class="absolute inset-y-0 right-0 bg-[#240B36] transition-all duration-300" style="width:0%">
                         </div>
                     </div>
                     <div class="flex items-center gap-3 step" data-index="1">
                         <div
-                            class="h-9 w-9 rounded-full grid place-items-center border-2 border-gray-200 dark:border-gray-700 text-gray-500 font-extrabold step-circle">
+                            class="h-9 w-9 rounded-full grid place-items-center border-2 border-gray-200 text-gray-500 font-extrabold step-circle">
                             2</div>
                         <div class="text-sm">المراجعة والدفع</div>
                     </div>
@@ -151,26 +102,26 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- العمود الرئيسي -->
             <div
-                class="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 dark:text-white rounded-xl shadow p-6">
+                class="lg:col-span-2 bg-white border border-gray-200 rounded-xl shadow p-6">
                 <h1 class="text-2xl font-extrabold mb-1">احجز اسم النطاق</h1>
-                <p class="text-gray-600 dark:text-gray-300 mb-6">ابدأ باختيار طريقة ربط اسم النطاق بموقعك الجديد.</p>
+                <p class="text-gray-600 mb-6">ابدأ باختيار طريقة ربط اسم النطاق بموقعك الجديد.</p>
 
                 <!-- Tabs -->
                 <div role="tablist" aria-label="طرق الدومين" class="flex gap-2 mb-6">
                     <button data-tab="register" role="tab" aria-controls="tab-register" aria-selected="true"
-                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
+                        class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-primary/80 hover:text-white hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
                         تسجيل جديد
                     </button>
                     <button data-tab="transfer" role="tab" aria-controls="tab-transfer" aria-selected="false"
-                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
+                        class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-primary/80 hover:text-white hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
                         نقل نطاق
                     </button>
                     <button data-tab="owndomain" role="tab" aria-controls="tab-owndomain" aria-selected="false"
-                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
+                        class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-primary/80 hover:text-white hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
                         أمتلك نطاقاً
                     </button>
                     <button data-tab="subdomain" role="tab" aria-controls="tab-subdomain" aria-selected="false"
-                        class="px-4 py-2 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-900 hover:bg-primary/80 hover:text-white dark:hover:bg-gray-800 hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
+                        class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-primary/80 hover:text-white hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
                         Subdomain مجاني
                     </button>
                 </div>
@@ -181,15 +132,15 @@
                     @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example"
-                            class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
                         <select aria-label="الامتداد"
-                            class="w-40 rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                            class="w-40 rounded-xl border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
                             <option>.com</option>
                             <option>.net</option>
                             <option>.org</option>
                         </select>
                         <button type="button" id="btnCheck"
-                            class="inline-flex items-center justify-center rounded-xl px-4 py-2 font-semibold border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-900 hover:bg-gray-50 active:scale-95 transition">
+                            class="inline-flex items-center justify-center rounded-xl px-4 py-2 font-semibold border border-gray-300 text-gray-800 bg-white hover:bg-gray-50 active:scale-95 transition">
                             تحقق
                         </button>
                     </div>
@@ -213,9 +164,9 @@
                     @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example.com"
-                            class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
                         <input aria-label="رمز النقل" placeholder="Auth Code"
-                            class="w-48 rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
+                            class="w-48 rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
                     </div>
                     <div class="flex items-center justify-end pt-2">
                         <button type="button" id="goConfigT"
@@ -231,7 +182,7 @@
                     @csrf
                     <div class="flex gap-2">
                         <input aria-label="اسم النطاق" placeholder="example.com"
-                            class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
                     </div>
                     <p class="text-xs text-gray-500">سنوفر لك سجلات DNS لتوجيه نطاقك إلى خوادمنا بعد الدفع.</p>
                     <div class="flex items-center justify-end pt-2">
@@ -248,10 +199,10 @@
                     @csrf
                     <div class="flex gap-2 items-stretch">
                         <input aria-label="اسم الساب-دومين" placeholder="myshop"
-                            class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
                         <div class="flex items-center text-gray-500 px-2">.</div>
                         <select aria-label="الدومين الأساسي"
-                            class="w-56 rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                            class="w-56 rounded-xl border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
                             <option>{{ $tenantBaseDomain }}</option>
                         </select>
                     </div>
@@ -270,7 +221,7 @@
 
             <!-- ملخص جانبي -->
             <aside
-                class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 dark:text-white rounded-xl shadow p-6 h-max">
+                class="bg-white border border-gray-200 rounded-xl shadow p-6 h-max">
                 <h3 class="font-bold mb-3">ملخص سريع</h3>
                 <ul class="space-y-2 text-sm">
                     @if ($template)
@@ -308,7 +259,7 @@
                             class="font-semibold">—</span>
                     </li>
                 </ul>
-                <hr class="my-4 border-gray-200 dark:border-gray-800" />
+                <hr class="my-4 border-gray-200" />
                 <div class="flex justify-between font-bold"><span>الإجمالي التقديري</span><span id="summaryTotal">
                         @if ($template)
                             @if ($showDiscount)
@@ -333,27 +284,27 @@
         class="{{ $requires_domain_selection ? 'hidden ' : '' }}max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div
-                class="lg:col-span-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-6">
+                class="lg:col-span-2 bg-white border border-gray-200 rounded-xl shadow p-6">
                 <h2 class="text-2xl font-extrabold mb-1">المراجعة والدفع</h2>
-                <p class="text-gray-600 dark:text-gray-300 mb-6">راجع التفاصيل واكمل إنشاء الحساب/الدخول ثم اختر طريقة
+                <p class="text-gray-600 mb-6">راجع التفاصيل واكمل إنشاء الحساب/الدخول ثم اختر طريقة
                     الدفع.
                 </p>
                 @if (! $requires_domain_selection)
                     <div
-                        class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-800/80 dark:bg-emerald-900/20 dark:text-emerald-200">
+                        class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                         سيتم توليد Subdomain تلقائياً بعد الدفع إذا لم تضف دوميناً مع الطلب.
                     </div>
                 @endif
 
-                <div class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 mb-6">
+                <div class="overflow-hidden rounded-xl border border-gray-200 mb-6">
                     <div class="flex items-center justify-between mb-3">
                         <div class="text-sm text-gray-500">يمكنك إزالة عنصر أو إفراغ السلة قبل الدفع.</div>
                         <button type="button" id="btnClearCart"
-                            class="px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800">إفراغ
+                            class="px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-300 bg-white hover:bg-gray-50">إفراغ
                             السلة</button>
                     </div>
                     <table class="w-full text-sm">
-                        <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                        <thead class="bg-gray-100 text-gray-700">
                             <tr>
                                 <th class="text-right p-3">البند</th>
                                 <th class="text-right p-3">المدة</th>
@@ -363,7 +314,7 @@
                         </thead>
                         <tbody id="reviewDomainsBody">
                             <!-- يُملأ ديناميكياً من العناصر المتعددة -->
-                            <tr class="border-t border-gray-200 dark:border-gray-800 hidden rv-domain-row"
+                            <tr class="border-t border-gray-200 hidden rv-domain-row"
                                 id="reviewDomainProto">
                                 <td class="p-3">تسجيل نطاق <span class="rv-domain">—</span></td>
                                 <td class="p-3">12 شهر</td>
@@ -375,7 +326,7 @@
                                 </td>
                             </tr>
                             @if ($template)
-                                <tr class="border-t border-gray-200 dark:border-gray-800 rv-template-row">
+                                <tr class="border-t border-gray-200 rv-template-row">
                                     <td class="p-3">القالب: <span
                                             class="font-semibold">{{ $translation && $translation->name ? $translation->name : ($template && $template->name ? $template->name : '—') }}</span>
                                     </td>
@@ -398,7 +349,7 @@
                                 </tr>
                             @endif
                             @if ($plan)
-                                <tr class="border-t border-gray-200 dark:border-gray-800 rv-template-row">
+                                <tr class="border-t border-gray-200 rv-template-row">
                                     <td class="p-3">الخطة: <span
                                             class="font-semibold">{{ $plan_translation && $plan_translation->name ? $plan_translation->name : ($plan && $plan->name ? $plan->name : '—') }}</span>
                                     </td>
@@ -421,19 +372,19 @@
 
                 @if (!$template && !$plan)
                     <div
-                        class="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4 mb-6">
-                        <div class="font-bold text-amber-800 dark:text-amber-200 mb-1">تحجز دومين فقط؟</div>
-                        <p class="text-sm text-amber-700 dark:text-amber-300">يمكنك إتمام الحجز الآن أو اختيار قالب
+                        class="rounded-xl border border-amber-300 bg-amber-50 p-4 mb-6">
+                        <div class="font-bold text-amber-800 mb-1">تحجز دومين فقط؟</div>
+                        <p class="text-sm text-amber-700">يمكنك إتمام الحجز الآن أو اختيار قالب
                             لبدء موقعك بسرعة. او خطة</p>
                         <div class="mt-3 flex gap-2">
                             <a id="chooseTemplateLink" href="/templates"
                                 class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار
                                 قالب</a>
                             <button type="button"
-                                class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">إكمال
+                                class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 bg-white">إكمال
                                 بدون قالب</button>
                             <button type="button" id="btnChoosePlan"
-                                class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">إكمال
+                                class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 bg-white">إكمال
                                 بدون خطة</button>
                         </div>
                     </div>
@@ -441,9 +392,9 @@
 
                 <!-- يظهر بعد حذف القالب أثناء الجلسة الحالية -->
                 <div id="chooseTemplateAfterRemove"
-                    class="hidden rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-700 p-4 mb-6">
-                    <div class="font-bold text-amber-800 dark:text-amber-200 mb-1">تم حذف القالب والخطة.</div>
-                    <p class="text-sm text-amber-700 dark:text-amber-300">هل تريد اختيار قالب او خطة للموقع قبل الدفع؟
+                    class="hidden rounded-xl border border-amber-300 bg-amber-50 p-4 mb-6">
+                    <div class="font-bold text-amber-800 mb-1">تم حذف القالب والخطة.</div>
+                    <p class="text-sm text-amber-700">هل تريد اختيار قالب او خطة للموقع قبل الدفع؟
                     </p>
                     <div class="mt-3 flex gap-2">
                         <a id="chooseTemplateLink2" href="/templates"
@@ -453,7 +404,7 @@
                             class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار
                             خطة</a>
                         <button type="button"
-                            class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900">إكمال
+                            class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 bg-white">إكمال
                             بدون قالب</button>
                     </div>
                 </div>
@@ -461,15 +412,15 @@
                 @if (!auth('client')->check())
                     <!-- تبديل الدخول/التسجيل (Tabs) -->
                     <div role="tablist" aria-label="حساب العميل"
-                        class="inline-flex rounded-xl bg-gray-50 dark:bg-gray-900 p-1 mb-6 shadow border border-gray-200 dark:border-gray-700 gap-2">
+                        class="inline-flex rounded-xl bg-gray-50 p-1 mb-6 shadow border border-gray-200 gap-2">
                         <button id="btn-login" type="button" role="tab" aria-controls="login-form"
                             aria-selected="true" data-auth-tab="login"
-                            class="px-5 py-1.5 rounded-xl text-sm font-bold bg-white dark:bg-gray-900 text-[#240B36] border border-transparent hover:bg-[#240B36] hover:text-white focus:outline-none aria-selected:bg-[#240B36] aria-selected:text-white aria-selected:shadow-sm aria-selected:ring-2 aria-selected:ring-[#240B36]/30">
+                            class="px-5 py-1.5 rounded-xl text-sm font-bold bg-white text-[#240B36] border border-transparent hover:bg-[#240B36] hover:text-white focus:outline-none aria-selected:bg-[#240B36] aria-selected:text-white aria-selected:shadow-sm aria-selected:ring-2 aria-selected:ring-[#240B36]/30">
                             دخول العميل
                         </button>
                         <button id="btn-register" type="button" role="tab" aria-controls="register-form"
                             aria-selected="false" data-auth-tab="register"
-                            class="px-5 py-1.5 rounded-xl text-sm font-bold bg-white dark:bg-gray-900 text-[#240B36] border border-transparent hover:bg-[#240B36] hover:text-white focus:outline-none aria-selected:bg-[#240B36] aria-selected:text-white aria-selected:shadow-sm aria-selected:ring-2 aria-selected:ring-[#240B36]/30">
+                            class="px-5 py-1.5 rounded-xl text-sm font-bold bg-white text-[#240B36] border border-transparent hover:bg-[#240B36] hover:text-white focus:outline-none aria-selected:bg-[#240B36] aria-selected:text-white aria-selected:shadow-sm aria-selected:ring-2 aria-selected:ring-[#240B36]/30">
                             إنشاء حساب جديد
                         </button>
                     </div>
@@ -514,7 +465,7 @@
                 @else
                     <!-- نموذج الدخول -->
 
-                    <form id="login-form" class=" mb-2" role="tabpanel" method="POST"
+                    <form id="login-form" class="mb-2" role="tabpanel" method="POST"
                         action="{{ route('login.store') }}">
                         @csrf
                         <input type="hidden" name="redirect_to"
@@ -523,13 +474,13 @@
                             <div>
                                 <label class="text-sm font-medium mb-1 block">البريد الإلكتروني *</label>
                                 <input type="email" name="email"
-                                    class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-3 h-12 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 h-12 outline-none focus:ring-4 focus:ring-[#240B36]/20"
                                     placeholder="example@domain.com" required />
                             </div>
                             <div>
                                 <label class="text-sm font-medium mb-1 block">كلمة المرور *</label>
                                 <input type="password" name="password"
-                                    class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-3 h-12 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 h-12 outline-none focus:ring-4 focus:ring-[#240B36]/20"
                                     placeholder="••••••" required />
                             </div>
                             <div class="pt-6">
@@ -554,13 +505,13 @@
                             <div>
                                 <label class="block text-sm font-medium mb-1">الاسم الأول *</label>
                                 <input name="first_name"
-                                    class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
                                     placeholder="محمد" required />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">الاسم الأخير *</label>
                                 <input name="last_name"
-                                    class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
                                     placeholder="أحمد" required />
                             </div>
                         </div>
@@ -569,7 +520,7 @@
                                 <label class="block text-sm font-medium mb-1">رقم الجوال *</label>
                                 <div class="flex gap-2">
                                     <select id="registerPhoneCountryCode"
-                                        class="w-32 rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                        class="w-32 rounded-xl border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
                                         aria-label="Country calling code">
                                         <option value="+970" selected>PS +970</option>
                                         <option value="+962">JO +962</option>
@@ -584,7 +535,7 @@
                                         <option value="+1">US +1</option>
                                     </select>
                                     <input id="registerPhoneLocal" type="tel"
-                                        class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
                                         placeholder="590000000" inputmode="tel" autocomplete="tel-national" required />
                                 </div>
                                 <input type="hidden" name="phone" id="registerPhoneFull" value="">
@@ -593,7 +544,7 @@
                             <div>
                                 <label class="block text-sm font-medium mb-1">البريد الإلكتروني *</label>
                                 <input type="email" name="email"
-                                    class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
                                     placeholder="you@example.com" required />
                             </div>
                         </div>
@@ -601,13 +552,13 @@
                             <div>
                                 <label class="block text-sm font-medium mb-1">كلمة المرور *</label>
                                 <input type="password" name="password"
-                                    class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
                                     placeholder="••••••" required />
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">تأكيد كلمة المرور *</label>
                                 <input type="password" name="password_confirmation"
-                                    class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
                                     placeholder="••••••" required />
                             </div>
                         </div>
@@ -615,16 +566,16 @@
                 @endif
 
                 <!-- الدفع (مُحسَّن) -->
-                <div class="border border-gray-200 dark:border-gray-800 rounded-xl p-4" id="paymentBox">
+                <div class="border border-gray-200 rounded-xl p-4" id="paymentBox">
                     <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
                         <div>
                             <h3 class="font-bold">طريقة الدفع</h3>
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            <p class="mt-1 text-sm text-gray-500">
                                 أدخل بيانات الدفع لإكمال الطلب. سنجري تحققاً فورياً من صحة الحقول قبل الإرسال.
                             </p>
                         </div>
                         <span
-                            class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300">
+                            class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
                             اتصال آمن
                         </span>
                     </div>
@@ -632,14 +583,14 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                         <label
                             data-gateway-option="card"
-                            class="border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition hover:border-[#240B36]/30 hover:bg-[#240B36]/[0.03]">
+                            class="border border-gray-200 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition hover:border-[#240B36]/30 hover:bg-[#240B36]/[0.03]">
                             <input type="radio" name="gateway" value="card" class="scale-110" checked>
                             <span>بطاقة ائتمانية</span>
                             <span id="gatewayCardMeta" class="ms-auto text-xs text-gray-500">Visa / MasterCard</span>
                         </label>
                         <label
                             data-gateway-option="bank"
-                            class="border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition hover:border-[#240B36]/30 hover:bg-[#240B36]/[0.03]">
+                            class="border border-gray-200 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition hover:border-[#240B36]/30 hover:bg-[#240B36]/[0.03]">
                             <input type="radio" name="gateway" value="bank" class="scale-110">
                             <span>تحويل بنكي</span>
                             <span class="ms-auto text-xs text-gray-500">تأكيد يدوي</span>
@@ -654,9 +605,9 @@
                                 <div class="relative">
                                     <input id="ccNumber" inputmode="numeric" autocomplete="cc-number"
                                         placeholder="4242 4242 4242 4242" maxlength="23"
-                                        class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 ltr:pr-24 rtl:pl-24 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 ltr:pr-24 rtl:pl-24 outline-none focus:ring-4 focus:ring-[#240B36]/20">
                                     <span id="ccBrandBadge"
-                                        class="pointer-events-none absolute inset-y-0 my-auto flex h-8 items-center rounded-full bg-gray-100 px-3 text-xs font-semibold text-gray-500 dark:bg-gray-800 dark:text-gray-300 ltr:right-3 rtl:left-3">
+                                        class="pointer-events-none absolute inset-y-0 my-auto flex h-8 items-center rounded-full bg-gray-100 px-3 text-xs font-semibold text-gray-500 ltr:right-3 rtl:left-3">
                                         Card
                                     </span>
                                 </div>
@@ -664,7 +615,7 @@
                             <div>
                                 <label class="block text-sm font-medium mb-1">اسم حامل البطاقة *</label>
                                 <input id="ccName" autocomplete="cc-name" placeholder="Mohammed A."
-                                    class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
                             </div>
                         </div>
                         <div class="grid md:grid-cols-3 gap-4">
@@ -672,13 +623,13 @@
                                 <label class="block text-sm font-medium mb-1">تاريخ الانتهاء *</label>
                                 <input id="ccExp" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY"
                                     maxlength="5"
-                                    class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">CVV *</label>
                                 <input id="ccCvv" inputmode="numeric" autocomplete="cc-csc" placeholder="123"
                                     maxlength="4"
-                                    class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
                             </div>
                             <div class="flex items-end">
                                 <div id="ccHint" class="text-xs text-gray-500">
@@ -691,25 +642,25 @@
                     <!-- نموذج تحويل بنكي -->
                     <form id="bankForm" class="space-y-4 hidden">
                         <div
-                            class="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                            class="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-800">
                             سيتم وضع الطلب بانتظار المراجعة حتى يتم تأكيد التحويل البنكي يدوياً.
                         </div>
                         <div class="grid md:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium mb-1">البنك المحوَّل إليه</label>
                                 <input value="Bank of Palestine - IBAN: PS00 PALS 0000 0000 0000 0000" readonly
-                                    class="w-full rounded-xl border border-gray-200 bg-gray-50 dark:bg-gray-800 dark:border-gray-800 px-4 py-2">
+                                    class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium mb-1">رقم المعاملة *</label>
                                 <input id="bankRef" placeholder="TRX-123456" maxlength="40"
-                                    class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
                             </div>
                         </div>
                         <div>
                             <label class="block text-sm font-medium mb-1">ملاحظة (اختياري)</label>
                             <textarea id="bankNote" rows="3"
-                                class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
                                 placeholder="ارفق أي تفاصيل مهمة عن التحويل..."></textarea>
                         </div>
                         <p id="bankHint" class="text-xs text-gray-500">
@@ -719,7 +670,7 @@
 
                     <div class="mt-4 flex items-start gap-2">
                         <input id="agreeTos" type="checkbox" class="mt-1">
-                        <label for="agreeTos" class="text-sm text-gray-700 dark:text-gray-300">أوافق على <a
+                        <label for="agreeTos" class="text-sm text-gray-700">أوافق على <a
                                 href="#" class="underline">الشروط والأحكام</a> وسياسة الخصوصية.</label>
                     </div>
                 </div>
@@ -737,7 +688,7 @@
                     <div class="flex items-center justify-end gap-3 mt-6">
                         @if ($requires_domain_selection)
                             <button id="backToDomain2" type="button"
-                                class="rounded-xl px-4 py-2 font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 active:scale-95 transition">رجوع</button>
+                                class="rounded-xl px-4 py-2 font-semibold border border-gray-300 bg-white hover:bg-gray-50 active:scale-95 transition">رجوع</button>
                         @endif
                         <button id="placeOrderReal" type="submit" disabled
                             class="inline-flex items-center justify-center rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] opacity-50 cursor-not-allowed transition shadow-sm">إتمام
@@ -748,25 +699,25 @@
             </div>
 
             <aside
-                class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-6 h-max">
+                class="bg-white border border-gray-200 rounded-xl shadow p-6 h-max">
                 <h3 class="font-bold mb-3">الإجمالي</h3>
                 <div class="space-y-2 text-sm">
                     <div class="flex justify-between"><span>المجموع</span><span id="sumSub">0.00</span></div>
                     <div class="flex justify-between"><span>الخصم</span><span id="sumDiscount">$0.00</span></div>
                     <div class="flex justify-between"><span>الضريبة</span><span id="sumTax">$0.00</span></div>
                 </div>
-                <hr class="my-4 border-gray-200 dark:border-gray-800" />
+                <hr class="my-4 border-gray-200" />
                 <div class="space-y-3">
                     <div class="flex gap-2">
                         <input id="couponInput"
-                            class="w-full rounded-xl border border-gray-300 bg-white dark:bg-gray-900 dark:border-gray-700 px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
                             placeholder="كود الخصم (إن وجد)">
                         <button id="applyCoupon"
-                            class="rounded-xl px-4 py-2 font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 active:scale-95 transition">تطبيق</button>
+                            class="rounded-xl px-4 py-2 font-semibold border border-gray-300 bg-white hover:bg-gray-50 active:scale-95 transition">تطبيق</button>
                     </div>
                     <p id="couponMsg" class="text-xs text-gray-500"></p>
                 </div>
-                <hr class="my-4 border-gray-200 dark:border-gray-800" />
+                <hr class="my-4 border-gray-200" />
                 <div class="flex justify-between font-bold text-lg"><span>الإجمالي المستحق</span><span id="sumTotal2">
                         @if ($template)
                             @if ($showDiscount)
@@ -786,7 +737,7 @@
     <section id="view-success" class="hidden max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-16">
 
         <div
-            class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow p-8 text-center invoice-print-area">
+            class="bg-white border border-gray-200 rounded-xl shadow p-8 text-center invoice-print-area">
             <!-- شعار الشركة للطباعة -->
             <div class="print-logo mb-6" style="display:none">
                 <img src="/assets/dashboard/images/logo-white.svg" alt="Palgoals Logo"
@@ -796,54 +747,54 @@
                 class="mx-auto w-16 h-16 rounded-full grid place-items-center bg-green-100 text-green-700 mb-4 not-print">
                 ✓</div>
             <h2 class="text-2xl font-extrabold mb-2" id="sx-success-msg">Order completed successfully</h2>
-            <p id="sx-success-subtitle" class="text-gray-600 dark:text-gray-300 mb-6 not-print">
+            <p id="sx-success-subtitle" class="text-gray-600 mb-6 not-print">
                 Review the latest payment, provisioning, and domain status below.
             </p>
             <div id="sx-status-grid" class="mx-auto mb-6 grid max-w-4xl gap-3 text-left md:grid-cols-3 not-print">
-                <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-800 dark:bg-gray-800/60">
+                <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
                     <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Payment</p>
                     <div class="flex items-center justify-between gap-2">
-                        <span id="sx-payment-status-label" class="font-semibold text-gray-900 dark:text-white">Pending</span>
+                        <span id="sx-payment-status-label" class="font-semibold text-gray-900">Pending</span>
                         <span id="sx-payment-status-badge"
                             class="inline-flex items-center rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-600">
                             Submitted
                         </span>
                     </div>
                 </div>
-                <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-800 dark:bg-gray-800/60">
+                <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
                     <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Provisioning</p>
                     <div class="flex items-center justify-between gap-2">
-                        <span id="sx-provisioning-status-label" class="font-semibold text-gray-900 dark:text-white">Pending</span>
+                        <span id="sx-provisioning-status-label" class="font-semibold text-gray-900">Pending</span>
                         <span id="sx-provisioning-status-badge"
                             class="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600">
                             Queued
                         </span>
                     </div>
                 </div>
-                <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 dark:border-gray-800 dark:bg-gray-800/60">
+                <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
                     <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Domain</p>
                     <div class="flex items-center justify-between gap-2">
-                        <span id="sx-domain-status-label" class="font-semibold text-gray-900 dark:text-white">Pending</span>
+                        <span id="sx-domain-status-label" class="font-semibold text-gray-900">Pending</span>
                         <span id="sx-domain-status-badge"
                             class="inline-flex items-center rounded-full bg-slate-500/10 px-2.5 py-1 text-xs font-semibold text-slate-600">
                             Pending
                         </span>
                     </div>
-                    <p id="sx-domain-value" class="mt-2 break-all text-sm text-gray-500 dark:text-gray-300">—</p>
+                    <p id="sx-domain-value" class="mt-2 break-all text-sm text-gray-500">—</p>
                 </div>
             </div>
             <!-- ملخص الفاتورة الاحترافي -->
             <div class="max-w-2xl mx-auto mb-8">
                 <table
-                    class="w-full text-base border rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-lg invoice-table-print">
+                    class="w-full text-base border rounded-2xl overflow-hidden bg-white shadow-lg invoice-table-print">
                     <thead
-                        class="bg-gradient-to-l from-[#f3f4f6] to-[#e9eaf0] dark:from-gray-800 dark:to-gray-900 text-[#240B36] dark:text-gray-100">
+                        class="bg-gradient-to-l from-[#f3f4f6] to-[#e9eaf0] text-[#240B36]">
                         <tr>
                             <th class="p-4 text-right font-extrabold text-lg w-1/2">البند</th>
                             <th class="p-4 text-right font-extrabold text-lg w-1/2">القيمة</th>
                         </tr>
                     </thead>
-                    <tbody id="sx-invoice-body" class="divide-y divide-gray-200 dark:divide-gray-800">
+                    <tbody id="sx-invoice-body" class="divide-y divide-gray-200">
                         <!-- سيتم تعبئتها ديناميكياً -->
                     </tbody>
                 </table>
@@ -858,7 +809,7 @@
                     Manage this site
                 </button>
                 <button id="sx-print"
-                    class="rounded-xl px-5 py-2.5 font-semibold border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 active:scale-95 transition">
+                    class="rounded-xl px-5 py-2.5 font-semibold border border-gray-300 bg-white hover:bg-gray-50 active:scale-95 transition">
                     طباعة الفاتورة
                 </button>
             </div>
@@ -1261,7 +1212,7 @@
                 // نظّف جميع الحالات قبل التفعيل
                 c.classList.remove(
                     'border-[#240B36]', 'text-[#240B36]', 'bg-[#240B36]', 'text-white',
-                    'border-gray-200', 'dark:border-gray-700', 'text-gray-500'
+                    'border-gray-200', 'text-gray-500'
                 );
                 if (i < normalizedStep) {
                     // مكتملة
@@ -1271,7 +1222,7 @@
                     c.classList.add('border-[#240B36]', 'text-[#240B36]');
                 } else {
                     // القادمة
-                    c.classList.add('border-gray-200', 'dark:border-gray-700', 'text-gray-500');
+                    c.classList.add('border-gray-200', 'text-gray-500');
                 }
             });
             // تقدّم الخط بين الخطوتين (RTL: من اليمين لليسار)
@@ -1325,7 +1276,7 @@
             };
 
             appendRow('Order number', data.order_no, {
-                rowClass: 'bg-gray-50 dark:bg-gray-800',
+                rowClass: 'bg-gray-50',
                 valueClass: 'py-3 px-4 font-bold',
             });
             appendRow('Mode', checkoutMode === 'template' ? 'Template checkout' : 'Hosting checkout');
@@ -1334,7 +1285,7 @@
             appendRow('Provisioning', data.provisioning_status_label || '');
             appendRow('Domain', data.domain || '');
             appendRow('Total', data.total || '', {
-                rowClass: 'bg-green-50 dark:bg-green-900 font-extrabold text-lg',
+                rowClass: 'bg-green-50 font-extrabold text-lg',
                 labelClass: 'py-4 px-4',
                 valueClass: 'py-4 px-4 text-green-700',
             });
