@@ -239,7 +239,6 @@ For tenant runtime pages, the practical render sequence is now:
 The main admin controller currently exposes these shared/admin section types:
 
 - `hero_default`
-- `hero_minimal`
 - `hero_campaign`
 - `programming_showcase`
 - `mobile_app_showcase`
@@ -282,8 +281,8 @@ Important note:
 
 Examples:
 
-- `hero_minimal`
 - `features_grid`
+- `cta`
 
 Typical fields:
 

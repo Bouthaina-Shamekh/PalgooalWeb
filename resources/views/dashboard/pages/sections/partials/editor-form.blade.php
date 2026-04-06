@@ -1,5 +1,6 @@
 @php
     use App\Support\Sections\SectionMediaPreviewBuilder;
+    use App\Support\Sections\SectionEditorSchemaHelper;
 
     $workspaceRoutePrefix = $workspaceRoutePrefix ?? 'dashboard.pages.sections.';
     $workspaceRouteBaseParameters = $workspaceRouteBaseParameters ?? ['page' => $page];
@@ -27,6 +28,117 @@
     $feedbackTone = $feedbackTone ?? 'success';
     $viewErrors = $errors ?? new \Illuminate\Support\ViewErrorBag();
     $editorState = $editorState ?? [];
+    $schema = $editorState['editorSchema'] ?? [];
+    $schemaFields = collect($schema['fields'] ?? []);
+    $fieldsByGroup = $schemaFields->groupBy('group');
+    $contentFields = $fieldsByGroup->get('content', collect());
+    $ctaFields = $fieldsByGroup->get('cta', collect());
+    $mediaFields = $fieldsByGroup->get('media', collect());
+    $schemaGroupField = function (string $groupName, string $fieldName) use ($fieldsByGroup): array {
+        return collect($fieldsByGroup->get($groupName, collect()))->firstWhere('name', $fieldName) ?? [];
+    };
+    $schemaGroupFieldLabel = function (string $groupName, string $fieldName, string $fallback) use ($schemaGroupField) {
+        return $schemaGroupField($groupName, $fieldName)['label'] ?? $fallback;
+    };
+    $schemaGroupFieldMeta = function (string $groupName, string $fieldName) use ($schemaGroupField): array {
+        return $schemaGroupField($groupName, $fieldName);
+    };
+    $schemaGroupFieldPlaceholder = function (string $groupName, string $fieldName, ?string $fallback = null) use (
+        $schemaGroupFieldMeta,
+    ) {
+        return data_get($schemaGroupFieldMeta($groupName, $fieldName), 'ui.placeholder', $fallback);
+    };
+    /*
+    |--------------------------------------------------------------------------
+    | Shared schema helpers (available in partials)
+    |--------------------------------------------------------------------------
+    | These helpers are defined in the main Blade scope and are available
+    | to all included partials via Blade scope inheritance.
+    |
+    | Do NOT redefine or duplicate them inside block partials.
+    | Use them directly when extracting schema-driven fields.
+    | Do NOT pass them manually unless a future extraction truly requires it.
+    */
+    /*
+    |--------------------------------------------------------------------------
+    | Schema-driven field rendering
+    |--------------------------------------------------------------------------
+    | Use this pipeline for simple localized text/url fields whose label,
+    | placeholder, type, and schema metadata can be resolved from the editor
+    | schema without custom layout behavior.
+    |
+    | Use:
+    | - $schemaFieldContext(...) to resolve the schema-backed label,
+    |   placeholder, and schema metadata with safe fallbacks.
+    | - $schemaRenderableFieldConfig(...) to derive renderer-ready field
+    |   config such as fieldType and rows for simple scalar fields.
+    | - $schemaRendererPayload(...) to produce the shared include payload
+    |   while preserving existing names, values, and schemaField keys.
+    |
+    | Do not use this pipeline for repeaters, media fields, complex grouped
+    | layouts, or textarea fields with special/manual behavior. Those remain
+    | manual until they have dedicated handling.
+    */
+    $schemaFieldContext = function (
+        string $groupName,
+        string $fieldName,
+        string $fallbackLabel,
+        ?string $fallbackPlaceholder = null,
+    ) use ($schemaGroupFieldLabel, $schemaGroupFieldPlaceholder, $schemaGroupFieldMeta): array {
+        return [
+            'label' => $schemaGroupFieldLabel($groupName, $fieldName, $fallbackLabel),
+            'placeholder' => $schemaGroupFieldPlaceholder($groupName, $fieldName, $fallbackPlaceholder),
+            'schemaMeta' => $schemaGroupFieldMeta($groupName, $fieldName),
+        ];
+    };
+    $schemaFieldRows = function (array $schemaMeta, int $fallback = 4): int {
+        return (int) data_get($schemaMeta, 'ui.rows', $fallback);
+    };
+    $schemaFieldType = function (array $schemaMeta, string $fallback = 'text'): string {
+        $type = (string) data_get($schemaMeta, 'ui.type', $fallback);
+
+        return in_array($type, ['text', 'textarea', 'url'], true) ? $type : $fallback;
+    };
+    $schemaRenderableFieldConfig = function (
+        array $fieldContext,
+        string $fallbackType = 'text',
+        int $fallbackRows = 3
+    ) use ($schemaFieldType, $schemaFieldRows): array {
+        $resolvedType = $schemaFieldType($fieldContext['schemaMeta'], $fallbackType);
+
+        return [
+            'fieldType' => $resolvedType,
+            'rows' => $resolvedType === 'textarea'
+                ? $schemaFieldRows($fieldContext['schemaMeta'], $fallbackRows)
+                : null,
+            'label' => $fieldContext['label'],
+            'placeholder' => $fieldContext['placeholder'],
+            'schemaMeta' => $fieldContext['schemaMeta'],
+        ];
+    };
+    $schemaRendererPayload = function (
+        array $renderConfig,
+        string $name,
+        mixed $value,
+        string $schemaField,
+        string $wrapperClass = 'lg:col-span-2'
+    ): array {
+        return [
+            'fieldType' => $renderConfig['fieldType'],
+            'label' => $renderConfig['label'],
+            'name' => $name,
+            'value' => $value,
+            'placeholder' => $renderConfig['placeholder'],
+            'rows' => $renderConfig['rows'],
+            'schemaField' => $schemaField,
+            'schemaMeta' => $renderConfig['schemaMeta'],
+            'wrapperClass' => $wrapperClass,
+        ];
+    };
+    $schemaHelper = SectionEditorSchemaHelper::make($schema);
+    $schemaGroups = collect($schema['groups'] ?? []);
+    $schemaGroupLabel = fn(string $name, string $fallback) => $schemaGroups->firstWhere('name', $name)['label'] ??
+        $fallback;
     $editorDefaultLocale = $editorState['defaultLocale'] ?? app()->getLocale();
     $mediaPreviewBuilder = app(SectionMediaPreviewBuilder::class);
     $workspaceMode = $workspaceMode ?? 'admin';
@@ -38,12 +150,19 @@
     $contentSectionHelp = $isClientWorkspace
         ? __('Update the text, media, and settings for this block in each language.')
         : __('Edit localized content for each language.');
+    $contentGroupLabel = $schemaGroupLabel('content', __('Content'));
+    $footerLinksGroupLabel = $schemaGroupLabel('links', __('Footer Links'));
+    $socialLinksGroupLabel = $schemaGroupLabel('social', __('Social Links'));
+    $footerLinksFieldLabel = $schemaHelper->fieldLabel('footer_links', __('Footer Links'));
+    $footerLinksFieldUi = $schemaHelper->fieldUi('footer_links');
+    $footerLinksItemLabel = $footerLinksFieldUi['itemLabel'] ?? __('Link');
+    $copyrightFieldLabel = $schemaHelper->fieldLabel('copyright', __('Copyright Line'));
 @endphp
 
 <form id="{{ $formId }}" method="{{ strtoupper($formMethod) }}" action="{{ $formAction }}"
     class="{{ $formClass }}" data-section-editor-form data-section-id="{{ $section->id }}"
     data-default-editor-tab="lang-{{ $editorDefaultLocale }}" data-save-action="{{ $saveAction }}"
-    @if ($preventNativeSubmit) onsubmit="return false;" @endif>
+    data-section-schema='@json($schema)' @if ($preventNativeSubmit) onsubmit="return false;" @endif>
     @csrf
     @if ($formMethodSpoof)
         @method($formMethodSpoof)
@@ -60,8 +179,8 @@
         $fieldFlags = $editorState['flags'] ?? [];
         $isHeroCampaign = (bool) ($typeFlags['isHeroCampaign'] ?? false);
         $isProgrammingShowcase = (bool) ($typeFlags['isProgrammingShowcase'] ?? false);
-        $isMobileAppShowcase = (bool) ($typeFlags['isMobileAppShowcase'] ?? false);
         $isDesignShowcase = (bool) ($typeFlags['isDesignShowcase'] ?? false);
+        $isMobileAppShowcase = (bool) ($typeFlags['isMobileAppShowcase'] ?? false);
         $isDigitalMarketingShowcase = (bool) ($typeFlags['isDigitalMarketingShowcase'] ?? false);
         $isTechStackShowcase = (bool) ($typeFlags['isTechStackShowcase'] ?? false);
         $isReviewsShowcase = (bool) ($typeFlags['isReviewsShowcase'] ?? false);
@@ -391,34 +510,78 @@
                             </div>
                         @endif
 
+                        @php
+                            $searchHeadingFieldContext = $schemaFieldContext(
+                                'content',
+                                'search_heading',
+                                __('Search Box Title'),
+                                __('Find your perfect Domain name'),
+                            );
+                            $searchHeadingRenderConfig = $schemaRenderableFieldConfig(
+                                $searchHeadingFieldContext,
+                                'text',
+                                3,
+                            );
+                        @endphp
+
                         @if ($showDomainsSearchHeadingField)
-                            <div class="lg:col-span-2">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('Search Box Title') }}</label>
-                                <input type="text" name="translations[{{ $code }}][content][search_heading]"
-                                    value="{{ $domainsSearchHeadingValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                    placeholder="{{ __('Find your perfect Domain name') }}">
-                            </div>
+                            @include(
+                                'dashboard.pages.sections.partials.fields.schema-field-renderer',
+                                $schemaRendererPayload(
+                                    $searchHeadingRenderConfig,
+                                    'translations[' . $code . '][content][search_heading]',
+                                    $domainsSearchHeadingValue,
+                                    'search_heading',
+                                    'lg:col-span-2',
+                                )
+                            )
                         @endif
 
                         @if ($showSubtitleField)
-                            <div class="lg:col-span-2">
-                                <label class="block text-sm font-medium text-slate-700">
-                                    {{ $isHeroCampaign ? __('Main Title - Line 2') : __('Subtitle') }}
-                                </label>
-                                <textarea name="translations[{{ $code }}][content][subtitle]" rows="3"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">{{ $subtitleValue }}</textarea>
-                            </div>
+                            @php
+                                $subtitleFieldContext = $schemaFieldContext(
+                                    'content',
+                                    'subtitle',
+                                    $isHeroCampaign ? __('Main Title - Line 2') : __('Subtitle'),
+                                    null,
+                                );
+                            @endphp
+
+                            {{-- This field remains manual because textarea rendering can require special behavior and layout handling. Do not convert it without dedicated textarea handling. --}}
+                            @include('dashboard.pages.sections.partials.fields.schema-field-renderer', [
+                                'fieldType' => 'textarea',
+                                'label' => $subtitleFieldContext['label'],
+                                'name' => 'translations[' . $code . '][content][subtitle]',
+                                'value' => $subtitleValue,
+                                'placeholder' => null,
+                                'rows' => $schemaFieldRows($subtitleFieldContext['schemaMeta'], 3),
+                                'schemaField' => 'subtitle',
+                                'schemaMeta' => $subtitleFieldContext['schemaMeta'],
+                                'wrapperClass' => 'lg:col-span-2',
+                            ])
                         @endif
 
                         @if ($showDescriptionField)
-                            <div class="lg:col-span-2">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ $isDomainsShowcase ? __('Search Box Description') : __('Description') }}</label>
-                                <textarea name="translations[{{ $code }}][content][description]" rows="4"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">{{ $descriptionValue }}</textarea>
-                            </div>
+                            @php
+                                $descriptionFieldContext = $schemaFieldContext(
+                                    'content',
+                                    'description',
+                                    $isDomainsShowcase ? __('Search Box Description') : __('Description'),
+                                    null,
+                                );
+                            @endphp
+
+                            @include('dashboard.pages.sections.partials.fields.schema-field-renderer', [
+                                'fieldType' => 'textarea',
+                                'label' => $descriptionFieldContext['label'],
+                                'name' => 'translations[' . $code . '][content][description]',
+                                'value' => $descriptionValue,
+                                'placeholder' => null,
+                                'rows' => $schemaFieldRows($descriptionFieldContext['schemaMeta'], 4),
+                                'schemaField' => 'description',
+                                'schemaMeta' => $descriptionFieldContext['schemaMeta'],
+                                'wrapperClass' => 'lg:col-span-2',
+                            ])
                         @endif
 
                         @if ($showDomainsPlaceholderField)
@@ -442,14 +605,30 @@
                                 </p>
                             </div>
 
-                            <div class="lg:col-span-2">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('CTA Button Label') }}</label>
-                                <input type="text" name="translations[{{ $code }}][content][button_label]"
-                                    value="{{ $hostingPricingButtonLabelValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                    placeholder="{{ __('Choose Now') }}">
-                            </div>
+                            @php
+                                $hostingPricingButtonLabelFieldContext = $schemaFieldContext(
+                                    'content',
+                                    'button_label',
+                                    __('CTA Button Label'),
+                                    __('Choose Now'),
+                                );
+                                $hostingPricingButtonLabelRenderConfig = $schemaRenderableFieldConfig(
+                                    $hostingPricingButtonLabelFieldContext,
+                                    'text',
+                                    3,
+                                );
+                            @endphp
+
+                            @include(
+                                'dashboard.pages.sections.partials.fields.schema-field-renderer',
+                                $schemaRendererPayload(
+                                    $hostingPricingButtonLabelRenderConfig,
+                                    'translations[' . $code . '][content][button_label]',
+                                    $hostingPricingButtonLabelValue,
+                                    'button_label',
+                                    'lg:col-span-2',
+                                )
+                            )
 
                             <div class="lg:col-span-2">
                                 <label
@@ -521,26 +700,55 @@
                             ])
                         @endif
 
+                        @php
+                            $outputsHeadingFieldContext = $schemaFieldContext(
+                                'content',
+                                'outputs_heading',
+                                __('Outputs Heading'),
+                                null,
+                            );
+                            $featuresHeadingFieldContext = $schemaFieldContext(
+                                'content',
+                                'features_heading',
+                                __('Features Heading'),
+                                null,
+                            );
+                            $outputsHeadingRenderConfig = $schemaRenderableFieldConfig(
+                                $outputsHeadingFieldContext,
+                                'text',
+                                3,
+                            );
+                            $featuresHeadingRenderConfig = $schemaRenderableFieldConfig(
+                                $featuresHeadingFieldContext,
+                                'text',
+                                3,
+                            );
+                        @endphp
+
                         @if ($showOutputsHeadingField)
-                            <div class="lg:col-span-2">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('Outputs Heading') }}</label>
-                                <input type="text"
-                                    name="translations[{{ $code }}][content][outputs_heading]"
-                                    value="{{ $outputsHeadingValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                            </div>
+                            @include(
+                                'dashboard.pages.sections.partials.fields.schema-field-renderer',
+                                $schemaRendererPayload(
+                                    $outputsHeadingRenderConfig,
+                                    'translations[' . $code . '][content][outputs_heading]',
+                                    $outputsHeadingValue,
+                                    'outputs_heading',
+                                    'lg:col-span-2',
+                                )
+                            )
                         @endif
 
                         @if ($showFeaturesHeadingField)
-                            <div class="lg:col-span-2">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('Features Heading') }}</label>
-                                <input type="text"
-                                    name="translations[{{ $code }}][content][features_heading]"
-                                    value="{{ $featuresHeadingValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                            </div>
+                            @include(
+                                'dashboard.pages.sections.partials.fields.schema-field-renderer',
+                                $schemaRendererPayload(
+                                    $featuresHeadingRenderConfig,
+                                    'translations[' . $code . '][content][features_heading]',
+                                    $featuresHeadingValue,
+                                    'features_heading',
+                                    'lg:col-span-2',
+                                )
+                            )
                         @endif
 
                         @if ($showOutputsTextareaField)
@@ -628,141 +836,32 @@
                         @endif
 
                         @if ($showTemplatesListingDatabaseField)
-                            <div class="lg:col-span-2 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
-                                <div class="flex flex-wrap items-start justify-between gap-4">
-                                    <div>
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Templates Source') }}</label>
-                                        <p class="mt-1 text-sm text-slate-500">
-                                            {{ __('This section builds the templates archive from the Templates module automatically. Use these fields only for the breadcrumb text, filter labels, card button labels, and items shown per page.') }}
-                                        </p>
-                                    </div>
-                                    <a href="{{ route('dashboard.templates.index') }}"
-                                        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                                        <i class="ti ti-layout-grid text-base leading-none" aria-hidden="true"></i>
-                                        <span>{{ __('Open Templates') }}</span>
-                                    </a>
-                                </div>
-
-                                <div class="mt-5 grid grid-cols-1 gap-5">
-                                    <div class="lg:col-span-2">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Breadcrumb Label') }}</label>
-                                        <input type="text"
-                                            name="translations[{{ $code }}][content][breadcrumb_label]"
-                                            value="{{ $templatesListingBreadcrumbLabelValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="{{ __('Templates') }}">
-                                    </div>
-
-                                    <div class="lg:col-span-2">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('All Categories Label') }}</label>
-                                        <input type="text"
-                                            name="translations[{{ $code }}][content][all_categories_label]"
-                                            value="{{ $templatesListingAllCategoriesLabelValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="{{ __('All Hosting') }}">
-                                    </div>
-
-                                    <div class="lg:col-span-2">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Type Filter Label') }}</label>
-                                        <input type="text"
-                                            name="translations[{{ $code }}][content][type_label]"
-                                            value="{{ $templatesListingTypeLabelValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="{{ __('Type') }}">
-                                    </div>
-
-                                    <div class="lg:col-span-2">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Best Sellers Filter Label') }}</label>
-                                        <input type="text"
-                                            name="translations[{{ $code }}][content][best_sellers_label]"
-                                            value="{{ $templatesListingBestSellersLabelValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="{{ __('Best Sellers') }}">
-                                    </div>
-
-                                    <div class="lg:col-span-2">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Price Filter Label') }}</label>
-                                        <input type="text"
-                                            name="translations[{{ $code }}][content][price_label]"
-                                            value="{{ $templatesListingPriceLabelValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="{{ __('Price') }}">
-                                    </div>
-
-                                    <div class="lg:col-span-2">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Buy Button Label') }}</label>
-                                        <input type="text"
-                                            name="translations[{{ $code }}][content][buy_label]"
-                                            value="{{ $templatesListingBuyLabelValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="{{ __('Buy Now') }}">
-                                    </div>
-
-                                    <div class="lg:col-span-2">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Preview Button Label') }}</label>
-                                        <input type="text"
-                                            name="translations[{{ $code }}][content][preview_label]"
-                                            value="{{ $templatesListingPreviewLabelValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="{{ __('Live Preview') }}">
-                                    </div>
-
-                                    <div class="lg:col-span-2">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Items Per Page') }}</label>
-                                        <input type="number" min="1"
-                                            name="translations[{{ $code }}][content][items_per_page]"
-                                            value="{{ $templatesListingItemsPerPageValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="12">
-                                        <p class="mt-2 text-xs text-slate-500">
-                                            {{ __('This controls how many template cards appear before the pagination switches to the next page.') }}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                            @include(
+                                'dashboard.pages.sections.partials.blocks.templates-listing-fields',
+                                [
+                                    'code' => $code,
+                                    'templatesListingBreadcrumbLabelValue' => $templatesListingBreadcrumbLabelValue,
+                                    'templatesListingAllCategoriesLabelValue' =>
+                                        $templatesListingAllCategoriesLabelValue,
+                                    'templatesListingTypeLabelValue' => $templatesListingTypeLabelValue,
+                                    'templatesListingBestSellersLabelValue' =>
+                                        $templatesListingBestSellersLabelValue,
+                                    'templatesListingPriceLabelValue' => $templatesListingPriceLabelValue,
+                                    'templatesListingBuyLabelValue' => $templatesListingBuyLabelValue,
+                                    'templatesListingPreviewLabelValue' => $templatesListingPreviewLabelValue,
+                                    'templatesListingItemsPerPageValue' => $templatesListingItemsPerPageValue,
+                                ]
+                            )
                         @endif
 
                         @if ($showReviewsDatabaseField)
-                            <div class="lg:col-span-2 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
-                                <div class="flex flex-wrap items-start justify-between gap-4">
-                                    <div>
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Testimonials Source') }}</label>
-                                        <p class="mt-1 text-sm text-slate-500">
-                                            {{ __('This section now reads approved testimonial cards directly from the Testimonials module in the dashboard.') }}
-                                        </p>
-                                    </div>
-                                    <a href="{{ route('dashboard.testimonials.index') }}"
-                                        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                                        <i class="ti ti-message-star text-base leading-none" aria-hidden="true"></i>
-                                        <span>{{ __('Open Testimonials') }}</span>
-                                    </a>
-                                </div>
-
-                                <div class="mt-5">
-                                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Items Limit') }}</label>
-                                        <input type="number" min="1"
-                                            name="translations[{{ $code }}][content][limit]"
-                                            value="{{ $reviewsLimitValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="6">
-                                        <p class="mt-2 text-xs text-slate-500">
-                                            {{ __('Optional. Leave this empty to show all approved testimonials from the Testimonials module.') }}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                            @include(
+                                'dashboard.pages.sections.partials.blocks.reviews-database-fields',
+                                [
+                                    'code' => $code,
+                                    'reviewsLimitValue' => $reviewsLimitValue,
+                                ]
+                            )
                         @endif
 
                         @if ($showOurWorkDatabaseField)
@@ -878,12 +977,15 @@
 
                         @if ($showSiteFooterLinksTextareaField)
                             <div class="lg:col-span-2" data-footer-link-repeater
-                                data-footer-link-item-label="{{ __('Link') }}"
+                                data-schema-group-label="{{ $footerLinksGroupLabel }}"
+                                data-schema-field="footer_links"
+                                data-schema-field-label="{{ $footerLinksFieldLabel }}"
+                                data-footer-link-item-label="{{ $footerLinksItemLabel }}"
                                 data-footer-link-item-hint="{{ __('Add the label and destination for this footer link.') }}">
                                 <div class="mb-4 flex items-center justify-between gap-3 rtl:flex-row-reverse">
                                     <div>
                                         <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Footer Links') }}</label>
+                                            class="block text-sm font-medium text-slate-700">{{ $footerLinksFieldLabel }}</label>
                                         <p class="mt-1 text-xs text-slate-500">
                                             {{ __('This is used in the links footer layout. Add each link with a label and URL.') }}
                                         </p>
@@ -992,65 +1094,20 @@
                         @endif
 
                         @if ($showSiteFooterSocialFields)
-                            <div class="lg:col-span-2">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('Copyright Line') }}</label>
-                                <input type="text" name="translations[{{ $code }}][content][copyright]"
-                                    value="{{ $footerCopyrightValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                                <p class="mt-2 text-xs text-slate-500">
-                                    {{ __('Only the links you fill in will appear in the footer. Leave any network empty to hide it.') }}
-                                </p>
-                            </div>
-
-                            <div class="lg:col-span-2">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('Facebook URL') }}</label>
-                                <input type="url"
-                                    name="translations[{{ $code }}][content][social_links][facebook]"
-                                    value="{{ $footerFacebookUrlValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                    placeholder="https://facebook.com/your-page">
-                            </div>
-
-                            <div class="lg:col-span-2">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('Instagram URL') }}</label>
-                                <input type="url"
-                                    name="translations[{{ $code }}][content][social_links][instagram]"
-                                    value="{{ $footerInstagramUrlValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                    placeholder="https://instagram.com/your-page">
-                            </div>
-
-                            <div class="lg:col-span-2">
-                                <label class="block text-sm font-medium text-slate-700">{{ __('X URL') }}</label>
-                                <input type="url"
-                                    name="translations[{{ $code }}][content][social_links][x]"
-                                    value="{{ $footerXUrlValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                    placeholder="https://x.com/your-page">
-                            </div>
-
-                            <div class="lg:col-span-2">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('GitHub URL') }}</label>
-                                <input type="url"
-                                    name="translations[{{ $code }}][content][social_links][github]"
-                                    value="{{ $footerGithubUrlValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                    placeholder="https://github.com/your-page">
-                            </div>
-
-                            <div class="lg:col-span-2">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('YouTube URL') }}</label>
-                                <input type="url"
-                                    name="translations[{{ $code }}][content][social_links][youtube]"
-                                    value="{{ $footerYoutubeUrlValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                    placeholder="https://youtube.com/@your-channel">
-                            </div>
+                            @include(
+                                'dashboard.pages.sections.partials.blocks.site-footer-social-fields',
+                                [
+                                    'code' => $code,
+                                    'footerCopyrightValue' => $footerCopyrightValue,
+                                    'footerFacebookUrlValue' => $footerFacebookUrlValue,
+                                    'footerInstagramUrlValue' => $footerInstagramUrlValue,
+                                    'footerXUrlValue' => $footerXUrlValue,
+                                    'footerGithubUrlValue' => $footerGithubUrlValue,
+                                    'footerYoutubeUrlValue' => $footerYoutubeUrlValue,
+                                    'copyrightFieldLabel' => $copyrightFieldLabel,
+                                    'socialLinksGroupLabel' => $socialLinksGroupLabel,
+                                ]
+                            )
                         @endif
 
                         @if ($showSecondaryButtonFields)

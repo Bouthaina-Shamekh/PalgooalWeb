@@ -84,11 +84,6 @@ class SectionEditorTypeCapabilities
                 'showMediaUrlField' => true,
             ],
         ],
-        'hero_minimal' => [
-            'flags' => [
-                'showPrimaryButtonFields' => true,
-            ],
-        ],
         'hero_campaign' => [
             'typeFlags' => ['isHeroCampaign' => true],
             'usesInternalLabel' => true,

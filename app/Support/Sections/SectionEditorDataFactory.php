@@ -17,6 +17,7 @@ class SectionEditorDataFactory
         protected SectionEditorRepeaterFactory $repeaterFactory,
         protected SectionEditorLocaleViewDataFactory $localeViewDataFactory,
         protected SectionEditorTypeCapabilities $typeCapabilities,
+        protected SectionEditorSchemaRegistry $schemaRegistry,
     ) {}
 
     public function make(Section $section, iterable $languages, array $sectionTypes = []): array
@@ -34,6 +35,7 @@ class SectionEditorDataFactory
             'typeFlags' => $typeFlags,
             'usesInternalLabel' => (bool) ($typeCapabilities['usesInternalLabel'] ?? false),
             'flags' => $fieldFlags,
+            'editorSchema' => $this->schemaRegistry->for($selectedType),
             'hostingPricingAvailableCategories' => ($typeFlags['isHostingPricingShowcase'] ?? false)
                 ? PlanCategory::query()->active()->ordered()->with('translations')->get()
                 : collect(),

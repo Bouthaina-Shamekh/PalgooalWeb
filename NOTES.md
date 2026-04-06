@@ -158,5 +158,10 @@
 - Client views: client layout/partials under `resources/views/client/layouts/**` with `@extends('client.layouts.app')` and `client.layouts.partials.*`.
 - Front views: renamed namespace `tamplate.*` -> `front.*`, moved to `resources/views/front/**`, and updated controller/route view calls accordingly.
 
+### 2026-04-03
+
+- إزالة section type `hero_minimal` من مكتبة السكاشن ومسارات الـ legacy rendering والتوثيق المرتبط به.
+- إضافة data migration لتحويل أي سجلات قديمة من `hero_minimal` إلى `hero_default` حتى لا تبقى مراجع مكسورة بعد الحذف.
+
 
 

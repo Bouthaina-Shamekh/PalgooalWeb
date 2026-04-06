@@ -663,14 +663,6 @@ class SectionController extends Controller
                 'preview'     => 'assets/admin/sections/hero-default.png',
             ],
 
-            'hero_minimal' => [
-                'type'        => 'hero_minimal',
-                'label'       => 'Hero - Minimal',
-                'description' => 'Simple hero with title and single CTA.',
-                'category'    => 'hero',
-                'preview'     => 'assets/admin/sections/hero-minimal.png',
-            ],
-
             'hero_campaign' => [
                 'type'        => 'hero_campaign',
                 'label'       => 'Hero - Campaign',
@@ -841,7 +833,6 @@ class SectionController extends Controller
         switch ($type) {
             case 'hero':
             case 'hero_default':
-            case 'hero_minimal':
                 return $this->normalizeHeroContent($content);
 
             case 'features':
@@ -986,15 +977,6 @@ class SectionController extends Controller
                 ],
                 'media_type' => 'image',
                 'media_url'  => null,
-            ],
-
-            'hero_minimal' => [
-                'title'    => $pageTitle,
-                'subtitle' => 'Update this hero from the section editor.',
-                'primary_button' => [
-                    'label' => 'Get Started',
-                    'url'   => '#',
-                ],
             ],
 
             'hero_campaign' => [

@@ -26,7 +26,6 @@
     $previewBaseUrl = $workspaceRouteFor('preview', [], false);
     $previewUrl = $previewBaseUrl . ($selectedSectionId ? '?highlight=' . $selectedSectionId : '');
     $autoEditSectionId = (int) request('edit');
-    $editingSection = $autoEditSectionId > 0 ? $sections->firstWhere('id', $autoEditSectionId) : null;
     $addSectionLabel = $isClientWorkspace ? __('Add Block') : __('Add Section');
     $refreshPreviewLabel = $isClientWorkspace ? __('Reload Preview') : __('Refresh Preview');
     $emptyStateTitle = $isClientWorkspace ? __('Start by adding your first block') : __('Start by adding your first section');
@@ -542,7 +541,7 @@
 @endsection
 
 @section('workspace-sidebar')
-    <div data-sections-sidebar-outline class="space-y-5 {{ $editingSection ? 'hidden' : '' }}">
+    <div data-sections-sidebar-outline class="space-y-5">
         @if ($pageBuilderMode !== 'sections' && ! $isClientWorkspace)
             <div class="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
                 <h3 class="text-base font-semibold text-slate-900">{{ __('Sections are not the active builder yet') }}
@@ -653,16 +652,7 @@
         </div>
     </div>
 
-    <div data-sections-sidebar-editor class="{{ $editingSection ? 'h-full' : 'hidden h-full' }}">
-        @if ($editingSection)
-            @include('dashboard.pages.sections.partials.sidebar-editor', [
-                'page' => $page,
-                'section' => $editingSection,
-                'languages' => $languages,
-                'sectionTypes' => $sectionTypes,
-            ])
-        @endif
-    </div>
+    <div data-sections-sidebar-editor class="hidden h-full"></div>
 @endsection
 
 @push('scripts')
@@ -1718,21 +1708,15 @@
             applyPreviewDevice('desktop');
 
             if (autoEditSectionId) {
-                if (sidebarEditorPanel?.querySelector('[data-section-editor-root]')) {
-                    setEditorMode(true);
-                    bindSectionEditor(sidebarEditorPanel, autoEditSectionId);
-                    updateWorkspaceUrl(autoEditSectionId);
-                } else {
-                    const autoEditItem = document.querySelector(
-                        `#sections-outline-list [data-section-id="${autoEditSectionId}"]`);
-                    if (autoEditItem) {
-                        openSectionEditor(
-                            autoEditSectionId,
-                            autoEditItem.dataset.editSectionUrl || '',
-                            autoEditItem.dataset.editSectionFallbackUrl || '',
-                            false
-                        );
-                    }
+                const autoEditItem = document.querySelector(
+                    `#sections-outline-list [data-section-id="${autoEditSectionId}"]`);
+                if (autoEditItem) {
+                    openSectionEditor(
+                        autoEditSectionId,
+                        autoEditItem.dataset.editSectionUrl || '',
+                        autoEditItem.dataset.editSectionFallbackUrl || '',
+                        false
+                    );
                 }
             }
         });

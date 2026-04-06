@@ -125,7 +125,6 @@
         @break
 
     @case('hero_default')
-    @case('hero_minimal')
         @include('components.template.sections.hero_default', [
             'section' => $section,
             'title' => $fallbackTranslation?->title,
