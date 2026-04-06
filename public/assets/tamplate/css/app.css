@@ -3235,6 +3235,12 @@
       background-color: color-mix(in oklab, var(--color-primary) 90%, transparent);
     }
   }
+  .bg-purple-100 {
+    background-color: var(--color-purple-100);
+  }
+  .bg-purple-200 {
+    background-color: var(--color-purple-200);
+  }
   .bg-purple-500 {
     background-color: var(--color-purple-500);
   }
@@ -4623,6 +4629,12 @@
   }
   .text-purple-600 {
     color: var(--color-purple-600);
+  }
+  .text-purple-700 {
+    color: var(--color-purple-700);
+  }
+  .text-purple-800 {
+    color: var(--color-purple-800);
   }
   .text-purple-brand {
     color: var(--color-purple-brand);

@@ -33,6 +33,7 @@ class SectionEditorLocaleViewDataFactory
 
         return [
             'featuresTextarea' => $this->resolveFeaturesTextarea($locale, $content),
+            'heroCampaignTrustItemsTextarea' => $this->resolveHeroCampaignTrustItemsTextarea($locale, $content),
             'outputsTextarea' => $this->resolveOutputsTextarea($locale, $content),
             'servicesTextarea' => $this->resolveServicesTextarea($locale, $content),
             'faqItemsTextarea' => $this->resolveFaqItemsTextarea($locale, $content),
@@ -96,6 +97,27 @@ class SectionEditorLocaleViewDataFactory
         }
 
         return $this->implodeTextLines($content['outputs'] ?? []);
+    }
+
+    protected function resolveHeroCampaignTrustItemsTextarea(string $locale, array $content): string
+    {
+        $value = old("translations.$locale.content.trust_items_textarea");
+
+        if ($value !== null) {
+            return $this->stringValue($value);
+        }
+
+        $items = $this->normalizeTextLineItems($content['trust_items'] ?? []);
+
+        if ($items === []) {
+            $items = [
+                'بدون خبرة تقنية',
+                'جاهز خلال دقائق',
+                'دعم كامل',
+            ];
+        }
+
+        return collect($items)->implode("\n");
     }
 
     protected function resolveServicesTextarea(string $locale, array $content): string
@@ -167,8 +189,19 @@ class SectionEditorLocaleViewDataFactory
 
     protected function implodeTextLines(mixed $items): string
     {
-        if (! is_array($items) || $items === []) {
+        $normalizedItems = $this->normalizeTextLineItems($items);
+
+        if ($normalizedItems === []) {
             return '';
+        }
+
+        return Collection::make($normalizedItems)->implode("\n");
+    }
+
+    protected function normalizeTextLineItems(mixed $items): array
+    {
+        if (! is_array($items) || $items === []) {
+            return [];
         }
 
         return Collection::make($items)
@@ -180,7 +213,8 @@ class SectionEditorLocaleViewDataFactory
                 return is_scalar($item) ? trim((string) $item) : '';
             })
             ->filter()
-            ->implode("\n");
+            ->values()
+            ->all();
     }
 
     protected function normalizeMediaValues(mixed $values): array

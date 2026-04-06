@@ -6,7 +6,6 @@
     $heroSubtitle = $content['subtitle'] ?? '';
     $heroDescription = $content['description'] ?? '';
     $featuresHeading = $content['features_heading'] ?? __('The campaign includes:');
-
     $primaryButton = is_array($content['primary_button'] ?? null) ? $content['primary_button'] : [];
     $primaryLabel = $primaryButton['label'] ?? null;
     $primaryUrl = $primaryButton['url'] ?? null;
@@ -44,7 +43,7 @@
     $sanitizeInlineSvg = static function ($value): ?string {
         $svg = trim((string) $value);
 
-        if ($svg === '' || ! preg_match('/<svg\b/i', $svg)) {
+        if ($svg === '' || !preg_match('/<svg\b/i', $svg)) {
             return null;
         }
 
@@ -57,15 +56,21 @@
                 $text = trim($feature);
 
                 return $text !== ''
-                    ? ['text' => $text, 'icon_source' => 'class', 'icon' => null, 'icon_svg' => null, 'icon_media_url' => null]
+                    ? [
+                        'text' => $text,
+                        'icon_source' => 'class',
+                        'icon' => null,
+                        'icon_svg' => null,
+                        'icon_media_url' => null,
+                    ]
                     : null;
             }
 
-            if (! is_array($feature)) {
+            if (!is_array($feature)) {
                 return null;
             }
 
-            $text = trim((string) ($feature['text'] ?? $feature['title'] ?? $feature['label'] ?? ''));
+            $text = trim((string) ($feature['text'] ?? ($feature['title'] ?? ($feature['label'] ?? ''))));
 
             if ($text === '') {
                 return null;
@@ -77,22 +82,20 @@
             $requestedSource = trim((string) ($feature['icon_source'] ?? ''));
             $iconSource = in_array($requestedSource, ['class', 'svg', 'media'], true) ? $requestedSource : null;
 
-            if ($iconSource === 'svg' && ! $iconSvg) {
+            if ($iconSource === 'svg' && !$iconSvg) {
                 $iconSource = null;
             }
 
-            if ($iconSource === 'media' && ! $iconMediaUrl) {
+            if ($iconSource === 'media' && !$iconMediaUrl) {
                 $iconSource = null;
             }
 
-            if ($iconSource === 'class' && ! $iconClass) {
+            if ($iconSource === 'class' && !$iconClass) {
                 $iconSource = null;
             }
 
-            if (! $iconSource) {
-                $iconSource = $iconSvg
-                    ? 'svg'
-                    : ($iconMediaUrl ? 'media' : 'class');
+            if (!$iconSource) {
+                $iconSource = $iconSvg ? 'svg' : ($iconMediaUrl ? 'media' : 'class');
             }
 
             return [
@@ -103,6 +106,11 @@
                 'icon_media_url' => $iconMediaUrl,
             ];
         })
+        ->filter()
+        ->values();
+    $trustItemsSource = $content['trust_items'] ?? [];
+    $trustItems = collect(is_array($trustItemsSource) ? $trustItemsSource : preg_split("/\r\n|\r|\n/", (string) $trustItemsSource))
+        ->map(fn($item) => trim((string) $item))
         ->filter()
         ->values();
     $rawMediaValue = $content['media_url'] ?? null;
@@ -119,12 +127,13 @@
 @endphp
 
 <section id="hero" class="px-4 sm:px-6 lg:px-12 {{ $paddingY }}">
-    <div class="container mx-auto flex h-full flex-col-reverse items-center justify-between gap-12 lg:gap-16 ltr:lg:flex-row rtl:lg:flex-row-reverse">
+    <div
+        class="container mx-auto flex h-full flex-col-reverse items-center justify-between gap-12 lg:gap-16 ltr:lg:flex-row rtl:lg:flex-row-reverse">
         <div class="text-content w-full text-center lg:w-1/2 lg:text-start ltr:lg:order-1 rtl:lg:order-2">
             @if ($heroTitle)
-                <h1 class="mb-2 text-4xl leading-tight font-extrabold text-purple-brand md:text-6xl">
+                <span class="inline-flex items-center gap-2 bg-purple-100 text-purple-700 text-base px-4 py-1.5 rounded-full mb-4 font-medium">
                     {{ $heroTitle }}
-                </h1>
+                </span>
             @endif
 
             @if ($heroSubtitle)
@@ -149,19 +158,26 @@
                 <div class="mb-10 grid grid-cols-1 gap-4 md:grid-cols-2">
                     @foreach ($features as $feature)
                         <div class="flex items-center gap-3 ltr:justify-start rtl:justify-start">
-                            @if (($feature['icon_source'] ?? 'class') === 'svg' && ! empty($feature['icon_svg']))
-                                <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center text-red-brand md:h-6 md:w-6" aria-hidden="true">
+                            @if (($feature['icon_source'] ?? 'class') === 'svg' && !empty($feature['icon_svg']))
+                                <span
+                                    class="inline-flex h-5 w-5 shrink-0 items-center justify-center text-red-brand md:h-6 md:w-6"
+                                    aria-hidden="true">
                                     {!! $feature['icon_svg'] !!}
                                 </span>
-                            @elseif (($feature['icon_source'] ?? 'class') === 'media' && ! empty($feature['icon_media_url']))
-                                <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center md:h-6 md:w-6" aria-hidden="true">
-                                    <img src="{{ $feature['icon_media_url'] }}" alt="" class="h-full w-full object-contain">
+                            @elseif (($feature['icon_source'] ?? 'class') === 'media' && !empty($feature['icon_media_url']))
+                                <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center md:h-6 md:w-6"
+                                    aria-hidden="true">
+                                    <img src="{{ $feature['icon_media_url'] }}" alt=""
+                                        class="h-full w-full object-contain">
                                 </span>
                             @elseif ($feature['icon'])
-                                <i class="{{ $feature['icon'] }} text-xl text-red-brand md:text-2xl" aria-hidden="true"></i>
+                                <i class="{{ $feature['icon'] }} text-xl text-red-brand md:text-2xl"
+                                    aria-hidden="true"></i>
                             @else
-                                <svg class="h-5 text-red-brand" fill="currentColor" viewBox="0 0 27 21" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                    <path d="M8.4 15.9L2.1 9.6L0 11.7L8.4 20.1L26.4 2.1L24.3 0L8.4 15.9Z" fill="#BA112C" />
+                                <svg class="h-5 text-red-brand" fill="currentColor" viewBox="0 0 27 21"
+                                    xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <path d="M8.4 15.9L2.1 9.6L0 11.7L8.4 20.1L26.4 2.1L24.3 0L8.4 15.9Z"
+                                        fill="#BA112C" />
                                 </svg>
                             @endif
                             <span class="text-base text-purple-brand md:text-xl">{{ $feature['text'] }}</span>
@@ -171,27 +187,71 @@
             @endif
 
             @if ($primaryLabel && $primaryUrl)
-                <a
-                    href="{{ $primaryUrl }}"
-                    @if ($primaryNewTab) target="_blank" rel="noopener" @endif
-                    class="inline-flex items-center justify-center rounded-xl bg-red-brand px-10 py-3 text-lg text-white shadow-md transition-all duration-300 hover:translate-x-1 hover:bg-red-brand/90 hover:shadow-lg md:text-xl"
-                >
+                <a href="{{ $primaryUrl }}" @if ($primaryNewTab) target="_blank" rel="noopener" @endif
+                    class="inline-flex items-center justify-center rounded-xl bg-red-brand px-10 py-3 text-lg text-white shadow-md transition-all duration-300 hover:translate-x-1 hover:bg-red-brand/90 hover:shadow-lg md:text-xl">
                     {{ $primaryLabel }}
                 </a>
+            @endif
+            @if ($trustItems->isNotEmpty())
+                <div class="mt-4 flex flex-wrap items-center justify-start gap-2 text-sm text-gray-500">
+                    @foreach ($trustItems as $trustItem)
+                        <span class="flex items-center gap-1">
+                            <svg class="h-4 w-4 text-red-brand" fill="none" stroke="currentColor" stroke-width="2"
+                                viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            {{ $trustItem }}
+                        </span>
+
+                        @if (! $loop->last)
+                            <span class="text-gray-300">&bull;</span>
+                        @endif
+                    @endforeach
+                </div>
+            @else
+                <div class="mt-4 text-sm text-gray-500 flex flex-wrap items-center justify-start gap-2">
+
+                <span class="flex items-center  gap-1">
+                    <svg class="w-4 h-4 text-red-brand" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    بدون خبرة تقنية
+                </span>
+
+                <span class="text-gray-300">•</span>
+
+                <span class="flex items-center gap-1">
+                    <svg class="w-4 h-4 text-red-brand" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    جاهز خلال دقائق
+                </span>
+
+                <span class="text-gray-300">•</span>
+
+                <span class="flex items-center gap-1">
+                    <svg class="w-4 h-4 text-red-brand" fill="none" stroke="currentColor" stroke-width="2"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    دعم كامل
+                </span>
+
+            </div>
             @endif
         </div>
 
         <div class="hero-image h-auto w-full p-8 ltr:lg:order-2 rtl:lg:order-1 lg:w-1/2">
             <div class="group relative h-full w-full rounded-[40px]">
                 @if ($mediaUrl)
-                    <img
-                        src="{{ $mediaUrl }}"
+                    <img src="{{ $mediaUrl }}"
                         class="h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
-                        alt="{{ $heroSubtitle ?: $heroTitle ?: 'Hero illustration' }}"
-                        loading="lazy"
-                    >
+                        alt="{{ $heroSubtitle ?: $heroTitle ?: 'Hero illustration' }}" loading="lazy">
                 @else
-                    <div class="flex min-h-[24rem] items-center justify-center rounded-[40px] bg-background p-10 text-center text-tertiary">
+                    <div
+                        class="flex min-h-[24rem] items-center justify-center rounded-[40px] bg-background p-10 text-center text-tertiary">
                         {{ __('Add an illustration URL from the section editor.') }}
                     </div>
                 @endif

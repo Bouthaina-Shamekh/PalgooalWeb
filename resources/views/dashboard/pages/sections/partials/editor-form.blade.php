@@ -1,3 +1,4 @@
+{{-- Main orchestrator setup and shared schema helpers --}}
 @php
     use App\Support\Sections\SectionMediaPreviewBuilder;
     use App\Support\Sections\SectionEditorSchemaHelper;
@@ -78,6 +79,105 @@
     | Do not use this pipeline for repeaters, media fields, complex grouped
     | layouts, or textarea fields with special/manual behavior. Those remain
     | manual until they have dedicated handling.
+    */
+    /*
+    |--------------------------------------------------------------------------
+    | Architecture rules for fields and block extraction
+    |--------------------------------------------------------------------------
+    | Full schema-driven rendering:
+    | - Use for simple localized text/url fields and other stable scalar inputs.
+    | - Prefer it when label, placeholder, and type should come from schema
+    |   metadata through:
+    |   schemaFieldContext -> schemaRenderableFieldConfig -> schemaRendererPayload
+    |
+    | Manual rendering:
+    | - Keep repeaters, media fields, textarea fields with custom behavior,
+    |   JS-heavy markup, special DOM contracts, and complex conditional layouts
+    |   manual unless a dedicated pattern already exists for them.
+    |
+    | Hybrid rendering:
+    | - Acceptable for very small manual blocks that should stay simple but
+    |   still benefit from schema-based label/placeholder resolution.
+    | - The reviews limit field is the reference pattern for this approach.
+    |
+    | Block extraction:
+    | - Extract coherent field families with clear boundaries and a low or
+    |   moderate dependency surface when doing so improves readability without
+    |   breaking editor-form.blade.php orchestration ownership.
+    |
+    | Keep in the main orchestrator:
+    | - Global setup, shared closures/helpers, the language loop, high-level
+    |   orchestration, and complex cross-block conditional flow stay here.
+    |
+    | Governance:
+    | - Do not introduce new rendering patterns casually.
+    | - Consistency is more important than theoretical purity.
+    | - Schema migration and block extraction must remain incremental and
+    |   low-risk.
+    */
+    /*
+    |--------------------------------------------------------------------------
+    | Dependency policy for extracted block partials
+    |--------------------------------------------------------------------------
+    | Pass explicit dependencies when they are direct field values, small
+    | block-specific scalars, or otherwise make the partial's required input
+    | obvious at the include site.
+    |
+    | Shared inherited scope is acceptable for intentionally global editor
+    | dependencies such as schema helpers, shared schema context/labels/groups,
+    | and common infrastructure objects reused consistently across blocks.
+    |
+    | Do not pass helpers or values redundantly when they are already part of
+    | that shared scope contract. Avoid large catch-all dependency bundles.
+    |
+    | Warning signs:
+    | - too many hidden parent variables
+    | - unclear required inputs at the include site
+    | - fragile coupling to distant setup code
+    |
+    | Tighten dependencies and pass more explicitly when block complexity
+    | grows, reuse expands beyond this orchestrator, or review/maintenance
+    | becomes harder with inherited scope alone.
+    */
+    /*
+    |--------------------------------------------------------------------------
+    | Inventory: major editor rendering regions
+    |--------------------------------------------------------------------------
+    | A) Already extracted
+    | - Templates slider config: extracted / manual / keep extracted; bounded
+    |   database-config card with obvious scalar inputs.
+    | - Templates listing config: extracted / mixed / keep extracted; coherent
+    |   schema-first block with one small manual field.
+    | - Reviews database config: extracted / hybrid / keep extracted; small
+    |   manual card already aligned with shared field context.
+    | - Our work database config: extracted / manual / keep extracted; simple
+    |   self-contained portfolio config block.
+    | - Site footer social fields: extracted / mixed / keep extracted; cohesive
+    |   footer-social family with shared helper usage.
+    |
+    | B) Inline and should stay inline for now
+    | - Orchestrator scaffolding: inline / mixed / keep inline; shared setup,
+    |   settings surface, language tabs, and locale loop own global flow.
+    | - Repeater/media families: inline / mixed / keep inline; JS hooks,
+    |   templates, and preview contracts are still tightly coupled here.
+    |
+    | C) Inline and good extraction candidates later
+    | - Hosting pricing config region: inline / mixed / extract later; clear
+    |   block boundary, but coupled to category visibility state.
+    | - Hero campaign CTA region: inline / manual-hybrid / extract later if it
+    |   stabilizes further as a dedicated section-specific card.
+    |
+    | D) Inline but better suited for hybrid alignment first
+    | - Manual textarea/content scalar family: inline / hybrid-manual / align
+    |   first; labels/placeholders can standardize before any extraction.
+    |
+    | E) Inline and already schema-driven enough
+    | - Simple heading/search scalar fields: inline / schema-driven / keep
+    |   inline unless extracted as part of a larger cohesive family.
+    |
+    | F) Inline/manual and likely not worth extracting soon
+    | - One-off notices and tiny contextual hints: inline / manual / leave
+    |   inline; too small and too tied to nearby conditions to justify partials.
     */
     $schemaFieldContext = function (
         string $groupName,
@@ -229,6 +329,7 @@
         $hostingPricingAvailableCategories = $editorState['hostingPricingAvailableCategories'] ?? collect();
     @endphp
 
+    {{-- Editor feedback surface --}}
     <div data-section-editor-feedback
         class="hidden rounded-2xl border px-4 py-3 text-sm {{ $feedbackVisible ? $feedbackClasses : 'border-slate-200 bg-slate-50 text-slate-600' }}">
         <ul class="{{ $feedbackVisible ? '' : 'hidden ' }}space-y-1" data-section-editor-feedback-list>
@@ -242,6 +343,7 @@
         </ul>
     </div>
 
+    {{-- Form settings surface --}}
     <div class="{{ $surfaceClass }}">
         <div class="{{ $sectionBodyClass }}">
             <input type="hidden" name="type" value="{{ $selectedType }}">
@@ -292,6 +394,7 @@
         </div>
     </div>
 
+    {{-- Localized content surface --}}
     <div class="{{ $surfaceClass }}">
         <div class="{{ $sectionHeaderClass }}">
             <h2 class="text-lg font-semibold text-slate-900">{{ $contentSectionLabel }}</h2>
@@ -299,6 +402,7 @@
         </div>
 
         <div class="{{ $sectionBodyClass }}">
+            {{-- Per-language editor navigation --}}
             <div class="mb-5 border-b border-slate-200">
                 <nav class="-mb-px flex flex-wrap gap-2" aria-label="Language tabs">
                     @foreach ($languages as $index => $language)
@@ -314,6 +418,7 @@
                 </nav>
             </div>
 
+            {{-- Per-language hydration and rendering loop --}}
             @foreach ($languages as $index => $language)
                 @php
                     $code = $language->code;
@@ -329,6 +434,7 @@
                     $pricingCategoryItems = $editorState['localePricingCategoryItems'][$code] ?? [];
                     $pricingPlanItems = $editorState['localePricingPlanItems'][$code] ?? [];
                     $featuresTextarea = $localeViewData['featuresTextarea'] ?? '';
+                    $heroCampaignTrustItemsTextarea = $localeViewData['heroCampaignTrustItemsTextarea'] ?? '';
                     $outputsTextarea = $localeViewData['outputsTextarea'] ?? '';
                     $servicesTextarea = $localeViewData['servicesTextarea'] ?? '';
                     $faqItemsTextarea = $localeViewData['faqItemsTextarea'] ?? '';
@@ -500,6 +606,7 @@
                             </div>
                         @endif
 
+                        {{-- Header-specific branding/media controls stay inline here. --}}
                         @if ($isSiteHeader)
                             <div class="lg:col-span-2">
                                 <x-dashboard.media-picker :name="'translations[' . $code . '][content][logo]'" :label="__('Brand Image')" :button-text="__('Choose From Media Library')"
@@ -751,6 +858,7 @@
                             )
                         @endif
 
+                        {{-- Repeaters with heavier DOM contracts remain inline in the orchestrator. --}}
                         @if ($showOutputsTextareaField)
                             @include('dashboard.pages.sections.partials.repeaters.outputs-repeater', [
                                 'code' => $code,
@@ -775,64 +883,17 @@
                             ])
                         @endif
 
+                        {{-- Extracted configuration/database blocks: explicit block values + inherited shared helpers. --}}
                         @if ($showTemplatesSliderDatabaseField)
-                            <div class="lg:col-span-2 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
-                                <div class="flex flex-wrap items-start justify-between gap-4">
-                                    <div>
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Templates Source') }}</label>
-                                        <p class="mt-1 text-sm text-slate-500">
-                                            {{ __('This section loads template cards automatically from the Templates module. Use the fields below only to control the section heading, card button labels, and item limit.') }}
-                                        </p>
-                                    </div>
-                                    <a href="{{ route('dashboard.templates.index') }}"
-                                        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                                        <i class="ti ti-layout-grid text-base leading-none" aria-hidden="true"></i>
-                                        <span>{{ __('Open Templates') }}</span>
-                                    </a>
-                                </div>
-
-                                <div class="mt-5 grid grid-cols-1 gap-5">
-                                    <div class="lg:col-span-2">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Buy Button Label') }}</label>
-                                        <input type="text"
-                                            name="translations[{{ $code }}][content][buy_label]"
-                                            value="{{ $templatesSliderBuyLabelValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="{{ __('Buy Now') }}">
-                                        <p class="mt-2 text-xs text-slate-500">
-                                            {{ __('This label appears on the main CTA button in every template card.') }}
-                                        </p>
-                                    </div>
-
-                                    <div class="lg:col-span-2">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Preview Button Label') }}</label>
-                                        <input type="text"
-                                            name="translations[{{ $code }}][content][preview_label]"
-                                            value="{{ $templatesSliderPreviewLabelValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="{{ __('Live Preview') }}">
-                                        <p class="mt-2 text-xs text-slate-500">
-                                            {{ __('This label appears on the secondary button in every template card.') }}
-                                        </p>
-                                    </div>
-
-                                    <div class="lg:col-span-2">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Items Limit') }}</label>
-                                        <input type="number" min="1"
-                                            name="translations[{{ $code }}][content][limit]"
-                                            value="{{ $templatesSliderLimitValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="6">
-                                        <p class="mt-2 text-xs text-slate-500">
-                                            {{ __('Optional. Leave this empty to use the default number of template cards for the slider.') }}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                            @include(
+                                'dashboard.pages.sections.partials.blocks.templates-slider-fields',
+                                [
+                                    'code' => $code,
+                                    'templatesSliderBuyLabelValue' => $templatesSliderBuyLabelValue,
+                                    'templatesSliderPreviewLabelValue' => $templatesSliderPreviewLabelValue,
+                                    'templatesSliderLimitValue' => $templatesSliderLimitValue,
+                                ]
+                            )
                         @endif
 
                         @if ($showTemplatesListingDatabaseField)
@@ -865,52 +926,17 @@
                         @endif
 
                         @if ($showOurWorkDatabaseField)
-                            <div class="lg:col-span-2 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
-                                <div class="flex flex-wrap items-start justify-between gap-4">
-                                    <div>
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Portfolios Source') }}</label>
-                                        <p class="mt-1 text-sm text-slate-500">
-                                            {{ __('This section reads portfolio cards directly from the Portfolios module in the dashboard.') }}
-                                        </p>
-                                    </div>
-                                    <a href="{{ route('dashboard.portfolios.index') }}"
-                                        class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                                        <i class="ti ti-briefcase text-base leading-none" aria-hidden="true"></i>
-                                        <span>{{ __('Open Portfolios') }}</span>
-                                    </a>
-                                </div>
-
-                                <div class="mt-5 space-y-4">
-                                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Items Limit') }}</label>
-                                        <input type="number" min="1"
-                                            name="translations[{{ $code }}][content][limit]"
-                                            value="{{ $ourWorkLimitValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="6">
-                                        <p class="mt-2 text-xs text-slate-500">
-                                            {{ __('Optional. Use this to show only the first portfolio items ordered from the Portfolios module.') }}
-                                        </p>
-                                    </div>
-
-                                    <div class="rounded-2xl border border-slate-200 bg-white p-4">
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('Visit Button Label') }}</label>
-                                        <input type="text"
-                                            name="translations[{{ $code }}][content][visit_label]"
-                                            value="{{ $ourWorkVisitLabelValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                            placeholder="{{ __('Visit') }}">
-                                        <p class="mt-2 text-xs text-slate-500">
-                                            {{ __('This text appears on the card button for every portfolio item in the slider.') }}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                            @include(
+                                'dashboard.pages.sections.partials.blocks.our-work-database-fields',
+                                [
+                                    'code' => $code,
+                                    'ourWorkLimitValue' => $ourWorkLimitValue,
+                                    'ourWorkVisitLabelValue' => $ourWorkVisitLabelValue,
+                                ]
+                            )
                         @endif
 
+                        {{-- Inline/manual blocks still owned by editor-form orchestrator --}}
                         @if ($showPrimaryButtonFields && !$isHeroCampaign)
                             <div
                                 class="{{ $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isDomainsShowcase || $isSiteHeader ? 'lg:col-span-2' : '' }}">
@@ -975,6 +1001,7 @@
                             </div>
                         @endif
 
+                        {{-- Footer-specific repeater/layout logic remains inline here. --}}
                         @if ($showSiteFooterLinksTextareaField)
                             <div class="lg:col-span-2" data-footer-link-repeater
                                 data-schema-group-label="{{ $footerLinksGroupLabel }}"
@@ -1093,6 +1120,7 @@
                             </div>
                         @endif
 
+                        {{-- Extracted footer/social configuration block --}}
                         @if ($showSiteFooterSocialFields)
                             @include(
                                 'dashboard.pages.sections.partials.blocks.site-footer-social-fields',
@@ -1130,6 +1158,7 @@
                             </div>
                         @endif
 
+                        {{-- Inline repeaters, textarea builders, and media areas continue below. --}}
                         @if ($showFeatureRepeaterField)
                             @include(
                                 'dashboard.pages.sections.partials.repeaters.campaign-features-repeater',
@@ -1383,6 +1412,15 @@
                         @endif
 
                         @if ($isHeroCampaign)
+                            @php
+                                $heroCampaignTrustItemsFieldContext = $schemaFieldContext(
+                                    'cta',
+                                    'trust_items',
+                                    __('Trust Items'),
+                                    __('One line per item shown below the CTA button'),
+                                );
+                            @endphp
+
                             <div class="lg:col-span-2 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
                                 <div class="mb-4">
                                     <label
@@ -1420,6 +1458,19 @@
                                         {{ $primaryButtonNewTabValue ? 'checked' : '' }}>
                                     <span>{{ __('Open CTA in a new tab') }}</span>
                                 </label>
+
+                                <div class="mt-5">
+                                    <label class="block text-sm font-medium text-slate-700">
+                                        {{ $heroCampaignTrustItemsFieldContext['label'] }}
+                                    </label>
+                                    <textarea name="translations[{{ $code }}][content][trust_items_textarea]"
+                                        rows="{{ $schemaFieldRows($heroCampaignTrustItemsFieldContext['schemaMeta'], 3) }}"
+                                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                        placeholder="{{ $heroCampaignTrustItemsFieldContext['placeholder'] }}">{{ $heroCampaignTrustItemsTextarea }}</textarea>
+                                    <p class="mt-2 text-xs text-slate-500">
+                                        {{ __('Use one line per item. These appear below the CTA button in the campaign hero.') }}
+                                    </p>
+                                </div>
                             </div>
                         @endif
 

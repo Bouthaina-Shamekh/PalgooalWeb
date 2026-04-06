@@ -96,6 +96,18 @@ class SectionEditorSchemaRegistry
                     'required' => false,
                 ],
                 [
+                    'name' => 'trust_items',
+                    'type' => 'textarea',
+                    'label' => 'Trust Items',
+                    'group' => 'cta',
+                    'localized' => true,
+                    'required' => false,
+                    'ui' => [
+                        'rows' => 3,
+                        'placeholder' => 'One line per item shown below the CTA button',
+                    ],
+                ],
+                [
                     'name' => 'media_url',
                     'type' => 'media',
                     'label' => 'Illustration',

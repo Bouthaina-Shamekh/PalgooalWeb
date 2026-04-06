@@ -999,6 +999,11 @@ class SectionController extends Controller
                     ['text' => 'Private Domain', 'icon_source' => 'class', 'icon' => 'ti ti-world'],
                     ['text' => '24/7 technical support', 'icon_source' => 'class', 'icon' => 'ti ti-headset'],
                 ],
+                'trust_items' => [
+                    'بدون خبرة تقنية',
+                    'جاهز خلال دقائق',
+                    'دعم كامل',
+                ],
                 'media_type' => 'image',
                 'media_url' => 'assets/tamplate/images/Fu.svg',
             ],
@@ -1658,6 +1663,9 @@ class SectionController extends Controller
             'features' => $this->normalizeCampaignFeatureItems(
                 $content['features'] ?? ($content['features_textarea'] ?? '')
             ),
+            'trust_items' => $this->normalizeLineTextItems(
+                $content['trust_items'] ?? ($content['trust_items_textarea'] ?? '')
+            ),
             'media_type' => $content['media_type'] ?? 'image',
             'media_url' => $content['media_url'] ?? null,
         ];
@@ -2172,6 +2180,34 @@ class SectionController extends Controller
         }
 
         return collect(preg_split("/\r\n|\r|\n/", (string) $featuresRaw))
+            ->map(fn($item) => trim((string) $item))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Normalize line-based text items into a stable string array.
+     *
+     * @return array<int, string>
+     */
+    protected function normalizeLineTextItems(mixed $itemsRaw): array
+    {
+        if (is_array($itemsRaw)) {
+            return collect($itemsRaw)
+                ->map(function ($item): string {
+                    if (is_array($item)) {
+                        return trim((string) ($item['text'] ?? $item['title'] ?? $item['label'] ?? ''));
+                    }
+
+                    return is_scalar($item) ? trim((string) $item) : '';
+                })
+                ->filter()
+                ->values()
+                ->all();
+        }
+
+        return collect(preg_split("/\r\n|\r|\n/", (string) $itemsRaw))
             ->map(fn($item) => trim((string) $item))
             ->filter()
             ->values()
