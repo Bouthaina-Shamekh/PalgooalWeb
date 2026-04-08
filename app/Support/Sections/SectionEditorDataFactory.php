@@ -100,7 +100,7 @@ class SectionEditorDataFactory
                     $code => array_merge(
                         $this->buildBaseScalarValues($code, $translation, $content, $typeLabel, $isTemplatesListingShowcase),
                         $this->buildBrandScalarValues($code, $content),
-                        $this->buildButtonScalarValues($code, $content, $primaryButton, $secondaryButton),
+                        $this->buildButtonScalarValues($code, $section->type, $content, $primaryButton, $secondaryButton),
                         $this->buildTemplatesScalarValues($code, $content),
                         $this->buildFooterScalarValues($code, $content),
                         $this->buildSocialScalarValues($code, $content),
@@ -150,18 +150,67 @@ class SectionEditorDataFactory
 
     protected function buildButtonScalarValues(
         string $code,
+        string $sectionType,
         array $content,
         array $primaryButton,
         array $secondaryButton,
     ): array {
+        $primaryButtonDefaultLabel = $this->defaultPrimaryButtonLabelForType($sectionType);
+        $primaryButtonDefaultUrl = $this->defaultPrimaryButtonUrlForType($sectionType);
+        $primaryButtonDefaultVisible = $this->defaultPrimaryButtonVisibleForType($sectionType);
+        $primaryButtonDefaultNewTab = $this->defaultPrimaryButtonNewTabForType($sectionType);
+
         return [
             'hostingPricingButtonLabelValue' => $this->stringValue($this->oldContentValue($code, 'button_label', $content['button_label'] ?? __('Choose Now'))),
-            'primaryButtonLabelValue' => $this->stringValue($this->oldNestedContentValue($code, 'primary_button.label', $primaryButton['label'] ?? '')),
-            'primaryButtonUrlValue' => $this->stringValue($this->oldNestedContentValue($code, 'primary_button.url', $primaryButton['url'] ?? '')),
-            'primaryButtonNewTabValue' => $this->oldBooleanContentValue($code, 'primary_button.new_tab', $primaryButton['new_tab'] ?? false),
+            'primaryButtonLabelValue' => $this->stringValue(
+                $this->oldNestedContentValue(
+                    $code,
+                    'primary_button.label',
+                    $primaryButton['label'] ?? $primaryButtonDefaultLabel,
+                ),
+            ),
+            'primaryButtonUrlValue' => $this->stringValue(
+                $this->oldNestedContentValue(
+                    $code,
+                    'primary_button.url',
+                    $primaryButton['url'] ?? $primaryButtonDefaultUrl,
+                ),
+            ),
+            'primaryButtonVisibleValue' => $this->oldBooleanContentValue(
+                $code,
+                'primary_button.visible',
+                $primaryButton['visible'] ?? $primaryButtonDefaultVisible,
+            ),
+            'primaryButtonNewTabValue' => $this->oldBooleanContentValue(
+                $code,
+                'primary_button.new_tab',
+                $primaryButton['new_tab'] ?? $primaryButtonDefaultNewTab,
+            ),
             'secondaryButtonLabelValue' => $this->stringValue($this->oldNestedContentValue($code, 'secondary_button.label', $secondaryButton['label'] ?? '')),
             'secondaryButtonUrlValue' => $this->stringValue($this->oldNestedContentValue($code, 'secondary_button.url', $secondaryButton['url'] ?? '')),
         ];
+    }
+
+    protected function defaultPrimaryButtonLabelForType(string $sectionType): string
+    {
+        return $sectionType === 'how_we_build'
+            ? 'ابدأ الآن — موقعك جاهز خلال دقائق'
+            : '';
+    }
+
+    protected function defaultPrimaryButtonUrlForType(string $sectionType): string
+    {
+        return $sectionType === 'how_we_build' ? '#' : '';
+    }
+
+    protected function defaultPrimaryButtonVisibleForType(string $sectionType): bool
+    {
+        return $sectionType === 'how_we_build';
+    }
+
+    protected function defaultPrimaryButtonNewTabForType(string $sectionType): bool
+    {
+        return $sectionType === 'how_we_build';
     }
 
     protected function buildTemplatesScalarValues(string $code, array $content): array

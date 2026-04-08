@@ -1,7 +1,5 @@
 @php
-    $payload = is_array($data ?? null)
-        ? $data
-        : (is_array($content ?? null) ? $content : []);
+    $payload = is_array($data ?? null) ? $data : (is_array($content ?? null) ? $content : []);
 
     $style = isset($section) && is_array($section->style ?? null) ? $section->style : [];
     $paddingY = $style['padding_y'] ?? 'py-20';
@@ -9,7 +7,9 @@
     $brandPrefix = trim((string) ($payload['brand_prefix'] ?? 'PAL'));
     $brandSuffix = trim((string) ($payload['brand_suffix'] ?? 'GOALS'));
     $sectionTitle = trim((string) ($payload['title'] ?? __('TEMPLATE')));
-    $sectionDescription = trim((string) ($payload['description'] ?? __('Choose from a range of templates and publish them instantly')));
+    $sectionDescription = trim(
+        (string) ($payload['description'] ?? __('Choose from a range of templates and publish them instantly')),
+    );
     $buyLabel = trim((string) ($payload['buy_label'] ?? __('Buy Now')));
     $previewLabel = trim((string) ($payload['preview_label'] ?? __('Live Preview')));
 
@@ -23,7 +23,7 @@
 
     $templates = collect($payload['templates'] ?? [])
         ->map(function ($template): ?array {
-            if (! $template) {
+            if (!$template) {
                 return null;
             }
 
@@ -31,9 +31,10 @@
             $slug = trim((string) ($translation?->slug ?? ''));
             $name = trim((string) ($translation?->name ?? __('Template')));
             $previewSource = trim((string) ($translation?->preview_url ?? ''));
-            $image = is_string($template->image ?? null) && $template->image !== ''
-                ? asset('storage/' . ltrim($template->image, '/'))
-                : null;
+            $image =
+                is_string($template->image ?? null) && $template->image !== ''
+                    ? asset('storage/' . ltrim($template->image, '/'))
+                    : null;
 
             if ($name === '') {
                 $name = __('Template');
@@ -41,11 +42,11 @@
 
             $detailsUrl = $slug !== '' ? route('template.show', $slug, false) : '#';
             $redesignUrl = $slug !== '' ? route('template.show.redesign', $slug, false) : $detailsUrl;
-            $hasValidPreviewSource = $previewSource !== ''
-                && (filter_var($previewSource, FILTER_VALIDATE_URL) || str_starts_with($previewSource, '//'));
-            $previewUrl = ($slug !== '' && $hasValidPreviewSource)
-                ? route('template.preview', $slug, false)
-                : $detailsUrl;
+            $hasValidPreviewSource =
+                $previewSource !== '' &&
+                (filter_var($previewSource, FILTER_VALIDATE_URL) || str_starts_with($previewSource, '//'));
+            $previewUrl =
+                $slug !== '' && $hasValidPreviewSource ? route('template.preview', $slug, false) : $detailsUrl;
 
             return [
                 'id' => $template->id,
@@ -69,8 +70,9 @@
     <div class="container mx-auto">
         {{-- Section Header --}}
         <div class="mb-12 px-4 text-center">
-            <p class="mb-2 text-lg md:text-xl">
-                <span class="text-red-brand">{{ $brandPrefix }}</span><span class="text-purple-brand">{{ $brandSuffix }}</span>
+            <p class="inline-flex items-center gap-1 text-lg md:text-xl">
+                <span class="text-red-brand">{{ $brandPrefix }}</span>
+                <span class="text-purple-brand">{{ $brandSuffix }}</span>
             </p>
 
             @if ($sectionTitle !== '')
@@ -89,28 +91,29 @@
         {{-- Templates Slider Container --}}
         <div class="relative">
             {{-- Slider Wrapper with Scroll Snap --}}
-            <div
-                id="{{ $sliderId }}"
-                data-templates-slider
-                class="scrollbar-hide flex select-none gap-6 overflow-x-auto scroll-smooth snap-x snap-proximity px-4 py-2 md:px-12 lg:px-24"
-            >
+            <div id="{{ $sliderId }}" data-templates-slider
+                class="scrollbar-hide flex select-none gap-6 overflow-x-auto scroll-smooth snap-x snap-proximity px-4 py-2 md:px-12 lg:px-24">
                 @forelse ($templates as $template)
                     {{-- Template Card --}}
-                    <div data-template-slide class="w-[85vw] flex-shrink-0 snap-center md:w-[60vw] lg:w-[45vw] xl:w-[38vw]">
-                        <div class="overflow-hidden rounded-3xl bg-white p-6 shadow-md transition-all duration-300 hover:-translate-y-2 hover:shadow-lg">
+                    <div data-template-slide
+                        class="w-[85vw] flex-shrink-0 snap-center md:w-[60vw] lg:w-[45vw] xl:w-[38vw]">
+                        <div
+                            class="overflow-hidden rounded-3xl bg-white p-6 shadow-md transition-all duration-300 hover:-translate-y-3 hover:scale-[1.02] hover:shadow-lg">
                             {{-- Card Image --}}
                             <div class="relative mb-4">
-                                <div class="absolute inset-0 z-10"></div>
+                                <span
+                                    class="absolute top-3 right-3 z-20 bg-red-brand text-white text-sm px-3 py-1 rounded-full shadow">
+                                    متجر إلكتروني
+                                </span>
+                                <div class="absolute inset-0 bg-black/5 rounded-2xl"></div>
 
                                 @if ($template['image'])
-                                    <img
-                                        src="{{ $template['image'] }}"
+                                    <img src="{{ $template['image'] }}"
                                         class="h-40 w-full rounded-2xl object-cover md:h-66"
-                                        alt="{{ $template['name'] }}"
-                                        loading="lazy"
-                                    >
+                                        alt="{{ $template['name'] }}" loading="lazy">
                                 @else
-                                    <div class="flex h-40 w-full items-center justify-center rounded-2xl bg-slate-100 px-6 text-center text-lg font-semibold text-slate-500 md:h-66">
+                                    <div
+                                        class="flex h-40 w-full items-center justify-center rounded-2xl bg-slate-100 px-6 text-center text-lg font-semibold text-slate-500 md:h-66">
                                         {{ $template['name'] }}
                                     </div>
                                 @endif
@@ -122,18 +125,15 @@
                                     {{ $template['name'] }}
                                 </h3>
 
-                                <div class="flex flex-auto justify-between gap-4 text-base md:flex-none lg:justify-start">
-                                    <a
-                                        href="{{ $template['buy_url'] }}"
-                                        class="rounded-xl bg-purple-brand px-4 py-2 font-bold text-white transition-all duration-300 hover:-translate-y-1 hover:bg-opacity-90 hover:shadow-lg md:px-8 md:py-3"
-                                    >
+                                <div
+                                    class="flex flex-auto justify-between gap-4 text-base md:flex-none lg:justify-start">
+                                    <a href="{{ $template['buy_url'] }}"
+                                        class="rounded-xl bg-red-brand px-4 py-2 font-bold text-white transition-all duration-300 hover:-translate-y-1 hover:bg-opacity-90 hover:shadow-lg md:px-8 md:py-3">
                                         {{ $buyLabel }}
                                     </a>
 
-                                    <a
-                                        href="{{ $template['preview_url'] }}"
-                                        class="rounded-xl bg-gray-200 px-4 py-2 font-bold text-purple-brand transition-all duration-300 hover:-translate-y-1 hover:bg-gray-300 hover:shadow-lg md:px-8 md:py-3"
-                                    >
+                                    <a href="{{ $template['preview_url'] }}"
+                                        class="rounded-xl bg-gray-200 px-4 py-2 font-bold text-purple-brand transition-all duration-300 hover:-translate-y-1 hover:bg-gray-300 hover:shadow-lg md:px-8 md:py-3">
                                         {{ $previewLabel }}
                                     </a>
                                 </div>
@@ -141,7 +141,8 @@
                         </div>
                     </div>
                 @empty
-                    <div class="mx-4 rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-slate-500">
+                    <div
+                        class="mx-4 rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-slate-500">
                         {{ __('No templates available yet.') }}
                     </div>
                 @endforelse
@@ -162,7 +163,7 @@
 
 @if ($templates->count() > 1)
     <script>
-        (function () {
+        (function() {
             const slider = document.querySelector(@json('#' . $sliderId));
             const indicatorsContainer = document.querySelector(@json('#' . $indicatorsId));
 
@@ -178,8 +179,8 @@
                 return;
             }
 
-            const isRtl = document.documentElement.dir === 'rtl'
-                || window.getComputedStyle(slider).direction === 'rtl';
+            const isRtl = document.documentElement.dir === 'rtl' ||
+                window.getComputedStyle(slider).direction === 'rtl';
             const rtlScrollType = isRtl ? detectRtlScrollType() : 'default';
             const dragSensitivity = 1.05;
             const interactiveSelector = 'a, button, input, textarea, select, summary, [role="button"]';
@@ -303,10 +304,11 @@
                     indicator.type = 'button';
                     indicator.dataset.index = String(cardIndex);
                     indicator.dataset.displayIndex = String(displayIndex);
-                    indicator.className = 'indicator-dot h-2 rounded-full transition-all duration-300 cursor-pointer w-12 bg-gray-300';
+                    indicator.className =
+                        'indicator-dot h-2 rounded-full transition-all duration-300 cursor-pointer w-12 bg-gray-300';
                     indicator.setAttribute('aria-label', `Go to template ${displayIndex + 1}`);
 
-                    indicator.addEventListener('click', function () {
+                    indicator.addEventListener('click', function() {
                         scrollToCard(cardIndex);
                     });
 
@@ -349,7 +351,7 @@
                         indicator.classList.add('w-32', 'bg-purple-brand');
                     } else {
                         indicator.classList.remove('w-32', 'bg-purple-brand');
-                        indicator.classList.add('w-12', 'bg-gray-300');
+                        indicator.classList.add('w-20', 'bg-gray-300');
                     }
                 });
             }
@@ -382,8 +384,7 @@
                 if (event?.pointerId != null && slider.releasePointerCapture) {
                     try {
                         slider.releasePointerCapture(event.pointerId);
-                    } catch (error) {
-                    }
+                    } catch (error) {}
                 }
 
                 if (hasDragged) {
@@ -391,18 +392,20 @@
                 }
             }
 
-            slider.addEventListener('scroll', function () {
+            slider.addEventListener('scroll', function() {
                 if (scrollRaf !== null) {
                     return;
                 }
 
-                scrollRaf = window.requestAnimationFrame(function () {
+                scrollRaf = window.requestAnimationFrame(function() {
                     scrollRaf = null;
                     updateActiveIndicator();
                 });
-            }, { passive: true });
+            }, {
+                passive: true
+            });
 
-            slider.addEventListener('pointerdown', function (event) {
+            slider.addEventListener('pointerdown', function(event) {
                 if (event.pointerType === 'mouse' && event.button !== 0) {
                     return;
                 }
@@ -425,7 +428,7 @@
                 }
             });
 
-            slider.addEventListener('pointermove', function (event) {
+            slider.addEventListener('pointermove', function(event) {
                 if (!isDown) {
                     return;
                 }

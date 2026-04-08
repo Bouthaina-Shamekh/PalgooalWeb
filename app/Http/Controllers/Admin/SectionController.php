@@ -1101,6 +1101,12 @@ class SectionController extends Controller
             'how_we_build' => [
                 'title' => 'How We Build',
                 'subtitle' => 'We Build with precision, passion, and purpose',
+                'primary_button' => [
+                    'label' => 'ابدأ الآن — موقعك جاهز خلال دقائق',
+                    'url' => '#',
+                    'visible' => true,
+                    'new_tab' => true,
+                ],
                 'steps' => [
                     ['title' => 'Analysis', 'icon_source' => 'class', 'icon' => 'ti ti-search', 'is_accent' => false],
                     ['title' => 'Ux/Ui', 'icon_source' => 'class', 'icon' => 'ti ti-palette', 'is_accent' => false],
@@ -1767,9 +1773,27 @@ class SectionController extends Controller
      */
     protected function normalizeHowWeBuildContent(array $content): array
     {
+        $primaryButton = is_array($content['primary_button'] ?? null) ? $content['primary_button'] : [];
+
         return [
             'title' => $content['title'] ?? null,
             'subtitle' => $content['subtitle'] ?? null,
+            'primary_button' => [
+                'label' => $content['primary_button_label']
+                    ?? ($primaryButton['label'] ?? 'ابدأ الآن — موقعك جاهز خلال دقائق'),
+                'url' => $content['primary_button_url']
+                    ?? ($primaryButton['url'] ?? '#'),
+                'visible' => filter_var(
+                    $content['primary_button_visible']
+                        ?? ($primaryButton['visible'] ?? true),
+                    FILTER_VALIDATE_BOOLEAN
+                ),
+                'new_tab' => filter_var(
+                    $content['primary_button_new_tab']
+                        ?? ($primaryButton['new_tab'] ?? true),
+                    FILTER_VALIDATE_BOOLEAN
+                ),
+            ],
             'steps' => collect(is_array($content['steps'] ?? null) ? $content['steps'] : [])
                 ->map(function ($step): ?array {
                     if (! is_array($step)) {

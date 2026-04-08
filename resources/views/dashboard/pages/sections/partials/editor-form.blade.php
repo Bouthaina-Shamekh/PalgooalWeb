@@ -152,6 +152,9 @@
     |   manual card already aligned with shared field context.
     | - Our work database config: extracted / manual / keep extracted; simple
     |   self-contained portfolio config block.
+    | - Hosting pricing config: extracted / mixed / keep extracted; schema-
+    |   driven CTA label + manual category visibility controls, with repeaters
+    |   intentionally kept in orchestrator.
     | - Site footer social fields: extracted / mixed / keep extracted; cohesive
     |   footer-social family with shared helper usage.
     |
@@ -160,10 +163,11 @@
     |   settings surface, language tabs, and locale loop own global flow.
     | - Repeater/media families: inline / mixed / keep inline; JS hooks,
     |   templates, and preview contracts are still tightly coupled here.
+    | - Primary button logic: inline / manual-hybrid / keep inline; section-
+    |   sensitive wording and toggles now stabilized, especially for
+    |   how_we_build CTA behavior.
     |
     | C) Inline and good extraction candidates later
-    | - Hosting pricing config region: inline / mixed / extract later; clear
-    |   block boundary, but coupled to category visibility state.
     | - Hero campaign CTA region: inline / manual-hybrid / extract later if it
     |   stabilizes further as a dedicated section-specific card.
     |
@@ -277,6 +281,7 @@
         $selectedType = $editorState['selectedType'] ?? $section->type;
         $typeFlags = $editorState['typeFlags'] ?? [];
         $fieldFlags = $editorState['flags'] ?? [];
+        $isHowWeBuild = $selectedType === 'how_we_build';
         $isHeroCampaign = (bool) ($typeFlags['isHeroCampaign'] ?? false);
         $isProgrammingShowcase = (bool) ($typeFlags['isProgrammingShowcase'] ?? false);
         $isDesignShowcase = (bool) ($typeFlags['isDesignShowcase'] ?? false);
@@ -483,6 +488,7 @@
                     $outputsHeadingValue = $localeScalarValues['outputsHeadingValue'] ?? '';
                     $primaryButtonLabelValue = $localeScalarValues['primaryButtonLabelValue'] ?? '';
                     $primaryButtonUrlValue = $localeScalarValues['primaryButtonUrlValue'] ?? '';
+                    $primaryButtonVisibleValue = (bool) ($localeScalarValues['primaryButtonVisibleValue'] ?? false);
                     $primaryButtonNewTabValue = (bool) ($localeScalarValues['primaryButtonNewTabValue'] ?? false);
                     $secondaryButtonLabelValue = $localeScalarValues['secondaryButtonLabelValue'] ?? '';
                     $secondaryButtonUrlValue = $localeScalarValues['secondaryButtonUrlValue'] ?? '';
@@ -691,6 +697,62 @@
                             ])
                         @endif
 
+                        {{-- Hero campaign CTA block: stabilized for future extraction; uses dedicated CTA wording and layout. --}}
+                        @if ($showPrimaryButtonFields && $isHeroCampaign)
+                            @php
+                                $isHeroCampaignCtaContext = true;
+                                $heroCtaColumnClass = 'lg:col-span-2';
+                            @endphp
+
+                            <div class="{{ $heroCtaColumnClass }}">
+                                <label class="block text-sm font-medium text-slate-700">
+                                    {{ __('Primary CTA Label') }}
+                                </label>
+                                <input type="text"
+                                    name="translations[{{ $code }}][content][primary_button][label]"
+                                    value="{{ $primaryButtonLabelValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
+                            </div>
+
+                            <div class="{{ $heroCtaColumnClass }}">
+                                <label class="block text-sm font-medium text-slate-700">
+                                    {{ __('Primary CTA URL') }}
+                                </label>
+                                <input type="text"
+                                    name="translations[{{ $code }}][content][primary_button][url]"
+                                    value="{{ $primaryButtonUrlValue }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
+                            </div>
+
+                            <div class="lg:col-span-2">
+                                <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+                                    <input type="hidden"
+                                        name="translations[{{ $code }}][content][primary_button][visible]"
+                                        value="0">
+                                    <input type="checkbox"
+                                        name="translations[{{ $code }}][content][primary_button][visible]"
+                                        value="1"
+                                        class="rounded border-slate-300"
+                                        {{ $primaryButtonVisibleValue ? 'checked' : '' }}>
+                                    {{ __('Show CTA button') }}
+                                </label>
+                            </div>
+
+                            <div class="lg:col-span-2">
+                                <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+                                    <input type="hidden"
+                                        name="translations[{{ $code }}][content][primary_button][new_tab]"
+                                        value="0">
+                                    <input type="checkbox"
+                                        name="translations[{{ $code }}][content][primary_button][new_tab]"
+                                        value="1"
+                                        class="rounded border-slate-300"
+                                        {{ $primaryButtonNewTabValue ? 'checked' : '' }}>
+                                    {{ __('Open CTA in a new tab') }}
+                                </label>
+                            </div>
+                        @endif
+
                         @if ($showDomainsPlaceholderField)
                             <div class="lg:col-span-2">
                                 <label
@@ -704,88 +766,16 @@
                         @endif
 
                         @if ($showHostingPricingDatabaseField)
-                            <div
-                                class="lg:col-span-2 rounded-[1.75rem] bg-slate-50/80 px-5 py-4 text-sm text-slate-600">
-                                <p class="font-medium text-slate-900">{{ __('Plans Grid') }}</p>
-                                <p class="mt-1 leading-6">
-                                    {{ __('Tabs and plan cards are loaded automatically from the Plans and Plan Categories modules. Manage the actual plans there, and use this section only for the heading and shared CTA label.') }}
-                                </p>
-                            </div>
-
-                            @php
-                                $hostingPricingButtonLabelFieldContext = $schemaFieldContext(
-                                    'content',
-                                    'button_label',
-                                    __('CTA Button Label'),
-                                    __('Choose Now'),
-                                );
-                                $hostingPricingButtonLabelRenderConfig = $schemaRenderableFieldConfig(
-                                    $hostingPricingButtonLabelFieldContext,
-                                    'text',
-                                    3,
-                                );
-                            @endphp
-
+                            {{-- Hosting pricing config extracted; repeaters remain in orchestrator --}}
                             @include(
-                                'dashboard.pages.sections.partials.fields.schema-field-renderer',
-                                $schemaRendererPayload(
-                                    $hostingPricingButtonLabelRenderConfig,
-                                    'translations[' . $code . '][content][button_label]',
-                                    $hostingPricingButtonLabelValue,
-                                    'button_label',
-                                    'lg:col-span-2',
-                                )
+                                'dashboard.pages.sections.partials.blocks.hosting-pricing-config-fields',
+                                [
+                                    'code' => $code,
+                                    'hostingPricingButtonLabelValue' => $hostingPricingButtonLabelValue,
+                                    'hostingPricingAvailableCategories' => $hostingPricingAvailableCategories,
+                                    'hostingPricingVisibleCategoryIds' => $hostingPricingVisibleCategoryIds,
+                                ]
                             )
-
-                            <div class="lg:col-span-2">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('Visible Categories') }}</label>
-                                <p class="mt-1 text-xs leading-5 text-slate-500">
-                                    {{ __('Choose only the plan categories you want to show in this section. Leave all unchecked to show every active category.') }}
-                                </p>
-
-                                <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                    @forelse ($hostingPricingAvailableCategories as $availableCategory)
-                                        @php
-                                            $availableCategoryTranslation =
-                                                $availableCategory->translation($code) ??
-                                                $availableCategory->translations->first();
-                                            $availableCategoryLabel = trim(
-                                                (string) ($availableCategoryTranslation?->title ??
-                                                    __('Category') . ' #' . $availableCategory->id),
-                                            );
-                                            $availableCategoryKey = trim(
-                                                (string) ($availableCategoryTranslation?->slug ??
-                                                    'category-' . $availableCategory->id),
-                                            );
-                                            $isVisibleCategoryChecked = in_array(
-                                                (int) $availableCategory->id,
-                                                $hostingPricingVisibleCategoryIds,
-                                                true,
-                                            );
-                                        @endphp
-
-                                        <label
-                                            class="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 transition hover:border-slate-300">
-                                            <input type="checkbox"
-                                                name="translations[{{ $code }}][content][visible_category_ids][]"
-                                                value="{{ $availableCategory->id }}" @checked($isVisibleCategoryChecked)
-                                                class="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400">
-                                            <span class="min-w-0 flex-1">
-                                                <span dir="auto"
-                                                    class="block font-medium text-slate-900 break-words">{{ $availableCategoryLabel }}</span>
-                                                <span dir="ltr"
-                                                    class="mt-1 block text-xs text-slate-500 break-all">{{ $availableCategoryKey }}</span>
-                                            </span>
-                                        </label>
-                                    @empty
-                                        <div
-                                            class="sm:col-span-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                                            {{ __('No active plan categories found.') }}
-                                        </div>
-                                    @endforelse
-                                </div>
-                            </div>
                         @endif
 
                         @if ($showHostingPricingCategoriesField)
@@ -936,22 +926,40 @@
                             )
                         @endif
 
-                        {{-- Inline/manual blocks still owned by editor-form orchestrator --}}
+                        {{-- Primary button wording and toggles are section-sensitive; how_we_build is intentionally treated as a CTA-driven variant. --}}
                         @if ($showPrimaryButtonFields && !$isHeroCampaign)
-                            <div
-                                class="{{ $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isDomainsShowcase || $isSiteHeader ? 'lg:col-span-2' : '' }}">
+                            @php
+                                $isHowWeBuildPrimaryButtonContext = $isHowWeBuild;
+                                $usesCtaPrimaryButtonLabels =
+                                    $isHowWeBuildPrimaryButtonContext ||
+                                    $isProgrammingShowcase ||
+                                    $isMobileAppShowcase ||
+                                    $isDesignShowcase ||
+                                    $isDigitalMarketingShowcase;
+                                $usesWidePrimaryButtonFields =
+                                    $usesCtaPrimaryButtonLabels || $isDomainsShowcase || $isSiteHeader;
+                                $showsPrimaryButtonNewTabToggle =
+                                    $usesCtaPrimaryButtonLabels || $isSiteHeader;
+                                $primaryButtonFieldColumnClass = $usesWidePrimaryButtonFields ? 'lg:col-span-2' : '';
+                                $primaryButtonLabelText = $isSiteHeader
+                                    ? __('Header Button Label')
+                                    : ($isDomainsShowcase
+                                        ? __('Search Button Label')
+                                        : ($usesCtaPrimaryButtonLabels
+                                            ? __('CTA Button Label')
+                                            : __('Primary Button Label')));
+                                $primaryButtonUrlLabelText = $isSiteHeader
+                                    ? __('Header Button URL')
+                                    : ($isDomainsShowcase
+                                        ? __('Search Page URL')
+                                        : ($usesCtaPrimaryButtonLabels
+                                            ? __('CTA Button URL')
+                                            : __('Primary Button URL')));
+                            @endphp
+
+                            <div class="{{ $primaryButtonFieldColumnClass }}">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ $isSiteHeader
-                                        ? __('Header Button Label')
-                                        : ($isDomainsShowcase
-                                            ? __('Search Button Label')
-                                            : ($isHeroCampaign ||
-                                            $isProgrammingShowcase ||
-                                            $isMobileAppShowcase ||
-                                            $isDesignShowcase ||
-                                            $isDigitalMarketingShowcase
-                                                ? __('CTA Button Label')
-                                                : __('Primary Button Label'))) }}
+                                    {{ $primaryButtonLabelText }}
                                 </label>
                                 <input type="text"
                                     name="translations[{{ $code }}][content][primary_button][label]"
@@ -959,20 +967,9 @@
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
                             </div>
 
-                            <div
-                                class="{{ $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isDomainsShowcase || $isSiteHeader ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ $primaryButtonFieldColumnClass }}">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ $isSiteHeader
-                                        ? __('Header Button URL')
-                                        : ($isDomainsShowcase
-                                            ? __('Search Page URL')
-                                            : ($isHeroCampaign ||
-                                            $isProgrammingShowcase ||
-                                            $isMobileAppShowcase ||
-                                            $isDesignShowcase ||
-                                            $isDigitalMarketingShowcase
-                                                ? __('CTA Button URL')
-                                                : __('Primary Button URL'))) }}
+                                    {{ $primaryButtonUrlLabelText }}
                                 </label>
                                 <input type="text"
                                     name="translations[{{ $code }}][content][primary_button][url]"
@@ -980,10 +977,29 @@
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
                             </div>
 
-                            @if ($isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isSiteHeader)
+                            @if ($isHowWeBuildPrimaryButtonContext)
                                 <div class="lg:col-span-2">
                                     <label
                                         class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+                                        <input type="hidden"
+                                            name="translations[{{ $code }}][content][primary_button][visible]"
+                                            value="0">
+                                        <input type="checkbox"
+                                            name="translations[{{ $code }}][content][primary_button][visible]"
+                                            value="1" class="rounded border-slate-300"
+                                            {{ $primaryButtonVisibleValue ? 'checked' : '' }}>
+                                        {{ __('Show CTA button') }}
+                                    </label>
+                                </div>
+                            @endif
+
+                            @if ($showsPrimaryButtonNewTabToggle)
+                                <div class="lg:col-span-2">
+                                    <label
+                                        class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
+                                        <input type="hidden"
+                                            name="translations[{{ $code }}][content][primary_button][new_tab]"
+                                            value="0">
                                         <input type="checkbox"
                                             name="translations[{{ $code }}][content][primary_button][new_tab]"
                                             value="1" class="rounded border-slate-300"
@@ -1422,55 +1438,16 @@
                             @endphp
 
                             <div class="lg:col-span-2 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
-                                <div class="mb-4">
-                                    <label
-                                        class="block text-sm font-medium text-slate-700">{{ __('CTA Button') }}</label>
-                                    <p class="mt-1 text-xs text-slate-500">
-                                        {{ __('This button appears below the campaign features and right before the illustration block.') }}
-                                    </p>
-                                </div>
-
-                                <div class="space-y-5">
-                                    <div>
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('CTA Button Label') }}</label>
-                                        <input type="text"
-                                            name="translations[{{ $code }}][content][primary_button][label]"
-                                            value="{{ $primaryButtonLabelValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                                    </div>
-
-                                    <div>
-                                        <label
-                                            class="block text-sm font-medium text-slate-700">{{ __('CTA Button URL') }}</label>
-                                        <input type="text"
-                                            name="translations[{{ $code }}][content][primary_button][url]"
-                                            value="{{ $primaryButtonUrlValue }}"
-                                            class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                                    </div>
-                                </div>
-
-                                <label
-                                    class="mt-5 inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 rtl:flex-row-reverse">
-                                    <input type="checkbox"
-                                        name="translations[{{ $code }}][content][primary_button][new_tab]"
-                                        value="1" class="rounded border-slate-300"
-                                        {{ $primaryButtonNewTabValue ? 'checked' : '' }}>
-                                    <span>{{ __('Open CTA in a new tab') }}</span>
+                                <label class="block text-sm font-medium text-slate-700">
+                                    {{ $heroCampaignTrustItemsFieldContext['label'] }}
                                 </label>
-
-                                <div class="mt-5">
-                                    <label class="block text-sm font-medium text-slate-700">
-                                        {{ $heroCampaignTrustItemsFieldContext['label'] }}
-                                    </label>
-                                    <textarea name="translations[{{ $code }}][content][trust_items_textarea]"
-                                        rows="{{ $schemaFieldRows($heroCampaignTrustItemsFieldContext['schemaMeta'], 3) }}"
-                                        class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                        placeholder="{{ $heroCampaignTrustItemsFieldContext['placeholder'] }}">{{ $heroCampaignTrustItemsTextarea }}</textarea>
-                                    <p class="mt-2 text-xs text-slate-500">
-                                        {{ __('Use one line per item. These appear below the CTA button in the campaign hero.') }}
-                                    </p>
-                                </div>
+                                <textarea name="translations[{{ $code }}][content][trust_items_textarea]"
+                                    rows="{{ $schemaFieldRows($heroCampaignTrustItemsFieldContext['schemaMeta'], 3) }}"
+                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    placeholder="{{ $heroCampaignTrustItemsFieldContext['placeholder'] }}">{{ $heroCampaignTrustItemsTextarea }}</textarea>
+                                <p class="mt-2 text-xs text-slate-500">
+                                    {{ __('Use one line per item. These appear below the primary CTA in the campaign hero.') }}
+                                </p>
                             </div>
                         @endif
 

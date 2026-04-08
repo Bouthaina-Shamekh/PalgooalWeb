@@ -109,7 +109,9 @@
         ->filter()
         ->values();
     $trustItemsSource = $content['trust_items'] ?? [];
-    $trustItems = collect(is_array($trustItemsSource) ? $trustItemsSource : preg_split("/\r\n|\r|\n/", (string) $trustItemsSource))
+    $trustItems = collect(
+        is_array($trustItemsSource) ? $trustItemsSource : preg_split("/\r\n|\r|\n/", (string) $trustItemsSource),
+    )
         ->map(fn($item) => trim((string) $item))
         ->filter()
         ->values();
@@ -131,7 +133,8 @@
         class="container mx-auto flex h-full flex-col-reverse items-center justify-between gap-12 lg:gap-16 ltr:lg:flex-row rtl:lg:flex-row-reverse">
         <div class="text-content w-full text-center lg:w-1/2 lg:text-start ltr:lg:order-1 rtl:lg:order-2">
             @if ($heroTitle)
-                <span class="inline-flex items-center gap-2 bg-purple-100 text-purple-700 text-base px-4 py-1.5 rounded-full mb-4 font-medium">
+                <span
+                    class="inline-flex items-center gap-2 bg-purple-100 text-purple-700 text-base px-4 py-1.5 rounded-full mb-4 font-medium">
                     {{ $heroTitle }}
                 </span>
             @endif
@@ -203,7 +206,7 @@
                             {{ $trustItem }}
                         </span>
 
-                        @if (! $loop->last)
+                        @if (!$loop->last)
                             <span class="text-gray-300">&bull;</span>
                         @endif
                     @endforeach
@@ -211,35 +214,35 @@
             @else
                 <div class="mt-4 text-sm text-gray-500 flex flex-wrap items-center justify-start gap-2">
 
-                <span class="flex items-center  gap-1">
-                    <svg class="w-4 h-4 text-red-brand" fill="none" stroke="currentColor" stroke-width="2"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                    بدون خبرة تقنية
-                </span>
+                    <span class="flex items-center  gap-1">
+                        <svg class="w-4 h-4 text-red-brand" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        بدون خبرة تقنية
+                    </span>
 
-                <span class="text-gray-300">•</span>
+                    <span class="text-gray-300">•</span>
 
-                <span class="flex items-center gap-1">
-                    <svg class="w-4 h-4 text-red-brand" fill="none" stroke="currentColor" stroke-width="2"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                    جاهز خلال دقائق
-                </span>
+                    <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4 text-red-brand" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        جاهز خلال دقائق
+                    </span>
 
-                <span class="text-gray-300">•</span>
+                    <span class="text-gray-300">•</span>
 
-                <span class="flex items-center gap-1">
-                    <svg class="w-4 h-4 text-red-brand" fill="none" stroke="currentColor" stroke-width="2"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                    دعم كامل
-                </span>
+                    <span class="flex items-center gap-1">
+                        <svg class="w-4 h-4 text-red-brand" fill="none" stroke="currentColor" stroke-width="2"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        دعم كامل
+                    </span>
 
-            </div>
+                </div>
             @endif
         </div>
 

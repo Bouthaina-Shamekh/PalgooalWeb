@@ -122,6 +122,7 @@ class SectionEditorTypeCapabilities
         'how_we_build' => [
             'flags' => [
                 'showBuildStepsRepeaterField' => true,
+                'showPrimaryButtonFields' => true,
             ],
         ],
         'design_showcase' => [
