@@ -155,6 +155,8 @@
     | - Hosting pricing config: extracted / mixed / keep extracted; schema-
     |   driven CTA label + manual category visibility controls, with repeaters
     |   intentionally kept in orchestrator.
+    | - Hero campaign CTA fields: extracted / manual / keep extracted;
+    |   dedicated CTA wording and toggles isolated for future reuse.
     | - Site footer social fields: extracted / mixed / keep extracted; cohesive
     |   footer-social family with shared helper usage.
     |
@@ -166,10 +168,6 @@
     | - Primary button logic: inline / manual-hybrid / keep inline; section-
     |   sensitive wording and toggles now stabilized, especially for
     |   how_we_build CTA behavior.
-    |
-    | C) Inline and good extraction candidates later
-    | - Hero campaign CTA region: inline / manual-hybrid / extract later if it
-    |   stabilizes further as a dedicated section-specific card.
     |
     | D) Inline but better suited for hybrid alignment first
     | - Manual textarea/content scalar family: inline / hybrid-manual / align
@@ -697,60 +695,18 @@
                             ])
                         @endif
 
-                        {{-- Hero campaign CTA block: stabilized for future extraction; uses dedicated CTA wording and layout. --}}
                         @if ($showPrimaryButtonFields && $isHeroCampaign)
-                            @php
-                                $isHeroCampaignCtaContext = true;
-                                $heroCtaColumnClass = 'lg:col-span-2';
-                            @endphp
-
-                            <div class="{{ $heroCtaColumnClass }}">
-                                <label class="block text-sm font-medium text-slate-700">
-                                    {{ __('Primary CTA Label') }}
-                                </label>
-                                <input type="text"
-                                    name="translations[{{ $code }}][content][primary_button][label]"
-                                    value="{{ $primaryButtonLabelValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                            </div>
-
-                            <div class="{{ $heroCtaColumnClass }}">
-                                <label class="block text-sm font-medium text-slate-700">
-                                    {{ __('Primary CTA URL') }}
-                                </label>
-                                <input type="text"
-                                    name="translations[{{ $code }}][content][primary_button][url]"
-                                    value="{{ $primaryButtonUrlValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                            </div>
-
-                            <div class="lg:col-span-2">
-                                <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
-                                    <input type="hidden"
-                                        name="translations[{{ $code }}][content][primary_button][visible]"
-                                        value="0">
-                                    <input type="checkbox"
-                                        name="translations[{{ $code }}][content][primary_button][visible]"
-                                        value="1"
-                                        class="rounded border-slate-300"
-                                        {{ $primaryButtonVisibleValue ? 'checked' : '' }}>
-                                    {{ __('Show CTA button') }}
-                                </label>
-                            </div>
-
-                            <div class="lg:col-span-2">
-                                <label class="inline-flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700">
-                                    <input type="hidden"
-                                        name="translations[{{ $code }}][content][primary_button][new_tab]"
-                                        value="0">
-                                    <input type="checkbox"
-                                        name="translations[{{ $code }}][content][primary_button][new_tab]"
-                                        value="1"
-                                        class="rounded border-slate-300"
-                                        {{ $primaryButtonNewTabValue ? 'checked' : '' }}>
-                                    {{ __('Open CTA in a new tab') }}
-                                </label>
-                            </div>
+                            {{-- Hero campaign CTA extracted into its own partial. --}}
+                            @include(
+                                'dashboard.pages.sections.partials.blocks.hero-campaign-cta-fields',
+                                [
+                                    'code' => $code,
+                                    'primaryButtonLabelValue' => $primaryButtonLabelValue,
+                                    'primaryButtonUrlValue' => $primaryButtonUrlValue,
+                                    'primaryButtonVisibleValue' => $primaryButtonVisibleValue,
+                                    'primaryButtonNewTabValue' => $primaryButtonNewTabValue,
+                                ]
+                            )
                         @endif
 
                         @if ($showDomainsPlaceholderField)
@@ -1154,19 +1110,42 @@
                             )
                         @endif
 
+                        {{-- Secondary button block: stabilized for consistent CTA/supporting action behavior; kept inline for now. --}}
                         @if ($showSecondaryButtonFields)
-                            <div>
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('Secondary Button Label') }}</label>
+                            @php
+                                $isSecondaryCtaContext =
+                                    $isHeroCampaign ||
+                                    $isHowWeBuild ||
+                                    $isProgrammingShowcase ||
+                                    $isMobileAppShowcase ||
+                                    $isDesignShowcase ||
+                                    $isDigitalMarketingShowcase;
+
+                                $secondaryButtonFieldColumnClass = $isSecondaryCtaContext ? 'lg:col-span-2' : '';
+
+                                $secondaryButtonLabelText = $isSecondaryCtaContext
+                                    ? __('Secondary CTA Label')
+                                    : __('Secondary Button Label');
+
+                                $secondaryButtonUrlLabelText = $isSecondaryCtaContext
+                                    ? __('Secondary CTA URL')
+                                    : __('Secondary Button URL');
+                            @endphp
+
+                            <div class="{{ $secondaryButtonFieldColumnClass }}">
+                                <label class="block text-sm font-medium text-slate-700">
+                                    {{ $secondaryButtonLabelText }}
+                                </label>
                                 <input type="text"
                                     name="translations[{{ $code }}][content][secondary_button][label]"
                                     value="{{ $secondaryButtonLabelValue }}"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
                             </div>
 
-                            <div>
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('Secondary Button URL') }}</label>
+                            <div class="{{ $secondaryButtonFieldColumnClass }}">
+                                <label class="block text-sm font-medium text-slate-700">
+                                    {{ $secondaryButtonUrlLabelText }}
+                                </label>
                                 <input type="text"
                                     name="translations[{{ $code }}][content][secondary_button][url]"
                                     value="{{ $secondaryButtonUrlValue }}"

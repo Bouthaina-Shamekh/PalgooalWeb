@@ -30,6 +30,7 @@
             $translation = $template->translation(app()->getLocale()) ?? $template->translations->first();
             $slug = trim((string) ($translation?->slug ?? ''));
             $name = trim((string) ($translation?->name ?? __('Template')));
+            $description = trim(strip_tags((string) ($translation?->description ?? '')));
             $previewSource = trim((string) ($translation?->preview_url ?? ''));
             $image =
                 is_string($template->image ?? null) && $template->image !== ''
@@ -51,6 +52,7 @@
             return [
                 'id' => $template->id,
                 'name' => $name,
+                'description' => $description,
                 'image' => $image,
                 'buy_url' => $redesignUrl,
                 'preview_url' => $previewUrl,
@@ -66,23 +68,28 @@
 @endphp
 
 {{-- Templates Section --}}
-<section id="{{ $sectionDomId }}" class="bg-gray-light {{ $paddingY }}">
-    <div class="container mx-auto">
+<section id="{{ $sectionDomId }}" class="relative overflow-hidden bg-gray-light {{ $paddingY }}">
+    <div aria-hidden="true"
+        class="pointer-events-none absolute -top-24 -right-16 h-72 w-72 rounded-full bg-purple-brand/5 blur-3xl"></div>
+    <div aria-hidden="true"
+        class="pointer-events-none absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-red-brand/5 blur-3xl"></div>
+
+    <div class="container relative mx-auto">
         {{-- Section Header --}}
-        <div class="mb-12 px-4 text-center">
-            <p class="inline-flex items-center gap-1 text-lg md:text-xl">
+        <div class="mx-auto mb-16 max-w-5xl px-4 text-center md:mb-20">
+            <p class="mb-4 inline-flex items-center gap-1 text-base font-extrabold tracking-[0.3em] md:text-xl">
                 <span class="text-red-brand">{{ $brandPrefix }}</span>
                 <span class="text-purple-brand">{{ $brandSuffix }}</span>
             </p>
 
             @if ($sectionTitle !== '')
-                <h2 class="mb-2 text-4xl font-extrabold uppercase text-purple-brand md:text-5xl">
+                <h2 class="text-3xl font-extrabold leading-tight text-slate-950 md:text-4xl lg:whitespace-nowrap lg:text-[3.25rem]">
                     {{ $sectionTitle }}
                 </h2>
             @endif
 
             @if ($sectionDescription !== '')
-                <p class="mx-auto max-w-2xl text-base text-gray-dark">
+                <p class="mx-auto mt-4 max-w-2xl text-base leading-8 text-slate-500 md:text-lg">
                     {{ $sectionDescription }}
                 </p>
             @endif
@@ -90,50 +97,75 @@
 
         {{-- Templates Slider Container --}}
         <div class="relative">
+            @if ($templates->count() > 1)
+                <div
+                    class="pointer-events-none absolute inset-y-1/2 z-20 hidden w-full -translate-y-1/2 items-center justify-between px-2 lg:flex xl:-left-10 xl:w-[calc(100%+5rem)]">
+                    <button type="button" data-templates-slider-prev
+                        class="pointer-events-auto inline-flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-all duration-300 hover:-translate-x-1 hover:bg-slate-50 hover:text-slate-900"
+                        aria-label="{{ __('Previous template') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="1.8" class="h-6 w-6 transition-transform rtl:rotate-180">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 6l-6 6 6 6" />
+                        </svg>
+                    </button>
+
+                    <button type="button" data-templates-slider-next
+                        class="pointer-events-auto inline-flex h-14 w-14 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-all duration-300 hover:translate-x-1 hover:bg-slate-50 hover:text-slate-900"
+                        aria-label="{{ __('Next template') }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="1.8" class="h-6 w-6 transition-transform rtl:rotate-180">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 6l6 6-6 6" />
+                        </svg>
+                    </button>
+                </div>
+            @endif
+
             {{-- Slider Wrapper with Scroll Snap --}}
-            <div id="{{ $sliderId }}" data-templates-slider
-                class="scrollbar-hide flex select-none gap-6 overflow-x-auto scroll-smooth snap-x snap-proximity px-4 py-2 md:px-12 lg:px-24">
+            <div id="{{ $sliderId }}" data-templates-slider dir="ltr"
+                class="scrollbar-hide flex select-none gap-4 overflow-x-auto scroll-smooth snap-x snap-proximity px-4 pb-6 pt-2 md:gap-6 md:px-6 lg:px-12">
                 @forelse ($templates as $template)
                     {{-- Template Card --}}
-                    <div data-template-slide
+                    <div data-template-slide dir="rtl"
                         class="w-[85vw] flex-shrink-0 snap-center md:w-[60vw] lg:w-[45vw] xl:w-[38vw]">
                         <div
-                            class="overflow-hidden rounded-3xl bg-white p-6 shadow-md transition-all duration-300 hover:-translate-y-3 hover:scale-[1.02] hover:shadow-lg">
+                            class="group flex h-full flex-col overflow-hidden rounded-[2rem] border border-slate-100 bg-white p-5 transition-all duration-500 hover:-translate-y-2 hover:scale-[1.01] md:p-6">
                             {{-- Card Image --}}
-                            <div class="relative mb-4">
-                                <span
-                                    class="absolute top-3 right-3 z-20 bg-red-brand text-white text-sm px-3 py-1 rounded-full shadow">
-                                    متجر إلكتروني
-                                </span>
-                                <div class="absolute inset-0 bg-black/5 rounded-2xl"></div>
-
+                            <div class="relative mb-5 overflow-hidden rounded-[1.5rem]">
                                 @if ($template['image'])
                                     <img src="{{ $template['image'] }}"
-                                        class="h-40 w-full rounded-2xl object-cover md:h-66"
+                                        class="h-56 w-full rounded-[1.5rem] object-cover transition duration-500 group-hover:scale-[1.03] md:h-72"
                                         alt="{{ $template['name'] }}" loading="lazy">
+                                    <div
+                                        class="pointer-events-none absolute inset-0 rounded-[1.5rem] bg-gradient-to-t from-slate-950/15 via-transparent to-transparent">
+                                    </div>
                                 @else
                                     <div
-                                        class="flex h-40 w-full items-center justify-center rounded-2xl bg-slate-100 px-6 text-center text-lg font-semibold text-slate-500 md:h-66">
+                                        class="flex h-56 w-full items-center justify-center rounded-[1.5rem] bg-slate-100 px-6 text-center text-lg font-semibold text-slate-500 md:h-72">
                                         {{ $template['name'] }}
                                     </div>
                                 @endif
                             </div>
 
                             {{-- Card Content --}}
-                            <div class="flex flex-wrap items-center justify-between gap-4 md:flex-nowrap">
-                                <h3 class="text-center text-lg text-purple-brand md:text-xl lg:text-start">
+                            <div class="flex flex-1 flex-col">
+                                <h3 class="truncate text-xl font-extrabold leading-snug text-slate-950 md:text-2xl">
                                     {{ $template['name'] }}
                                 </h3>
 
-                                <div
-                                    class="flex flex-auto justify-between gap-4 text-base md:flex-none lg:justify-start">
+                                @if (!empty($template['description']))
+                                    <p class="mt-3 truncate text-sm text-slate-500 md:text-base">
+                                        {{ $template['description'] }}
+                                    </p>
+                                @endif
+
+                                <div class="mt-6 flex flex-col gap-3 text-base sm:flex-row">
                                     <a href="{{ $template['buy_url'] }}"
-                                        class="rounded-xl bg-red-brand px-4 py-2 font-bold text-white transition-all duration-300 hover:-translate-y-1 hover:bg-opacity-90 hover:shadow-lg md:px-8 md:py-3">
+                                        class="inline-flex flex-1 items-center justify-center rounded-2xl bg-red-brand px-5 py-3 text-sm font-extrabold text-white transition-all duration-300 hover:-translate-y-1 hover:bg-red-brand/90 md:px-7 md:py-3.5 md:text-base">
                                         {{ $buyLabel }}
                                     </a>
 
                                     <a href="{{ $template['preview_url'] }}"
-                                        class="rounded-xl bg-gray-200 px-4 py-2 font-bold text-purple-brand transition-all duration-300 hover:-translate-y-1 hover:bg-gray-300 hover:shadow-lg md:px-8 md:py-3">
+                                        class="inline-flex flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition-all duration-300 hover:-translate-y-1 hover:bg-slate-100 md:px-7 md:py-3.5 md:text-base">
                                         {{ $previewLabel }}
                                     </a>
                                 </div>
@@ -142,21 +174,17 @@
                     </div>
                 @empty
                     <div
-                        class="mx-4 rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-slate-500">
+                        class="mx-4 rounded-[2rem] border border-dashed border-slate-300 bg-white px-6 py-12 text-center text-slate-500">
                         {{ __('No templates available yet.') }}
                     </div>
                 @endforelse
 
-                @if ($templates->isNotEmpty())
-                    {{-- Spacer to allow last card to scroll into view --}}
-                    <div aria-hidden="true" class="w-[40vw] flex-shrink-0 md:w-[30vw] lg:w-[20vw]"></div>
-                @endif
             </div>
         </div>
 
         @if ($templates->count() > 1)
             {{-- Slider Indicators --}}
-            <div id="{{ $indicatorsId }}" class="mt-12 flex justify-center gap-2" dir="ltr"></div>
+            <div id="{{ $indicatorsId }}" class="mt-12 flex justify-center gap-3 md:mt-16" dir="ltr"></div>
         @endif
     </div>
 </section>
@@ -166,6 +194,9 @@
         (function() {
             const slider = document.querySelector(@json('#' . $sliderId));
             const indicatorsContainer = document.querySelector(@json('#' . $indicatorsId));
+            const sectionRoot = slider?.closest('section');
+            const prevButton = sectionRoot?.querySelector('[data-templates-slider-prev]');
+            const nextButton = sectionRoot?.querySelector('[data-templates-slider-next]');
 
             if (!slider || !indicatorsContainer || slider.dataset.templatesSliderBound === '1') {
                 return;
@@ -179,157 +210,116 @@
                 return;
             }
 
-            const isRtl = document.documentElement.dir === 'rtl' ||
-                window.getComputedStyle(slider).direction === 'rtl';
-            const rtlScrollType = isRtl ? detectRtlScrollType() : 'default';
-            const dragSensitivity = 1.05;
-            const interactiveSelector = 'a, button, input, textarea, select, summary, [role="button"]';
+            let currentIndex = 0;
+            let scrollTimeout = null;
+            const sliderComputedStyle = window.getComputedStyle(slider);
+            const basePaddingLeft = Number.parseFloat(sliderComputedStyle.paddingLeft) || 0;
+            const basePaddingRight = Number.parseFloat(sliderComputedStyle.paddingRight) || 0;
 
-            let scrollRaf = null;
-            let isDown = false;
-            let startX = 0;
-            let startScrollLeft = 0;
-            let hasDragged = false;
+            function clampScrollOffset(offset) {
+                const maxScrollLeft = Math.max(0, slider.scrollWidth - slider.clientWidth);
 
-            slider.style.scrollBehavior = 'auto';
-            slider.style.touchAction = 'pan-y';
-            slider.classList.add('cursor-grab');
+                return Math.max(0, Math.min(offset, maxScrollLeft));
+            }
 
-            function detectRtlScrollType() {
-                const probe = document.createElement('div');
-                const child = document.createElement('div');
+            function syncCarouselLayout() {
+                const referenceCard = cards[0];
 
-                probe.dir = 'rtl';
-                probe.style.position = 'absolute';
-                probe.style.top = '-9999px';
-                probe.style.width = '4px';
-                probe.style.height = '1px';
-                probe.style.overflow = 'scroll';
-                probe.style.visibility = 'hidden';
-
-                child.style.width = '8px';
-                child.style.height = '1px';
-
-                probe.appendChild(child);
-                document.body.appendChild(probe);
-
-                let type = 'reverse';
-
-                if (probe.scrollLeft > 0) {
-                    type = 'default';
-                } else {
-                    probe.scrollLeft = 1;
-
-                    if (probe.scrollLeft === 0) {
-                        type = 'negative';
-                    }
+                if (!referenceCard) {
+                    return;
                 }
 
-                document.body.removeChild(probe);
+                const sidePadding = Math.max(0, (slider.clientWidth - referenceCard.offsetWidth) / 2);
+                const paddedLeft = Math.max(basePaddingLeft, sidePadding);
+                const paddedRight = Math.max(basePaddingRight, sidePadding);
 
-                return type;
+                slider.style.paddingLeft = `${paddedLeft}px`;
+                slider.style.paddingRight = `${paddedRight}px`;
+                slider.style.scrollPaddingLeft = `${paddedLeft}px`;
+                slider.style.scrollPaddingRight = `${paddedRight}px`;
             }
 
-            function getMaxScroll() {
-                return Math.max(0, slider.scrollWidth - slider.clientWidth);
-            }
-
-            function getNormalizedScrollLeft() {
-                const raw = slider.scrollLeft;
-
-                if (!isRtl) {
-                    return raw;
-                }
-
-                const max = getMaxScroll();
-
-                if (rtlScrollType === 'negative') {
-                    return -raw;
-                }
-
-                if (rtlScrollType === 'reverse') {
-                    return max - raw;
-                }
-
-                return raw;
-            }
-
-            function toRawScrollLeft(normalized) {
-                const clamped = Math.max(0, Math.min(normalized, getMaxScroll()));
-
-                if (!isRtl) {
-                    return clamped;
-                }
-
-                if (rtlScrollType === 'negative') {
-                    return -clamped;
-                }
-
-                if (rtlScrollType === 'reverse') {
-                    return getMaxScroll() - clamped;
-                }
-
-                return clamped;
-            }
-
-            function setNormalizedScrollLeft(normalized) {
-                slider.scrollLeft = toRawScrollLeft(normalized);
-            }
-
-            function smoothScrollToNormalized(normalized) {
-                slider.scrollTo({
-                    left: toRawScrollLeft(normalized),
-                    behavior: 'smooth'
-                });
-            }
-
-            function startedFromInteractiveTarget(target) {
-                return !!target?.closest?.(interactiveSelector);
-            }
-
-            function toDisplayIndex(cardIndex) {
-                return isRtl ? (cards.length - 1 - cardIndex) : cardIndex;
-            }
-
-            function toCardIndex(displayIndex) {
-                return isRtl ? (cards.length - 1 - displayIndex) : displayIndex;
-            }
-
-            function rebuildIndicators() {
+            function renderIndicators() {
                 indicatorsContainer.innerHTML = '';
 
-                cards.forEach((card, displayIndex) => {
-                    const cardIndex = toCardIndex(displayIndex);
+                cards.forEach((_, index) => {
                     const indicator = document.createElement('button');
+
                     indicator.type = 'button';
-                    indicator.dataset.index = String(cardIndex);
-                    indicator.dataset.displayIndex = String(displayIndex);
+                    indicator.dataset.index = String(index);
                     indicator.className =
-                        'indicator-dot h-2 rounded-full transition-all duration-300 cursor-pointer w-12 bg-gray-300';
-                    indicator.setAttribute('aria-label', `Go to template ${displayIndex + 1}`);
+                        'indicator-dot h-2.5 w-2.5 rounded-full bg-slate-300 transition-all duration-500 cursor-pointer hover:bg-slate-400';
+                    indicator.setAttribute('aria-label', `Go to template ${index + 1}`);
 
                     indicator.addEventListener('click', function() {
-                        scrollToCard(cardIndex);
+                        scrollToSlide(index);
                     });
 
                     indicatorsContainer.appendChild(indicator);
                 });
             }
 
-            function getClosestIndex() {
-                if (!cards.length) {
-                    return 0;
+            function updateIndicators() {
+                const indicators = indicatorsContainer.querySelectorAll('.indicator-dot');
+
+                indicators.forEach((indicator, index) => {
+                    if (index === currentIndex) {
+                        indicator.classList.remove('w-2.5', 'bg-slate-300');
+                        indicator.classList.add('w-12', 'bg-purple-brand');
+                    } else {
+                        indicator.classList.remove('w-12', 'bg-purple-brand');
+                        indicator.classList.add('w-2.5', 'bg-slate-300');
+                    }
+                });
+            }
+
+            function scrollToSlide(index, behavior = 'smooth') {
+                const card = cards[index];
+
+                if (!card) {
+                    return;
                 }
 
-                const sliderRect = slider.getBoundingClientRect();
-                const edge = sliderRect.left;
+                currentIndex = index;
 
+                const sliderRect = slider.getBoundingClientRect();
+                const cardRect = card.getBoundingClientRect();
+                const scrollOffset = slider.scrollLeft +
+                    (cardRect.left - sliderRect.left) -
+                    ((slider.clientWidth - cardRect.width) / 2);
+
+                slider.scrollTo({
+                    left: clampScrollOffset(scrollOffset),
+                    behavior
+                });
+
+                updateIndicators();
+            }
+
+            function scrollSlider(direction) {
+                let nextIndex = currentIndex + direction;
+
+                if (nextIndex < 0) {
+                    nextIndex = cards.length - 1;
+                } else if (nextIndex >= cards.length) {
+                    nextIndex = 0;
+                }
+
+                scrollToSlide(nextIndex);
+            }
+
+            function syncCurrentIndexFromScroll() {
+                const sliderRect = slider.getBoundingClientRect();
+                const sliderCenter = slider.scrollLeft + (slider.clientWidth / 2);
                 let closestIndex = 0;
                 let minDistance = Infinity;
 
                 cards.forEach((card, index) => {
                     const cardRect = card.getBoundingClientRect();
-                    const distance = Math.abs(cardRect.left - edge);
+                    const cardCenter = slider.scrollLeft +
+                        (cardRect.left - sliderRect.left) +
+                        (cardRect.width / 2);
+                    const distance = Math.abs(cardCenter - sliderCenter);
 
                     if (distance < minDistance) {
                         minDistance = distance;
@@ -337,119 +327,42 @@
                     }
                 });
 
-                return closestIndex;
-            }
-
-            function updateActiveIndicator() {
-                const indicators = indicatorsContainer.querySelectorAll('.indicator-dot');
-                const closestIndex = getClosestIndex();
-                const activeDisplayIndex = toDisplayIndex(closestIndex);
-
-                indicators.forEach((indicator, index) => {
-                    if (index === activeDisplayIndex) {
-                        indicator.classList.remove('w-12', 'bg-gray-300');
-                        indicator.classList.add('w-32', 'bg-purple-brand');
-                    } else {
-                        indicator.classList.remove('w-32', 'bg-purple-brand');
-                        indicator.classList.add('w-20', 'bg-gray-300');
-                    }
-                });
-            }
-
-            function scrollToCard(index) {
-                const targetCard = cards[index];
-                if (!targetCard) {
-                    return;
-                }
-
-                const sliderRect = slider.getBoundingClientRect();
-                const cardRect = targetCard.getBoundingClientRect();
-                const delta = cardRect.left - sliderRect.left;
-
-                smoothScrollToNormalized(getNormalizedScrollLeft() + delta);
-
-                window.setTimeout(updateActiveIndicator, 300);
-            }
-
-            function onPointerUp(event) {
-                if (!isDown) {
-                    return;
-                }
-
-                isDown = false;
-                slider.classList.remove('cursor-grabbing');
-                slider.style.scrollSnapType = '';
-                slider.style.scrollBehavior = 'auto';
-
-                if (event?.pointerId != null && slider.releasePointerCapture) {
-                    try {
-                        slider.releasePointerCapture(event.pointerId);
-                    } catch (error) {}
-                }
-
-                if (hasDragged) {
-                    scrollToCard(getClosestIndex());
+                if (closestIndex !== currentIndex) {
+                    currentIndex = closestIndex;
+                    updateIndicators();
                 }
             }
 
             slider.addEventListener('scroll', function() {
-                if (scrollRaf !== null) {
-                    return;
-                }
-
-                scrollRaf = window.requestAnimationFrame(function() {
-                    scrollRaf = null;
-                    updateActiveIndicator();
-                });
+                window.clearTimeout(scrollTimeout);
+                scrollTimeout = window.setTimeout(syncCurrentIndexFromScroll, 100);
             }, {
                 passive: true
             });
 
-            slider.addEventListener('pointerdown', function(event) {
-                if (event.pointerType === 'mouse' && event.button !== 0) {
-                    return;
-                }
+            if (prevButton) {
+                prevButton.addEventListener('click', function() {
+                    scrollSlider(-1);
+                });
+            }
 
-                if (startedFromInteractiveTarget(event.target)) {
-                    return;
-                }
+            if (nextButton) {
+                nextButton.addEventListener('click', function() {
+                    scrollSlider(1);
+                });
+            }
 
-                isDown = true;
-                hasDragged = false;
-                slider.classList.add('cursor-grabbing');
-                slider.style.scrollBehavior = 'auto';
-                slider.style.scrollSnapType = 'none';
-
-                startX = event.clientX;
-                startScrollLeft = getNormalizedScrollLeft();
-
-                if (slider.setPointerCapture) {
-                    slider.setPointerCapture(event.pointerId);
-                }
+            window.addEventListener('resize', function() {
+                syncCarouselLayout();
+                scrollToSlide(currentIndex, 'auto');
             });
 
-            slider.addEventListener('pointermove', function(event) {
-                if (!isDown) {
-                    return;
-                }
-
-                event.preventDefault();
-                const deltaX = event.clientX - startX;
-
-                if (!hasDragged && Math.abs(deltaX) > 3) {
-                    hasDragged = true;
-                }
-
-                setNormalizedScrollLeft(startScrollLeft - (deltaX * dragSensitivity));
+            renderIndicators();
+            requestAnimationFrame(function() {
+                syncCarouselLayout();
+                scrollToSlide(0, 'auto');
+                syncCurrentIndexFromScroll();
             });
-
-            slider.addEventListener('mouseleave', onPointerUp);
-            slider.addEventListener('pointerup', onPointerUp);
-            slider.addEventListener('pointercancel', onPointerUp);
-            window.addEventListener('resize', updateActiveIndicator);
-
-            rebuildIndicators();
-            updateActiveIndicator();
         })();
     </script>
 @endif
