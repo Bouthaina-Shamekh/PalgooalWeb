@@ -157,6 +157,11 @@
     |   intentionally kept in orchestrator.
     | - Hero campaign CTA fields: extracted / manual / keep extracted;
     |   dedicated CTA wording and toggles isolated for future reuse.
+    | - Domains search fields: extracted / mixed / keep extracted; bounded
+    |   search-oriented region with consistent heading, description, and
+    |   placeholder behavior.
+    | - Secondary button fields: extracted / manual-hybrid / keep extracted;
+    |   CTA-aware wording and layout isolated into a small reusable partial.
     | - Site footer social fields: extracted / mixed / keep extracted; cohesive
     |   footer-social family with shared helper usage.
     |
@@ -168,10 +173,14 @@
     | - Primary button logic: inline / manual-hybrid / keep inline; section-
     |   sensitive wording and toggles now stabilized, especially for
     |   how_we_build CTA behavior.
+    | - Header region: inline / manual-hybrid / keep inline for now;
+    |   branding, logo, header-specific hints, and button wording are now
+    |   more explicitly bounded and stabilized before any extraction decision.
     |
     | D) Inline but better suited for hybrid alignment first
-    | - Manual textarea/content scalar family: inline / hybrid-manual / align
-    |   first; labels/placeholders can standardize before any extraction.
+    | - Manual textarea/content scalar family: inline / hybrid-manual / keep
+    |   aligned inline; core textarea wrappers, labels, and hint patterns are
+    |   now more consistent, with future extraction still optional.
     |
     | E) Inline and already schema-driven enough
     | - Simple heading/search scalar fields: inline / schema-driven / keep
@@ -560,9 +569,64 @@
                             </div>
                         @endif
 
+                        {{-- Header region: stabilized as a bounded branding/navigation configuration area before any extraction decision. --}}
+                        @php
+                            $brandIdentityFieldColumnClass =
+                                $isProgrammingShowcase ||
+                                $isMobileAppShowcase ||
+                                $isDesignShowcase ||
+                                $isDigitalMarketingShowcase ||
+                                $isReviewsShowcase ||
+                                $isOurWorkShowcase ||
+                                $isDomainsShowcase ||
+                                $isTemplatesSliderShowcase ||
+                                $isTemplatesListingShowcase
+                                    ? 'lg:col-span-2'
+                                    : '';
+
+                            $mainTitleFieldColumnClass =
+                                $isHeroCampaign ||
+                                $isProgrammingShowcase ||
+                                $isMobileAppShowcase ||
+                                $isDesignShowcase ||
+                                $isDigitalMarketingShowcase ||
+                                $isReviewsShowcase ||
+                                $isOurWorkShowcase ||
+                                $isDomainsShowcase ||
+                                $isTemplatesSliderShowcase ||
+                                $isTemplatesListingShowcase ||
+                                $isSiteHeader
+                                    ? 'lg:col-span-2'
+                                    : '';
+
+                            $mainTitleLabelText = $isSiteHeader || $isSiteFooter
+                                ? __('Brand Name')
+                                : ($isHeroCampaign
+                                    ? __('Main Title - Line 1')
+                                    : ($isProgrammingShowcase ||
+                                    $isMobileAppShowcase ||
+                                    $isDesignShowcase ||
+                                    $isDigitalMarketingShowcase ||
+                                    $isReviewsShowcase ||
+                                    $isOurWorkShowcase ||
+                                    $isDomainsShowcase ||
+                                    $isTemplatesSliderShowcase ||
+                                    $isTemplatesListingShowcase
+                                        ? __('Section Title')
+                                        : __('Main Title')));
+
+                            $headerRegionFieldColumnClass = 'lg:col-span-2';
+                            $headerLogoFieldLabel = __('Brand Image');
+                            $headerLogoFieldHint = __(
+                                'Upload a brand image from your media library. If you leave this empty, the header will use the first letter of the brand name.',
+                            );
+                            $headerNavigationHint = __(
+                                'Navigation links are pulled automatically from your active site pages. Edit the button here if you want a highlighted action on the right side of the header.',
+                            );
+                        @endphp
+
                         @if ($showBrandFields)
-                            <div
-                                class="{{ $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ $brandIdentityFieldColumnClass }}">
                                 <label
                                     class="block text-sm font-medium text-slate-700">{{ __('Brand Prefix') }}</label>
                                 <input type="text" name="translations[{{ $code }}][content][brand_prefix]"
@@ -571,8 +635,7 @@
                                     placeholder="PAL">
                             </div>
 
-                            <div
-                                class="{{ $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ $brandIdentityFieldColumnClass }}">
                                 <label
                                     class="block text-sm font-medium text-slate-700">{{ __('Brand Suffix') }}</label>
                                 <input type="text" name="translations[{{ $code }}][content][brand_suffix]"
@@ -583,24 +646,9 @@
                         @endif
 
                         @if ($showMainTitleField)
-                            <div
-                                class="{{ $isHeroCampaign || $isProgrammingShowcase || $isMobileAppShowcase || $isDesignShowcase || $isDigitalMarketingShowcase || $isReviewsShowcase || $isOurWorkShowcase || $isDomainsShowcase || $isTemplatesSliderShowcase || $isTemplatesListingShowcase || $isSiteHeader ? 'lg:col-span-2' : '' }}">
+                            <div class="{{ $mainTitleFieldColumnClass }}">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ $isSiteHeader || $isSiteFooter
-                                        ? __('Brand Name')
-                                        : ($isHeroCampaign
-                                            ? __('Main Title - Line 1')
-                                            : ($isProgrammingShowcase ||
-                                            $isMobileAppShowcase ||
-                                            $isDesignShowcase ||
-                                            $isDigitalMarketingShowcase ||
-                                            $isReviewsShowcase ||
-                                            $isOurWorkShowcase ||
-                                            $isDomainsShowcase ||
-                                            $isTemplatesSliderShowcase ||
-                                            $isTemplatesListingShowcase
-                                                ? __('Section Title')
-                                                : __('Main Title'))) }}
+                                    {{ $mainTitleLabelText }}
                                 </label>
                                 <input type="text" name="translations[{{ $code }}][content][title]"
                                     value="{{ $heroTitleValue }}"
@@ -610,42 +658,14 @@
                             </div>
                         @endif
 
-                        {{-- Header-specific branding/media controls stay inline here. --}}
                         @if ($isSiteHeader)
-                            <div class="lg:col-span-2">
-                                <x-dashboard.media-picker :name="'translations[' . $code . '][content][logo]'" :label="__('Brand Image')" :button-text="__('Choose From Media Library')"
+                            <div class="{{ $headerRegionFieldColumnClass }}">
+                                <x-dashboard.media-picker :name="'translations[' . $code . '][content][logo]'" :label="$headerLogoFieldLabel" :button-text="__('Choose From Media Library')"
                                     :value="$headerLogoValue" :preview-urls="$headerLogoPreviewUrls" :multiple="false" store-value="id" />
                                 <p class="mt-2 text-xs text-slate-500">
-                                    {{ __('Upload a brand image from your media library. If you leave this empty, the header will use the first letter of the brand name.') }}
+                                    {{ $headerLogoFieldHint }}
                                 </p>
                             </div>
-                        @endif
-
-                        @php
-                            $searchHeadingFieldContext = $schemaFieldContext(
-                                'content',
-                                'search_heading',
-                                __('Search Box Title'),
-                                __('Find your perfect Domain name'),
-                            );
-                            $searchHeadingRenderConfig = $schemaRenderableFieldConfig(
-                                $searchHeadingFieldContext,
-                                'text',
-                                3,
-                            );
-                        @endphp
-
-                        @if ($showDomainsSearchHeadingField)
-                            @include(
-                                'dashboard.pages.sections.partials.fields.schema-field-renderer',
-                                $schemaRendererPayload(
-                                    $searchHeadingRenderConfig,
-                                    'translations[' . $code . '][content][search_heading]',
-                                    $domainsSearchHeadingValue,
-                                    'search_heading',
-                                    'lg:col-span-2',
-                                )
-                            )
                         @endif
 
                         @if ($showSubtitleField)
@@ -672,28 +692,19 @@
                             ])
                         @endif
 
-                        @if ($showDescriptionField)
-                            @php
-                                $descriptionFieldContext = $schemaFieldContext(
-                                    'content',
-                                    'description',
-                                    $isDomainsShowcase ? __('Search Box Description') : __('Description'),
-                                    null,
-                                );
-                            @endphp
-
-                            @include('dashboard.pages.sections.partials.fields.schema-field-renderer', [
-                                'fieldType' => 'textarea',
-                                'label' => $descriptionFieldContext['label'],
-                                'name' => 'translations[' . $code . '][content][description]',
-                                'value' => $descriptionValue,
-                                'placeholder' => null,
-                                'rows' => $schemaFieldRows($descriptionFieldContext['schemaMeta'], 4),
-                                'schemaField' => 'description',
-                                'schemaMeta' => $descriptionFieldContext['schemaMeta'],
-                                'wrapperClass' => 'lg:col-span-2',
-                            ])
-                        @endif
+                        @include(
+                            'dashboard.pages.sections.partials.blocks.domains-search-fields',
+                            [
+                                'code' => $code,
+                                'domainsSearchHeadingValue' => $domainsSearchHeadingValue,
+                                'domainsInputPlaceholderValue' => $domainsInputPlaceholderValue,
+                                'descriptionValue' => $descriptionValue,
+                                'isDomainsShowcase' => $isDomainsShowcase,
+                                'showDomainsSearchHeadingField' => $showDomainsSearchHeadingField,
+                                'showDescriptionField' => $showDescriptionField,
+                                'showDomainsPlaceholderField' => $showDomainsPlaceholderField,
+                            ]
+                        )
 
                         @if ($showPrimaryButtonFields && $isHeroCampaign)
                             {{-- Hero campaign CTA extracted into its own partial. --}}
@@ -707,18 +718,6 @@
                                     'primaryButtonNewTabValue' => $primaryButtonNewTabValue,
                                 ]
                             )
-                        @endif
-
-                        @if ($showDomainsPlaceholderField)
-                            <div class="lg:col-span-2">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('Input Placeholder') }}</label>
-                                <input type="text"
-                                    name="translations[{{ $code }}][content][input_placeholder]"
-                                    value="{{ $domainsInputPlaceholderValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                    placeholder="{{ __('enter your domain here...') }}">
-                            </div>
                         @endif
 
                         @if ($showHostingPricingDatabaseField)
@@ -886,6 +885,8 @@
                         @if ($showPrimaryButtonFields && !$isHeroCampaign)
                             @php
                                 $isHowWeBuildPrimaryButtonContext = $isHowWeBuild;
+                                $isDomainsPrimaryButtonContext = $isDomainsShowcase;
+                                $isHeaderPrimaryButtonContext = $isSiteHeader;
                                 $usesCtaPrimaryButtonLabels =
                                     $isHowWeBuildPrimaryButtonContext ||
                                     $isProgrammingShowcase ||
@@ -893,24 +894,29 @@
                                     $isDesignShowcase ||
                                     $isDigitalMarketingShowcase;
                                 $usesWidePrimaryButtonFields =
-                                    $usesCtaPrimaryButtonLabels || $isDomainsShowcase || $isSiteHeader;
+                                    $usesCtaPrimaryButtonLabels ||
+                                    $isDomainsPrimaryButtonContext ||
+                                    $isHeaderPrimaryButtonContext;
                                 $showsPrimaryButtonNewTabToggle =
-                                    $usesCtaPrimaryButtonLabels || $isSiteHeader;
+                                    $usesCtaPrimaryButtonLabels || $isHeaderPrimaryButtonContext;
                                 $primaryButtonFieldColumnClass = $usesWidePrimaryButtonFields ? 'lg:col-span-2' : '';
-                                $primaryButtonLabelText = $isSiteHeader
+                                $primaryButtonLabelText = $isHeaderPrimaryButtonContext
                                     ? __('Header Button Label')
-                                    : ($isDomainsShowcase
+                                    : ($isDomainsPrimaryButtonContext
                                         ? __('Search Button Label')
                                         : ($usesCtaPrimaryButtonLabels
                                             ? __('CTA Button Label')
                                             : __('Primary Button Label')));
-                                $primaryButtonUrlLabelText = $isSiteHeader
+                                $primaryButtonUrlLabelText = $isHeaderPrimaryButtonContext
                                     ? __('Header Button URL')
-                                    : ($isDomainsShowcase
+                                    : ($isDomainsPrimaryButtonContext
                                         ? __('Search Page URL')
                                         : ($usesCtaPrimaryButtonLabels
                                             ? __('CTA Button URL')
                                             : __('Primary Button URL')));
+                                $primaryButtonNewTabLabelText = $isHeaderPrimaryButtonContext
+                                    ? __('Open header button in a new tab')
+                                    : __('Open CTA in a new tab');
                             @endphp
 
                             <div class="{{ $primaryButtonFieldColumnClass }}">
@@ -960,7 +966,7 @@
                                             name="translations[{{ $code }}][content][primary_button][new_tab]"
                                             value="1" class="rounded border-slate-300"
                                             {{ $primaryButtonNewTabValue ? 'checked' : '' }}>
-                                        {{ $isSiteHeader ? __('Open header button in a new tab') : __('Open CTA in a new tab') }}
+                                        {{ $primaryButtonNewTabLabelText }}
                                     </label>
                                 </div>
                             @endif
@@ -969,7 +975,7 @@
                         @if ($isSiteHeader)
                             <div
                                 class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                {{ __('Navigation links are pulled automatically from your active site pages. Edit the button here if you want a highlighted action on the right side of the header.') }}
+                                {{ $headerNavigationHint }}
                             </div>
                         @endif
 
@@ -1110,47 +1116,21 @@
                             )
                         @endif
 
-                        {{-- Secondary button block: stabilized for consistent CTA/supporting action behavior; kept inline for now. --}}
                         @if ($showSecondaryButtonFields)
-                            @php
-                                $isSecondaryCtaContext =
-                                    $isHeroCampaign ||
-                                    $isHowWeBuild ||
-                                    $isProgrammingShowcase ||
-                                    $isMobileAppShowcase ||
-                                    $isDesignShowcase ||
-                                    $isDigitalMarketingShowcase;
-
-                                $secondaryButtonFieldColumnClass = $isSecondaryCtaContext ? 'lg:col-span-2' : '';
-
-                                $secondaryButtonLabelText = $isSecondaryCtaContext
-                                    ? __('Secondary CTA Label')
-                                    : __('Secondary Button Label');
-
-                                $secondaryButtonUrlLabelText = $isSecondaryCtaContext
-                                    ? __('Secondary CTA URL')
-                                    : __('Secondary Button URL');
-                            @endphp
-
-                            <div class="{{ $secondaryButtonFieldColumnClass }}">
-                                <label class="block text-sm font-medium text-slate-700">
-                                    {{ $secondaryButtonLabelText }}
-                                </label>
-                                <input type="text"
-                                    name="translations[{{ $code }}][content][secondary_button][label]"
-                                    value="{{ $secondaryButtonLabelValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                            </div>
-
-                            <div class="{{ $secondaryButtonFieldColumnClass }}">
-                                <label class="block text-sm font-medium text-slate-700">
-                                    {{ $secondaryButtonUrlLabelText }}
-                                </label>
-                                <input type="text"
-                                    name="translations[{{ $code }}][content][secondary_button][url]"
-                                    value="{{ $secondaryButtonUrlValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                            </div>
+                            @include(
+                                'dashboard.pages.sections.partials.blocks.secondary-button-fields',
+                                [
+                                    'code' => $code,
+                                    'secondaryButtonLabelValue' => $secondaryButtonLabelValue,
+                                    'secondaryButtonUrlValue' => $secondaryButtonUrlValue,
+                                    'isHeroCampaign' => $isHeroCampaign,
+                                    'isHowWeBuild' => $isHowWeBuild,
+                                    'isProgrammingShowcase' => $isProgrammingShowcase,
+                                    'isMobileAppShowcase' => $isMobileAppShowcase,
+                                    'isDesignShowcase' => $isDesignShowcase,
+                                    'isDigitalMarketingShowcase' => $isDigitalMarketingShowcase,
+                                ]
+                            )
                         @endif
 
                         {{-- Inline repeaters, textarea builders, and media areas continue below. --}}
@@ -1165,28 +1145,36 @@
                             )
                         @endif
 
+                        {{-- Manual textarea/content scalar family: aligned for consistency before any future extraction or deeper schema migration. --}}
+                        @php
+                            $manualContentTextareaWrapperClass = 'lg:col-span-2';
+                            $manualContentTextareaClass =
+                                'mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900';
+                            $manualContentTextareaHintClass = 'mt-2 text-xs text-slate-500';
+                        @endphp
+
                         @if ($showFeaturesTextareaField)
-                            <div class="lg:col-span-2">
+                            <div class="{{ $manualContentTextareaWrapperClass }}">
                                 <label class="block text-sm font-medium text-slate-700">
-                                    {{ __('Features (each line = one bullet)') }}
+                                    {{ __('Feature Items') }}
                                 </label>
                                 <textarea name="translations[{{ $code }}][content][features_textarea]" rows="5"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">{{ $featuresTextarea }}</textarea>
-                                <p class="mt-2 text-xs text-slate-500">
-                                    {{ __('Each line will be converted to a feature item.') }}
+                                    class="{{ $manualContentTextareaClass }}">{{ $featuresTextarea }}</textarea>
+                                <p class="{{ $manualContentTextareaHintClass }}">
+                                    {{ __('Use one line per item. Each line becomes one feature bullet.') }}
                                 </p>
                             </div>
                         @endif
 
                         @if ($showFaqItemsTextareaField)
-                            <div class="lg:col-span-2">
+                            <div class="{{ $manualContentTextareaWrapperClass }}">
                                 <label class="block text-sm font-medium text-slate-700">
                                     {{ __('FAQ Items') }}
                                 </label>
                                 <textarea name="translations[{{ $code }}][content][faq_textarea]" rows="6"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">{{ $faqItemsTextarea }}</textarea>
-                                <p class="mt-2 text-xs text-slate-500">
-                                    {{ __('Use one line per item in this format: Question || Answer') }}
+                                    class="{{ $manualContentTextareaClass }}">{{ $faqItemsTextarea }}</textarea>
+                                <p class="{{ $manualContentTextareaHintClass }}">
+                                    {{ __('Use one line per item in this format: Question || Answer.') }}
                                 </p>
                             </div>
                         @endif
@@ -1416,15 +1404,15 @@
                                 );
                             @endphp
 
-                            <div class="lg:col-span-2 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+                            <div class="{{ $manualContentTextareaWrapperClass }} rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
                                 <label class="block text-sm font-medium text-slate-700">
                                     {{ $heroCampaignTrustItemsFieldContext['label'] }}
                                 </label>
                                 <textarea name="translations[{{ $code }}][content][trust_items_textarea]"
                                     rows="{{ $schemaFieldRows($heroCampaignTrustItemsFieldContext['schemaMeta'], 3) }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
+                                    class="{{ $manualContentTextareaClass }}"
                                     placeholder="{{ $heroCampaignTrustItemsFieldContext['placeholder'] }}">{{ $heroCampaignTrustItemsTextarea }}</textarea>
-                                <p class="mt-2 text-xs text-slate-500">
+                                <p class="{{ $manualContentTextareaHintClass }}">
                                     {{ __('Use one line per item. These appear below the primary CTA in the campaign hero.') }}
                                 </p>
                             </div>

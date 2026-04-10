@@ -78,12 +78,13 @@
     <div class="container mx-auto">
         {{-- Header --}}
         <div class="mb-12 text-center">
-            <p class="text-lg md:text-xl">
-                <span class="text-red-brand">{{ $brandPrefix }}</span><span class="text-purple-brand">{{ $brandSuffix }}</span>
+            <p class="inline-flex items-center gap-1 text-lg md:text-xl">
+                <span class="text-red-brand">{{ $brandPrefix }}</span>
+                <span class="text-purple-brand">{{ $brandSuffix }}</span>
             </p>
 
             @if ($sectionTitle)
-                <h2 class="text-3xl font-extrabold uppercase leading-tight text-purple-brand md:text-[40px]">
+                <h2 class="text-3xl font-extrabold uppercase leading-tight text-purple-brand md:text-[40px] mb-4">
                     {{ $sectionTitle }}
                 </h2>
             @endif

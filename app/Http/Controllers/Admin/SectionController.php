@@ -9,6 +9,8 @@ use App\Models\Section;
 use App\Models\SectionTranslation;
 use App\Models\Template;
 use App\Support\Sections\SectionEditorDataFactory;
+use App\Support\Sections\SectionSidebarEditorViewDataFactory;
+use App\Support\Sections\SectionWorkspacePreviewViewDataFactory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -50,10 +52,12 @@ class SectionController extends Controller
     /**
      * Render a front-like preview for the sections workspace iframe.
      */
-    public function preview(Request $request, Page $page)
+    public function preview(
+        Request $request,
+        Page $page,
+        ?SectionWorkspacePreviewViewDataFactory $previewViewFactory = null,
+    )
     {
-        $page->loadMissing('translations');
-
         $sections = Section::with('translations')
             ->where('page_id', $page->id)
             ->orderBy('order')
@@ -69,13 +73,17 @@ class SectionController extends Controller
             ->latest('id')
             ->limit(8)
             ->get();
+        $sectionTypes = $this->availableSectionTypes();
+        $previewView = ($previewViewFactory ?? app(SectionWorkspacePreviewViewDataFactory::class))->build(
+            $page,
+            $sections,
+            $sectionTypes,
+            $previewTemplates,
+            $request->integer('highlight'),
+        );
 
         return view('dashboard.pages.sections.preview', [
-            'page' => $page,
-            'sections' => $sections,
-            'sectionTypes' => $this->availableSectionTypes(),
-            'previewTemplates' => $previewTemplates,
-            'highlightSectionId' => $request->integer('highlight'),
+            'previewView' => $previewView,
         ] + $this->workspaceViewData($page));
     }
 
@@ -2540,6 +2548,16 @@ class SectionController extends Controller
 
         $sectionTypes = $this->availableSectionTypes();
         $editorState = app(SectionEditorDataFactory::class)->make($section, $languages, $sectionTypes);
+        $workspaceViewData = $this->workspaceViewData($page);
+        $sidebarEditor = app(SectionSidebarEditorViewDataFactory::class)->build(
+            $section,
+            $sectionTypes,
+            (string) ($workspaceViewData['workspaceMode'] ?? $this->workspaceMode()),
+            (string) ($workspaceViewData['workspaceRoutePrefix'] ?? $this->workspaceRoutePrefix()),
+            is_array($workspaceViewData['workspaceRouteBaseParameters'] ?? null)
+                ? $workspaceViewData['workspaceRouteBaseParameters']
+                : $this->workspaceBaseRouteParameters($page),
+        );
 
         return [
             'page' => $page,
@@ -2547,6 +2565,7 @@ class SectionController extends Controller
             'languages' => $languages,
             'sectionTypes' => $sectionTypes,
             'editorState' => $editorState,
-        ] + $this->workspaceViewData($page);
+            'sidebarEditor' => $sidebarEditor,
+        ] + $workspaceViewData;
     }
 }
