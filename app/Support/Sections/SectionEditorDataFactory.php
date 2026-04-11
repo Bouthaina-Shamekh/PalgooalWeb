@@ -64,6 +64,9 @@ class SectionEditorDataFactory
             'localeCampaignFeatureItems' => ($typeFlags['isHeroCampaign'] ?? false)
                 ? $this->repeaterFactory->buildLocaleCampaignFeatureItems($section, $languages)
                 : [],
+            'localeCampaignFeatureItems' => ($typeFlags['isHeroCampaign'] ?? false)
+                ? $this->repeaterFactory->buildLocaleCampaignFeatureItems($section, $languages)
+                : [],    
             'localeOutputItems' => ($typeFlags['isProgrammingShowcase'] ?? false)
                 ? $this->repeaterFactory->buildLocaleOutputItems($section, $languages)
                 : [],

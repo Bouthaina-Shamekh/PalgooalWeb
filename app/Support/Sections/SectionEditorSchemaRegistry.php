@@ -122,6 +122,112 @@ class SectionEditorSchemaRegistry
         ];
     }
 
+    protected function hostingHeroSchema(): array
+    {
+        return [
+            'type' => 'hosting_hero',
+            'label' => 'hosting_hero',
+            'groups' => [
+                [
+                    'name' => 'content',
+                    'label' => 'Content',
+                ],
+                [
+                    'name' => 'cta',
+                    'label' => 'CTA',
+                ],
+                [
+                    'name' => 'features',
+                    'label' => 'Features',
+                ],
+                [
+                    'name' => 'media',
+                    'label' => 'Media',
+                ],
+            ],
+            'fields' => [
+                [
+                    'name' => 'title',
+                    'type' => 'text',
+                    'label' => 'Title',
+                    'group' => 'content',
+                    'localized' => true,
+                    'required' => false,
+                ],
+                [
+                    'name' => 'description',
+                    'type' => 'textarea',
+                    'label' => 'Description',
+                    'group' => 'content',
+                    'localized' => true,
+                    'required' => false,
+                ],
+                [
+                    'name' => 'features_heading',
+                    'type' => 'text',
+                    'label' => 'Features Heading',
+                    'group' => 'features',
+                    'localized' => true,
+                    'required' => false,
+                ],
+                [
+                    'name' => 'features',
+                    'type' => 'repeater',
+                    'label' => 'Features',
+                    'group' => 'features',
+                    'localized' => true,
+                    'required' => false,
+                    'ui' => [
+                        'itemLabel' => 'Feature',
+                        'supportsIconClass' => true,
+                        'supportsIconSvg' => true,
+                        'supportsIconMedia' => true,
+                    ],
+                    'default' => [],
+                ],
+                [
+                    'name' => 'primary_button.label',
+                    'type' => 'text',
+                    'label' => 'CTA Button Label',
+                    'group' => 'cta',
+                    'localized' => true,
+                    'required' => false,
+                ],
+                [
+                    'name' => 'primary_button.url',
+                    'type' => 'text',
+                    'label' => 'CTA Button URL',
+                    'group' => 'cta',
+                    'localized' => true,
+                    'required' => false,
+                ],
+                [
+                    'name' => 'trust_items',
+                    'type' => 'textarea',
+                    'label' => 'Trust Items',
+                    'group' => 'cta',
+                    'localized' => true,
+                    'required' => false,
+                    'ui' => [
+                        'rows' => 3,
+                        'placeholder' => 'One line per item shown below the CTA button',
+                    ],
+                ],
+                [
+                    'name' => 'media_url',
+                    'type' => 'media',
+                    'label' => 'Illustration',
+                    'group' => 'media',
+                    'localized' => true,
+                    'required' => false,
+                    'ui' => [
+                        'preview' => true,
+                    ],
+                ],
+            ],
+        ];
+    }
+
     protected function programmingShowcaseSchema(): array
     {
         return [

@@ -679,6 +679,14 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
+            'hosting_hero' => [
+                'type'        => 'hosting_hero',
+                'label'       => 'Hero - Hosting',
+                'description' => 'Two-line hero with hosting benefits, CTA, and side illustration.',
+                'category'    => 'hero',
+                'preview'     => null,
+            ],
+
             'programming_showcase' => [
                 'type'        => 'programming_showcase',
                 'label'       => 'Programming Showcase',
@@ -864,6 +872,9 @@ class SectionController extends Controller
 
             case 'hero_campaign':
                 return $this->normalizeHeroCampaignContent($content);
+
+            case 'hosting_hero':
+                return $this->normalizeHostingHeroContent($content);    
 
             case 'programming_showcase':
                 return $this->normalizeProgrammingContent($content);

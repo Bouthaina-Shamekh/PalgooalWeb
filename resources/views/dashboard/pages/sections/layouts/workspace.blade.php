@@ -28,38 +28,16 @@
             ? $adminLogoPath
             : asset('storage/' . ltrim(preg_replace('#^storage/#', '', $adminLogoPath), '/')))
         : asset('assets/tamplate/images/logo.svg');
-    $sectionsIconLibrary = [
-        ['label' => __('Template'), 'value' => 'ti ti-layout-grid', 'keywords' => 'template layout grid blocks cards'],
-        ['label' => __('Hosting'), 'value' => 'ti ti-server', 'keywords' => 'hosting server infrastructure cloud'],
-        ['label' => __('Settings'), 'value' => 'ti ti-settings', 'keywords' => 'settings config options setup'],
-        ['label' => __('Mail'), 'value' => 'ti ti-mail', 'keywords' => 'mail email message inbox'],
-        ['label' => __('Domain'), 'value' => 'ti ti-world', 'keywords' => 'domain world globe website internet'],
-        ['label' => __('Support'), 'value' => 'ti ti-headset', 'keywords' => 'support help service call'],
-        ['label' => __('Analysis'), 'value' => 'ti ti-search', 'keywords' => 'analysis inspect research search audit'],
-        ['label' => __('Design'), 'value' => 'ti ti-palette', 'keywords' => 'design palette creative colors'],
-        ['label' => __('Development'), 'value' => 'ti ti-code', 'keywords' => 'development code programming engineering'],
-        ['label' => __('Testing'), 'value' => 'ti ti-test-pipe', 'keywords' => 'testing qa quality review bug'],
-        ['label' => __('Launch'), 'value' => 'ti ti-rocket', 'keywords' => 'launch publish release growth'],
-        ['label' => __('Mobile'), 'value' => 'ti ti-device-mobile', 'keywords' => 'mobile phone app smartphone'],
-        ['label' => __('Desktop'), 'value' => 'ti ti-device-desktop', 'keywords' => 'desktop web laptop monitor'],
-        ['label' => __('Marketing'), 'value' => 'ti ti-speakerphone', 'keywords' => 'marketing campaign ads announce'],
-        ['label' => __('Store'), 'value' => 'ti ti-shopping-cart', 'keywords' => 'store shop ecommerce cart'],
-        ['label' => __('Business'), 'value' => 'ti ti-briefcase', 'keywords' => 'business company service work'],
-        ['label' => __('Team'), 'value' => 'ti ti-users', 'keywords' => 'team users people clients'],
-        ['label' => __('Client'), 'value' => 'ti ti-user-star', 'keywords' => 'client customer testimonial review'],
-        ['label' => __('Message'), 'value' => 'ti ti-message-circle', 'keywords' => 'message comment chat feedback'],
-        ['label' => __('Checklist'), 'value' => 'ti ti-checklist', 'keywords' => 'checklist tasks process steps'],
-        ['label' => __('Package'), 'value' => 'ti ti-package', 'keywords' => 'package box shipping product'],
-        ['label' => __('Box'), 'value' => 'ti ti-box', 'keywords' => 'box package product item'],
-        ['label' => __('Shield'), 'value' => 'ti ti-shield-check', 'keywords' => 'shield security trust safe'],
-        ['label' => __('Lightning'), 'value' => 'ti ti-bolt', 'keywords' => 'fast speed bolt performance'],
-        ['label' => __('Image'), 'value' => 'ti ti-photo', 'keywords' => 'image photo gallery media'],
-        ['label' => __('Brush'), 'value' => 'ti ti-brush', 'keywords' => 'brush design art branding'],
-        ['label' => __('Apps'), 'value' => 'ti ti-apps', 'keywords' => 'apps modules collection tools'],
-        ['label' => __('Building'), 'value' => 'ti ti-building-store', 'keywords' => 'building store office branch'],
-        ['label' => __('Chart'), 'value' => 'ti ti-chart-bar', 'keywords' => 'chart analytics data metrics'],
-        ['label' => __('Seo'), 'value' => 'ti ti-chart-arrows-vertical', 'keywords' => 'seo rank growth analytics'],
-    ];
+    $sectionsIconLibrary = collect(config('sections.icon_library', []))
+        ->map(function (array $icon) {
+            return [
+                'label' => __($icon['label'] ?? ''),
+                'value' => $icon['value'] ?? '',
+                'keywords' => $icon['keywords'] ?? '',
+            ];
+        })
+        ->values()
+        ->all();
 @endphp
 
 <!doctype html>
@@ -74,174 +52,7 @@
 
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}" id="palgoals-app-css">
     <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/tabler-icons.min.css') }}">
-
-    <style>
-        .workspace-scrollbar::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-        }
-
-        .workspace-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 999px;
-        }
-
-        .workspace-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        .sections-workspace-panels {
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
-        .sections-workspace-main {
-            min-width: 0;
-            flex: 1 1 auto;
-        }
-
-        .sections-workspace-sidebar-shell {
-            position: relative;
-            flex: 0 0 auto;
-            overflow: visible;
-        }
-
-        .sections-workspace-sidebar {
-            flex: 0 0 auto;
-            height: 100%;
-            border-color: #e2e8f0;
-        }
-
-        .sections-workspace-shell.is-sidebar-collapsed .sections-workspace-sidebar-shell {
-            display: none;
-        }
-
-        .sections-workspace-shell.is-section-editor-open .sections-workspace-sidebar {
-            overflow: hidden;
-        }
-
-        .sections-sidebar-open-button {
-            position: absolute;
-            top: 50%;
-            z-index: 12;
-            display: none;
-            height: 3rem;
-            width: 1.125rem;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid #e2e8f0;
-            border-radius: 0.75rem;
-            background: #ffffff;
-            color: #334155;
-            box-shadow: 0 8px 20px -14px rgba(15, 23, 42, 0.28), 0 2px 6px rgba(15, 23, 42, 0.08);
-            transform: translateY(-50%);
-            transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, color 180ms ease;
-        }
-
-        .sections-workspace-shell.is-sidebar-collapsed .sections-sidebar-open-button {
-            display: inline-flex;
-        }
-
-        .sections-sidebar-open-button:hover,
-        .sections-sidebar-handle:hover {
-            background: #f8fafc;
-            color: #0f172a;
-            transform: translateY(-50%) scale(1.05);
-            box-shadow: 0 12px 24px -16px rgba(15, 23, 42, 0.32), 0 4px 10px rgba(15, 23, 42, 0.1);
-        }
-
-        .sections-sidebar-open-button:focus-visible,
-        .sections-sidebar-handle:focus-visible {
-            outline: 2px solid #cbd5e1;
-            outline-offset: 3px;
-        }
-
-        .sections-sidebar-handle {
-            position: absolute;
-            top: 50%;
-            z-index: 10;
-            display: inline-flex;
-            height: 3rem;
-            width: 1.125rem;
-            align-items: center;
-            justify-content: center;
-            border: 1px solid #e2e8f0;
-            border-radius: 0.75rem;
-            background: #ffffff;
-            color: #334155;
-            box-shadow: 0 8px 20px -14px rgba(15, 23, 42, 0.28), 0 2px 6px rgba(15, 23, 42, 0.08);
-            transform: translateY(-50%);
-            transition: transform 180ms ease, box-shadow 180ms ease, background-color 180ms ease, color 180ms ease;
-        }
-
-        html[dir="ltr"] .sections-sidebar-open-button {
-            left: -0.5625rem;
-        }
-
-        html[dir="ltr"] .sections-sidebar-handle {
-            right: -0.5625rem;
-        }
-
-        html[dir="rtl"] .sections-sidebar-open-button {
-            right: -0.5625rem;
-        }
-
-        html[dir="rtl"] .sections-sidebar-handle {
-            left: -0.5625rem;
-        }
-
-        html[dir="ltr"] .sections-sidebar-open-button svg,
-        html[dir="rtl"] .sections-sidebar-handle svg {
-            transform: rotate(180deg);
-        }
-
-        .sections-header-cluster > a,
-        .sections-header-cluster > button,
-        .sections-header-cluster > form > button {
-            min-height: 2.75rem;
-        }
-
-        .sections-icon-library-tile.is-active {
-            border-color: #0f172a;
-            background: #f8fafc;
-            box-shadow: 0 14px 30px -24px rgba(15, 23, 42, 0.35);
-        }
-
-        .sections-editor-icon-preview svg,
-        .sections-editor-icon-preview img {
-            max-width: 1.75rem;
-            max-height: 1.75rem;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        .sections-editor-icon-preview svg {
-            display: block;
-        }
-
-        @media (min-width: 1280px) {
-            html[dir="ltr"] .sections-workspace-panels,
-            html[dir="rtl"] .sections-workspace-panels {
-                flex-direction: row-reverse;
-            }
-
-            .sections-workspace-sidebar-shell {
-                width: 24rem;
-                min-width: 24rem;
-            }
-
-            html[dir="ltr"] .sections-workspace-sidebar {
-                border-right-width: 1px;
-            }
-
-            html[dir="rtl"] .sections-workspace-sidebar {
-                border-left-width: 1px;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ asset('assets/dashboard/css/sections-workspace.css') }}">
 
     @stack('styles')
 </head>
@@ -499,69 +310,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script src="{{ asset('assets/dashboard/js/media-picker.js') }}?v={{ filemtime(public_path('assets/dashboard/js/media-picker.js')) }}" defer></script>
     @include('dashboard.partials.media-picker')
-    <div id="sections-icon-library-overlay" class="fixed inset-0 z-[70] hidden bg-slate-950/55"></div>
-    <div id="sections-icon-library-modal" class="fixed inset-0 z-[71] hidden items-center justify-center p-4 lg:p-6" aria-hidden="true">
-        <div class="flex max-h-[calc(100vh-2rem)] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl">
-            <div class="border-b border-slate-200 px-5 py-4 lg:px-6">
-                <div class="flex items-start justify-between gap-4 rtl:flex-row-reverse">
-                    <div>
-                        <h3 class="text-lg font-semibold text-slate-900">{{ __('Icon Library') }}</h3>
-                        <p class="mt-1 text-sm text-slate-500">{{ __('Search and choose an icon for the current item.') }}</p>
-                    </div>
-                    <div class="flex items-center gap-2 rtl:flex-row-reverse">
-                        <button
-                            type="button"
-                            data-section-icon-library-clear
-                            class="hidden rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                        >
-                            {{ __('Clear Icon') }}
-                        </button>
-                        <button
-                            type="button"
-                            data-close-section-icon-library
-                            class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
-                            aria-label="{{ __('Close') }}"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex flex-1 flex-col overflow-hidden px-5 py-4 lg:px-6">
-                <div class="relative">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 ltr:left-3 rtl:right-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m0 0A7.5 7.5 0 1 0 6 6a7.5 7.5 0 0 0 10.65 10.65Z" />
-                    </svg>
-                    <input
-                        id="sections-icon-library-search"
-                        type="text"
-                        placeholder="{{ __('Search icons by name or use case') }}"
-                        class="w-full rounded-full border border-slate-200 bg-white py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400 ltr:pl-10 ltr:pr-4 ltr:text-left rtl:pl-4 rtl:pr-10 rtl:text-right"
-                    >
-                </div>
-
-                <div class="mt-3 flex items-center justify-between gap-3 text-xs text-slate-500 rtl:flex-row-reverse">
-                    <p>{{ __('Click any icon to apply it immediately to the current field.') }}</p>
-                    <span id="sections-icon-library-count"></span>
-                </div>
-
-                <div
-                    id="sections-icon-library-grid"
-                    class="workspace-scrollbar mt-4 grid flex-1 grid-cols-2 gap-3 overflow-y-auto pb-1 pr-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-                ></div>
-
-                <div
-                    id="sections-icon-library-empty"
-                    class="mt-4 hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500"
-                >
-                    {{ __('No icons match this search yet.') }}
-                </div>
-            </div>
-        </div>
-    </div>
+    @include('dashboard.pages.sections.partials.icon-library-modal')
 
     @stack('scripts')
     <script>

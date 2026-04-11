@@ -157,6 +157,9 @@
     |   intentionally kept in orchestrator.
     | - Hero campaign CTA fields: extracted / manual / keep extracted;
     |   dedicated CTA wording and toggles isolated for future reuse.
+    | - Header branding fields: extracted / manual-hybrid / keep extracted;
+    |   brand identity, title logic, logo picker, and navigation hint are
+    |   isolated into a bounded partial.
     | - Domains search fields: extracted / mixed / keep extracted; bounded
     |   search-oriented region with consistent heading, description, and
     |   placeholder behavior.
@@ -173,9 +176,9 @@
     | - Primary button logic: inline / manual-hybrid / keep inline; section-
     |   sensitive wording and toggles now stabilized, especially for
     |   how_we_build CTA behavior.
-    | - Header region: inline / manual-hybrid / keep inline for now;
-    |   branding, logo, header-specific hints, and button wording are now
-    |   more explicitly bounded and stabilized before any extraction decision.
+    | - Header button logic: inline / manual-hybrid / keep inline for now;
+    |   header-specific CTA wording and new-tab behavior remain
+    |   intentionally coupled to the shared primary_button system.
     |
     | D) Inline but better suited for hybrid alignment first
     | - Manual textarea/content scalar family: inline / hybrid-manual / keep
@@ -569,104 +572,31 @@
                             </div>
                         @endif
 
-                        {{-- Header region: stabilized as a bounded branding/navigation configuration area before any extraction decision. --}}
-                        @php
-                            $brandIdentityFieldColumnClass =
-                                $isProgrammingShowcase ||
-                                $isMobileAppShowcase ||
-                                $isDesignShowcase ||
-                                $isDigitalMarketingShowcase ||
-                                $isReviewsShowcase ||
-                                $isOurWorkShowcase ||
-                                $isDomainsShowcase ||
-                                $isTemplatesSliderShowcase ||
-                                $isTemplatesListingShowcase
-                                    ? 'lg:col-span-2'
-                                    : '';
-
-                            $mainTitleFieldColumnClass =
-                                $isHeroCampaign ||
-                                $isProgrammingShowcase ||
-                                $isMobileAppShowcase ||
-                                $isDesignShowcase ||
-                                $isDigitalMarketingShowcase ||
-                                $isReviewsShowcase ||
-                                $isOurWorkShowcase ||
-                                $isDomainsShowcase ||
-                                $isTemplatesSliderShowcase ||
-                                $isTemplatesListingShowcase ||
-                                $isSiteHeader
-                                    ? 'lg:col-span-2'
-                                    : '';
-
-                            $mainTitleLabelText = $isSiteHeader || $isSiteFooter
-                                ? __('Brand Name')
-                                : ($isHeroCampaign
-                                    ? __('Main Title - Line 1')
-                                    : ($isProgrammingShowcase ||
-                                    $isMobileAppShowcase ||
-                                    $isDesignShowcase ||
-                                    $isDigitalMarketingShowcase ||
-                                    $isReviewsShowcase ||
-                                    $isOurWorkShowcase ||
-                                    $isDomainsShowcase ||
-                                    $isTemplatesSliderShowcase ||
-                                    $isTemplatesListingShowcase
-                                        ? __('Section Title')
-                                        : __('Main Title')));
-
-                            $headerRegionFieldColumnClass = 'lg:col-span-2';
-                            $headerLogoFieldLabel = __('Brand Image');
-                            $headerLogoFieldHint = __(
-                                'Upload a brand image from your media library. If you leave this empty, the header will use the first letter of the brand name.',
-                            );
-                            $headerNavigationHint = __(
-                                'Navigation links are pulled automatically from your active site pages. Edit the button here if you want a highlighted action on the right side of the header.',
-                            );
-                        @endphp
-
-                        @if ($showBrandFields)
-                            <div class="{{ $brandIdentityFieldColumnClass }}">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('Brand Prefix') }}</label>
-                                <input type="text" name="translations[{{ $code }}][content][brand_prefix]"
-                                    value="{{ $brandPrefixValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                    placeholder="PAL">
-                            </div>
-
-                            <div class="{{ $brandIdentityFieldColumnClass }}">
-                                <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('Brand Suffix') }}</label>
-                                <input type="text" name="translations[{{ $code }}][content][brand_suffix]"
-                                    value="{{ $brandSuffixValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                    placeholder="GOALS">
-                            </div>
-                        @endif
-
-                        @if ($showMainTitleField)
-                            <div class="{{ $mainTitleFieldColumnClass }}">
-                                <label class="block text-sm font-medium text-slate-700">
-                                    {{ $mainTitleLabelText }}
-                                </label>
-                                <input type="text" name="translations[{{ $code }}][content][title]"
-                                    value="{{ $heroTitleValue }}"
-                                    class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                    @if ($isReviewsShowcase) placeholder="{{ __('REVIEWS') }}" @endif
-                                    @if ($isOurWorkShowcase) placeholder="{{ __('OUR WORK') }}" @endif>
-                            </div>
-                        @endif
-
-                        @if ($isSiteHeader)
-                            <div class="{{ $headerRegionFieldColumnClass }}">
-                                <x-dashboard.media-picker :name="'translations[' . $code . '][content][logo]'" :label="$headerLogoFieldLabel" :button-text="__('Choose From Media Library')"
-                                    :value="$headerLogoValue" :preview-urls="$headerLogoPreviewUrls" :multiple="false" store-value="id" />
-                                <p class="mt-2 text-xs text-slate-500">
-                                    {{ $headerLogoFieldHint }}
-                                </p>
-                            </div>
-                        @endif
+                        @include(
+                            'dashboard.pages.sections.partials.blocks.header-branding-fields',
+                            [
+                                'code' => $code,
+                                'brandPrefixValue' => $brandPrefixValue,
+                                'brandSuffixValue' => $brandSuffixValue,
+                                'heroTitleValue' => $heroTitleValue,
+                                'headerLogoValue' => $headerLogoValue,
+                                'headerLogoPreviewUrls' => $headerLogoPreviewUrls,
+                                'showBrandFields' => $showBrandFields,
+                                'showMainTitleField' => $showMainTitleField,
+                                'isSiteHeader' => $isSiteHeader,
+                                'isSiteFooter' => $isSiteFooter,
+                                'isHeroCampaign' => $isHeroCampaign,
+                                'isProgrammingShowcase' => $isProgrammingShowcase,
+                                'isMobileAppShowcase' => $isMobileAppShowcase,
+                                'isDesignShowcase' => $isDesignShowcase,
+                                'isDigitalMarketingShowcase' => $isDigitalMarketingShowcase,
+                                'isReviewsShowcase' => $isReviewsShowcase,
+                                'isOurWorkShowcase' => $isOurWorkShowcase,
+                                'isDomainsShowcase' => $isDomainsShowcase,
+                                'isTemplatesSliderShowcase' => $isTemplatesSliderShowcase,
+                                'isTemplatesListingShowcase' => $isTemplatesListingShowcase,
+                            ]
+                        )
 
                         @if ($showSubtitleField)
                             @php
@@ -970,13 +900,6 @@
                                     </label>
                                 </div>
                             @endif
-                        @endif
-
-                        @if ($isSiteHeader)
-                            <div
-                                class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                {{ $headerNavigationHint }}
-                            </div>
                         @endif
 
                         {{-- Footer-specific repeater/layout logic remains inline here. --}}
