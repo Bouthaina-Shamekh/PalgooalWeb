@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Sections\SectionDefinition;
 use App\Models\Tenancy\Subscription;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +23,8 @@ class Section extends Model
      * The attributes that are mass assignable.
      *
      * - page_id   : the page this section belongs to
+     * - section_definition_id : optional developer-definition link for
+     *   definition-driven sections
      * - type      : logical block key used by the Page Builder (hero_default, features_grid, etc.)
      * - variant   : optional design variation for the same type (default, v2, minimal, etc.)
      * - order     : display order of the section within the page
@@ -29,6 +32,7 @@ class Section extends Model
      */
     protected $fillable = [
         'page_id',
+        'section_definition_id',
         'tenant_id',
         'type',
         'variant',
@@ -41,6 +45,7 @@ class Section extends Model
      * Attribute type casting.
      */
     protected $casts = [
+        'section_definition_id' => 'integer',
         'is_active' => 'boolean',
         'style'     => 'array',
     ];
@@ -82,6 +87,17 @@ class Section extends Model
     public function page(): BelongsTo
     {
         return $this->belongsTo(Page::class);
+    }
+
+    /**
+     * Optional relationship: linked developer section blueprint.
+     *
+     * Legacy sections keep this null and continue through the older type-based
+     * rendering/editor flows unchanged.
+     */
+    public function sectionDefinition(): BelongsTo
+    {
+        return $this->belongsTo(SectionDefinition::class);
     }
 
     /**

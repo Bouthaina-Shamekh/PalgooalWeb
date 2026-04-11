@@ -1,5 +1,5 @@
 @php
-    $normalizedTypes = collect($sectionTypes ?? [])->mapWithKeys(function ($meta, $key) {
+    $normalizedTypes = collect($sectionLibraryTypes ?? $sectionTypes ?? [])->mapWithKeys(function ($meta, $key) {
         $type = $meta['type'] ?? $meta['key'] ?? $key;
 
         return [
@@ -9,10 +9,13 @@
 
     $sectionTypes = $normalizedTypes;
     $selectedType = old('type', 'hero_default');
+    $selectedSectionDefinitionId = old('section_definition_id');
     $sectionTypeMeta = $sectionTypes[$selectedType] ?? null;
     $sectionTypeLabel = $sectionTypeMeta['label'] ?? $selectedType;
     $pageTitle = $page->translation()?->title ?? $page->slug;
-    $groupedTypes = $sectionTypes->groupBy(fn ($meta, $type) => $meta['category'] ?? 'other');
+    $groupedTypes = $sectionTypes
+        ->reject(fn ($meta) => (bool) ($meta['library_hidden'] ?? false))
+        ->groupBy(fn ($meta, $type) => $meta['category'] ?? 'other');
 @endphp
 
 @extends('dashboard.pages.sections.layouts.workspace')
@@ -51,6 +54,8 @@
 
             <div class="space-y-6 p-5 lg:p-6">
                 <input type="hidden" name="type" id="section-type-input" value="{{ $selectedType }}">
+                <input type="hidden" name="section_definition_id" id="section-definition-id-input"
+                    value="{{ $selectedSectionDefinitionId }}">
 
                 <div class="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                     <div>
@@ -75,12 +80,16 @@
                             <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                                 @foreach ($items as $type => $meta)
                                     @php
-                                        $isActive = $selectedType === $type;
+                                        $metaSectionDefinitionId = $meta['section_definition_id'] ?? null;
+                                        $isActive =
+                                            $selectedType === $type
+                                            && (string) ($selectedSectionDefinitionId ?? '') === (string) ($metaSectionDefinitionId ?? '');
                                     @endphp
                                     <button
                                         type="button"
                                         class="js-section-type-card group overflow-hidden rounded-3xl border bg-white text-left transition hover:-translate-y-0.5 hover:shadow-md {{ $isActive ? 'border-slate-900 ring-1 ring-slate-900/10' : 'border-slate-200' }}"
                                         data-type="{{ $type }}"
+                                        data-definition-id="{{ $metaSectionDefinitionId }}"
                                         data-label="{{ $meta['label'] ?? $type }}"
                                         data-category="{{ $meta['category'] ?? 'other' }}"
                                     >
@@ -429,6 +438,7 @@
             const buttons = document.querySelectorAll('.tab-btn');
             const panels = document.querySelectorAll('.tab-panel');
             const typeInput = document.getElementById('section-type-input');
+            const sectionDefinitionInput = document.getElementById('section-definition-id-input');
             const typeCards = document.querySelectorAll('.js-section-type-card');
             const selectedTypeLabel = document.getElementById('selected-type-label');
             const sidebarSelectedType = document.getElementById('sidebar-selected-type');
@@ -455,10 +465,12 @@
             typeCards.forEach((card) => {
                 card.addEventListener('click', () => {
                     const type = card.getAttribute('data-type') || '';
+                    const definitionId = card.getAttribute('data-definition-id') || '';
                     const label = card.getAttribute('data-label') || type;
                     const category = card.getAttribute('data-category') || 'other';
 
                     if (typeInput) typeInput.value = type;
+                    if (sectionDefinitionInput) sectionDefinitionInput.value = definitionId;
                     if (selectedTypeLabel) selectedTypeLabel.textContent = label;
                     if (sidebarSelectedType) sidebarSelectedType.textContent = label;
                     if (selectedTypeCategory) selectedTypeCategory.textContent = category.replace(/[_-]+/g, ' ');

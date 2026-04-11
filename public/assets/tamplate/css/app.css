@@ -1454,6 +1454,9 @@
   .min-h-\[420px\] {
     min-height: 420px;
   }
+  .min-h-\[448px\] {
+    min-height: 448px;
+  }
   .min-h-\[600px\] {
     min-height: 600px;
   }
@@ -3302,6 +3305,12 @@
       background-color: color-mix(in oklab, var(--color-purple-brand) 5%, transparent);
     }
   }
+  .bg-purple-brand\/80 {
+    background-color: color-mix(in srgb, #240a37 80%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-purple-brand) 80%, transparent);
+    }
+  }
   .bg-red-50 {
     background-color: var(--color-red-50);
   }
@@ -3394,6 +3403,12 @@
   }
   .bg-slate-50 {
     background-color: var(--color-slate-50);
+  }
+  .bg-slate-50\/60 {
+    background-color: color-mix(in srgb, oklch(98.4% 0.003 247.858) 60%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-slate-50) 60%, transparent);
+    }
   }
   .bg-slate-50\/70 {
     background-color: color-mix(in srgb, oklch(98.4% 0.003 247.858) 70%, transparent);
@@ -4541,6 +4556,9 @@
   }
   .text-\[\#F53003\] {
     color: #F53003;
+  }
+  .text-\[\#d9d9d9\] {
+    color: #d9d9d9;
   }
   .text-\[\#f53003\] {
     color: #f53003;
@@ -8009,6 +8027,11 @@
       margin-block: calc(var(--spacing) * 12);
     }
   }
+  .sm\:mt-0 {
+    @media (width >= 40rem) {
+      margin-top: calc(var(--spacing) * 0);
+    }
+  }
   .sm\:mt-10 {
     @media (width >= 40rem) {
       margin-top: calc(var(--spacing) * 10);
@@ -8745,6 +8768,11 @@
       padding-block: calc(var(--spacing) * 4);
     }
   }
+  .md\:py-10 {
+    @media (width >= 48rem) {
+      padding-block: calc(var(--spacing) * 10);
+    }
+  }
   .md\:pt-8 {
     @media (width >= 48rem) {
       padding-top: calc(var(--spacing) * 8);
@@ -8821,6 +8849,11 @@
     @media (width >= 48rem) {
       font-size: var(--text-xl);
       line-height: var(--tw-leading, var(--text-xl--line-height));
+    }
+  }
+  .md\:text-\[29px\] {
+    @media (width >= 48rem) {
+      font-size: 29px;
     }
   }
   .md\:text-\[40px\] {

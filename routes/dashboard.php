@@ -18,6 +18,8 @@ use App\Http\Controllers\Admin\PortfolioController;
 use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\PageBuilderController;
 use App\Http\Controllers\Admin\SectionController;
+use App\Http\Controllers\Admin\SectionDefinitionController;
+use App\Http\Controllers\Admin\SectionDefinitionFieldController;
 use App\Http\Controllers\Admin\AppearanceController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\ClientController as AdminClientController;
@@ -259,6 +261,43 @@ Route::group([
             Route::delete('sections/{section}', [SectionController::class, 'destroy'])
                 ->whereNumber('section')
                 ->name('destroy');
+        });
+
+    // -------------------------------------------------------------------------
+    // Developer Section Definitions
+    // Admin-only CRUD for section blueprint definitions.
+    // -------------------------------------------------------------------------
+    Route::prefix('section-definitions')
+        ->name('section_definitions.')
+        ->group(function () {
+            Route::get('/', [SectionDefinitionController::class, 'index'])->name('index');
+            Route::get('/create', [SectionDefinitionController::class, 'create'])->name('create');
+            Route::post('/', [SectionDefinitionController::class, 'store'])->name('store');
+            Route::get('/{sectionDefinition}/edit', [SectionDefinitionController::class, 'edit'])
+                ->whereNumber('sectionDefinition')
+                ->name('edit');
+            Route::match(['put', 'patch'], '/{sectionDefinition}', [SectionDefinitionController::class, 'update'])
+                ->whereNumber('sectionDefinition')
+                ->name('update');
+
+            Route::prefix('/{sectionDefinition}/fields')
+                ->whereNumber('sectionDefinition')
+                ->name('fields.')
+                ->group(function () {
+                    Route::get('/', [SectionDefinitionFieldController::class, 'index'])->name('index');
+                    Route::get('/create', [SectionDefinitionFieldController::class, 'create'])->name('create');
+                    Route::post('/', [SectionDefinitionFieldController::class, 'store'])->name('store');
+                    Route::post('/reorder', [SectionDefinitionFieldController::class, 'reorder'])->name('reorder');
+                    Route::get('/{field}/edit', [SectionDefinitionFieldController::class, 'edit'])
+                        ->whereNumber('field')
+                        ->name('edit');
+                    Route::match(['put', 'patch'], '/{field}', [SectionDefinitionFieldController::class, 'update'])
+                        ->whereNumber('field')
+                        ->name('update');
+                    Route::delete('/{field}', [SectionDefinitionFieldController::class, 'destroy'])
+                        ->whereNumber('field')
+                        ->name('destroy');
+                });
         });
 
     // -------------------------------------------------------------------------

@@ -8,20 +8,67 @@ use App\Models\SectionTranslation;
 class SectionRenderer
 {
     /**
-     * Render a section into HTML using its registered view.
+     * Render a section into HTML through the first safe renderer that applies.
      *
      * @param  \App\Models\Section  $section
      * @param  string|null          $locale
+     * @param  array<string, mixed> $extraViewData
      * @return string
      */
-    public static function render(Section $section, string $locale = null): string
+    public static function render(Section $section, ?string $locale = null, array $extraViewData = []): string
     {
+        $definitionDrivenHtml = self::renderDefinitionDriven($section, $locale, $extraViewData);
+
+        if ($definitionDrivenHtml !== null) {
+            return $definitionDrivenHtml;
+        }
+
+        return self::renderRegisteredSection($section, $locale, $extraViewData);
+    }
+
+    /**
+     * Render a section through the definition/template registry when possible.
+     *
+     * Returns null when the section should keep using the existing legacy or
+     * custom rendering path unchanged.
+     *
+     * @param  array<string, mixed> $extraViewData
+     */
+    public static function renderDefinitionDriven(
+        Section $section,
+        ?string $locale = null,
+        array $extraViewData = [],
+    ): ?string {
+        $renderPayload = app(SectionDefinitionFrontendViewDataFactory::class)->build(
+            $section,
+            $locale,
+            $extraViewData,
+        );
+
+        if (! is_array($renderPayload)) {
+            return null;
+        }
+
+        return view(
+            $renderPayload['view'],
+            $renderPayload['viewData'],
+        )->render();
+    }
+
+    /**
+     * Render a section through the older code-side registry flow.
+     *
+     * @param  array<string, mixed> $extraViewData
+     */
+    protected static function renderRegisteredSection(
+        Section $section,
+        ?string $locale = null,
+        array $extraViewData = [],
+    ): string {
         $locale ??= app()->getLocale();
 
         /** @var \App\Models\SectionTranslation|null $translation */
-        $translation = $section->translations
-            ->where('locale', $locale)
-            ->first();
+        $translation = $section->translation($locale);
 
         // Get section config from registry (view, options, etc.)
         $config = SectionRegistry::get($section->type);
@@ -33,7 +80,7 @@ class SectionRenderer
         $view = $config['view'];
 
         // Base raw content from translation (JSON cast on model)
-        $content = $translation?->content ?? [];
+        $content = is_array($translation?->content ?? null) ? $translation->content : [];
 
         // Normalize data per section type if needed
         $data = match ($section->type) {
@@ -42,10 +89,10 @@ class SectionRenderer
         };
 
         // Render Blade view with normalized $data
-        return view($view, [
-            'data'    => $data,
+        return view($view, array_merge($extraViewData, [
+            'data' => $data,
             'section' => $section,
-        ])->render();
+        ]))->render();
     }
 
     /**

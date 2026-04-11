@@ -15,7 +15,7 @@
     $workspaceMode = $workspaceMode ?? 'admin';
     $isClientWorkspace = $workspaceMode === 'client';
     $currentLocale = app()->getLocale();
-    $groupedTypes = collect($sectionTypes ?? [])
+    $groupedTypes = collect($sectionLibraryTypes ?? $sectionTypes ?? [])
         ->reject(fn($meta) => (bool) ($meta['library_hidden'] ?? false))
         ->groupBy(fn($meta) => $meta['category'] ?? 'other', true);
     $highlightSectionId = (int) request('highlight');
@@ -483,12 +483,17 @@
                                     $cardDescription = $meta['description'] ?? __('No description provided.');
                                     $cardType = $meta['type'] ?? $type;
                                     $cardVariant = $meta['variant'] ?? null;
+                                    $cardSectionDefinitionId = $meta['section_definition_id'] ?? null;
                                 @endphp
                                 <form action="{{ $workspaceRouteFor('quick-store', [], false) }}"
                                     method="POST" data-library-item
                                     data-library-text="{{ \Illuminate\Support\Str::lower($meta['label'] . ' ' . ($meta['description'] ?? '') . ' ' . $category) }}">
                                     @csrf
                                     <input type="hidden" name="type" value="{{ $cardType }}">
+                                    @if (filled($cardSectionDefinitionId))
+                                        <input type="hidden" name="section_definition_id"
+                                            value="{{ $cardSectionDefinitionId }}">
+                                    @endif
                                     @if (filled($cardVariant))
                                         <input type="hidden" name="variant" value="{{ $cardVariant }}">
                                     @endif

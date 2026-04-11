@@ -340,6 +340,8 @@
         $showReviewRepeaterField = (bool) ($fieldFlags['showReviewRepeaterField'] ?? false);
         $showSiteFooterLinksTextareaField = (bool) ($fieldFlags['showSiteFooterLinksTextareaField'] ?? false);
         $showSiteFooterSocialFields = (bool) ($fieldFlags['showSiteFooterSocialFields'] ?? false);
+        $usesDynamicEditor = (bool) ($editorState['usesDynamicEditor'] ?? false);
+        $dynamicEditor = is_array($editorState['dynamicEditor'] ?? null) ? $editorState['dynamicEditor'] : null;
         $selectedFooterVariant = old('variant', $section->variant ?: 'simple_social');
         $hostingPricingAvailableCategories = $editorState['hostingPricingAvailableCategories'] ?? collect();
     @endphp
@@ -541,6 +543,16 @@
                     <input type="hidden" name="translations[{{ $code }}][locale]"
                         value="{{ $code }}">
 
+                    @if ($usesDynamicEditor && is_array($dynamicEditor))
+                        {{-- Hybrid editor path: definition-driven fields render here while the legacy/custom editor remains unchanged below. --}}
+                        @include('dashboard.pages.sections.partials.dynamic-editor.renderer', [
+                            'code' => $code,
+                            'dynamicEditor' => $dynamicEditor,
+                            'contentGridClass' => $contentGridClass,
+                            'usesInternalLabel' => $usesInternalLabel,
+                            'sectionTitleValue' => $sectionTitleValue,
+                        ])
+                    @else
                     <div class="{{ $contentGridClass }}">
                         @if ($usesInternalLabel)
                             <input type="hidden" name="translations[{{ $code }}][title]"
@@ -1378,6 +1390,7 @@
                             @endif
                         @endif
                     </div>
+                    @endif
                 </div>
             @endforeach
         </div>

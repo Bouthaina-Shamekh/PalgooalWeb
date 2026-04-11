@@ -7,6 +7,7 @@ use App\Models\Language;
 use App\Models\Page;
 use App\Models\Section;
 use App\Models\SectionTranslation;
+use App\Models\Sections\SectionDefinition;
 use App\Models\Template;
 use App\Support\Sections\SectionEditorDataFactory;
 use App\Support\Sections\SectionSidebarEditorViewDataFactory;
@@ -15,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 /**
@@ -46,6 +48,7 @@ class SectionController extends Controller
             'sections'     => $sections,
             'languages'    => $languages,
             'sectionTypes' => $this->availableSectionTypes(),
+            'sectionLibraryTypes' => $this->sectionLibraryTypes(),
         ] + $this->workspaceViewData($page));
     }
 
@@ -102,6 +105,7 @@ class SectionController extends Controller
             'page'         => $page,
             'languages'    => $languages,
             'sectionTypes' => $this->availableSectionTypes(),
+            'sectionLibraryTypes' => $this->sectionLibraryTypes(),
             'nextOrder'    => $this->nextOrderForPage($page),
         ] + $this->workspaceViewData($page));
     }
@@ -111,8 +115,18 @@ class SectionController extends Controller
      */
     public function store(Request $request, Page $page)
     {
+        $sectionDefinitionIdRules = ['nullable', 'integer'];
+
+        if (Schema::hasTable('section_definitions')) {
+            $sectionDefinitionIdRules[] = Rule::exists('section_definitions', 'id')
+                ->where(fn ($query) => $query
+                    ->where('is_active', true)
+                    ->where('is_visible', true));
+        }
+
         $validated = $request->validate([
-            'type'      => ['required', 'string', 'max:100', Rule::in($this->availableSectionTypeKeys())],
+            'type'      => ['required', 'string', 'max:100', Rule::in($this->allowedSectionTypeKeys())],
+            'section_definition_id' => $sectionDefinitionIdRules,
             'variant'   => 'nullable|string|max:100',
             'style'     => 'nullable|array',
             'order'     => 'nullable|integer|min:0',
@@ -124,16 +138,23 @@ class SectionController extends Controller
             'translations.*.content' => 'nullable|array',
         ]);
 
+        $sectionSelection = $this->normalizeSectionCreateSelection(
+            (string) $validated['type'],
+            isset($validated['section_definition_id']) ? (int) $validated['section_definition_id'] : null,
+        );
+        $validated['type'] = $sectionSelection['type'];
+
         $validated['translations'] = $this->syncSharedSectionContent(
             $validated['type'],
             $validated['translations'] ?? []
         );
 
-        DB::transaction(function () use ($validated, $page) {
+        DB::transaction(function () use ($validated, $page, $sectionSelection) {
             $type = $validated['type'];
 
             $section = Section::create([
                 'page_id'   => $page->id,
+                ...$this->sectionDefinitionLinkAttributes($sectionSelection['section_definition_id']),
                 'type'      => $type,
                 'variant'   => $validated['variant'] ?? null,
                 'style'     => $validated['style'] ?? $this->defaultStyleForType($type),
@@ -165,19 +186,36 @@ class SectionController extends Controller
      */
     public function quickStore(Request $request, Page $page)
     {
+        $sectionDefinitionIdRules = ['nullable', 'integer'];
+
+        if (Schema::hasTable('section_definitions')) {
+            $sectionDefinitionIdRules[] = Rule::exists('section_definitions', 'id')
+                ->where(fn ($query) => $query
+                    ->where('is_active', true)
+                    ->where('is_visible', true));
+        }
+
         $validated = $request->validate([
-            'type'    => ['required', 'string', 'max:100', Rule::in($this->availableSectionTypeKeys())],
+            'type'    => ['required', 'string', 'max:100', Rule::in($this->allowedSectionTypeKeys())],
+            'section_definition_id' => $sectionDefinitionIdRules,
             'variant' => 'nullable|string|max:100',
         ]);
+
+        $sectionSelection = $this->normalizeSectionCreateSelection(
+            (string) $validated['type'],
+            isset($validated['section_definition_id']) ? (int) $validated['section_definition_id'] : null,
+        );
 
         $page->loadMissing('translations');
         $createdSection = null;
 
-        DB::transaction(function () use ($page, $validated, &$createdSection) {
+        DB::transaction(function () use ($page, $validated, $sectionSelection, &$createdSection) {
             $createdSection = $this->createDefaultSection(
                 $page,
-                $validated['type'],
-                $validated['variant'] ?? null
+                $sectionSelection['type'],
+                $validated['variant'] ?? null,
+                $sectionSelection['section_definition_id'],
+                $sectionSelection['section_definition'],
             );
         });
 
@@ -237,7 +275,7 @@ class SectionController extends Controller
         $this->ensureSectionBelongsToPage($page, $section);
 
         $validated = $request->validate([
-            'type'      => ['required', 'string', 'max:100', Rule::in($this->availableSectionTypeKeys())],
+            'type'      => ['required', 'string', 'max:100', Rule::in($this->allowedSectionTypeKeys($section))],
             'variant'   => 'nullable|string|max:100',
             'style'     => 'nullable|array',
             'order'     => 'nullable|integer|min:0',
@@ -258,6 +296,7 @@ class SectionController extends Controller
             $type = $validated['type'];
 
             $section->update([
+                ...$this->sectionDefinitionAttributesForType($type, $section),
                 'type'      => $type,
                 'variant'   => $validated['variant'] ?? null,
                 'style'     => $validated['style'] ?? $section->style,
@@ -474,6 +513,7 @@ class SectionController extends Controller
         DB::transaction(function () use ($page, $section, &$duplicate) {
             $duplicate = Section::create([
                 'page_id'   => $page->id,
+                ...$this->duplicatedSectionDefinitionAttributes($section),
                 'type'      => $section->type,
                 'variant'   => $section->variant,
                 'style'     => $section->style,
@@ -679,12 +719,17 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
-            'hosting_hero' => [
-                'type'        => 'hosting_hero',
-                'label'       => 'Hero - Hosting',
-                'description' => 'Two-line hero with hosting benefits, CTA, and side illustration.',
-                'category'    => 'hero',
-                'preview'     => null,
+            // Legacy code-side registry entry kept for backward compatibility.
+            // Definition-driven hero variants should now be created from the
+            // section-definition library path instead of this template key.
+            'hero.hosting' => [
+                'type' => 'hero.hosting',
+                'label' => 'Hosting Hero',
+                'description' => 'Legacy hosting hero entry preserved for already-linked content.',
+                'category' => 'hero',
+                'preview' => null,
+                'library_hidden' => true,
+                'view' => 'front.sections.hero.hosting',
             ],
 
             'programming_showcase' => [
@@ -873,9 +918,6 @@ class SectionController extends Controller
             case 'hero_campaign':
                 return $this->normalizeHeroCampaignContent($content);
 
-            case 'hosting_hero':
-                return $this->normalizeHostingHeroContent($content);    
-
             case 'programming_showcase':
                 return $this->normalizeProgrammingContent($content);
 
@@ -920,13 +962,21 @@ class SectionController extends Controller
     /**
      * Create a section with lightweight defaults for the quick-add workflow.
      */
-    protected function createDefaultSection(Page $page, string $type, ?string $variant = null): Section
+    protected function createDefaultSection(
+        Page $page,
+        string $type,
+        ?string $variant = null,
+        ?int $sectionDefinitionId = null,
+        ?SectionDefinition $sectionDefinition = null,
+    ): Section
     {
-        $sectionTypes = $this->availableSectionTypes();
-        $label = $sectionTypes[$type]['label'] ?? ucfirst(str_replace('_', ' ', $type));
+        $sectionTypes = $this->sectionLibraryTypes();
+        $label = $sectionDefinition?->label
+            ?? ($sectionTypes[$type]['label'] ?? ucfirst(str_replace('_', ' ', $type)));
 
         $section = Section::create([
             'page_id'   => $page->id,
+            ...$this->sectionDefinitionLinkAttributes($sectionDefinitionId),
             'type'      => $type,
             'variant'   => $variant,
             'style'     => $this->defaultStyleForType($type),
@@ -2504,6 +2554,228 @@ class SectionController extends Controller
     protected function availableSectionTypeKeys(): array
     {
         return array_keys($this->availableSectionTypes());
+    }
+
+    /**
+     * Combined section library catalog for the standalone create screen and
+     * the workspace quick-add drawer.
+     *
+     * Legacy section types keep their current cards. Active, visible section
+     * definitions are appended as parallel cards that submit an explicit
+     * section_definition_id plus the definition section_key as the type.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    protected function sectionLibraryTypes(): array
+    {
+        $libraryTypes = $this->availableSectionTypes();
+
+        if (! Schema::hasTable('section_definitions')) {
+            return $libraryTypes;
+        }
+
+        $definitions = SectionDefinition::query()
+            ->where('is_active', true)
+            ->where('is_visible', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($definitions as $definition) {
+            $definitionKey = trim((string) $definition->section_key);
+
+            if ($definitionKey === '' || isset($libraryTypes[$definitionKey])) {
+                continue;
+            }
+
+            $libraryTypes[$definitionKey] = [
+                'type' => $definitionKey,
+                'label' => $definition->label,
+                'description' => $definition->description ?: __('Definition-driven section'),
+                'category' => $definition->category ?: 'other',
+                'preview' => data_get($definition->settings, 'preview'),
+                'section_definition_id' => (int) $definition->id,
+                'source' => 'definition',
+            ];
+        }
+
+        return $libraryTypes;
+    }
+
+    /**
+     * Allow both legacy types and active section-definition keys to pass
+     * through the current save pipeline.
+     *
+     * The library UI now submits explicit section_definition_id values for
+     * definition-driven cards, but the canonical type key still needs to pass
+     * validation for both create and quick-add flows.
+     *
+     * @return array<int, string>
+     */
+    protected function allowedSectionTypeKeys(?Section $currentSection = null): array
+    {
+        $definitionKeys = Schema::hasTable('section_definitions')
+            ? SectionDefinition::query()
+                ->where('is_active', true)
+                ->pluck('section_key')
+                ->map(fn ($key) => (string) $key)
+                ->filter()
+                ->values()
+                ->all()
+            : [];
+
+        return collect(array_merge(
+            $this->availableSectionTypeKeys(),
+            $definitionKeys,
+            $currentSection ? [(string) $currentSection->type] : [],
+        ))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Normalize the section-library selection into a canonical type and an
+     * explicit definition link when a definition-driven card was chosen.
+     *
+     * @return array{type: string, section_definition_id: int|null, section_definition: SectionDefinition|null}
+     */
+    protected function normalizeSectionCreateSelection(string $type, ?int $sectionDefinitionId = null): array
+    {
+        $type = trim($type);
+        $sectionDefinition = $this->resolveVisibleLibrarySectionDefinition($sectionDefinitionId);
+
+        if ($sectionDefinition instanceof SectionDefinition) {
+            return [
+                'type' => (string) $sectionDefinition->section_key,
+                'section_definition_id' => $this->sectionDefinitionColumnAvailable()
+                    ? (int) $sectionDefinition->id
+                    : null,
+                'section_definition' => $sectionDefinition,
+            ];
+        }
+
+        return [
+            'type' => $type,
+            'section_definition_id' => $this->resolveSectionDefinitionIdForType($type),
+            'section_definition' => null,
+        ];
+    }
+
+    /**
+     * Resolve an explicit section-definition selection from the library.
+     *
+     * Creation flows only allow active, visible definitions so the UI cannot
+     * bind new sections to retired or hidden blueprints.
+     */
+    protected function resolveVisibleLibrarySectionDefinition(?int $sectionDefinitionId): ?SectionDefinition
+    {
+        if (! $sectionDefinitionId || ! Schema::hasTable('section_definitions')) {
+            return null;
+        }
+
+        return SectionDefinition::query()
+            ->whereKey($sectionDefinitionId)
+            ->where('is_active', true)
+            ->where('is_visible', true)
+            ->first();
+    }
+
+    /**
+     * Build the explicit FK payload when the create flow already normalized
+     * the selection and no legacy inference is needed.
+     *
+     * @return array<string, int|null>
+     */
+    protected function sectionDefinitionLinkAttributes(?int $sectionDefinitionId): array
+    {
+        if (! $this->sectionDefinitionColumnAvailable()) {
+            return [];
+        }
+
+        return [
+            'section_definition_id' => $sectionDefinitionId,
+        ];
+    }
+
+    /**
+     * Keep relational linking explicit for definition-driven sections while
+     * leaving legacy section types unlinked.
+     *
+     * The current create/update UI still submits a type key, so this method
+     * performs a one-time lookup only when the submitted type is not part of
+     * the legacy registry. Runtime rendering/editor behavior no longer depends
+     * on that string match once the foreign key is stored.
+     *
+     * @return array<string, int|null>
+     */
+    protected function sectionDefinitionAttributesForType(string $type, ?Section $currentSection = null): array
+    {
+        if (! $this->sectionDefinitionColumnAvailable()) {
+            return [];
+        }
+
+        return [
+            'section_definition_id' => $this->resolveSectionDefinitionIdForType($type, $currentSection),
+        ];
+    }
+
+    /**
+     * Preserve any existing explicit definition link when duplicating a
+     * definition-driven section instance.
+     *
+     * @return array<string, int|null>
+     */
+    protected function duplicatedSectionDefinitionAttributes(Section $section): array
+    {
+        if (! $this->sectionDefinitionColumnAvailable()) {
+            return [];
+        }
+
+        return [
+            'section_definition_id' => $section->section_definition_id,
+        ];
+    }
+
+    /**
+     * Resolve the definition id that should be linked to a section instance.
+     *
+     * Legacy types intentionally stay unlinked. New definition-driven types
+     * are resolved once at write time so runtime behavior can rely on the
+     * foreign key instead of fragile type-key matching.
+     */
+    protected function resolveSectionDefinitionIdForType(string $type, ?Section $currentSection = null): ?int
+    {
+        $type = trim($type);
+
+        if ($currentSection instanceof Section && $currentSection->section_definition_id) {
+            $currentSection->loadMissing('sectionDefinition');
+
+            if ((string) ($currentSection->sectionDefinition?->section_key ?? '') === $type) {
+                return (int) $currentSection->section_definition_id;
+            }
+        }
+
+        if ($type === '' || array_key_exists($type, $this->availableSectionTypes())) {
+            return null;
+        }
+
+        $definitionId = SectionDefinition::query()
+            ->where('section_key', $type)
+            ->where('is_active', true)
+            ->value('id');
+
+        return $definitionId ? (int) $definitionId : null;
+    }
+
+    /**
+     * Guard write-time FK usage during zero-downtime deploys before the new
+     * sections-table migration has been applied everywhere.
+     */
+    protected function sectionDefinitionColumnAvailable(): bool
+    {
+        return Schema::hasColumn('sections', 'section_definition_id');
     }
 
     /**

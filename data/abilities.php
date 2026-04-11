@@ -115,6 +115,20 @@
             'edit' => __('admin.Edit Section'),
             'delete' => __('admin.Delete Section'),
         ],
+        'sectiondefinitions' => [
+            'name' => __('Section Definitions'),
+            'view' => __('View Section Definitions'),
+            'create' => __('Create Section Definition'),
+            'edit' => __('Edit Section Definition'),
+            'delete' => __('Delete Section Definition'),
+        ],
+        'sectiondefinitionfields' => [
+            'name' => __('Section Definition Fields'),
+            'view' => __('View Section Definition Fields'),
+            'create' => __('Create Section Definition Field'),
+            'edit' => __('Edit Section Definition Field'),
+            'delete' => __('Delete Section Definition Field'),
+        ],
         'servers' => [
             'name' => __('admin.Servers'),
             'view' => __('admin.View Servers'),
@@ -158,4 +172,3 @@
             'delete' => __('admin.Delete Translation Value'),
         ],
     ];
-

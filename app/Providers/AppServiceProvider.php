@@ -6,6 +6,10 @@ use App\Models\GeneralSetting;
 use App\Models\Language;
 use App\Models\Page;
 use App\Models\User;
+use App\Models\Sections\SectionDefinition;
+use App\Models\Sections\SectionDefinitionField;
+use App\Policies\SectionDefinitionFieldPolicy;
+use App\Policies\SectionDefinitionPolicy;
 use App\Support\Blocks\HeroBlock;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
@@ -31,6 +35,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+        Gate::policy(SectionDefinition::class, SectionDefinitionPolicy::class);
+        Gate::policy(SectionDefinitionField::class, SectionDefinitionFieldPolicy::class);
         Gate::define('access-dashboard', fn($user) => (bool)$user->is_admin);
         Gate::define('manage-reviews', fn($user) => (bool)$user->is_admin);
 

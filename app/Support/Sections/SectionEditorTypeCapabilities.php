@@ -270,6 +270,18 @@ class SectionEditorTypeCapabilities
         ],
     ];
 
+    /**
+     * Whether the legacy editor has explicit type-specific support for a type.
+     *
+     * This is used by the hybrid editor strategy so new definition-driven
+     * section types can opt into the dynamic path without overriding existing
+     * legacy/custom editor behavior.
+     */
+    public function supports(string $type): bool
+    {
+        return array_key_exists($type, self::TYPE_CONFIG);
+    }
+
     public function for(string $type): array
     {
         $config = self::TYPE_CONFIG[$type] ?? [];

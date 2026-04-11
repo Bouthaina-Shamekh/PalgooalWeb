@@ -18,6 +18,7 @@ class SectionEditorDataFactory
         protected SectionEditorLocaleViewDataFactory $localeViewDataFactory,
         protected SectionEditorTypeCapabilities $typeCapabilities,
         protected SectionEditorSchemaRegistry $schemaRegistry,
+        protected DynamicSectionEditorRenderer $dynamicSectionEditorRenderer,
     ) {}
 
     public function make(Section $section, iterable $languages, array $sectionTypes = []): array
@@ -28,6 +29,7 @@ class SectionEditorDataFactory
         $typeCapabilities = $this->typeCapabilities->for($selectedType);
         $typeFlags = $typeCapabilities['typeFlags'];
         $fieldFlags = $typeCapabilities['flags'];
+        $dynamicEditor = $this->dynamicSectionEditorRenderer->buildForSection($section, $languages);
 
         $editorState = [
             'selectedType' => $selectedType,
@@ -36,6 +38,8 @@ class SectionEditorDataFactory
             'usesInternalLabel' => (bool) ($typeCapabilities['usesInternalLabel'] ?? false),
             'flags' => $fieldFlags,
             'editorSchema' => $this->schemaRegistry->for($selectedType),
+            'usesDynamicEditor' => is_array($dynamicEditor) && (bool) ($dynamicEditor['enabled'] ?? false),
+            'dynamicEditor' => $dynamicEditor,
             'hostingPricingAvailableCategories' => ($typeFlags['isHostingPricingShowcase'] ?? false)
                 ? PlanCategory::query()->active()->ordered()->with('translations')->get()
                 : collect(),

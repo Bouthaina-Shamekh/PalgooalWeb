@@ -33,4 +33,155 @@ return [
         ['label' => 'Chart', 'value' => 'ti ti-chart-bar', 'keywords' => 'chart analytics data metrics'],
         ['label' => 'Seo', 'value' => 'ti ti-chart-arrows-vertical', 'keywords' => 'seo rank growth analytics'],
     ],
+
+    'template_registry' => [
+        'fallback_view' => 'components.template.sections._missing-template',
+
+        'templates' => [
+            'banner' => [
+                'label' => 'Banner',
+                'view' => 'components.template.sections.banner',
+                'category' => 'marketing',
+            ],
+            'blog' => [
+                'label' => 'Blog',
+                'view' => 'components.template.sections.blog',
+                'category' => 'content',
+            ],
+            'cta' => [
+                'label' => 'CTA',
+                'view' => 'components.template.sections.cta',
+                'category' => 'cta',
+            ],
+            'design_showcase' => [
+                'label' => 'Design Showcase',
+                'view' => 'components.template.sections.design_showcase',
+                'category' => 'services',
+            ],
+            'digital_marketing_showcase' => [
+                'label' => 'Digital Marketing Showcase',
+                'view' => 'components.template.sections.digital_marketing_showcase',
+                'category' => 'services',
+            ],
+            'domains_showcase' => [
+                'label' => 'Domains Showcase',
+                'view' => 'components.template.sections.domains_showcase',
+                'category' => 'pricing',
+            ],
+            'faq' => [
+                'label' => 'FAQ',
+                'view' => 'components.template.sections.faq',
+                'category' => 'content',
+            ],
+            'features' => [
+                'label' => 'Features',
+                'view' => 'components.template.sections.features',
+                'category' => 'content',
+            ],
+            'features_2' => [
+                'label' => 'Features 2',
+                'view' => 'components.template.sections.features-2',
+                'category' => 'content',
+            ],
+            'features_3' => [
+                'label' => 'Features 3',
+                'view' => 'components.template.sections.features-3',
+                'category' => 'content',
+            ],
+            'hero' => [
+                'label' => 'Hero',
+                'view' => 'components.template.sections.hero',
+                'category' => 'hero',
+            ],
+            'hero_campaign' => [
+                'label' => 'Hero Campaign',
+                'view' => 'components.template.sections.hero_campaign',
+                'category' => 'hero',
+            ],
+            'hero_default' => [
+                'label' => 'Hero Default',
+                'view' => 'components.template.sections.hero_default',
+                'category' => 'hero',
+            ],
+            'hosting_hero' => [
+                'label' => 'Hosting Hero',
+                'view' => 'front.sections.hero.hosting',
+            ],
+            'home_works' => [
+                'label' => 'Home Works',
+                'view' => 'components.template.sections.home-works',
+                'category' => 'portfolio',
+            ],
+            'hosting_pricing_showcase' => [
+                'label' => 'Hosting Pricing Showcase',
+                'view' => 'components.template.sections.hosting_pricing_showcase',
+                'category' => 'pricing',
+            ],
+            'how_we_build' => [
+                'label' => 'How We Build',
+                'view' => 'components.template.sections.how_we_build',
+                'category' => 'content',
+            ],
+            'mobile_app_showcase' => [
+                'label' => 'Mobile App Showcase',
+                'view' => 'components.template.sections.mobile_app_showcase',
+                'category' => 'services',
+            ],
+            'our_work_showcase' => [
+                'label' => 'Our Work Showcase',
+                'view' => 'components.template.sections.our_work_showcase',
+                'category' => 'portfolio',
+            ],
+            'programming_showcase' => [
+                'label' => 'Programming Showcase',
+                'view' => 'components.template.sections.programming_showcase',
+                'category' => 'services',
+            ],
+            'reviews_showcase' => [
+                'label' => 'Reviews Showcase',
+                'view' => 'components.template.sections.reviews_showcase',
+                'category' => 'social',
+            ],
+            'search_domain' => [
+                'label' => 'Search Domain',
+                'view' => 'components.template.sections.search-domain',
+                'category' => 'pricing',
+            ],
+            'services' => [
+                'label' => 'Services',
+                'view' => 'components.template.sections.services',
+                'category' => 'content',
+            ],
+            'tech_stack_showcase' => [
+                'label' => 'Tech Stack Showcase',
+                'view' => 'components.template.sections.tech_stack_showcase',
+                'category' => 'content',
+            ],
+            'templates' => [
+                'label' => 'Templates',
+                'view' => 'components.template.sections.templates',
+                'category' => 'templates',
+            ],
+            'templates_listing_showcase' => [
+                'label' => 'Templates Listing Showcase',
+                'view' => 'components.template.sections.templates_listing_showcase',
+                'category' => 'templates',
+            ],
+            'templates_slider_showcase' => [
+                'label' => 'Templates Slider Showcase',
+                'view' => 'components.template.sections.templates_slider_showcase',
+                'category' => 'templates',
+            ],
+            'testimonials' => [
+                'label' => 'Testimonials',
+                'view' => 'components.template.sections.testimonials',
+                'category' => 'social',
+            ],
+            'works' => [
+                'label' => 'Works',
+                'view' => 'components.template.sections.works',
+                'category' => 'portfolio',
+            ],
+        ],
+    ],
 ];
