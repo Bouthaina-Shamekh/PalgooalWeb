@@ -69,6 +69,23 @@
                                     placeholder="Last Name" />
                             </div>
 
+                            <!-- Company Name -->
+                            <div class="bg-white rounded-[20px] h-[60.271px] w-full flex items-center gap-3 px-6">
+                                <svg class="w-[20px] h-[20px] shrink-0" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <path d="M3 21H21" stroke="#BA112C" stroke-width="1.6" stroke-linecap="round" />
+                                    <path d="M5 21V7C5 6.44772 5.44772 6 6 6H18C18.5523 6 19 6.44772 19 7V21"
+                                        stroke="#BA112C" stroke-width="1.6" />
+                                    <path d="M9 10H10" stroke="#BA112C" stroke-width="1.6" stroke-linecap="round" />
+                                    <path d="M14 10H15" stroke="#BA112C" stroke-width="1.6" stroke-linecap="round" />
+                                    <path d="M9 14H10" stroke="#BA112C" stroke-width="1.6" stroke-linecap="round" />
+                                    <path d="M14 14H15" stroke="#BA112C" stroke-width="1.6" stroke-linecap="round" />
+                                </svg>
+                                <input type="text" name="company_name" value="{{ old('company_name') }}" required
+                                    class="w-full h-full bg-transparent outline-none border-0 font-poppins text-[#696969] text-[18px] sm:text-[20px] tracking-[0.4px] placeholder:text-[#696969]"
+                                    placeholder="Company Name" />
+                            </div>
+
                             <!-- Email -->
                             <div class="bg-white rounded-[20px] h-[60.271px] w-full flex items-center gap-3 px-6">
                                 <svg class="w-[22.404px] h-[17.695px] shrink-0" viewBox="0 0 24 19" fill="none"
