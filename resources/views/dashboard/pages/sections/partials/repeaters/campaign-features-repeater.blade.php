@@ -1,16 +1,29 @@
-<div class="lg:col-span-2" data-feature-repeater data-feature-item-label="{{ __('Feature') }}"
-    data-feature-item-hint="{{ __('Click to edit this feature') }}">
+@php
+    $featureRepeaterItemLabel = $featureRepeaterItemLabel ?? __('Feature');
+    $featureRepeaterItemHint = $featureRepeaterItemHint ?? __('Click to edit this feature');
+    $featureRepeaterHeading = $featureRepeaterHeading ?? __('Campaign Features');
+    $featureRepeaterDescription = $featureRepeaterDescription ?? __('Create structured feature items with their own icon and text.');
+    $featureRepeaterAddLabel = $featureRepeaterAddLabel ?? __('Add Feature');
+    $featureRepeaterEmptyState = $featureRepeaterEmptyState ?? __('No campaign features yet. Add the first one to build the grid.');
+    $featureRepeaterTextLabel = $featureRepeaterTextLabel ?? __('Feature Text');
+    $featureRepeaterTextHelp = $featureRepeaterTextHelp ?? __('This is the text shown next to the icon in the campaign grid.');
+    $featureRepeaterTextPlaceholder = $featureRepeaterTextPlaceholder ?? __('Example: 24/7 technical support');
+    $featureRepeaterNewItemLabel = $featureRepeaterNewItemLabel ?? __('New Feature');
+@endphp
+
+<div class="lg:col-span-2" data-feature-repeater data-feature-item-label="{{ $featureRepeaterItemLabel }}"
+    data-feature-item-hint="{{ $featureRepeaterItemHint }}">
     <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-            <label class="block text-sm font-medium text-slate-700">{{ __('Campaign Features') }}</label>
+            <label class="block text-sm font-medium text-slate-700">{{ $featureRepeaterHeading }}</label>
             <p class="mt-1 text-xs text-slate-500">
-                {{ __('Create structured feature items with their own icon and text.') }}
+                {{ $featureRepeaterDescription }}
             </p>
         </div>
         <button type="button" data-add-feature-item
             class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
             <i class="ti ti-plus text-base leading-none" aria-hidden="true"></i>
-            <span>{{ __('Add Feature') }}</span>
+            <span>{{ $featureRepeaterAddLabel }}</span>
         </button>
     </div>
 
@@ -56,7 +69,7 @@
                                             ? __('SVG from media library')
                                             : (filled($featureItem['icon'] ?? '')
                                                 ? __('Tabler icon selected')
-                                                : __('Click to edit this feature'))) }}
+                                                : $featureRepeaterItemHint)) }}
                                 </p>
                             </div>
 
@@ -73,7 +86,7 @@
                         <div>
                             <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
                                 <label
-                                    class="block text-sm font-medium text-slate-700">{{ __('Feature Text') }}</label>
+                                    class="block text-sm font-medium text-slate-700">{{ $featureRepeaterTextLabel }}</label>
                                 <span class="text-xs text-slate-400">{{ __('Visible on the page') }}</span>
                             </div>
                             <input type="text"
@@ -81,9 +94,9 @@
                                 data-name-template="translations[{{ $code }}][content][features][__INDEX__][text]"
                                 data-feature-field="text" value="{{ $featureItem['text'] ?? '' }}"
                                 class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                                placeholder="{{ __('Example: 24/7 technical support') }}">
+                                placeholder="{{ $featureRepeaterTextPlaceholder }}">
                             <p class="mt-2 text-xs text-slate-500">
-                                {{ __('This is the text shown next to the icon in the campaign grid.') }}
+                                {{ $featureRepeaterTextHelp }}
                             </p>
                         </div>
 
@@ -168,7 +181,7 @@
 
         <div data-feature-empty
             class="{{ count($campaignFeatureItems) ? 'hidden ' : '' }}mt-3 rounded-2xl border border-dashed border-slate-300 bg-white/80 px-4 py-6 text-center text-sm text-slate-500">
-            {{ __('No campaign features yet. Add the first one to build the grid.') }}
+            {{ $featureRepeaterEmptyState }}
         </div>
 
         <template data-feature-item-template>
@@ -201,10 +214,10 @@
                         <div class="min-w-0 flex-1">
                             <p dir="auto" data-feature-item-title
                                 class="text-sm font-semibold leading-5 text-slate-900 break-words">
-                                {{ __('New Feature') }}</p>
+                                {{ $featureRepeaterNewItemLabel }}</p>
                             <p dir="auto" data-feature-item-summary
                                 class="mt-1 text-xs leading-5 text-slate-500 break-words">
-                                {{ __('Click to edit this feature') }}</p>
+                                {{ $featureRepeaterItemHint }}</p>
                         </div>
 
                         <span
@@ -218,7 +231,7 @@
                 <div data-feature-item-body class="mt-4 hidden space-y-4">
                     <div>
                         <div class="flex items-center justify-between gap-3 rtl:flex-row-reverse">
-                            <label class="block text-sm font-medium text-slate-700">{{ __('Feature Text') }}</label>
+                                <label class="block text-sm font-medium text-slate-700">{{ $featureRepeaterTextLabel }}</label>
                             <span class="text-xs text-slate-400">{{ __('Visible on the page') }}</span>
                         </div>
                         <input type="text"
@@ -226,9 +239,9 @@
                             data-name-template="translations[{{ $code }}][content][features][__INDEX__][text]"
                             data-feature-field="text" value=""
                             class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
-                            placeholder="{{ __('Example: 24/7 technical support') }}">
+                            placeholder="{{ $featureRepeaterTextPlaceholder }}">
                         <p class="mt-2 text-xs text-slate-500">
-                            {{ __('This is the text shown next to the icon in the campaign grid.') }}
+                            {{ $featureRepeaterTextHelp }}
                         </p>
                     </div>
 

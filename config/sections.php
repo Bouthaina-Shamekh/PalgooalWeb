@@ -182,6 +182,39 @@ return [
                 'view' => 'components.template.sections.works',
                 'category' => 'portfolio',
             ],
+
+            'wordpress_ai_promo' => [
+                'label' => 'WordPress AI Promo',
+                'view' => 'front.sections.promo.wordpress_ai_promo',
+            ],
+        ],
+    ],
+
+    'custom_preset_registry' => [
+        'presets' => [
+            'hosting_hero' => [
+                'label' => 'Hosting Hero',
+                'view' => 'dashboard.pages.sections.partials.custom-presets.hosting-hero',
+                'builder' => 'buildHostingHeroPreset',
+            ],
+
+            'wordpress_ai_promo' => [
+                'label' => 'WordPress AI Promo',
+                'view' => 'dashboard.pages.sections.partials.custom-presets.wordpress-ai-promo',
+                'builder' => 'buildWordPressAIPromoPreset',
+            ],
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | Temporary legacy bridges
+        |--------------------------------------------------------------------------
+        | These mappings allow already-linked definitions to keep using a
+        | custom preset editor before their editor_mode/custom_editor_key
+        | values are formally backfilled in the database.
+        */
+        'legacy_section_key_bridge' => [
+            'hosting_hero' => 'hosting_hero',
         ],
     ],
 ];

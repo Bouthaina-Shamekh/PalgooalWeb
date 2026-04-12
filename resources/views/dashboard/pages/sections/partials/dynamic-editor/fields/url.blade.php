@@ -1,4 +1,4 @@
-<div class="{{ $field['wrapperClass'] }}">
+<div class="{{ $field['wrapperClass'] }} lg:col-span-2">
     <div class="flex items-center gap-2">
         <label for="{{ $field['id'] }}" class="block text-sm font-medium text-slate-700">
             {{ $field['label'] }}

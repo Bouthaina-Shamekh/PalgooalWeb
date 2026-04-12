@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\Sections\SectionDefinition;
+use App\Support\Sections\SectionCustomPresetRegistry;
 use App\Support\Sections\SectionTemplateRegistry;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -20,6 +21,8 @@ class StoreSectionDefinitionRequest extends FormRequest
 
     public function rules(): array
     {
+        $allowedCustomPresetKeys = array_keys(SectionCustomPresetRegistry::all());
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'key' => [
@@ -44,7 +47,13 @@ class StoreSectionDefinitionRequest extends FormRequest
                     SectionDefinition::EDITOR_MODE_CUSTOM_PRESET,
                 ]),
             ],
-            'custom_editor_key' => ['nullable', 'string', 'max:150'],
+            'custom_editor_key' => [
+                Rule::requiredIf(fn () => $this->input('editor_mode') === SectionDefinition::EDITOR_MODE_CUSTOM_PRESET),
+                'nullable',
+                'string',
+                'max:150',
+                Rule::in($allowedCustomPresetKeys),
+            ],
             'is_active' => ['sometimes', 'boolean'],
             'is_visible_in_library' => ['sometimes', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],

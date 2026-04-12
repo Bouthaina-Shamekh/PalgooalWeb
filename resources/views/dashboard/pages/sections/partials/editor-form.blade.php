@@ -340,6 +340,8 @@
         $showReviewRepeaterField = (bool) ($fieldFlags['showReviewRepeaterField'] ?? false);
         $showSiteFooterLinksTextareaField = (bool) ($fieldFlags['showSiteFooterLinksTextareaField'] ?? false);
         $showSiteFooterSocialFields = (bool) ($fieldFlags['showSiteFooterSocialFields'] ?? false);
+        $usesCustomPresetEditor = (bool) ($editorState['usesCustomPresetEditor'] ?? false);
+        $customPresetEditor = is_array($editorState['customPresetEditor'] ?? null) ? $editorState['customPresetEditor'] : null;
         $usesDynamicEditor = (bool) ($editorState['usesDynamicEditor'] ?? false);
         $dynamicEditor = is_array($editorState['dynamicEditor'] ?? null) ? $editorState['dynamicEditor'] : null;
         $selectedFooterVariant = old('variant', $section->variant ?: 'simple_social');
@@ -543,7 +545,17 @@
                     <input type="hidden" name="translations[{{ $code }}][locale]"
                         value="{{ $code }}">
 
-                    @if ($usesDynamicEditor && is_array($dynamicEditor))
+                    @if ($usesCustomPresetEditor && is_array($customPresetEditor))
+                        {{-- Custom preset editor path: curated UI for specific definition-driven sections. --}}
+                        @include($customPresetEditor['view'], [
+                            'code' => $code,
+                            'customPresetEditor' => $customPresetEditor,
+                            'contentGridClass' => $contentGridClass,
+                            'usesInternalLabel' => $usesInternalLabel,
+                            'sectionTitleValue' => $sectionTitleValue,
+                            'mediaPreviewBuilder' => $mediaPreviewBuilder,
+                        ])
+                    @elseif ($usesDynamicEditor && is_array($dynamicEditor))
                         {{-- Hybrid editor path: definition-driven fields render here while the legacy/custom editor remains unchanged below. --}}
                         @include('dashboard.pages.sections.partials.dynamic-editor.renderer', [
                             'code' => $code,

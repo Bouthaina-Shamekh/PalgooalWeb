@@ -18,6 +18,7 @@ class SectionEditorDataFactory
         protected SectionEditorLocaleViewDataFactory $localeViewDataFactory,
         protected SectionEditorTypeCapabilities $typeCapabilities,
         protected SectionEditorSchemaRegistry $schemaRegistry,
+        protected SectionCustomPresetEditorRenderer $customPresetEditorRenderer,
         protected DynamicSectionEditorRenderer $dynamicSectionEditorRenderer,
     ) {}
 
@@ -29,7 +30,10 @@ class SectionEditorDataFactory
         $typeCapabilities = $this->typeCapabilities->for($selectedType);
         $typeFlags = $typeCapabilities['typeFlags'];
         $fieldFlags = $typeCapabilities['flags'];
-        $dynamicEditor = $this->dynamicSectionEditorRenderer->buildForSection($section, $languages);
+        $customPresetEditor = $this->customPresetEditorRenderer->buildForSection($section, $languages);
+        $dynamicEditor = is_array($customPresetEditor) && (bool) ($customPresetEditor['enabled'] ?? false)
+            ? null
+            : $this->dynamicSectionEditorRenderer->buildForSection($section, $languages);
 
         $editorState = [
             'selectedType' => $selectedType,
@@ -38,6 +42,8 @@ class SectionEditorDataFactory
             'usesInternalLabel' => (bool) ($typeCapabilities['usesInternalLabel'] ?? false),
             'flags' => $fieldFlags,
             'editorSchema' => $this->schemaRegistry->for($selectedType),
+            'usesCustomPresetEditor' => is_array($customPresetEditor) && (bool) ($customPresetEditor['enabled'] ?? false),
+            'customPresetEditor' => $customPresetEditor,
             'usesDynamicEditor' => is_array($dynamicEditor) && (bool) ($dynamicEditor['enabled'] ?? false),
             'dynamicEditor' => $dynamicEditor,
             'hostingPricingAvailableCategories' => ($typeFlags['isHostingPricingShowcase'] ?? false)

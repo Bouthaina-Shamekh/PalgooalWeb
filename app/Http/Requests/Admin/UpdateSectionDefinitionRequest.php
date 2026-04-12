@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\Sections\SectionDefinition;
+use App\Support\Sections\SectionCustomPresetRegistry;
 use App\Support\Sections\SectionTemplateRegistry;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -27,10 +28,16 @@ class UpdateSectionDefinitionRequest extends FormRequest
         /** @var \App\Models\Sections\SectionDefinition|null $sectionDefinition */
         $sectionDefinition = $this->route('sectionDefinition');
         $allowedTemplateKeys = array_keys(SectionTemplateRegistry::all());
+        $allowedCustomPresetKeys = array_keys(SectionCustomPresetRegistry::all());
         $currentTemplateKey = $sectionDefinition?->templates()->orderByPivot('sort_order')->first()?->template_key;
+        $currentCustomEditorKey = $sectionDefinition?->custom_editor_key;
 
         if (is_string($currentTemplateKey) && $currentTemplateKey !== '') {
             $allowedTemplateKeys[] = $currentTemplateKey;
+        }
+
+        if (is_string($currentCustomEditorKey) && $currentCustomEditorKey !== '') {
+            $allowedCustomPresetKeys[] = $currentCustomEditorKey;
         }
 
         return [
@@ -57,7 +64,13 @@ class UpdateSectionDefinitionRequest extends FormRequest
                     SectionDefinition::EDITOR_MODE_CUSTOM_PRESET,
                 ]),
             ],
-            'custom_editor_key' => ['nullable', 'string', 'max:150'],
+            'custom_editor_key' => [
+                Rule::requiredIf(fn () => $this->input('editor_mode') === SectionDefinition::EDITOR_MODE_CUSTOM_PRESET),
+                'nullable',
+                'string',
+                'max:150',
+                Rule::in(array_values(array_unique($allowedCustomPresetKeys))),
+            ],
             'is_active' => ['sometimes', 'boolean'],
             'is_visible_in_library' => ['sometimes', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
