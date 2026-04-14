@@ -66,6 +66,57 @@ class SectionEditorRepeaterFactory
             ->all();
     }
 
+    public function buildLocaleProtectionItems(Section $section, iterable $languages): array
+    {
+        return Collection::make($languages)
+            ->mapWithKeys(function ($language) use ($section) {
+                $code = $language->code;
+                $translation = $section->translations->firstWhere('locale', $code);
+                $content = is_array($translation?->content) ? $translation->content : [];
+                $oldItems = old("translations.$code.content.items");
+                $itemsSource = is_array($oldItems)
+                    ? $oldItems
+                    : (is_array($content['items'] ?? null)
+                        ? $content['items']
+                        : []);
+
+                return [
+                    $code => collect($itemsSource)
+                        ->map(function ($item) {
+                            if (! is_array($item)) {
+                                return null;
+                            }
+
+                            $title       = trim((string) ($item['title'] ?? ''));
+                            $description = trim((string) ($item['description'] ?? ''));
+                            $icon        = trim((string) ($item['icon'] ?? ''));
+                            $iconSource  = trim((string) ($item['icon_source'] ?? 'class'));
+                            $iconMedia   = is_scalar($item['icon_media'] ?? null)
+                                ? (string) $item['icon_media']
+                                : '';
+
+                            if ($title === '' && $description === '') {
+                                return null;
+                            }
+
+                            return [
+                                'title'       => $title,
+                                'description' => $description,
+                                'icon'        => $icon,
+                                'icon_source' => in_array($iconSource, ['class', 'media'], true)
+                                    ? $iconSource
+                                    : 'class',
+                                'icon_media'  => $iconMedia,
+                            ];
+                        })
+                        ->filter()
+                        ->values()
+                        ->all(),
+                ];
+            })
+            ->all();
+    }
+
     public function buildLocaleOutputItems(Section $section, iterable $languages): array
     {
         return Collection::make($languages)
