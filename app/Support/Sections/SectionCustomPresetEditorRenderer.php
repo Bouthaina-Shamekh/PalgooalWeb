@@ -196,6 +196,78 @@ class SectionCustomPresetEditorRenderer
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    protected function buildWordPressAIPromoPreset(
+        Section $section,
+        SectionDefinition $definition,
+        iterable $languages,
+        array $presetMeta,
+    ): array {
+        $languagesCollection = Collection::make($languages)->values();
+        $defaultLocale = $this->resolveDefaultLocale($languagesCollection);
+        $featureItemsByLocale = $this->repeaterFactory->buildLocaleCampaignFeatureItems($section, $languagesCollection);
+
+        return [
+            'enabled'          => true,
+            'presetKey'        => (string) ($presetMeta['preset_key'] ?? 'wordpress_ai_promo'),
+            'view'             => (string) ($presetMeta['view'] ?? 'dashboard.pages.sections.partials.custom-presets.wordpress-ai-promo'),
+            'activationSource' => $definition->editor_mode === SectionDefinition::EDITOR_MODE_CUSTOM_PRESET
+                ? 'custom_editor_key'
+                : 'legacy_section_key_bridge',
+            'defaultLocale'    => $defaultLocale,
+            'definition'       => [
+                'id'          => $definition->id,
+                'key'         => $definition->section_key,
+                'label'       => $definition->label,
+                'description' => $definition->description,
+            ],
+            'locales' => $languagesCollection
+                ->mapWithKeys(function ($language) use ($section, $featureItemsByLocale) {
+                    $locale = (string) $language->code;
+                    $translation = $section->translations->firstWhere('locale', $locale);
+                    $content = is_array($translation?->content) ? $translation->content : [];
+                    $backgroundImageValue = $this->oldContentValue(
+                        $locale,
+                        'background_image',
+                        $content['background_image'] ?? null,
+                    );
+
+                    return [
+                        $locale => [
+                            'code'   => $locale,
+                            'label'  => (string) ($language->name ?? strtoupper($locale)),
+                            'values' => [
+                                'eyebrowValue' => $this->stringValue(
+                                    $this->oldContentValue($locale, 'eyebrow', $content['eyebrow'] ?? ''),
+                                ),
+                                'titleValue' => $this->stringValue(
+                                    $this->oldContentValue($locale, 'title', $content['title'] ?? ''),
+                                ),
+                                'pricingValue' => $this->stringValue(
+                                    $this->oldContentValue($locale, 'pricing', $content['pricing'] ?? ''),
+                                ),
+                                'buttonLabelValue' => $this->stringValue(
+                                    $this->oldContentValue($locale, 'button_label', $content['button_label'] ?? ''),
+                                ),
+                                'buttonUrlValue' => $this->stringValue(
+                                    $this->oldContentValue($locale, 'button_url', $content['button_url'] ?? ''),
+                                ),
+                                'imageAltValue' => $this->stringValue(
+                                    $this->oldContentValue($locale, 'image_alt', $content['image_alt'] ?? ''),
+                                ),
+                                'backgroundImageValue'       => $backgroundImageValue,
+                                'backgroundImagePreviewUrls' => $this->mediaPreviewBuilder->build($backgroundImageValue),
+                                'featureItems'               => $featureItemsByLocale[$locale] ?? [],
+                            ],
+                        ],
+                    ];
+                })
+                ->all(),
+        ];
+    }
+
     protected function oldContentValue(string $locale, string $key, mixed $default = ''): mixed
     {
         return old("translations.$locale.content.$key", $default);
@@ -205,7 +277,7 @@ class SectionCustomPresetEditorRenderer
     {
         $localeCodes = $languages
             ->pluck('code')
-            ->map(fn ($code) => (string) $code)
+            ->map(fn($code) => (string) $code)
             ->filter()
             ->values();
 

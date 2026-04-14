@@ -16,6 +16,7 @@ use Illuminate\Support\Arr;
  * - the developer section-definition tables are available
  * - the current section instance is explicitly linked to a definition
  * - the definition has a selected template_key through its primary template
+ * - the linked definition is active, regardless of editor_mode
  *
  * Legacy sections keep `section_definition_id = null` and continue through the
  * existing type-based rendering path unchanged.
@@ -107,7 +108,7 @@ class SectionDefinitionFrontendViewDataFactory
 
     protected function resolveDefinition(Section $section): ?\App\Models\Sections\SectionDefinition
     {
-        return $this->runtimeResolver->resolveDynamicDefinition($section);
+        return $this->runtimeResolver->resolveRenderableDefinition($section);
     }
 
     /**

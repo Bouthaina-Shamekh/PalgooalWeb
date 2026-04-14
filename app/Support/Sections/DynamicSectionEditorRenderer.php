@@ -64,7 +64,7 @@ class DynamicSectionEditorRenderer
         $defaultLocale = $this->resolveDefaultLocale($languagesCollection);
         $localeCodes = $languagesCollection
             ->pluck('code')
-            ->map(fn ($code) => (string) $code)
+            ->map(fn($code) => (string) $code)
             ->filter()
             ->values()
             ->all();
@@ -113,13 +113,13 @@ class DynamicSectionEditorRenderer
         array $localeCodes,
     ): array {
         return $fields
-            ->groupBy(fn (SectionDefinitionField $field) => $field->group_name ?: 'general')
+            ->groupBy(fn(SectionDefinitionField $field) => $field->group_name ?: 'general')
             ->map(function (Collection $groupFields, string $groupKey) use ($section, $locale, $defaultLocale, $localeCodes) {
                 return [
                     'key' => $groupKey,
                     'label' => Str::headline(str_replace(['_', '-'], ' ', $groupKey)),
                     'fields' => $groupFields
-                        ->map(fn (SectionDefinitionField $field) => $this->buildFieldPayload(
+                        ->map(fn(SectionDefinitionField $field) => $this->buildFieldPayload(
                             $section,
                             $field,
                             $locale,
@@ -131,7 +131,7 @@ class DynamicSectionEditorRenderer
                         ->all(),
                 ];
             })
-            ->filter(fn (array $group) => $group['fields'] !== [])
+            ->filter(fn(array $group) => $group['fields'] !== [])
             ->values()
             ->all();
     }
@@ -344,8 +344,8 @@ class DynamicSectionEditorRenderer
     protected function fieldKeyToBracketSuffix(string $fieldKey): string
     {
         return collect(explode('.', $fieldKey))
-            ->filter(fn ($segment) => $segment !== '')
-            ->map(fn ($segment) => '[' . $segment . ']')
+            ->filter(fn($segment) => $segment !== '')
+            ->map(fn($segment) => '[' . $segment . ']')
             ->implode('');
     }
 
@@ -360,8 +360,8 @@ class DynamicSectionEditorRenderer
         string $defaultLocale,
     ): array {
         return Collection::make($localeCodes)
-            ->reject(fn (string $locale) => $locale === $defaultLocale)
-            ->map(fn (string $locale) => [
+            ->reject(fn(string $locale) => $locale === $defaultLocale)
+            ->map(fn(string $locale) => [
                 'name' => $this->inputName($fieldKey, $locale),
                 'value' => $this->serializeScalarValue($value),
             ])
@@ -386,7 +386,7 @@ class DynamicSectionEditorRenderer
     {
         $localeCodes = $languages
             ->pluck('code')
-            ->map(fn ($code) => (string) $code)
+            ->map(fn($code) => (string) $code)
             ->filter()
             ->values();
 
@@ -394,5 +394,4 @@ class DynamicSectionEditorRenderer
             ? app()->getLocale()
             : ($localeCodes->first() ?? app()->getLocale());
     }
-
 }

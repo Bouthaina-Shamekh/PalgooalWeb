@@ -187,6 +187,12 @@ return [
                 'label' => 'WordPress AI Promo',
                 'view' => 'front.sections.promo.wordpress_ai_promo',
             ],
+
+            'website_protection' => [
+                'label' => 'Website Protection',
+                'view' => 'front.sections.promo.website_protection',
+            ],
+
         ],
     ],
 
@@ -202,6 +208,12 @@ return [
                 'label' => 'WordPress AI Promo',
                 'view' => 'dashboard.pages.sections.partials.custom-presets.wordpress-ai-promo',
                 'builder' => 'buildWordPressAIPromoPreset',
+            ],
+
+            'website_protection' => [
+                'label' => 'Website Protection Promo',
+                'view' => 'dashboard.pages.sections.partials.custom-presets.website-protection-promo',
+                'builder' => 'buildWebsiteProtectionPreset',
             ],
         ],
 

@@ -10,10 +10,11 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Shared runtime rules for definition-driven section behavior.
  *
- * This class keeps the editor and frontend aligned on one decision:
- * a section instance may use the definition-driven path only when it is
- * explicitly linked to an active dynamic definition that also has a selected
- * template key.
+ * Dynamic editor rendering remains stricter than frontend rendering:
+ * - the dynamic editor only activates for linked active definitions whose
+ *   editor_mode is `dynamic`
+ * - frontend definition-driven rendering may use any linked active definition
+ *   that has a selected primary template key
  */
 class SectionDefinitionRuntimeResolver
 {
@@ -37,46 +38,29 @@ class SectionDefinitionRuntimeResolver
     }
 
     /**
-     * Resolve the linked definition only when it is eligible for the shared
-     * definition-driven runtime.
-     *
-     * The same eligibility rule is used by both the admin editor and the
-     * frontend renderer so neither side silently diverges.
+     * Resolve the linked definition for the dynamic editor path only.
      */
     public function resolveDynamicDefinition(Section $section): ?SectionDefinition
     {
-        if (! $this->runtimeTablesAvailable() || ! $section->section_definition_id) {
-            return null;
-        }
+        $definition = $this->resolveLinkedDefinition($section, SectionDefinition::EDITOR_MODE_DYNAMIC);
 
-        $query = $section->sectionDefinition()
-            ->where('is_active', true)
-            ->where('editor_mode', SectionDefinition::EDITOR_MODE_DYNAMIC)
-            ->with([
-                'templates' => fn ($templateQuery) => $templateQuery
-                    ->where('is_active', true)
-                    ->orderByPivot('sort_order')
-                    ->orderBy('id'),
-            ]);
+        return $this->hasPrimaryTemplate($definition)
+            ? $definition
+            : null;
+    }
 
-        if ($this->fieldTablesAvailable()) {
-            $query->with([
-                'fields' => fn ($fieldQuery) => $fieldQuery
-                    ->where('is_active', true)
-                    ->orderBy('sort_order')
-                    ->orderBy('id'),
-            ]);
-        }
+    /**
+     * Resolve the linked definition for frontend definition-driven rendering.
+     *
+     * Unlike the dynamic editor path, frontend rendering should not exclude
+     * linked custom-preset definitions when they already have a selected
+     * primary template key.
+     */
+    public function resolveRenderableDefinition(Section $section): ?SectionDefinition
+    {
+        $definition = $this->resolveLinkedDefinition($section);
 
-        $definition = $query->first();
-
-        if (! $definition) {
-            return null;
-        }
-
-        $templateKey = $definition->primaryTemplateKey();
-
-        return is_string($templateKey) && trim($templateKey) !== ''
+        return $this->hasPrimaryTemplate($definition)
             ? $definition
             : null;
     }
@@ -120,5 +104,49 @@ class SectionDefinitionRuntimeResolver
         return $defaultValue !== []
             ? [true, $defaultValue]
             : [false, null];
+    }
+
+    protected function resolveLinkedDefinition(
+        Section $section,
+        ?string $editorMode = null,
+    ): ?SectionDefinition {
+        if (! $this->runtimeTablesAvailable() || ! $section->section_definition_id) {
+            return null;
+        }
+
+        $query = $section->sectionDefinition()
+            ->where('is_active', true)
+            ->with([
+                'templates' => fn ($templateQuery) => $templateQuery
+                    ->where('is_active', true)
+                    ->orderByPivot('sort_order')
+                    ->orderBy('id'),
+            ]);
+
+        if ($editorMode !== null) {
+            $query->where('editor_mode', $editorMode);
+        }
+
+        if ($this->fieldTablesAvailable()) {
+            $query->with([
+                'fields' => fn ($fieldQuery) => $fieldQuery
+                    ->where('is_active', true)
+                    ->orderBy('sort_order')
+                    ->orderBy('id'),
+            ]);
+        }
+
+        return $query->first();
+    }
+
+    protected function hasPrimaryTemplate(?SectionDefinition $definition): bool
+    {
+        if (! $definition instanceof SectionDefinition) {
+            return false;
+        }
+
+        $templateKey = $definition->primaryTemplateKey();
+
+        return is_string($templateKey) && trim($templateKey) !== '';
     }
 }

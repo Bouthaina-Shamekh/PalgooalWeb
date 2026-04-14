@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sqlite3 database/database.sqlite \"SELECT id, section_key, label, editor_mode, custom_editor_key, is_active FROM section_definitions LIMIT 20;\")"
+    ]
+  }
+}

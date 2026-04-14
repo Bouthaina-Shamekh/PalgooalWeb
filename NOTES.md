@@ -165,3 +165,7 @@
 
 
 
+### 2026-04-13
+
+- Frontend definition-driven rendering now accepts linked active `custom_preset` definitions when they have a primary `template_key`.
+- Dynamic-only filtering remains limited to the admin dynamic editor path so legacy sections continue through the existing fallback flow.
