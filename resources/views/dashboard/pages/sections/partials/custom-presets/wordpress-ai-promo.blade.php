@@ -1,19 +1,14 @@
 @php
-    $presetLocaleEditor = $customPresetEditor['locales'][$code] ?? null;
-    $presetValues = is_array($presetLocaleEditor['values'] ?? null) ? $presetLocaleEditor['values'] : [];
-    $eyebrowValue = $presetValues['eyebrowValue'] ?? '';
-    $titleValue = $presetValues['titleValue'] ?? '';
-    $pricingValue = $presetValues['pricingValue'] ?? '';
-    $buttonLabelValue = $presetValues['buttonLabelValue'] ?? '';
-    $buttonUrlValue = $presetValues['buttonUrlValue'] ?? '';
-
-    $backgroundImageValue = $presetValues['backgroundImageValue'] ?? null;
-    $backgroundImagePreviewUrls = is_array($presetValues['backgroundImagePreviewUrls'] ?? null)
-        ? $presetValues['backgroundImagePreviewUrls']
-        : [];
-    $imageAltValue = $presetValues['imageAltValue'] ?? '';
-    $featureItems = is_array($presetValues['featureItems'] ?? null) ? $presetValues['featureItems'] : [];
-
+    $pv = \App\Support\Sections\SectionPresetEditorValues::for($customPresetEditor, $code);
+    $eyebrowValue               = $pv->scalar('eyebrowValue');
+    $titleValue                 = $pv->scalar('titleValue');
+    $pricingValue               = $pv->scalar('pricingValue');
+    $buttonLabelValue           = $pv->scalar('buttonLabelValue');
+    $buttonUrlValue             = $pv->scalar('buttonUrlValue');
+    $imageAltValue              = $pv->scalar('imageAltValue');
+    $featureItems               = $pv->items('featureItems');
+    $backgroundImageValue       = $pv->mediaId('backgroundImageValue');
+    $backgroundImagePreviewUrls = $pv->items('backgroundImagePreviewUrls');
 @endphp
 
 <div class="{{ $contentGridClass }}">

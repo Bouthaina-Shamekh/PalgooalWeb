@@ -20,15 +20,10 @@
         ->filter()
         ->values();
 
-    // Resolve media icon URLs eagerly (one query per item at most)
-    $resolvedMedia = [];
-    foreach ($cardItems as $ci) {
-        $mediaId = $ci['icon_media'] ?? null;
-        if ($ci['icon_source'] === 'media' && $mediaId && !isset($resolvedMedia[$mediaId])) {
-            $media = \App\Models\Media::find($mediaId);
-            $resolvedMedia[$mediaId] = $media?->url ?? null;
-        }
-    }
+    // Resolve all icon_media IDs in one batched query before the render loop.
+    $resolvedMedia = \App\Support\Sections\SectionFrontendMediaResolver::resolveMany(
+        $cardItems->pluck('icon_media')
+    );
 @endphp
 <section id="hosting-protection" class="bg-[#EAEAEA] py-16 md:py-24 px-4 sm:px-6 lg:px-12">
     <div class="container mx-auto">

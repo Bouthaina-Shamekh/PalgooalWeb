@@ -1,19 +1,16 @@
 @php
-    $presetLocaleEditor = $customPresetEditor['locales'][$code] ?? null;
-    $presetValues = is_array($presetLocaleEditor['values'] ?? null) ? $presetLocaleEditor['values'] : [];
-    $breadcrumbHomeLabelValue = $presetValues['breadcrumbHomeLabelValue'] ?? '';
-    $breadcrumbHomeUrlValue = $presetValues['breadcrumbHomeUrlValue'] ?? '';
-    $breadcrumbCurrentLabelValue = $presetValues['breadcrumbCurrentLabelValue'] ?? '';
-    $titleValue = $presetValues['titleValue'] ?? '';
-    $subtitleValue = $presetValues['subtitleValue'] ?? '';
-    $featureItems = is_array($presetValues['featureItems'] ?? null) ? $presetValues['featureItems'] : [];
-    $cardTitleValue = $presetValues['cardTitleValue'] ?? '';
-    $cardButtonLabelValue = $presetValues['cardButtonLabelValue'] ?? '';
-    $cardButtonUrlValue = $presetValues['cardButtonUrlValue'] ?? '';
-    $backgroundImageValue = $presetValues['backgroundImageValue'] ?? null;
-    $backgroundImagePreviewUrls = is_array($presetValues['backgroundImagePreviewUrls'] ?? null)
-        ? $presetValues['backgroundImagePreviewUrls']
-        : [];
+    $pv = \App\Support\Sections\SectionPresetEditorValues::for($customPresetEditor, $code);
+    $breadcrumbHomeLabelValue    = $pv->scalar('breadcrumbHomeLabelValue');
+    $breadcrumbHomeUrlValue      = $pv->scalar('breadcrumbHomeUrlValue');
+    $breadcrumbCurrentLabelValue = $pv->scalar('breadcrumbCurrentLabelValue');
+    $titleValue                  = $pv->scalar('titleValue');
+    $subtitleValue               = $pv->scalar('subtitleValue');
+    $featureItems                = $pv->items('featureItems');
+    $cardTitleValue              = $pv->scalar('cardTitleValue');
+    $cardButtonLabelValue        = $pv->scalar('cardButtonLabelValue');
+    $cardButtonUrlValue          = $pv->scalar('cardButtonUrlValue');
+    $backgroundImageValue        = $pv->mediaId('backgroundImageValue');
+    $backgroundImagePreviewUrls  = $pv->items('backgroundImagePreviewUrls');
 @endphp
 
 <div class="{{ $contentGridClass }}">

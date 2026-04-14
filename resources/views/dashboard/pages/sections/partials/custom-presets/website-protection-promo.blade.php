@@ -1,9 +1,8 @@
 @php
-    $presetLocaleEditor = $customPresetEditor['locales'][$code] ?? null;
-    $presetValues = is_array($presetLocaleEditor['values'] ?? null) ? $presetLocaleEditor['values'] : [];
-    $titleValue = $presetValues['titleValue'] ?? '';
-    $subtitleValue = $presetValues['subtitleValue'] ?? '';
-    $protectionItems = is_array($presetValues['protectionItems'] ?? null) ? $presetValues['protectionItems'] : [];
+    $pv = \App\Support\Sections\SectionPresetEditorValues::for($customPresetEditor, $code);
+    $titleValue      = $pv->scalar('titleValue');
+    $subtitleValue   = $pv->scalar('subtitleValue');
+    $protectionItems = $pv->items('protectionItems');
 @endphp
 <div class="{{ $contentGridClass }}">
     @if ($usesInternalLabel)

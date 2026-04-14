@@ -186,21 +186,42 @@ Media field values are stored as **integer IDs** (Media model primary key), not 
 - Returns `[]` if nothing resolves
 
 ### Frontend Resolution
-**Do not use `SectionMediaPreviewBuilder` in frontend templates.** Resolve IDs in the Blade template directly:
+
+**All frontend preset templates must use `SectionFrontendMediaResolver`.**  
+Do not call `\App\Models\Media::find()` directly in Blade templates, and do not use `SectionMediaPreviewBuilder` (admin-only).
+
+**Class**: `App\Support\Sections\SectionFrontendMediaResolver`  
+**Call style**: always use the fully-qualified class name (FQCN) — no `use` statement needed in Blade.
+
+#### Scalar fields (single background image, single featured image)
 
 ```php
-// Correct pattern (used in hosting.blade.php, website_protection.blade.php)
-if (!empty($data['background_image'])) {
-    $media = \App\Models\Media::find($data['background_image']);
-    $bgUrl = $media?->url ?? null;
-}
-
-// For repeater items with icon_media
-$media = \App\Models\Media::find($item['icon_media']);
-$resolvedMedia[$item['icon_media']] = $media?->url ?? null;
+// Returns string URL or null — safe when $data key is missing or non-numeric
+$bgUrl = \App\Support\Sections\SectionFrontendMediaResolver::resolve($data['background_image'] ?? null);
 ```
 
-Resolve `icon_media` IDs eagerly (collect all IDs first, then batch-resolve or resolve per item at most once) to avoid N+1 queries.
+#### Repeater items with `icon_media` — preferred pattern
+
+`resolveMany()` is the **preferred pattern for lists**. It deduplicates IDs and issues a single `whereIn` query before the render loop, avoiding N+1.
+
+```php
+// Collect all icon_media values from the normalized item list
+$resolvedMedia = \App\Support\Sections\SectionFrontendMediaResolver::resolveMany(
+    $cardItems->pluck('icon_media')
+);
+
+// Then inside the @foreach loop:
+// $url = $resolvedMedia[$card['icon_media']] ?? null;
+```
+
+#### Return contract
+
+| Method | Input | Returns |
+|--------|-------|---------|
+| `resolve($id)` | numeric ID, null, or any value | `string` URL or `null` |
+| `resolveMany($ids)` | iterable of IDs (mixed types safe) | `array<int, string\|null>` keyed by integer ID |
+
+Both methods are null-safe and silently ignore non-numeric or empty values.
 
 ### Fallback Behavior
 Always define a fallback when media is absent:
@@ -314,13 +335,15 @@ translations[{locale}][content][{repeater_key}][{index}][{item_field}]
    ```
 
 5. **Create the admin Blade partial** at the registered `view` path.
-   - Read `$customPresetEditor['locales'][$code]['values']` for field values.
+   - Use `SectionPresetEditorValues::for($customPresetEditor, $code)` at the top of the `@php` block.
+   - Read values via `->scalar()`, `->items()`, `->mediaId()` — do not access `$customPresetEditor['locales'][$code]['values']` directly.
    - Use `$code` (current locale), `$contentGridClass`, `$sectionTitleValue`, `$usesInternalLabel`.
    - `@include` existing repeater partials as needed.
 
 6. **Create the frontend Blade template** at the `template_registry` view path.
    - Read from `$data[...]` (the normalized content array).
-   - Resolve media IDs using `\App\Models\Media::find()`.
+   - Resolve media IDs using `SectionFrontendMediaResolver` (never call `Media::find()` directly).
+   - Use `resolve()` for scalar fields, `resolveMany()` for repeater icon lists.
    - Always define icon/media fallbacks.
 
 7. **Run the verification checklist** (see `docs/sections/preset-checklist.md`).
@@ -334,7 +357,9 @@ translations[{locale}][content][{repeater_key}][{index}][{item_field}]
 | `SectionCustomPresetRegistry` | `app/Support/Sections/` | Stores + resolves preset metadata from config and runtime |
 | `SectionCustomPresetEditorRenderer` | `app/Support/Sections/` | Builds the editor payload per preset (one method per preset) |
 | `SectionEditorRepeaterFactory` | `app/Support/Sections/` | Prepares repeater item arrays per locale for editor use |
-| `SectionMediaPreviewBuilder` | `app/Support/Sections/` | Resolves media IDs to preview URLs for admin editor only |
+| `SectionMediaPreviewBuilder` | `app/Support/Sections/` | Resolves media IDs to preview URLs for **admin editor only** |
+| `SectionPresetEditorValues` | `app/Support/Sections/` | Typed value accessor for custom preset Blade views — `::for($customPresetEditor, $code)` then `->scalar()`, `->items()`, `->mediaId()` |
+| `SectionFrontendMediaResolver` | `app/Support/Sections/` | Resolves media IDs to URLs for **frontend templates only** — use `resolve()` for scalar fields, `resolveMany()` for repeater lists |
 | `SectionTemplateRegistry` | `app/Support/Sections/` | Maps `template_key` → Blade view path |
 | `SectionDefinitionRuntimeResolver` | `app/Support/Sections/` | Resolves which definition applies (dynamic vs renderable) |
 | `SectionDefinitionFrontendViewDataFactory` | `app/Support/Sections/` | Builds frontend render payload for definition-driven sections |

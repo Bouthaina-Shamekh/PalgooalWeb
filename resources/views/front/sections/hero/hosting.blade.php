@@ -1,5 +1,4 @@
 @php
-    $bgUrl = null;
     $breadcrumbHomeLabel = trim((string) ($data['breadcrumb_home_label'] ?? __('Home')));
     $breadcrumbHomeUrl = trim((string) ($data['breadcrumb_home_url'] ?? 'index.html'));
     $breadcrumbCurrentLabel = trim((string) ($data['breadcrumb_current_label'] ?? __('Hosting')));
@@ -22,10 +21,7 @@
         ->filter()
         ->values();
 
-    if (!empty($data['background_image'])) {
-        $media = \App\Models\Media::find($data['background_image']);
-        $bgUrl = $media?->url ?? null;
-    }
+    $bgUrl = \App\Support\Sections\SectionFrontendMediaResolver::resolve($data['background_image'] ?? null);
 
     if ($featureItems->isEmpty()) {
         $featureItems = collect([
