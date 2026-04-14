@@ -279,7 +279,102 @@ translations[{locale}][content][{repeater_key}][{index}][{item_field}]
 
 ---
 
-## 9. Adding a New Custom Preset — Steps
+## 9. Reusable Admin Field Partials
+
+To avoid duplicating the same HTML field block across multiple preset editor views, three standard field partials are available in:
+
+```
+resources/views/dashboard/pages/sections/partials/custom-presets/fields/
+```
+
+Always `@include` these partials instead of writing raw `<input>` / `<textarea>` blocks inline.
+
+### `_text-field.blade.php`
+
+A single labeled text (or URL) input, optionally wrapped in a column-span div.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `label` | string | required | Visible label text |
+| `name` | string | required | The `name` attribute (full `translations[...]` path) |
+| `value` | string | `''` | Current field value |
+| `placeholder` | string | `''` | Placeholder text (omitted from markup when empty) |
+| `type` | string | `'text'` | Input type — use `'url'` for URL fields |
+| `colSpan` | string | `'lg:col-span-2'` | CSS class for the wrapper div; pass `''` to omit the wrapper class |
+
+```blade
+@include('dashboard.pages.sections.partials.custom-presets.fields._text-field', [
+    'label'       => __('Title'),
+    'name'        => 'translations[' . $code . '][content][title]',
+    'value'       => $titleValue,
+    'placeholder' => __('e.g. My Section Title'),
+])
+```
+
+### `_textarea-field.blade.php`
+
+A single labeled textarea.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `label` | string | required | Visible label text |
+| `name` | string | required | The `name` attribute |
+| `value` | string | `''` | Current field value |
+| `rows` | int | `4` | Number of visible textarea rows |
+| `placeholder` | string | `''` | Placeholder text |
+| `colSpan` | string | `'lg:col-span-2'` | Wrapper class; pass `''` to omit |
+
+```blade
+@include('dashboard.pages.sections.partials.custom-presets.fields._textarea-field', [
+    'label' => __('Subtitle'),
+    'name'  => 'translations[' . $code . '][content][subtitle]',
+    'value' => $subtitleValue,
+    'rows'  => 3,
+])
+```
+
+### `_background-image-card.blade.php`
+
+A full-card wrapper containing a `x-dashboard.media-picker` component, with an optional image alt text input below it.
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `code` | string | required | Current locale code |
+| `heading` | string | required | Card heading (e.g. `__('Background')`) |
+| `description` | string | required | Card description text |
+| `value` | mixed | required | Media ID value (from `$pv->mediaId(...)`) |
+| `previewUrls` | array | `[]` | Preview URL array (from `$pv->items(...)`) |
+| `fieldKey` | string | `'background_image'` | Content key used in the `name` attribute |
+| `imageAltKey` | string\|null | `null` | When non-null, renders an alt text input using this key |
+| `imageAlt` | string\|null | `null` | Current alt text value |
+
+```blade
+{{-- Without alt text input --}}
+@include('dashboard.pages.sections.partials.custom-presets.fields._background-image-card', [
+    'code'        => $code,
+    'heading'     => __('Background'),
+    'description' => __('Choose the background image used behind this section.'),
+    'value'       => $backgroundImageValue,
+    'previewUrls' => $backgroundImagePreviewUrls,
+])
+
+{{-- With alt text input --}}
+@include('dashboard.pages.sections.partials.custom-presets.fields._background-image-card', [
+    'code'        => $code,
+    'heading'     => __('Background'),
+    'description' => __('Choose the background image.'),
+    'value'       => $backgroundImageValue,
+    'previewUrls' => $backgroundImagePreviewUrls,
+    'imageAltKey' => 'image_alt',
+    'imageAlt'    => $imageAltValue,
+])
+```
+
+> **Do not** write raw `<input type="text">` or `<textarea>` field blocks inside preset views — always use these partials. Repeater partials are excluded and remain in `partials/repeaters/`.
+
+---
+
+## 10. Adding a New Custom Preset — Steps
 
 1. **Create the SectionDefinition record** in DB:
    - `editor_mode = custom_preset`
@@ -338,7 +433,8 @@ translations[{locale}][content][{repeater_key}][{index}][{item_field}]
    - Use `SectionPresetEditorValues::for($customPresetEditor, $code)` at the top of the `@php` block.
    - Read values via `->scalar()`, `->items()`, `->mediaId()` — do not access `$customPresetEditor['locales'][$code]['values']` directly.
    - Use `$code` (current locale), `$contentGridClass`, `$sectionTitleValue`, `$usesInternalLabel`.
-   - `@include` existing repeater partials as needed.
+   - Use `@include` with the field partials from `custom-presets/fields/` for all individual text inputs, textareas, and background image cards (see Section 9).
+   - `@include` existing repeater partials from `partials/repeaters/` as needed.
 
 6. **Create the frontend Blade template** at the `template_registry` view path.
    - Read from `$data[...]` (the normalized content array).
@@ -350,7 +446,7 @@ translations[{locale}][content][{repeater_key}][{index}][{item_field}]
 
 ---
 
-## 10. Class & File Reference
+## 11. Class & File Reference
 
 | Class / File | Location | Responsibility |
 |---|---|---|
@@ -368,5 +464,8 @@ translations[{locale}][content][{repeater_key}][{index}][{item_field}]
 | `DynamicSectionEditorRenderer` | `app/Support/Sections/` | Builds the dynamic editor payload from DB field definitions |
 | `config/sections.php` | `config/` | Static registry for templates, presets, icon library |
 | `custom-presets/*.blade.php` | `resources/views/dashboard/pages/sections/partials/custom-presets/` | Admin editor UI per preset |
+| `custom-presets/fields/_text-field.blade.php` | `resources/views/dashboard/pages/sections/partials/custom-presets/fields/` | Reusable text/URL input field block for preset editors |
+| `custom-presets/fields/_textarea-field.blade.php` | `resources/views/dashboard/pages/sections/partials/custom-presets/fields/` | Reusable textarea field block for preset editors |
+| `custom-presets/fields/_background-image-card.blade.php` | `resources/views/dashboard/pages/sections/partials/custom-presets/fields/` | Reusable background image card block (media picker + optional alt text) |
 | `repeaters/*.blade.php` | `resources/views/dashboard/pages/sections/partials/repeaters/` | Reusable repeater UI partials |
 | `front/sections/**` | `resources/views/front/sections/` | Frontend template views |
