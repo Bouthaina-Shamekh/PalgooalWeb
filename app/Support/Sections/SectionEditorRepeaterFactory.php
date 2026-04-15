@@ -66,6 +66,19 @@ class SectionEditorRepeaterFactory
             ->all();
     }
 
+    /**
+     * Build per-locale protection card item arrays.
+     *
+     * Content key: 'items'  (generic — stored as-is; see naming-inconsistencies note in preset-framework.md)
+     *
+     * Item shape: { title, description, icon, icon_source, icon_media }
+     *
+     * Note: icon_source is intentionally limited to ['class', 'media'].
+     * SVG icons are not supported by the protection-items-repeater UI partial
+     * and are therefore excluded here to keep editor and frontend in sync.
+     * Do not add 'svg' without also updating the repeater partial and the
+     * website_protection.blade.php frontend template.
+     */
     public function buildLocaleProtectionItems(Section $section, iterable $languages): array
     {
         return Collection::make($languages)

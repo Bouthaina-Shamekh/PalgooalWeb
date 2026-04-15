@@ -266,10 +266,12 @@ Use the **plural noun** for the repeater container and consistent item-level key
 | Pricing categories | `categories` | `label` | — | — |
 
 ### Icon Source Values
-Always use these three values for `icon_source`:
+Most repeaters support three values for `icon_source`:
 - `'class'` — Tabler CSS class string (default)
 - `'media'` — Media library ID stored in `icon_media`
 - `'svg'` — raw SVG string stored in `icon_svg` (only where supported)
+
+**Exception — `protection-items-repeater`**: `icon_source` is limited to `['class', 'media']`. SVG is intentionally excluded because the protection-items-repeater UI partial does not have an SVG input tab. Do not add `'svg'` support without also updating the repeater partial and the `website_protection.blade.php` frontend template.
 
 ### Input Name Pattern (Blade)
 ```
@@ -279,7 +281,48 @@ translations[{locale}][content][{repeater_key}][{index}][{item_field}]
 
 ---
 
-## 9. Reusable Admin Field Partials
+## 9. Known Naming Inconsistencies & Technical Debt
+
+This section records divergences that were identified but **intentionally not changed** because they involve stored content keys or require broader coordination. Future preset authors should be aware of these before introducing new presets.
+
+### Intentional Deferrals (stored content keys — do not rename without a migration)
+
+**`website_protection` repeater stored under `items` (not `protection_items`)**
+- Stored key: `items`
+- Factory reads: `$content['items']`
+- Ideal name: `protection_items` or `cards`
+- Status: **deferred** — renaming requires a data migration for all existing sections. Do not use `items` as a content key in new presets; prefer a descriptive plural noun.
+
+**Button key namespace differs across presets**
+- `hosting_hero` uses namespaced keys: `card_button_label`, `card_button_url` (scoped to the Side Card sub-component)
+- `wordpress_ai_promo` uses flat keys: `button_label`, `button_url`
+- Status: **deferred** — both are stored keys in production. New presets should follow `button_label` / `button_url` (flat) unless a single section has multiple independent CTA buttons, in which case namespace them (e.g. `primary_button_label`, `secondary_button_label`).
+
+### Frontend Normalization — Intentional Defensive Code
+
+**`text ?? title ?? label` fallback chain in frontend feature-item normalization**
+
+Both `hosting.blade.php` and `wordpress_ai_promo.blade.php` normalize feature item text with:
+```php
+$text = trim((string) ($item['text'] ?? ($item['title'] ?? ($item['label'] ?? ''))));
+```
+`SectionEditorRepeaterFactory` already normalizes all new saves to `text`. The `title` and `label` fallbacks are retained for backward compatibility with any data saved before the factory was introduced. Do not remove them.
+
+### Repeater Variable Naming — Editor Payload vs Content Key
+
+The `values` array inside the editor payload uses a different name than the stored content key for repeater items. This is intentional — the editor variable is scoped to the editor view, while the content key is what gets saved.
+
+| Preset | Editor values key | Stored content key | Factory method |
+|--------|------------------|-------------------|----------------|
+| `hosting_hero` | `featureItems` | `features` | `buildLocaleCampaignFeatureItems` |
+| `wordpress_ai_promo` | `featureItems` | `features` | `buildLocaleCampaignFeatureItems` |
+| `website_protection` | `protectionItems` | `items` | `buildLocaleProtectionItems` |
+
+New presets must follow this same two-name pattern: use a `*Value` or `*Items` suffix for editor payload keys, and the canonical snake_case noun for the stored content key.
+
+---
+
+## 10. Reusable Admin Field Partials
 
 To avoid duplicating the same HTML field block across multiple preset editor views, three standard field partials are available in:
 
@@ -374,7 +417,7 @@ A full-card wrapper containing a `x-dashboard.media-picker` component, with an o
 
 ---
 
-## 10. Adding a New Custom Preset — Steps
+## 11. Adding a New Custom Preset — Steps
 
 1. **Create the SectionDefinition record** in DB:
    - `editor_mode = custom_preset`
@@ -446,7 +489,7 @@ A full-card wrapper containing a `x-dashboard.media-picker` component, with an o
 
 ---
 
-## 11. Class & File Reference
+## 12. Class & File Reference
 
 | Class / File | Location | Responsibility |
 |---|---|---|

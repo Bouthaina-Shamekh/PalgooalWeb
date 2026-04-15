@@ -1,7 +1,6 @@
 @php
-    $breadcrumbHomeLabel = trim((string) ($data['breadcrumb_home_label'] ?? __('Home')));
-    $breadcrumbHomeUrl = trim((string) ($data['breadcrumb_home_url'] ?? 'index.html'));
-    $breadcrumbCurrentLabel = trim((string) ($data['breadcrumb_current_label'] ?? __('Hosting')));
+    // Features stored under 'features' key; text/title/label fallback chain preserves
+    // backward compatibility with any data saved before SectionEditorRepeaterFactory normalization.
     $featureItems = collect(is_array($data['features'] ?? null) ? $data['features'] : [])
         ->map(function ($item) {
             if (is_array($item)) {
@@ -12,25 +11,12 @@
                 return null;
             }
 
-            if ($text === '') {
-                return null;
-            }
-
-            return ['text' => $text];
+            return $text !== '' ? ['text' => $text] : null;
         })
         ->filter()
         ->values();
 
     $bgUrl = \App\Support\Sections\SectionFrontendMediaResolver::resolve($data['background_image'] ?? null);
-
-    if ($featureItems->isEmpty()) {
-        $featureItems = collect([
-            ['text' => 'Choose your Template'],
-            ['text' => 'Control Panel'],
-            ['text' => 'Private Domain'],
-            ['text' => 'Private Domain'],
-        ]);
-    }
 @endphp
 <section id="hosting-wordpress" class="bg-[#F8F8F8] py-16 md:py-24 px-4 sm:px-6 lg:px-12">
     <div class="container mx-auto">
@@ -64,7 +50,7 @@
             </div>
             <div class="animate-from-right order-1 lg:order-2 h-full">
                 @if (!empty($bgUrl))
-                    <img src="{{ $bgUrl }}" loading="lazy" alt="Team collaboration"
+                    <img src="{{ $bgUrl }}" loading="lazy" alt="{{ $data['image_alt'] ?? '' }}"
                         class="aspect-[3/2] w-full h-full rounded-[36px] object-cover hover:-translate-y-0.5 transition-all duration-300">
                 @endif
             </div>
