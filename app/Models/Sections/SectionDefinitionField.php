@@ -24,6 +24,9 @@ class SectionDefinitionField extends Model
     public const FIELD_TYPE_NUMBER = 'number';
     public const FIELD_TYPE_BOOLEAN = 'boolean';
     public const FIELD_TYPE_SELECT = 'select';
+    // Phase 5A: repeater is a first-class field type; items are defined by
+    // schema['item_schema'] — an array of {key, type} sub-field descriptors.
+    public const FIELD_TYPE_REPEATER = 'repeater';
 
     public const FIELD_SCOPE_SHARED = 'shared';
     public const FIELD_SCOPE_TRANSLATABLE = 'translatable';
@@ -73,7 +76,30 @@ class SectionDefinitionField extends Model
             self::FIELD_TYPE_NUMBER,
             self::FIELD_TYPE_BOOLEAN,
             self::FIELD_TYPE_SELECT,
+            self::FIELD_TYPE_REPEATER,
         ];
+    }
+
+    /**
+     * Extract the declared item_schema for a repeater field.
+     *
+     * Returns [] when the field is not a repeater or no schema is declared,
+     * so callers never need to null-check.
+     *
+     * Each element is expected to be: ['key' => string, 'type' => string]
+     *
+     * @return array<int, array{key: string, type: string}>
+     */
+    public function getItemSchema(): array
+    {
+        if ($this->field_type !== self::FIELD_TYPE_REPEATER) {
+            return [];
+        }
+
+        $schema = is_array($this->schema) ? $this->schema : [];
+        $itemSchema = $schema['item_schema'] ?? null;
+
+        return is_array($itemSchema) ? $itemSchema : [];
     }
 
     /**

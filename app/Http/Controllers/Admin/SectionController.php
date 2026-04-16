@@ -9,6 +9,8 @@ use App\Models\Section;
 use App\Models\SectionTranslation;
 use App\Models\Sections\SectionDefinition;
 use App\Models\Template;
+use App\Support\Sections\DynamicSectionContentNormalizer;
+use App\Support\Sections\SectionDefinitionRuntimeResolver;
 use App\Support\Sections\SectionEditorDataFactory;
 use App\Support\Sections\SectionSidebarEditorViewDataFactory;
 use App\Support\Sections\SectionWorkspacePreviewViewDataFactory;
@@ -144,12 +146,29 @@ class SectionController extends Controller
         );
         $validated['type'] = $sectionSelection['type'];
 
+        // Load the linked definition with its active fields for Phase 5D normalization.
+        // null when this is a legacy section type with no linked definition.
+        $definition = $sectionSelection['section_definition']
+            ? $this->loadDefinitionWithActiveFields($sectionSelection['section_definition'])
+            : null;
+
+        // Legacy shared-field sync (hardcoded types only — unchanged).
         $validated['translations'] = $this->syncSharedSectionContent(
             $validated['type'],
             $validated['translations'] ?? []
         );
 
-        DB::transaction(function () use ($validated, $page, $sectionSelection) {
+        // Phase 5D — V1 shared-field sync for definition-driven dynamic sections.
+        // For field_scope = 'shared' fields, the default-locale value is propagated
+        // to all other locales before normalization runs. See syncDynamicDefinitionSharedContent().
+        if ($definition) {
+            $validated['translations'] = $this->syncDynamicDefinitionSharedContent(
+                $validated['translations'],
+                $definition
+            );
+        }
+
+        DB::transaction(function () use ($validated, $page, $sectionSelection, $definition) {
             $type = $validated['type'];
 
             $section = Section::create([
@@ -164,6 +183,10 @@ class SectionController extends Controller
 
             foreach ($validated['translations'] as $translationData) {
                 $content = $this->normalizeContentByType($type, $translationData['content'] ?? []);
+
+                // Phase 5D — apply dynamic field normalization when a definition is linked.
+                // This strips unknown keys, normalizes scalar types, and normalizes repeater items.
+                $content = $this->applyDynamicDefinitionNormalization($content, $definition);
 
                 SectionTranslation::create([
                     'section_id' => $section->id,
@@ -287,12 +310,25 @@ class SectionController extends Controller
             'translations.*.content' => 'nullable|array',
         ]);
 
+        // Phase 5D — resolve the linked definition with fields for this section before
+        // running any syncing or normalization (one DB query, shared across the save).
+        $definition = $this->resolveDefinitionForSection($section);
+
+        // Legacy shared-field sync (hardcoded types only — unchanged).
         $validated['translations'] = $this->syncSharedSectionContent(
             $validated['type'],
             $validated['translations'] ?? []
         );
 
-        DB::transaction(function () use ($validated, $section) {
+        // Phase 5D — V1 shared-field sync for definition-driven dynamic sections.
+        if ($definition) {
+            $validated['translations'] = $this->syncDynamicDefinitionSharedContent(
+                $validated['translations'],
+                $definition
+            );
+        }
+
+        DB::transaction(function () use ($validated, $section, $definition) {
             $type = $validated['type'];
 
             $section->update([
@@ -315,10 +351,13 @@ class SectionController extends Controller
                 ]);
 
                 $translation->title = $translationData['title'] ?? null;
-                $translation->content = $this->normalizeContentByType(
-                    $type,
-                    $translationData['content'] ?? []
-                );
+
+                $content = $this->normalizeContentByType($type, $translationData['content'] ?? []);
+
+                // Phase 5D — apply dynamic field normalization when a definition is linked.
+                $content = $this->applyDynamicDefinitionNormalization($content, $definition);
+
+                $translation->content = $content;
                 $translation->save();
             }
 
@@ -2479,6 +2518,148 @@ class SectionController extends Controller
         $value = trim($value);
 
         return $value !== '' ? $value : null;
+    }
+
+    // =========================================================================
+    // Phase 5D — Dynamic definition content normalization helpers
+    // =========================================================================
+
+    /**
+     * Eager-load active fields onto a SectionDefinition (one query).
+     *
+     * If fields are already loaded (e.g., resolved earlier in the request),
+     * the relation cache is reused rather than re-queried.
+     */
+    protected function loadDefinitionWithActiveFields(SectionDefinition $definition): SectionDefinition
+    {
+        if (! $definition->relationLoaded('fields')) {
+            $definition->load([
+                'fields' => fn ($q) => $q->where('is_active', true)
+                    ->orderBy('sort_order')
+                    ->orderBy('id'),
+            ]);
+        }
+
+        return $definition;
+    }
+
+    /**
+     * Resolve the SectionDefinition (with active fields) for an existing section.
+     *
+     * Returns null when the section has no definition link, when the definition
+     * tables are unavailable, or when the linked definition is no longer active.
+     * The result is loaded once per request and passed into the transaction closure.
+     */
+    protected function resolveDefinitionForSection(Section $section): ?SectionDefinition
+    {
+        if (! $section->section_definition_id) {
+            return null;
+        }
+
+        if (! app(SectionDefinitionRuntimeResolver::class)->fieldTablesAvailable()) {
+            return null;
+        }
+
+        $definition = SectionDefinition::query()
+            ->whereKey($section->section_definition_id)
+            ->where('is_active', true)
+            ->with([
+                'fields' => fn ($q) => $q->where('is_active', true)
+                    ->orderBy('sort_order')
+                    ->orderBy('id'),
+            ])
+            ->first();
+
+        return $definition instanceof SectionDefinition ? $definition : null;
+    }
+
+    /**
+     * Apply dynamic definition normalization to a single locale's content array.
+     *
+     * This is a no-op when $definition is null, so the method is safe to call
+     * unconditionally in both store() and update() without extra null-checks.
+     *
+     * @param  array<string, mixed>       $content
+     * @param  SectionDefinition|null     $definition
+     * @return array<string, mixed>
+     */
+    protected function applyDynamicDefinitionNormalization(array $content, ?SectionDefinition $definition): array
+    {
+        if (! $definition instanceof SectionDefinition) {
+            return $content;
+        }
+
+        return app(DynamicSectionContentNormalizer::class)->normalize($content, $definition);
+    }
+
+    /**
+     * Phase 5D — V1 shared-field sync for definition-driven dynamic sections.
+     *
+     * V1 DECISION: For field_scope = 'shared' fields, the value from the DEFAULT
+     * locale (or the first locale that has a non-null value) is copied into every
+     * other locale's content before normalization runs. This mirrors the existing
+     * syncSharedSectionContent() pattern for legacy hardcoded types.
+     *
+     * Rationale: repeater and scalar shared fields should not diverge per locale;
+     * storing one canonical value avoids frontend inconsistency. This decision is
+     * intentional and explicit for V1. A future phase may introduce field-level
+     * locale overrides, but that is out of scope here.
+     *
+     * DEFERRED: the default locale is currently the first locale in the submitted
+     * translations array. A future phase should derive it from the Language table.
+     *
+     * @param  array<int|string, array<string, mixed>>  $translations
+     * @return array<int|string, array<string, mixed>>
+     */
+    protected function syncDynamicDefinitionSharedContent(array $translations, SectionDefinition $definition): array
+    {
+        if ($translations === []) {
+            return $translations;
+        }
+
+        // Collect fields that are explicitly shared (field_scope = 'shared')
+        $fields = $definition->relationLoaded('fields')
+            ? $definition->fields
+            : collect();
+
+        $sharedFields = $fields->filter(
+            fn ($field) => $field->field_scope === \App\Models\Sections\SectionDefinitionField::FIELD_SCOPE_SHARED
+        );
+
+        if ($sharedFields->isEmpty()) {
+            return $translations;
+        }
+
+        foreach ($sharedFields as $field) {
+            $key = (string) $field->field_key;
+
+            // Find the first non-null, non-empty value across all submitted locales.
+            // This matches the existing syncSharedSectionContent() precedence logic.
+            $sharedValue = null;
+
+            foreach ($translations as $translationData) {
+                $content = is_array($translationData['content'] ?? null) ? $translationData['content'] : [];
+                $candidate = $content[$key] ?? null;
+
+                if ($candidate !== null && $candidate !== '') {
+                    $sharedValue = $candidate;
+                    break;
+                }
+            }
+
+            if ($sharedValue === null) {
+                continue;
+            }
+
+            // Write the shared value into every locale's content
+            foreach ($translations as $index => $translationData) {
+                $content = is_array($translationData['content'] ?? null) ? $translationData['content'] : [];
+                $content[$key] = $sharedValue;
+                $translations[$index]['content'] = $content;
+            }
+        }
+
+        return $translations;
     }
 
     /**
