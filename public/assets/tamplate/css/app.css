@@ -1834,6 +1834,9 @@
   .flex-none {
     flex: none;
   }
+  .flex-shrink {
+    flex-shrink: 1;
+  }
   .flex-shrink-0 {
     flex-shrink: 0;
   }
@@ -5511,6 +5514,11 @@
   .group-open\:rotate-180 {
     &:is(:where(.group):is([open], :popover-open, :open) *) {
       rotate: 180deg;
+    }
+  }
+  .group-open\:bg-slate-100 {
+    &:is(:where(.group):is([open], :popover-open, :open) *) {
+      background-color: var(--color-slate-100);
     }
   }
   .group-open\:text-\[\#240B36\] {
