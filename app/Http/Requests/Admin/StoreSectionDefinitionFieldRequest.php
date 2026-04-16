@@ -40,6 +40,15 @@ class StoreSectionDefinitionFieldRequest extends FormRequest
             'options' => ['nullable', 'string'],
             'settings' => ['nullable', 'json'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            // Repeater item schema — submitted as a nested array when field type = repeater.
+            // All rules are nullable so stale DOM rows submitted with non-repeater types
+            // pass validation safely and are then discarded in persistableAttributes().
+            'item_schema' => ['nullable', 'array'],
+            'item_schema.*.key' => ['nullable', 'string', 'max:100', 'regex:/^[a-z0-9_]+$/'],
+            'item_schema.*.label' => ['nullable', 'string', 'max:255'],
+            'item_schema.*.type' => ['nullable', 'string', Rule::in(SectionDefinitionField::repeaterSubFieldTypes())],
+            'item_schema.*.required' => ['nullable', 'boolean'],
+            'item_schema.*.translatable' => ['nullable', 'boolean'],
         ];
     }
 
@@ -56,6 +65,9 @@ class StoreSectionDefinitionFieldRequest extends FormRequest
             'is_translatable' => $this->boolean('is_translatable'),
             'is_required' => $this->boolean('is_required'),
             'sort_order' => $this->filled('sort_order') ? (int) $this->input('sort_order') : 0,
+            // Keep item_schema as-is (already an array from form inputs);
+            // null-coerce anything that isn't an array so validation sees nullable.
+            'item_schema' => is_array($this->input('item_schema')) ? $this->input('item_schema') : null,
         ]);
     }
 

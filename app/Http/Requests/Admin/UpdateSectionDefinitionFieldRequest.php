@@ -47,6 +47,13 @@ class UpdateSectionDefinitionFieldRequest extends FormRequest
             'options' => ['nullable', 'string'],
             'settings' => ['nullable', 'json'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            // Repeater item schema — see StoreSectionDefinitionFieldRequest for full comment.
+            'item_schema' => ['nullable', 'array'],
+            'item_schema.*.key' => ['nullable', 'string', 'max:100', 'regex:/^[a-z0-9_]+$/'],
+            'item_schema.*.label' => ['nullable', 'string', 'max:255'],
+            'item_schema.*.type' => ['nullable', 'string', Rule::in(SectionDefinitionField::repeaterSubFieldTypes())],
+            'item_schema.*.required' => ['nullable', 'boolean'],
+            'item_schema.*.translatable' => ['nullable', 'boolean'],
         ];
     }
 
@@ -63,6 +70,7 @@ class UpdateSectionDefinitionFieldRequest extends FormRequest
             'is_translatable' => $this->boolean('is_translatable'),
             'is_required' => $this->boolean('is_required'),
             'sort_order' => $this->filled('sort_order') ? (int) $this->input('sort_order') : 0,
+            'item_schema' => is_array($this->input('item_schema')) ? $this->input('item_schema') : null,
         ]);
     }
 

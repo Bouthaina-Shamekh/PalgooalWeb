@@ -52,8 +52,8 @@
                     <div class="col-span-12 md:col-span-4">
                         <label for="group" class="form-label">{{ __('Group') }}</label>
                         <input id="group" type="text" name="group" class="form-control"
-                            list="field-group-suggestions"
-                            value="{{ old('group', $field->group_name) }}" placeholder="{{ __('content') }}">
+                            list="field-group-suggestions" value="{{ old('group', $field->group_name) }}"
+                            placeholder="{{ __('content') }}">
                         <datalist id="field-group-suggestions">
                             @foreach ($groupSuggestions as $groupSuggestion)
                                 <option value="{{ $groupSuggestion }}"></option>
@@ -81,8 +81,7 @@
                             <label class="flex items-center gap-3 rounded border border-slate-200 px-4 py-3">
                                 <input type="hidden" name="is_translatable" value="0">
                                 <input type="checkbox" name="is_translatable" value="1" class="form-checkbox"
-                                    data-field-translatable-toggle
-                                    @checked($isTranslatable)>
+                                    data-field-translatable-toggle @checked($isTranslatable)>
                                 <span>
                                     <span class="block font-medium text-slate-900">{{ __('Translatable') }}</span>
                                     <span class="block text-sm text-slate-500">
@@ -105,6 +104,23 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        {{-- Repeater Sub-field Schema (Phase 5B) --}}
+        <div class="card mt-6 {{ $selectedFieldType !== 'repeater' ? 'hidden' : '' }}" data-repeater-panel>
+            <div class="card-header">
+                <h5 class="mb-1">{{ __('Repeater Sub-fields') }}</h5>
+                <p class="mb-0 text-sm text-slate-500">
+                    {{ __('Define the schema for each item in this repeater. Keys must be unique within the repeater and use lowercase letters, numbers, and underscores only.') }}
+                    {{ __('In V1, locale behavior is still controlled by the main field Shared/Translatable setting; the per-sub-field Translatable flag is stored as schema metadata for future phases.') }}
+                </p>
+            </div>
+            <div class="card-body">
+                @include('dashboard.section_definitions.fields.partials.repeater-item-schema-editor', [
+                    'repeaterItemSchema' => $repeaterItemSchema,
+                    'repeaterSubFieldTypeOptions' => $repeaterSubFieldTypeOptions,
+                ])
             </div>
         </div>
 
@@ -137,12 +153,17 @@
                                 <label for="default_value_translations_{{ $locale['code'] }}" class="form-label">
                                     {{ __('Default Value') }} ({{ $locale['label'] }})
                                 </label>
-                                @include('dashboard.section_definitions.fields.partials.default-value-input', [
-                                    'inputId' => 'default_value_translations_' . $locale['code'],
-                                    'inputName' => 'default_value_translations[' . $locale['code'] . ']',
-                                    'value' => $translatableDefaultValues[$locale['code']] ?? null,
-                                    'placeholder' => __('Default value for :locale', ['locale' => $locale['label']]),
-                                ])
+                                @include(
+                                    'dashboard.section_definitions.fields.partials.default-value-input',
+                                    [
+                                        'inputId' => 'default_value_translations_' . $locale['code'],
+                                        'inputName' => 'default_value_translations[' . $locale['code'] . ']',
+                                        'value' => $translatableDefaultValues[$locale['code']] ?? null,
+                                        'placeholder' => __('Default value for :locale', [
+                                            'locale' => $locale['label'],
+                                        ]),
+                                    ]
+                                )
                             </div>
                         @endforeach
                     </div>
@@ -199,7 +220,8 @@
         </div>
 
         <div class="mt-6 flex items-center justify-end gap-3">
-            <a href="{{ route('dashboard.section_definitions.fields.index', $sectionDefinition) }}" class="btn btn-light">
+            <a href="{{ route('dashboard.section_definitions.fields.index', $sectionDefinition) }}"
+                class="btn btn-light">
                 {{ __('Cancel') }}
             </a>
 
@@ -217,22 +239,161 @@
 </div>
 
 <script>
-    (function () {
+    (function() {
+        // ── Translatable toggle ──────────────────────────────────────────────
         const toggle = document.querySelector('[data-field-translatable-toggle]');
         const sharedPanel = document.querySelector('[data-default-shared-panel]');
         const translatablePanel = document.querySelector('[data-default-translatable-panel]');
 
-        if (!toggle || !sharedPanel || !translatablePanel) {
-            return;
+        if (toggle && sharedPanel && translatablePanel) {
+            const syncPanels = function() {
+                const isChecked = toggle.checked;
+                sharedPanel.classList.toggle('hidden', isChecked);
+                translatablePanel.classList.toggle('hidden', !isChecked);
+            };
+
+            toggle.addEventListener('change', syncPanels);
+            syncPanels();
         }
 
-        const syncPanels = function () {
-            const isChecked = toggle.checked;
-            sharedPanel.classList.toggle('hidden', isChecked);
-            translatablePanel.classList.toggle('hidden', !isChecked);
+        // ── Repeater panel visibility ────────────────────────────────────────
+        const typeSelect = document.getElementById('type');
+        const repeaterPanel = document.querySelector('[data-repeater-panel]');
+
+        const syncRepeaterPanel = function() {
+            if (!repeaterPanel) {
+                return;
+            }
+            repeaterPanel.classList.toggle('hidden', typeSelect.value !== 'repeater');
         };
 
-        toggle.addEventListener('change', syncPanels);
-        syncPanels();
+        if (typeSelect) {
+            typeSelect.addEventListener('change', syncRepeaterPanel);
+            syncRepeaterPanel();
+        }
+
+        // ── Repeater row management ──────────────────────────────────────────
+        const tbody = document.getElementById('repeater-schema-tbody');
+        const addBtn = document.getElementById('repeater-add-row');
+
+        // Sub-field type options passed from Blade as a JSON map.
+        const subTypeOptions = @json($repeaterSubFieldTypeOptions);
+
+        // Row index counter — starts after the server-rendered rows so names
+        // remain unique and don't clash with old() restored rows.
+        let rowIndex = {{ count($repeaterItemSchema) }};
+
+        function buildTypeSelect(name, selectedType) {
+            const sel = document.createElement('select');
+            sel.name = name;
+            sel.className = 'form-control form-control-sm';
+
+            Object.entries(subTypeOptions).forEach(([value, label]) => {
+                const opt = document.createElement('option');
+                opt.value = value;
+                opt.textContent = label;
+                if (value === (selectedType || 'text')) {
+                    opt.selected = true;
+                }
+                sel.appendChild(opt);
+            });
+
+            return sel;
+        }
+
+        function buildCheckboxCell(name, checked) {
+            const wrapper = document.createElement('td');
+            wrapper.className = 'py-2 pr-3 text-center';
+
+            const hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = name;
+            hidden.value = '0';
+
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.name = name;
+            cb.value = '1';
+            cb.checked = checked;
+            cb.className = 'form-checkbox';
+
+            wrapper.appendChild(hidden);
+            wrapper.appendChild(cb);
+            return wrapper;
+        }
+
+        function addRow() {
+            if (!tbody) {
+                return;
+            }
+
+            const tr = document.createElement('tr');
+            tr.className = 'repeater-schema-row border-b border-slate-100 align-top';
+
+            // Key cell
+            const keyTd = document.createElement('td');
+            keyTd.className = 'py-2 pr-3';
+            const keyInput = document.createElement('input');
+            keyInput.type = 'text';
+            keyInput.name = 'item_schema[' + rowIndex + '][key]';
+            keyInput.className = 'form-control form-control-sm';
+            keyInput.placeholder = 'field_key';
+            keyInput.pattern = '[a-z0-9_]+';
+            keyTd.appendChild(keyInput);
+
+            // Label cell
+            const labelTd = document.createElement('td');
+            labelTd.className = 'py-2 pr-3';
+            const labelInput = document.createElement('input');
+            labelInput.type = 'text';
+            labelInput.name = 'item_schema[' + rowIndex + '][label]';
+            labelInput.className = 'form-control form-control-sm';
+            labelInput.placeholder = '{{ __('Label') }}';
+            labelTd.appendChild(labelInput);
+
+            // Type cell
+            const typeTd = document.createElement('td');
+            typeTd.className = 'py-2 pr-3';
+            typeTd.appendChild(buildTypeSelect('item_schema[' + rowIndex + '][type]', 'text'));
+
+            // Required cell (unchecked by default)
+            const requiredTd = buildCheckboxCell('item_schema[' + rowIndex + '][required]', false);
+
+            // Translatable cell (checked by default — matches normalizeItemSchemaForPersistence)
+            const translatableTd = buildCheckboxCell('item_schema[' + rowIndex + '][translatable]', true);
+
+            // Remove button cell
+            const removeTd = document.createElement('td');
+            removeTd.className = 'py-2';
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'repeater-remove-row rounded px-2 py-1 text-xs text-red-500 hover:bg-red-50';
+            removeBtn.title = '{{ __('Remove sub-field') }}';
+            removeBtn.textContent = '×';
+            removeTd.appendChild(removeBtn);
+
+            tr.appendChild(keyTd);
+            tr.appendChild(labelTd);
+            tr.appendChild(typeTd);
+            tr.appendChild(requiredTd);
+            tr.appendChild(translatableTd);
+            tr.appendChild(removeTd);
+
+            tbody.appendChild(tr);
+            rowIndex++;
+        }
+
+        if (addBtn) {
+            addBtn.addEventListener('click', addRow);
+        }
+
+        if (tbody) {
+            tbody.addEventListener('click', function(e) {
+                const btn = e.target.closest('.repeater-remove-row');
+                if (btn) {
+                    btn.closest('tr').remove();
+                }
+            });
+        }
     })();
 </script>

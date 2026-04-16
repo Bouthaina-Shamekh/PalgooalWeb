@@ -18,14 +18,16 @@ use Illuminate\Support\Str;
 class DynamicSectionEditorRenderer
 {
     protected const FIELD_PARTIALS = [
-        SectionDefinitionField::FIELD_TYPE_TEXT => 'dashboard.pages.sections.partials.dynamic-editor.fields.text',
+        SectionDefinitionField::FIELD_TYPE_TEXT     => 'dashboard.pages.sections.partials.dynamic-editor.fields.text',
         SectionDefinitionField::FIELD_TYPE_TEXTAREA => 'dashboard.pages.sections.partials.dynamic-editor.fields.textarea',
         SectionDefinitionField::FIELD_TYPE_RICHTEXT => 'dashboard.pages.sections.partials.dynamic-editor.fields.textarea',
-        SectionDefinitionField::FIELD_TYPE_URL => 'dashboard.pages.sections.partials.dynamic-editor.fields.url',
-        SectionDefinitionField::FIELD_TYPE_MEDIA => 'dashboard.pages.sections.partials.dynamic-editor.fields.media',
-        SectionDefinitionField::FIELD_TYPE_NUMBER => 'dashboard.pages.sections.partials.dynamic-editor.fields.number',
-        SectionDefinitionField::FIELD_TYPE_BOOLEAN => 'dashboard.pages.sections.partials.dynamic-editor.fields.boolean',
-        SectionDefinitionField::FIELD_TYPE_SELECT => 'dashboard.pages.sections.partials.dynamic-editor.fields.select',
+        SectionDefinitionField::FIELD_TYPE_URL      => 'dashboard.pages.sections.partials.dynamic-editor.fields.url',
+        SectionDefinitionField::FIELD_TYPE_MEDIA    => 'dashboard.pages.sections.partials.dynamic-editor.fields.media',
+        SectionDefinitionField::FIELD_TYPE_NUMBER   => 'dashboard.pages.sections.partials.dynamic-editor.fields.number',
+        SectionDefinitionField::FIELD_TYPE_BOOLEAN  => 'dashboard.pages.sections.partials.dynamic-editor.fields.boolean',
+        SectionDefinitionField::FIELD_TYPE_SELECT   => 'dashboard.pages.sections.partials.dynamic-editor.fields.select',
+        // Phase 5C: repeater fields now render via a dedicated generic partial.
+        SectionDefinitionField::FIELD_TYPE_REPEATER => 'dashboard.pages.sections.partials.dynamic-editor.fields.repeater',
     ];
 
     public function __construct(
@@ -143,6 +145,13 @@ class DynamicSectionEditorRenderer
      * into the other locale payloads via hidden replica inputs so the current
      * save pipeline can remain unchanged.
      *
+     * Repeater fields are routed to buildRepeaterPayload() instead of being
+     * inlined here; they carry their own item list and item_schema rather than
+     * a scalar value.
+     *
+     * Returns null in the following cases (all filtered by the caller):
+     * - shared (non-translatable) field on a non-default locale tab
+     *
      * @param  array<int, string>  $localeCodes
      * @return array<string, mixed>|null
      */
@@ -153,6 +162,11 @@ class DynamicSectionEditorRenderer
         string $defaultLocale,
         array $localeCodes,
     ): ?array {
+        // Route repeater fields to their dedicated payload builder (Phase 5C).
+        if ($field->isRepeater()) {
+            return $this->buildRepeaterPayload($section, $field, $locale, $defaultLocale, $localeCodes);
+        }
+
         $isTranslatable = $field->isTranslatable();
 
         if (! $isTranslatable && $locale !== $defaultLocale) {
@@ -190,6 +204,112 @@ class DynamicSectionEditorRenderer
                 ? $this->replicaInputs($field->field_key, $value, $localeCodes, $defaultLocale)
                 : [],
         ];
+    }
+
+    /**
+     * Build the Blade-friendly payload for a repeater field.
+     *
+     * Repeater fields carry an item_schema and a resolved item list instead of
+     * a scalar value. Replica inputs are not emitted: array-valued fields cannot
+     * be propagated via the scalar hidden-input replication pattern used by
+     * shared scalar fields. For shared repeaters only the default locale tab
+     * renders the widget; other locale tabs suppress it.
+     *
+     * @param  array<int, string>  $localeCodes
+     * @return array<string, mixed>|null
+     */
+    protected function buildRepeaterPayload(
+        Section $section,
+        SectionDefinitionField $field,
+        string $locale,
+        string $defaultLocale,
+        array $localeCodes,
+    ): ?array {
+        $isTranslatable = $field->isTranslatable();
+
+        // Shared repeaters render once on the default locale tab only.
+        if (! $isTranslatable && $locale !== $defaultLocale) {
+            return null;
+        }
+
+        $itemSchema = $field->repeaterItemSchema();
+        $items      = $this->resolveRepeaterItems($section, $field, $locale, $defaultLocale, $localeCodes);
+
+        // Base input name prefix: translations[{locale}][content][{fieldKey}]
+        // The partial appends [index][subfield_key] for each cell.
+        $nameBase = 'translations[' . $locale . '][content][' . $field->field_key . ']';
+
+        return [
+            'fieldKey'      => $field->field_key,
+            'fieldType'     => SectionDefinitionField::FIELD_TYPE_REPEATER,
+            'renderType'    => SectionDefinitionField::FIELD_TYPE_REPEATER,
+            'label'         => $field->label,
+            'name'          => $nameBase,
+            'id'            => $this->inputId($section->id, $field->field_key, $locale),
+            'value'         => null,   // not used for repeaters
+            'placeholder'   => null,
+            'helpText'      => $field->help_text,
+            'isRequired'    => (bool) $field->is_required,
+            'isTranslatable'=> $isTranslatable,
+            'isRichText'    => false,
+            'options'       => [],
+            'settings'      => is_array($field->settings) ? $field->settings : [],
+            'rows'          => 3,
+            'partial'       => self::FIELD_PARTIALS[SectionDefinitionField::FIELD_TYPE_REPEATER],
+            'wrapperClass'  => 'lg:col-span-2',
+            'previewUrls'   => [],
+            'replicaInputs' => [],
+            // Repeater-specific keys consumed by the repeater partial
+            'itemSchema'    => $itemSchema,
+            'items'         => $items,
+            'locale'        => $locale,
+        ];
+    }
+
+    /**
+     * Resolve the ordered list of saved repeater items for one field/locale.
+     *
+     * Resolution order:
+     *  1. old() on failed validation (preserves in-progress edits)
+     *  2. Saved translation content for this locale
+     *  3. For shared repeaters: fall back across all locale candidates
+     *  4. Empty array — the widget renders with no items
+     *
+     * @param  array<int, string>  $localeCodes
+     * @return array<int, array<string, mixed>>
+     */
+    protected function resolveRepeaterItems(
+        Section $section,
+        SectionDefinitionField $field,
+        string $locale,
+        string $defaultLocale,
+        array $localeCodes,
+    ): array {
+        // old() takes precedence — preserves the user's in-progress edits on
+        // a failed validation round-trip (same key pattern as scalar fields).
+        $oldValue = old('translations.' . $locale . '.content.' . $field->field_key);
+
+        if (is_array($oldValue)) {
+            return array_values($oldValue);
+        }
+
+        if ($field->isTranslatable()) {
+            $saved = $this->savedFieldValue($section, $field->field_key, $locale);
+
+            return is_array($saved) ? array_values($saved) : [];
+        }
+
+        // Shared repeater: walk locale candidates until a non-empty array is found
+        // (mirrors sharedSavedFieldValue logic used for scalar shared fields).
+        foreach (array_unique(array_merge([$defaultLocale], $localeCodes)) as $candidateLocale) {
+            $saved = $this->savedFieldValue($section, $field->field_key, $candidateLocale);
+
+            if (is_array($saved) && $saved !== []) {
+                return array_values($saved);
+            }
+        }
+
+        return [];
     }
 
     /**
@@ -324,6 +444,7 @@ class DynamicSectionEditorRenderer
             SectionDefinitionField::FIELD_TYPE_TEXTAREA,
             SectionDefinitionField::FIELD_TYPE_MEDIA,
             SectionDefinitionField::FIELD_TYPE_BOOLEAN,
+            SectionDefinitionField::FIELD_TYPE_REPEATER,
         ], true)
             ? 'lg:col-span-2'
             : '';

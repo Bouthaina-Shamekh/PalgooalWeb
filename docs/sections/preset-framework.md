@@ -281,6 +281,102 @@ translations[{locale}][content][{repeater_key}][{index}][{item_field}]
 
 ---
 
+## 8a. Dynamic Field Type — Repeater (Phase 5A Foundation)
+
+`repeater` is now a recognized `field_type` in the `SectionDefinitionField` system. This section documents the V1 schema contract.
+
+### Current state (Phase 5A)
+
+| Layer | Status |
+|---|---|
+| `FIELD_TYPE_REPEATER` constant | ✅ Added to model |
+| Recognized by `supportedFieldTypes()` | ✅ Validated by both form requests |
+| Appears in admin type dropdown | ✅ `SectionDefinitionFieldFormDataFactory::fieldTypeOptions()` |
+| `isRepeater()` accessor | ✅ Available on model |
+| `repeaterItemSchema()` accessor | ✅ Reads + normalizes `schema['item_schema']` |
+| `repeaterSubFieldTypes()` allowlist | ✅ Static method on model |
+| Dynamic editor rendering | ⏳ Deferred to Phase 5B — fields return null from `buildFieldPayload()` |
+| Item schema editor UI | ⏳ Deferred to Phase 5B |
+| Save/load pipeline | ⏳ Deferred to Phase 5B |
+| Frontend rendering | ⏳ Deferred (future phase) |
+
+### item_schema storage
+
+`item_schema` is stored in the `schema` JSON column on `section_definition_fields` under the key `item_schema`. The `settings` column is not used for this purpose.
+
+```json
+{
+  "item_schema": [
+    {
+      "key": "text",
+      "label": "Text",
+      "type": "text",
+      "required": true,
+      "translatable": true
+    },
+    {
+      "key": "icon_media",
+      "label": "Icon",
+      "type": "media",
+      "required": false,
+      "translatable": false
+    }
+  ]
+}
+```
+
+### V1 sub-field type allowlist
+
+The following types are permitted inside `item_schema`. This list is the authoritative source — always read it from `SectionDefinitionField::repeaterSubFieldTypes()`.
+
+| Type | Notes |
+|------|-------|
+| `text` | Single-line string |
+| `textarea` | Multi-line string |
+| `url` | URL string |
+| `media` | Media library ID (integer) |
+| `boolean` | true/false |
+| `select` | Requires `options` to be meaningful; not yet wired to sub-field in Phase 5A |
+
+**Explicitly excluded from V1:**
+- `repeater` — nested repeaters are not supported
+- `richtext` — complex editor dependency not suitable for inline item fields
+- `number` — not yet required by any planned V1 use-case
+
+### Normalization contract (`repeaterItemSchema()`)
+
+The model accessor `repeaterItemSchema()` reads `schema['item_schema']` and returns a clean array. Each returned item is guaranteed to have exactly these keys:
+
+| Key | Type | Fallback |
+|-----|------|---------|
+| `key` | string | — (required; entry dropped if missing) |
+| `label` | string | falls back to `key` |
+| `type` | string | — (required; entry dropped if not in allowlist) |
+| `required` | bool | `false` |
+| `translatable` | bool | `true` |
+
+Malformed entries (missing key, unknown type, wrong shape) are silently dropped. Returns `[]` for non-repeater fields, null schema, or empty item_schema.
+
+### Writing item_schema (Phase 5A)
+
+Until Phase 5B adds the admin UI, `item_schema` must be written programmatically:
+
+```php
+// Via Eloquent directly:
+$field->update([
+    'schema' => ['item_schema' => [
+        ['key' => 'text',  'label' => 'Text',  'type' => 'text',  'required' => true, 'translatable' => true],
+        ['key' => 'media', 'label' => 'Media', 'type' => 'media', 'required' => false, 'translatable' => false],
+    ]],
+]);
+
+// Reading back:
+$schema = $field->repeaterItemSchema(); // always returns a normalized array
+$isRepeater = $field->isRepeater();    // bool
+```
+
+---
+
 ## 9. Known Naming Inconsistencies & Technical Debt
 
 This section records divergences that were identified but **intentionally not changed** because they involve stored content keys or require broader coordination. Future preset authors should be aware of these before introducing new presets.

@@ -16,6 +16,10 @@ class SectionDefinitionFieldFormDataFactory
     /**
      * Return human-readable field type options for the admin form.
      *
+     * The order here determines the order rendered in the type <select>.
+     * Repeater is listed last as it requires item_schema configuration
+     * (Phase 5B) before it becomes useful in the dynamic editor.
+     *
      * @return array<string, string>
      */
     public function fieldTypeOptions(): array
@@ -29,7 +33,29 @@ class SectionDefinitionFieldFormDataFactory
             SectionDefinitionField::FIELD_TYPE_NUMBER => __('Number'),
             SectionDefinitionField::FIELD_TYPE_BOOLEAN => __('Boolean'),
             SectionDefinitionField::FIELD_TYPE_SELECT => __('Select'),
+            // Phase 5A: repeater is a recognized type. The item_schema editor
+            // UI and the dynamic editor rendering panel are deferred to Phase 5B.
+            SectionDefinitionField::FIELD_TYPE_REPEATER => __('Repeater'),
         ];
+    }
+
+    /**
+     * Return human-readable type options for repeater sub-fields.
+     *
+     * Derived from fieldTypeOptions() filtered to the allowed sub-field type list,
+     * preserving insertion order (richtext and repeater are intentionally absent).
+     *
+     * @return array<string, string>
+     */
+    public function repeaterSubFieldTypeOptions(): array
+    {
+        $allowed = array_flip(SectionDefinitionField::repeaterSubFieldTypes());
+
+        return array_filter(
+            $this->fieldTypeOptions(),
+            fn (string $key) => isset($allowed[$key]),
+            ARRAY_FILTER_USE_KEY,
+        );
     }
 
     /**
@@ -50,6 +76,10 @@ class SectionDefinitionFieldFormDataFactory
             'optionsTextarea' => old('options', $this->optionsTextarea($field->options)),
             'validationRulesTextarea' => old('validation_rules', $this->validationRulesTextarea($field->validation_rules)),
             'settingsJson' => old('settings', $this->settingsJson($field->settings)),
+            // Repeater item schema: old() takes precedence on failed submission,
+            // falling back to the saved schema from the model accessor.
+            'repeaterItemSchema' => $this->repeaterItemSchemaForForm($field),
+            'repeaterSubFieldTypeOptions' => $this->repeaterSubFieldTypeOptions(),
         ];
     }
 
@@ -79,6 +109,9 @@ class SectionDefinitionFieldFormDataFactory
             'validation_rules' => $this->normalizeValidationRules($validated['validation_rules'] ?? null),
             'is_required' => (bool) ($validated['is_required'] ?? false),
             'sort_order' => (int) ($validated['sort_order'] ?? 0),
+            // Repeater item schema — null for non-repeater types; stored in the
+            // existing `schema` JSON column under the key `item_schema`.
+            'schema' => $this->normalizeItemSchemaForPersistence($validated, $fieldType),
         ];
     }
 
@@ -233,6 +266,95 @@ class SectionDefinitionFieldFormDataFactory
             ->all();
 
         return $rules === [] ? null : $rules;
+    }
+
+    /**
+     * Return the repeater item_schema ready for the create/edit form.
+     *
+     * old() takes precedence on a failed validation round-trip so the user's
+     * in-progress edits are preserved. Falls back to the normalized schema
+     * already stored on the model (via repeaterItemSchema()).
+     *
+     * @return array<int, array{key: string, label: string, type: string, required: bool, translatable: bool}>
+     */
+    protected function repeaterItemSchemaForForm(SectionDefinitionField $field): array
+    {
+        $oldItemSchema = old('item_schema');
+
+        if (is_array($oldItemSchema)) {
+            $allowedSubTypes = SectionDefinitionField::repeaterSubFieldTypes();
+
+            return Collection::make($oldItemSchema)
+                ->filter(fn ($item) => is_array($item))
+                ->map(function (array $item) use ($allowedSubTypes): ?array {
+                    $key  = trim((string) ($item['key'] ?? ''));
+                    $type = trim((string) ($item['type'] ?? 'text'));
+
+                    if ($key === '' || ! in_array($type, $allowedSubTypes, true)) {
+                        return null;
+                    }
+
+                    return [
+                        'key'          => $key,
+                        'label'        => trim((string) ($item['label'] ?? '')),
+                        'type'         => $type,
+                        'required'     => (bool) ($item['required'] ?? false),
+                        'translatable' => (bool) ($item['translatable'] ?? true),
+                    ];
+                })
+                ->filter()
+                ->values()
+                ->all();
+        }
+
+        return $field->repeaterItemSchema();
+    }
+
+    /**
+     * Normalize the raw item_schema payload for persistence in the `schema` column.
+     *
+     * Returns null for non-repeater field types so the column is left untouched.
+     * For repeater fields, returns `['item_schema' => [...]]` with invalid rows
+     * silently discarded (empty key, unrecognized type).
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>|null
+     */
+    protected function normalizeItemSchemaForPersistence(array $validated, string $fieldType): ?array
+    {
+        if ($fieldType !== SectionDefinitionField::FIELD_TYPE_REPEATER) {
+            return null;
+        }
+
+        $rawItems = is_array($validated['item_schema'] ?? null) ? $validated['item_schema'] : [];
+        $allowedSubTypes = SectionDefinitionField::repeaterSubFieldTypes();
+
+        $items = Collection::make($rawItems)
+            ->map(function (mixed $item) use ($allowedSubTypes): ?array {
+                if (! is_array($item)) {
+                    return null;
+                }
+
+                $key  = trim((string) ($item['key'] ?? ''));
+                $type = trim((string) ($item['type'] ?? ''));
+
+                if ($key === '' || ! in_array($type, $allowedSubTypes, true)) {
+                    return null;
+                }
+
+                return [
+                    'key'          => $key,
+                    'label'        => trim((string) ($item['label'] ?? $key)) ?: $key,
+                    'type'         => $type,
+                    'required'     => (bool) ($item['required'] ?? false),
+                    'translatable' => (bool) ($item['translatable'] ?? true),
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        return ['item_schema' => $items];
     }
 
     protected function normalizeScalarDefaultValue(mixed $value, string $fieldType): mixed

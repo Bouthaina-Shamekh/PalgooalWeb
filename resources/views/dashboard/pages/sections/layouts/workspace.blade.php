@@ -2,28 +2,32 @@
 @php
     $translation = $page->translation();
     $pageTitle = $translation?->title ?? __('Sections Workspace');
-    $frontUrl = $workspaceFrontUrl ?? ($page->is_home ? url('/') : ($translation?->slug ? url($translation->slug) : url('/')));
+    $frontUrl =
+        $workspaceFrontUrl ?? ($page->is_home ? url('/') : ($translation?->slug ? url($translation->slug) : url('/')));
     $workspaceShellBackUrl = $workspaceShellBackUrl ?? route('dashboard.pages.index');
     $workspaceShellBackLabel = $workspaceShellBackLabel ?? __('Back to pages');
     $workspaceVisualBuilderUrl = $workspaceVisualBuilderUrl ?? route('dashboard.pages.builder', $page);
     $workspaceMode = $workspaceMode ?? 'admin';
     $isClientWorkspace = $workspaceMode === 'client';
-    $workspaceModeLabel = $workspaceModeLabel ?? ($workspaceMode === 'client' ? __('Client homepage editor') : __('Admin workspace'));
+    $workspaceModeLabel =
+        $workspaceModeLabel ?? ($workspaceMode === 'client' ? __('Client homepage editor') : __('Admin workspace'));
     $workspaceModeDisplayLabel = $isClientWorkspace ? __('Site Editor') : $workspaceModeLabel;
     $workspaceTitleSuffix = $isClientWorkspace ? __('Page Editor') : __('Sections Workspace');
     $workspacePreviewLabel = $isClientWorkspace ? __('View Page') : __('Preview');
     $workspaceShowSidebarLabel = $isClientWorkspace ? __('Show Blocks') : __('Show Sidebar');
     $workspaceHideSidebarLabel = $isClientWorkspace ? __('Hide Blocks') : __('Hide Sidebar');
-    $workspaceLanguages = collect($languages ?? [])->filter(fn ($language) => filled($language->code))->values();
+    $workspaceLanguages = collect($languages ?? [])
+        ->filter(fn($language) => filled($language->code))
+        ->values();
     $hasMultipleWorkspaceLanguages = $workspaceLanguages->count() > 1;
     $workspacePageSwitcher = $workspacePageSwitcher ?? [];
     $workspacePageOptions = collect(data_get($workspacePageSwitcher, 'pages', []))
-        ->filter(fn ($workspacePageOption) => filled(data_get($workspacePageOption, 'url')))
+        ->filter(fn($workspacePageOption) => filled(data_get($workspacePageOption, 'url')))
         ->values();
     $hasWorkspacePageSwitcher = $isClientWorkspace && $workspacePageOptions->isNotEmpty();
     $workspacePageSwitcherLabel = data_get($workspacePageSwitcher, 'label', __('Page'));
     $adminLogoPath = $settings?->admin_logo ?: $settings?->logo;
-    $adminLogoHref = ! empty($adminLogoPath)
+    $adminLogoHref = !empty($adminLogoPath)
         ? (\Illuminate\Support\Str::startsWith($adminLogoPath, ['http://', 'https://', '//'])
             ? $adminLogoPath
             : asset('storage/' . ltrim(preg_replace('#^storage/#', '', $adminLogoPath), '/')))
@@ -42,6 +46,7 @@
 
 <!doctype html>
 <html lang="{{ app()->getLocale() }}" class="h-full" dir="{{ current_dir() }}">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -56,64 +61,74 @@
 
     @stack('styles')
 </head>
+
 <body class="h-full bg-slate-100 text-slate-900">
     <div id="sections-workspace-shell" class="sections-workspace-shell flex h-screen flex-col overflow-hidden">
         <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur shadow-sm">
             <div class="px-4 py-2 lg:px-6">
                 <div class="flex flex-wrap items-center justify-between gap-2 xl:flex-nowrap">
                     <div class="flex min-w-0 items-center gap-3 rtl:flex-row-reverse">
-                        <a
-                            href="{{ $workspaceShellBackUrl }}"
+                        <a href="{{ $workspaceShellBackUrl }}"
                             class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md"
-                            aria-label="{{ $workspaceShellBackLabel }}"
-                            title="{{ $workspaceShellBackLabel }}"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 rtl:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12l7.5-7.5M3 12h18" />
+                            aria-label="{{ $workspaceShellBackLabel }}" title="{{ $workspaceShellBackLabel }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 rtl:rotate-180" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M10.5 19.5L3 12l7.5-7.5M3 12h18" />
                             </svg>
                         </a>
 
                         <div class="flex min-w-0 flex-wrap items-center gap-2 rtl:flex-row-reverse">
                             <h1 class="sr-only">{{ $pageTitle }}</h1>
                             @if ($hasWorkspacePageSwitcher)
-                                <div class="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-slate-100/90 px-2 py-2 shadow-sm rtl:flex-row-reverse">
-                                    <span class="shrink-0 px-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                                <div
+                                    class="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-slate-100/90 px-2 py-2 shadow-sm rtl:flex-row-reverse">
+                                    <span
+                                        class="shrink-0 px-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
                                         {{ $workspacePageSwitcherLabel }}
                                     </span>
                                     <div class="relative min-w-[11rem] max-w-[15rem] sm:max-w-[19rem]">
-                                        <select
-                                            onchange="if (this.value) { window.location.href = this.value; }"
+                                        <select onchange="if (this.value) { window.location.href = this.value; }"
                                             class="h-10 w-full appearance-none rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 shadow-sm transition outline-none hover:border-slate-300 focus:border-sky-300 focus:ring-2 focus:ring-sky-100 rtl:pl-10 rtl:pr-4 ltr:pl-4 ltr:pr-10"
-                                            aria-label="{{ __('Switch page') }}"
-                                        >
+                                            aria-label="{{ __('Switch page') }}">
                                             @foreach ($workspacePageOptions as $workspacePageOption)
-                                                <option value="{{ $workspacePageOption['url'] }}" @selected(! empty($workspacePageOption['active']))>
-                                                    {{ $workspacePageOption['label'] }}@if (! empty($workspacePageOption['is_home'])) • {{ __('Home') }}@endif
+                                                <option value="{{ $workspacePageOption['url'] }}"
+                                                    @selected(!empty($workspacePageOption['active']))>
+                                                    {{ $workspacePageOption['label'] }}@if (!empty($workspacePageOption['is_home']))
+                                                        • {{ __('Home') }}
+                                                    @endif
                                                 </option>
                                             @endforeach
                                         </select>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 rtl:left-3 ltr:right-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            class="pointer-events-none absolute top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 rtl:left-3 ltr:right-3"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                                         </svg>
                                     </div>
                                     @if (filled($workspaceModeDisplayLabel))
-                                        <span class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+                                        <span
+                                            class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
                                             {{ $workspaceModeDisplayLabel }}
                                         </span>
                                     @endif
                                 </div>
                             @else
-                                <div class="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-slate-100/90 px-4 py-2 shadow-sm rtl:flex-row-reverse">
+                                <div
+                                    class="inline-flex max-w-full items-center gap-2 rounded-full border border-slate-200 bg-slate-100/90 px-4 py-2 shadow-sm rtl:flex-row-reverse">
                                     <h1 class="truncate text-sm font-semibold text-slate-900 lg:text-[15px]">
                                         {{ $pageTitle }}
                                     </h1>
                                     @if ($page->is_home)
-                                        <span class="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                                        <span
+                                            class="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
                                             {{ __('Home') }}
                                         </span>
                                     @endif
                                     @if (filled($workspaceModeDisplayLabel))
-                                        <span class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
+                                        <span
+                                            class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
                                             {{ $workspaceModeDisplayLabel }}
                                         </span>
                                     @endif
@@ -121,13 +136,11 @@
                             @endif
 
                             @if ($hasMultipleWorkspaceLanguages)
-                                <x-lang.language-switcher
-                                    variant="builder"
+                                <x-lang.language-switcher variant="builder"
                                     buttonClass="inline-flex h-10 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                                     menuClass="absolute mt-2 min-w-[11rem] rounded-2xl border border-slate-200 bg-white p-2 shadow-xl z-40 rtl:right-0 rtl:left-auto ltr:left-0 ltr:right-auto"
                                     itemClass="block w-full rounded-xl px-3 py-2 text-sm transition hover:bg-slate-50 ltr:text-left rtl:text-right"
-                                    activeItemClass="bg-slate-100 font-semibold text-slate-900"
-                                />
+                                    activeItemClass="bg-slate-100 font-semibold text-slate-900" />
                             @endif
                         </div>
                     </div>
@@ -137,17 +150,17 @@
                             @yield('workspace-header-toolbar')
                         @endif
 
-                        <div class="sections-header-cluster flex flex-wrap items-center gap-2 rounded-[1.75rem] border border-slate-200 bg-slate-100/90 p-1 shadow-inner rtl:flex-row-reverse">
-                            <a
-                                href="{{ $frontUrl }}"
-                                target="_blank"
+                        <div
+                            class="sections-header-cluster flex flex-wrap items-center gap-2 rounded-[1.75rem] border border-slate-200 bg-slate-100/90 p-1 shadow-inner rtl:flex-row-reverse">
+                            <a href="{{ $frontUrl }}" target="_blank"
                                 class="{{ $isClientWorkspace ? 'inline-flex h-11 w-11 items-center justify-center rounded-full text-slate-700 transition hover:bg-white hover:shadow-sm' : 'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-white hover:shadow-sm' }}"
-                                aria-label="{{ $workspacePreviewLabel }}"
-                                title="{{ $workspacePreviewLabel }}"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12S5.25 5.25 12 5.25 21.75 12 21.75 12 18.75 18.75 12 18.75 2.25 12 2.25 12Z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" />
+                                aria-label="{{ $workspacePreviewLabel }}" title="{{ $workspacePreviewLabel }}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M2.25 12S5.25 5.25 12 5.25 21.75 12 21.75 12 18.75 18.75 12 18.75 2.25 12 2.25 12Z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                        d="M12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z" />
                                 </svg>
                                 @unless ($isClientWorkspace)
                                     {{ $workspacePreviewLabel }}
@@ -155,13 +168,14 @@
                             </a>
 
                             @if (filled($workspaceVisualBuilderUrl))
-                                <a
-                                    href="{{ $workspaceVisualBuilderUrl }}"
-                                    class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-white hover:shadow-sm"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5v10.5H3.75V5.25Z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 18.75h6M12 15.75v3" />
+                                <a href="{{ $workspaceVisualBuilderUrl }}"
+                                    class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-white hover:shadow-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M3.75 5.25h16.5v10.5H3.75V5.25Z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M9 18.75h6M12 15.75v3" />
                                     </svg>
                                     {{ __('Visual Builder') }}
                                 </a>
@@ -169,7 +183,8 @@
                         </div>
 
                         @hasSection('workspace-header-actions')
-                            <div class="sections-header-cluster flex flex-wrap items-center gap-2 rounded-[1.75rem] border border-slate-200 bg-white p-1 shadow-sm rtl:flex-row-reverse">
+                            <div
+                                class="sections-header-cluster flex flex-wrap items-center gap-2 rounded-[1.75rem] border border-slate-200 bg-white p-1 shadow-sm rtl:flex-row-reverse">
                                 @yield('workspace-header-actions')
                             </div>
                         @endif
@@ -180,16 +195,11 @@
 
         <main class="flex-1 overflow-hidden">
             <div class="sections-workspace-panels">
-                <button
-                    type="button"
-                    id="sections-sidebar-open-btn"
-                    class="sections-sidebar-open-button"
-                    aria-controls="sections-workspace-sidebar"
-                    aria-expanded="false"
-                    aria-label="{{ $workspaceShowSidebarLabel }}"
-                    title="{{ $workspaceShowSidebarLabel }}"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <button type="button" id="sections-sidebar-open-btn" class="sections-sidebar-open-button"
+                    aria-controls="sections-workspace-sidebar" aria-expanded="false"
+                    aria-label="{{ $workspaceShowSidebarLabel }}" title="{{ $workspaceShowSidebarLabel }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6" />
                     </svg>
                 </button>
@@ -199,21 +209,17 @@
                 </section>
 
                 <div class="sections-workspace-sidebar-shell">
-                    <button
-                        type="button"
-                        id="sections-sidebar-hide-btn"
-                        class="sections-sidebar-handle"
-                        aria-controls="sections-workspace-sidebar"
-                        aria-expanded="true"
-                        aria-label="{{ $workspaceHideSidebarLabel }}"
-                        title="{{ $workspaceHideSidebarLabel }}"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <button type="button" id="sections-sidebar-hide-btn" class="sections-sidebar-handle"
+                        aria-controls="sections-workspace-sidebar" aria-expanded="true"
+                        aria-label="{{ $workspaceHideSidebarLabel }}" title="{{ $workspaceHideSidebarLabel }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 18l-6-6 6-6" />
                         </svg>
                     </button>
 
-                    <aside id="sections-workspace-sidebar" class="sections-workspace-sidebar workspace-scrollbar border-t border-slate-200 bg-white/90 overflow-y-auto px-4 py-5 lg:px-6">
+                    <aside id="sections-workspace-sidebar"
+                        class="sections-workspace-sidebar workspace-scrollbar border-t border-slate-200 bg-white/90 overflow-y-auto px-4 py-5 lg:px-6">
                         @yield('workspace-sidebar')
                     </aside>
                 </div>
@@ -228,9 +234,10 @@
     </script>
     <script src="{{ asset('assets/dashboard/js/plugins/sweetalert2.all.min.js') }}"></script>
     <script>
-        window.sectionsShowAlert = function (options = {}) {
+        window.sectionsShowAlert = function(options = {}) {
             const tone = options.tone === 'success' ? 'success' : 'error';
-            const title = String(options.title || (tone === 'success' ? @json(__('Success')) : @json(__('Something went wrong'))));
+            const title = String(options.title || (tone === 'success' ? @json(__('Success')) :
+                @json(__('Something went wrong'))));
             const messages = Array.isArray(options.messages) ? options.messages.filter(Boolean) : [];
             const text = String(options.text || '');
 
@@ -257,12 +264,12 @@
                 return;
             }
 
-            const html = messages.length
-                ? `<div class="text-start"><ul style="margin:0;padding-inline-start:1.25rem;">${messages.map((message) => `<li>${String(message)
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')}</li>`).join('')}</ul></div>`
-                : '';
+            const html = messages.length ?
+                `<div class="text-start"><ul style="margin:0;padding-inline-start:1.25rem;">${messages.map((message) => `<li>${String(message)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')}</li>`).join('')}</ul></div>` :
+                '';
 
             Swal.fire({
                 icon: 'error',
@@ -278,7 +285,7 @@
             });
         };
 
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             const successMessage = @json(session('success'));
             const errorMessage = @json(session('error'));
             const validationErrors = @json($errors->all());
@@ -308,13 +315,15 @@
         });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <script src="{{ asset('assets/dashboard/js/media-picker.js') }}?v={{ filemtime(public_path('assets/dashboard/js/media-picker.js')) }}" defer></script>
+    <script
+        src="{{ asset('assets/dashboard/js/media-picker.js') }}?v={{ filemtime(public_path('assets/dashboard/js/media-picker.js')) }}"
+        defer></script>
     @include('dashboard.partials.media-picker')
     @include('dashboard.pages.sections.partials.icon-library-modal')
 
     @stack('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             const shell = document.getElementById('sections-workspace-shell');
             const hideButton = document.getElementById('sections-sidebar-hide-btn');
             const openButton = document.getElementById('sections-sidebar-open-btn');
@@ -360,17 +369,17 @@
 
             applySidebarState(readInitialState());
 
-            hideButton?.addEventListener('click', function () {
+            hideButton?.addEventListener('click', function() {
                 applySidebarState(true);
                 persistSidebarState(true);
             });
 
-            openButton?.addEventListener('click', function () {
+            openButton?.addEventListener('click', function() {
                 applySidebarState(false);
                 persistSidebarState(false);
             });
 
-            window.addEventListener('media-picker-confirmed', function (event) {
+            window.addEventListener('media-picker-confirmed', function(event) {
                 const targetInputId = event.detail?.targetInputId;
                 if (!targetInputId) {
                     return;
@@ -381,8 +390,12 @@
                 const form = targetInput?.closest?.('[data-section-editor-form]');
 
                 if (targetInput) {
-                    targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+                    targetInput.dispatchEvent(new Event('input', {
+                        bubbles: true
+                    }));
+                    targetInput.dispatchEvent(new Event('change', {
+                        bubbles: true
+                    }));
                 }
 
                 if (!currentGroup || !form) {
@@ -403,8 +416,12 @@
                     }
 
                     input.value = nextValue;
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                    input.dispatchEvent(new Event('input', {
+                        bubbles: true
+                    }));
+                    input.dispatchEvent(new Event('change', {
+                        bubbles: true
+                    }));
 
                     if (!preview) {
                         return;
@@ -413,7 +430,8 @@
                     preview.innerHTML = '';
                     items.forEach((item) => {
                         const wrapper = document.createElement('div');
-                        wrapper.className = 'relative h-20 w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900';
+                        wrapper.className =
+                            'relative h-20 w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900';
 
                         const image = document.createElement('img');
                         image.src = item.url || '';
@@ -434,9 +452,10 @@
             window.initBuildStepRepeaters?.(document);
             window.initReviewRepeaters?.(document);
             window.initFooterLinkRepeaters?.(document);
+            window.initDynamicRepeaters?.(document);
         });
 
-        window.initSectionIconLibrary = function () {
+        window.initSectionIconLibrary = function() {
             if (window.__sectionsIconLibraryBound) {
                 return;
             }
@@ -479,8 +498,12 @@
                 }
 
                 activeInput.value = sanitizeIconClass(value);
-                activeInput.dispatchEvent(new Event('input', { bubbles: true }));
-                activeInput.dispatchEvent(new Event('change', { bubbles: true }));
+                activeInput.dispatchEvent(new Event('input', {
+                    bubbles: true
+                }));
+                activeInput.dispatchEvent(new Event('change', {
+                    bubbles: true
+                }));
             };
 
             const renderLibrary = (query = '') => {
@@ -491,7 +514,8 @@
                 });
 
                 grid.innerHTML = '';
-                countLabel.textContent = `${filteredIcons.length} ${filteredIcons.length === 1 ? @json(__('icon')) : @json(__('icons'))}`;
+                countLabel.textContent =
+                    `${filteredIcons.length} ${filteredIcons.length === 1 ? @json(__('icon')) : @json(__('icons'))}`;
                 emptyState.classList.toggle('hidden', filteredIcons.length > 0);
                 grid.classList.toggle('hidden', filteredIcons.length === 0);
                 clearButton.classList.toggle('hidden', activeValue === '');
@@ -501,7 +525,8 @@
                     button.type = 'button';
                     button.dataset.sectionIconOption = 'true';
                     button.dataset.sectionIconValue = icon.value;
-                    button.className = 'sections-icon-library-tile flex flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-slate-300 hover:bg-slate-50 rtl:text-right';
+                    button.className =
+                        'sections-icon-library-tile flex flex-col items-start gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-left transition hover:border-slate-300 hover:bg-slate-50 rtl:text-right';
 
                     if (icon.value === activeValue) {
                         button.classList.add('is-active');
@@ -563,11 +588,11 @@
                 }, 30);
             };
 
-            searchInput.addEventListener('input', function () {
+            searchInput.addEventListener('input', function() {
                 renderLibrary(searchInput.value);
             });
 
-            clearButton.addEventListener('click', function () {
+            clearButton.addEventListener('click', function() {
                 applyIconValue('');
                 closeLibrary();
             });
@@ -578,7 +603,7 @@
                 button.addEventListener('click', closeLibrary);
             });
 
-            document.addEventListener('click', function (event) {
+            document.addEventListener('click', function(event) {
                 const openTrigger = event.target.closest('[data-open-section-icon-library]');
                 if (openTrigger) {
                     event.preventDefault();
@@ -594,7 +619,7 @@
                 }
             });
 
-            document.addEventListener('keydown', function (event) {
+            document.addEventListener('keydown', function(event) {
                 if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
                     closeLibrary();
                 }
@@ -603,11 +628,11 @@
             window.__sectionsIconLibraryBound = true;
         };
 
-        window.initSectionEditorTabs = function (scope) {
+        window.initSectionEditorTabs = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const editorRoots = root.matches?.('[data-section-editor-form]')
-                ? [root]
-                : Array.from(root.querySelectorAll('[data-section-editor-form]'));
+            const editorRoots = root.matches?.('[data-section-editor-form]') ?
+                [root] :
+                Array.from(root.querySelectorAll('[data-section-editor-form]'));
 
             editorRoots.forEach((form) => {
                 if (form.dataset.editorTabsBound === '1') {
@@ -637,7 +662,7 @@
                 };
 
                 buttons.forEach((button) => {
-                    button.addEventListener('click', function () {
+                    button.addEventListener('click', function() {
                         activateTab(button.dataset.tab || '');
                     });
                 });
@@ -650,11 +675,11 @@
             });
         };
 
-        window.initSectionFeatureRepeaters = function (scope) {
+        window.initSectionFeatureRepeaters = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const repeaters = root.matches?.('[data-feature-repeater]')
-                ? [root]
-                : Array.from(root.querySelectorAll('[data-feature-repeater]'));
+            const repeaters = root.matches?.('[data-feature-repeater]') ?
+                [root] :
+                Array.from(root.querySelectorAll('[data-feature-repeater]'));
 
             const createUniqueId = () => `feature_icon_${Math.random().toString(36).slice(2, 10)}`;
 
@@ -690,7 +715,9 @@
                     svg = svg.replace(/<!DOCTYPE[^>]*>/gi, '');
                     svg = svg.replace(/<(script|style|foreignObject)\b.*?<\/\1>/gis, '');
                     svg = svg.replace(/\son[a-zA-Z-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/g, '');
-                    svg = svg.replace(/\s(?:href|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi, '');
+                    svg = svg.replace(
+                        /\s(?:href|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi,
+                        '');
 
                     const match = svg.match(/<svg\b[\s\S]*<\/svg>/i);
                     if (!match) {
@@ -710,7 +737,8 @@
                     container.innerHTML = '';
                     urls.filter(Boolean).forEach((url) => {
                         const wrapper = document.createElement('div');
-                        wrapper.className = 'relative h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-50';
+                        wrapper.className =
+                            'relative h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-50';
 
                         const image = document.createElement('img');
                         image.src = url;
@@ -734,7 +762,8 @@
                     const mediaButton = item.querySelector('[data-feature-icon-media-button]');
                     const mediaPreview = item.querySelector('[data-feature-icon-media-preview]');
 
-                    if (!(mediaInput instanceof HTMLInputElement) || !(mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
+                    if (!(mediaInput instanceof HTMLInputElement) || !(
+                        mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
                         return;
                     }
 
@@ -755,7 +784,8 @@
                 const toggleFeatureIconPanels = (item, source = null) => {
                     const activeSource = source || getFeatureIconSource(item);
                     item.querySelectorAll('[data-feature-icon-panel]').forEach((panel) => {
-                        panel.classList.toggle('hidden', panel.dataset.featureIconPanel !== activeSource);
+                        panel.classList.toggle('hidden', panel.dataset.featureIconPanel !==
+                            activeSource);
                     });
                 };
 
@@ -853,11 +883,11 @@
                     }
 
                     if (summary) {
-                        summary.textContent = source === 'svg'
-                            ? (svgValue ? @json(__('Custom SVG icon')) : featureItemHint)
-                            : source === 'media'
-                                ? (mediaValue ? @json(__('SVG from media library')) : featureItemHint)
-                                : (iconValue ? @json(__('Tabler icon selected')) : featureItemHint);
+                        summary.textContent = source === 'svg' ?
+                            (svgValue ? @json(__('Custom SVG icon')) : featureItemHint) :
+                            source === 'media' ?
+                            (mediaValue ? @json(__('SVG from media library')) : featureItemHint) :
+                            (iconValue ? @json(__('Tabler icon selected')) : featureItemHint);
                     }
                 };
 
@@ -868,7 +898,8 @@
                         item.querySelectorAll('[data-name-template]').forEach((field) => {
                             const templateName = field.dataset.nameTemplate || '';
                             if (templateName) {
-                                field.name = templateName.replace(/__INDEX__/g, String(index));
+                                field.name = templateName.replace(/__INDEX__/g, String(
+                                    index));
                             }
                         });
 
@@ -911,55 +942,56 @@
                     const duplicateButton = item.querySelector('[data-duplicate-feature-item]');
                     const toggleButton = item.querySelector('[data-feature-toggle]');
 
-                    iconInput?.addEventListener('input', function () {
+                    iconInput?.addEventListener('input', function() {
                         renderIconPreview(item);
                         refreshFeatureItemMeta(item);
                     });
 
-                    iconSourceInput?.addEventListener('change', function () {
+                    iconSourceInput?.addEventListener('change', function() {
                         toggleFeatureIconPanels(item, getFeatureIconSource(item));
                         renderIconPreview(item);
                         refreshFeatureItemMeta(item);
                     });
 
-                    iconSvgInput?.addEventListener('input', function () {
+                    iconSvgInput?.addEventListener('input', function() {
                         renderIconPreview(item);
                         refreshFeatureItemMeta(item);
                     });
 
-                    iconMediaInput?.addEventListener('input', function () {
+                    iconMediaInput?.addEventListener('input', function() {
                         renderIconPreview(item);
                         refreshFeatureItemMeta(item);
                     });
 
-                    iconMediaInput?.addEventListener('change', function () {
+                    iconMediaInput?.addEventListener('change', function() {
                         renderIconPreview(item);
                         refreshFeatureItemMeta(item);
                     });
 
-                    textInput?.addEventListener('input', function () {
+                    textInput?.addEventListener('input', function() {
                         refreshFeatureItemMeta(item);
                     });
 
-                    removeButton?.addEventListener('click', function () {
+                    removeButton?.addEventListener('click', function() {
                         item.remove();
                         reindexItems();
                     });
 
-                    duplicateButton?.addEventListener('click', function () {
+                    duplicateButton?.addEventListener('click', function() {
                         const createdItem = createFeatureItem({
                             text: textInput?.value || '',
                             icon: iconInput?.value || '',
                             iconSource: getFeatureIconSource(item),
                             iconSvg: iconSvgInput?.value || '',
                             iconMedia: iconMediaInput?.value || '',
-                            mediaPreviewUrl: mediaPreview?.querySelector('img')?.getAttribute('src') || '',
+                            mediaPreviewUrl: mediaPreview?.querySelector('img')
+                                ?.getAttribute('src') || '',
                         });
 
                         setFeatureExpanded(createdItem, true, true);
                     });
 
-                    toggleButton?.addEventListener('click', function () {
+                    toggleButton?.addEventListener('click', function() {
                         const body = item.querySelector('[data-feature-item-body]');
                         const shouldExpand = body?.classList.contains('hidden') ?? true;
                         setFeatureExpanded(item, shouldExpand, shouldExpand);
@@ -999,7 +1031,8 @@
                     }
 
                     if (iconSourceInput && typeof seed.iconSource === 'string') {
-                        iconSourceInput.value = ['class', 'svg', 'media'].includes(seed.iconSource) ? seed.iconSource : 'class';
+                        iconSourceInput.value = ['class', 'svg', 'media'].includes(seed.iconSource) ? seed
+                            .iconSource : 'class';
                     }
 
                     if (iconSvgInput && typeof seed.iconSvg === 'string') {
@@ -1010,7 +1043,8 @@
                         iconMediaInput.value = seed.iconMedia;
                     }
 
-                    renderMediaPreview(mediaPreview, typeof seed.mediaPreviewUrl === 'string' && seed.mediaPreviewUrl ? [seed.mediaPreviewUrl] : []);
+                    renderMediaPreview(mediaPreview, typeof seed.mediaPreviewUrl === 'string' && seed
+                        .mediaPreviewUrl ? [seed.mediaPreviewUrl] : []);
                     toggleFeatureIconPanels(item, getFeatureIconSource(item));
                     renderIconPreview(item);
                     reindexItems();
@@ -1020,7 +1054,7 @@
                 };
 
                 addButtons.forEach((button) => {
-                    button.addEventListener('click', function () {
+                    button.addEventListener('click', function() {
                         const item = createFeatureItem();
                         const textInput = item?.querySelector('[data-feature-field="text"]');
 
@@ -1050,11 +1084,11 @@
             });
         };
 
-        window.initSectionOutputRepeaters = function (scope) {
+        window.initSectionOutputRepeaters = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const repeaters = root.matches?.('[data-output-repeater]')
-                ? [root]
-                : Array.from(root.querySelectorAll('[data-output-repeater]'));
+            const repeaters = root.matches?.('[data-output-repeater]') ?
+                [root] :
+                Array.from(root.querySelectorAll('[data-output-repeater]'));
 
             const createUniqueId = () => `output_icon_${Math.random().toString(36).slice(2, 10)}`;
 
@@ -1088,7 +1122,8 @@
                     container.innerHTML = '';
                     urls.filter(Boolean).forEach((url) => {
                         const wrapper = document.createElement('div');
-                        wrapper.className = 'relative h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-50';
+                        wrapper.className =
+                            'relative h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-50';
 
                         const image = document.createElement('img');
                         image.src = url;
@@ -1112,7 +1147,8 @@
                     const mediaButton = item.querySelector('[data-output-icon-media-button]');
                     const mediaPreview = item.querySelector('[data-output-icon-media-preview]');
 
-                    if (!(mediaInput instanceof HTMLInputElement) || !(mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
+                    if (!(mediaInput instanceof HTMLInputElement) || !(
+                        mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
                         return;
                     }
 
@@ -1133,7 +1169,8 @@
                 const toggleOutputIconPanels = (item, source = null) => {
                     const activeSource = source || getOutputIconSource(item);
                     item.querySelectorAll('[data-output-icon-panel]').forEach((panel) => {
-                        panel.classList.toggle('hidden', panel.dataset.outputIconPanel !== activeSource);
+                        panel.classList.toggle('hidden', panel.dataset.outputIconPanel !==
+                            activeSource);
                     });
                 };
 
@@ -1228,9 +1265,10 @@
                     }
 
                     if (summary) {
-                        summary.textContent = source === 'media'
-                            ? (mediaValue ? @json(__('SVG from media library')) : outputItemHint)
-                            : (iconValue ? @json(__('Tabler icon selected')) : (textValue ? @json(__('Visible in the outputs list')) : outputItemHint));
+                        summary.textContent = source === 'media' ?
+                            (mediaValue ? @json(__('SVG from media library')) : outputItemHint) :
+                            (iconValue ? @json(__('Tabler icon selected')) : (textValue ?
+                                @json(__('Visible in the outputs list')) : outputItemHint));
                     }
                 };
 
@@ -1241,7 +1279,8 @@
                         item.querySelectorAll('[data-name-template]').forEach((field) => {
                             const templateName = field.dataset.nameTemplate || '';
                             if (templateName) {
-                                field.name = templateName.replace(/__INDEX__/g, String(index));
+                                field.name = templateName.replace(/__INDEX__/g, String(
+                                    index));
                             }
                         });
 
@@ -1278,49 +1317,50 @@
 
                     ensureOutputIconMediaTargets(item);
 
-                    textInput?.addEventListener('input', function () {
+                    textInput?.addEventListener('input', function() {
                         refreshOutputItemMeta(item);
                     });
 
-                    iconInput?.addEventListener('input', function () {
+                    iconInput?.addEventListener('input', function() {
                         renderOutputIconPreview(item);
                         refreshOutputItemMeta(item);
                     });
 
-                    iconSourceInput?.addEventListener('change', function () {
+                    iconSourceInput?.addEventListener('change', function() {
                         toggleOutputIconPanels(item, getOutputIconSource(item));
                         renderOutputIconPreview(item);
                         refreshOutputItemMeta(item);
                     });
 
-                    iconMediaInput?.addEventListener('input', function () {
+                    iconMediaInput?.addEventListener('input', function() {
                         renderOutputIconPreview(item);
                         refreshOutputItemMeta(item);
                     });
 
-                    iconMediaInput?.addEventListener('change', function () {
+                    iconMediaInput?.addEventListener('change', function() {
                         renderOutputIconPreview(item);
                         refreshOutputItemMeta(item);
                     });
 
-                    removeButton?.addEventListener('click', function () {
+                    removeButton?.addEventListener('click', function() {
                         item.remove();
                         reindexItems();
                     });
 
-                    duplicateButton?.addEventListener('click', function () {
+                    duplicateButton?.addEventListener('click', function() {
                         const createdItem = createOutputItem({
                             text: textInput?.value || '',
                             icon: iconInput?.value || '',
                             iconSource: getOutputIconSource(item),
                             iconMedia: iconMediaInput?.value || '',
-                            mediaPreviewUrl: mediaPreview?.querySelector('img')?.getAttribute('src') || '',
+                            mediaPreviewUrl: mediaPreview?.querySelector('img')
+                                ?.getAttribute('src') || '',
                         });
 
                         setOutputExpanded(createdItem, true, true);
                     });
 
-                    toggleButton?.addEventListener('click', function () {
+                    toggleButton?.addEventListener('click', function() {
                         const body = item.querySelector('[data-output-item-body]');
                         const shouldExpand = body?.classList.contains('hidden') ?? true;
                         setOutputExpanded(item, shouldExpand, shouldExpand);
@@ -1359,14 +1399,16 @@
                     }
 
                     if (iconSourceInput && typeof seed.iconSource === 'string') {
-                        iconSourceInput.value = ['class', 'media'].includes(seed.iconSource) ? seed.iconSource : 'class';
+                        iconSourceInput.value = ['class', 'media'].includes(seed.iconSource) ? seed
+                            .iconSource : 'class';
                     }
 
                     if (iconMediaInput && typeof seed.iconMedia === 'string') {
                         iconMediaInput.value = seed.iconMedia;
                     }
 
-                    renderMediaPreview(mediaPreview, typeof seed.mediaPreviewUrl === 'string' && seed.mediaPreviewUrl ? [seed.mediaPreviewUrl] : []);
+                    renderMediaPreview(mediaPreview, typeof seed.mediaPreviewUrl === 'string' && seed
+                        .mediaPreviewUrl ? [seed.mediaPreviewUrl] : []);
                     toggleOutputIconPanels(item, getOutputIconSource(item));
                     renderOutputIconPreview(item);
                     reindexItems();
@@ -1376,7 +1418,7 @@
                 };
 
                 addButtons.forEach((button) => {
-                    button.addEventListener('click', function () {
+                    button.addEventListener('click', function() {
                         const item = createOutputItem();
                         const textInput = item?.querySelector('[data-output-field="text"]');
 
@@ -1406,11 +1448,11 @@
             });
         };
 
-        window.initSectionServiceRepeaters = function (scope) {
+        window.initSectionServiceRepeaters = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const repeaters = root.matches?.('[data-service-repeater]')
-                ? [root]
-                : Array.from(root.querySelectorAll('[data-service-repeater]'));
+            const repeaters = root.matches?.('[data-service-repeater]') ?
+                [root] :
+                Array.from(root.querySelectorAll('[data-service-repeater]'));
 
             const createUniqueId = () => `service_icon_${Math.random().toString(36).slice(2, 10)}`;
 
@@ -1444,7 +1486,8 @@
                     container.innerHTML = '';
                     urls.filter(Boolean).forEach((url) => {
                         const wrapper = document.createElement('div');
-                        wrapper.className = 'relative h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-50';
+                        wrapper.className =
+                            'relative h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-50';
 
                         const image = document.createElement('img');
                         image.src = url;
@@ -1468,7 +1511,8 @@
                     const mediaButton = item.querySelector('[data-service-icon-media-button]');
                     const mediaPreview = item.querySelector('[data-service-icon-media-preview]');
 
-                    if (!(mediaInput instanceof HTMLInputElement) || !(mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
+                    if (!(mediaInput instanceof HTMLInputElement) || !(
+                        mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
                         return;
                     }
 
@@ -1489,7 +1533,8 @@
                 const toggleServiceIconPanels = (item, source = null) => {
                     const activeSource = source || getServiceIconSource(item);
                     item.querySelectorAll('[data-service-icon-panel]').forEach((panel) => {
-                        panel.classList.toggle('hidden', panel.dataset.serviceIconPanel !== activeSource);
+                        panel.classList.toggle('hidden', panel.dataset.serviceIconPanel !==
+                            activeSource);
                     });
                 };
 
@@ -1528,7 +1573,8 @@
                         return;
                     }
 
-                    preview.innerHTML = '<svg width="10" height="13" viewBox="0 0 10 13" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M9.75 6.49512L0 12.9903V-7.34329e-05L9.75 6.49512Z" fill="#BA112C"></path></svg>';
+                    preview.innerHTML =
+                        '<svg width="10" height="13" viewBox="0 0 10 13" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M9.75 6.49512L0 12.9903V-7.34329e-05L9.75 6.49512Z" fill="#BA112C"></path></svg>';
                 };
 
                 const setServiceExpanded = (item, expanded, collapseOthers = false) => {
@@ -1582,9 +1628,10 @@
                     }
 
                     if (summary) {
-                        summary.textContent = source === 'media'
-                            ? (mediaValue ? @json(__('SVG from media library')) : serviceItemHint)
-                            : (iconValue ? @json(__('Tabler icon selected')) : (textValue ? @json(__('Uses the default service marker')) : serviceItemHint));
+                        summary.textContent = source === 'media' ?
+                            (mediaValue ? @json(__('SVG from media library')) : serviceItemHint) :
+                            (iconValue ? @json(__('Tabler icon selected')) : (textValue ?
+                                @json(__('Uses the default service marker')) : serviceItemHint));
                     }
                 };
 
@@ -1595,7 +1642,8 @@
                         item.querySelectorAll('[data-name-template]').forEach((field) => {
                             const templateName = field.dataset.nameTemplate || '';
                             if (templateName) {
-                                field.name = templateName.replace(/__INDEX__/g, String(index));
+                                field.name = templateName.replace(/__INDEX__/g, String(
+                                    index));
                             }
                         });
 
@@ -1632,49 +1680,50 @@
 
                     ensureServiceIconMediaTargets(item);
 
-                    textInput?.addEventListener('input', function () {
+                    textInput?.addEventListener('input', function() {
                         refreshServiceItemMeta(item);
                     });
 
-                    iconInput?.addEventListener('input', function () {
+                    iconInput?.addEventListener('input', function() {
                         renderServiceIconPreview(item);
                         refreshServiceItemMeta(item);
                     });
 
-                    iconSourceInput?.addEventListener('change', function () {
+                    iconSourceInput?.addEventListener('change', function() {
                         toggleServiceIconPanels(item, getServiceIconSource(item));
                         renderServiceIconPreview(item);
                         refreshServiceItemMeta(item);
                     });
 
-                    iconMediaInput?.addEventListener('input', function () {
+                    iconMediaInput?.addEventListener('input', function() {
                         renderServiceIconPreview(item);
                         refreshServiceItemMeta(item);
                     });
 
-                    iconMediaInput?.addEventListener('change', function () {
+                    iconMediaInput?.addEventListener('change', function() {
                         renderServiceIconPreview(item);
                         refreshServiceItemMeta(item);
                     });
 
-                    removeButton?.addEventListener('click', function () {
+                    removeButton?.addEventListener('click', function() {
                         item.remove();
                         reindexItems();
                     });
 
-                    duplicateButton?.addEventListener('click', function () {
+                    duplicateButton?.addEventListener('click', function() {
                         const createdItem = createServiceItem({
                             text: textInput?.value || '',
                             icon: iconInput?.value || '',
                             iconSource: getServiceIconSource(item),
                             iconMedia: iconMediaInput?.value || '',
-                            mediaPreviewUrl: mediaPreview?.querySelector('img')?.getAttribute('src') || '',
+                            mediaPreviewUrl: mediaPreview?.querySelector('img')
+                                ?.getAttribute('src') || '',
                         });
 
                         setServiceExpanded(createdItem, true, true);
                     });
 
-                    toggleButton?.addEventListener('click', function () {
+                    toggleButton?.addEventListener('click', function() {
                         const body = item.querySelector('[data-service-item-body]');
                         const shouldExpand = body?.classList.contains('hidden') ?? true;
                         setServiceExpanded(item, shouldExpand, shouldExpand);
@@ -1713,14 +1762,16 @@
                     }
 
                     if (iconSourceInput && typeof seed.iconSource === 'string') {
-                        iconSourceInput.value = ['class', 'media'].includes(seed.iconSource) ? seed.iconSource : 'class';
+                        iconSourceInput.value = ['class', 'media'].includes(seed.iconSource) ? seed
+                            .iconSource : 'class';
                     }
 
                     if (iconMediaInput && typeof seed.iconMedia === 'string') {
                         iconMediaInput.value = seed.iconMedia;
                     }
 
-                    renderMediaPreview(mediaPreview, typeof seed.mediaPreviewUrl === 'string' && seed.mediaPreviewUrl ? [seed.mediaPreviewUrl] : []);
+                    renderMediaPreview(mediaPreview, typeof seed.mediaPreviewUrl === 'string' && seed
+                        .mediaPreviewUrl ? [seed.mediaPreviewUrl] : []);
                     toggleServiceIconPanels(item, getServiceIconSource(item));
                     renderServiceIconPreview(item);
                     reindexItems();
@@ -1730,7 +1781,7 @@
                 };
 
                 addButtons.forEach((button) => {
-                    button.addEventListener('click', function () {
+                    button.addEventListener('click', function() {
                         const item = createServiceItem();
                         const textInput = item?.querySelector('[data-service-field="text"]');
 
@@ -1760,11 +1811,11 @@
             });
         };
 
-        window.initBuildStepRepeaters = function (scope) {
+        window.initBuildStepRepeaters = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const repeaters = root.matches?.('[data-build-step-repeater]')
-                ? [root]
-                : Array.from(root.querySelectorAll('[data-build-step-repeater]'));
+            const repeaters = root.matches?.('[data-build-step-repeater]') ?
+                [root] :
+                Array.from(root.querySelectorAll('[data-build-step-repeater]'));
 
             const createUniqueId = () => `build_step_icon_${Math.random().toString(36).slice(2, 10)}`;
 
@@ -1800,7 +1851,9 @@
                     svg = svg.replace(/<!DOCTYPE[^>]*>/gi, '');
                     svg = svg.replace(/<(script|style|foreignObject)\b.*?<\/\1>/gis, '');
                     svg = svg.replace(/\son[a-zA-Z-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/g, '');
-                    svg = svg.replace(/\s(?:href|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi, '');
+                    svg = svg.replace(
+                        /\s(?:href|xlink:href)\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|javascript:[^\s>]+)/gi,
+                        '');
 
                     const match = svg.match(/<svg\b[\s\S]*<\/svg>/i);
                     if (!match) {
@@ -1820,7 +1873,8 @@
                     container.innerHTML = '';
                     urls.filter(Boolean).forEach((url) => {
                         const wrapper = document.createElement('div');
-                        wrapper.className = 'relative h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-50';
+                        wrapper.className =
+                            'relative h-14 w-14 overflow-hidden rounded-xl border border-slate-200 bg-slate-50';
 
                         const image = document.createElement('img');
                         image.src = url;
@@ -1844,7 +1898,8 @@
                     const mediaButton = item.querySelector('[data-build-step-icon-media-button]');
                     const mediaPreview = item.querySelector('[data-build-step-icon-media-preview]');
 
-                    if (!(mediaInput instanceof HTMLInputElement) || !(mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
+                    if (!(mediaInput instanceof HTMLInputElement) || !(
+                        mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
                         return;
                     }
 
@@ -1865,7 +1920,8 @@
                 const toggleBuildStepIconPanels = (item, source = null) => {
                     const activeSource = source || getBuildStepIconSource(item);
                     item.querySelectorAll('[data-build-step-icon-panel]').forEach((panel) => {
-                        panel.classList.toggle('hidden', panel.dataset.buildStepIconPanel !== activeSource);
+                        panel.classList.toggle('hidden', panel.dataset.buildStepIconPanel !==
+                            activeSource);
                     });
                 };
 
@@ -1965,16 +2021,16 @@
                     }
 
                     if (summary) {
-                        let summaryText = source === 'svg'
-                            ? (svgValue ? @json(__('Custom SVG icon')) : buildStepItemHint)
-                            : source === 'media'
-                                ? (mediaValue ? @json(__('SVG from media library')) : buildStepItemHint)
-                                : (iconValue ? @json(__('Tabler icon selected')) : buildStepItemHint);
+                        let summaryText = source === 'svg' ?
+                            (svgValue ? @json(__('Custom SVG icon')) : buildStepItemHint) :
+                            source === 'media' ?
+                            (mediaValue ? @json(__('SVG from media library')) : buildStepItemHint) :
+                            (iconValue ? @json(__('Tabler icon selected')) : buildStepItemHint);
 
                         if (isAccent) {
-                            summaryText = summaryText === buildStepItemHint
-                                ? @json(__('Highlighted in red'))
-                                : `${summaryText} • ${@json(__('Highlighted in red'))}`;
+                            summaryText = summaryText === buildStepItemHint ?
+                                @json(__('Highlighted in red')) :
+                                `${summaryText} • ${@json(__('Highlighted in red'))}`;
                         }
 
                         summary.textContent = summaryText;
@@ -1988,7 +2044,8 @@
                         item.querySelectorAll('[data-name-template]').forEach((field) => {
                             const templateName = field.dataset.nameTemplate || '';
                             if (templateName) {
-                                field.name = templateName.replace(/__INDEX__/g, String(index));
+                                field.name = templateName.replace(/__INDEX__/g, String(
+                                    index));
                             }
                         });
 
@@ -2026,60 +2083,63 @@
                     const duplicateButton = item.querySelector('[data-duplicate-build-step]');
                     const toggleButton = item.querySelector('[data-build-step-toggle]');
 
-                    iconInput?.addEventListener('input', function () {
+                    iconInput?.addEventListener('input', function() {
                         renderIconPreview(item);
                         refreshBuildStepMeta(item);
                     });
 
-                    iconSourceInput?.addEventListener('change', function () {
+                    iconSourceInput?.addEventListener('change', function() {
                         toggleBuildStepIconPanels(item, getBuildStepIconSource(item));
                         renderIconPreview(item);
                         refreshBuildStepMeta(item);
                     });
 
-                    iconSvgInput?.addEventListener('input', function () {
+                    iconSvgInput?.addEventListener('input', function() {
                         renderIconPreview(item);
                         refreshBuildStepMeta(item);
                     });
 
-                    iconMediaInput?.addEventListener('input', function () {
+                    iconMediaInput?.addEventListener('input', function() {
                         renderIconPreview(item);
                         refreshBuildStepMeta(item);
                     });
 
-                    iconMediaInput?.addEventListener('change', function () {
+                    iconMediaInput?.addEventListener('change', function() {
                         renderIconPreview(item);
                         refreshBuildStepMeta(item);
                     });
 
-                    titleInput?.addEventListener('input', function () {
+                    titleInput?.addEventListener('input', function() {
                         refreshBuildStepMeta(item);
                     });
 
-                    item.querySelector('[data-build-step-field="accent"]')?.addEventListener('change', function () {
-                        refreshBuildStepMeta(item);
-                    });
+                    item.querySelector('[data-build-step-field="accent"]')?.addEventListener('change',
+                        function() {
+                            refreshBuildStepMeta(item);
+                        });
 
-                    removeButton?.addEventListener('click', function () {
+                    removeButton?.addEventListener('click', function() {
                         item.remove();
                         reindexItems();
                     });
 
-                    duplicateButton?.addEventListener('click', function () {
+                    duplicateButton?.addEventListener('click', function() {
                         createStepItem({
                             title: titleInput?.value || '',
                             icon: iconInput?.value || '',
                             iconSource: getBuildStepIconSource(item),
                             iconSvg: iconSvgInput?.value || '',
                             iconMedia: iconMediaInput?.value || '',
-                            mediaPreviewUrl: mediaPreview?.querySelector('img')?.getAttribute('src') || '',
-                            isAccent: item.querySelector('[data-build-step-field="accent"]')?.checked || false,
+                            mediaPreviewUrl: mediaPreview?.querySelector('img')
+                                ?.getAttribute('src') || '',
+                            isAccent: item.querySelector('[data-build-step-field="accent"]')
+                                ?.checked || false,
                         });
 
                         setBuildStepExpanded(createdItem, true, true);
                     });
 
-                    toggleButton?.addEventListener('click', function () {
+                    toggleButton?.addEventListener('click', function() {
                         const body = item.querySelector('[data-build-step-item-body]');
                         const shouldExpand = body?.classList.contains('hidden') ?? true;
                         setBuildStepExpanded(item, shouldExpand, shouldExpand);
@@ -2120,7 +2180,8 @@
                     }
 
                     if (iconSourceInput && typeof seed.iconSource === 'string') {
-                        iconSourceInput.value = ['class', 'svg', 'media'].includes(seed.iconSource) ? seed.iconSource : 'class';
+                        iconSourceInput.value = ['class', 'svg', 'media'].includes(seed.iconSource) ? seed
+                            .iconSource : 'class';
                     }
 
                     if (iconSvgInput && typeof seed.iconSvg === 'string') {
@@ -2135,7 +2196,8 @@
                         accentInput.checked = Boolean(seed.isAccent);
                     }
 
-                    renderMediaPreview(mediaPreview, typeof seed.mediaPreviewUrl === 'string' && seed.mediaPreviewUrl ? [seed.mediaPreviewUrl] : []);
+                    renderMediaPreview(mediaPreview, typeof seed.mediaPreviewUrl === 'string' && seed
+                        .mediaPreviewUrl ? [seed.mediaPreviewUrl] : []);
                     toggleBuildStepIconPanels(item, getBuildStepIconSource(item));
                     renderIconPreview(item);
                     reindexItems();
@@ -2145,9 +2207,10 @@
                 };
 
                 addButtons.forEach((button) => {
-                    button.addEventListener('click', function () {
+                    button.addEventListener('click', function() {
                         const item = createStepItem();
-                        const titleInput = item?.querySelector('[data-build-step-field="title"]');
+                        const titleInput = item?.querySelector(
+                            '[data-build-step-field="title"]');
 
                         if (titleInput instanceof HTMLElement) {
                             window.setTimeout(() => titleInput.focus(), 30);
@@ -2175,11 +2238,11 @@
             });
         };
 
-        window.initReviewRepeaters = function (scope) {
+        window.initReviewRepeaters = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const repeaters = root.matches?.('[data-review-repeater]')
-                ? [root]
-                : Array.from(root.querySelectorAll('[data-review-repeater]'));
+            const repeaters = root.matches?.('[data-review-repeater]') ?
+                [root] :
+                Array.from(root.querySelectorAll('[data-review-repeater]'));
 
             const createUniqueId = () => `review_media_${Math.random().toString(36).slice(2, 10)}`;
 
@@ -2246,7 +2309,8 @@
                         item.querySelectorAll('[data-name-template]').forEach((field) => {
                             const templateName = field.dataset.nameTemplate || '';
                             if (templateName) {
-                                field.name = templateName.replace(/__INDEX__/g, String(index));
+                                field.name = templateName.replace(/__INDEX__/g, String(
+                                    index));
                             }
                         });
                     });
@@ -2275,18 +2339,20 @@
                         renderAvatarPreview(item);
                     }
 
-                    removeButton?.addEventListener('click', function () {
+                    removeButton?.addEventListener('click', function() {
                         item.remove();
                         reindexItems();
                     });
 
-                    duplicateButton?.addEventListener('click', function () {
+                    duplicateButton?.addEventListener('click', function() {
                         createReviewItem({
                             name: nameInput?.value || '',
                             text: textInput?.value || '',
                             rating: ratingInput?.value || '5',
                             avatar: avatarInput?.value || '',
-                            previewUrl: item.querySelector('[data-review-avatar-preview] img')?.getAttribute('src') || '',
+                            previewUrl: item.querySelector(
+                                    '[data-review-avatar-preview] img')?.getAttribute(
+                                'src') || '',
                         });
                     });
 
@@ -2333,7 +2399,7 @@
                 };
 
                 addButtons.forEach((button) => {
-                    button.addEventListener('click', function () {
+                    button.addEventListener('click', function() {
                         const item = createReviewItem();
                         const nameInput = item?.querySelector('[data-review-field="name"]');
 
@@ -2363,11 +2429,11 @@
             });
         };
 
-        window.initFooterLinkRepeaters = function (scope) {
+        window.initFooterLinkRepeaters = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const repeaters = root.matches?.('[data-footer-link-repeater]')
-                ? [root]
-                : Array.from(root.querySelectorAll('[data-footer-link-repeater]'));
+            const repeaters = root.matches?.('[data-footer-link-repeater]') ?
+                [root] :
+                Array.from(root.querySelectorAll('[data-footer-link-repeater]'));
 
             repeaters.forEach((repeater) => {
                 if (repeater.dataset.footerLinkRepeaterBound === '1') {
@@ -2392,7 +2458,8 @@
                         item.querySelectorAll('[data-name-template]').forEach((field) => {
                             const templateName = field.dataset.nameTemplate || '';
                             if (templateName) {
-                                field.name = templateName.replace(/__INDEX__/g, String(index));
+                                field.name = templateName.replace(/__INDEX__/g, String(
+                                    index));
                             }
                         });
 
@@ -2415,15 +2482,17 @@
                     const removeButton = item.querySelector('[data-remove-footer-link]');
                     const duplicateButton = item.querySelector('[data-duplicate-footer-link]');
 
-                    removeButton?.addEventListener('click', function () {
+                    removeButton?.addEventListener('click', function() {
                         item.remove();
                         reindexItems();
                     });
 
-                    duplicateButton?.addEventListener('click', function () {
+                    duplicateButton?.addEventListener('click', function() {
                         createItem({
-                            label: item.querySelector('[data-footer-link-field="label"]')?.value || '',
-                            url: item.querySelector('[data-footer-link-field="url"]')?.value || '',
+                            label: item.querySelector('[data-footer-link-field="label"]')
+                                ?.value || '',
+                            url: item.querySelector('[data-footer-link-field="url"]')
+                                ?.value || '',
                         });
                     });
 
@@ -2459,9 +2528,10 @@
                 };
 
                 addButtons.forEach((button) => {
-                    button.addEventListener('click', function () {
+                    button.addEventListener('click', function() {
                         const item = createItem();
-                        const labelInput = item?.querySelector('[data-footer-link-field="label"]');
+                        const labelInput = item?.querySelector(
+                            '[data-footer-link-field="label"]');
 
                         if (labelInput instanceof HTMLElement) {
                             window.setTimeout(() => labelInput.focus(), 30);
@@ -2475,6 +2545,208 @@
                 repeater.dataset.footerLinkRepeaterBound = '1';
             });
         };
+
+        window.initDynamicRepeaters = function(scope) {
+            const root = scope instanceof Element || scope instanceof Document ?
+                scope :
+                document;
+
+            const repeaters = root.matches?.('[data-dynamic-repeater]') ?
+                [root] :
+                Array.from(root.querySelectorAll('[data-dynamic-repeater]'));
+
+            repeaters.forEach((repeater) => {
+                if (repeater.dataset.dynamicRepeaterBound === '1') {
+                    return;
+                }
+
+                const list = repeater.querySelector('[data-dynamic-repeater-items]');
+                const template = repeater.querySelector('template[data-dynamic-repeater-template]');
+                const emptyState = repeater.querySelector('[data-dynamic-repeater-empty]');
+                const footerAdd = repeater.querySelector('[data-dynamic-repeater-footer-add]');
+                const addButtons = Array.from(repeater.querySelectorAll('[data-add-dynamic-repeater-item]'));
+
+                if (!list || !template) {
+                    repeater.dataset.dynamicRepeaterBound = '1';
+                    return;
+                }
+
+                const reindexItems = () => {
+                    const items = Array.from(list.querySelectorAll('[data-dynamic-repeater-item]'));
+
+                    items.forEach((item, index) => {
+                        item.querySelectorAll('[data-name-template]').forEach((field) => {
+                            const templateName = field.dataset.nameTemplate || '';
+
+                            if (templateName) {
+                                field.name = templateName.replace(/__INDEX__/g, String(
+                                    index));
+                            }
+                        });
+
+                        const label = item.querySelector('[data-dynamic-repeater-item-label]');
+
+                        if (label) {
+                            if (!label.dataset.itemPrefix) {
+                                label.dataset.itemPrefix = label.textContent
+                                    .replace(/\s*\d+\s*$/, '')
+                                    .trim();
+                            }
+
+                            label.textContent = `${label.dataset.itemPrefix} ${index + 1}`;
+                        }
+                    });
+
+                    if (emptyState) {
+                        emptyState.classList.toggle('hidden', items.length > 0);
+                    }
+
+                    if (footerAdd) {
+                        footerAdd.classList.toggle('hidden', items.length === 0);
+                    }
+                };
+
+                const bindToggle = (item) => {
+                    const toggleButton = item.querySelector('[data-dynamic-repeater-toggle]');
+                    const body = item.querySelector('[data-dynamic-repeater-item-body]');
+                    const icon = item.querySelector('[data-dynamic-repeater-toggle-icon]');
+
+                    if (!toggleButton || !body) {
+                        return;
+                    }
+
+                    toggleButton.addEventListener('click', function() {
+                        const expanded = toggleButton.getAttribute('aria-expanded') === 'true';
+                        const next = !expanded;
+
+                        body.classList.toggle('hidden', !next);
+                        toggleButton.setAttribute('aria-expanded', String(next));
+
+                        if (icon) {
+                            icon.classList.toggle('rotate-180', next);
+                        }
+                    });
+                };
+
+                const bindItem = (item) => {
+                    if (!(item instanceof HTMLElement) || item.dataset.dynamicRepeaterItemBound === '1') {
+                        return;
+                    }
+
+                    const removeButton = item.querySelector('[data-remove-dynamic-repeater-item]');
+                    const duplicateButton = item.querySelector('[data-duplicate-dynamic-repeater-item]');
+
+                    removeButton?.addEventListener('click', function() {
+                        item.remove();
+                        reindexItems();
+                    });
+
+                    duplicateButton?.addEventListener('click', function() {
+                        const seed = {};
+
+                        item.querySelectorAll('[data-name-template]').forEach((field) => {
+                            const templateName = field.dataset.nameTemplate || '';
+                            const match = templateName.match(/\[([^\[\]]+)\]$/);
+
+                            if (!match) {
+                                return;
+                            }
+
+                            const key = match[1];
+
+                            if (field.type === 'checkbox') {
+                                if (field.checked) {
+                                    seed[key] = '1';
+                                }
+                            } else if (field.type !== 'hidden') {
+                                seed[key] = field.value;
+                            }
+                        });
+
+                        createItem(seed);
+                    });
+
+                    bindToggle(item);
+                    item.dataset.dynamicRepeaterItemBound = '1';
+                };
+
+                const createItem = (seed = {}) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.innerHTML = template.innerHTML.trim();
+
+                    const item = wrapper.firstElementChild;
+
+                    if (!(item instanceof HTMLElement)) {
+                        return null;
+                    }
+
+                    const body = item.querySelector('[data-dynamic-repeater-item-body]');
+                    const toggleButton = item.querySelector('[data-dynamic-repeater-toggle]');
+                    const icon = item.querySelector('[data-dynamic-repeater-toggle-icon]');
+
+                    if (body) {
+                        body.classList.remove('hidden');
+                    }
+
+                    if (toggleButton) {
+                        toggleButton.setAttribute('aria-expanded', 'true');
+                    }
+
+                    if (icon) {
+                        icon.classList.add('rotate-180');
+                    }
+
+                    list.appendChild(item);
+                    bindItem(item);
+
+                    if (Object.keys(seed).length > 0) {
+                        item.querySelectorAll('[data-name-template]').forEach((field) => {
+                            const templateName = field.dataset.nameTemplate || '';
+                            const match = templateName.match(/\[([^\[\]]+)\]$/);
+
+                            if (!match) {
+                                return;
+                            }
+
+                            const key = match[1];
+
+                            if (!(key in seed)) {
+                                return;
+                            }
+
+                            if (field.type === 'checkbox') {
+                                field.checked = seed[key] === '1';
+                            } else if (field.type !== 'hidden') {
+                                field.value = seed[key];
+                            }
+                        });
+                    }
+
+                    reindexItems();
+
+                    const firstInput = item.querySelector(
+                    'input[type="text"], input[type="url"], textarea');
+
+                    if (firstInput instanceof HTMLElement) {
+                        window.setTimeout(() => firstInput.focus(), 30);
+                    }
+
+                    return item;
+                };
+
+                addButtons.forEach((button) => {
+                    button.addEventListener('click', function() {
+                        createItem();
+                    });
+                });
+
+                Array.from(list.querySelectorAll('[data-dynamic-repeater-item]')).forEach(bindItem);
+
+                reindexItems();
+                repeater.dataset.dynamicRepeaterBound = '1';
+            });
+        };
     </script>
 </body>
+
 </html>
