@@ -266,9 +266,9 @@
 
             const html = messages.length ?
                 `<div class="text-start"><ul style="margin:0;padding-inline-start:1.25rem;">${messages.map((message) => `<li>${String(message)
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')}</li>`).join('')}</ul></div>` :
+                            .replace(/&/g, '&amp;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')}</li>`).join('')}</ul></div>` :
                 '';
 
             Swal.fire({
@@ -559,6 +559,7 @@
                     trigger.closest('[data-output-item]') ||
                     trigger.closest('[data-service-item]') ||
                     trigger.closest('[data-build-step-item]') ||
+                    trigger.closest('[data-dynamic-repeater-item]') ||
                     trigger.closest('[data-section-editor-form]') ||
                     document;
 
@@ -630,8 +631,7 @@
 
         window.initSectionEditorTabs = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const editorRoots = root.matches?.('[data-section-editor-form]') ?
-                [root] :
+            const editorRoots = root.matches?.('[data-section-editor-form]') ? [root] :
                 Array.from(root.querySelectorAll('[data-section-editor-form]'));
 
             editorRoots.forEach((form) => {
@@ -677,8 +677,7 @@
 
         window.initSectionFeatureRepeaters = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const repeaters = root.matches?.('[data-feature-repeater]') ?
-                [root] :
+            const repeaters = root.matches?.('[data-feature-repeater]') ? [root] :
                 Array.from(root.querySelectorAll('[data-feature-repeater]'));
 
             const createUniqueId = () => `feature_icon_${Math.random().toString(36).slice(2, 10)}`;
@@ -763,7 +762,7 @@
                     const mediaPreview = item.querySelector('[data-feature-icon-media-preview]');
 
                     if (!(mediaInput instanceof HTMLInputElement) || !(
-                        mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
+                            mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
                         return;
                     }
 
@@ -1086,8 +1085,7 @@
 
         window.initSectionOutputRepeaters = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const repeaters = root.matches?.('[data-output-repeater]') ?
-                [root] :
+            const repeaters = root.matches?.('[data-output-repeater]') ? [root] :
                 Array.from(root.querySelectorAll('[data-output-repeater]'));
 
             const createUniqueId = () => `output_icon_${Math.random().toString(36).slice(2, 10)}`;
@@ -1148,7 +1146,7 @@
                     const mediaPreview = item.querySelector('[data-output-icon-media-preview]');
 
                     if (!(mediaInput instanceof HTMLInputElement) || !(
-                        mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
+                            mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
                         return;
                     }
 
@@ -1450,8 +1448,7 @@
 
         window.initSectionServiceRepeaters = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const repeaters = root.matches?.('[data-service-repeater]') ?
-                [root] :
+            const repeaters = root.matches?.('[data-service-repeater]') ? [root] :
                 Array.from(root.querySelectorAll('[data-service-repeater]'));
 
             const createUniqueId = () => `service_icon_${Math.random().toString(36).slice(2, 10)}`;
@@ -1512,7 +1509,7 @@
                     const mediaPreview = item.querySelector('[data-service-icon-media-preview]');
 
                     if (!(mediaInput instanceof HTMLInputElement) || !(
-                        mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
+                            mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
                         return;
                     }
 
@@ -1813,8 +1810,7 @@
 
         window.initBuildStepRepeaters = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const repeaters = root.matches?.('[data-build-step-repeater]') ?
-                [root] :
+            const repeaters = root.matches?.('[data-build-step-repeater]') ? [root] :
                 Array.from(root.querySelectorAll('[data-build-step-repeater]'));
 
             const createUniqueId = () => `build_step_icon_${Math.random().toString(36).slice(2, 10)}`;
@@ -1899,7 +1895,7 @@
                     const mediaPreview = item.querySelector('[data-build-step-icon-media-preview]');
 
                     if (!(mediaInput instanceof HTMLInputElement) || !(
-                        mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
+                            mediaButton instanceof HTMLElement) || !(mediaPreview instanceof HTMLElement)) {
                         return;
                     }
 
@@ -2240,8 +2236,7 @@
 
         window.initReviewRepeaters = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const repeaters = root.matches?.('[data-review-repeater]') ?
-                [root] :
+            const repeaters = root.matches?.('[data-review-repeater]') ? [root] :
                 Array.from(root.querySelectorAll('[data-review-repeater]'));
 
             const createUniqueId = () => `review_media_${Math.random().toString(36).slice(2, 10)}`;
@@ -2351,7 +2346,7 @@
                             rating: ratingInput?.value || '5',
                             avatar: avatarInput?.value || '',
                             previewUrl: item.querySelector(
-                                    '[data-review-avatar-preview] img')?.getAttribute(
+                                '[data-review-avatar-preview] img')?.getAttribute(
                                 'src') || '',
                         });
                     });
@@ -2431,8 +2426,7 @@
 
         window.initFooterLinkRepeaters = function(scope) {
             const root = scope instanceof Element || scope instanceof Document ? scope : document;
-            const repeaters = root.matches?.('[data-footer-link-repeater]') ?
-                [root] :
+            const repeaters = root.matches?.('[data-footer-link-repeater]') ? [root] :
                 Array.from(root.querySelectorAll('[data-footer-link-repeater]'));
 
             repeaters.forEach((repeater) => {
@@ -2551,9 +2545,15 @@
                 scope :
                 document;
 
-            const repeaters = root.matches?.('[data-dynamic-repeater]') ?
-                [root] :
+            const repeaters = root.matches?.('[data-dynamic-repeater]') ? [root] :
                 Array.from(root.querySelectorAll('[data-dynamic-repeater]'));
+
+            const createUniqueId = () => `dynamic_repeater_${Math.random().toString(36).slice(2, 10)}`;
+            const sanitizeIconClass = (value) => String(value || '')
+                .replace(/[^A-Za-z0-9\-_ ]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const allowedIconSources = ['class', 'media', 'svg'];
 
             repeaters.forEach((repeater) => {
                 if (repeater.dataset.dynamicRepeaterBound === '1') {
@@ -2570,6 +2570,147 @@
                     repeater.dataset.dynamicRepeaterBound = '1';
                     return;
                 }
+
+                const getIconSource = (item) => {
+                    const sourceInput = item.querySelector('[data-dynamic-repeater-field="icon_source"]');
+                    const source = String(sourceInput?.value || 'class').trim();
+
+                    return allowedIconSources.includes(source) ? source : 'class';
+                };
+
+                const ensureMediaTargets = (item) => {
+                    item.querySelectorAll('[data-dynamic-repeater-media-picker-button]').forEach((button) => {
+                        const fieldKey = button.dataset.dynamicRepeaterField || '';
+
+                        if (!fieldKey) {
+                            return;
+                        }
+
+                        const input = item.querySelector(
+                            `[data-dynamic-repeater-media-input][data-dynamic-repeater-field="${fieldKey}"]`
+                        );
+                        const preview = item.querySelector(
+                            `[data-dynamic-repeater-media-preview][data-dynamic-repeater-field="${fieldKey}"]`
+                        );
+
+                        if (!(input instanceof HTMLInputElement) || !(button instanceof HTMLElement)) {
+                            return;
+                        }
+
+                        if (!input.id || input.id.includes('__INDEX__')) {
+                            input.id = `${createUniqueId()}_input`;
+                        }
+
+                        if (preview instanceof HTMLElement) {
+                            if (!preview.id || preview.id.includes('__INDEX__')) {
+                                preview.id = `${createUniqueId()}_preview`;
+                            }
+
+                            button.dataset.targetPreview = preview.id;
+                        } else {
+                            delete button.dataset.targetPreview;
+                        }
+
+                        button.dataset.targetInput = input.id;
+                        button.dataset.multiple = 'false';
+                        button.dataset.storeValue = button.dataset.storeValue || 'id';
+                    });
+                };
+
+                const toggleIconPanels = (item, source = null) => {
+                    const sourceInput = item.querySelector('[data-dynamic-repeater-field="icon_source"]');
+
+                    if (!sourceInput) {
+                        return;
+                    }
+
+                    const activeSource = source || getIconSource(item);
+                    item.querySelectorAll('[data-dynamic-repeater-icon-panel]').forEach((panel) => {
+                        panel.classList.toggle('hidden', panel.dataset.dynamicRepeaterIconPanel !== activeSource);
+                    });
+                };
+
+                /**
+                 * Refresh the unified icon picker card UI for a repeater item.
+                 * Reads from the hidden icon_source select, icon class input, and
+                 * media preview div, then updates the card's preview box, status
+                 * line, tab highlighting, and context-sensitive action buttons.
+                 */
+                const refreshIconCard = (item) => {
+                    const card = item.querySelector('[data-icon-picker-card]');
+                    if (!card) {
+                        return;
+                    }
+
+                    const source = getIconSource(item);
+                    const iconClassInput = item.querySelector('[data-dynamic-repeater-icon-class-field]');
+                    const mediaInput = item.querySelector(
+                        '[data-dynamic-repeater-media-input][data-dynamic-repeater-field="icon_media"]'
+                    );
+                    const previewBox = card.querySelector('[data-icon-card-preview]');
+                    const statusEl = card.querySelector('[data-icon-card-status]');
+                    const chooseIconBtn = card.querySelector('[data-icon-card-choose-icon]');
+                    const chooseMediaBtn = card.querySelector('[data-icon-card-choose-media]');
+                    const mediaPreviewDiv = card.querySelector('[data-icon-card-media-preview]');
+
+                    const iconClass = sanitizeIconClass(iconClassInput?.value || '');
+                    const mediaId = String(mediaInput?.value || '').trim();
+
+                    // Update preview box
+                    if (previewBox) {
+                        previewBox.innerHTML = '';
+                        if (source === 'class' && iconClass) {
+                            const el = document.createElement('i');
+                            el.className = `${iconClass} text-4xl leading-none`;
+                            el.setAttribute('aria-hidden', 'true');
+                            previewBox.appendChild(el);
+                        } else if (source === 'media') {
+                            // Read thumbnail from the hidden media preview div (populated by media-picker.js)
+                            const img = mediaPreviewDiv?.querySelector('img');
+                            if (img) {
+                                const clone = img.cloneNode(true);
+                                clone.className = 'h-20 w-20 object-contain p-1';
+                                previewBox.appendChild(clone);
+                            } else {
+                                const el = document.createElement('i');
+                                el.className = 'ti ti-photo text-3xl leading-none text-slate-300';
+                                el.setAttribute('aria-hidden', 'true');
+                                previewBox.appendChild(el);
+                            }
+                        } else if (source === 'svg') {
+                            const el = document.createElement('i');
+                            el.className = 'ti ti-code text-3xl leading-none text-slate-400';
+                            el.setAttribute('aria-hidden', 'true');
+                            previewBox.appendChild(el);
+                        } else {
+                            // Placeholder — nothing selected yet
+                            const el = document.createElement('i');
+                            el.className = 'ti ti-photo-off text-3xl leading-none text-slate-300';
+                            el.setAttribute('aria-hidden', 'true');
+                            previewBox.appendChild(el);
+                        }
+                    }
+
+                    // statusEl: optional in redesigned card (no status line rendered).
+                    // Guard is kept so the function works if the element ever exists.
+                    if (statusEl) {
+                        if (source === 'class') {
+                            statusEl.textContent = iconClass || @json(__('No icon selected'));
+                        } else if (source === 'media') {
+                            statusEl.textContent = mediaId
+                                ? @json(__('Media file selected'))
+                                : @json(__('No media selected'));
+                        } else if (source === 'svg') {
+                            statusEl.textContent = @json(__('Edit the inline SVG field below'));
+                        } else {
+                            statusEl.textContent = @json(__('No icon set'));
+                        }
+                    }
+                    // Both action buttons are always visible in the redesigned card;
+                    // no show/hide toggling needed.
+                    // mediaPreviewDiv stays permanently hidden — it is an internal
+                    // container for media-picker.js and is never surfaced in the UI.
+                };
 
                 const reindexItems = () => {
                     const items = Array.from(list.querySelectorAll('[data-dynamic-repeater-item]'));
@@ -2633,6 +2774,108 @@
                         return;
                     }
 
+                    ensureMediaTargets(item);
+
+                    item.querySelectorAll('[data-dynamic-repeater-icon-class-field]').forEach((input) => {
+                        if (!(input instanceof HTMLInputElement)) {
+                            return;
+                        }
+
+                        const sanitized = sanitizeIconClass(input.value);
+                        if (input.value !== sanitized) {
+                            input.value = sanitized;
+                        }
+
+                        input.addEventListener('input', function() {
+                            const next = sanitizeIconClass(input.value);
+                            if (input.value !== next) {
+                                input.value = next;
+                            }
+                        });
+
+                        // Refresh card when the icon library modal writes a new value
+                        input.addEventListener('change', () => refreshIconCard(item));
+                    });
+
+                    item.querySelector('[data-dynamic-repeater-field="icon_source"]')?.addEventListener('change',
+                        function() {
+                            toggleIconPanels(item, getIconSource(item));
+                            refreshIconCard(item);
+                        });
+
+                    // Refresh card after media picker sets icon_media value.
+                    // Use setTimeout so the preview div thumbnail (rendered by media-picker.js
+                    // synchronously after dispatching 'change') is in the DOM first.
+                    item.querySelector(
+                        '[data-dynamic-repeater-media-input][data-dynamic-repeater-field="icon_media"]'
+                    )?.addEventListener('change', () => window.setTimeout(() => refreshIconCard(item), 0));
+
+                    // --- Icon picker card bindings ---
+                    const pickerCard = item.querySelector('[data-icon-picker-card]');
+                    if (pickerCard) {
+                        // Icon Library button: set icon_source='class' before the global
+                        // data-open-section-icon-library click delegation fires the modal.
+                        // Element listeners fire before document listeners, so source is
+                        // already 'class' when openLibrary() runs.
+                        pickerCard.querySelector('[data-icon-card-choose-icon]')?.addEventListener('click', function() {
+                            const sourceInput = item.querySelector(
+                                '[data-dynamic-repeater-field="icon_source"]'
+                            );
+                            if (sourceInput && sourceInput.value !== 'class') {
+                                sourceInput.value = 'class';
+                                sourceInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        });
+
+                        // Upload SVG button: set icon_source='media' before media-picker.js
+                        // handles the btn-open-media-picker click.
+                        pickerCard.querySelector('[data-icon-card-choose-media]')?.addEventListener('click', function() {
+                            const sourceInput = item.querySelector(
+                                '[data-dynamic-repeater-field="icon_source"]'
+                            );
+                            if (sourceInput && sourceInput.value !== 'media') {
+                                sourceInput.value = 'media';
+                                sourceInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        });
+
+                        // Clear button — reset source to class, wipe icon class and media values
+                        pickerCard.querySelector('[data-icon-card-clear]')?.addEventListener('click', function() {
+                            const sourceInput = item.querySelector(
+                                '[data-dynamic-repeater-field="icon_source"]'
+                            );
+                            const iconClassInput = item.querySelector(
+                                '[data-dynamic-repeater-icon-class-field]'
+                            );
+                            const mediaInput = item.querySelector(
+                                '[data-dynamic-repeater-media-input][data-dynamic-repeater-field="icon_media"]'
+                            );
+                            const mediaPreviewDiv = item.querySelector(
+                                '[data-icon-card-media-preview]'
+                            );
+
+                            if (iconClassInput instanceof HTMLInputElement) {
+                                iconClassInput.value = '';
+                                iconClassInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                iconClassInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                            if (mediaInput instanceof HTMLInputElement) {
+                                mediaInput.value = '';
+                                mediaInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                            if (mediaPreviewDiv instanceof HTMLElement) {
+                                mediaPreviewDiv.innerHTML = '';
+                            }
+                            if (sourceInput) {
+                                sourceInput.value = 'class';
+                                sourceInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            } else {
+                                toggleIconPanels(item, 'class');
+                                refreshIconCard(item);
+                            }
+                        });
+                    }
+
                     const removeButton = item.querySelector('[data-remove-dynamic-repeater-item]');
                     const duplicateButton = item.querySelector('[data-duplicate-dynamic-repeater-item]');
 
@@ -2643,6 +2886,7 @@
 
                     duplicateButton?.addEventListener('click', function() {
                         const seed = {};
+                        const mediaPreviewHtml = {};
 
                         item.querySelectorAll('[data-name-template]').forEach((field) => {
                             const templateName = field.dataset.nameTemplate || '';
@@ -2658,15 +2902,35 @@
                                 if (field.checked) {
                                     seed[key] = '1';
                                 }
-                            } else if (field.type !== 'hidden') {
+                            } else if (field.type === 'hidden') {
+                                // Include media inputs and hidden icon class fields (picker card UX)
+                                if (field.hasAttribute('data-dynamic-repeater-media-input') ||
+                                    field.hasAttribute('data-dynamic-repeater-icon-class-field')) {
+                                    seed[key] = field.value;
+                                }
+                            } else {
                                 seed[key] = field.value;
                             }
                         });
+
+                        item.querySelectorAll('[data-dynamic-repeater-media-preview]').forEach((preview) => {
+                            const key = preview.dataset.dynamicRepeaterField || '';
+
+                            if (key) {
+                                mediaPreviewHtml[key] = preview.innerHTML;
+                            }
+                        });
+
+                        if (Object.keys(mediaPreviewHtml).length > 0) {
+                            seed.__mediaPreviewHtml = mediaPreviewHtml;
+                        }
 
                         createItem(seed);
                     });
 
                     bindToggle(item);
+                    toggleIconPanels(item, getIconSource(item));
+                    refreshIconCard(item);
                     item.dataset.dynamicRepeaterItemBound = '1';
                 };
 
@@ -2716,16 +2980,36 @@
 
                             if (field.type === 'checkbox') {
                                 field.checked = seed[key] === '1';
-                            } else if (field.type !== 'hidden') {
+                            } else if (field.type === 'hidden') {
+                                // Apply media inputs and hidden icon class fields (picker card UX)
+                                if (field.hasAttribute('data-dynamic-repeater-media-input') ||
+                                    field.hasAttribute('data-dynamic-repeater-icon-class-field')) {
+                                    field.value = seed[key];
+                                }
+                            } else {
                                 field.value = seed[key];
                             }
                         });
                     }
 
+                    if (seed.__mediaPreviewHtml && typeof seed.__mediaPreviewHtml === 'object') {
+                        Object.entries(seed.__mediaPreviewHtml).forEach(([key, html]) => {
+                            const preview = item.querySelector(
+                                `[data-dynamic-repeater-media-preview][data-dynamic-repeater-field="${key}"]`
+                            );
+
+                            if (preview instanceof HTMLElement && typeof html === 'string') {
+                                preview.innerHTML = html;
+                            }
+                        });
+                    }
+
+                    toggleIconPanels(item, getIconSource(item));
+                    refreshIconCard(item);
                     reindexItems();
 
                     const firstInput = item.querySelector(
-                    'input[type="text"], input[type="url"], textarea');
+                        'input[type="text"], input[type="url"], textarea');
 
                     if (firstInput instanceof HTMLElement) {
                         window.setTimeout(() => firstInput.focus(), 30);
@@ -2748,5 +3032,4 @@
         };
     </script>
 </body>
-
 </html>

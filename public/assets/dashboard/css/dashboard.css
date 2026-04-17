@@ -1150,6 +1150,9 @@
   .aspect-\[4\/3\] {
     aspect-ratio: 4/3;
   }
+  .aspect-\[4\/4\] {
+    aspect-ratio: 4/4;
+  }
   .aspect-\[5\/3\] {
     aspect-ratio: 5/3;
   }
@@ -1362,6 +1365,9 @@
   }
   .h-screen {
     height: 100vh;
+  }
+  .max-h-0 {
+    max-height: calc(var(--spacing) * 0);
   }
   .max-h-32 {
     max-height: calc(var(--spacing) * 32);
@@ -2715,6 +2721,9 @@
   .border-sky-300 {
     border-color: var(--color-sky-300);
   }
+  .border-sky-600 {
+    border-color: var(--color-sky-600);
+  }
   .border-slate-100 {
     border-color: var(--color-slate-100);
   }
@@ -4050,6 +4059,9 @@
   .pe-5 {
     padding-inline-end: calc(var(--spacing) * 5);
   }
+  .pt-0\.5 {
+    padding-top: calc(var(--spacing) * 0.5);
+  }
   .pt-1 {
     padding-top: calc(var(--spacing) * 1);
   }
@@ -4697,6 +4709,9 @@
   }
   .text-slate-100 {
     color: var(--color-slate-100);
+  }
+  .text-slate-200 {
+    color: var(--color-slate-200);
   }
   .text-slate-300 {
     color: var(--color-slate-300);
@@ -7494,6 +7509,11 @@
       --tw-ring-color: var(--color-sky-100);
     }
   }
+  .focus\:ring-sky-300 {
+    &:focus {
+      --tw-ring-color: var(--color-sky-300);
+    }
+  }
   .focus\:ring-sky-400 {
     &:focus {
       --tw-ring-color: var(--color-sky-400);
@@ -7548,6 +7568,12 @@
       outline-style: none;
     }
   }
+  .focus-visible\:ring-1 {
+    &:focus-visible {
+      --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
+      box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+    }
+  }
   .focus-visible\:ring-2 {
     &:focus-visible {
       --tw-ring-shadow: var(--tw-ring-inset,) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color, currentcolor);
@@ -7583,6 +7609,11 @@
       }
     }
   }
+  .focus-visible\:ring-rose-300 {
+    &:focus-visible {
+      --tw-ring-color: var(--color-rose-300);
+    }
+  }
   .focus-visible\:ring-secondary {
     &:focus-visible {
       --tw-ring-color: var(--color-secondary);
@@ -7591,6 +7622,12 @@
   .focus-visible\:ring-slate-300 {
     &:focus-visible {
       --tw-ring-color: var(--color-slate-300);
+    }
+  }
+  .focus-visible\:ring-offset-1 {
+    &:focus-visible {
+      --tw-ring-offset-width: 1px;
+      --tw-ring-offset-shadow: var(--tw-ring-inset,) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
     }
   }
   .focus-visible\:ring-offset-2 {
@@ -9191,6 +9228,12 @@
     @media (width >= 64rem) {
       font-size: var(--text-lg);
       line-height: var(--tw-leading, var(--text-lg--line-height));
+    }
+  }
+  .lg\:text-xl {
+    @media (width >= 64rem) {
+      font-size: var(--text-xl);
+      line-height: var(--tw-leading, var(--text-xl--line-height));
     }
   }
   .lg\:text-\[3\.25rem\] {

@@ -193,6 +193,11 @@ return [
                 'view' => 'front.sections.promo.website_protection',
             ],
 
+            'faq_section' => [
+                'label' => 'FAQ Section',
+                'view' => 'front.sections.faq.faq_section',
+            ],
+
         ],
     ],
 

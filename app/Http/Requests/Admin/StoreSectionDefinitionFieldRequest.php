@@ -19,6 +19,8 @@ class StoreSectionDefinitionFieldRequest extends FormRequest
         /** @var \App\Models\Sections\SectionDefinition|null $sectionDefinition */
         $sectionDefinition = $this->route('sectionDefinition');
 
+        $isRepeater = $this->input('type') === SectionDefinitionField::FIELD_TYPE_REPEATER;
+
         return [
             'key' => [
                 'required',
@@ -41,12 +43,19 @@ class StoreSectionDefinitionFieldRequest extends FormRequest
             'settings' => ['nullable', 'json'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             // Repeater item schema — submitted as a nested array when field type = repeater.
-            // All rules are nullable so stale DOM rows submitted with non-repeater types
-            // pass validation safely and are then discarded in persistableAttributes().
-            'item_schema' => ['nullable', 'array'],
-            'item_schema.*.key' => ['nullable', 'string', 'max:100', 'regex:/^[a-z0-9_]+$/'],
+            // When type IS repeater: item_schema is required and each row must have a
+            // non-empty key and a recognised type. This produces a visible validation error
+            // instead of silently discarding rows in normalizeItemSchemaForPersistence().
+            // When type is NOT repeater: all rules are nullable so any stale DOM rows that
+            // still submit pass validation and are discarded safely.
+            'item_schema' => $isRepeater ? ['required', 'array', 'min:1'] : ['nullable', 'array'],
+            'item_schema.*.key' => $isRepeater
+                ? ['required', 'string', 'max:100', 'regex:/^[a-z0-9_]+$/']
+                : ['nullable', 'string', 'max:100', 'regex:/^[a-z0-9_]+$/'],
             'item_schema.*.label' => ['nullable', 'string', 'max:255'],
-            'item_schema.*.type' => ['nullable', 'string', Rule::in(SectionDefinitionField::repeaterSubFieldTypes())],
+            'item_schema.*.type' => $isRepeater
+                ? ['required', 'string', Rule::in(SectionDefinitionField::repeaterSubFieldTypes())]
+                : ['nullable', 'string', Rule::in(SectionDefinitionField::repeaterSubFieldTypes())],
             'item_schema.*.required' => ['nullable', 'boolean'],
             'item_schema.*.translatable' => ['nullable', 'boolean'],
         ];

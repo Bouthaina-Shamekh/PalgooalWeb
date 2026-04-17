@@ -338,6 +338,10 @@ class SectionDefinitionFieldFormDataFactory
                 $key  = trim((string) ($item['key'] ?? ''));
                 $type = trim((string) ($item['type'] ?? ''));
 
+                // Both key and type are required for a valid sub-field entry.
+                // Validation in the Request classes guarantees this when coming
+                // from the admin form (type = repeater), but we guard here too
+                // so any programmatic caller gets a clean, predictable result.
                 if ($key === '' || ! in_array($type, $allowedSubTypes, true)) {
                     return null;
                 }
@@ -353,6 +357,18 @@ class SectionDefinitionFieldFormDataFactory
             ->filter()
             ->values()
             ->all();
+
+        // Never persist an empty item_schema for a repeater field — it would
+        // cause the section editor to show "No sub-fields defined" and make the
+        // field completely unusable. Validation should have caught this already,
+        // but this guard ensures no code path can create a broken state.
+        if ($items === []) {
+            throw new \LogicException(
+                'Cannot persist a repeater field with an empty item_schema. '
+                . 'Add at least one sub-field with a non-empty key and a recognised type '
+                . '(' . implode(', ', $allowedSubTypes) . ').'
+            );
+        }
 
         return ['item_schema' => $items];
     }

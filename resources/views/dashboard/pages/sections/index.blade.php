@@ -1233,6 +1233,7 @@
                 runEditorInitializer(window.initSectionServiceRepeaters);
                 runEditorInitializer(window.initBuildStepRepeaters);
                 runEditorInitializer(window.initReviewRepeaters);
+                runEditorInitializer(window.initDynamicRepeaters);
 
                 root.querySelectorAll('[data-close-section-editor]').forEach((button) => {
                     button.addEventListener('click', closeSectionEditor);

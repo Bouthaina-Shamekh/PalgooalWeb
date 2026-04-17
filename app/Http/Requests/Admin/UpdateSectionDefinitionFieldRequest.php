@@ -25,6 +25,8 @@ class UpdateSectionDefinitionFieldRequest extends FormRequest
         /** @var \App\Models\Sections\SectionDefinitionField|null $field */
         $field = $this->route('field');
 
+        $isRepeater = $this->input('type') === SectionDefinitionField::FIELD_TYPE_REPEATER;
+
         return [
             'key' => [
                 'required',
@@ -48,10 +50,14 @@ class UpdateSectionDefinitionFieldRequest extends FormRequest
             'settings' => ['nullable', 'json'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
             // Repeater item schema — see StoreSectionDefinitionFieldRequest for full comment.
-            'item_schema' => ['nullable', 'array'],
-            'item_schema.*.key' => ['nullable', 'string', 'max:100', 'regex:/^[a-z0-9_]+$/'],
+            'item_schema' => $isRepeater ? ['required', 'array', 'min:1'] : ['nullable', 'array'],
+            'item_schema.*.key' => $isRepeater
+                ? ['required', 'string', 'max:100', 'regex:/^[a-z0-9_]+$/']
+                : ['nullable', 'string', 'max:100', 'regex:/^[a-z0-9_]+$/'],
             'item_schema.*.label' => ['nullable', 'string', 'max:255'],
-            'item_schema.*.type' => ['nullable', 'string', Rule::in(SectionDefinitionField::repeaterSubFieldTypes())],
+            'item_schema.*.type' => $isRepeater
+                ? ['required', 'string', Rule::in(SectionDefinitionField::repeaterSubFieldTypes())]
+                : ['nullable', 'string', Rule::in(SectionDefinitionField::repeaterSubFieldTypes())],
             'item_schema.*.required' => ['nullable', 'boolean'],
             'item_schema.*.translatable' => ['nullable', 'boolean'],
         ];

@@ -176,7 +176,7 @@ class SectionDefinitionField extends Model
 
         $allowedSubTypes = self::repeaterSubFieldTypes();
 
-        return Collection::make($raw)
+        $items = Collection::make($raw)
             ->map(function (mixed $item) use ($allowedSubTypes): ?array {
                 if (! is_array($item)) {
                     return null;
@@ -201,6 +201,36 @@ class SectionDefinitionField extends Model
             ->filter()
             ->values()
             ->all();
+
+        $keys = Collection::make($items)
+            ->pluck('key')
+            ->filter(fn (mixed $key): bool => is_string($key) && $key !== '')
+            ->values();
+
+        if (
+            $keys->contains('icon_source') &&
+            $keys->contains('icon_media') &&
+            ! $keys->contains('icon')
+        ) {
+            $iconMediaIndex = Collection::make($items)->search(
+                fn (array $item): bool => ($item['key'] ?? null) === 'icon_media',
+            );
+            $iconField = [
+                'key' => 'icon',
+                'label' => 'icon',
+                'type' => self::FIELD_TYPE_TEXT,
+                'required' => false,
+                'translatable' => (bool) (Collection::make($items)->firstWhere('key', 'icon_source')['translatable'] ?? true),
+            ];
+
+            if (is_int($iconMediaIndex)) {
+                array_splice($items, $iconMediaIndex, 0, [$iconField]);
+            } else {
+                $items[] = $iconField;
+            }
+        }
+
+        return $items;
     }
 
     /**

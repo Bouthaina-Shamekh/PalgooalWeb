@@ -106,6 +106,6 @@
 @endphp
 @if ($hasSchemaErrors)
     <div class="mt-2 text-sm text-red-600">
-        {{ __('Some repeater sub-field entries are invalid. Please review each row (key and type are required).') }}
+        {{ __('Repeater sub-fields are invalid. At least one sub-field is required, and every row must have a non-empty key (lowercase letters, numbers, underscores only) and a valid type.') }}
     </div>
 @endif

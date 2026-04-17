@@ -169,3 +169,8 @@
 
 - Frontend definition-driven rendering now accepts linked active `custom_preset` definitions when they have a primary `template_key`.
 - Dynamic-only filtering remains limited to the admin dynamic editor path so legacy sections continue through the existing fallback flow.
+
+### 2026-04-17
+
+- Fixed the admin page sections workspace so AJAX-loaded sidebar editors now run `initDynamicRepeaters`, allowing dynamic repeater "Add Item" actions to bind correctly in the live workspace without changing validation behavior.
+- Enhanced the generic dynamic repeater editor runtime so repeater media sub-fields reuse the media picker, icon class inputs can open the shared icon library, and `icon_source` can toggle icon-related panels inside dynamic repeater items.
