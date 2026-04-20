@@ -18,7 +18,7 @@
                 <div class="card-header">
                     <h5 class="mb-1">{{ __('Definition Information') }}</h5>
                     <p class="mb-0 text-sm text-slate-500">
-                        {{ __('This form manages the definition record only. Nested field builders and runtime rendering will be handled separately.') }}
+                        {{ __('Save the definition first, then continue directly to field definitions. Template selection stays registry-backed in code.') }}
                     </p>
                 </div>
                 <div class="card-body">

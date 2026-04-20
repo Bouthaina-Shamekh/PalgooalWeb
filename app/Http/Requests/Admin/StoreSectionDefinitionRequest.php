@@ -34,6 +34,7 @@ class StoreSectionDefinitionRequest extends FormRequest
             ],
             'description' => ['nullable', 'string'],
             'category' => ['nullable', 'string', 'max:100'],
+            'preview_media_id' => ['nullable', 'integer', Rule::exists('media', 'id')],
             'template_key' => [
                 'nullable',
                 'string',
@@ -76,6 +77,7 @@ class StoreSectionDefinitionRequest extends FormRequest
             'key' => $this->normalizeKey('key'),
             'description' => $this->normalizeNullableString('description'),
             'category' => $this->normalizeNullableString('category'),
+            'preview_media_id' => $this->normalizeNullableInteger('preview_media_id'),
             'template_key' => $this->normalizeNullableString('template_key'),
             'editor_mode' => $editorMode,
             'custom_editor_key' => $this->normalizeNullableString('custom_editor_key'),
@@ -95,6 +97,13 @@ class StoreSectionDefinitionRequest extends FormRequest
         $value = trim((string) $this->input($key, ''));
 
         return $value === '' ? null : $value;
+    }
+
+    protected function normalizeNullableInteger(string $key): ?int
+    {
+        $value = trim((string) $this->input($key, ''));
+
+        return is_numeric($value) ? (int) $value : null;
     }
 
     protected function normalizeKey(string $key): string

@@ -12,6 +12,12 @@
         </div>
     </div>
 
+    @if (session('success'))
+        <div class="mb-4 rounded bg-green-100 px-4 py-2 text-green-800">
+            {{ session('success') }}
+        </div>
+    @endif
+
     <div class="mb-4 flex justify-end">
         <a href="{{ route('dashboard.section_definitions.fields.index', $sectionDefinition) }}" class="btn btn-light-primary">
             {{ __('Manage Fields') }}
@@ -24,7 +30,7 @@
                 <div class="card-header">
                     <h5 class="mb-1">{{ __('Definition Information') }}</h5>
                     <p class="mb-0 text-sm text-slate-500">
-                        {{ __('Update the definition record without changing field-builder configuration or frontend rendering behavior.') }}
+                        {{ __('Update definition metadata here, then continue to field definitions when the dynamic schema needs changes. Template and preset resolution remain code-side.') }}
                     </p>
                 </div>
                 <div class="card-body">

@@ -1,7 +1,10 @@
 @php
     $pageTitle = $page->translation()?->title ?? $page->slug;
-    $sectionTypeMeta = $sectionTypes[old('type', $section->type)] ?? ($sectionTypes[$section->type] ?? null);
-    $sectionTypeLabel = $sectionTypeMeta['label'] ?? old('type', $section->type);
+    $selectedType = old('type', $section->type);
+    $sectionTypeMeta = $selectedType === $section->type
+        ? $section->resolvedTypeMeta($sectionTypes)
+        : ($sectionTypes[$selectedType] ?? null);
+    $sectionTypeLabel = $sectionTypeMeta['label'] ?? \Illuminate\Support\Str::headline(str_replace(['_', '-'], ' ', $selectedType));
     $workspaceRoutePrefix = $workspaceRoutePrefix ?? 'dashboard.pages.sections.';
     $workspaceRouteBaseParameters = $workspaceRouteBaseParameters ?? ['page' => $page];
     $workspaceRouteFor =

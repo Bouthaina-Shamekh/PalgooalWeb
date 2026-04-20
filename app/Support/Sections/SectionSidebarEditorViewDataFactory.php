@@ -3,7 +3,6 @@
 namespace App\Support\Sections;
 
 use App\Models\Section;
-use Illuminate\Support\Str;
 
 class SectionSidebarEditorViewDataFactory
 {
@@ -22,10 +21,8 @@ class SectionSidebarEditorViewDataFactory
             ? $section->translation($currentLocale)
             : null;
         $displaySectionTranslation = $localizedSectionTranslation ?? $section->translations->first();
-        $resolvedSectionTypeMeta = $sectionTypes[$section->type] ?? null;
-        $resolvedSectionTypeLabel =
-            $resolvedSectionTypeMeta['label']
-            ?? Str::headline(str_replace(['_', '-'], ' ', $section->type));
+        $resolvedSectionTypeMeta = $section->resolvedTypeMeta($sectionTypes);
+        $resolvedSectionTypeLabel = $resolvedSectionTypeMeta['label'];
         $sectionDisplayTitle = $displaySectionTranslation?->title ?: $resolvedSectionTypeLabel;
         $isSectionActive = (bool) $section->is_active;
         $sectionUpdateAction = route(

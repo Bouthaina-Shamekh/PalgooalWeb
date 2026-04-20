@@ -334,8 +334,8 @@ class SectionController extends Controller
         $section->refresh()->load('translations');
 
         if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
-            $typeLabel = $this->availableSectionTypes()[$section->type]['label']
-                ?? \Illuminate\Support\Str::headline(str_replace(['_', '-'], ' ', $section->type));
+            $sectionTypeMeta = $section->resolvedTypeMeta($this->availableSectionTypes());
+            $typeLabel = $sectionTypeMeta['label'];
 
             $translation = $section->translation(app()->getLocale()) ?? $section->translations->first();
 
@@ -690,7 +690,7 @@ class SectionController extends Controller
     }
 
     /**
-     * Registry of section types available to the workspace.
+     * Legacy fallback registry of section types available to the workspace.
      */
     protected function availableSectionTypes(): array
     {
@@ -717,19 +717,6 @@ class SectionController extends Controller
                 'description' => 'Two-line hero with campaign benefits, CTA, and side illustration.',
                 'category'    => 'hero',
                 'preview'     => null,
-            ],
-
-            // Legacy code-side registry entry kept for backward compatibility.
-            // Definition-driven hero variants should now be created from the
-            // section-definition library path instead of this template key.
-            'hero.hosting' => [
-                'type' => 'hero.hosting',
-                'label' => 'Hosting Hero',
-                'description' => 'Legacy hosting hero entry preserved for already-linked content.',
-                'category' => 'hero',
-                'preview' => null,
-                'library_hidden' => true,
-                'view' => 'front.sections.hero.hosting',
             ],
 
             'programming_showcase' => [
@@ -972,7 +959,7 @@ class SectionController extends Controller
     {
         $sectionTypes = $this->sectionLibraryTypes();
         $label = $sectionDefinition?->label
-            ?? ($sectionTypes[$type]['label'] ?? ucfirst(str_replace('_', ' ', $type)));
+            ?? ($sectionTypes[$type]['label'] ?? Str::headline(str_replace(['_', '-'], ' ', $type)));
 
         $section = Section::create([
             'page_id'   => $page->id,
@@ -1322,6 +1309,8 @@ class SectionController extends Controller
                 'subtitle' => 'Show your best templates.',
                 'items'    => [],
             ],
+
+            'hosting_hero' => [],
 
             default => [
                 'title'    => $pageTitle,
@@ -2560,21 +2549,22 @@ class SectionController extends Controller
      * Combined section library catalog for the standalone create screen and
      * the workspace quick-add drawer.
      *
-     * Legacy section types keep their current cards. Active, visible section
-     * definitions are appended as parallel cards that submit an explicit
-     * section_definition_id plus the definition section_key as the type.
+     * Active, visible section definitions are the primary source for library
+     * cards. Legacy config-backed section types are appended only when no
+     * matching section definition currently covers that section_key.
      *
      * @return array<string, array<string, mixed>>
      */
     protected function sectionLibraryTypes(): array
     {
-        $libraryTypes = $this->availableSectionTypes();
+        $libraryTypes = [];
 
         if (! Schema::hasTable('section_definitions')) {
-            return $libraryTypes;
+            return $this->availableSectionTypes();
         }
 
         $definitions = SectionDefinition::query()
+            ->with('previewMedia')
             ->where('is_active', true)
             ->where('is_visible', true)
             ->orderBy('sort_order')
@@ -2593,9 +2583,24 @@ class SectionController extends Controller
                 'label' => $definition->label,
                 'description' => $definition->description ?: __('Definition-driven section'),
                 'category' => $definition->category ?: 'other',
+                'preview_url' => $definition->previewMedia?->url,
                 'preview' => data_get($definition->settings, 'preview'),
                 'section_definition_id' => (int) $definition->id,
                 'source' => 'definition',
+            ];
+        }
+
+        foreach ($this->availableSectionTypes() as $key => $meta) {
+            $type = trim((string) ($meta['type'] ?? $key));
+
+            if ($type === '' || isset($libraryTypes[$type])) {
+                continue;
+            }
+
+            $libraryTypes[$type] = $meta + [
+                'type' => $type,
+                'section_definition_id' => null,
+                'source' => 'config',
             ];
         }
 
@@ -2614,21 +2619,10 @@ class SectionController extends Controller
      */
     protected function allowedSectionTypeKeys(?Section $currentSection = null): array
     {
-        $definitionKeys = Schema::hasTable('section_definitions')
-            ? SectionDefinition::query()
-                ->where('is_active', true)
-                ->pluck('section_key')
-                ->map(fn ($key) => (string) $key)
-                ->filter()
-                ->values()
-                ->all()
-            : [];
-
-        return collect(array_merge(
-            $this->availableSectionTypeKeys(),
-            $definitionKeys,
-            $currentSection ? [(string) $currentSection->type] : [],
-        ))
+        return collect([
+            ...array_keys($this->sectionLibraryTypes()),
+            ...($currentSection ? [(string) $currentSection->type] : []),
+        ])
             ->filter()
             ->unique()
             ->values()
@@ -2644,7 +2638,8 @@ class SectionController extends Controller
     protected function normalizeSectionCreateSelection(string $type, ?int $sectionDefinitionId = null): array
     {
         $type = trim($type);
-        $sectionDefinition = $this->resolveVisibleLibrarySectionDefinition($sectionDefinitionId);
+        $sectionDefinition = $this->resolveVisibleLibrarySectionDefinition($sectionDefinitionId)
+            ?? $this->resolveVisibleLibrarySectionDefinitionByType($type);
 
         if ($sectionDefinition instanceof SectionDefinition) {
             return [
@@ -2658,7 +2653,7 @@ class SectionController extends Controller
 
         return [
             'type' => $type,
-            'section_definition_id' => $this->resolveSectionDefinitionIdForType($type),
+            'section_definition_id' => null,
             'section_definition' => null,
         ];
     }
@@ -2679,6 +2674,29 @@ class SectionController extends Controller
             ->whereKey($sectionDefinitionId)
             ->where('is_active', true)
             ->where('is_visible', true)
+            ->first();
+    }
+
+    /**
+     * Resolve the primary visible definition for a library type key.
+     *
+     * This keeps create/quick-add flows definition-first even when a legacy
+     * config fallback still exists for the same section_key.
+     */
+    protected function resolveVisibleLibrarySectionDefinitionByType(string $type): ?SectionDefinition
+    {
+        $type = trim($type);
+
+        if ($type === '' || ! Schema::hasTable('section_definitions')) {
+            return null;
+        }
+
+        return SectionDefinition::query()
+            ->where('section_key', $type)
+            ->where('is_active', true)
+            ->where('is_visible', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
             ->first();
     }
 

@@ -81,6 +81,9 @@
                                 @foreach ($items as $type => $meta)
                                     @php
                                         $metaSectionDefinitionId = $meta['section_definition_id'] ?? null;
+                                        $cardPreview = ! empty($meta['preview_url'])
+                                            ? $meta['preview_url']
+                                            : (! empty($meta['preview']) ? asset($meta['preview']) : null);
                                         $isActive =
                                             $selectedType === $type
                                             && (string) ($selectedSectionDefinitionId ?? '') === (string) ($metaSectionDefinitionId ?? '');
@@ -93,10 +96,10 @@
                                         data-label="{{ $meta['label'] ?? $type }}"
                                         data-category="{{ $meta['category'] ?? 'other' }}"
                                     >
-                                        @if (! empty($meta['preview']))
+                                        @if ($cardPreview)
                                             <div class="aspect-[16/10] overflow-hidden bg-slate-100">
                                                 <img
-                                                    src="{{ asset($meta['preview']) }}"
+                                                    src="{{ $cardPreview }}"
                                                     alt="{{ $meta['label'] ?? $type }}"
                                                     class="h-full w-full object-cover transition duration-200 group-hover:scale-[1.02]"
                                                     loading="lazy"

@@ -7,6 +7,7 @@ use App\Models\Tenancy\Subscription;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 
 /**
  * Canonical structured content block for marketing pages.
@@ -101,6 +102,62 @@ class Section extends Model
     }
 
     /**
+     * Resolve admin/workspace metadata for this section.
+     *
+     * Priority:
+     * 1. linked SectionDefinition
+     * 2. legacy availableSectionTypes() metadata
+     * 3. headline(type)
+     *
+     * @param  array<string, array<string, mixed>>  $sectionTypes
+     * @return array{type:string,label:string,description:?string,category:?string,section_definition_id:?int,source:string}
+     */
+    public function resolvedTypeMeta(array $sectionTypes = []): array
+    {
+        $type = trim((string) $this->type);
+        $legacyMeta = is_array($sectionTypes[$type] ?? null) ? $sectionTypes[$type] : [];
+
+        if ($this->section_definition_id) {
+            $this->loadMissing('sectionDefinition');
+        }
+
+        $definition = $this->sectionDefinition;
+        $headlineLabel = $this->headlineTypeLabel($type);
+
+        if ($definition instanceof SectionDefinition) {
+            $definitionLabel = trim((string) ($definition->label ?? ''));
+            $definitionDescription = trim((string) ($definition->description ?? ''));
+            $definitionCategory = trim((string) ($definition->category ?? ''));
+
+            return [
+                'type' => $type,
+                'label' => $definitionLabel !== ''
+                    ? $definitionLabel
+                    : (string) ($legacyMeta['label'] ?? $headlineLabel),
+                'description' => $definitionDescription !== ''
+                    ? $definitionDescription
+                    : (isset($legacyMeta['description']) ? (string) $legacyMeta['description'] : null),
+                'category' => $definitionCategory !== ''
+                    ? $definitionCategory
+                    : (isset($legacyMeta['category']) ? (string) $legacyMeta['category'] : null),
+                'section_definition_id' => $this->section_definition_id,
+                'source' => 'definition',
+            ];
+        }
+
+        return [
+            'type' => $type,
+            'label' => isset($legacyMeta['label']) && trim((string) $legacyMeta['label']) !== ''
+                ? (string) $legacyMeta['label']
+                : $headlineLabel,
+            'description' => isset($legacyMeta['description']) ? (string) $legacyMeta['description'] : null,
+            'category' => isset($legacyMeta['category']) ? (string) $legacyMeta['category'] : null,
+            'section_definition_id' => $this->section_definition_id,
+            'source' => $legacyMeta !== [] ? 'config' : 'headline',
+        ];
+    }
+
+    /**
      * Relationship: optional canonical tenant ownership.
      *
      * No global scope is applied, so sections with `tenant_id = null`
@@ -137,5 +194,10 @@ class Section extends Model
         $tenantId = $tenant instanceof Subscription ? $tenant->getKey() : $tenant;
 
         return $query->where('tenant_id', $tenantId);
+    }
+
+    protected function headlineTypeLabel(string $type): string
+    {
+        return Str::headline(str_replace(['_', '-'], ' ', $type));
     }
 }

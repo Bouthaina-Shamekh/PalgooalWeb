@@ -4,6 +4,7 @@ namespace App\Support\Sections;
 
 use App\Models\Media;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Frontend-safe media ID resolution for section template views.
@@ -34,7 +35,7 @@ class SectionFrontendMediaResolver
 
         $media = Media::find((int) $id);
 
-        return ($media && $media->url) ? (string) $media->url : null;
+        return self::publicUrlFromPath($media?->file_path, $media?->disk);
     }
 
     /**
@@ -64,16 +65,25 @@ class SectionFrontendMediaResolver
         }
 
         $mediaRecords = Media::whereIn('id', $uniqueIds->all())
-            ->get(['id', 'url'])
+            ->get(['id', 'file_path', 'disk'])
             ->keyBy('id');
 
         $resolved = [];
 
         foreach ($uniqueIds as $id) {
             $record = $mediaRecords->get($id);
-            $resolved[$id] = ($record && $record->url) ? (string) $record->url : null;
+            $resolved[$id] = self::publicUrlFromPath($record?->file_path, $record?->disk);
         }
 
         return $resolved;
+    }
+
+    private static function publicUrlFromPath(?string $path, ?string $disk = null): ?string
+    {
+        if (! is_string($path) || trim($path) === '') {
+            return null;
+        }
+
+        return Storage::disk($disk ?: 'public')->url($path);
     }
 }

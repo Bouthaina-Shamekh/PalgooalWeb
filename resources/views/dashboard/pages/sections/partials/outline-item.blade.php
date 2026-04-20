@@ -14,9 +14,8 @@
     $isClientWorkspace = $workspaceMode === 'client';
     $sidebarTranslation = method_exists($section, 'translation') ? $section->translation($currentLocale) : null;
     $sidebarFallbackTranslation = $sidebarTranslation ?? $section->translations->first();
-    $sidebarTypeMeta = $sectionTypes[$section->type] ?? null;
-    $sidebarTypeLabel =
-        $sidebarTypeMeta['label'] ?? \Illuminate\Support\Str::headline(str_replace(['_', '-'], ' ', $section->type));
+    $sidebarTypeMeta = $section->resolvedTypeMeta($sectionTypes);
+    $sidebarTypeLabel = $sidebarTypeMeta['label'];
     $sidebarTitle = $sidebarFallbackTranslation?->title ?: $sidebarTypeLabel;
     $sectionStatusLabel = $section->is_active ? ($isClientWorkspace ? __('Visible') : __('Active')) : __('Hidden');
     $editActionLabel = $isClientWorkspace ? __('Edit block') : __('Edit section');

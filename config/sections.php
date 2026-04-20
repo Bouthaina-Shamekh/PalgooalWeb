@@ -103,9 +103,10 @@ return [
                 'view' => 'components.template.sections.hero_default',
                 'category' => 'hero',
             ],
-            'hosting_hero' => [
-                'label' => 'Hosting Hero',
-                'view' => 'front.sections.hero.hosting',
+            'hero_featured' => [
+                'label' => 'Featured Hero',
+                'view' => 'front.sections.hero.hero_featured',
+                'category' => 'hero',
             ],
             'home_works' => [
                 'label' => 'Home Works',
@@ -198,17 +199,22 @@ return [
                 'view' => 'front.sections.faq.faq_section',
             ],
 
+            'hero_internal_stats' => [
+                'label' => 'Hero Internal Stats',
+                'view' => 'front.sections.hero.hero_internal_stats',
+                'category' => 'hero',
+            ],
+
+            'promo_image_features' => [
+                'label' => 'Promo Image Features',
+                'view' => 'front.sections.promo.promo_image_features',
+                'category' => 'promo',
+            ],
         ],
     ],
 
     'custom_preset_registry' => [
         'presets' => [
-            'hosting_hero' => [
-                'label' => 'Hosting Hero',
-                'view' => 'dashboard.pages.sections.partials.custom-presets.hosting-hero',
-                'builder' => 'buildHostingHeroPreset',
-            ],
-
             'wordpress_ai_promo' => [
                 'label' => 'WordPress AI Promo',
                 'view' => 'dashboard.pages.sections.partials.custom-presets.wordpress-ai-promo',
@@ -222,16 +228,6 @@ return [
             ],
         ],
 
-        /*
-        |--------------------------------------------------------------------------
-        | Temporary legacy bridges
-        |--------------------------------------------------------------------------
-        | These mappings allow already-linked definitions to keep using a
-        | custom preset editor before their editor_mode/custom_editor_key
-        | values are formally backfilled in the database.
-        */
-        'legacy_section_key_bridge' => [
-            'hosting_hero' => 'hosting_hero',
-        ],
+        'legacy_section_key_bridge' => [],
     ],
 ];

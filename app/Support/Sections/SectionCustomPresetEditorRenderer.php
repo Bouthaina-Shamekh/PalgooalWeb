@@ -77,10 +77,6 @@ class SectionCustomPresetEditorRenderer
      * Formal activation rule:
      * - editor_mode = custom_preset
      * - custom_editor_key = registered preset key
-     *
-     * Temporary compatibility:
-     * - already-linked hosting_hero definitions may still activate through
-     *   the configured legacy bridge until their records are backfilled.
      */
     protected function resolvePresetMeta(SectionDefinition $definition): ?array
     {
@@ -96,104 +92,6 @@ class SectionCustomPresetEditorRenderer
         $bridgePresetKey = SectionCustomPresetRegistry::legacyBridgePresetKey($definition->section_key);
 
         return SectionCustomPresetRegistry::get($bridgePresetKey);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    protected function buildHostingHeroPreset(
-        Section $section,
-        SectionDefinition $definition,
-        iterable $languages,
-        array $presetMeta,
-    ): array {
-        $languagesCollection = Collection::make($languages)->values();
-        $defaultLocale = $this->resolveDefaultLocale($languagesCollection);
-        $featureItemsByLocale = $this->repeaterFactory->buildLocaleCampaignFeatureItems($section, $languagesCollection);
-
-        return [
-            'enabled' => true,
-            'presetKey' => (string) ($presetMeta['preset_key'] ?? 'hosting_hero'),
-            'view' => (string) ($presetMeta['view'] ?? 'dashboard.pages.sections.partials.custom-presets.hosting-hero'),
-            'activationSource' => $definition->editor_mode === SectionDefinition::EDITOR_MODE_CUSTOM_PRESET
-                ? 'custom_editor_key'
-                : 'legacy_section_key_bridge',
-            'defaultLocale' => $defaultLocale,
-            'definition' => [
-                'id' => $definition->id,
-                'key' => $definition->section_key,
-                'label' => $definition->label,
-                'description' => $definition->description,
-            ],
-            'locales' => $languagesCollection
-                ->mapWithKeys(function ($language) use ($section, $featureItemsByLocale) {
-                    $locale = (string) $language->code;
-                    $translation = $section->translations->firstWhere('locale', $locale);
-                    $content = is_array($translation?->content) ? $translation->content : [];
-                    $backgroundImageValue = $this->oldContentValue(
-                        $locale,
-                        'background_image',
-                        $content['background_image'] ?? null,
-                    );
-
-                    return [
-                        $locale => [
-                            'code' => $locale,
-                            'label' => (string) ($language->name ?? strtoupper($locale)),
-                            'values' => [
-                                'breadcrumbHomeLabelValue' => $this->stringValue(
-                                    $this->oldContentValue(
-                                        $locale,
-                                        'breadcrumb_home_label',
-                                        $content['breadcrumb_home_label'] ?? __('Home'),
-                                    ),
-                                ),
-                                'breadcrumbHomeUrlValue' => $this->stringValue(
-                                    $this->oldContentValue(
-                                        $locale,
-                                        'breadcrumb_home_url',
-                                        $content['breadcrumb_home_url'] ?? 'index.html',
-                                    ),
-                                ),
-                                'breadcrumbCurrentLabelValue' => $this->stringValue(
-                                    $this->oldContentValue(
-                                        $locale,
-                                        'breadcrumb_current_label',
-                                        $content['breadcrumb_current_label'] ?? __('Hosting'),
-                                    ),
-                                ),
-                                'titleValue' => $this->stringValue(
-                                    $this->oldContentValue($locale, 'title', $content['title'] ?? ''),
-                                ),
-                                'subtitleValue' => $this->stringValue(
-                                    $this->oldContentValue($locale, 'subtitle', $content['subtitle'] ?? ''),
-                                ),
-                                'cardTitleValue' => $this->stringValue(
-                                    $this->oldContentValue($locale, 'card_title', $content['card_title'] ?? ''),
-                                ),
-                                'cardButtonLabelValue' => $this->stringValue(
-                                    $this->oldContentValue(
-                                        $locale,
-                                        'card_button_label',
-                                        $content['card_button_label'] ?? '',
-                                    ),
-                                ),
-                                'cardButtonUrlValue' => $this->stringValue(
-                                    $this->oldContentValue(
-                                        $locale,
-                                        'card_button_url',
-                                        $content['card_button_url'] ?? '',
-                                    ),
-                                ),
-                                'backgroundImageValue' => $backgroundImageValue,
-                                'backgroundImagePreviewUrls' => $this->mediaPreviewBuilder->build($backgroundImageValue),
-                                'featureItems' => $featureItemsByLocale[$locale] ?? [],
-                            ],
-                        ],
-                    ];
-                })
-                ->all(),
-        ];
     }
 
     /**

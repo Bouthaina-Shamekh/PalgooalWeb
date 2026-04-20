@@ -1,4 +1,9 @@
 <x-dashboard-layout>
+    @php
+        $primaryTemplateKey = $sectionDefinition->primaryTemplateKey();
+        $isDynamicDefinition = $sectionDefinition->editor_mode === \App\Models\Sections\SectionDefinition::EDITOR_MODE_DYNAMIC;
+    @endphp
+
     <div class="page-header">
         <div class="page-block">
             <ul class="breadcrumb">
@@ -29,6 +34,27 @@
                                 <code class="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">{{ $sectionDefinition->section_key }}</code>
                                 <span class="mx-2">/</span>
                                 {{ __('Manage the field schema for this section definition only. No frontend rendering is changed here.') }}
+                            </p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <span class="rounded px-2 py-1 text-xs {{ $isDynamicDefinition ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800' }}">
+                                    {{ $isDynamicDefinition ? __('Dynamic') : __('Custom Preset') }}
+                                </span>
+                                <span class="rounded px-2 py-1 text-xs {{ $sectionDefinition->is_active ? 'bg-green-100 text-green-800' : 'bg-slate-100 text-slate-700' }}">
+                                    {{ $sectionDefinition->is_active ? __('Active') : __('Inactive') }}
+                                </span>
+                                <span class="rounded px-2 py-1 text-xs {{ $sectionDefinition->is_visible ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700' }}">
+                                    {{ $sectionDefinition->is_visible ? __('Visible In Library') : __('Hidden From Library') }}
+                                </span>
+                                <span class="rounded px-2 py-1 text-xs {{ $primaryTemplateKey ? 'bg-indigo-100 text-indigo-800' : 'bg-rose-100 text-rose-800' }}">
+                                    {{ $primaryTemplateKey ? __('Template') . ': ' . $primaryTemplateKey : __('No Template Selected') }}
+                                </span>
+                            </div>
+                            <p class="mt-3 mb-0 text-xs text-slate-500">
+                                @if ($isDynamicDefinition)
+                                    {{ __('Dynamic definitions become reusable library entries from the database when they are active, visible in the library, and linked to a registered template key. Add fields here to complete the editor schema.') }}
+                                @else
+                                    {{ __('Custom preset definitions still rely on their code-side preset editor. Fields defined here remain stored metadata and do not change that runtime behavior.') }}
+                                @endif
                             </p>
                         </div>
                         <div class="flex flex-wrap gap-2">

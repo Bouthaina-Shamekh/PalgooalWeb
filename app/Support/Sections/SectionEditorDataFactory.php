@@ -25,8 +25,10 @@ class SectionEditorDataFactory
     public function make(Section $section, iterable $languages, array $sectionTypes = []): array
     {
         $selectedType = $this->normalizeSelectedType(old('type', $section->type));
-        $typeLabel = $sectionTypes[$selectedType]['label']
-            ?? Str::headline(str_replace(['_', '-'], ' ', $selectedType));
+        $typeLabel = $selectedType === $section->type
+            ? $section->resolvedTypeMeta($sectionTypes)['label']
+            : ($sectionTypes[$selectedType]['label']
+                ?? Str::headline(str_replace(['_', '-'], ' ', $selectedType)));
         $typeCapabilities = $this->typeCapabilities->for($selectedType);
         $typeFlags = $typeCapabilities['typeFlags'];
         $fieldFlags = $typeCapabilities['flags'];

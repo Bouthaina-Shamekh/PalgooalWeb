@@ -2,9 +2,11 @@
 
 namespace App\Models\Sections;
 
+use App\Models\Media;
 use App\Models\Section;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -29,6 +31,7 @@ class SectionDefinition extends Model
         'category',
         'editor_mode',
         'custom_editor_key',
+        'preview_media_id',
         'settings',
         'schema',
         'is_active',
@@ -37,6 +40,7 @@ class SectionDefinition extends Model
     ];
 
     protected $casts = [
+        'preview_media_id' => 'integer',
         'settings' => 'array',
         'schema' => 'array',
         'is_active' => 'boolean',
@@ -76,6 +80,14 @@ class SectionDefinition extends Model
             ->withTimestamps()
             ->withPivot('sort_order')
             ->orderByPivot('sort_order');
+    }
+
+    /**
+     * Optional media thumbnail used for admin/library preview cards.
+     */
+    public function previewMedia(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'preview_media_id');
     }
 
     /**

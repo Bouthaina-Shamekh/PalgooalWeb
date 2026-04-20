@@ -476,10 +476,11 @@
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             @foreach ($items as $type => $meta)
                                 @php
-                                    $previewAsset =
-                                        !empty($meta['preview']) && file_exists(public_path($meta['preview']))
+                                    $previewAsset = !empty($meta['preview_url'])
+                                        ? $meta['preview_url']
+                                        : (!empty($meta['preview']) && file_exists(public_path($meta['preview']))
                                             ? asset($meta['preview'])
-                                            : null;
+                                            : null);
                                     $cardDescription = $meta['description'] ?? __('No description provided.');
                                     $cardType = $meta['type'] ?? $type;
                                     $cardVariant = $meta['variant'] ?? null;
