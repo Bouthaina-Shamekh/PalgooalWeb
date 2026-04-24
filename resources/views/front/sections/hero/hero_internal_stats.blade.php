@@ -21,7 +21,7 @@
         ->values();
 
     $resolvedFeatureMedia = \App\Support\Sections\SectionFrontendMediaResolver::resolveMany(
-        $featureItems->pluck('icon_media'),
+    $featureItems->pluck('icon_media'),
     );
 
     $backgroundUrl = \App\Support\Sections\SectionFrontendMediaResolver::resolve($data['background_image'] ?? null);

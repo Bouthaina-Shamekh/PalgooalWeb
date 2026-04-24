@@ -134,6 +134,12 @@ class SectionDefinitionController extends Controller
             ? (int) $previewMediaId
             : null;
 
+        $selectedTemplateKey = old(
+            'template_key',
+            $sectionDefinition->templates->first()?->template_key,
+        );
+        $selectedCategory = old('category', $sectionDefinition->category);
+
         return [
             'sectionDefinition' => $sectionDefinition,
             'templateOptions' => $this->templateOptions($sectionDefinition),
@@ -145,10 +151,8 @@ class SectionDefinitionController extends Controller
             'previewMediaValue' => $previewMediaId,
             'previewMediaPreviewUrls' => app(SectionMediaPreviewBuilder::class)->build($previewMediaId),
             'selectedEditorMode' => old('editor_mode', $sectionDefinition->editor_mode),
-            'selectedTemplateKey' => old(
-                'template_key',
-                $sectionDefinition->templates->first()?->template_key,
-            ),
+            'selectedTemplateKey' => $selectedTemplateKey,
+            'selectedTemplateMeta' => SectionTemplateRegistry::describe($selectedTemplateKey, $selectedCategory),
             'selectedCustomEditorKey' => old(
                 'custom_editor_key',
                 $sectionDefinition->custom_editor_key,
@@ -157,7 +161,7 @@ class SectionDefinitionController extends Controller
     }
 
     /**
-     * Return the template registry options for the form select.
+     * Return the template registry options for the form suggestions.
      *
      * @return array<string, array<string, mixed>>
      */
@@ -167,10 +171,13 @@ class SectionDefinitionController extends Controller
         $currentTemplateKey = $sectionDefinition?->templates()->orderByPivot('sort_order')->first()?->template_key;
 
         if ($currentTemplateKey && ! isset($templateOptions[$currentTemplateKey])) {
-            $templateOptions[$currentTemplateKey] = [
+            $templateOptions[$currentTemplateKey] = SectionTemplateRegistry::describe(
+                $currentTemplateKey,
+                $sectionDefinition?->category,
+            ) ?? [
                 'template_key' => $currentTemplateKey,
-                'label' => __('Unregistered Template') . ' (' . $currentTemplateKey . ')',
-                'view' => SectionTemplateRegistry::fallbackView(),
+                'label' => __('Unknown Template') . ' (' . $currentTemplateKey . ')',
+                'view' => '',
                 'category' => null,
                 'meta' => [],
             ];
@@ -245,7 +252,7 @@ class SectionDefinitionController extends Controller
             return;
         }
 
-        $templateConfig = SectionTemplateRegistry::get($templateKey);
+        $templateConfig = SectionTemplateRegistry::describe($templateKey, $sectionDefinition->category);
 
         if (! is_array($templateConfig)) {
             $sectionDefinition->templates()->sync([]);

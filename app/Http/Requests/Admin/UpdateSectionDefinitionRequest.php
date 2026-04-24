@@ -27,14 +27,8 @@ class UpdateSectionDefinitionRequest extends FormRequest
     {
         /** @var \App\Models\Sections\SectionDefinition|null $sectionDefinition */
         $sectionDefinition = $this->route('sectionDefinition');
-        $allowedTemplateKeys = array_keys(SectionTemplateRegistry::all());
         $allowedCustomPresetKeys = array_keys(SectionCustomPresetRegistry::all());
-        $currentTemplateKey = $sectionDefinition?->templates()->orderByPivot('sort_order')->first()?->template_key;
         $currentCustomEditorKey = $sectionDefinition?->custom_editor_key;
-
-        if (is_string($currentTemplateKey) && $currentTemplateKey !== '') {
-            $allowedTemplateKeys[] = $currentTemplateKey;
-        }
 
         if (is_string($currentCustomEditorKey) && $currentCustomEditorKey !== '') {
             $allowedCustomPresetKeys[] = $currentCustomEditorKey;
@@ -55,7 +49,16 @@ class UpdateSectionDefinitionRequest extends FormRequest
             'template_key' => [
                 'nullable',
                 'string',
-                Rule::in($allowedTemplateKeys),
+                'max:150',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+
+                    if (! SectionTemplateRegistry::isValidTemplateKey((string) $value)) {
+                        $fail(__('Template Key may only contain lowercase letters, numbers, underscores, and dashes.'));
+                    }
+                },
             ],
             'editor_mode' => [
                 'required',
@@ -95,7 +98,7 @@ class UpdateSectionDefinitionRequest extends FormRequest
             'description' => $this->normalizeNullableString('description'),
             'category' => $this->normalizeNullableString('category'),
             'preview_media_id' => $this->normalizeNullableInteger('preview_media_id'),
-            'template_key' => $this->normalizeNullableString('template_key'),
+            'template_key' => $this->normalizeNullableKey('template_key'),
             'editor_mode' => $editorMode,
             'custom_editor_key' => $this->normalizeNullableString('custom_editor_key'),
             'is_active' => $this->boolean('is_active'),
@@ -112,6 +115,13 @@ class UpdateSectionDefinitionRequest extends FormRequest
     protected function normalizeNullableString(string $key): ?string
     {
         $value = trim((string) $this->input($key, ''));
+
+        return $value === '' ? null : $value;
+    }
+
+    protected function normalizeNullableKey(string $key): ?string
+    {
+        $value = trim(strtolower((string) $this->input($key, '')));
 
         return $value === '' ? null : $value;
     }

@@ -42,6 +42,12 @@ class SectionDefinitionFrontendViewDataFactory
      * Returns null when the section should continue through the existing
      * legacy/custom rendering path unchanged.
      *
+     * Resolution priority:
+     * 1. explicit code-side template registry override
+     * 2. convention-based Blade resolution from template_key
+     * 3. existing legacy renderer path when the section type already supports it
+     * 4. explicit missing-renderer view state
+     *
      * @param  array<string, mixed>  $extraViewData
      * @return array{view: string, viewData: array<string, mixed>}|null
      */
@@ -72,7 +78,42 @@ class SectionDefinitionFrontendViewDataFactory
         $content = is_array($translation?->content ?? null) ? $translation->content : [];
         $data = $this->normalizeContent($content, $definition, $locale, $translation);
         $resolvedType = $this->resolvedSectionType($definition->section_key);
-        $resolvedView = SectionTemplateRegistry::resolveView($templateKey);
+        $templateResolution = SectionTemplateRegistry::resolve($templateKey, $definition->category);
+        $resolvedView = $templateResolution['view'] ?? null;
+
+        if (! is_string($resolvedView) || trim($resolvedView) === '') {
+            if ($this->shouldUseLegacyFallback($templateResolution, $resolvedType)) {
+                return null;
+            }
+
+            return [
+                'view' => SectionTemplateRegistry::fallbackView(),
+                'viewData' => array_merge($extraViewData, [
+                    'data' => $data,
+                    'content' => $data,
+                    'section' => $section,
+                    'title' => $translation?->title,
+                    'translation' => $translation,
+                    'variant' => $section->variant,
+                    'currentLocale' => $locale,
+                    'sectionDefinition' => $definition,
+                    'sectionDefinitionFields' => $definition->relationLoaded('fields')
+                        ? $definition->fields->values()
+                        : collect(),
+                    'sectionTemplate' => $template,
+                    'sectionTemplateKey' => $templateKey,
+                    'sectionTemplateMeta' => $templateResolution['descriptor'],
+                    'resolvedSectionType' => $resolvedType,
+                    'missingTemplate' => $this->missingTemplatePayload(
+                        $section,
+                        $definition,
+                        $templateKey,
+                        $resolvedType,
+                        $templateResolution,
+                    ),
+                ]),
+            ];
+        }
 
         return [
             'view' => $resolvedView,
@@ -90,7 +131,8 @@ class SectionDefinitionFrontendViewDataFactory
                     : collect(),
                 'sectionTemplate' => $template,
                 'sectionTemplateKey' => $templateKey,
-                'sectionTemplateMeta' => SectionTemplateRegistry::get($templateKey),
+                'sectionTemplateMeta' => $templateResolution['descriptor'],
+                'sectionTemplateResolution' => $templateResolution,
                 'resolvedSectionType' => $resolvedType,
             ]),
         ];
@@ -173,5 +215,67 @@ class SectionDefinitionFrontendViewDataFactory
         }
 
         return self::TYPE_ALIASES[$sectionType] ?? $sectionType;
+    }
+
+    /**
+     * Only preserve the legacy path when the template key was convention-based
+     * and the section type already has an explicit old renderer.
+     *
+     * @param  array<string, mixed>  $templateResolution
+     */
+    protected function shouldUseLegacyFallback(array $templateResolution, ?string $resolvedType): bool
+    {
+        return in_array(($templateResolution['source'] ?? null), ['convention', 'deprecated_convention'], true)
+            && SectionRenderer::hasLegacyRenderer($resolvedType);
+    }
+
+    /**
+     * @param  array<string, mixed>  $templateResolution
+     * @return array<string, mixed>
+     */
+    protected function missingTemplatePayload(
+        Section $section,
+        SectionDefinition $definition,
+        string $templateKey,
+        ?string $resolvedType,
+        array $templateResolution,
+    ): array {
+        $attemptedViews = array_values(array_filter(
+            array_map(
+                static fn ($value): string => trim((string) $value),
+                is_array($templateResolution['attempted_views'] ?? null) ? $templateResolution['attempted_views'] : [],
+            ),
+            static fn (string $value): bool => $value !== '',
+        ));
+
+        $resolutionSource = (string) ($templateResolution['source'] ?? 'missing');
+        $sourceMessage = $resolutionSource === 'registry'
+            ? __('A code-side template override is registered for this template key, but its Blade view could not be found.')
+            : __('No explicit code-side override was registered, and the categorized convention-based Blade view could not be found.');
+        $category = SectionTemplateRegistry::normalizeCategory($definition->category);
+
+        return [
+            'title' => __('Section renderer not found'),
+            'message' => __('Template key ":templateKey" could not be resolved for definition ":definitionKey".', [
+                'templateKey' => $templateKey,
+                'definitionKey' => $definition->section_key,
+            ]),
+            'details' => [
+                $sourceMessage,
+                $resolvedType
+                    ? __('Legacy fallback is not available for section type ":sectionType".', [
+                        'sectionType' => $resolvedType,
+                    ])
+                    : __('Legacy fallback is not available because the section type could not be resolved.'),
+            ],
+            'template_key' => $templateKey,
+            'category' => $category,
+            'section_key' => $definition->section_key,
+            'resolved_section_type' => $resolvedType,
+            'resolution_source' => $resolutionSource,
+            'attempted_views' => $attemptedViews,
+            'section_id' => $section->id,
+            'section_definition_id' => $definition->id,
+        ];
     }
 }

@@ -19,6 +19,10 @@ use Illuminate\Support\Facades\View;
  */
 class SectionTemplateRegistry
 {
+    public const TEMPLATE_KEY_REGEX = '/^[a-z0-9_-]+$/';
+    public const CATEGORY_REGEX = '/^[a-z0-9_-]+$/';
+    public const DEFAULT_CATEGORY = 'uncategorized';
+
     /**
      * Runtime registrations layered on top of config-defined templates.
      *
@@ -84,21 +88,149 @@ class SectionTemplateRegistry
     }
 
     /**
-     * Resolve the Blade view for a template key.
-     *
-     * If the key is missing or the configured view no longer exists, the
-     * registry falls back to a safe internal view.
+     * Determine whether the given template key is safe for convention-based
+     * renderer resolution.
      */
-    public static function resolveView(?string $templateKey): string
+    public static function isValidTemplateKey(?string $templateKey): bool
     {
-        $template = is_string($templateKey) ? static::get($templateKey) : null;
-        $view = is_array($template) ? ($template['view'] ?? null) : null;
-
-        if (is_string($view) && $view !== '' && View::exists($view)) {
-            return $view;
+        if (! is_string($templateKey)) {
+            return false;
         }
 
-        return static::fallbackView();
+        $templateKey = trim($templateKey);
+
+        return $templateKey !== ''
+            && preg_match(static::TEMPLATE_KEY_REGEX, $templateKey) === 1;
+    }
+
+    /**
+     * Describe a template key for admin/runtime usage without exposing raw
+     * view paths in the database.
+     *
+     * Registered keys keep their explicit code-side metadata. Unregistered but
+     * valid keys resolve to the convention-based Blade candidate.
+     *
+     * @return array<string, mixed>|null
+     */
+    public static function describe(?string $templateKey, ?string $category = null): ?array
+    {
+        if (! static::isValidTemplateKey($templateKey)) {
+            return null;
+        }
+
+        $templateKey = trim((string) $templateKey);
+        $normalizedCategory = static::normalizeCategory($category);
+        $registeredTemplate = static::get($templateKey);
+
+        if (is_array($registeredTemplate)) {
+            $view = trim((string) ($registeredTemplate['view'] ?? ''));
+
+            return array_merge($registeredTemplate, [
+                'view' => $view,
+                'resolution_source' => 'registry',
+                'view_exists' => $view !== '' && View::exists($view),
+            ]);
+        }
+
+        $conventionView = static::conventionView($templateKey, $normalizedCategory);
+
+        return [
+            'template_key' => $templateKey,
+            'label' => Str::headline(str_replace(['_', '-'], ' ', $templateKey)),
+            'view' => $conventionView ?? '',
+            'category' => $normalizedCategory,
+            'meta' => [],
+            'resolution_source' => 'convention',
+            'view_exists' => $conventionView !== null && View::exists($conventionView),
+            'deprecated_convention_view' => static::deprecatedConventionView($templateKey),
+        ];
+    }
+
+    /**
+     * Resolve the Blade view for a template key without silently falling back
+     * to the internal missing-template view.
+     *
+     * @return array{
+     *     template_key: string|null,
+     *     found: bool,
+     *     view: string|null,
+     *     source: string,
+     *     descriptor: array<string, mixed>|null,
+     *     attempted_views: array<int, string>
+     * }
+     */
+    public static function resolve(?string $templateKey, ?string $category = null): array
+    {
+        $templateKey = is_string($templateKey) ? trim($templateKey) : null;
+        $descriptor = static::describe($templateKey, $category);
+        $candidateView = is_array($descriptor) ? trim((string) ($descriptor['view'] ?? '')) : '';
+        $deprecatedCandidateView = is_array($descriptor)
+            ? trim((string) ($descriptor['deprecated_convention_view'] ?? ''))
+            : '';
+        $resolutionSource = is_array($descriptor)
+            ? (string) ($descriptor['resolution_source'] ?? 'convention')
+            : 'invalid';
+        $attemptedViews = [];
+
+        if ($candidateView !== '') {
+            $attemptedViews[] = $candidateView;
+        }
+
+        $resolvedView = null;
+
+        if ($candidateView !== '' && View::exists($candidateView)) {
+            $resolvedView = $candidateView;
+        } elseif ($resolutionSource === 'convention' && $deprecatedCandidateView !== '') {
+            $attemptedViews[] = $deprecatedCandidateView . ' (deprecated)';
+
+            if (View::exists($deprecatedCandidateView)) {
+                $resolvedView = $deprecatedCandidateView;
+                $resolutionSource = 'deprecated_convention';
+            }
+        }
+
+        return [
+            'template_key' => $templateKey,
+            'found' => $resolvedView !== null,
+            'view' => $resolvedView,
+            'source' => $resolutionSource,
+            'descriptor' => $descriptor,
+            'attempted_views' => array_values(array_unique($attemptedViews)),
+        ];
+    }
+
+    /**
+     * Resolve the convention-based Blade view for a valid template key.
+     */
+    public static function conventionView(?string $templateKey, ?string $category = null): ?string
+    {
+        if (! static::isValidTemplateKey($templateKey)) {
+            return null;
+        }
+
+        return 'front.sections.' . static::normalizeCategory($category) . '.' . trim((string) $templateKey);
+    }
+
+    /**
+     * Deprecated temporary compatibility path for pre-categorized dynamic
+     * renderer files. Do not use for new section templates.
+     */
+    public static function deprecatedConventionView(?string $templateKey): ?string
+    {
+        if (! static::isValidTemplateKey($templateKey)) {
+            return null;
+        }
+
+        return 'components.template.sections.' . trim((string) $templateKey);
+    }
+
+    public static function normalizeCategory(?string $category): string
+    {
+        $category = strtolower(trim((string) $category));
+
+        return $category !== '' && preg_match(static::CATEGORY_REGEX, $category) === 1
+            ? $category
+            : static::DEFAULT_CATEGORY;
     }
 
     /**
@@ -124,11 +256,12 @@ class SectionTemplateRegistry
     protected static function normalize(string $templateKey, array $config): array
     {
         $fallbackLabel = Str::headline(str_replace(['_', '-'], ' ', $templateKey));
+        $view = trim((string) ($config['view'] ?? ''));
 
         return [
             'template_key' => $templateKey,
             'label' => __((string) ($config['label'] ?? $fallbackLabel)),
-            'view' => (string) ($config['view'] ?? static::fallbackView()),
+            'view' => $view,
             'category' => isset($config['category']) ? (string) $config['category'] : null,
             'meta' => is_array($config['meta'] ?? null) ? $config['meta'] : [],
         ];

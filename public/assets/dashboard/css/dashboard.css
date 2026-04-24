@@ -2005,6 +2005,9 @@
   .snap-start {
     scroll-snap-align: start;
   }
+  .snap-always {
+    scroll-snap-stop: always;
+  }
   .scroll-mt-24 {
     scroll-margin-top: calc(var(--spacing) * 24);
   }
@@ -4689,6 +4692,9 @@
   }
   .text-rose-900 {
     color: var(--color-rose-900);
+  }
+  .text-rose-950 {
+    color: var(--color-rose-950);
   }
   .text-secondary {
     color: var(--color-secondary);

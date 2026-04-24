@@ -29,16 +29,15 @@
         ->filter()
         ->values();
 
-    $resolvedMedia = \App\Support\Sections\SectionFrontendMediaResolver::resolveMany(
-        $cardItems->pluck('icon_media')
-    );
+    $resolvedMedia = \App\Support\Sections\SectionFrontendMediaResolver::resolveMany($cardItems->pluck('icon_media'));
 @endphp
 
 <section id="website-protection" class="bg-[#EAEAEA] py-16 md:py-24 px-4 sm:px-6 lg:px-12">
     <div class="container mx-auto">
 
         @if ($title !== '')
-            <h2 class="text-purple-brand font-extrabold text-3xl md:text-4xl lg:text-[40px] text-center uppercase mb-4 animate-from-up">
+            <h2
+                class="text-purple-brand font-extrabold text-3xl md:text-4xl lg:text-[40px] text-center uppercase mb-4 animate-from-up">
                 {{ $title }}
             </h2>
         @endif
@@ -54,9 +53,10 @@
 
                 @foreach ($cardItems as $card)
                     @php
-                        $iconUrl = $card['icon_source'] === 'media' && !empty($card['icon_media'])
-                            ? ($resolvedMedia[$card['icon_media']] ?? null)
-                            : null;
+                        $iconUrl =
+                            $card['icon_source'] === 'media' && !empty($card['icon_media'])
+                                ? $resolvedMedia[$card['icon_media']] ?? null
+                                : null;
                     @endphp
 
                     <div class="bg-white rounded-[20px] p-6 transition-all duration-300">

@@ -122,11 +122,11 @@
 
             {{-- Slider Wrapper with Scroll Snap --}}
             <div id="{{ $sliderId }}" data-templates-slider dir="ltr"
-                class="scrollbar-hide flex select-none gap-4 overflow-x-auto scroll-smooth snap-x snap-proximity px-4 pb-6 pt-2 md:gap-6 md:px-6 lg:px-12">
+                class="scrollbar-hide flex select-none gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory px-4 pb-6 pt-2 md:gap-6 md:px-6 lg:px-12">
                 @forelse ($templates as $template)
                     {{-- Template Card --}}
                     <div data-template-slide dir="rtl"
-                        class="w-[85vw] flex-shrink-0 snap-center md:w-[60vw] lg:w-[45vw] xl:w-[38vw]">
+                        class="w-[85vw] flex-shrink-0 snap-center snap-always md:w-[60vw] lg:w-[45vw] xl:w-[38vw]">
                         <div
                             class="group flex h-full flex-col overflow-hidden rounded-[2rem] border border-slate-100 bg-white p-5 transition-all duration-500 hover:-translate-y-2 hover:scale-[1.01] md:p-6">
                             {{-- Card Image --}}
@@ -222,6 +222,32 @@
                 return Math.max(0, Math.min(offset, maxScrollLeft));
             }
 
+            function getNormalizedScrollLeft(el) {
+                const style = window.getComputedStyle(el);
+
+                if (style.direction === 'rtl') {
+                    return el.scrollWidth - el.clientWidth - el.scrollLeft;
+                }
+
+                return el.scrollLeft;
+            }
+
+            function updateButtonStates() {
+                if (!prevButton || !nextButton) {
+                    return;
+                }
+
+                const isFirst = currentIndex === 0;
+                const isLast = currentIndex === cards.length - 1;
+
+                prevButton.disabled = isFirst;
+                nextButton.disabled = isLast;
+                prevButton.classList.toggle('opacity-40', isFirst);
+                prevButton.classList.toggle('cursor-not-allowed', isFirst);
+                nextButton.classList.toggle('opacity-40', isLast);
+                nextButton.classList.toggle('cursor-not-allowed', isLast);
+            }
+
             function syncCarouselLayout() {
                 const referenceCard = cards[0];
 
@@ -263,14 +289,15 @@
                 const indicators = indicatorsContainer.querySelectorAll('.indicator-dot');
 
                 indicators.forEach((indicator, index) => {
-                    if (index === currentIndex) {
-                        indicator.classList.remove('w-2.5', 'bg-slate-300');
-                        indicator.classList.add('w-12', 'bg-purple-brand');
-                    } else {
-                        indicator.classList.remove('w-12', 'bg-purple-brand');
-                        indicator.classList.add('w-2.5', 'bg-slate-300');
-                    }
+                    const isActive = index === currentIndex;
+
+                    indicator.classList.toggle('w-12', isActive);
+                    indicator.classList.toggle('bg-purple-brand', isActive);
+                    indicator.classList.toggle('w-2.5', !isActive);
+                    indicator.classList.toggle('bg-slate-300', !isActive);
                 });
+
+                updateButtonStates();
             }
 
             function scrollToSlide(index, behavior = 'smooth') {
@@ -297,26 +324,31 @@
             }
 
             function scrollSlider(direction) {
-                let nextIndex = currentIndex + direction;
+                const isRTL = window.getComputedStyle(slider).direction === 'rtl' ||
+                    document.documentElement.dir === 'rtl';
+                let nextIndex = currentIndex;
 
-                if (nextIndex < 0) {
-                    nextIndex = cards.length - 1;
-                } else if (nextIndex >= cards.length) {
-                    nextIndex = 0;
+                if (direction === 'next') {
+                    nextIndex = isRTL ? currentIndex - 1 : currentIndex + 1;
+                } else {
+                    nextIndex = isRTL ? currentIndex + 1 : currentIndex - 1;
                 }
+
+                nextIndex = Math.max(0, Math.min(nextIndex, cards.length - 1));
 
                 scrollToSlide(nextIndex);
             }
 
             function syncCurrentIndexFromScroll() {
                 const sliderRect = slider.getBoundingClientRect();
-                const sliderCenter = slider.scrollLeft + (slider.clientWidth / 2);
+                const normalizedScrollLeft = getNormalizedScrollLeft(slider);
+                const sliderCenter = normalizedScrollLeft + (slider.clientWidth / 2);
                 let closestIndex = 0;
                 let minDistance = Infinity;
 
                 cards.forEach((card, index) => {
                     const cardRect = card.getBoundingClientRect();
-                    const cardCenter = slider.scrollLeft +
+                    const cardCenter = normalizedScrollLeft +
                         (cardRect.left - sliderRect.left) +
                         (cardRect.width / 2);
                     const distance = Math.abs(cardCenter - sliderCenter);
@@ -330,6 +362,8 @@
                 if (closestIndex !== currentIndex) {
                     currentIndex = closestIndex;
                     updateIndicators();
+                } else {
+                    updateButtonStates();
                 }
             }
 
@@ -342,13 +376,13 @@
 
             if (prevButton) {
                 prevButton.addEventListener('click', function() {
-                    scrollSlider(-1);
+                    scrollSlider('prev');
                 });
             }
 
             if (nextButton) {
                 nextButton.addEventListener('click', function() {
-                    scrollSlider(1);
+                    scrollSlider('next');
                 });
             }
 

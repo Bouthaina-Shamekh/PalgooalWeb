@@ -4,9 +4,38 @@ namespace App\Support\Sections;
 
 use App\Models\Section;
 use App\Models\SectionTranslation;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\View;
 
 class SectionRenderer
 {
+    /**
+     * Legacy frontend-rendered marketing section types that still have an
+     * explicit non-definition-driven renderer path.
+     *
+     * @var array<int, string>
+     */
+    protected const LEGACY_FRONTEND_SECTION_TYPES = [
+        'hero',
+        'hero_default',
+        'hero_campaign',
+        'programming_showcase',
+        'mobile_app_showcase',
+        'how_we_build',
+        'design_showcase',
+        'digital_marketing_showcase',
+        'tech_stack_showcase',
+        'reviews_showcase',
+        'our_work_showcase',
+        'hosting_pricing_showcase',
+        'domains_showcase',
+        'templates_slider_showcase',
+        'templates_listing_showcase',
+        'features_grid',
+        'services_grid',
+        'templates_showcase',
+    ];
+
     /**
      * Render a section into HTML through the first safe renderer that applies.
      *
@@ -53,6 +82,28 @@ class SectionRenderer
             $renderPayload['view'],
             $renderPayload['viewData'],
         )->render();
+    }
+
+    /**
+     * Determine whether the section type still has a specific legacy renderer
+     * path that should remain available when definition-driven resolution does
+     * not find an explicit or convention-based renderer.
+     */
+    public static function hasLegacyRenderer(?string $sectionType): bool
+    {
+        $sectionType = static::resolvedLegacySectionType($sectionType);
+
+        if ($sectionType === null) {
+            return false;
+        }
+
+        if (in_array($sectionType, static::LEGACY_FRONTEND_SECTION_TYPES, true)) {
+            return true;
+        }
+
+        $tenantPartial = 'tenant.sections.' . Str::slug($sectionType, '_');
+
+        return View::exists($tenantPartial);
     }
 
     /**
@@ -158,5 +209,18 @@ class SectionRenderer
             'show_illustration' => $showIllustration,
             'illustration'     => $illustration,
         ];
+    }
+
+    protected static function resolvedLegacySectionType(?string $sectionType): ?string
+    {
+        if (! is_string($sectionType) || trim($sectionType) === '') {
+            return null;
+        }
+
+        $sectionType = trim($sectionType);
+
+        return $sectionType === 'templates-pages'
+            ? 'templates_listing_showcase'
+            : $sectionType;
     }
 }

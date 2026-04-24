@@ -51,7 +51,7 @@
                             </div>
                             <p class="mt-3 mb-0 text-xs text-slate-500">
                                 @if ($isDynamicDefinition)
-                                    {{ __('Dynamic definitions become reusable library entries from the database when they are active, visible in the library, and linked to a registered template key. Add fields here to complete the editor schema.') }}
+                                    {{ __('Dynamic definitions become reusable library entries from the database when they are active, visible in the library, and linked to a stable template key. Runtime can still use a code-side override, but normal dynamic renderers may now resolve by convention from that key.') }}
                                 @else
                                     {{ __('Custom preset definitions still rely on their code-side preset editor. Fields defined here remain stored metadata and do not change that runtime behavior.') }}
                                 @endif

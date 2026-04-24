@@ -38,7 +38,16 @@ class StoreSectionDefinitionRequest extends FormRequest
             'template_key' => [
                 'nullable',
                 'string',
-                Rule::in(array_keys(SectionTemplateRegistry::all())),
+                'max:150',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+
+                    if (! SectionTemplateRegistry::isValidTemplateKey((string) $value)) {
+                        $fail(__('Template Key may only contain lowercase letters, numbers, underscores, and dashes.'));
+                    }
+                },
             ],
             'editor_mode' => [
                 'required',
@@ -78,7 +87,7 @@ class StoreSectionDefinitionRequest extends FormRequest
             'description' => $this->normalizeNullableString('description'),
             'category' => $this->normalizeNullableString('category'),
             'preview_media_id' => $this->normalizeNullableInteger('preview_media_id'),
-            'template_key' => $this->normalizeNullableString('template_key'),
+            'template_key' => $this->normalizeNullableKey('template_key'),
             'editor_mode' => $editorMode,
             'custom_editor_key' => $this->normalizeNullableString('custom_editor_key'),
             'is_active' => $this->boolean('is_active'),
@@ -95,6 +104,13 @@ class StoreSectionDefinitionRequest extends FormRequest
     protected function normalizeNullableString(string $key): ?string
     {
         $value = trim((string) $this->input($key, ''));
+
+        return $value === '' ? null : $value;
+    }
+
+    protected function normalizeNullableKey(string $key): ?string
+    {
+        $value = trim(strtolower((string) $this->input($key, '')));
 
         return $value === '' ? null : $value;
     }
