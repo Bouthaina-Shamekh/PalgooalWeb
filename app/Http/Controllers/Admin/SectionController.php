@@ -1281,8 +1281,6 @@ class SectionController extends Controller
                 'items'    => [],
             ],
 
-            'hosting_hero' => [],
-
             default => [
                 'title'    => $pageTitle,
                 'subtitle' => '',
