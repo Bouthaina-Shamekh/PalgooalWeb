@@ -158,7 +158,7 @@ Benefits:
 
 Real-world example:
 
-- One `Section` row may represent a `hero_default` block for a page.
+- One `Section` row may represent a `hero_campaign` block for a page.
 - The Arabic translation can have Arabic title and content.
 - The English translation can have English title and content.
 - The section order and visibility still remain shared.

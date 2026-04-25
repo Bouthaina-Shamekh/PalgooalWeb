@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreSectionDefinitionRequest;
 use App\Http\Requests\Admin\UpdateSectionDefinitionRequest;
+use App\Models\SectionTranslation;
 use App\Models\Sections\SectionDefinition;
 use App\Models\Sections\Template as SectionTemplate;
 use App\Support\Sections\SectionCustomPresetRegistry;
@@ -13,6 +14,7 @@ use App\Support\Sections\SectionTemplateRegistry;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class SectionDefinitionController extends Controller
 {
@@ -26,6 +28,7 @@ class SectionDefinitionController extends Controller
         $sectionDefinitions = SectionDefinition::query()
             ->with(['templates' => fn ($query) => $query->orderByPivot('sort_order')->orderBy('id')])
             ->withCount('fields')
+            ->withCount('sections')
             ->orderBy('sort_order')
             ->orderBy('id')
             ->paginate(20);
@@ -107,6 +110,48 @@ class SectionDefinitionController extends Controller
         });
 
         return $this->redirectAfterSave($sectionDefinition, (string) $request->input('after_save', 'edit'));
+    }
+
+    /**
+     * Delete a developer section definition and only its database-owned
+     * definition-driven content. Renderer files, media records, uploads, and
+     * config registry entries are intentionally untouched.
+     */
+    public function destroy(SectionDefinition $sectionDefinition): RedirectResponse
+    {
+        $this->authorize('delete', $sectionDefinition);
+
+        try {
+            DB::transaction(function () use ($sectionDefinition): void {
+                $linkedSectionIds = $sectionDefinition->sections()
+                    ->pluck('id')
+                    ->all();
+
+                if ($linkedSectionIds !== []) {
+                    SectionTranslation::query()
+                        ->whereIn('section_id', $linkedSectionIds)
+                        ->delete();
+
+                    $sectionDefinition->sections()
+                        ->whereKey($linkedSectionIds)
+                        ->delete();
+                }
+
+                $sectionDefinition->fields()->delete();
+                $sectionDefinition->templates()->detach();
+                $sectionDefinition->delete();
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return redirect()
+                ->route('dashboard.section_definitions.index')
+                ->with('error', __('Section definition could not be deleted. Please review linked records and try again.'));
+        }
+
+        return redirect()
+            ->route('dashboard.section_definitions.index')
+            ->with('success', __('Section definition and linked section instances were deleted successfully.'));
     }
 
     /**

@@ -2,7 +2,7 @@
 
 return [
     'restaurant' => [
-        'hero_default' => [
+        'hero' => [
             'type' => 'hero',
             'variant' => 'restaurant_default',
             'key' => 'hero-block',

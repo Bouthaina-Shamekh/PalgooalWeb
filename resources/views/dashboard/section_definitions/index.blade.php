@@ -17,6 +17,12 @@
         </div>
     @endif
 
+    @if (session('error'))
+        <div class="mb-4 rounded bg-red-100 px-4 py-2 text-red-800">
+            {{ session('error') }}
+        </div>
+    @endif
+
     <div class="grid grid-cols-12 gap-x-6">
         <div class="col-span-12">
             <div class="card table-card">
@@ -122,6 +128,17 @@
                                                     class="btn btn-sm btn-light">
                                                     {{ __('Fields') }}
                                                 </a>
+                                                <form
+                                                    action="{{ route('dashboard.section_definitions.destroy', $sectionDefinition) }}"
+                                                    method="POST"
+                                                    onsubmit="return confirm(@js(__('Delete this section definition? This will also delete :count linked section instance(s) and their translations. Media records, uploaded files, Blade files, and config entries will not be deleted.', ['count' => $sectionDefinition->sections_count])));"
+                                                >
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        {{ __('Delete') }}
+                                                    </button>
+                                                </form>
                                             </div>
                                         </td>
                                     </tr>

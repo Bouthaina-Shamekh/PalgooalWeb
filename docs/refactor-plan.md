@@ -330,7 +330,7 @@ After every phase, verify all of the following:
 
 ### Section-Type Checks
 
-- `hero_default` still shows its expected simple hero fields
+- `hero_campaign` still shows its expected hero fields
 - `hero_campaign` still supports feature repeaters
 - `programming_showcase` still supports outputs and CTA fields
 - `how_we_build` still preserves icon and accent flags

@@ -161,7 +161,7 @@
 ### 2026-04-03
 
 - إزالة section type `hero_minimal` من مكتبة السكاشن ومسارات الـ legacy rendering والتوثيق المرتبط به.
-- إضافة data migration لتحويل أي سجلات قديمة من `hero_minimal` إلى `hero_default` حتى لا تبقى مراجع مكسورة بعد الحذف.
+- إضافة data migration لإزالة أي سجلات قديمة من `hero_minimal` حتى لا تبقى مراجع مكسورة بعد الحذف.
 
 
 

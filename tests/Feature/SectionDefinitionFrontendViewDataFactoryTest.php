@@ -46,10 +46,10 @@ class SectionDefinitionFrontendViewDataFactoryTest extends TestCase
     public function test_legacy_fallback_is_preserved_when_the_section_type_already_has_a_legacy_renderer(): void
     {
         $factory = new SectionDefinitionFrontendViewDataFactory(
-            $this->mockRuntimeResolverFor($this->makeDefinition('hero_default', 'missing_dynamic_renderer')),
+            $this->mockRuntimeResolverFor($this->makeDefinition('hero_campaign', 'missing_dynamic_renderer')),
         );
 
-        $payload = $factory->build($this->makeSection('hero_default'), 'en');
+        $payload = $factory->build($this->makeSection('hero_campaign'), 'en');
 
         $this->assertNull($payload);
     }

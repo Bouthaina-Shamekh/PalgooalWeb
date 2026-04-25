@@ -95,12 +95,7 @@ return [
             ],
             'hero_campaign' => [
                 'label' => 'Hero Campaign',
-                'view' => 'components.template.sections.hero_campaign',
-                'category' => 'hero',
-            ],
-            'hero_default' => [
-                'label' => 'Hero Default',
-                'view' => 'components.template.sections.hero_default',
+                'view' => 'front.sections.hero.hero_campaign',
                 'category' => 'hero',
             ],
             'hero_featured' => [

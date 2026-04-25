@@ -136,7 +136,7 @@ class PageBuilderController extends Controller
             $q->where('locale', $locale);
         }])
             ->where('page_id', $page->id)
-            ->where('type', 'hero_default')
+            ->where('type', 'hero')
             ->first();
 
         $content = $heroSection?->translations->first()?->content ?? [];
@@ -294,7 +294,7 @@ class PageBuilderController extends Controller
     }
 
     /**
-     * نحاول استخراج بيانات الهيرو من الـ project (أو structure) لتحديث hero_default section.
+     * نحاول استخراج بيانات الهيرو من الـ project (أو structure) لتحديث hero section.
      */
     protected function extractHeroContentFromStructure(array $structure): ?array
     {
@@ -399,7 +399,7 @@ class PageBuilderController extends Controller
      *  - project : JSON كامل من getProjectData()
      *  - html    : ناتج getHtml()
      *  - css     : ناتج getCss()
-     * ونحدث hero_default section كما كان سابقًا.
+     * ونحدث hero section كما كان سابقًا.
      */
     public function saveData(Request $request, Page $page): JsonResponse
     {
@@ -433,7 +433,7 @@ class PageBuilderController extends Controller
 
             if ($heroContent) {
                 $section = Section::where('page_id', $page->id)
-                    ->where('type', 'hero_default')
+                    ->where('type', 'hero')
                     ->first();
 
                 if ($section) {

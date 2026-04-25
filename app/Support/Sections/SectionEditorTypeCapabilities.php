@@ -74,16 +74,6 @@ class SectionEditorTypeCapabilities
                 'showMediaUrlField' => true,
             ],
         ],
-        'hero_default' => [
-            'flags' => [
-                'showEyebrowField' => true,
-                'showPrimaryButtonFields' => true,
-                'showSecondaryButtonFields' => true,
-                'showFeaturesTextareaField' => true,
-                'showMediaTypeField' => true,
-                'showMediaUrlField' => true,
-            ],
-        ],
         'hero_campaign' => [
             'typeFlags' => ['isHeroCampaign' => true],
             'usesInternalLabel' => true,

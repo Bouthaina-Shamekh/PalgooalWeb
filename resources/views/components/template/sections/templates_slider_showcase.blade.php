@@ -212,9 +212,7 @@
 
             let currentIndex = 0;
             let scrollTimeout = null;
-            const sliderComputedStyle = window.getComputedStyle(slider);
-            const basePaddingLeft = Number.parseFloat(sliderComputedStyle.paddingLeft) || 0;
-            const basePaddingRight = Number.parseFloat(sliderComputedStyle.paddingRight) || 0;
+            let resizeTimeout = null;
 
             function clampScrollOffset(offset) {
                 const maxScrollLeft = Math.max(0, slider.scrollWidth - slider.clientWidth);
@@ -255,14 +253,17 @@
                     return;
                 }
 
-                const sidePadding = Math.max(0, (slider.clientWidth - referenceCard.offsetWidth) / 2);
-                const paddedLeft = Math.max(basePaddingLeft, sidePadding);
-                const paddedRight = Math.max(basePaddingRight, sidePadding);
+                const trackRect = slider.getBoundingClientRect();
+                const nextButtonRect = nextButton?.getBoundingClientRect();
+                const buttonEdgePadding = nextButtonRect
+                    ? Math.round(nextButtonRect.right - trackRect.left) + 8
+                    : 72;
+                const sidePadding = Math.max(0, buttonEdgePadding);
 
-                slider.style.paddingLeft = `${paddedLeft}px`;
-                slider.style.paddingRight = `${paddedRight}px`;
-                slider.style.scrollPaddingLeft = `${paddedLeft}px`;
-                slider.style.scrollPaddingRight = `${paddedRight}px`;
+                slider.style.paddingLeft = `${sidePadding}px`;
+                slider.style.paddingRight = `${sidePadding}px`;
+                slider.style.scrollPaddingLeft = `${sidePadding}px`;
+                slider.style.scrollPaddingRight = `${sidePadding}px`;
             }
 
             function renderIndicators() {
@@ -308,6 +309,8 @@
                 }
 
                 currentIndex = index;
+                updateIndicators();
+                updateButtonStates();
 
                 const sliderRect = slider.getBoundingClientRect();
                 const cardRect = card.getBoundingClientRect();
@@ -319,21 +322,10 @@
                     left: clampScrollOffset(scrollOffset),
                     behavior
                 });
-
-                updateIndicators();
             }
 
             function scrollSlider(direction) {
-                const isRTL = window.getComputedStyle(slider).direction === 'rtl' ||
-                    document.documentElement.dir === 'rtl';
-                let nextIndex = currentIndex;
-
-                if (direction === 'next') {
-                    nextIndex = isRTL ? currentIndex - 1 : currentIndex + 1;
-                } else {
-                    nextIndex = isRTL ? currentIndex + 1 : currentIndex - 1;
-                }
-
+                let nextIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
                 nextIndex = Math.max(0, Math.min(nextIndex, cards.length - 1));
 
                 scrollToSlide(nextIndex);
@@ -386,17 +378,29 @@
                 });
             }
 
-            window.addEventListener('resize', function() {
+            function syncLayoutAndPosition() {
                 syncCarouselLayout();
                 scrollToSlide(currentIndex, 'auto');
+            }
+
+            window.addEventListener('resize', function() {
+                window.clearTimeout(resizeTimeout);
+                resizeTimeout = window.setTimeout(syncLayoutAndPosition, 120);
             });
 
             renderIndicators();
-            requestAnimationFrame(function() {
-                syncCarouselLayout();
-                scrollToSlide(0, 'auto');
+            const initializeCarousel = function() {
+                syncLayoutAndPosition();
                 syncCurrentIndexFromScroll();
-            });
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeCarousel, {
+                    once: true
+                });
+            } else {
+                requestAnimationFrame(initializeCarousel);
+            }
         })();
     </script>
 @endif

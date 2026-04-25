@@ -26,7 +26,7 @@ class Section extends Model
      * - page_id   : the page this section belongs to
      * - section_definition_id : optional developer-definition link for
      *   definition-driven sections
-     * - type      : logical block key used by the Page Builder (hero_default, features_grid, etc.)
+     * - type      : logical block key used by the Page Builder (hero, features_grid, etc.)
      * - variant   : optional design variation for the same type (default, v2, minimal, etc.)
      * - order     : display order of the section within the page
      * - is_active : toggle to show/hide the section without deleting it

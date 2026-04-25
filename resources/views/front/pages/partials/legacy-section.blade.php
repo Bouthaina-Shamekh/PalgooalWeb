@@ -149,15 +149,6 @@
             ])
         @break
 
-        @case('hero_default')
-            @include('components.template.sections.hero_default', [
-                'section' => $section,
-                'title' => $fallbackTranslation?->title,
-                'content' => $content,
-                'variant' => $section->variant,
-            ])
-        @break
-
         @case('hero_campaign')
             @include('components.template.sections.hero_campaign', [
                 'section' => $section,

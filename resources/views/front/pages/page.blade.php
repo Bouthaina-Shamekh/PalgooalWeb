@@ -145,7 +145,6 @@
      */
     $sectionComponents = [
         'hero' => 'hero',
-        'hero_default' => 'hero_default',
         'hero-template' => null, // inline
         'support-hero' => null, // inline
         'text' => null, // inline

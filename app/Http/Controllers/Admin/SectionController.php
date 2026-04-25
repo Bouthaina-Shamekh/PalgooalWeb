@@ -703,14 +703,6 @@ class SectionController extends Controller
                 'preview'     => null,
             ],
 
-            'hero_default' => [
-                'type'        => 'hero_default',
-                'label'       => 'Hero - Default',
-                'description' => 'Main hero with title, subtitle, 2 buttons, and media.',
-                'category'    => 'hero',
-                'preview'     => 'assets/admin/sections/hero-default.png',
-            ],
-
             'hero_campaign' => [
                 'type'        => 'hero_campaign',
                 'label'       => 'Hero - Campaign',
@@ -880,7 +872,6 @@ class SectionController extends Controller
     {
         switch ($type) {
             case 'hero':
-            case 'hero_default':
                 return $this->normalizeHeroContent($content);
 
             case 'features':
@@ -1010,26 +1001,6 @@ class SectionController extends Controller
                     'First benefit',
                     'Second benefit',
                     'Third benefit',
-                ],
-                'media_type' => 'image',
-                'media_url'  => null,
-            ],
-
-            'hero_default' => [
-                'eyebrow'  => 'New section',
-                'title'    => $pageTitle,
-                'subtitle' => 'Update this hero from the section editor.',
-                'primary_button' => [
-                    'label' => 'Get Started',
-                    'url'   => '#',
-                ],
-                'secondary_button' => [
-                    'label' => 'Learn More',
-                    'url'   => '#',
-                ],
-                'features' => [
-                    'First benefit',
-                    'Second benefit',
                 ],
                 'media_type' => 'image',
                 'media_url'  => null,
@@ -1325,11 +1296,6 @@ class SectionController extends Controller
     protected function defaultStyleForType(string $type): array
     {
         return match ($type) {
-            'hero_default' => [
-                'background_color' => 'bg-background dark:bg-gray-950',
-                'text_align'       => 'rtl:text-right ltr:text-left',
-                'padding_y'        => 'py-16 sm:py-20',
-            ],
             'hero_campaign' => [
                 'padding_y' => 'pt-6 pb-8 lg:pt-10 lg:pb-18',
             ],

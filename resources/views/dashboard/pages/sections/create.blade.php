@@ -8,7 +8,7 @@
     });
 
     $sectionTypes = $normalizedTypes;
-    $selectedType = old('type', 'hero_default');
+    $selectedType = old('type', 'hero_campaign');
     $selectedSectionDefinitionId = old('section_definition_id');
     $sectionTypeMeta = $sectionTypes[$selectedType] ?? null;
     $sectionTypeLabel = $sectionTypeMeta['label'] ?? $selectedType;

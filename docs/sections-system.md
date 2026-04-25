@@ -179,7 +179,7 @@ Typical flow:
 
 Real-world example:
 
-- Quick-adding `hero_default` creates a section and seeds title, subtitle, button, and media defaults so the section is not visually empty.
+- Quick-adding `hero_campaign` creates a section and seeds title, subtitle, button, and media defaults so the section is not visually empty.
 - In the workspace quick-add flow, the server also returns the new section ID, sidebar card HTML, and editor URL so the sidebar and preview can update immediately without a full page reload.
 
 Edge case:
@@ -238,7 +238,6 @@ For tenant runtime pages, the practical render sequence is now:
 
 The main admin controller currently exposes these shared/admin section types:
 
-- `hero_default`
 - `hero_campaign`
 - `programming_showcase`
 - `mobile_app_showcase`
@@ -295,7 +294,7 @@ Typical fields:
 
 Examples:
 
-- `hero_default`
+- `hero_campaign`
 - `mobile_app_showcase`
 - `design_showcase`
 - `tech_stack_showcase`

@@ -17,7 +17,6 @@ class SectionRenderer
      */
     protected const LEGACY_FRONTEND_SECTION_TYPES = [
         'hero',
-        'hero_default',
         'hero_campaign',
         'programming_showcase',
         'mobile_app_showcase',

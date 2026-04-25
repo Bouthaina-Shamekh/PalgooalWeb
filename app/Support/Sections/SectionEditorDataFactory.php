@@ -448,7 +448,7 @@ class SectionEditorDataFactory
     protected function normalizeSelectedType(mixed $selectedType): string
     {
         if (! is_string($selectedType) || trim($selectedType) === '') {
-            return 'hero_default';
+            return 'hero_campaign';
         }
 
         return self::LEGACY_TYPE_ALIASES[$selectedType] ?? $selectedType;

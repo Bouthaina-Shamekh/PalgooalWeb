@@ -279,6 +279,9 @@ Route::group([
             Route::match(['put', 'patch'], '/{sectionDefinition}', [SectionDefinitionController::class, 'update'])
                 ->whereNumber('sectionDefinition')
                 ->name('update');
+            Route::delete('/{sectionDefinition}', [SectionDefinitionController::class, 'destroy'])
+                ->whereNumber('sectionDefinition')
+                ->name('destroy');
 
             Route::prefix('/{sectionDefinition}/fields')
                 ->whereNumber('sectionDefinition')

@@ -56,7 +56,7 @@
             name="key"
             class="form-control"
             value="{{ old('key', $sectionDefinition->section_key) }}"
-            placeholder="hero_default"
+            placeholder="hero_campaign"
             required
         >
         <div class="mt-1 text-xs text-slate-500">
@@ -124,7 +124,7 @@
             class="form-control"
             list="template_key_suggestions"
             value="{{ $selectedTemplateKey }}"
-            placeholder="hero_default"
+            placeholder="hero_campaign"
             data-template-key-input
         >
         <datalist id="template_key_suggestions">

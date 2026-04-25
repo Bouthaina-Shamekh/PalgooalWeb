@@ -1,3 +1,4 @@
+{{-- Deprecated: dynamic hero_campaign renderer moved to front.sections.hero.hero_campaign. Remove this legacy fallback after legacy hero_campaign sections no longer render through legacy-section.blade.php. --}}
 @php
     $style = is_array($section->style ?? null) ? $section->style : [];
     $paddingY = $style['padding_y'] ?? 'pt-6 pb-8 lg:pt-10 lg:pb-18';

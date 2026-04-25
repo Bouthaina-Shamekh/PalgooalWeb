@@ -177,7 +177,7 @@ class PageBuilderStructure extends Model
         $type = trim(strtolower($type));
 
         return match ($type) {
-            'hero', 'hero_default'   => $this->mapHeroSection($component),
+            'hero'                   => $this->mapHeroSection($component),
             'features', 'features-1' => $this->mapFeaturesSection($component),
             'services' => $this->mapServicesSection($component),
 

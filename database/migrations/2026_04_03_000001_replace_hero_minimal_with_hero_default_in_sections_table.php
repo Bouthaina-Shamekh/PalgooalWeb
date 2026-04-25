@@ -9,14 +9,11 @@ return new class extends Migration
     {
         DB::table('sections')
             ->where('type', 'hero_minimal')
-            ->update([
-                'type' => 'hero_default',
-            ]);
+            ->delete();
     }
 
     public function down(): void
     {
-        // Irreversible data migration: after consolidating types, a rollback
-        // would risk converting genuine hero_default sections to hero_minimal.
+        // Irreversible data migration: hero_minimal and hero_default are removed.
     }
 };

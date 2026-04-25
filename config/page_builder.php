@@ -27,11 +27,11 @@ return [
         // =========================
         // HERO SECTION (MARKETING)
         // =========================
-        'hero_default' => [
+        'hero' => [
             'label'       => 'Default Hero',
             'description' => 'Main hero section with title, subtitle, button and image.',
             'contexts'    => ['marketing'], // later: ['marketing', 'tenant']
-            'template'    => 'marketing.sections.hero_default', // Blade view path
+            'template'    => 'marketing.sections.hero', // Blade view path
 
             // This structure will be stored as JSON in `section_translations.content`
             'default_content' => [
