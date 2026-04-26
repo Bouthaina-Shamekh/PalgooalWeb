@@ -142,7 +142,6 @@ class SectionTemplateRegistry
             'meta' => [],
             'resolution_source' => 'convention',
             'view_exists' => $conventionView !== null && View::exists($conventionView),
-            'deprecated_convention_view' => static::deprecatedConventionView($templateKey),
         ];
     }
 
@@ -164,9 +163,6 @@ class SectionTemplateRegistry
         $templateKey = is_string($templateKey) ? trim($templateKey) : null;
         $descriptor = static::describe($templateKey, $category);
         $candidateView = is_array($descriptor) ? trim((string) ($descriptor['view'] ?? '')) : '';
-        $deprecatedCandidateView = is_array($descriptor)
-            ? trim((string) ($descriptor['deprecated_convention_view'] ?? ''))
-            : '';
         $resolutionSource = is_array($descriptor)
             ? (string) ($descriptor['resolution_source'] ?? 'convention')
             : 'invalid';
@@ -180,13 +176,6 @@ class SectionTemplateRegistry
 
         if ($candidateView !== '' && View::exists($candidateView)) {
             $resolvedView = $candidateView;
-        } elseif ($resolutionSource === 'convention' && $deprecatedCandidateView !== '') {
-            $attemptedViews[] = $deprecatedCandidateView . ' (deprecated)';
-
-            if (View::exists($deprecatedCandidateView)) {
-                $resolvedView = $deprecatedCandidateView;
-                $resolutionSource = 'deprecated_convention';
-            }
         }
 
         return [
@@ -211,19 +200,6 @@ class SectionTemplateRegistry
         return 'front.sections.' . static::normalizeCategory($category) . '.' . trim((string) $templateKey);
     }
 
-    /**
-     * Deprecated temporary compatibility path for pre-categorized dynamic
-     * renderer files. Do not use for new section templates.
-     */
-    public static function deprecatedConventionView(?string $templateKey): ?string
-    {
-        if (! static::isValidTemplateKey($templateKey)) {
-            return null;
-        }
-
-        return 'components.template.sections.' . trim((string) $templateKey);
-    }
-
     public static function normalizeCategory(?string $category): string
     {
         $category = strtolower(trim((string) $category));
@@ -238,13 +214,13 @@ class SectionTemplateRegistry
      */
     public static function fallbackView(): string
     {
-        $fallbackView = config('sections.template_registry.fallback_view', 'components.template.sections._missing-template');
+        $fallbackView = config('sections.template_registry.fallback_view', 'front.sections._missing-template');
 
         if (is_string($fallbackView) && $fallbackView !== '' && View::exists($fallbackView)) {
             return $fallbackView;
         }
 
-        return 'components.template.sections._missing-template';
+        return 'front.sections._missing-template';
     }
 
     /**

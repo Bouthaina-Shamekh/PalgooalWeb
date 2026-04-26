@@ -421,16 +421,6 @@
                 <span class="text-sm font-semibold text-slate-500">{{ __('Open') }}</span>
             </a>
 
-            <a
-                href="{{ route('dashboard.pages.builder', $page) }}"
-                class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:bg-slate-50"
-            >
-                <span>
-                    <span class="block text-sm font-semibold text-slate-900">{{ __('Visual Builder') }}</span>
-                    <span class="block text-xs text-slate-500">{{ __('Open the visual builder for this page.') }}</span>
-                </span>
-                <span class="text-sm font-semibold text-slate-500">{{ __('Open') }}</span>
-            </a>
         </div>
     </div>
 @endsection

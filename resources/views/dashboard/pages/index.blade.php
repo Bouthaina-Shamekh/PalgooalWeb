@@ -62,9 +62,7 @@
                                         $title = $translation?->title ?? ($p->slug ?? '#' . $p->id);
                                         $slug = $translation?->slug ?? ($p->slug ?? '');
                                         $frontUrl = $p->is_home ? url('/') : ($slug ? url($slug) : url('/'));
-                                        $currentBuilderMode = in_array($p->builder_mode, ['visual', 'sections'], true)
-                                            ? $p->builder_mode
-                                            : ((($p->builder_structures_count ?? 0) > 0) ? 'visual' : ((($p->sections_count ?? 0) > 0) ? 'sections' : 'visual'));
+                                        $currentBuilderMode = $p->builder_mode === 'sections' ? 'sections' : 'visual';
                                     @endphp
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
@@ -122,21 +120,11 @@
 
                                         <td>
                                             <div class="space-y-2">
-                                                <span class="text-xs px-2 py-1 rounded {{ $currentBuilderMode === 'visual' ? 'bg-indigo-100 text-indigo-800' : 'bg-amber-100 text-amber-800' }}">
-                                                    {{ $currentBuilderMode === 'visual' ? __('Visual Builder') : __('Sections Builder') }}
+                                                <span class="text-xs px-2 py-1 rounded {{ $currentBuilderMode === 'visual' ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-800' }}">
+                                                    {{ $currentBuilderMode === 'visual' ? __('Visual Builder Archived') : __('Sections Builder') }}
                                                 </span>
 
                                                 <div class="flex items-center gap-1">
-                                                    <form action="{{ route('dashboard.pages.builder-mode', $p) }}"
-                                                        method="POST" class="inline">
-                                                        @csrf
-                                                        <input type="hidden" name="builder_mode" value="visual">
-                                                        <button type="submit"
-                                                            class="btn btn-sm {{ $currentBuilderMode === 'visual' ? 'btn-primary' : 'btn-light-primary' }}">
-                                                            {{ __('Visual') }}
-                                                        </button>
-                                                    </form>
-
                                                     <form action="{{ route('dashboard.pages.builder-mode', $p) }}"
                                                         method="POST" class="inline">
                                                         @csrf
@@ -180,13 +168,6 @@
                                                 @csrf
                                                 @method('DELETE')
                                             </form>
-                                            {{-- Page Builder --}}
-                                            <a href="{{ route('dashboard.pages.builder', $p) }}"
-                                                class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
-                                                title="{{ __('Visual Builder') }}">
-                                                <i class="ti ti-vector text-xl leading-none"></i>
-                                            </a>
-
                                             {{-- Sections Builder --}}
                                             <a href="{{ route('dashboard.pages.sections.index', $p) }}"
                                                 class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"

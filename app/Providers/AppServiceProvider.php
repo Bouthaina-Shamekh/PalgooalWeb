@@ -15,7 +15,6 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
-use App\Support\Sections\SectionRegistry;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,7 +23,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->bind('abilities', function() {
+        $this->app->bind('abilities', function () {
             return include base_path('data/abilities.php');
         });
     }
@@ -42,8 +41,8 @@ class AppServiceProvider extends ServiceProvider
 
         //Authouration
         Gate::before(function ($user, $ability) {
-            if($user instanceof User) {
-                if($user->super_admin) {
+            if ($user instanceof User) {
+                if ($user->super_admin) {
                     return true;
                 }
             }
@@ -67,28 +66,5 @@ class AppServiceProvider extends ServiceProvider
                 $view->with('currentPage', $page);
             }
         });
-        // Hero section
-        SectionRegistry::register('hero', [
-            // Blade view used to render this section
-            'view'  => 'components.template.sections.hero',
-
-            // Optional metadata (for UI/builders if تحتاج مستقبلاً)
-            'label' => 'Hero',
-            'group' => 'hero',
-        ]);
-
-        // Features section (اللي اشتغلنا عليه الآن)
-        SectionRegistry::register('features', [
-            'view'  => 'components.template.sections.features',
-            'label' => 'Features',
-            'group' => 'content',
-        ]);
-
-        // تقدر تسجل باقي الأنواع بنفس الفكرة:
-        SectionRegistry::register('services', [
-            'view'  => 'components.template.sections.services',
-            'label' => 'Services',
-            'group' => 'content',
-        ]);
     }
 }

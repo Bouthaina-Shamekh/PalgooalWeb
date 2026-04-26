@@ -1,0 +1,114 @@
+{
+  "__commonjsHelpers-CqkleIqs.js": {
+    "file": "assets/_commonjsHelpers-CqkleIqs.js",
+    "name": "_commonjsHelpers"
+  },
+  "_grapes-BWp8l4b9.css": {
+    "file": "assets/grapes-BWp8l4b9.css",
+    "src": "_grapes-BWp8l4b9.css"
+  },
+  "_grapes.min-BaMFK-eV.js": {
+    "file": "assets/grapes.min-BaMFK-eV.js",
+    "name": "grapes.min",
+    "css": [
+      "assets/grapes-BWp8l4b9.css"
+    ]
+  },
+  "_index-C5vPMOiV.js": {
+    "file": "assets/index-C5vPMOiV.js",
+    "name": "index",
+    "isDynamicEntry": true,
+    "imports": [
+      "__commonjsHelpers-CqkleIqs.js"
+    ]
+  },
+  "_index-CJeepb4V.js": {
+    "file": "assets/index-CJeepb4V.js",
+    "name": "index",
+    "isDynamicEntry": true,
+    "imports": [
+      "__commonjsHelpers-CqkleIqs.js"
+    ]
+  },
+  "_index-Cu8SKbJq.js": {
+    "file": "assets/index-Cu8SKbJq.js",
+    "name": "index",
+    "isDynamicEntry": true,
+    "imports": [
+      "__commonjsHelpers-CqkleIqs.js"
+    ]
+  },
+  "_index-DKOLdCRt.js": {
+    "file": "assets/index-DKOLdCRt.js",
+    "name": "index",
+    "isDynamicEntry": true,
+    "imports": [
+      "__commonjsHelpers-CqkleIqs.js"
+    ]
+  },
+  "_index-DVBFgbMa.js": {
+    "file": "assets/index-DVBFgbMa.js",
+    "name": "index",
+    "isDynamicEntry": true,
+    "imports": [
+      "__commonjsHelpers-CqkleIqs.js"
+    ]
+  },
+  "_index-Eq8mS_Xi.js": {
+    "file": "assets/index-Eq8mS_Xi.js",
+    "name": "index",
+    "isDynamicEntry": true,
+    "imports": [
+      "__commonjsHelpers-CqkleIqs.js"
+    ]
+  },
+  "_tinymce-Bys_sb1e.js": {
+    "file": "assets/tinymce-Bys_sb1e.js",
+    "name": "tinymce",
+    "isDynamicEntry": true,
+    "imports": [
+      "__commonjsHelpers-CqkleIqs.js"
+    ]
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-DAhtJERX.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-Cw2LDeFm.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/dashboard/builder/index.js": {
+    "file": "assets/index-D4jqzmub.js",
+    "name": "index",
+    "src": "resources/js/dashboard/builder/index.js",
+    "isEntry": true,
+    "imports": [
+      "_grapes.min-BaMFK-eV.js"
+    ],
+    "dynamicImports": [
+      "_tinymce-Bys_sb1e.js",
+      "_index-CJeepb4V.js",
+      "_index-DVBFgbMa.js",
+      "_index-Cu8SKbJq.js",
+      "_index-DKOLdCRt.js",
+      "_index-Eq8mS_Xi.js",
+      "_index-C5vPMOiV.js"
+    ],
+    "css": [
+      "assets/index-CeUJM3IK.css"
+    ]
+  },
+  "resources/js/dashboard/page-builder.js": {
+    "file": "assets/page-builder-sgBlEHHP.js",
+    "name": "page-builder",
+    "src": "resources/js/dashboard/page-builder.js",
+    "isEntry": true,
+    "imports": [
+      "_grapes.min-BaMFK-eV.js"
+    ]
+  }
+}

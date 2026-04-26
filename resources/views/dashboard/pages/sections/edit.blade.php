@@ -14,7 +14,7 @@
             array_merge($workspaceRouteBaseParameters, $extra),
             $absolute,
         );
-    $workspaceVisualBuilderUrl = $workspaceVisualBuilderUrl ?? route('dashboard.pages.builder', $page);
+    $workspaceVisualBuilderUrl = $workspaceVisualBuilderUrl ?? null;
 @endphp
 
 @extends('dashboard.pages.sections.layouts.workspace')

@@ -553,7 +553,7 @@
                 <h3 class="text-base font-semibold text-slate-900">{{ __('Sections are not the active builder yet') }}
                 </h3>
                 <p class="mt-2 text-sm leading-6 text-slate-600">
-                    {{ __('This page still renders from the Visual Builder. Switch the page mode if you want these sections to appear on the frontend.') }}
+                    {{ __('This page is still marked with the archived Visual Builder mode. Switch it to Sections Builder so these sections appear on the frontend.') }}
                 </p>
                 @if (filled($workspaceBuilderModeUrl))
                     <form action="{{ $workspaceBuilderModeUrl }}" method="POST" class="mt-4">

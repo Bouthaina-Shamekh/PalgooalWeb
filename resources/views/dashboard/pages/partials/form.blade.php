@@ -9,19 +9,7 @@
     $defaultStatus = $isEdit ? (int) $page->is_active : 1;  // 1 = Published, 0 = Draft
     $defaultIsHome = $isEdit ? (int) $page->is_home   : 0;  // 1 = Homepage
 
-    $defaultBuilderMode = old('builder_mode');
-
-    if ($defaultBuilderMode === null) {
-        if ($isEdit && in_array($page->builder_mode, ['visual', 'sections'], true)) {
-            $defaultBuilderMode = $page->builder_mode;
-        } elseif ($isEdit && (($page->builder_structures_count ?? 0) > 0)) {
-            $defaultBuilderMode = 'visual';
-        } elseif ($isEdit && (($page->sections_count ?? 0) > 0)) {
-            $defaultBuilderMode = 'sections';
-        } else {
-            $defaultBuilderMode = 'visual';
-        }
-    }
+    $defaultBuilderMode = 'sections';
 @endphp
 
 {{-- ===========================
@@ -306,41 +294,18 @@
         </h3>
 
         <div>
+            <input type="hidden" name="builder_mode" value="{{ $defaultBuilderMode }}">
+
             <label class="block font-semibold mb-1">
                 {{ __('Builder Type') }}
             </label>
 
-            <label class="flex items-start gap-2">
-                <input
-                    type="radio"
-                    name="builder_mode"
-                    value="visual"
-                    class="form-radio mt-1"
-                    {{ $defaultBuilderMode === 'visual' ? 'checked' : '' }}
-                >
-                <span>
-                    <span class="block">{{ __('Visual Builder') }}</span>
-                    <span class="block text-xs text-gray-500">
-                        {{ __('Use the drag-and-drop page builder.') }}
-                    </span>
+            <div class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                <span class="block font-medium">{{ __('Sections Builder') }}</span>
+                <span class="block text-xs text-slate-500">
+                    {{ __('Visual Builder is archived; new and updated pages use SectionDefinitions.') }}
                 </span>
-            </label>
-
-            <label class="flex items-start gap-2 mt-2">
-                <input
-                    type="radio"
-                    name="builder_mode"
-                    value="sections"
-                    class="form-radio mt-1"
-                    {{ $defaultBuilderMode === 'sections' ? 'checked' : '' }}
-                >
-                <span>
-                    <span class="block">{{ __('Sections Builder') }}</span>
-                    <span class="block text-xs text-gray-500">
-                        {{ __('Use the per-section page builder from the dashboard.') }}
-                    </span>
-                </span>
-            </label>
+            </div>
 
             @error('builder_mode')
                 <span class="text-red-500 text-sm">{{ $message }}</span>

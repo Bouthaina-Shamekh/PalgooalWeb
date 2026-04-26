@@ -128,233 +128,56 @@
     $ogImage = $pageOgImage;
     $seo = $seoOverrides;
 
-    /**
-     * ------------------------------------------------------------------
-     * Section → Blade component mapping
-     * ------------------------------------------------------------------
-     * Used for:
-     *  - builderSections (GrapesJS → normalizedSections())
-     *  - legacy $page->sections from admin module
-     *
-     * Architectural note:
-     * - The canonical marketing content model is `Page` + `Section`.
-     * - Builder-derived sections and published HTML are alternative
-     *   render outputs from `PageBuilderStructure`, not the primary
-     *   authored content source.
-     * ------------------------------------------------------------------
-     */
-    $sectionComponents = [
-        'hero' => 'hero',
-        'hero-template' => null, // inline
-        'support-hero' => null, // inline
-        'text' => null, // inline
-        'image' => null, // inline
-        'button' => null, // inline
-        'section' => null, // inline
-        'features' => 'features',
-        'features-2' => 'features-2',
-        'features-3' => 'features-3',
-        'cta' => 'cta',
-        'services' => 'services',
-        'works' => 'works',
-        'home-works' => 'home-works',
-        'testimonials' => 'testimonials',
-        'blog' => 'blog', // Legacy builder-only type. Keep supported, but do not extend.
-        'banner' => 'banner',
-        'search-domain' => 'search-domain',
-        'hosting_pricing_showcase' => 'hosting_pricing_showcase',
-        'domains_showcase' => 'domains_showcase',
-        'templates_slider_showcase' => 'templates_slider_showcase',
-        'templates_listing_showcase' => 'templates_listing_showcase',
-        'faq' => 'faq',
-    ];
-
-    $legacyBuilderTypeAliases = [
-        'templates-pages' => 'templates_listing_showcase',
-    ];
-
-    /**
-     * ------------------------------------------------------------------
-     * Builder Data (GrapesJS)
-     * ------------------------------------------------------------------
-     * - $publishedHtml / $publishedCss: snapshot from "Publish" action
-     * - $builderSections: normalized sections array from project JSON
-     *
-     * These values come from the builder storage/output layer and are
-     * intentionally resolved separately from the canonical `Page` +
-     * `Section` content model.
-     * ------------------------------------------------------------------
-     */
-    $builder = \App\Models\PageBuilderStructure::query()
-        ->where('page_id', $page->id)
-        ->whereIn('locale', [app()->getLocale(), config('app.fallback_locale', 'ar')])
-        ->orderByRaw('FIELD(locale, ?, ?)', [app()->getLocale(), config('app.fallback_locale', 'ar')])
-        ->first();
-
-    $publishedHtml = $builder?->published_html;
-    $publishedCss = $builder?->published_css_path;
-
-    $builderSections = $builder?->normalizedSections() ?? [];
-
-    $selectedBuilderMode = in_array($page->builder_mode, ['visual', 'sections'], true)
-        ? $page->builder_mode
-        : null;
 @endphp
 
 @extends('front.layouts.app')
 
 @section('content')
 
-@php
-    /**
-     * ------------------------------------------------------------
-     * STEP 1: Prepare dynamic sections from Builder (DB driven)
-     * ------------------------------------------------------------
-     */
-    $dynamicSections = collect($builderSections)
-        ->filter(fn ($s) => isset($s['type'], $s['data']))
-        ->mapWithKeys(function ($s) use ($legacyBuilderTypeAliases) {
-            $rawType = $s['type'];
-            $type = $legacyBuilderTypeAliases[$rawType] ?? $rawType;
-            $data = is_array($s['data']) ? $s['data'] : [];
-
-            // Resolve DB-backed data for the canonical runtime section type.
-            $data = \App\Support\Sections\SectionQueryResolver::resolve($type, $data);
-
-            return $type === $rawType
-                ? [$type => $data]
-                : [
-                    $rawType => $data,
-                    $type => $data,
-                ];
-        });
-
-    $legacySections = $page->sections
-        ->where('is_active', true)
-        ->values();
-
-    $shouldRenderPublishedHtml = $selectedBuilderMode !== 'sections' && !empty($publishedHtml);
-    $shouldRenderBuilderSections = $selectedBuilderMode !== 'sections'
-        && !$shouldRenderPublishedHtml
-        && !empty($builderSections);
-    $shouldRenderLegacySections = $selectedBuilderMode !== 'visual'
-        && !$shouldRenderPublishedHtml
-        && !$shouldRenderBuilderSections
-        && $legacySections->isNotEmpty();
-
-    $legacyTemplates = collect();
-
-    if ($shouldRenderLegacySections && $legacySections->contains(fn ($section) => $section->type === 'templates_showcase')) {
-        $legacyTemplates = Template::query()
-            ->with([
-                'translations',
-                'categoryTemplate.translation',
-                'categoryTemplate.translations',
-            ])
-            ->latest('id')
-            ->limit(8)
-            ->get();
-    }
-@endphp
-
-{{-- =========================================================
-     CASE 1: Published Builder HTML (PRIMARY – like Elementor)
-========================================================== --}}
-@if ($shouldRenderPublishedHtml)
-
-    @push('styles')
-        @if ($publishedCss)
-            <link rel="stylesheet" href="{{ asset($publishedCss) }}">
-        @endif
-    @endpush
-
     @php
-        $html = $publishedHtml;
+        $legacySections = $page->sections->where('is_active', true)->values();
 
-        /**
-         * ------------------------------------------------------------
-         * STEP 2: Inject dynamic sections into snapshot HTML
-         * Placeholders format:
-         *   <div data-pg-dynamic="services"></div>
-         * ------------------------------------------------------------
-         */
-        foreach ($dynamicSections as $type => $data) {
-            $pattern = '/<[^>]*data-pg-dynamic=["\']'.preg_quote($type, '/').'["\'][^>]*>(.*?)<\/[^>]+>/s';
+        $shouldRenderLegacySections = $legacySections->isNotEmpty();
 
-            if (preg_match($pattern, $html)) {
-                $componentType = $legacyBuilderTypeAliases[$type] ?? $type;
-                $component = $sectionComponents[$componentType] ?? null;
+        $legacyTemplates = collect();
 
-                if (! $component) {
-                    continue;
-                }
-
-                $replacement = view(
-                    'components.template.sections.' . $component,
-                    ['data' => $data]
-                )->render();
-
-                $html = preg_replace($pattern, $replacement, $html, 1);
-            }
+        if (
+            $shouldRenderLegacySections &&
+            $legacySections->contains(fn($section) => $section->type === 'templates_showcase')
+        ) {
+            $legacyTemplates = Template::query()
+                ->with(['translations', 'categoryTemplate.translation', 'categoryTemplate.translations'])
+                ->latest('id')
+                ->limit(8)
+                ->get();
         }
     @endphp
 
-    <div class="pg-builder-page">
-        {!! $html !!}
-    </div>
-
-
-{{-- =========================================================
-     CASE 2: Builder Sections ONLY (no snapshot yet)
+    {{-- =========================================================
+     CASE 1: Admin Sections
 ========================================================== --}}
-@elseif ($shouldRenderBuilderSections)
-
-    @foreach ($builderSections as $builderSection)
-        @php
-            $rawType = $builderSection['type'] ?? null;
-            $type = $legacyBuilderTypeAliases[$rawType] ?? $rawType;
-            $component = $sectionComponents[$type] ?? null;
-            $data = $dynamicSections[$type] ?? $dynamicSections[$rawType] ?? [];
-        @endphp
-
-        @if ($component)
-            <x-dynamic-component
-                :component="'template.sections.' . $component"
-                :data="$data"
-            />
-        @endif
-    @endforeach
+    @if ($shouldRenderLegacySections)
+        @foreach ($legacySections as $section)
+            @include('front.pages.partials.definition-section', [
+                'section' => $section,
+            ])
+        @endforeach
 
 
-{{-- =========================================================
-     CASE 3: Legacy Admin Sections
+        {{-- =========================================================
+     CASE 2: WYSIWYG fallback
 ========================================================== --}}
-@elseif ($shouldRenderLegacySections)
+    @else
+        <section class="bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-4xl mx-auto">
+                <h1 class="text-3xl font-extrabold mb-6">
+                    {{ $pageTitle }}
+                </h1>
 
-    @foreach ($legacySections as $section)
-        @include('front.pages.partials.legacy-section', [
-            'section' => $section,
-            'templates' => $legacyTemplates,
-        ])
-    @endforeach
-
-
-{{-- =========================================================
-     CASE 4: WYSIWYG fallback
-========================================================== --}}
-@else
-
-    <section class="bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
-        <div class="max-w-4xl mx-auto">
-            <h1 class="text-3xl font-extrabold mb-6">
-                {{ $pageTitle }}
-            </h1>
-
-            <article class="prose max-w-none">
-                {!! $pageTranslation?->content ?: '<p>لا يوجد محتوى</p>' !!}
-            </article>
-        </div>
-    </section>
-
-@endif
+                <article class="prose max-w-none">
+                    {!! $pageTranslation?->content ?: '<p>لا يوجد محتوى</p>' !!}
+                </article>
+            </div>
+        </section>
+    @endif
 @endsection

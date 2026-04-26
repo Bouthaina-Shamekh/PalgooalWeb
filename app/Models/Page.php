@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\PageBuilderStructure;
 
 /**
  * Canonical content aggregate for marketing pages.
@@ -15,8 +14,6 @@ use App\Models\PageBuilderStructure;
  * Architectural note:
  * - `Page` + `Section` is the primary authored content model for the
  *   marketing site, tenant runtime, and the admin sections workspace.
- * - `PageBuilderStructure` is a companion storage/output layer for the
- *   visual builder, published HTML snapshots, and normalized builder data.
  * - `tenant_id` is an opt-in ownership field for future canonical tenancy
  *   support. It is nullable so existing marketing pages continue to work
  *   without any query or rendering changes.
@@ -74,29 +71,6 @@ class Page extends Model
         // We keep the default ordering by `order` so sections are always sorted.
         return $this->hasMany(Section::class)
             ->orderBy('order');
-    }
-
-    /**
-     * Relationship: single builder structure JSON blob (GrapesJS).
-     *
-     * This is a storage/output companion for the visual builder and not
-     * the canonical authored content model.
-     */
-    public function builderStructure()
-    {
-        return $this->hasOne(PageBuilderStructure::class);
-    }
-
-    /**
-     * Relationship: all builder structure snapshots/records for this page.
-     *
-     * These records support builder persistence and publish output, and
-     * are intentionally separate from the primary `Page` + `Section`
-     * content model.
-     */
-    public function builderStructures()
-    {
-        return $this->hasMany(PageBuilderStructure::class);
     }
 
     /**

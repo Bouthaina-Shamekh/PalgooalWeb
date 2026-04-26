@@ -6,7 +6,7 @@
         $workspaceFrontUrl ?? ($page->is_home ? url('/') : ($translation?->slug ? url($translation->slug) : url('/')));
     $workspaceShellBackUrl = $workspaceShellBackUrl ?? route('dashboard.pages.index');
     $workspaceShellBackLabel = $workspaceShellBackLabel ?? __('Back to pages');
-    $workspaceVisualBuilderUrl = $workspaceVisualBuilderUrl ?? route('dashboard.pages.builder', $page);
+    $workspaceVisualBuilderUrl = $workspaceVisualBuilderUrl ?? null;
     $workspaceMode = $workspaceMode ?? 'admin';
     $isClientWorkspace = $workspaceMode === 'client';
     $workspaceModeLabel =

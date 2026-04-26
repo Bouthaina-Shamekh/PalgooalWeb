@@ -16,7 +16,6 @@ use App\Http\Controllers\Admin\TemplateReviewController;
 use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\PortfolioController;
 use App\Http\Controllers\Admin\PageController;
-use App\Http\Controllers\Admin\PageBuilderController;
 use App\Http\Controllers\Admin\SectionController;
 use App\Http\Controllers\Admin\SectionDefinitionController;
 use App\Http\Controllers\Admin\SectionDefinitionFieldController;
@@ -199,12 +198,8 @@ Route::group([
             Route::post('/{page}/builder-mode', [PageController::class, 'updateBuilderMode'])
                 ->name('builder-mode');
 
-            // Visual Page Builder (GrapesJS)
-            Route::get('/{page}/builder', [PageBuilderController::class, 'edit'])->name('builder');
-            Route::get('/{page}/builder/data', [PageBuilderController::class, 'loadData'])->name('builder.data');
-            Route::post('/{page}/builder/data', [PageBuilderController::class, 'saveData'])->name('builder.data.save');
-            Route::post('/{page}/builder/publish', [PageBuilderController::class, 'publish'])
-                ->name('builder.publish');
+            // Visual Builder is archived under legacy/visual-builder.
+            // Keep the source code and database tables intact, but do not expose routes.
         });
 
     // -------------------------------------------------------------------------

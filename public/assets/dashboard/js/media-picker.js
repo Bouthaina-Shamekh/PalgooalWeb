@@ -485,7 +485,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Bridge event for GrapesJS/custom integrations (full payload)
+        // Bridge event for custom integrations (full payload)
         window.dispatchEvent(
             new CustomEvent('media-picker-confirmed', {
                 detail: {

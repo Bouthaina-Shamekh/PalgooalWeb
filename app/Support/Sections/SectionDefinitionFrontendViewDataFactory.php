@@ -57,6 +57,11 @@ class SectionDefinitionFrontendViewDataFactory
             return null;
         }
 
+        $disableLegacyFallback = filter_var(
+            $extraViewData['disable_legacy_fallback'] ?? false,
+            FILTER_VALIDATE_BOOLEAN,
+        );
+
         $locale ??= app()->getLocale();
         $section->loadMissing('translations');
 
@@ -82,7 +87,7 @@ class SectionDefinitionFrontendViewDataFactory
         $resolvedView = $templateResolution['view'] ?? null;
 
         if (! is_string($resolvedView) || trim($resolvedView) === '') {
-            if ($this->shouldUseLegacyFallback($templateResolution, $resolvedType)) {
+            if (! $disableLegacyFallback && $this->shouldUseLegacyFallback($templateResolution, $resolvedType)) {
                 return null;
             }
 
@@ -242,10 +247,10 @@ class SectionDefinitionFrontendViewDataFactory
     ): array {
         $attemptedViews = array_values(array_filter(
             array_map(
-                static fn ($value): string => trim((string) $value),
+                static fn($value): string => trim((string) $value),
                 is_array($templateResolution['attempted_views'] ?? null) ? $templateResolution['attempted_views'] : [],
             ),
-            static fn (string $value): bool => $value !== '',
+            static fn(string $value): bool => $value !== '',
         ));
 
         $resolutionSource = (string) ($templateResolution['source'] ?? 'missing');

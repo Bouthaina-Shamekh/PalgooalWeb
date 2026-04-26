@@ -658,7 +658,7 @@ class SectionController extends Controller
      */
     protected function workspaceVisualBuilderUrl(Page $page): ?string
     {
-        return route('dashboard.pages.builder', $page);
+        return null;
     }
 
     /**
@@ -2510,12 +2510,13 @@ class SectionController extends Controller
     }
 
     /**
-     * Combined section library catalog for the standalone create screen and
-     * the workspace quick-add drawer.
+     * Definition-backed section library catalog for the standalone create
+     * screen and the workspace quick-add drawer.
      *
-     * Active, visible section definitions are the primary source for library
-     * cards. Legacy config-backed section types are appended only when no
-     * matching section definition currently covers that section_key.
+     * Active, visible SectionDefinition records are the only source for
+     * library cards. Legacy config-backed section types stay available to old
+     * code paths through availableSectionTypes(), but they are intentionally
+     * not exposed as automatically addable cards.
      *
      * @return array<string, array<string, mixed>>
      */
@@ -2524,7 +2525,7 @@ class SectionController extends Controller
         $libraryTypes = [];
 
         if (! Schema::hasTable('section_definitions')) {
-            return $this->availableSectionTypes();
+            return [];
         }
 
         $definitions = SectionDefinition::query()
@@ -2551,20 +2552,6 @@ class SectionController extends Controller
                 'preview' => data_get($definition->settings, 'preview'),
                 'section_definition_id' => (int) $definition->id,
                 'source' => 'definition',
-            ];
-        }
-
-        foreach ($this->availableSectionTypes() as $key => $meta) {
-            $type = trim((string) ($meta['type'] ?? $key));
-
-            if ($type === '' || isset($libraryTypes[$type])) {
-                continue;
-            }
-
-            $libraryTypes[$type] = $meta + [
-                'type' => $type,
-                'section_definition_id' => null,
-                'source' => 'config',
             ];
         }
 
