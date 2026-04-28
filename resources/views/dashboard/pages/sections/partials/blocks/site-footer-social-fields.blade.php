@@ -1,132 +1,64 @@
-<div class="lg:col-span-2" data-schema-group-label="{{ $contentGroupLabel }}"
-    data-schema-field="copyright" data-schema-field-label="{{ $copyrightFieldLabel }}">
+<div class="lg:col-span-2" data-schema-group-label="{{ $contentGroupLabel }}" data-schema-field="copyright"
+    data-schema-field-label="{{ $copyrightFieldLabel }}">
     <label class="block text-sm font-medium text-slate-700">{{ $copyrightFieldLabel }}</label>
-    <input type="text" name="translations[{{ $code }}][content][copyright]"
-        value="{{ $footerCopyrightValue }}"
+    <input type="text" name="translations[{{ $code }}][content][copyright]" value="{{ $footerCopyrightValue }}"
         class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
     <p class="mt-2 text-xs text-slate-500">
         {{ __('Only the links you fill in will appear in the footer. Leave any network empty to hide it.') }}
     </p>
 </div>
 
-<div class="lg:col-span-2 space-y-5"
-    data-schema-group-label="{{ $socialLinksGroupLabel }}">
+<div class="lg:col-span-2 space-y-5" data-schema-group-label="{{ $socialLinksGroupLabel }}">
     @php
-        $footerFacebookUrlFieldContext = $schemaFieldContext(
-            'social',
-            'social_links.facebook',
-            __('Facebook URL'),
-            'https://facebook.com/your-page',
-        );
-        $footerFacebookUrlRenderConfig = $schemaRenderableFieldConfig(
-            $footerFacebookUrlFieldContext,
-            'url',
-            3,
-        );
+        $socialFieldLabels = is_array($socialFieldLabels ?? null) ? $socialFieldLabels : [];
     @endphp
-    @include(
-        'dashboard.pages.sections.partials.fields.schema-field-renderer',
-        $schemaRendererPayload(
-            $footerFacebookUrlRenderConfig,
-            'translations[' . $code . '][content][social_links][facebook]',
-            $footerFacebookUrlValue,
-            'social_links.facebook',
-        )
-    )
+    @include('dashboard.pages.sections.partials.fields.schema-field-renderer', [
+        'fieldType' => 'url',
+        'label' => (string) ($socialFieldLabels['facebook'] ?? __('Facebook URL')),
+        'name' => 'translations[' . $code . '][content][social_links][facebook]',
+        'value' => $footerFacebookUrlValue,
+        'placeholder' => 'https://facebook.com/your-page',
+        'schemaField' => 'social_links.facebook',
+        'wrapperClass' => '',
+    ])
 
-    @php
-        $footerInstagramUrlFieldContext = $schemaFieldContext(
-            'social',
-            'social_links.instagram',
-            __('Instagram URL'),
-            'https://instagram.com/your-page',
-        );
-        $footerInstagramUrlRenderConfig = $schemaRenderableFieldConfig(
-            $footerInstagramUrlFieldContext,
-            'url',
-            3,
-        );
-    @endphp
+    @include('dashboard.pages.sections.partials.fields.schema-field-renderer', [
+        'fieldType' => 'url',
+        'label' => (string) ($socialFieldLabels['instagram'] ?? __('Instagram URL')),
+        'name' => 'translations[' . $code . '][content][social_links][instagram]',
+        'value' => $footerInstagramUrlValue,
+        'placeholder' => 'https://instagram.com/your-page',
+        'schemaField' => 'social_links.instagram',
+        'wrapperClass' => '',
+    ])
 
-    @include(
-        'dashboard.pages.sections.partials.fields.schema-field-renderer',
-        $schemaRendererPayload(
-            $footerInstagramUrlRenderConfig,
-            'translations[' . $code . '][content][social_links][instagram]',
-            $footerInstagramUrlValue,
-            'social_links.instagram',
-        )
-    )
+    @include('dashboard.pages.sections.partials.fields.schema-field-renderer', [
+        'fieldType' => 'url',
+        'label' => (string) ($socialFieldLabels['x'] ?? __('X URL')),
+        'name' => 'translations[' . $code . '][content][social_links][x]',
+        'value' => $footerXUrlValue,
+        'placeholder' => 'https://x.com/your-page',
+        'schemaField' => 'social_links.x',
+        'wrapperClass' => '',
+    ])
 
-    @php
-        $footerXUrlFieldContext = $schemaFieldContext(
-            'social',
-            'social_links.x',
-            __('X URL'),
-            'https://x.com/your-page',
-        );
-        $footerXUrlRenderConfig = $schemaRenderableFieldConfig(
-            $footerXUrlFieldContext,
-            'url',
-            3,
-        );
-    @endphp
+    @include('dashboard.pages.sections.partials.fields.schema-field-renderer', [
+        'fieldType' => 'url',
+        'label' => (string) ($socialFieldLabels['github'] ?? __('GitHub URL')),
+        'name' => 'translations[' . $code . '][content][social_links][github]',
+        'value' => $footerGithubUrlValue,
+        'placeholder' => 'https://github.com/your-page',
+        'schemaField' => 'social_links.github',
+        'wrapperClass' => '',
+    ])
 
-    @include(
-        'dashboard.pages.sections.partials.fields.schema-field-renderer',
-        $schemaRendererPayload(
-            $footerXUrlRenderConfig,
-            'translations[' . $code . '][content][social_links][x]',
-            $footerXUrlValue,
-            'social_links.x',
-        )
-    )
-
-    @php
-        $footerGithubUrlFieldContext = $schemaFieldContext(
-            'social',
-            'social_links.github',
-            __('GitHub URL'),
-            'https://github.com/your-page',
-        );
-        $footerGithubUrlRenderConfig = $schemaRenderableFieldConfig(
-            $footerGithubUrlFieldContext,
-            'url',
-            3,
-        );
-    @endphp
-
-    @include(
-        'dashboard.pages.sections.partials.fields.schema-field-renderer',
-        $schemaRendererPayload(
-            $footerGithubUrlRenderConfig,
-            'translations[' . $code . '][content][social_links][github]',
-            $footerGithubUrlValue,
-            'social_links.github',
-        )
-    )
-
-    @php
-        $footerYoutubeUrlFieldContext = $schemaFieldContext(
-            'social',
-            'social_links.youtube',
-            __('YouTube URL'),
-            'https://youtube.com/@your-channel',
-        );
-        $footerYoutubeUrlRenderConfig = $schemaRenderableFieldConfig(
-            $footerYoutubeUrlFieldContext,
-            'url',
-            3,
-        );
-    @endphp
-
-    @include(
-        'dashboard.pages.sections.partials.fields.schema-field-renderer',
-        $schemaRendererPayload(
-            $footerYoutubeUrlRenderConfig,
-            'translations[' . $code . '][content][social_links][youtube]',
-            $footerYoutubeUrlValue,
-            'social_links.youtube',
-        )
-    )
+    @include('dashboard.pages.sections.partials.fields.schema-field-renderer', [
+        'fieldType' => 'url',
+        'label' => (string) ($socialFieldLabels['youtube'] ?? __('YouTube URL')),
+        'name' => 'translations[' . $code . '][content][social_links][youtube]',
+        'value' => $footerYoutubeUrlValue,
+        'placeholder' => 'https://youtube.com/@your-channel',
+        'schemaField' => 'social_links.youtube',
+        'wrapperClass' => '',
+    ])
 </div>

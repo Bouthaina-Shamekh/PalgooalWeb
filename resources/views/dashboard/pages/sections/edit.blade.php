@@ -17,6 +17,7 @@
             $absolute,
         );
     $workspaceVisualBuilderUrl = $workspaceVisualBuilderUrl ?? null;
+    $editorFormPartial = $editorFormPartial ?? 'dashboard.pages.sections.partials.dynamic-editor-form';
 @endphp
 
 @extends('dashboard.pages.sections.layouts.workspace')
@@ -34,14 +35,7 @@
 @endsection
 
 @section('workspace-main')
-    @include(
-        $editorState['usesDynamicEditor'] ?? false
-            ? 'dashboard.pages.sections.partials.dynamic-editor-form'
-            : 'dashboard.pages.sections.partials.shell-editor-form',
-        [
-            'formId' => 'section-edit-form',
-        ]
-    )
+    @include($editorFormPartial, ['formId' => 'section-edit-form'])
 @endsection
 
 @section('workspace-sidebar')

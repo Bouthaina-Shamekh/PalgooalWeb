@@ -1100,8 +1100,14 @@ class SectionController extends Controller
             'languages' => $languages,
             'sectionTypes' => $sectionTypes,
             'editorState' => $editorState,
+            'editorFormPartial' => $this->editorFormPartial($page, $section),
             'sidebarEditor' => $sidebarEditor,
         ] + $workspaceViewData;
+    }
+
+    protected function editorFormPartial(Page $page, Section $section): string
+    {
+        return 'dashboard.pages.sections.partials.dynamic-editor-form';
     }
 
     protected function normalizeSubmittedTranslations(

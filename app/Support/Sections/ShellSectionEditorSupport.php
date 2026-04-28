@@ -16,8 +16,6 @@ use Illuminate\Support\Collection;
 class ShellSectionEditorSupport
 {
     public function __construct(
-        protected SectionEditorTypeCapabilities $typeCapabilities,
-        protected SectionEditorSchemaRegistry $schemaRegistry,
         protected SectionMediaPreviewBuilder $mediaPreviewBuilder,
     ) {}
 
@@ -66,17 +64,11 @@ class ShellSectionEditorSupport
     public function buildEditorState(Section $section, iterable $languages, array $sectionTypes = []): array
     {
         $selectedType = $this->normalizeSelectedType(old('type', $section->type), $section->type);
-        $typeCapabilities = $this->typeCapabilities->for($selectedType);
 
         $editorState = [
             'selectedType' => $selectedType,
             'defaultLocale' => $this->resolveDefaultLocale($languages),
-            'usesInternalLabel' => (bool) ($typeCapabilities['usesInternalLabel'] ?? false),
-            'flags' => $typeCapabilities['flags'],
-            'editorSchema' => $this->schemaRegistry->for($selectedType),
-            'usesDynamicEditor' => false,
-            'dynamicEditor' => null,
-            'hostingPricingAvailableCategories' => collect(),
+            'footerEditorConfig' => $this->buildFooterEditorConfig($selectedType),
             'localeScalarValues' => $this->buildLocaleScalarValues($section, $languages),
         ];
 
@@ -93,6 +85,28 @@ class ShellSectionEditorSupport
             ->all();
 
         return $editorState;
+    }
+
+    protected function buildFooterEditorConfig(string $type): array
+    {
+        if ($type !== 'site_footer') {
+            return [];
+        }
+
+        return [
+            'footerLinksGroupLabel' => __('Footer Links'),
+            'socialLinksGroupLabel' => __('Social Links'),
+            'footerLinksFieldLabel' => __('Footer Links'),
+            'footerLinksItemLabel' => __('Link'),
+            'copyrightFieldLabel' => __('Copyright Line'),
+            'socialFieldLabels' => [
+                'facebook' => __('Facebook URL'),
+                'instagram' => __('Instagram URL'),
+                'x' => __('X URL'),
+                'github' => __('GitHub URL'),
+                'youtube' => __('YouTube URL'),
+            ],
+        ];
     }
 
     public function normalizeTranslations(string $type, array $translations): array
@@ -172,11 +186,6 @@ class ShellSectionEditorSupport
                         ),
                         'primaryButtonUrlValue' => $this->stringValue(
                             $this->oldNestedContentValue($code, 'primary_button.url', $primaryButton['url'] ?? ''),
-                        ),
-                        'primaryButtonVisibleValue' => $this->oldBooleanContentValue(
-                            $code,
-                            'primary_button.visible',
-                            $primaryButton['visible'] ?? false,
                         ),
                         'primaryButtonNewTabValue' => $this->oldBooleanContentValue(
                             $code,

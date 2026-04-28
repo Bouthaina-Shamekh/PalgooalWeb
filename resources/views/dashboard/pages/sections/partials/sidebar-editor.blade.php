@@ -1,5 +1,9 @@
 <div class="flex h-full min-h-0 flex-col overflow-hidden rounded-[1.5rem] bg-white shadow-[0_24px_60px_-36px_rgba(15,23,42,0.35)]"
     data-section-editor-root>
+    @php
+        $editorFormPartial = $editorFormPartial ?? 'dashboard.pages.sections.partials.dynamic-editor-form';
+    @endphp
+
     <div class="border-b border-slate-200 px-4 py-3">
         <div class="min-w-0">
             <button type="button" data-close-section-editor aria-label="{{ $sidebarEditor['backNavigationLabel'] }}"
@@ -31,12 +35,7 @@
     </div>
 
     <div class="workspace-scrollbar min-h-0 flex-1 overflow-y-auto px-0 py-0">
-        @include(
-            $editorState['usesDynamicEditor'] ?? false
-                ? 'dashboard.pages.sections.partials.dynamic-editor-form'
-                : 'dashboard.pages.sections.partials.shell-editor-form',
-            $sidebarEditor['formConfig']
-        )
+        @include($editorFormPartial, $sidebarEditor['formConfig'])
     </div>
 
     <div class="shrink-0 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">

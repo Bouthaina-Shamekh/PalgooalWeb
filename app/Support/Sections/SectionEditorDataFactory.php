@@ -45,8 +45,6 @@ class SectionEditorDataFactory
         return [
             'selectedType' => $this->normalizeSelectedType(old('type', $section->type)),
             'defaultLocale' => $defaultLocale,
-            'usesInternalLabel' => true,
-            'usesDynamicEditor' => true,
             'dynamicEditor' => $resolvedDynamicEditor,
             'localeScalarValues' => $this->buildDefinitionOnlyLocaleScalarValues($section, $languages),
         ];

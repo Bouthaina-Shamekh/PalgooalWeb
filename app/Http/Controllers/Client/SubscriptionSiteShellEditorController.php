@@ -220,6 +220,11 @@ class SubscriptionSiteShellEditorController extends SectionController
         return __('Back to site dashboard');
     }
 
+    protected function editorFormPartial(Page $page, Section $section): string
+    {
+        return 'dashboard.pages.sections.partials.shell-editor-form';
+    }
+
     protected function workspaceFrontUrl(Page $page): string
     {
         if (! $this->workspaceSubscription instanceof Subscription) {

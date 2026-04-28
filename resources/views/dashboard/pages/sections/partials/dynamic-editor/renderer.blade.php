@@ -4,18 +4,7 @@
 @endphp
 
 <div class="{{ $contentGridClass }}">
-    @if ($usesInternalLabel)
-        <input type="hidden" name="translations[{{ $code }}][title]" value="{{ $sectionTitleValue }}">
-    @else
-        <div class="lg:col-span-2">
-            <label class="block text-sm font-medium text-slate-700">
-                {{ __('Section Title') }} ({{ $code }})
-            </label>
-            <input type="text" name="translations[{{ $code }}][title]"
-                value="{{ $sectionTitleValue }}"
-                class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-        </div>
-    @endif
+    <input type="hidden" name="translations[{{ $code }}][title]" value="{{ $sectionTitleValue }}">
 
     @forelse ($dynamicGroups as $dynamicGroup)
         <div class="lg:col-span-2 rounded-3xl border border-slate-200 bg-slate-50/60 p-5">
@@ -41,7 +30,8 @@
             </div>
         </div>
     @empty
-        <div class="lg:col-span-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
+        <div
+            class="lg:col-span-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-500">
             {{ __('No dynamic fields are registered for this locale yet.') }}
         </div>
     @endforelse

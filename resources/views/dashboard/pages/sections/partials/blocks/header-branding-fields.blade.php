@@ -2,6 +2,8 @@
 @php
     $isShellHeader = ($selectedType ?? null) === 'site_header';
     $isShellFooter = ($selectedType ?? null) === 'site_footer';
+    $renderBrandIdentityFields = $renderBrandIdentityFields ?? ($showBrandFields ?? false);
+    $renderMainTitleField = $renderMainTitleField ?? ($showMainTitleField ?? false);
     $brandIdentityFieldColumnClass =
         $isProgrammingShowcase ||
         $isMobileAppShowcase ||
@@ -57,7 +59,7 @@
     );
 @endphp
 
-@if ($showBrandFields)
+@if ($renderBrandIdentityFields)
     <div class="{{ $brandIdentityFieldColumnClass }}">
         <label class="block text-sm font-medium text-slate-700">{{ __('Brand Prefix') }}</label>
         <input type="text" name="translations[{{ $code }}][content][brand_prefix]"
@@ -75,7 +77,7 @@
     </div>
 @endif
 
-@if ($showMainTitleField)
+@if ($renderMainTitleField)
     <div class="{{ $mainTitleFieldColumnClass }}">
         <label class="block text-sm font-medium text-slate-700">
             {{ $mainTitleLabelText }}

@@ -53,7 +53,6 @@
                 ? 'border-red-200 bg-red-50 text-red-800'
                 : 'border-emerald-200 bg-emerald-50 text-emerald-800';
         $selectedType = $editorState['selectedType'] ?? $section->type;
-        $usesInternalLabel = (bool) ($editorState['usesInternalLabel'] ?? false);
         $dynamicEditor = is_array($editorState['dynamicEditor'] ?? null) ? $editorState['dynamicEditor'] : [];
     @endphp
 
@@ -141,7 +140,6 @@
                         'code' => $code,
                         'dynamicEditor' => $dynamicEditor,
                         'contentGridClass' => $contentGridClass,
-                        'usesInternalLabel' => $usesInternalLabel,
                         'sectionTitleValue' => $sectionTitleValue,
                     ])
                 </div>
