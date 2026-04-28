@@ -1,15 +1,17 @@
 @php
     $pageTitle = $page->translation()?->title ?? $page->slug;
     $selectedType = old('type', $section->type);
-    $sectionTypeMeta = $selectedType === $section->type
-        ? $section->resolvedTypeMeta($sectionTypes)
-        : ($sectionTypes[$selectedType] ?? null);
-    $sectionTypeLabel = $sectionTypeMeta['label'] ?? \Illuminate\Support\Str::headline(str_replace(['_', '-'], ' ', $selectedType));
+    $sectionTypeMeta =
+        $selectedType === $section->type
+            ? $section->resolvedTypeMeta($sectionTypes)
+            : $sectionTypes[$selectedType] ?? null;
+    $sectionTypeLabel =
+        $sectionTypeMeta['label'] ?? \Illuminate\Support\Str::headline(str_replace(['_', '-'], ' ', $selectedType));
     $workspaceRoutePrefix = $workspaceRoutePrefix ?? 'dashboard.pages.sections.';
     $workspaceRouteBaseParameters = $workspaceRouteBaseParameters ?? ['page' => $page];
     $workspaceRouteFor =
-        $workspaceRouteFor
-        ?? fn(string $name, array $extra = [], bool $absolute = true) => route(
+        $workspaceRouteFor ??
+        fn(string $name, array $extra = [], bool $absolute = true) => route(
             $workspaceRoutePrefix . $name,
             array_merge($workspaceRouteBaseParameters, $extra),
             $absolute,
@@ -20,26 +22,26 @@
 @extends('dashboard.pages.sections.layouts.workspace')
 
 @section('workspace-header-actions')
-    <a
-        href="{{ $workspaceRouteFor('index') }}"
-        class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:shadow-sm"
-    >
+    <a href="{{ $workspaceRouteFor('index') }}"
+        class="inline-flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:shadow-sm">
         {{ __('Back to Sections') }}
     </a>
 
-    <button
-        type="submit"
-        form="section-edit-form"
-        class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-    >
+    <button type="submit" form="section-edit-form"
+        class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
         {{ __('Update Section') }}
     </button>
 @endsection
 
 @section('workspace-main')
-    @include('dashboard.pages.sections.partials.editor-form', [
-        'formId' => 'section-edit-form',
-    ])
+    @include(
+        $editorState['usesDynamicEditor'] ?? false
+            ? 'dashboard.pages.sections.partials.dynamic-editor-form'
+            : 'dashboard.pages.sections.partials.shell-editor-form',
+        [
+            'formId' => 'section-edit-form',
+        ]
+    )
 @endsection
 
 @section('workspace-sidebar')
@@ -73,10 +75,8 @@
     <div class="mt-5 rounded-3xl border border-slate-200 bg-slate-50 p-5">
         <h3 class="text-base font-semibold text-slate-900">{{ __('Quick Links') }}</h3>
         <div class="mt-4 space-y-3">
-            <a
-                href="{{ $workspaceRouteFor('index') }}"
-                class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:bg-slate-50"
-            >
+            <a href="{{ $workspaceRouteFor('index') }}"
+                class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:bg-slate-50">
                 <span>
                     <span class="block text-sm font-semibold text-slate-900">{{ __('Back to Sections') }}</span>
                     <span class="block text-xs text-slate-500">{{ __('Return to the workspace outline.') }}</span>
@@ -85,10 +85,8 @@
             </a>
 
             @if (filled($workspaceVisualBuilderUrl))
-                <a
-                    href="{{ $workspaceVisualBuilderUrl }}"
-                    class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:bg-slate-50"
-                >
+                <a href="{{ $workspaceVisualBuilderUrl }}"
+                    class="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left transition hover:bg-slate-50">
                     <span>
                         <span class="block text-sm font-semibold text-slate-900">{{ __('Visual Builder') }}</span>
                         <span class="block text-xs text-slate-500">{{ __('Switch to the visual page builder.') }}</span>
@@ -102,7 +100,7 @@
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             window.initSectionEditorTabs?.(document);
             window.initSectionFeatureRepeaters?.(document);
             window.initSectionOutputRepeaters?.(document);

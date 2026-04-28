@@ -106,7 +106,7 @@ class Section extends Model
      *
      * Priority:
      * 1. linked SectionDefinition
-     * 2. legacy availableSectionTypes() metadata
+     * 2. workspace-supplied fallback metadata
      * 3. headline(type)
      *
      * @param  array<string, array<string, mixed>>  $sectionTypes

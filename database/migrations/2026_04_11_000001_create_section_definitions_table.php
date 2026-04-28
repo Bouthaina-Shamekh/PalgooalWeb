@@ -21,8 +21,8 @@ return new class extends Migration
             $table->string('label')->comment('Admin-facing definition label.');
             $table->text('description')->nullable()->comment('Optional internal description for maintainers.');
             $table->string('category')->nullable()->comment('Optional grouping for admin lists and filtering.');
-            $table->string('editor_mode')->default('dynamic')->comment('dynamic or custom_preset');
-            $table->string('custom_editor_key')->nullable()->comment('Preset key used when editor_mode = custom_preset.');
+            $table->string('editor_mode')->default('dynamic')->comment('Dynamic definition editor mode.');
+            $table->string('custom_editor_key')->nullable()->comment('Deprecated legacy metadata; kept nullable for compatibility.');
             $table->json('settings')->nullable()->comment('Editor/runtime metadata only. No render logic.');
             $table->json('schema')->nullable()->comment('Optional normalized schema metadata for future tooling.');
             $table->boolean('is_active')->default(true)->comment('Inactive definitions stay stored but should not be offered.');

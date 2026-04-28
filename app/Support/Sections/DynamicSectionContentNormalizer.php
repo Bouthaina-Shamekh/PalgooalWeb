@@ -8,8 +8,8 @@ use App\Models\Sections\SectionDefinitionField;
 /**
  * Phase 5D — Normalize definition-driven dynamic section content before persistence.
  *
- * This normalizer is applied after the legacy type-based normalizeContentByType()
- * pass and only when a section is explicitly linked to a SectionDefinition. It:
+ * This normalizer is applied only when a section is explicitly linked to a
+ * SectionDefinition. It:
  *
  *  - keeps only field keys declared in the definition (unknown keys are dropped)
  *  - normalizes scalar values by their declared field_type

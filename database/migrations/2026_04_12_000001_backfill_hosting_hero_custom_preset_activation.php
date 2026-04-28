@@ -23,8 +23,8 @@ return new class extends Migration
         DB::table('section_definitions')
             ->where('section_key', 'hosting_hero')
             ->update([
-                'editor_mode' => SectionDefinition::EDITOR_MODE_CUSTOM_PRESET,
-                'custom_editor_key' => 'hosting_hero',
+                'editor_mode' => SectionDefinition::EDITOR_MODE_DYNAMIC,
+                'custom_editor_key' => null,
                 'updated_at' => now(),
             ]);
     }
@@ -43,8 +43,7 @@ return new class extends Migration
 
         DB::table('section_definitions')
             ->where('section_key', 'hosting_hero')
-            ->where('editor_mode', SectionDefinition::EDITOR_MODE_CUSTOM_PRESET)
-            ->where('custom_editor_key', 'hosting_hero')
+            ->where('editor_mode', SectionDefinition::EDITOR_MODE_DYNAMIC)
             ->update([
                 'editor_mode' => SectionDefinition::EDITOR_MODE_DYNAMIC,
                 'custom_editor_key' => null,

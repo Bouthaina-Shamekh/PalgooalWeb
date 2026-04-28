@@ -8,7 +8,6 @@ use App\Http\Requests\Admin\UpdateSectionDefinitionRequest;
 use App\Models\SectionTranslation;
 use App\Models\Sections\SectionDefinition;
 use App\Models\Sections\Template as SectionTemplate;
-use App\Support\Sections\SectionCustomPresetRegistry;
 use App\Support\Sections\SectionMediaPreviewBuilder;
 use App\Support\Sections\SectionTemplateRegistry;
 use Illuminate\Contracts\View\View;
@@ -26,7 +25,7 @@ class SectionDefinitionController extends Controller
         $this->authorize('viewAny', SectionDefinition::class);
 
         $sectionDefinitions = SectionDefinition::query()
-            ->with(['templates' => fn ($query) => $query->orderByPivot('sort_order')->orderBy('id')])
+            ->with(['templates' => fn($query) => $query->orderByPivot('sort_order')->orderBy('id')])
             ->withCount('fields')
             ->withCount('sections')
             ->orderBy('sort_order')
@@ -87,7 +86,7 @@ class SectionDefinitionController extends Controller
     {
         $this->authorize('edit', $sectionDefinition);
 
-        $sectionDefinition->load(['templates' => fn ($query) => $query->orderByPivot('sort_order')->orderBy('id')]);
+        $sectionDefinition->load(['templates' => fn($query) => $query->orderByPivot('sort_order')->orderBy('id')]);
 
         return view('dashboard.section_definitions.edit', $this->formViewData($sectionDefinition));
     }
@@ -166,7 +165,7 @@ class SectionDefinitionController extends Controller
     protected function formViewData(SectionDefinition $sectionDefinition): array
     {
         $sectionDefinition->loadMissing([
-            'templates' => fn ($query) => $query->orderByPivot('sort_order')->orderBy('id'),
+            'templates' => fn($query) => $query->orderByPivot('sort_order')->orderBy('id'),
         ]);
 
         $previewMediaId = old('preview_media_id');
@@ -188,20 +187,14 @@ class SectionDefinitionController extends Controller
         return [
             'sectionDefinition' => $sectionDefinition,
             'templateOptions' => $this->templateOptions($sectionDefinition),
-            'customPresetOptions' => $this->customPresetOptions($sectionDefinition),
             'editorModeOptions' => [
                 SectionDefinition::EDITOR_MODE_DYNAMIC => __('Dynamic'),
-                SectionDefinition::EDITOR_MODE_CUSTOM_PRESET => __('Custom'),
             ],
             'previewMediaValue' => $previewMediaId,
             'previewMediaPreviewUrls' => app(SectionMediaPreviewBuilder::class)->build($previewMediaId),
-            'selectedEditorMode' => old('editor_mode', $sectionDefinition->editor_mode),
+            'selectedEditorMode' => SectionDefinition::EDITOR_MODE_DYNAMIC,
             'selectedTemplateKey' => $selectedTemplateKey,
             'selectedTemplateMeta' => SectionTemplateRegistry::describe($selectedTemplateKey, $selectedCategory),
-            'selectedCustomEditorKey' => old(
-                'custom_editor_key',
-                $sectionDefinition->custom_editor_key,
-            ),
         ];
     }
 
@@ -232,30 +225,6 @@ class SectionDefinitionController extends Controller
     }
 
     /**
-     * Return the custom preset registry options for the form select.
-     *
-     * @return array<string, array<string, mixed>>
-     */
-    protected function customPresetOptions(?SectionDefinition $sectionDefinition = null): array
-    {
-        $customPresetOptions = SectionCustomPresetRegistry::all();
-        $currentCustomEditorKey = trim((string) ($sectionDefinition?->custom_editor_key ?? ''));
-
-        if ($currentCustomEditorKey !== '' && ! isset($customPresetOptions[$currentCustomEditorKey])) {
-            $customPresetOptions[$currentCustomEditorKey] = [
-                'preset_key' => $currentCustomEditorKey,
-                'label' => __('Unregistered Custom Preset') . ' (' . $currentCustomEditorKey . ')',
-                'description' => __('This key is stored on the definition but is no longer registered in code.'),
-                'builder' => '',
-                'view' => '',
-                'meta' => [],
-            ];
-        }
-
-        return $customPresetOptions;
-    }
-
-    /**
      * Map UI payload fields to the current schema columns.
      *
      * @param  array<string, mixed>  $validated
@@ -263,18 +232,14 @@ class SectionDefinitionController extends Controller
      */
     protected function persistableAttributes(array $validated): array
     {
-        $editorMode = (string) ($validated['editor_mode'] ?? SectionDefinition::EDITOR_MODE_DYNAMIC);
-
         return [
             'label' => $validated['name'],
             'section_key' => $validated['key'],
             'description' => $validated['description'] ?? null,
             'category' => $validated['category'] ?? null,
             'preview_media_id' => $validated['preview_media_id'] ?? null,
-            'editor_mode' => $editorMode,
-            'custom_editor_key' => $editorMode === SectionDefinition::EDITOR_MODE_CUSTOM_PRESET
-                ? ($validated['custom_editor_key'] ?? null)
-                : null,
+            'editor_mode' => SectionDefinition::EDITOR_MODE_DYNAMIC,
+            'custom_editor_key' => null,
             'is_active' => (bool) ($validated['is_active'] ?? false),
             'is_visible' => (bool) ($validated['is_visible_in_library'] ?? false),
             'sort_order' => (int) ($validated['sort_order'] ?? 0),

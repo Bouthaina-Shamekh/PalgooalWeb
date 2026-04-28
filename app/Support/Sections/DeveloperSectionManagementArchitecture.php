@@ -20,13 +20,11 @@ namespace App\Support\Sections;
  *    - Blade templates, raw PHP, and rendering logic must not be stored in
  *      the database.
  *
- * 2. Dynamic Editor vs Custom Editor Preset
+ * 2. Dynamic Editor
  *    - A dynamic editor builds admin forms directly from normalized field
  *      definitions.
- *    - A custom editor preset is a developer-owned curated editor around the
- *      same definition contract when a section needs a specialized UX.
- *    - Both paths must stay admin-only and must not change frontend runtime
- *      rendering contracts by themselves.
+ *    - This remains an admin-only concern and must not change frontend
+ *      runtime rendering contracts by itself.
  *
  * 3. template_key-driven Frontend Rendering
  *    - Frontend rendering must remain template_key-driven so the database only
@@ -63,12 +61,6 @@ final class DeveloperSectionManagementArchitecture
      * Dynamic editor mode renders fields from normalized definitions.
      */
     public const EDITOR_MODE_DYNAMIC = 'dynamic';
-
-    /**
-     * Custom preset mode uses a hand-crafted admin editor over the same
-     * normalized definition contract.
-     */
-    public const EDITOR_MODE_CUSTOM_PRESET = 'custom_preset';
 
     /**
      * Frontend rendering remains code-driven through a registered template key.

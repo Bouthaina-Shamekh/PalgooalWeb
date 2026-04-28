@@ -22,7 +22,6 @@ class SectionDefinition extends Model
     use HasFactory;
 
     public const EDITOR_MODE_DYNAMIC = 'dynamic';
-    public const EDITOR_MODE_CUSTOM_PRESET = 'custom_preset';
 
     protected $fillable = [
         'section_key',
@@ -30,7 +29,6 @@ class SectionDefinition extends Model
         'description',
         'category',
         'editor_mode',
-        'custom_editor_key',
         'preview_media_id',
         'settings',
         'schema',

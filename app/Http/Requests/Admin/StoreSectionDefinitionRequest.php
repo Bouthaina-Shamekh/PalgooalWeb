@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\Sections\SectionDefinition;
-use App\Support\Sections\SectionCustomPresetRegistry;
 use App\Support\Sections\SectionTemplateRegistry;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -21,8 +20,6 @@ class StoreSectionDefinitionRequest extends FormRequest
 
     public function rules(): array
     {
-        $allowedCustomPresetKeys = array_keys(SectionCustomPresetRegistry::all());
-
         return [
             'name' => ['required', 'string', 'max:255'],
             'key' => [
@@ -50,19 +47,9 @@ class StoreSectionDefinitionRequest extends FormRequest
                 },
             ],
             'editor_mode' => [
-                'required',
-                'string',
-                Rule::in([
-                    SectionDefinition::EDITOR_MODE_DYNAMIC,
-                    SectionDefinition::EDITOR_MODE_CUSTOM_PRESET,
-                ]),
-            ],
-            'custom_editor_key' => [
-                Rule::requiredIf(fn () => $this->input('editor_mode') === SectionDefinition::EDITOR_MODE_CUSTOM_PRESET),
                 'nullable',
                 'string',
-                'max:150',
-                Rule::in($allowedCustomPresetKeys),
+                Rule::in([SectionDefinition::EDITOR_MODE_DYNAMIC]),
             ],
             'is_active' => ['sometimes', 'boolean'],
             'is_visible_in_library' => ['sometimes', 'boolean'],
@@ -75,12 +62,6 @@ class StoreSectionDefinitionRequest extends FormRequest
      */
     public function prepareForValidation(): void
     {
-        $editorMode = trim((string) $this->input('editor_mode', SectionDefinition::EDITOR_MODE_DYNAMIC));
-
-        if ($editorMode === 'custom') {
-            $editorMode = SectionDefinition::EDITOR_MODE_CUSTOM_PRESET;
-        }
-
         $this->merge([
             'name' => $this->normalizeString('name'),
             'key' => $this->normalizeKey('key'),
@@ -88,8 +69,7 @@ class StoreSectionDefinitionRequest extends FormRequest
             'category' => $this->normalizeNullableString('category'),
             'preview_media_id' => $this->normalizeNullableInteger('preview_media_id'),
             'template_key' => $this->normalizeNullableKey('template_key'),
-            'editor_mode' => $editorMode,
-            'custom_editor_key' => $this->normalizeNullableString('custom_editor_key'),
+            'editor_mode' => SectionDefinition::EDITOR_MODE_DYNAMIC,
             'is_active' => $this->boolean('is_active'),
             'is_visible_in_library' => $this->boolean('is_visible_in_library'),
             'sort_order' => $this->filled('sort_order') ? (int) $this->input('sort_order') : 0,

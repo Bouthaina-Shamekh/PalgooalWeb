@@ -103,7 +103,7 @@
     | Block extraction:
     | - Extract coherent field families with clear boundaries and a low or
     |   moderate dependency surface when doing so improves readability without
-    |   breaking editor-form.blade.php orchestration ownership.
+    |   breaking the shell editor orchestrator ownership.
     |
     | Keep in the main orchestrator:
     | - Global setup, shared closures/helpers, the language loop, high-level
@@ -116,11 +116,11 @@
     |   low-risk.
     */
     /*
-    |--------------------------------------------------------------------------
-    | Dependency policy for extracted block partials
-    |--------------------------------------------------------------------------
-    | Pass explicit dependencies when they are direct field values, small
-    | block-specific scalars, or otherwise make the partial's required input
+                                            |--------------------------------------------------------------------------
+                                            | Dependency policy for extracted block partials
+                                            |--------------------------------------------------------------------------
+                                            | Pass explicit dependencies when they are direct field values, small
+                                            | block-specific scalars, or otherwise make the partial's required input
     | obvious at the include site.
     |
     | Shared inherited scope is acceptable for intentionally global editor
@@ -139,7 +139,7 @@
     | grows, reuse expands beyond this orchestrator, or review/maintenance
     | becomes harder with inherited scope alone.
     */
-    /*
+/*
     |--------------------------------------------------------------------------
     | Inventory: major editor rendering regions
     |--------------------------------------------------------------------------
@@ -193,84 +193,83 @@
     | - One-off notices and tiny contextual hints: inline / manual / leave
     |   inline; too small and too tied to nearby conditions to justify partials.
     */
-    $schemaFieldContext = function (
-        string $groupName,
-        string $fieldName,
-        string $fallbackLabel,
-        ?string $fallbackPlaceholder = null,
-    ) use ($schemaGroupFieldLabel, $schemaGroupFieldPlaceholder, $schemaGroupFieldMeta): array {
-        return [
-            'label' => $schemaGroupFieldLabel($groupName, $fieldName, $fallbackLabel),
-            'placeholder' => $schemaGroupFieldPlaceholder($groupName, $fieldName, $fallbackPlaceholder),
-            'schemaMeta' => $schemaGroupFieldMeta($groupName, $fieldName),
-        ];
-    };
-    $schemaFieldRows = function (array $schemaMeta, int $fallback = 4): int {
-        return (int) data_get($schemaMeta, 'ui.rows', $fallback);
-    };
-    $schemaFieldType = function (array $schemaMeta, string $fallback = 'text'): string {
-        $type = (string) data_get($schemaMeta, 'ui.type', $fallback);
+$schemaFieldContext = function (
+    string $groupName,
+    string $fieldName,
+    string $fallbackLabel,
+    ?string $fallbackPlaceholder = null,
+) use ($schemaGroupFieldLabel, $schemaGroupFieldPlaceholder, $schemaGroupFieldMeta): array {
+    return [
+        'label' => $schemaGroupFieldLabel($groupName, $fieldName, $fallbackLabel),
+        'placeholder' => $schemaGroupFieldPlaceholder($groupName, $fieldName, $fallbackPlaceholder),
+        'schemaMeta' => $schemaGroupFieldMeta($groupName, $fieldName),
+    ];
+};
+$schemaFieldRows = function (array $schemaMeta, int $fallback = 4): int {
+    return (int) data_get($schemaMeta, 'ui.rows', $fallback);
+};
+$schemaFieldType = function (array $schemaMeta, string $fallback = 'text'): string {
+    $type = (string) data_get($schemaMeta, 'ui.type', $fallback);
 
-        return in_array($type, ['text', 'textarea', 'url'], true) ? $type : $fallback;
-    };
-    $schemaRenderableFieldConfig = function (
-        array $fieldContext,
-        string $fallbackType = 'text',
-        int $fallbackRows = 3
-    ) use ($schemaFieldType, $schemaFieldRows): array {
-        $resolvedType = $schemaFieldType($fieldContext['schemaMeta'], $fallbackType);
+    return in_array($type, ['text', 'textarea', 'url'], true) ? $type : $fallback;
+};
+$schemaRenderableFieldConfig = function (
+    array $fieldContext,
+    string $fallbackType = 'text',
+    int $fallbackRows = 3,
+) use ($schemaFieldType, $schemaFieldRows): array {
+    $resolvedType = $schemaFieldType($fieldContext['schemaMeta'], $fallbackType);
 
-        return [
-            'fieldType' => $resolvedType,
-            'rows' => $resolvedType === 'textarea'
-                ? $schemaFieldRows($fieldContext['schemaMeta'], $fallbackRows)
-                : null,
-            'label' => $fieldContext['label'],
-            'placeholder' => $fieldContext['placeholder'],
-            'schemaMeta' => $fieldContext['schemaMeta'],
-        ];
-    };
-    $schemaRendererPayload = function (
-        array $renderConfig,
-        string $name,
-        mixed $value,
-        string $schemaField,
-        string $wrapperClass = 'lg:col-span-2'
-    ): array {
-        return [
-            'fieldType' => $renderConfig['fieldType'],
-            'label' => $renderConfig['label'],
-            'name' => $name,
-            'value' => $value,
-            'placeholder' => $renderConfig['placeholder'],
-            'rows' => $renderConfig['rows'],
-            'schemaField' => $schemaField,
-            'schemaMeta' => $renderConfig['schemaMeta'],
-            'wrapperClass' => $wrapperClass,
-        ];
-    };
-    $schemaHelper = SectionEditorSchemaHelper::make($schema);
-    $schemaGroups = collect($schema['groups'] ?? []);
-    $schemaGroupLabel = fn(string $name, string $fallback) => $schemaGroups->firstWhere('name', $name)['label'] ??
-        $fallback;
-    $editorDefaultLocale = $editorState['defaultLocale'] ?? app()->getLocale();
-    $mediaPreviewBuilder = app(SectionMediaPreviewBuilder::class);
-    $workspaceMode = $workspaceMode ?? 'admin';
-    $isClientWorkspace = $workspaceMode === 'client';
-    $displayOrderLabel = $isClientWorkspace ? __('Block Order') : __('Display Order');
-    $displayOrderHelp = $isClientWorkspace ? __('Lower numbers appear earlier on the page.') : null;
-    $activeToggleLabel = $isClientWorkspace ? __('Show this block on your website') : __('Active on frontend');
-    $contentSectionLabel = $isClientWorkspace ? __('Block Content') : __('Section Content');
-    $contentSectionHelp = $isClientWorkspace
-        ? __('Update the text, media, and settings for this block in each language.')
-        : __('Edit localized content for each language.');
-    $contentGroupLabel = $schemaGroupLabel('content', __('Content'));
-    $footerLinksGroupLabel = $schemaGroupLabel('links', __('Footer Links'));
-    $socialLinksGroupLabel = $schemaGroupLabel('social', __('Social Links'));
-    $footerLinksFieldLabel = $schemaHelper->fieldLabel('footer_links', __('Footer Links'));
-    $footerLinksFieldUi = $schemaHelper->fieldUi('footer_links');
-    $footerLinksItemLabel = $footerLinksFieldUi['itemLabel'] ?? __('Link');
-    $copyrightFieldLabel = $schemaHelper->fieldLabel('copyright', __('Copyright Line'));
+    return [
+        'fieldType' => $resolvedType,
+        'rows' =>
+            $resolvedType === 'textarea' ? $schemaFieldRows($fieldContext['schemaMeta'], $fallbackRows) : null,
+        'label' => $fieldContext['label'],
+        'placeholder' => $fieldContext['placeholder'],
+        'schemaMeta' => $fieldContext['schemaMeta'],
+    ];
+};
+$schemaRendererPayload = function (
+    array $renderConfig,
+    string $name,
+    mixed $value,
+    string $schemaField,
+    string $wrapperClass = 'lg:col-span-2',
+): array {
+    return [
+        'fieldType' => $renderConfig['fieldType'],
+        'label' => $renderConfig['label'],
+        'name' => $name,
+        'value' => $value,
+        'placeholder' => $renderConfig['placeholder'],
+        'rows' => $renderConfig['rows'],
+        'schemaField' => $schemaField,
+        'schemaMeta' => $renderConfig['schemaMeta'],
+        'wrapperClass' => $wrapperClass,
+    ];
+};
+$schemaHelper = SectionEditorSchemaHelper::make($schema);
+$schemaGroups = collect($schema['groups'] ?? []);
+$schemaGroupLabel = fn(string $name, string $fallback) => $schemaGroups->firstWhere('name', $name)['label'] ??
+    $fallback;
+$editorDefaultLocale = $editorState['defaultLocale'] ?? app()->getLocale();
+$mediaPreviewBuilder = app(SectionMediaPreviewBuilder::class);
+$workspaceMode = $workspaceMode ?? 'admin';
+$isClientWorkspace = $workspaceMode === 'client';
+$displayOrderLabel = $isClientWorkspace ? __('Block Order') : __('Display Order');
+$displayOrderHelp = $isClientWorkspace ? __('Lower numbers appear earlier on the page.') : null;
+$activeToggleLabel = $isClientWorkspace ? __('Show this block on your website') : __('Active on frontend');
+$contentSectionLabel = $isClientWorkspace ? __('Block Content') : __('Section Content');
+$contentSectionHelp = $isClientWorkspace
+    ? __('Update the text, media, and settings for this block in each language.')
+    : __('Edit localized content for each language.');
+$contentGroupLabel = $schemaGroupLabel('content', __('Content'));
+$footerLinksGroupLabel = $schemaGroupLabel('links', __('Footer Links'));
+$socialLinksGroupLabel = $schemaGroupLabel('social', __('Social Links'));
+$footerLinksFieldLabel = $schemaHelper->fieldLabel('footer_links', __('Footer Links'));
+$footerLinksFieldUi = $schemaHelper->fieldUi('footer_links');
+$footerLinksItemLabel = $footerLinksFieldUi['itemLabel'] ?? __('Link');
+$copyrightFieldLabel = $schemaHelper->fieldLabel('copyright', __('Copyright Line'));
 @endphp
 
 <form id="{{ $formId }}" method="{{ strtoupper($formMethod) }}" action="{{ $formAction }}"
@@ -289,23 +288,22 @@
                 ? 'border-red-200 bg-red-50 text-red-800'
                 : 'border-emerald-200 bg-emerald-50 text-emerald-800';
         $selectedType = $editorState['selectedType'] ?? $section->type;
-        $typeFlags = $editorState['typeFlags'] ?? [];
         $fieldFlags = $editorState['flags'] ?? [];
+        $isShellHeader = $selectedType === 'site_header';
+        $isShellFooter = $selectedType === 'site_footer';
         $isHowWeBuild = $selectedType === 'how_we_build';
-        $isHeroCampaign = (bool) ($typeFlags['isHeroCampaign'] ?? false);
-        $isProgrammingShowcase = (bool) ($typeFlags['isProgrammingShowcase'] ?? false);
-        $isDesignShowcase = (bool) ($typeFlags['isDesignShowcase'] ?? false);
-        $isMobileAppShowcase = (bool) ($typeFlags['isMobileAppShowcase'] ?? false);
-        $isDigitalMarketingShowcase = (bool) ($typeFlags['isDigitalMarketingShowcase'] ?? false);
-        $isTechStackShowcase = (bool) ($typeFlags['isTechStackShowcase'] ?? false);
-        $isReviewsShowcase = (bool) ($typeFlags['isReviewsShowcase'] ?? false);
-        $isOurWorkShowcase = (bool) ($typeFlags['isOurWorkShowcase'] ?? false);
-        $isHostingPricingShowcase = (bool) ($typeFlags['isHostingPricingShowcase'] ?? false);
-        $isDomainsShowcase = (bool) ($typeFlags['isDomainsShowcase'] ?? false);
-        $isTemplatesSliderShowcase = (bool) ($typeFlags['isTemplatesSliderShowcase'] ?? false);
-        $isTemplatesListingShowcase = (bool) ($typeFlags['isTemplatesListingShowcase'] ?? false);
-        $isSiteHeader = (bool) ($typeFlags['isSiteHeader'] ?? false);
-        $isSiteFooter = (bool) ($typeFlags['isSiteFooter'] ?? false);
+        $isHeroCampaign = false;
+        $isProgrammingShowcase = false;
+        $isDesignShowcase = false;
+        $isMobileAppShowcase = false;
+        $isDigitalMarketingShowcase = false;
+        $isTechStackShowcase = false;
+        $isReviewsShowcase = false;
+        $isOurWorkShowcase = false;
+        $isHostingPricingShowcase = false;
+        $isDomainsShowcase = false;
+        $isTemplatesSliderShowcase = false;
+        $isTemplatesListingShowcase = false;
         $usesInternalLabel = (bool) ($editorState['usesInternalLabel'] ?? false);
         $showEyebrowField = (bool) ($fieldFlags['showEyebrowField'] ?? false);
         $showDescriptionField = (bool) ($fieldFlags['showDescriptionField'] ?? false);
@@ -340,10 +338,6 @@
         $showReviewRepeaterField = (bool) ($fieldFlags['showReviewRepeaterField'] ?? false);
         $showSiteFooterLinksTextareaField = (bool) ($fieldFlags['showSiteFooterLinksTextareaField'] ?? false);
         $showSiteFooterSocialFields = (bool) ($fieldFlags['showSiteFooterSocialFields'] ?? false);
-        $usesCustomPresetEditor = (bool) ($editorState['usesCustomPresetEditor'] ?? false);
-        $customPresetEditor = is_array($editorState['customPresetEditor'] ?? null) ? $editorState['customPresetEditor'] : null;
-        $usesDynamicEditor = (bool) ($editorState['usesDynamicEditor'] ?? false);
-        $dynamicEditor = is_array($editorState['dynamicEditor'] ?? null) ? $editorState['dynamicEditor'] : null;
         $selectedFooterVariant = old('variant', $section->variant ?: 'simple_social');
         $hostingPricingAvailableCategories = $editorState['hostingPricingAvailableCategories'] ?? collect();
     @endphp
@@ -366,9 +360,10 @@
     <div class="{{ $surfaceClass }}">
         <div class="{{ $sectionBodyClass }}">
             <input type="hidden" name="type" value="{{ $selectedType }}">
+            <input type="hidden" name="section_definition_id" value="{{ $section->section_definition_id }}">
 
             <div class="{{ $settingsGridClass }}">
-                @if ($isSiteFooter)
+                @if ($isShellFooter)
                     <div>
                         <label class="block text-sm font-medium text-slate-700">{{ __('Footer Layout') }}</label>
                         <select name="variant"
@@ -444,20 +439,13 @@
                     $translation = $section->translations->firstWhere('locale', $code);
                     $content = $translation?->content ?? [];
                     $localeScalarValues = $editorState['localeScalarValues'][$code] ?? [];
-                    $localeViewData = $editorState['localeViewData'][$code] ?? [];
 
-                    $campaignFeatureItems = $editorState['localeCampaignFeatureItems'][$code] ?? [];
-                    $buildStepItems = $editorState['localeBuildStepItems'][$code] ?? [];
-                    $outputItems = $editorState['localeOutputItems'][$code] ?? [];
-                    $serviceItems = $editorState['localeServiceItems'][$code] ?? [];
-                    $pricingCategoryItems = $editorState['localePricingCategoryItems'][$code] ?? [];
-                    $pricingPlanItems = $editorState['localePricingPlanItems'][$code] ?? [];
-                    $featuresTextarea = $localeViewData['featuresTextarea'] ?? '';
-                    $heroCampaignTrustItemsTextarea = $localeViewData['heroCampaignTrustItemsTextarea'] ?? '';
-                    $outputsTextarea = $localeViewData['outputsTextarea'] ?? '';
-                    $servicesTextarea = $localeViewData['servicesTextarea'] ?? '';
-                    $faqItemsTextarea = $localeViewData['faqItemsTextarea'] ?? '';
-                    $reviewItems = $localeViewData['reviewItems'] ?? [];
+                    $featuresTextarea = '';
+                    $heroCampaignTrustItemsTextarea = '';
+                    $outputsTextarea = '';
+                    $servicesTextarea = '';
+                    $faqItemsTextarea = '';
+                    $reviewItems = [];
 
                     $sectionTitleValue = $localeScalarValues['sectionTitleValue'] ?? '';
                     $eyebrowValue = $localeScalarValues['eyebrowValue'] ?? '';
@@ -517,7 +505,6 @@
                     $footerGithubUrlValue = $localeScalarValues['footerGithubUrlValue'] ?? '';
                     $footerYoutubeUrlValue = $localeScalarValues['footerYoutubeUrlValue'] ?? '';
                     $headerLogoValue = $localeScalarValues['headerLogoValue'] ?? null;
-                    $pricingCategoryDatalistId = 'pricing-category-keys-' . $section->id . '-' . $code;
                     $mediaUrlValue = $localeScalarValues['mediaUrlValue'] ?? '';
                     $mediaTypeOld = $localeScalarValues['mediaTypeOld'] ?? 'image';
                     $campaignIllustrationValue = $localeScalarValues['campaignIllustrationValue'] ?? null;
@@ -529,15 +516,15 @@
                     $designImageSixValue = $localeScalarValues['designImageSixValue'] ?? null;
                     $techStackLogosValue = $localeScalarValues['techStackLogosValue'] ?? [];
                     $techStackLogosValueForComponent = $localeScalarValues['techStackLogosValueForComponent'] ?? '';
-                    $campaignIllustrationPreviewUrls = $localeViewData['campaignIllustrationPreviewUrls'] ?? [];
-                    $headerLogoPreviewUrls = $localeViewData['headerLogoPreviewUrls'] ?? [];
-                    $mobileAppImageOnePreviewUrls = $localeViewData['mobileAppImageOnePreviewUrls'] ?? [];
-                    $mobileAppImageTwoPreviewUrls = $localeViewData['mobileAppImageTwoPreviewUrls'] ?? [];
-                    $mobileAppImageThreePreviewUrls = $localeViewData['mobileAppImageThreePreviewUrls'] ?? [];
-                    $designImageFourPreviewUrls = $localeViewData['designImageFourPreviewUrls'] ?? [];
-                    $designImageFivePreviewUrls = $localeViewData['designImageFivePreviewUrls'] ?? [];
-                    $designImageSixPreviewUrls = $localeViewData['designImageSixPreviewUrls'] ?? [];
-                    $techStackLogoPreviewUrls = $localeViewData['techStackLogoPreviewUrls'] ?? [];
+                    $campaignIllustrationPreviewUrls = [];
+                    $headerLogoPreviewUrls = $editorState['localeHeaderLogoPreviewUrls'][$code] ?? [];
+                    $mobileAppImageOnePreviewUrls = [];
+                    $mobileAppImageTwoPreviewUrls = [];
+                    $mobileAppImageThreePreviewUrls = [];
+                    $designImageFourPreviewUrls = [];
+                    $designImageFivePreviewUrls = [];
+                    $designImageSixPreviewUrls = [];
+                    $techStackLogoPreviewUrls = [];
                 @endphp
 
                 <div id="lang-{{ $code }}" data-editor-tab-panel
@@ -545,26 +532,7 @@
                     <input type="hidden" name="translations[{{ $code }}][locale]"
                         value="{{ $code }}">
 
-                    @if ($usesCustomPresetEditor && is_array($customPresetEditor))
-                        {{-- Custom preset editor path: curated UI for specific definition-driven sections. --}}
-                        @include($customPresetEditor['view'], [
-                            'code' => $code,
-                            'customPresetEditor' => $customPresetEditor,
-                            'contentGridClass' => $contentGridClass,
-                            'usesInternalLabel' => $usesInternalLabel,
-                            'sectionTitleValue' => $sectionTitleValue,
-                            'mediaPreviewBuilder' => $mediaPreviewBuilder,
-                        ])
-                    @elseif ($usesDynamicEditor && is_array($dynamicEditor))
-                        {{-- Hybrid editor path: definition-driven fields render here while the legacy/custom editor remains unchanged below. --}}
-                        @include('dashboard.pages.sections.partials.dynamic-editor.renderer', [
-                            'code' => $code,
-                            'dynamicEditor' => $dynamicEditor,
-                            'contentGridClass' => $contentGridClass,
-                            'usesInternalLabel' => $usesInternalLabel,
-                            'sectionTitleValue' => $sectionTitleValue,
-                        ])
-                    @else
+                    {{-- Shell editor legacy compatibility only. Normal admin page sections should never fall through here once linked to a definition. --}}
                     <div class="{{ $contentGridClass }}">
                         @if ($usesInternalLabel)
                             <input type="hidden" name="translations[{{ $code }}][title]"
@@ -596,31 +564,27 @@
                             </div>
                         @endif
 
-                        @include(
-                            'dashboard.pages.sections.partials.blocks.header-branding-fields',
-                            [
-                                'code' => $code,
-                                'brandPrefixValue' => $brandPrefixValue,
-                                'brandSuffixValue' => $brandSuffixValue,
-                                'heroTitleValue' => $heroTitleValue,
-                                'headerLogoValue' => $headerLogoValue,
-                                'headerLogoPreviewUrls' => $headerLogoPreviewUrls,
-                                'showBrandFields' => $showBrandFields,
-                                'showMainTitleField' => $showMainTitleField,
-                                'isSiteHeader' => $isSiteHeader,
-                                'isSiteFooter' => $isSiteFooter,
-                                'isHeroCampaign' => $isHeroCampaign,
-                                'isProgrammingShowcase' => $isProgrammingShowcase,
-                                'isMobileAppShowcase' => $isMobileAppShowcase,
-                                'isDesignShowcase' => $isDesignShowcase,
-                                'isDigitalMarketingShowcase' => $isDigitalMarketingShowcase,
-                                'isReviewsShowcase' => $isReviewsShowcase,
-                                'isOurWorkShowcase' => $isOurWorkShowcase,
-                                'isDomainsShowcase' => $isDomainsShowcase,
-                                'isTemplatesSliderShowcase' => $isTemplatesSliderShowcase,
-                                'isTemplatesListingShowcase' => $isTemplatesListingShowcase,
-                            ]
-                        )
+                        @include('dashboard.pages.sections.partials.blocks.header-branding-fields', [
+                            'code' => $code,
+                            'selectedType' => $selectedType,
+                            'brandPrefixValue' => $brandPrefixValue,
+                            'brandSuffixValue' => $brandSuffixValue,
+                            'heroTitleValue' => $heroTitleValue,
+                            'headerLogoValue' => $headerLogoValue,
+                            'headerLogoPreviewUrls' => $headerLogoPreviewUrls,
+                            'showBrandFields' => $showBrandFields,
+                            'showMainTitleField' => $showMainTitleField,
+                            'isHeroCampaign' => $isHeroCampaign,
+                            'isProgrammingShowcase' => $isProgrammingShowcase,
+                            'isMobileAppShowcase' => $isMobileAppShowcase,
+                            'isDesignShowcase' => $isDesignShowcase,
+                            'isDigitalMarketingShowcase' => $isDigitalMarketingShowcase,
+                            'isReviewsShowcase' => $isReviewsShowcase,
+                            'isOurWorkShowcase' => $isOurWorkShowcase,
+                            'isDomainsShowcase' => $isDomainsShowcase,
+                            'isTemplatesSliderShowcase' => $isTemplatesSliderShowcase,
+                            'isTemplatesListingShowcase' => $isTemplatesListingShowcase,
+                        ])
 
                         @if ($showSubtitleField)
                             @php
@@ -646,32 +610,26 @@
                             ])
                         @endif
 
-                        @include(
-                            'dashboard.pages.sections.partials.blocks.domains-search-fields',
-                            [
-                                'code' => $code,
-                                'domainsSearchHeadingValue' => $domainsSearchHeadingValue,
-                                'domainsInputPlaceholderValue' => $domainsInputPlaceholderValue,
-                                'descriptionValue' => $descriptionValue,
-                                'isDomainsShowcase' => $isDomainsShowcase,
-                                'showDomainsSearchHeadingField' => $showDomainsSearchHeadingField,
-                                'showDescriptionField' => $showDescriptionField,
-                                'showDomainsPlaceholderField' => $showDomainsPlaceholderField,
-                            ]
-                        )
+                        @include('dashboard.pages.sections.partials.blocks.domains-search-fields', [
+                            'code' => $code,
+                            'domainsSearchHeadingValue' => $domainsSearchHeadingValue,
+                            'domainsInputPlaceholderValue' => $domainsInputPlaceholderValue,
+                            'descriptionValue' => $descriptionValue,
+                            'isDomainsShowcase' => $isDomainsShowcase,
+                            'showDomainsSearchHeadingField' => $showDomainsSearchHeadingField,
+                            'showDescriptionField' => $showDescriptionField,
+                            'showDomainsPlaceholderField' => $showDomainsPlaceholderField,
+                        ])
 
                         @if ($showPrimaryButtonFields && $isHeroCampaign)
                             {{-- Hero campaign CTA extracted into its own partial. --}}
-                            @include(
-                                'dashboard.pages.sections.partials.blocks.hero-campaign-cta-fields',
-                                [
-                                    'code' => $code,
-                                    'primaryButtonLabelValue' => $primaryButtonLabelValue,
-                                    'primaryButtonUrlValue' => $primaryButtonUrlValue,
-                                    'primaryButtonVisibleValue' => $primaryButtonVisibleValue,
-                                    'primaryButtonNewTabValue' => $primaryButtonNewTabValue,
-                                ]
-                            )
+                            @include('dashboard.pages.sections.partials.blocks.hero-campaign-cta-fields', [
+                                'code' => $code,
+                                'primaryButtonLabelValue' => $primaryButtonLabelValue,
+                                'primaryButtonUrlValue' => $primaryButtonUrlValue,
+                                'primaryButtonVisibleValue' => $primaryButtonVisibleValue,
+                                'primaryButtonNewTabValue' => $primaryButtonNewTabValue,
+                            ])
                         @endif
 
                         @if ($showHostingPricingDatabaseField)
@@ -685,25 +643,6 @@
                                     'hostingPricingVisibleCategoryIds' => $hostingPricingVisibleCategoryIds,
                                 ]
                             )
-                        @endif
-
-                        @if ($showHostingPricingCategoriesField)
-                            @include(
-                                'dashboard.pages.sections.partials.repeaters.pricing-categories-repeater',
-                                [
-                                    'code' => $code,
-                                    'pricingCategoryItems' => $pricingCategoryItems,
-                                    'pricingCategoryDatalistId' => $pricingCategoryDatalistId,
-                                ]
-                            )
-                        @endif
-
-                        @if ($showHostingPricingPlansField)
-                            @include('dashboard.pages.sections.partials.repeaters.pricing-plans-repeater', [
-                                'code' => $code,
-                                'pricingPlanItems' => $pricingPlanItems,
-                                'pricingCategoryDatalistId' => $pricingCategoryDatalistId,
-                            ])
                         @endif
 
                         @php
@@ -739,9 +678,7 @@
                                     'translations[' . $code . '][content][outputs_heading]',
                                     $outputsHeadingValue,
                                     'outputs_heading',
-                                    'lg:col-span-2',
-                                )
-                            )
+                                    'lg:col-span-2'))
                         @endif
 
                         @if ($showFeaturesHeadingField)
@@ -752,87 +689,46 @@
                                     'translations[' . $code . '][content][features_heading]',
                                     $featuresHeadingValue,
                                     'features_heading',
-                                    'lg:col-span-2',
-                                )
-                            )
-                        @endif
-
-                        {{-- Repeaters with heavier DOM contracts remain inline in the orchestrator. --}}
-                        @if ($showOutputsTextareaField)
-                            @include('dashboard.pages.sections.partials.repeaters.outputs-repeater', [
-                                'code' => $code,
-                                'outputItems' => $outputItems,
-                                'mediaPreviewBuilder' => $mediaPreviewBuilder,
-                            ])
-                        @endif
-
-                        @if ($showServicesTextareaField)
-                            @include('dashboard.pages.sections.partials.repeaters.services-repeater', [
-                                'code' => $code,
-                                'serviceItems' => $serviceItems,
-                                'mediaPreviewBuilder' => $mediaPreviewBuilder,
-                            ])
-                        @endif
-
-                        @if ($showBuildStepsRepeaterField)
-                            @include('dashboard.pages.sections.partials.repeaters.build-steps-repeater', [
-                                'code' => $code,
-                                'buildStepItems' => $buildStepItems,
-                                'mediaPreviewBuilder' => $mediaPreviewBuilder,
-                            ])
+                                    'lg:col-span-2'))
                         @endif
 
                         {{-- Extracted configuration/database blocks: explicit block values + inherited shared helpers. --}}
                         @if ($showTemplatesSliderDatabaseField)
-                            @include(
-                                'dashboard.pages.sections.partials.blocks.templates-slider-fields',
-                                [
-                                    'code' => $code,
-                                    'templatesSliderBuyLabelValue' => $templatesSliderBuyLabelValue,
-                                    'templatesSliderPreviewLabelValue' => $templatesSliderPreviewLabelValue,
-                                    'templatesSliderLimitValue' => $templatesSliderLimitValue,
-                                ]
-                            )
+                            @include('dashboard.pages.sections.partials.blocks.templates-slider-fields', [
+                                'code' => $code,
+                                'templatesSliderBuyLabelValue' => $templatesSliderBuyLabelValue,
+                                'templatesSliderPreviewLabelValue' => $templatesSliderPreviewLabelValue,
+                                'templatesSliderLimitValue' => $templatesSliderLimitValue,
+                            ])
                         @endif
 
                         @if ($showTemplatesListingDatabaseField)
-                            @include(
-                                'dashboard.pages.sections.partials.blocks.templates-listing-fields',
-                                [
-                                    'code' => $code,
-                                    'templatesListingBreadcrumbLabelValue' => $templatesListingBreadcrumbLabelValue,
-                                    'templatesListingAllCategoriesLabelValue' =>
-                                        $templatesListingAllCategoriesLabelValue,
-                                    'templatesListingTypeLabelValue' => $templatesListingTypeLabelValue,
-                                    'templatesListingBestSellersLabelValue' =>
-                                        $templatesListingBestSellersLabelValue,
-                                    'templatesListingPriceLabelValue' => $templatesListingPriceLabelValue,
-                                    'templatesListingBuyLabelValue' => $templatesListingBuyLabelValue,
-                                    'templatesListingPreviewLabelValue' => $templatesListingPreviewLabelValue,
-                                    'templatesListingItemsPerPageValue' => $templatesListingItemsPerPageValue,
-                                ]
-                            )
+                            @include('dashboard.pages.sections.partials.blocks.templates-listing-fields', [
+                                'code' => $code,
+                                'templatesListingBreadcrumbLabelValue' => $templatesListingBreadcrumbLabelValue,
+                                'templatesListingAllCategoriesLabelValue' => $templatesListingAllCategoriesLabelValue,
+                                'templatesListingTypeLabelValue' => $templatesListingTypeLabelValue,
+                                'templatesListingBestSellersLabelValue' => $templatesListingBestSellersLabelValue,
+                                'templatesListingPriceLabelValue' => $templatesListingPriceLabelValue,
+                                'templatesListingBuyLabelValue' => $templatesListingBuyLabelValue,
+                                'templatesListingPreviewLabelValue' => $templatesListingPreviewLabelValue,
+                                'templatesListingItemsPerPageValue' => $templatesListingItemsPerPageValue,
+                            ])
                         @endif
 
                         @if ($showReviewsDatabaseField)
-                            @include(
-                                'dashboard.pages.sections.partials.blocks.reviews-database-fields',
-                                [
-                                    'code' => $code,
-                                    'reviewsLimitValue' => $reviewsLimitValue,
-                                ]
-                            )
+                            @include('dashboard.pages.sections.partials.blocks.reviews-database-fields', [
+                                'code' => $code,
+                                'reviewsLimitValue' => $reviewsLimitValue,
+                            ])
                         @endif
 
                         @if ($showOurWorkDatabaseField)
-                            @include(
-                                'dashboard.pages.sections.partials.blocks.our-work-database-fields',
-                                [
-                                    'code' => $code,
-                                    'ourWorkLimitValue' => $ourWorkLimitValue,
-                                    'ourWorkVisitLabelValue' => $ourWorkVisitLabelValue,
-                                ]
-                            )
+                            @include('dashboard.pages.sections.partials.blocks.our-work-database-fields', [
+                                'code' => $code,
+                                'ourWorkLimitValue' => $ourWorkLimitValue,
+                                'ourWorkVisitLabelValue' => $ourWorkVisitLabelValue,
+                            ])
                         @endif
 
                         {{-- Primary button wording and toggles are section-sensitive; how_we_build is intentionally treated as a CTA-driven variant. --}}
@@ -840,7 +736,7 @@
                             @php
                                 $isHowWeBuildPrimaryButtonContext = $isHowWeBuild;
                                 $isDomainsPrimaryButtonContext = $isDomainsShowcase;
-                                $isHeaderPrimaryButtonContext = $isSiteHeader;
+                                $isHeaderPrimaryButtonContext = $isShellHeader;
                                 $usesCtaPrimaryButtonLabels =
                                     $isHowWeBuildPrimaryButtonContext ||
                                     $isProgrammingShowcase ||
@@ -1064,32 +960,17 @@
                         @endif
 
                         @if ($showSecondaryButtonFields)
-                            @include(
-                                'dashboard.pages.sections.partials.blocks.secondary-button-fields',
-                                [
-                                    'code' => $code,
-                                    'secondaryButtonLabelValue' => $secondaryButtonLabelValue,
-                                    'secondaryButtonUrlValue' => $secondaryButtonUrlValue,
-                                    'isHeroCampaign' => $isHeroCampaign,
-                                    'isHowWeBuild' => $isHowWeBuild,
-                                    'isProgrammingShowcase' => $isProgrammingShowcase,
-                                    'isMobileAppShowcase' => $isMobileAppShowcase,
-                                    'isDesignShowcase' => $isDesignShowcase,
-                                    'isDigitalMarketingShowcase' => $isDigitalMarketingShowcase,
-                                ]
-                            )
-                        @endif
-
-                        {{-- Inline repeaters, textarea builders, and media areas continue below. --}}
-                        @if ($showFeatureRepeaterField)
-                            @include(
-                                'dashboard.pages.sections.partials.repeaters.campaign-features-repeater',
-                                [
-                                    'code' => $code,
-                                    'campaignFeatureItems' => $campaignFeatureItems,
-                                    'mediaPreviewBuilder' => $mediaPreviewBuilder,
-                                ]
-                            )
+                            @include('dashboard.pages.sections.partials.blocks.secondary-button-fields', [
+                                'code' => $code,
+                                'secondaryButtonLabelValue' => $secondaryButtonLabelValue,
+                                'secondaryButtonUrlValue' => $secondaryButtonUrlValue,
+                                'isHeroCampaign' => $isHeroCampaign,
+                                'isHowWeBuild' => $isHowWeBuild,
+                                'isProgrammingShowcase' => $isProgrammingShowcase,
+                                'isMobileAppShowcase' => $isMobileAppShowcase,
+                                'isDesignShowcase' => $isDesignShowcase,
+                                'isDigitalMarketingShowcase' => $isDigitalMarketingShowcase,
+                            ])
                         @endif
 
                         {{-- Manual textarea/content scalar family: aligned for consistency before any future extraction or deeper schema migration. --}}
@@ -1351,7 +1232,8 @@
                                 );
                             @endphp
 
-                            <div class="{{ $manualContentTextareaWrapperClass }} rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+                            <div
+                                class="{{ $manualContentTextareaWrapperClass }} rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
                                 <label class="block text-sm font-medium text-slate-700">
                                     {{ $heroCampaignTrustItemsFieldContext['label'] }}
                                 </label>
@@ -1371,9 +1253,11 @@
                                     class="block text-sm font-medium text-slate-700">{{ __('Media Type') }}</label>
                                 <select name="translations[{{ $code }}][content][media_type]"
                                     class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                                    <option value="image" {{ $mediaTypeOld === 'image' ? 'selected' : '' }}>Image
+                                    <option value="image" {{ $mediaTypeOld === 'image' ? 'selected' : '' }}>
+                                        Image
                                     </option>
-                                    <option value="video" {{ $mediaTypeOld === 'video' ? 'selected' : '' }}>Video
+                                    <option value="video" {{ $mediaTypeOld === 'video' ? 'selected' : '' }}>
+                                        Video
                                     </option>
                                 </select>
                             </div>
@@ -1402,7 +1286,6 @@
                             @endif
                         @endif
                     </div>
-                    @endif
                 </div>
             @endforeach
         </div>

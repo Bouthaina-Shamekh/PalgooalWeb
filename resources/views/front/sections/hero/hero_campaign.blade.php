@@ -114,7 +114,7 @@
 
             @if ($primaryLabel !== '' && $primaryUrl !== '')
                 <a href="{{ $primaryUrl }}" @if ($primaryNewTab) target="_blank" rel="noopener" @endif
-                    class="inline-flex items-center justify-center rounded-xl bg-red-brand px-10 py-3 text-lg text-white shadow-md transition-all duration-300 hover:translate-x-1 hover:bg-red-brand/90 hover:shadow-lg md:text-xl">
+                    class="bg-red-brand text-white px-10 py-3 rounded-xl text-lg md:text-xl hover:bg-opacity-90 transition-all duration-300 hover:translate-x-1 hover:shadow-lg shadow-md">
                     {{ $primaryLabel }}
                 </a>
             @endif

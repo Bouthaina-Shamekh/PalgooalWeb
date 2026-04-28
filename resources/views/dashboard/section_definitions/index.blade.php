@@ -66,13 +66,15 @@
                                         $primaryTemplate = $sectionDefinition->templates->first();
                                         $primaryTemplateKey = $primaryTemplate?->template_key;
                                         $primaryTemplateLabel = $primaryTemplateKey
-                                            ? ($templateRegistry[$primaryTemplateKey]['label'] ?? $primaryTemplate->label ?? $primaryTemplateKey)
+                                            ? $templateRegistry[$primaryTemplateKey]['label'] ??
+                                                ($primaryTemplate->label ?? $primaryTemplateKey)
                                             : null;
                                     @endphp
                                     <tr>
                                         <td>{{ $sectionDefinition->id }}</td>
                                         <td>
-                                            <div class="font-medium text-slate-900">{{ $sectionDefinition->label }}</div>
+                                            <div class="font-medium text-slate-900">{{ $sectionDefinition->label }}
+                                            </div>
                                             @if ($sectionDefinition->description)
                                                 <div class="mt-1 text-xs text-slate-500">
                                                     {{ \Illuminate\Support\Str::limit($sectionDefinition->description, 90) }}
@@ -87,19 +89,22 @@
                                         <td>{{ $sectionDefinition->category ?: '-' }}</td>
                                         <td>
                                             @if ($primaryTemplateKey)
-                                                <div class="font-medium text-slate-900">{{ $primaryTemplateLabel }}</div>
-                                                <div class="mt-1 text-xs text-slate-500">{{ $primaryTemplateKey }}</div>
+                                                <div class="font-medium text-slate-900">{{ $primaryTemplateLabel }}
+                                                </div>
+                                                <div class="mt-1 text-xs text-slate-500">{{ $primaryTemplateKey }}
+                                                </div>
                                             @else
                                                 <span class="text-slate-400">-</span>
                                             @endif
                                         </td>
                                         <td>
-                                            <span class="rounded px-2 py-1 text-xs {{ $sectionDefinition->editor_mode === \App\Models\Sections\SectionDefinition::EDITOR_MODE_CUSTOM_PRESET ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800' }}">
-                                                {{ $sectionDefinition->editor_mode === \App\Models\Sections\SectionDefinition::EDITOR_MODE_CUSTOM_PRESET ? __('Custom') : __('Dynamic') }}
+                                            <span class="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
+                                                {{ __('Dynamic') }}
                                             </span>
                                         </td>
                                         <td>
-                                            <div class="font-medium text-slate-900">{{ $sectionDefinition->fields_count }}</div>
+                                            <div class="font-medium text-slate-900">
+                                                {{ $sectionDefinition->fields_count }}</div>
                                             <div class="mt-1">
                                                 <a href="{{ route('dashboard.section_definitions.fields.index', $sectionDefinition) }}"
                                                     class="text-xs text-primary">
@@ -108,12 +113,14 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <span class="rounded px-2 py-1 text-xs {{ $sectionDefinition->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                            <span
+                                                class="rounded px-2 py-1 text-xs {{ $sectionDefinition->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
                                                 {{ $sectionDefinition->is_active ? __('Active') : __('Inactive') }}
                                             </span>
                                         </td>
                                         <td>
-                                            <span class="rounded px-2 py-1 text-xs {{ $sectionDefinition->is_visible ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700' }}">
+                                            <span
+                                                class="rounded px-2 py-1 text-xs {{ $sectionDefinition->is_visible ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700' }}">
                                                 {{ $sectionDefinition->is_visible ? __('Visible') : __('Hidden') }}
                                             </span>
                                         </td>
@@ -131,8 +138,7 @@
                                                 <form
                                                     action="{{ route('dashboard.section_definitions.destroy', $sectionDefinition) }}"
                                                     method="POST"
-                                                    onsubmit="return confirm(@js(__('Delete this section definition? This will also delete :count linked section instance(s) and their translations. Media records, uploaded files, Blade files, and config entries will not be deleted.', ['count' => $sectionDefinition->sections_count])));"
-                                                >
+                                                    onsubmit="return confirm(@js(__('Delete this section definition? This will also delete :count linked section instance(s) and their translations. Media records, uploaded files, Blade files, and config entries will not be deleted.', ['count' => $sectionDefinition->sections_count])));">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="btn btn-sm btn-danger">

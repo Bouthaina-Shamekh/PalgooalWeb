@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Admin\SectionController;
 use App\Models\Page;
 use App\Models\Section;
+use App\Models\Sections\SectionDefinition;
+use App\Support\Sections\ShellSectionEditorSupport;
 use App\Models\Tenancy\Subscription;
 use App\Services\Tenancy\TenantSiteShellService;
 use Illuminate\Http\Request;
@@ -17,8 +19,8 @@ class SubscriptionSiteShellEditorController extends SectionController
 
     public function __construct(
         protected TenantSiteShellService $shellService,
-    ) {
-    }
+        protected ShellSectionEditorSupport $shellEditorSupport,
+    ) {}
 
     public function headerIndex(Request $request, Subscription $subscription)
     {
@@ -248,46 +250,12 @@ class SubscriptionSiteShellEditorController extends SectionController
         ]);
     }
 
+    /**
+     * Shell editor legacy compatibility only.
+     */
     protected function availableSectionTypes(): array
     {
-        if ($this->workspaceShell === TenantSiteShellService::SHELL_FOOTER) {
-            return [
-                'site_footer' => [
-                    'type' => 'site_footer',
-                    'label' => 'Site Footer',
-                    'description' => 'Global tenant footer block.',
-                    'category' => 'other',
-                    'preview' => null,
-                    'library_hidden' => true,
-                ],
-                'site_footer_simple_social' => [
-                    'type' => 'site_footer',
-                    'variant' => 'simple_social',
-                    'label' => 'Footer: Social + Copyright',
-                    'description' => 'A compact footer with social icons and one copyright line.',
-                    'category' => 'other',
-                    'preview' => null,
-                ],
-                'site_footer_links_social' => [
-                    'type' => 'site_footer',
-                    'variant' => 'links_social',
-                    'label' => 'Footer: Links + Social',
-                    'description' => 'A larger footer with navigation links, social icons, and copyright.',
-                    'category' => 'other',
-                    'preview' => null,
-                ],
-            ];
-        }
-
-        return [
-            'site_header' => [
-                'type' => 'site_header',
-                'label' => 'Site Header',
-                'description' => 'Global tenant header with automatic page links and one optional call-to-action button.',
-                'category' => 'other',
-                'preview' => null,
-            ],
-        ];
+        return $this->shellEditorSupport->availableSectionTypes($this->workspaceShell);
     }
 
     protected function resolveOwnedShellPage(Request $request, Subscription $subscription, string $shell): Page
@@ -366,5 +334,67 @@ class SubscriptionSiteShellEditorController extends SectionController
             'pages' => $pages,
             'pages_index_url' => route('client.subscriptions.pages', $this->workspaceSubscription),
         ];
+    }
+
+    protected function allowedSectionTypeKeys(?Section $currentSection = null): array
+    {
+        return array_keys($this->availableSectionTypes());
+    }
+
+    protected function workspaceSectionTypes(): array
+    {
+        return $this->availableSectionTypes();
+    }
+
+    protected function sectionTypesForSection(Section $section): array
+    {
+        return $this->availableSectionTypes();
+    }
+
+    protected function sectionDefinitionIdRulesForCreate(): array
+    {
+        return ['nullable'];
+    }
+
+    protected function sectionDefinitionIdRulesForUpdate(Section $section): array
+    {
+        return ['nullable'];
+    }
+
+    protected function buildEditorState(Section $section, iterable $languages, array $sectionTypes): array
+    {
+        return $this->shellEditorSupport->buildEditorState($section, $languages, $sectionTypes);
+    }
+
+    protected function normalizeSubmittedTranslations(
+        string $type,
+        array $translations,
+        ?SectionDefinition $sectionDefinition = null,
+    ): array {
+        return $this->shellEditorSupport->normalizeTranslations($type, $translations);
+    }
+
+    protected function defaultContentForSection(
+        string $type,
+        string $pageTitle,
+        ?SectionDefinition $sectionDefinition = null,
+    ): array {
+        return $sectionDefinition instanceof SectionDefinition
+            ? parent::defaultContentForSection($type, $pageTitle, $sectionDefinition)
+            : $this->shellEditorSupport->defaultContent($type);
+    }
+
+    protected function defaultStyleForSection(string $type, ?SectionDefinition $sectionDefinition = null): array
+    {
+        return $sectionDefinition instanceof SectionDefinition
+            ? parent::defaultStyleForSection($type, $sectionDefinition)
+            : $this->shellEditorSupport->defaultStyle($type);
+    }
+
+    protected function resolveLinkedSectionDefinitionForUpdate(
+        Section $section,
+        ?int $sectionDefinitionId = null,
+    ): ?SectionDefinition {
+        return null;
     }
 }

@@ -38,22 +38,4 @@ return [
         'fallback_view' => 'front.sections._missing-template',
         'templates' => [],
     ],
-
-    'custom_preset_registry' => [
-        'presets' => [
-            'wordpress_ai_promo' => [
-                'label' => 'WordPress AI Promo',
-                'view' => 'dashboard.pages.sections.partials.custom-presets.wordpress-ai-promo',
-                'builder' => 'buildWordPressAIPromoPreset',
-            ],
-
-            'website_protection' => [
-                'label' => 'Website Protection Promo',
-                'view' => 'dashboard.pages.sections.partials.custom-presets.website-protection-promo',
-                'builder' => 'buildWebsiteProtectionPreset',
-            ],
-        ],
-
-        'legacy_section_key_bridge' => [],
-    ],
 ];

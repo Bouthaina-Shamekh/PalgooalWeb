@@ -1,5 +1,7 @@
 {{-- Header branding fields: extracted partial for the bounded brand identity region, including title, logo, and navigation hint. --}}
 @php
+    $isShellHeader = ($selectedType ?? null) === 'site_header';
+    $isShellFooter = ($selectedType ?? null) === 'site_footer';
     $brandIdentityFieldColumnClass =
         $isProgrammingShowcase ||
         $isMobileAppShowcase ||
@@ -24,25 +26,26 @@
         $isDomainsShowcase ||
         $isTemplatesSliderShowcase ||
         $isTemplatesListingShowcase ||
-        $isSiteHeader
+        $isShellHeader
             ? 'lg:col-span-2'
             : '';
 
-    $mainTitleLabelText = $isSiteHeader || $isSiteFooter
-        ? __('Brand Name')
-        : ($isHeroCampaign
-            ? __('Main Title - Line 1')
-            : ($isProgrammingShowcase ||
-            $isMobileAppShowcase ||
-            $isDesignShowcase ||
-            $isDigitalMarketingShowcase ||
-            $isReviewsShowcase ||
-            $isOurWorkShowcase ||
-            $isDomainsShowcase ||
-            $isTemplatesSliderShowcase ||
-            $isTemplatesListingShowcase
-                ? __('Section Title')
-                : __('Main Title')));
+    $mainTitleLabelText =
+        $isShellHeader || $isShellFooter
+            ? __('Brand Name')
+            : ($isHeroCampaign
+                ? __('Main Title - Line 1')
+                : ($isProgrammingShowcase ||
+                $isMobileAppShowcase ||
+                $isDesignShowcase ||
+                $isDigitalMarketingShowcase ||
+                $isReviewsShowcase ||
+                $isOurWorkShowcase ||
+                $isDomainsShowcase ||
+                $isTemplatesSliderShowcase ||
+                $isTemplatesListingShowcase
+                    ? __('Section Title')
+                    : __('Main Title')));
 
     $headerRegionFieldColumnClass = 'lg:col-span-2';
     $headerLogoFieldLabel = __('Brand Image');
@@ -77,25 +80,24 @@
         <label class="block text-sm font-medium text-slate-700">
             {{ $mainTitleLabelText }}
         </label>
-        <input type="text" name="translations[{{ $code }}][content][title]"
-            value="{{ $heroTitleValue }}"
+        <input type="text" name="translations[{{ $code }}][content][title]" value="{{ $heroTitleValue }}"
             class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900"
             @if ($isReviewsShowcase) placeholder="{{ __('REVIEWS') }}" @endif
             @if ($isOurWorkShowcase) placeholder="{{ __('OUR WORK') }}" @endif>
     </div>
 @endif
 
-@if ($isSiteHeader)
+@if ($isShellHeader)
     <div class="{{ $headerRegionFieldColumnClass }}">
-        <x-dashboard.media-picker :name="'translations[' . $code . '][content][logo]'" :label="$headerLogoFieldLabel" :button-text="__('Choose From Media Library')"
-            :value="$headerLogoValue" :preview-urls="$headerLogoPreviewUrls" :multiple="false" store-value="id" />
+        <x-dashboard.media-picker :name="'translations[' . $code . '][content][logo]'" :label="$headerLogoFieldLabel" :button-text="__('Choose From Media Library')" :value="$headerLogoValue"
+            :preview-urls="$headerLogoPreviewUrls" :multiple="false" store-value="id" />
         <p class="mt-2 text-xs text-slate-500">
             {{ $headerLogoFieldHint }}
         </p>
     </div>
 @endif
 
-@if ($isSiteHeader)
+@if ($isShellHeader)
     <div
         class="{{ $headerRegionFieldColumnClass }} rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
         {{ $headerNavigationHint }}

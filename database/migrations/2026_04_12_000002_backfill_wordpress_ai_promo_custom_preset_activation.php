@@ -22,8 +22,8 @@ return new class extends Migration
         DB::table('section_definitions')
             ->where('section_key', 'wordpress_ai_promo')
             ->update([
-                'editor_mode'       => SectionDefinition::EDITOR_MODE_CUSTOM_PRESET,
-                'custom_editor_key' => 'wordpress_ai_promo',
+                'editor_mode'       => SectionDefinition::EDITOR_MODE_DYNAMIC,
+                'custom_editor_key' => null,
                 'updated_at'        => now(),
             ]);
     }
@@ -36,8 +36,7 @@ return new class extends Migration
 
         DB::table('section_definitions')
             ->where('section_key', 'wordpress_ai_promo')
-            ->where('editor_mode', SectionDefinition::EDITOR_MODE_CUSTOM_PRESET)
-            ->where('custom_editor_key', 'wordpress_ai_promo')
+            ->where('editor_mode', SectionDefinition::EDITOR_MODE_DYNAMIC)
             ->update([
                 'editor_mode'       => SectionDefinition::EDITOR_MODE_DYNAMIC,
                 'custom_editor_key' => null,
