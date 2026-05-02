@@ -22,9 +22,7 @@
     initDynamicRepeaters() function in workspace.blade.php drives add/remove/
     duplicate and calls reindexItems() after every mutation.
 
-    V1 limitations (deferred to Phase 5D):
-      - Media sub-fields render as a plain text input (ID only); no media-picker.
-      - Select sub-fields render as a plain text input; no option list at sub-field level.
+    V1 limitations:
       - No drag-and-drop reorder.
 --}}
 

@@ -131,7 +131,7 @@ class SectionDefinitionField extends Model
      * from Phase 5A/5B/5C and newer save-time normalization all see the same
      * sanitized shape.
      *
-     * @return array<int, array{key: string, label: string, type: string, required: bool, translatable: bool}>
+     * @return array<int, array{key: string, label: string, type: string, required: bool, translatable: bool, options?: string}>
      */
     public function getItemSchema(): array
     {
@@ -151,6 +151,7 @@ class SectionDefinitionField extends Model
      *     'type'         => string   // one of repeaterSubFieldTypes()
      *     'required'     => bool
      *     'translatable' => bool
+     *     'options'      => string|null // select sub-fields only
      *   ]
      *
      * Malformed entries (missing key, unrecognized type, wrong shape) are
@@ -162,7 +163,7 @@ class SectionDefinitionField extends Model
      * - the schema column is null or empty
      * - item_schema is missing or not an array
      *
-     * @return array<int, array{key: string, label: string, type: string, required: bool, translatable: bool}>
+     * @return array<int, array{key: string, label: string, type: string, required: bool, translatable: bool, options?: string}>
      */
     public function repeaterItemSchema(): array
     {
@@ -190,13 +191,23 @@ class SectionDefinitionField extends Model
                     return null;
                 }
 
-                return [
+                $normalized = [
                     'key'          => $key,
                     'label'        => trim((string) ($item['label'] ?? $key)) ?: $key,
                     'type'         => $type,
                     'required'     => (bool) ($item['required'] ?? false),
                     'translatable' => (bool) ($item['translatable'] ?? true),
                 ];
+
+                if ($type === self::FIELD_TYPE_SELECT) {
+                    $options = trim((string) ($item['options'] ?? ''));
+
+                    if ($options !== '') {
+                        $normalized['options'] = $options;
+                    }
+                }
+
+                return $normalized;
             })
             ->filter()
             ->values()

@@ -2,36 +2,31 @@
     $title = trim((string) ($data['title'] ?? ''));
     $subtitle = trim((string) ($data['subtitle'] ?? ''));
     $description = trim((string) ($data['description'] ?? ''));
-    $featuresHeading = trim((string) ($data['features_heading'] ?? ''));
-    $primaryLabel = trim((string) data_get($data, 'primary_button.label', ''));
-    $primaryUrl = trim((string) data_get($data, 'primary_button.url', ''));
-    $primaryNewTab = (bool) data_get($data, 'primary_button.new_tab', false);
-    $mediaUrl = \App\Support\Sections\SectionFrontendMediaResolver::resolve($data['media_url'] ?? null);
-    $mediaAlt = trim((string) ($data['media_alt'] ?? ''));
-
+    $feature_list_title = trim((string) ($data['feature_list_title'] ?? ''));
+    $alt = trim((string) ($data['alt'] ?? ''));
+    $buttonLabel = trim((string) data_get($data, 'button_label', ''));
+    $buttonUrl = trim((string) data_get($data, 'button_url', ''));
+    $buttonNewTab = (bool) data_get($data, 'button_new_tab', false);
     $features = collect(is_array($data['features'] ?? null) ? $data['features'] : [])
-        ->map(function ($feature) {
-            if (is_string($feature)) {
-                $feature = ['text' => $feature];
-            }
-
-            if (! is_array($feature)) {
+        ->map(function ($item) {
+            if (!is_array($item)) {
                 return null;
             }
 
-            $text = trim((string) ($feature['text'] ?? ''));
+            $text = trim((string) ($item['text'] ?? ''));
+            $iconSource = ($item['icon_source'] ?? 'class') === 'media' ? 'media' : 'class';
+            $icon = trim((string) ($item['icon'] ?? ''));
+            $iconMedia = $item['icon_media'] ?? null;
 
-            if ($text === '') {
+            if ($text === '' && $icon === '' && empty($iconMedia)) {
                 return null;
             }
-
-            $iconSource = trim((string) ($feature['icon_source'] ?? 'class'));
 
             return [
                 'text' => $text,
-                'icon_source' => in_array($iconSource, ['class', 'media'], true) ? $iconSource : 'class',
-                'icon' => trim((string) ($feature['icon'] ?? '')),
-                'icon_media' => $feature['icon_media'] ?? null,
+                'icon_source' => $iconSource,
+                'icon' => $icon,
+                'icon_media' => $iconMedia,
             ];
         })
         ->filter()
@@ -41,26 +36,16 @@
         $features->pluck('icon_media'),
     );
 
-    $trustItems = collect(is_array($data['trust_items'] ?? null) ? $data['trust_items'] : [])
-        ->map(function ($item) {
-            if (is_array($item)) {
-                return trim((string) ($item['text'] ?? ''));
-            }
+    $mediaUrl = \App\Support\Sections\SectionFrontendMediaResolver::resolve($data['image'] ?? null);
 
-            return trim((string) $item);
-        })
-        ->filter()
-        ->values();
-
-    if ($mediaAlt === '') {
-        $mediaAlt = $subtitle ?: $title ?: __('Hero illustration');
-    }
 @endphp
-
-<section id="hero" class="px-4 pt-6 pb-8 sm:px-6 lg:px-12 lg:pt-10 lg:pb-18">
+<section id="hero" class="px-4 sm:px-6 lg:px-12 pt-6 pb-8 lg:pt-10 lg:pb-18">
     <div
-        class="container mx-auto flex h-full flex-col-reverse items-center justify-between gap-12 lg:gap-16 ltr:lg:flex-row rtl:lg:flex-row-reverse">
-        <div class="text-content w-full text-center lg:w-1/2 lg:text-start ltr:lg:order-1 rtl:lg:order-2">
+        class="container h-full mx-auto flex flex-col-reverse ltr:lg:flex-row rtl:lg:flex-row-reverse items-center justify-between gap-12 lg:gap-16">
+
+        <!-- Text Content -->
+        <div class="lg:w-1/2 w-full text-center lg:text-start ltr:lg:order-1 rtl:lg:order-2 text-content">
+            <!-- Main Title -->
             @if ($title !== '')
                 <span
                     class="mb-4 inline-flex items-center gap-2 rounded-full bg-purple-100 px-4 py-1.5 text-base font-medium text-purple-700">
@@ -68,89 +53,81 @@
                 </span>
             @endif
 
+            <!-- Subtitle -->
             @if ($subtitle !== '')
-                <h2 class="mb-2 text-2xl font-bold text-purple-brand md:text-3xl">
+                <h2 class="text-purple-brand font-bold text-2xl md:text-3xl mb-2">
                     {{ $subtitle }}
                 </h2>
             @endif
 
+            <!-- Description -->
             @if ($description !== '')
-                <p class="mb-4 text-base leading-relaxed text-gray-500 md:text-lg">
+                <p class="text-gray-500 text-base md:text-lg mb-4 leading-relaxed">
                     {{ $description }}
                 </p>
             @endif
 
-            @if ($featuresHeading !== '')
-                <h3 class="mb-4 text-start text-lg font-bold md:text-2xl">
-                    {{ $featuresHeading }}
+            <!-- Campaign Features Title -->
+            @if ($feature_list_title !== '')
+                <h3 class="font-bold text-lg md:text-2xl mb-4 text-start">
+                    {{ $feature_list_title }}
                 </h3>
             @endif
 
+            <!-- Features Grid -->
             @if ($features->isNotEmpty())
-                <div class="mb-10 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+                    <!-- Feature 1 -->
                     @foreach ($features as $feature)
-                        <div class="flex items-center gap-3 ltr:justify-start rtl:justify-start">
-                            @if ($feature['icon_source'] === 'media' && ! empty($feature['icon_media']) && ! empty($resolvedFeatureMedia[(int) $feature['icon_media']]))
-                                <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center md:h-6 md:w-6"
-                                    aria-hidden="true">
-                                    <img src="{{ $resolvedFeatureMedia[(int) $feature['icon_media']] }}" alt=""
-                                        class="h-full w-full object-contain">
-                                </span>
+                        <div class="flex items-center ltr:justify-start rtl:justify-start gap-3">
+                            @if (
+                                $feature['icon_source'] === 'media' &&
+                                    !empty($feature['icon_media']) &&
+                                    !empty($resolvedFeatureMedia[$feature['icon_media']]))
+                                <img src="{{ $resolvedFeatureMedia[$feature['icon_media']] }}" alt=""
+                                    class="h-5 w-5 shrink-0 object-contain" aria-hidden="true">
                             @elseif ($feature['icon'] !== '')
-                                <i class="{{ $feature['icon'] }} text-xl text-red-brand md:text-2xl"
-                                    aria-hidden="true"></i>
+                                <i class="{{ $feature['icon'] }} text-xl text-red-brand" aria-hidden="true"></i>
                             @else
-                                <svg class="h-5 text-red-brand" fill="currentColor" viewBox="0 0 27 21"
+                                <svg class="h-5 shrink-0 text-red-brand" fill="currentColor" viewBox="0 0 27 21"
                                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                                     <path d="M8.4 15.9L2.1 9.6L0 11.7L8.4 20.1L26.4 2.1L24.3 0L8.4 15.9Z"
                                         fill="#BA112C" />
                                 </svg>
                             @endif
-                            <span class="text-base text-purple-brand md:text-xl">{{ $feature['text'] }}</span>
+                            <span class="text-base md:text-xl text-purple-brand">
+                                {{ $feature['text'] }}
+                            </span>
                         </div>
                     @endforeach
                 </div>
             @endif
 
-            @if ($primaryLabel !== '' && $primaryUrl !== '')
-                <a href="{{ $primaryUrl }}" @if ($primaryNewTab) target="_blank" rel="noopener" @endif
-                    class="bg-red-brand text-white px-10 py-3 rounded-xl text-lg md:text-xl hover:bg-opacity-90 transition-all duration-300 hover:translate-x-1 hover:shadow-lg shadow-md">
-                    {{ $primaryLabel }}
+            <!-- CTA Button -->
+            @if ($buttonLabel !== '' && $buttonUrl !== '')
+                <a href="{{ $buttonUrl }}"
+                    @if ($buttonNewTab) target="_blank" rel="noopener noreferrer" @endif
+                    class="inline-flex bg-red-brand text-white px-10 py-3 rounded-xl text-lg md:text-xl hover:bg-opacity-90 transition-all duration-300 hover:translate-x-1 hover:shadow-lg shadow-md">
+                    {{ $buttonLabel }}
                 </a>
-            @endif
-
-            @if ($trustItems->isNotEmpty())
-                <div class="mt-4 flex flex-wrap items-center justify-start gap-2 text-sm text-gray-500">
-                    @foreach ($trustItems as $trustItem)
-                        <span class="flex items-center gap-1">
-                            <svg class="h-4 w-4 text-red-brand" fill="none" stroke="currentColor" stroke-width="2"
-                                viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                            {{ $trustItem }}
-                        </span>
-
-                        @if (! $loop->last)
-                            <span class="text-gray-300">&bull;</span>
-                        @endif
-                    @endforeach
-                </div>
             @endif
         </div>
 
-        <div class="hero-image h-auto w-full p-8 ltr:lg:order-2 rtl:lg:order-1 lg:w-1/2">
-            <div class="group relative h-full w-full rounded-[40px]">
+        <!-- Image (End Side) -->
+        <div class="w-full lg:w-1/2 h-auto ltr:lg:order-2 rtl:lg:order-1 p-8 hero-image">
+            <div class="relative h-full w-full rounded-[40px] group">
                 @if ($mediaUrl)
                     <img src="{{ $mediaUrl }}"
-                        class="h-full w-full object-cover object-center transition-transform duration-700 group-hover:scale-105"
-                        alt="{{ $mediaAlt }}" loading="lazy">
+                        class="w-full h-full object-cover object-center transform transition-transform duration-700 group-hover:scale-105"
+                        alt="{{ $alt ?: $title ?: 'Hero illustration' }}" loading="lazy">
                 @else
                     <div
                         class="flex min-h-[24rem] items-center justify-center rounded-[40px] bg-background p-10 text-center text-tertiary">
-                        {{ __('Add an illustration from the section editor.') }}
+                        {{ __('Add an image from the section editor.') }}
                     </div>
                 @endif
             </div>
         </div>
+
     </div>
 </section>

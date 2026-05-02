@@ -275,7 +275,7 @@ class SectionDefinitionFieldFormDataFactory
      * in-progress edits are preserved. Falls back to the normalized schema
      * already stored on the model (via repeaterItemSchema()).
      *
-     * @return array<int, array{key: string, label: string, type: string, required: bool, translatable: bool}>
+     * @return array<int, array{key: string, label: string, type: string, required: bool, translatable: bool, options?: string}>
      */
     protected function repeaterItemSchemaForForm(SectionDefinitionField $field): array
     {
@@ -294,13 +294,21 @@ class SectionDefinitionFieldFormDataFactory
                         return null;
                     }
 
-                    return [
+                    $normalized = [
                         'key'          => $key,
                         'label'        => trim((string) ($item['label'] ?? '')),
                         'type'         => $type,
                         'required'     => (bool) ($item['required'] ?? false),
                         'translatable' => (bool) ($item['translatable'] ?? true),
                     ];
+
+                    $options = trim((string) ($item['options'] ?? ''));
+
+                    if ($options !== '') {
+                        $normalized['options'] = $options;
+                    }
+
+                    return $normalized;
                 })
                 ->filter()
                 ->values()
@@ -346,13 +354,21 @@ class SectionDefinitionFieldFormDataFactory
                     return null;
                 }
 
-                return [
+                $normalized = [
                     'key'          => $key,
                     'label'        => trim((string) ($item['label'] ?? $key)) ?: $key,
                     'type'         => $type,
                     'required'     => (bool) ($item['required'] ?? false),
                     'translatable' => (bool) ($item['translatable'] ?? true),
                 ];
+
+                $options = trim((string) ($item['options'] ?? ''));
+
+                if ($options !== '') {
+                    $normalized['options'] = $options;
+                }
+
+                return $normalized;
             })
             ->filter()
             ->values()

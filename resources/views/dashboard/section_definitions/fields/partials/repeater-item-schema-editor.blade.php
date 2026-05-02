@@ -2,7 +2,7 @@
     Repeater item schema editor.
 
     Expected variables:
-      $repeaterItemSchema          — array<int, {key, label, type, required, translatable}>
+      $repeaterItemSchema          — array<int, {key, label, type, required, translatable, options?}>
       $repeaterSubFieldTypeOptions — array<string, string>  (type => label)
 
     Phase 5B: schema authoring only.
@@ -20,6 +20,7 @@
                 <th class="pb-2 pr-3">{{ __('Key') }}</th>
                 <th class="pb-2 pr-3">{{ __('Label') }}</th>
                 <th class="pb-2 pr-3">{{ __('Type') }}</th>
+                <th class="pb-2 pr-3">{{ __('Options') }}</th>
                 <th class="pb-2 pr-3 text-center">{{ __('Required') }}</th>
                 <th class="pb-2 pr-3 text-center">{{ __('Translatable') }}</th>
                 <th class="pb-2"></th>
@@ -56,6 +57,14 @@
                                 </option>
                             @endforeach
                         </select>
+                    </td>
+                    <td class="py-2 pr-3">
+                        <textarea
+                            name="item_schema[{{ $rowIndex }}][options]"
+                            class="form-control form-control-sm min-w-48"
+                            rows="3"
+                            placeholder="1x1|Normal&#10;2x1|Wide"
+                        >{{ $row['options'] ?? '' }}</textarea>
                     </td>
                     <td class="py-2 pr-3 text-center">
                         <input type="hidden" name="item_schema[{{ $rowIndex }}][required]" value="0">

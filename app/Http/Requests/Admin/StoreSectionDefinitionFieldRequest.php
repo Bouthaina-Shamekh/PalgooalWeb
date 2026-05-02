@@ -56,6 +56,7 @@ class StoreSectionDefinitionFieldRequest extends FormRequest
             'item_schema.*.type' => $isRepeater
                 ? ['required', 'string', Rule::in(SectionDefinitionField::repeaterSubFieldTypes())]
                 : ['nullable', 'string', Rule::in(SectionDefinitionField::repeaterSubFieldTypes())],
+            'item_schema.*.options' => ['nullable', 'string'],
             'item_schema.*.required' => ['nullable', 'boolean'],
             'item_schema.*.translatable' => ['nullable', 'boolean'],
         ];

@@ -105,6 +105,37 @@
                 $mediaPreviewUrls = $subType === 'media' && ! $isTemplate
                     ? $mediaPreviewBuilder->build($subValue)
                     : [];
+                $selectOptions = [];
+
+                if ($subType === 'select') {
+                    $rawOptions = (string) ($subField['options'] ?? '');
+                    $optionLines = preg_split('/\r\n|\r|\n/', $rawOptions) ?: [];
+
+                    $selectOptions = collect($optionLines)
+                        ->map(function (string $line) {
+                            $line = trim($line);
+
+                            if ($line === '') {
+                                return null;
+                            }
+
+                            [$value, $label] = array_pad(explode('|', $line, 2), 2, null);
+                            $value = trim((string) $value);
+                            $label = trim((string) ($label ?? $value));
+
+                            if ($value === '') {
+                                return null;
+                            }
+
+                            return [
+                                'value' => $value,
+                                'label' => $label !== '' ? $label : $value,
+                            ];
+                        })
+                        ->filter()
+                        ->values()
+                        ->all();
+                }
             @endphp
 
             @if ($hasIconSourceField && $isIconSourceField)
@@ -223,13 +254,17 @@
             @elseif ($subType === 'select')
                 <div class="{{ $fieldWrapperClass }}" @if ($iconPanel) data-dynamic-repeater-icon-panel="{{ $iconPanel }}" @endif>
                     <label class="block text-sm font-medium text-slate-700">{{ $subLabel }}</label>
-                    <input type="text" name="{{ $inputName }}" data-name-template="{{ $nameTpl }}"
-                        data-dynamic-repeater-field="{{ $subKey }}" value="{{ $isTemplate ? '' : (string) $subValue }}"
+                    <select name="{{ $inputName }}" data-name-template="{{ $nameTpl }}"
+                        data-dynamic-repeater-field="{{ $subKey }}"
                         @if ($subRequired) required @endif
                         class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                    <p class="mt-1.5 text-xs text-slate-400">
-                        {{ __('Option list configuration at sub-field level is coming in a future update.') }}
-                    </p>
+                        <option value="">{{ __('Select an option') }}</option>
+                        @foreach ($selectOptions as $option)
+                            <option value="{{ $option['value'] }}" @selected(! $isTemplate && (string) $subValue === (string) $option['value'])>
+                                {{ $option['label'] }}
+                            </option>
+                        @endforeach
+                    </select>
                 </div>
             @else
                 <div class="{{ $fieldWrapperClass }}" @if ($iconPanel) data-dynamic-repeater-icon-panel="{{ $iconPanel }}" @endif>

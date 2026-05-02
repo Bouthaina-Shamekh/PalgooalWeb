@@ -322,6 +322,20 @@
             return wrapper;
         }
 
+        function buildOptionsCell(name) {
+            const wrapper = document.createElement('td');
+            wrapper.className = 'py-2 pr-3';
+
+            const textarea = document.createElement('textarea');
+            textarea.name = name;
+            textarea.className = 'form-control form-control-sm min-w-48';
+            textarea.rows = 3;
+            textarea.placeholder = '1x1|Normal\n2x1|Wide';
+
+            wrapper.appendChild(textarea);
+            return wrapper;
+        }
+
         function addRow() {
             if (!tbody) {
                 return;
@@ -356,6 +370,9 @@
             typeTd.className = 'py-2 pr-3';
             typeTd.appendChild(buildTypeSelect('item_schema[' + rowIndex + '][type]', 'text'));
 
+            // Options cell, primarily used when the sub-field type is select.
+            const optionsTd = buildOptionsCell('item_schema[' + rowIndex + '][options]');
+
             // Required cell (unchecked by default)
             const requiredTd = buildCheckboxCell('item_schema[' + rowIndex + '][required]', false);
 
@@ -375,6 +392,7 @@
             tr.appendChild(keyTd);
             tr.appendChild(labelTd);
             tr.appendChild(typeTd);
+            tr.appendChild(optionsTd);
             tr.appendChild(requiredTd);
             tr.appendChild(translatableTd);
             tr.appendChild(removeTd);
