@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Language;
 use App\Models\Page;
+use App\Support\Tenancy\TenantThemeSettings;
 use App\Models\Section;
 use App\Models\SectionTranslation;
 use App\Models\Sections\SectionDefinition;
+use App\Models\Tenancy\Subscription;
 use App\Models\Template;
 use App\Support\Sections\DynamicSectionContentNormalizer;
 use App\Support\Sections\SectionEditorDataFactory;
@@ -660,6 +662,8 @@ class SectionController extends Controller
      */
     protected function workspaceViewData(Page $page): array
     {
+        $activeThemeSubscription = $this->resolveActiveThemeSubscription($page);
+
         return [
             'workspaceMode' => $this->workspaceMode(),
             'workspaceModeLabel' => $this->workspaceModeLabel(),
@@ -670,7 +674,53 @@ class SectionController extends Controller
             'workspaceFrontUrl' => $this->workspaceFrontUrl($page),
             'workspaceVisualBuilderUrl' => $this->workspaceVisualBuilderUrl($page),
             'workspaceBuilderModeUrl' => $this->workspaceBuilderModeUrl($page),
+            // Resolved from the page's tenant relationship so the preview iframe
+            // can load the correct tenant theme CSS even in admin builder context.
+            'activeThemeSubscription' => $activeThemeSubscription,
+            // Brand settings drawer — null when there is no associated subscription.
+            'brandSettingsUpdateUrl' => $this->workspaceBrandSettingsUpdateUrl($activeThemeSubscription),
+            'brandSettingsTheme' => $activeThemeSubscription !== null
+                ? TenantThemeSettings::fromArray(
+                    is_array($activeThemeSubscription->theme_settings) ? $activeThemeSubscription->theme_settings : []
+                )
+                : null,
         ];
+    }
+
+    /**
+     * Resolve the subscription whose theme CSS should be loaded in the
+     * preview iframe.
+     *
+     * Returns the Subscription linked via Page::tenant_id for tenant/client
+     * pages, or null for marketing pages that have no tenant owner.
+     *
+     * Client subclasses that already hold an explicit $workspaceSubscription
+     * override this via their own workspaceViewData() merge.
+     */
+    protected function resolveActiveThemeSubscription(Page $page): ?Subscription
+    {
+        $page->loadMissing('tenant');
+
+        return $page->tenant instanceof Subscription ? $page->tenant : null;
+    }
+
+    /**
+     * Return the URL to POST brand/theme settings to from the builder workspace.
+     *
+     * Returns null when there is no associated subscription (e.g. marketing pages).
+     * Client subclasses override this to use the client-scoped route.
+     */
+    protected function workspaceBrandSettingsUpdateUrl(?Subscription $subscription): ?string
+    {
+        if ($subscription === null) {
+            return null;
+        }
+
+        try {
+            return route('dashboard.subscriptions.theme.update', $subscription);
+        } catch (\Exception) {
+            return null;
+        }
     }
 
     /**

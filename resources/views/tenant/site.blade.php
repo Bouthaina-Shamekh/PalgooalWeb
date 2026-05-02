@@ -25,6 +25,10 @@
     >
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/tabler-icons.min.css') }}">
+    @php $tenantThemeCssUrl = \App\Services\Tenancy\TenantThemeCssGenerator::publicUrlFor($subscription); @endphp
+    @if ($tenantThemeCssUrl)
+        <link rel="stylesheet" href="{{ $tenantThemeCssUrl }}">
+    @endif
 </head>
 <body class="m-0 bg-white text-purple-brand overflow-x-hidden font-Cairo">
     <main>

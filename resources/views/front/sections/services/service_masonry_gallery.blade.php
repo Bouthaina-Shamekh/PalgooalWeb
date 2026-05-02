@@ -67,8 +67,8 @@
         ->values();
 
     $backgroundClass = match ($data['background_variant'] ?? 'white') {
-        'gray' => 'bg-gray-50',
-        default => 'bg-white',
+        'gray' => 'bg-gray-50 bg-theme-muted',
+        default => 'bg-white bg-theme-surface',
     };
 
     $galleryLayout = match ($data['gallery_layout'] ?? 'masonry_a') {
@@ -106,18 +106,18 @@
                     @if ($brandPrefix !== '' || $brandSuffix !== '')
                         <p class="text-lg md:text-xl">
                             @if ($brandPrefix !== '')
-                                <span class="text-red-brand">{{ $brandPrefix }}</span>
+                                <span class="text-red-brand text-theme-secondary">{{ $brandPrefix }}</span>
                             @endif
 
                             @if ($brandSuffix !== '')
-                                <span class="text-purple-brand">{{ $brandSuffix }}</span>
+                                <span class="text-purple-brand text-theme-primary">{{ $brandSuffix }}</span>
                             @endif
                         </p>
                     @endif
 
                     @if ($title !== '')
                         <h2 @class([
-                            'text-purple-brand font-extrabold uppercase leading-tight',
+                            'text-purple-brand text-theme-heading font-extrabold uppercase leading-tight',
                             'text-4xl md:text-[40px] mb-4' => $galleryLayout === 'masonry_a',
                             'text-3xl md:text-[40px] mb-4' => $galleryLayout === 'split_two',
                         ])>
@@ -126,7 +126,7 @@
                     @endif
 
                     @if ($description !== '')
-                        <p class="text-gray-dark text-lg leading-relaxed mb-4">
+                        <p class="text-gray-dark text-theme-body text-lg leading-relaxed mb-4">
                             {{ $description }}
                         </p>
                     @endif
@@ -138,7 +138,7 @@
                         ])>
                             @foreach ($services as $service)
                                 <li @class([
-                                    'flex gap-3 text-lg md:text-xl text-purple-brand',
+                                    'flex gap-3 text-lg md:text-xl text-purple-brand text-theme-heading',
                                     'items-center justify-start hover:text-red-brand transition-colors duration-300' => $galleryLayout === 'masonry_a',
                                     'items-start justify-start' => $galleryLayout === 'split_two',
                                 ])>
@@ -174,7 +174,7 @@
                         <a href="{{ $buttonUrl }}"
                             @if ($buttonNewTab) target="_blank" rel="noopener noreferrer" @endif
                             @class([
-                                'bg-red-brand text-white rounded-xl text-lg md:text-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300',
+                                'bg-red-brand bg-theme-secondary text-white rounded-xl text-lg md:text-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300',
                                 'px-14 py-4' => $galleryLayout === 'masonry_a',
                                 'md:px-14 md:py-4 px-6 py-3' => $galleryLayout === 'split_two',
                             ])>

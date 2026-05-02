@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\Management\OrderController as ManagementOrderCont
 use App\Http\Controllers\Admin\Management\PlanController;
 use App\Http\Controllers\Admin\Management\ServerController;
 use App\Http\Controllers\Admin\Management\SubscriptionController;
+use App\Http\Controllers\Admin\Management\SubscriptionThemeController;
 use App\Http\Controllers\Admin\Management\DomainProviderController;
 use App\Http\Controllers\Admin\Management\DomainTldController;
 use App\Http\Controllers\Admin\Management\PlanCategoryController;
@@ -414,6 +415,12 @@ Route::group([
 
     // Main resource (index/show/create/edit)
     Route::resource('/subscriptions', SubscriptionController::class)->names('subscriptions');
+
+    // Tenant theme editor
+    Route::get('/subscriptions/{subscription}/theme', [SubscriptionThemeController::class, 'edit'])
+        ->name('subscriptions.theme.edit');
+    Route::post('/subscriptions/{subscription}/theme', [SubscriptionThemeController::class, 'update'])
+        ->name('subscriptions.theme.update');
 
     // AJAX: username suggestion + uniqueness check
     Route::post(

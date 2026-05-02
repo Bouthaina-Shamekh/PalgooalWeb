@@ -2,13 +2,13 @@
     $sectionId = trim((string) ($data['section_id'] ?? 'tech-stack'));
 
     $backgroundClass = match ($data['background_variant'] ?? 'white') {
-        'gray' => 'bg-gray-50',
-        'purple' => 'bg-purple-brand',
-        'red' => 'bg-red-brand',
-        'dark' => 'bg-gray-950',
+        'gray'           => 'bg-gray-50 bg-theme-muted',
+        'purple'         => 'bg-purple-brand bg-theme-primary',
+        'red'            => 'bg-red-brand bg-theme-secondary',
+        'dark'           => 'bg-gray-950',
         'gradient_brand' => 'bg-gradient-to-br from-purple-brand to-red-brand',
-        'transparent' => 'bg-transparent',
-        default => 'bg-white',
+        'transparent'    => 'bg-transparent',
+        default          => 'bg-white bg-theme-surface',
     };
 
     $items = collect(is_array($data['items'] ?? null) ? $data['items'] : [])

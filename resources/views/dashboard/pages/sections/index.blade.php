@@ -405,6 +405,16 @@
         </div>
     </div>
 
+    {{-- Brand Settings drawer (only present when a subscription is associated) --}}
+    @if (! empty($brandSettingsUpdateUrl) && isset($brandSettingsTheme))
+        @include('dashboard.pages.sections.partials.brand-settings-drawer', [
+            'brandSettingsUpdateUrl' => $brandSettingsUpdateUrl,
+            'brandSettingsTheme'     => $brandSettingsTheme,
+            'isClientWorkspace'      => $isClientWorkspace,
+            'isRtl'                  => $isRtl,
+        ])
+    @endif
+
     <div id="section-library-overlay" class="fixed inset-0 z-[60] hidden bg-slate-950/55"></div>
     <aside id="section-library-drawer" data-closed-translate="{{ $drawerClosedTranslateClass }}"
         class="fixed inset-y-0 z-[61] flex w-full max-w-2xl flex-col border-slate-200 bg-white shadow-2xl transition-transform duration-200 {{ $isRtl ? 'left-0 border-r -translate-x-full' : 'right-0 border-l translate-x-full' }}"
@@ -656,6 +666,25 @@
                 {{ $bottomTipLabel }}
             </div>
         </div>
+
+        @if (! empty($brandSettingsUpdateUrl) && isset($brandSettingsTheme))
+            <div class="border-t border-slate-200 pt-4">
+                <button type="button" data-open-brand-settings
+                    class="group flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 rtl:flex-row-reverse">
+                    <span class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600 transition group-hover:bg-violet-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
+                        </svg>
+                    </span>
+                    <span class="flex-1 ltr:text-left rtl:text-right">
+                        {{ $isClientWorkspace ? __('Brand Settings') : __('Theme Settings') }}
+                    </span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0 text-slate-400 ltr:rotate-180 rtl:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
+                    </svg>
+                </button>
+            </div>
+        @endif
     </div>
 
     <div data-sections-sidebar-editor class="hidden h-full"></div>

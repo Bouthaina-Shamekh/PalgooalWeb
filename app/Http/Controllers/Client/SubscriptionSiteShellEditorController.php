@@ -9,6 +9,7 @@ use App\Models\Sections\SectionDefinition;
 use App\Support\Sections\ShellSectionEditorSupport;
 use App\Models\Tenancy\Subscription;
 use App\Services\Tenancy\TenantSiteShellService;
+use App\Support\Tenancy\TenantThemeSettings;
 use Illuminate\Http\Request;
 
 class SubscriptionSiteShellEditorController extends SectionController
@@ -248,11 +249,29 @@ class SubscriptionSiteShellEditorController extends SectionController
     protected function workspaceViewData(Page $page): array
     {
         return array_merge(parent::workspaceViewData($page), [
+            // Explicit: $workspaceSubscription is always known in this controller,
+            // so we pass it directly rather than relying on the page->tenant fallback.
+            'activeThemeSubscription' => $this->workspaceSubscription,
+            'brandSettingsUpdateUrl' => $this->workspaceBrandSettingsUpdateUrl($this->workspaceSubscription),
+            'brandSettingsTheme' => $this->workspaceSubscription !== null
+                ? TenantThemeSettings::fromArray(
+                    is_array($this->workspaceSubscription->theme_settings) ? $this->workspaceSubscription->theme_settings : []
+                )
+                : null,
             'workspaceContentLabel' => $this->workspaceShell === TenantSiteShellService::SHELL_FOOTER
                 ? __('You are editing your site footer')
                 : __('You are editing your site header'),
             'workspacePageSwitcher' => $this->workspacePageSwitcherData($page),
         ]);
+    }
+
+    protected function workspaceBrandSettingsUpdateUrl(?Subscription $subscription): ?string
+    {
+        if (! $this->workspaceSubscription instanceof Subscription) {
+            return null;
+        }
+
+        return route('client.subscriptions.brand-settings.update', $this->workspaceSubscription);
     }
 
     /**

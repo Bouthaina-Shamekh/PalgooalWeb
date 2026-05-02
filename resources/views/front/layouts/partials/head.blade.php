@@ -62,6 +62,20 @@
     <link rel="stylesheet" href="{{ route('frontend.assets.palgoals_marketing_footer_css') }}">
     <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/tabler-icons.min.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    @php
+        // Resolve the subscription whose theme CSS should be loaded.
+        // $activeThemeSubscription — set explicitly by builder/preview controllers.
+        // $tenantSubscription      — set by ServeTenantSite middleware for live tenant requests.
+        // $subscription            — available on tenant/site.blade.php and some client views.
+        $_themeSubscription = $activeThemeSubscription
+            ?? $tenantSubscription
+            ?? $subscription
+            ?? null;
+        $_themeCssUrl = \App\Services\Tenancy\TenantThemeCssGenerator::publicUrlFor($_themeSubscription);
+    @endphp
+    @if ($_themeCssUrl)
+        <link rel="stylesheet" href="{{ $_themeCssUrl }}">
+    @endif
 
     @stack('meta')
     @stack('styles')

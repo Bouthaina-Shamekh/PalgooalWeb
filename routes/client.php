@@ -9,6 +9,7 @@ use App\Http\Controllers\Client\SubscriptionHomepageEditorController;
 use App\Http\Controllers\Client\SubscriptionPageEditorController;
 use App\Http\Controllers\Client\SubscriptionController;
 use App\Http\Controllers\Client\SubscriptionSiteShellEditorController;
+use App\Http\Controllers\Client\SubscriptionThemeController;
 use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,6 +41,7 @@ Route::group([
 
     Route::get('subscriptions', [HomeController::class, 'subscriptions'])->name('subscriptions');
     Route::get('subscriptions/{subscription}/site', [SubscriptionController::class, 'site'])->name('subscriptions.site');
+    Route::post('subscriptions/{subscription}/brand-settings', [SubscriptionThemeController::class, 'update'])->name('subscriptions.brand-settings.update');
     Route::post('subscriptions/{subscription}/verify-domain', [SubscriptionController::class, 'verifyDomain'])->name('subscriptions.verify-domain');
     Route::get('subscriptions/{subscription}/content', [SubscriptionController::class, 'content'])->name('subscriptions.content');
     Route::get('subscriptions/{subscription}/pages', [SubscriptionPageEditorController::class, 'pages'])->name('subscriptions.pages');

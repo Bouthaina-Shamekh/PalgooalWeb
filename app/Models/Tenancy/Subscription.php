@@ -61,6 +61,7 @@ class Subscription extends Model
         'domain_verified_at',
         'domain_verification_error',
         'settings',
+        'theme_settings',
     ];
 
     protected $casts = [
@@ -73,6 +74,7 @@ class Subscription extends Model
         'domain_last_checked_at' => 'datetime',
         'domain_verified_at' => 'datetime',
         'settings' => 'array',
+        'theme_settings' => 'array',
     ];
 
     public function client(): BelongsTo
