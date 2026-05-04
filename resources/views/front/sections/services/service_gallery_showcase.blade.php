@@ -71,7 +71,7 @@
 
                 <!-- Title -->
                 @if ($title !== '')
-                    <h2 class="text-purple-brand font-extrabold text-4xl md:text-[40px] mb-2 uppercase leading-tight">
+                    <h2 class="text-purple-brand font-extrabold text-4xl md:text-[40px] mb-2 uppercase leading-tight font-theme-heading">
                         {{ $title }}
                     </h2>
                 @endif

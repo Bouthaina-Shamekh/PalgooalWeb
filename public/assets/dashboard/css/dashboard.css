@@ -3164,9 +3164,6 @@
   .bg-gray-700 {
     background-color: var(--color-gray-700);
   }
-  .bg-gray-900 {
-    background-color: var(--color-gray-900);
-  }
   .bg-gray-900\/20 {
     background-color: color-mix(in srgb, oklch(21% 0.034 264.665) 20%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -8201,11 +8198,6 @@
   .md\:col-span-12 {
     @media (width >= 48rem) {
       grid-column: span 12 / span 12;
-    }
-  }
-  .md\:row-span-2 {
-    @media (width >= 48rem) {
-      grid-row: span 2 / span 2;
     }
   }
   .md\:mt-0 {

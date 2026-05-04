@@ -19,7 +19,7 @@ class SectionWorkspacePreviewViewDataFactory
         iterable $previewTemplates = [],
         int $highlightSectionId = 0,
     ): array {
-        $page->loadMissing(['translations', 'tenant']);
+        $page->loadMissing(['translations', 'tenant', 'subscription']);
 
         $previewSections = Collection::make($sections)
             ->filter(fn ($section) => $section instanceof Section)
@@ -64,7 +64,7 @@ class SectionWorkspacePreviewViewDataFactory
      */
     protected function resolveTenantPreviewData(Page $page, bool $isTenantPagePreview): array
     {
-        $tenantSubscription = $page->tenant instanceof Subscription ? $page->tenant : null;
+        $tenantSubscription = $this->resolveTenantSubscription($page);
         $tenantNavigationPages = collect();
         $tenantHeaderPage = null;
         $tenantFooterPage = null;
@@ -92,6 +92,19 @@ class SectionWorkspacePreviewViewDataFactory
             'header' => $this->buildTenantRenderData($tenantHeaderPage, $tenantSubscription, $tenantNavigationPages),
             'footer' => $this->buildTenantRenderData($tenantFooterPage, $tenantSubscription, $tenantNavigationPages),
         ];
+    }
+
+    protected function resolveTenantSubscription(Page $page): ?Subscription
+    {
+        if ($page->tenant_id !== null && $page->tenant instanceof Subscription) {
+            return $page->tenant;
+        }
+
+        if ($page->subscription_id !== null && $page->subscription instanceof Subscription) {
+            return $page->subscription;
+        }
+
+        return null;
     }
 
     /**

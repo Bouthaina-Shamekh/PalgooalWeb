@@ -49,7 +49,7 @@
             @if ($title !== '' || $subtitle !== '')
                 <div class="mb-16">
                     @if ($title !== '')
-                        <h2 class="text-2xl md:text-3xl font-extrabold mb-2">
+                        <h2 class="text-2xl md:text-3xl font-extrabold mb-2 font-theme-heading">
                             {{ $title }}
                         </h2>
                     @endif

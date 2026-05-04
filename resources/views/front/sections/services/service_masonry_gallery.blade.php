@@ -117,7 +117,7 @@
 
                     @if ($title !== '')
                         <h2 @class([
-                            'text-purple-brand text-theme-heading font-extrabold uppercase leading-tight',
+                            'text-purple-brand text-theme-heading font-theme-heading font-extrabold uppercase leading-tight',
                             'text-4xl md:text-[40px] mb-4' => $galleryLayout === 'masonry_a',
                             'text-3xl md:text-[40px] mb-4' => $galleryLayout === 'split_two',
                         ])>

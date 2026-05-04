@@ -9,10 +9,34 @@ namespace App\Support\Tenancy;
  *  - Colors   : primary, secondary, surface, muted, heading, body, border
  *  - Typography: font_primary, font_heading, base_font_size, weight_normal, weight_bold
  *  - Shape    : radius_sm, radius_md, radius_lg, radius_xl
- *  - Buttons  : button_radius, button_style (filled | outline | ghost)
+ *  - Buttons  : button_radius, button_style (filled | outline | ghost),
+ *               button_bg_color, button_text_color,
+ *               button_hover_bg_color, button_hover_text_color
  */
 final class TenantThemeSettings
 {
+    // -----------------------------------------------------------------------
+    // Curated font list — label → CSS font-family value
+    // -----------------------------------------------------------------------
+
+    /**
+     * Allowed font families exposed to the UI.
+     * Key   = human-readable label shown in the select dropdown.
+     * Value = the CSS font-family string saved to storage.
+     */
+    public const ALLOWED_FONTS = [
+        'Inter'                 => 'Inter, sans-serif',
+        'Cairo'                 => 'Cairo, sans-serif',
+        'Tajawal'               => 'Tajawal, sans-serif',
+        'Poppins'               => 'Poppins, sans-serif',
+        'Roboto'                => 'Roboto, sans-serif',
+        'Montserrat'            => 'Montserrat, sans-serif',
+        'Noto Sans Arabic'      => 'Noto Sans Arabic, sans-serif',
+        'Noto Kufi Arabic'      => 'Noto Kufi Arabic, sans-serif',
+        'IBM Plex Sans Arabic'  => 'IBM Plex Sans Arabic, sans-serif',
+        'Almarai'               => 'Almarai, sans-serif',
+    ];
+
     // -----------------------------------------------------------------------
     // Color tokens
     // -----------------------------------------------------------------------
@@ -45,7 +69,19 @@ final class TenantThemeSettings
     // Button tokens
     // -----------------------------------------------------------------------
     public readonly string $buttonRadius;
-    public readonly string $buttonStyle;   // filled | outline | ghost
+    public readonly string $buttonStyle;           // filled | outline | ghost
+
+    /** Explicit button background color (replaces reliance on color_primary). */
+    public readonly string $buttonBgColor;
+
+    /** Explicit button text / foreground color. */
+    public readonly string $buttonTextColor;
+
+    /** Button background color on hover. */
+    public readonly string $buttonHoverBgColor;
+
+    /** Button text color on hover. */
+    public readonly string $buttonHoverTextColor;
 
     // -----------------------------------------------------------------------
     // Defaults
@@ -73,15 +109,25 @@ final class TenantThemeSettings
         'radius_lg'        => '0.75rem',   // 12 px
         'radius_xl'        => '1rem',      // 16 px
 
-        // Buttons
+        // Buttons — style
         'button_radius'    => '0.5rem',
         'button_style'     => 'filled',
+
+        // Buttons — explicit colors
+        // Default intentionally matches color_primary / white so existing
+        // subscriptions that haven't saved these tokens yet render identically
+        // to the previous behaviour.
+        'button_bg_color'         => '#7c3aed',  // violet-600 (= color_primary default)
+        'button_text_color'       => '#ffffff',
+        'button_hover_bg_color'   => '#6d28d9',  // violet-700 (darker hover)
+        'button_hover_text_color' => '#ffffff',
     ];
 
     private function __construct(array $data)
     {
         $d = array_merge(self::DEFAULTS, $data);
 
+        // Colors
         $this->colorPrimary   = $this->sanitizeHex($d['color_primary'],   self::DEFAULTS['color_primary']);
         $this->colorSecondary = $this->sanitizeHex($d['color_secondary'],  self::DEFAULTS['color_secondary']);
         $this->colorSurface   = $this->sanitizeHex($d['color_surface'],    self::DEFAULTS['color_surface']);
@@ -90,21 +136,30 @@ final class TenantThemeSettings
         $this->colorBody      = $this->sanitizeHex($d['color_body'],       self::DEFAULTS['color_body']);
         $this->colorBorder    = $this->sanitizeHex($d['color_border'],     self::DEFAULTS['color_border']);
 
+        // Typography
         $this->fontPrimary  = $this->sanitizeFont($d['font_primary'],  self::DEFAULTS['font_primary']);
         $this->fontHeading  = $this->sanitizeFont($d['font_heading'],  self::DEFAULTS['font_heading']);
         $this->baseFontSize = $this->sanitizeCssSize($d['base_font_size'], self::DEFAULTS['base_font_size']);
         $this->weightNormal = $this->sanitizeFontWeight($d['weight_normal'], self::DEFAULTS['weight_normal']);
         $this->weightBold   = $this->sanitizeFontWeight($d['weight_bold'],   self::DEFAULTS['weight_bold']);
 
+        // Shape
         $this->radiusSm = $this->sanitizeCssSize($d['radius_sm'], self::DEFAULTS['radius_sm']);
         $this->radiusMd = $this->sanitizeCssSize($d['radius_md'], self::DEFAULTS['radius_md']);
         $this->radiusLg = $this->sanitizeCssSize($d['radius_lg'], self::DEFAULTS['radius_lg']);
         $this->radiusXl = $this->sanitizeCssSize($d['radius_xl'], self::DEFAULTS['radius_xl']);
 
+        // Buttons — style
         $this->buttonRadius = $this->sanitizeCssSize($d['button_radius'], self::DEFAULTS['button_radius']);
         $this->buttonStyle  = in_array($d['button_style'], ['filled', 'outline', 'ghost'], true)
             ? $d['button_style']
             : self::DEFAULTS['button_style'];
+
+        // Buttons — explicit colors
+        $this->buttonBgColor         = $this->sanitizeHex($d['button_bg_color'],         self::DEFAULTS['button_bg_color']);
+        $this->buttonTextColor       = $this->sanitizeHex($d['button_text_color'],       self::DEFAULTS['button_text_color']);
+        $this->buttonHoverBgColor    = $this->sanitizeHex($d['button_hover_bg_color'],   self::DEFAULTS['button_hover_bg_color']);
+        $this->buttonHoverTextColor  = $this->sanitizeHex($d['button_hover_text_color'], self::DEFAULTS['button_hover_text_color']);
     }
 
     // -----------------------------------------------------------------------
@@ -122,12 +177,27 @@ final class TenantThemeSettings
     }
 
     // -----------------------------------------------------------------------
+    // Font helpers
+    // -----------------------------------------------------------------------
+
+    /**
+     * Returns only the CSS font-family values (suitable for Rule::in validation).
+     *
+     * @return list<string>
+     */
+    public static function allowedFontValues(): array
+    {
+        return array_values(self::ALLOWED_FONTS);
+    }
+
+    // -----------------------------------------------------------------------
     // Serialisation
     // -----------------------------------------------------------------------
 
     public function toArray(): array
     {
         return [
+            // Colors
             'color_primary'   => $this->colorPrimary,
             'color_secondary' => $this->colorSecondary,
             'color_surface'   => $this->colorSurface,
@@ -136,19 +206,28 @@ final class TenantThemeSettings
             'color_body'      => $this->colorBody,
             'color_border'    => $this->colorBorder,
 
+            // Typography
             'font_primary'    => $this->fontPrimary,
             'font_heading'    => $this->fontHeading,
             'base_font_size'  => $this->baseFontSize,
             'weight_normal'   => $this->weightNormal,
             'weight_bold'     => $this->weightBold,
 
+            // Shape
             'radius_sm'       => $this->radiusSm,
             'radius_md'       => $this->radiusMd,
             'radius_lg'       => $this->radiusLg,
             'radius_xl'       => $this->radiusXl,
 
+            // Buttons — style
             'button_radius'   => $this->buttonRadius,
             'button_style'    => $this->buttonStyle,
+
+            // Buttons — explicit colors
+            'button_bg_color'         => $this->buttonBgColor,
+            'button_text_color'       => $this->buttonTextColor,
+            'button_hover_bg_color'   => $this->buttonHoverBgColor,
+            'button_hover_text_color' => $this->buttonHoverTextColor,
         ];
     }
 
@@ -171,13 +250,28 @@ final class TenantThemeSettings
         return $fallback;
     }
 
+    /**
+     * Validates the font value.
+     *
+     * New saves are forced through the curated list via request validation.
+     * Here we also accept any previously-saved value that passes the safe
+     * character regex so existing subscriptions are not broken.
+     */
     private function sanitizeFont(mixed $value, string $fallback): string
     {
         $v = trim((string) $value);
-        // Allow letters, digits, spaces, commas, hyphens, apostrophes, and quotes
+
+        // Preferred: value is in the curated allow-list
+        if (in_array($v, self::ALLOWED_FONTS, true)) {
+            return $v;
+        }
+
+        // Legacy safety net: allow previously-saved font strings that are
+        // structurally safe even if not in the curated list
         if ($v !== '' && preg_match('/^[a-zA-Z0-9 ,\-\'\"]+$/', $v)) {
             return $v;
         }
+
         return $fallback;
     }
 

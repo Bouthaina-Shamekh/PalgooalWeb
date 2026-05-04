@@ -60,7 +60,7 @@
 
                 <!-- Title -->
                 @if ($title !== '')
-                    <h2 class="text-purple-brand font-extrabold text-4xl md:text-[40px] mb-1 uppercase leading-tight">
+                    <h2 class="text-purple-brand font-extrabold text-4xl md:text-[40px] mb-1 uppercase leading-tight font-theme-heading">
                         {{ $title }}
                     </h2>
                 @endif
@@ -75,7 +75,7 @@
                 <!-- Outputs Subsection -->
                 <div class="w-full mb-8">
                     @if ($outputs_title !== '')
-                        <h3 class="text-purple-brand text-xl font-bold mb-4 text-start">
+                        <h3 class="text-purple-brand text-xl font-bold mb-4 text-start font-theme-heading">
                             {{ $outputs_title }}
                         </h3>
                     @endif

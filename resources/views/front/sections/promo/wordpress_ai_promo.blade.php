@@ -26,7 +26,7 @@
                     <p class="text-red-brand font-bold text-lg md:text-xl uppercase mb-4">{{ $data['eyebrow'] }}</p>
                 @endif
                 @if (!empty($data['title']))
-                    <h2 class="text-purple-brand font-extrabold text-2xl md:text-[40px] leading-tight uppercase mb-6">
+                    <h2 class="text-purple-brand font-extrabold text-2xl md:text-[40px] leading-tight uppercase mb-6 font-theme-heading">
                         {{ $data['title'] }}</h2>
                 @endif
                 <ul class="space-y-3 mb-8">

@@ -52,7 +52,7 @@
         <div class="grid grid-cols-1 items-center gap-8 py-12 md:py-14 lg:grid-cols-12">
             <div class="animate-from-left lg:col-span-7">
                 @if ($title !== '')
-                    <h1 class="mb-4 text-3xl font-extrabold uppercase text-white md:text-4xl lg:text-[40px]">
+                    <h1 class="mb-4 text-3xl font-extrabold uppercase text-white md:text-4xl lg:text-[40px] font-theme-heading">
                         {{ $title }}
                     </h1>
                 @endif

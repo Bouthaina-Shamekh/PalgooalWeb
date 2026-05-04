@@ -32,7 +32,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-18 items-center">
                 <div class="order-2 lg:order-1 md:col-span-3">
                     @if ($title !== '')
-                        <h2 class="text-red-brand font-bold text-xl md:text-[25px]">
+                        <h2 class="text-red-brand font-bold text-xl md:text-[25px] font-theme-heading">
                             {{ $title }}
                         </h2>
                     @endif

@@ -6,7 +6,7 @@
 <section id="hosting-faq" class="bg-[#F8F8F8] py-16 md:py-24 px-4 sm:px-6 lg:px-12">
     <div class="container mx-auto">
         @if (!empty($data['title']))
-            <h2 class="text-purple-brand font-extrabold text-3xl md:text-4xl lg:text-[40px] text-center uppercase mb-0 animate-from-up">
+            <h2 class="text-purple-brand font-extrabold text-3xl md:text-4xl lg:text-[40px] text-center uppercase mb-0 animate-from-up font-theme-heading">
                 {{ $data['title'] }}
             </h2>
         @endif

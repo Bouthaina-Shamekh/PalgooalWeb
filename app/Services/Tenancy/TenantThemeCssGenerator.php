@@ -157,10 +157,21 @@ class TenantThemeCssGenerator
         $lines[] = "  --theme-radius-lg:       {$t->radiusLg};";
         $lines[] = "  --theme-radius-xl:       {$t->radiusXl};";
 
-        // Buttons
+        // Buttons — style token
         $lines[] = "";
         $lines[] = "  /* --- Buttons --- */";
-        $lines[] = "  --theme-button-radius:   {$t->buttonRadius};";
+        $lines[] = "  --theme-button-radius:       {$t->buttonRadius};";
+
+        // Buttons — explicit color tokens
+        // These are the primary source of truth for button colors.
+        // They intentionally default to the primary color values so that
+        // existing subscriptions that have not saved these tokens yet
+        // render identically to the previous behaviour.
+        $lines[] = "  --theme-button-bg:           {$t->buttonBgColor};";
+        $lines[] = "  --theme-button-text:         {$t->buttonTextColor};";
+        $lines[] = "  --theme-button-hover-bg:     {$t->buttonHoverBgColor};";
+        $lines[] = "  --theme-button-hover-text:   {$t->buttonHoverTextColor};";
+
         $lines[] = '}';
         $lines[] = '';
 
@@ -194,103 +205,104 @@ class TenantThemeCssGenerator
         $lines[] = '';
 
         // ------------------------------------------------------------------
-        // 5. Button utilities (style-dependent)
+        // 5. Button utilities
+        //
+        // All button styles now use the explicit --theme-button-* color tokens
+        // rather than colour_primary / color_secondary directly.
+        //
+        // button_style controls the border treatment (filled / outline / ghost);
+        // button_bg_color / button_text_color / hover variants control the paint.
+        //
+        // .btn-theme-secondary is kept for backwards compatibility but mirrors
+        // the same token-driven approach.
         // ------------------------------------------------------------------
         $lines[] = '/* --- Button utilities --- */';
 
+        // Shared typography / shape declarations (same for all styles)
+        $sharedProps = implode("\n", [
+            '  display: inline-flex; align-items: center; justify-content: center;',
+            '  border-radius: var(--theme-button-radius);',
+            '  font-family: var(--theme-font-primary);',
+            '  font-weight: var(--theme-weight-bold);',
+            '  padding: 0.625rem 1.5rem;',
+            '  cursor: pointer; text-decoration: none;',
+        ]);
+
         if ($t->buttonStyle === 'filled') {
+            // ── Filled ─────────────────────────────────────────────────────
             $lines[] = '.btn-theme-primary {';
-            $lines[] = '  display: inline-flex; align-items: center; justify-content: center;';
-            $lines[] = '  background-color: var(--theme-color-primary);';
-            $lines[] = '  color: #ffffff;';
+            $lines[] = $sharedProps;
+            $lines[] = '  background-color: var(--theme-button-bg);';
+            $lines[] = '  color: var(--theme-button-text);';
             $lines[] = '  border: 2px solid transparent;';
-            $lines[] = '  border-radius: var(--theme-button-radius);';
-            $lines[] = '  font-family: var(--theme-font-primary);';
-            $lines[] = '  font-weight: var(--theme-weight-bold);';
-            $lines[] = '  padding: 0.625rem 1.5rem;';
-            $lines[] = '  transition: opacity 0.15s ease, transform 0.1s ease;';
-            $lines[] = '  cursor: pointer; text-decoration: none;';
+            $lines[] = '  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;';
             $lines[] = '}';
-            $lines[] = '.btn-theme-primary:hover { opacity: 0.88; }';
+            $lines[] = '.btn-theme-primary:hover {';
+            $lines[] = '  background-color: var(--theme-button-hover-bg);';
+            $lines[] = '  color: var(--theme-button-hover-text);';
+            $lines[] = '}';
             $lines[] = '.btn-theme-primary:active { transform: scale(0.97); }';
 
             $lines[] = '';
             $lines[] = '.btn-theme-secondary {';
-            $lines[] = '  display: inline-flex; align-items: center; justify-content: center;';
+            $lines[] = $sharedProps;
             $lines[] = '  background-color: var(--theme-color-secondary);';
             $lines[] = '  color: #ffffff;';
             $lines[] = '  border: 2px solid transparent;';
-            $lines[] = '  border-radius: var(--theme-button-radius);';
-            $lines[] = '  font-family: var(--theme-font-primary);';
-            $lines[] = '  font-weight: var(--theme-weight-bold);';
-            $lines[] = '  padding: 0.625rem 1.5rem;';
             $lines[] = '  transition: opacity 0.15s ease, transform 0.1s ease;';
-            $lines[] = '  cursor: pointer; text-decoration: none;';
             $lines[] = '}';
             $lines[] = '.btn-theme-secondary:hover { opacity: 0.88; }';
             $lines[] = '.btn-theme-secondary:active { transform: scale(0.97); }';
 
         } elseif ($t->buttonStyle === 'outline') {
+            // ── Outline ────────────────────────────────────────────────────
             $lines[] = '.btn-theme-primary {';
-            $lines[] = '  display: inline-flex; align-items: center; justify-content: center;';
+            $lines[] = $sharedProps;
             $lines[] = '  background-color: transparent;';
-            $lines[] = '  color: var(--theme-color-primary);';
-            $lines[] = '  border: 2px solid var(--theme-color-primary);';
-            $lines[] = '  border-radius: var(--theme-button-radius);';
-            $lines[] = '  font-family: var(--theme-font-primary);';
-            $lines[] = '  font-weight: var(--theme-weight-bold);';
-            $lines[] = '  padding: 0.625rem 1.5rem;';
+            $lines[] = '  color: var(--theme-button-bg);';
+            $lines[] = '  border: 2px solid var(--theme-button-bg);';
             $lines[] = '  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;';
-            $lines[] = '  cursor: pointer; text-decoration: none;';
             $lines[] = '}';
-            $lines[] = '.btn-theme-primary:hover { background-color: var(--theme-color-primary); color: #ffffff; }';
+            $lines[] = '.btn-theme-primary:hover {';
+            $lines[] = '  background-color: var(--theme-button-hover-bg);';
+            $lines[] = '  color: var(--theme-button-hover-text);';
+            $lines[] = '  border-color: var(--theme-button-hover-bg);';
+            $lines[] = '}';
             $lines[] = '.btn-theme-primary:active { transform: scale(0.97); }';
 
             $lines[] = '';
             $lines[] = '.btn-theme-secondary {';
-            $lines[] = '  display: inline-flex; align-items: center; justify-content: center;';
+            $lines[] = $sharedProps;
             $lines[] = '  background-color: transparent;';
             $lines[] = '  color: var(--theme-color-secondary);';
             $lines[] = '  border: 2px solid var(--theme-color-secondary);';
-            $lines[] = '  border-radius: var(--theme-button-radius);';
-            $lines[] = '  font-family: var(--theme-font-primary);';
-            $lines[] = '  font-weight: var(--theme-weight-bold);';
-            $lines[] = '  padding: 0.625rem 1.5rem;';
             $lines[] = '  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;';
-            $lines[] = '  cursor: pointer; text-decoration: none;';
             $lines[] = '}';
             $lines[] = '.btn-theme-secondary:hover { background-color: var(--theme-color-secondary); color: #ffffff; }';
             $lines[] = '.btn-theme-secondary:active { transform: scale(0.97); }';
 
         } else {
-            // ghost
+            // ── Ghost ──────────────────────────────────────────────────────
             $lines[] = '.btn-theme-primary {';
-            $lines[] = '  display: inline-flex; align-items: center; justify-content: center;';
+            $lines[] = $sharedProps;
             $lines[] = '  background-color: transparent;';
-            $lines[] = '  color: var(--theme-color-primary);';
+            $lines[] = '  color: var(--theme-button-bg);';
             $lines[] = '  border: 2px solid transparent;';
-            $lines[] = '  border-radius: var(--theme-button-radius);';
-            $lines[] = '  font-family: var(--theme-font-primary);';
-            $lines[] = '  font-weight: var(--theme-weight-bold);';
-            $lines[] = '  padding: 0.625rem 1.5rem;';
-            $lines[] = '  transition: background-color 0.15s ease, transform 0.1s ease;';
-            $lines[] = '  cursor: pointer; text-decoration: none;';
+            $lines[] = '  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;';
             $lines[] = '}';
-            $lines[] = '.btn-theme-primary:hover { background-color: color-mix(in srgb, var(--theme-color-primary) 10%, transparent); }';
+            $lines[] = '.btn-theme-primary:hover {';
+            $lines[] = '  background-color: color-mix(in srgb, var(--theme-button-hover-bg) 12%, transparent);';
+            $lines[] = '  color: var(--theme-button-hover-text);';
+            $lines[] = '}';
             $lines[] = '.btn-theme-primary:active { transform: scale(0.97); }';
 
             $lines[] = '';
             $lines[] = '.btn-theme-secondary {';
-            $lines[] = '  display: inline-flex; align-items: center; justify-content: center;';
+            $lines[] = $sharedProps;
             $lines[] = '  background-color: transparent;';
             $lines[] = '  color: var(--theme-color-secondary);';
             $lines[] = '  border: 2px solid transparent;';
-            $lines[] = '  border-radius: var(--theme-button-radius);';
-            $lines[] = '  font-family: var(--theme-font-primary);';
-            $lines[] = '  font-weight: var(--theme-weight-bold);';
-            $lines[] = '  padding: 0.625rem 1.5rem;';
             $lines[] = '  transition: background-color 0.15s ease, transform 0.1s ease;';
-            $lines[] = '  cursor: pointer; text-decoration: none;';
             $lines[] = '}';
             $lines[] = '.btn-theme-secondary:hover { background-color: color-mix(in srgb, var(--theme-color-secondary) 10%, transparent); }';
             $lines[] = '.btn-theme-secondary:active { transform: scale(0.97); }';
@@ -303,6 +315,7 @@ class TenantThemeCssGenerator
         // ------------------------------------------------------------------
         $lines[] = '/* --- Typography base --- */';
         $lines[] = '.font-theme-primary { font-family: var(--theme-font-primary) !important; }';
+        $lines[] = '.font-theme-body    { font-family: var(--theme-font-primary) !important; }';
         $lines[] = '.font-theme-heading { font-family: var(--theme-font-heading) !important; }';
         $lines[] = '';
 

@@ -55,7 +55,7 @@
 
             <!-- Subtitle -->
             @if ($subtitle !== '')
-                <h2 class="text-purple-brand font-bold text-2xl md:text-3xl mb-2">
+                <h2 class="text-purple-brand font-bold text-2xl md:text-3xl mb-2 font-theme-heading">
                     {{ $subtitle }}
                 </h2>
             @endif
@@ -69,7 +69,7 @@
 
             <!-- Campaign Features Title -->
             @if ($feature_list_title !== '')
-                <h3 class="font-bold text-lg md:text-2xl mb-4 text-start">
+                <h3 class="font-bold text-lg md:text-2xl mb-4 text-start font-theme-heading">
                     {{ $feature_list_title }}
                 </h3>
             @endif

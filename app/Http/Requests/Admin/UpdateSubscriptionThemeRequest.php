@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Support\Tenancy\TenantThemeSettings;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,13 +15,15 @@ class UpdateSubscriptionThemeRequest extends FormRequest
 
     public function rules(): array
     {
-        $hexRule = ['nullable', 'string', 'regex:/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/'];
-        $sizeRule = ['nullable', 'string', 'regex:/^\d+(\.\d+)?(px|rem|em|%)$|^0$/'];
-        $fontRule = ['nullable', 'string', 'max:120', 'regex:/^[a-zA-Z0-9 ,\-\'\"]+$/'];
+        $hexRule    = ['nullable', 'string', 'regex:/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/'];
+        $sizeRule   = ['nullable', 'string', 'regex:/^\d+(\.\d+)?(px|rem|em|%)$|^0$/'];
         $weightRule = ['nullable', 'string', Rule::in([
             '100','200','300','400','500','600','700','800','900',
             'thin','extralight','light','normal','medium','semibold','bold','extrabold','black',
         ])];
+
+        // Font inputs are now select dropdowns; restrict to the curated list.
+        $fontRule = ['nullable', 'string', Rule::in(TenantThemeSettings::allowedFontValues())];
 
         return [
             // Colors
@@ -45,9 +48,15 @@ class UpdateSubscriptionThemeRequest extends FormRequest
             'radius_lg'       => $sizeRule,
             'radius_xl'       => $sizeRule,
 
-            // Buttons
+            // Buttons — style
             'button_radius'   => $sizeRule,
             'button_style'    => ['nullable', 'string', Rule::in(['filled', 'outline', 'ghost'])],
+
+            // Buttons — explicit colors
+            'button_bg_color'         => $hexRule,
+            'button_text_color'       => $hexRule,
+            'button_hover_bg_color'   => $hexRule,
+            'button_hover_text_color' => $hexRule,
         ];
     }
 
@@ -55,6 +64,8 @@ class UpdateSubscriptionThemeRequest extends FormRequest
     {
         return [
             '*.regex' => 'The :attribute field has an invalid format.',
+            'font_primary.in'  => 'Please select a font from the available list.',
+            'font_heading.in'  => 'Please select a font from the available list.',
         ];
     }
 
@@ -64,12 +75,19 @@ class UpdateSubscriptionThemeRequest extends FormRequest
     public function themeData(): array
     {
         return array_filter($this->only([
+            // Colors
             'color_primary', 'color_secondary', 'color_surface',
             'color_muted', 'color_heading', 'color_body', 'color_border',
+            // Typography
             'font_primary', 'font_heading', 'base_font_size',
             'weight_normal', 'weight_bold',
+            // Shape
             'radius_sm', 'radius_md', 'radius_lg', 'radius_xl',
+            // Buttons — style
             'button_radius', 'button_style',
+            // Buttons — explicit colors
+            'button_bg_color', 'button_text_color',
+            'button_hover_bg_color', 'button_hover_text_color',
         ]), fn ($v) => $v !== null);
     }
 }

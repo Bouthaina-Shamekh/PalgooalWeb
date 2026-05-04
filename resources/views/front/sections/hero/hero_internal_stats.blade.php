@@ -43,7 +43,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center ">
             <div class="lg:col-span-7">
                 @if (!empty($title))
-                    <h1 class="text-white font-extrabold text-3xl md:text-4xl lg:text-[40px] mb-1 uppercase mb-4">
+                    <h1 class="text-white font-extrabold text-3xl md:text-4xl lg:text-[40px] mb-1 uppercase mb-4 font-theme-heading">
                         {{ $title }}
                     </h1>
                 @endif

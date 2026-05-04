@@ -674,8 +674,8 @@ class SectionController extends Controller
             'workspaceFrontUrl' => $this->workspaceFrontUrl($page),
             'workspaceVisualBuilderUrl' => $this->workspaceVisualBuilderUrl($page),
             'workspaceBuilderModeUrl' => $this->workspaceBuilderModeUrl($page),
-            // Resolved from the page's tenant relationship so the preview iframe
-            // can load the correct tenant theme CSS even in admin builder context.
+            // Resolved explicitly from the page ownership columns so the preview
+            // iframe can load the correct tenant theme CSS in admin context.
             'activeThemeSubscription' => $activeThemeSubscription,
             // Brand settings drawer — null when there is no associated subscription.
             'brandSettingsUpdateUrl' => $this->workspaceBrandSettingsUpdateUrl($activeThemeSubscription),
@@ -691,17 +691,26 @@ class SectionController extends Controller
      * Resolve the subscription whose theme CSS should be loaded in the
      * preview iframe.
      *
-     * Returns the Subscription linked via Page::tenant_id for tenant/client
-     * pages, or null for marketing pages that have no tenant owner.
+     * Returns the Subscription linked through the canonical Page::tenant_id
+     * owner. Falls back to Page::subscription_id only for older tenant pages
+     * that still use that documented legacy linkage.
      *
      * Client subclasses that already hold an explicit $workspaceSubscription
      * override this via their own workspaceViewData() merge.
      */
     protected function resolveActiveThemeSubscription(Page $page): ?Subscription
     {
-        $page->loadMissing('tenant');
+        $page->loadMissing(['tenant', 'subscription']);
 
-        return $page->tenant instanceof Subscription ? $page->tenant : null;
+        if ($page->tenant_id !== null && $page->tenant instanceof Subscription) {
+            return $page->tenant;
+        }
+
+        if ($page->subscription_id !== null && $page->subscription instanceof Subscription) {
+            return $page->subscription;
+        }
+
+        return null;
     }
 
     /**

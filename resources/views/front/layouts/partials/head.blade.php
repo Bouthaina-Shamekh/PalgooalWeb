@@ -81,4 +81,4 @@
     @stack('styles')
 </head>
 
-<body x-data="languageSwitcher()" class="m-0 bg-white text-purple-brand overflow-x-hidden">
+<body x-data="languageSwitcher()" class="m-0 bg-white text-purple-brand overflow-x-hidden font-theme-body">

@@ -37,7 +37,7 @@
 
         @if ($title !== '')
             <h2
-                class="text-purple-brand font-extrabold text-3xl md:text-4xl lg:text-[40px] text-center uppercase mb-4 animate-from-up">
+                class="text-purple-brand font-extrabold text-3xl md:text-4xl lg:text-[40px] text-center uppercase mb-4 animate-from-up font-theme-heading">
                 {{ $title }}
             </h2>
         @endif
@@ -73,7 +73,7 @@
                         </div>
 
                         @if ($card['title'] !== '')
-                            <h3 class="text-purple-brand font-bold text-lg md:text-xl mb-2">
+                            <h3 class="text-purple-brand font-bold text-lg md:text-xl mb-2 font-theme-heading">
                                 {{ $card['title'] }}
                             </h3>
                         @endif

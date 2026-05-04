@@ -5,7 +5,7 @@
     brand / theme tokens without leaving the builder.
 
     Required variables (passed from index.blade.php):
-      $brandSettingsUpdateUrl  string             POST target
+      $brandSettingsUpdateUrl  string               POST target
       $brandSettingsTheme      TenantThemeSettings  current saved values
       $isClientWorkspace       bool
       $isRtl                   bool
@@ -24,14 +24,40 @@
     regardless of when it enters the DOM.
 --}}
 @php
-    /** @var \App\Support\Tenancy\TenantThemeSettings $brandSettingsTheme */
+    use App\Support\Tenancy\TenantThemeSettings;
+
+    /** @var TenantThemeSettings $brandSettingsTheme */
     $t = $brandSettingsTheme;
+
     $drawerTitle        = $isClientWorkspace ? __('Brand Settings') : __('Theme Settings');
     $drawerDescription  = $isClientWorkspace
         ? __('Customise your site colours, fonts and button style.')
         : __('Configure tenant theme tokens. Changes regenerate the CSS file immediately.');
-    $saveLabel          = __('Save Changes');
-    $cancelLabel        = __('Cancel');
+    $saveLabel   = __('Save Changes');
+    $cancelLabel = __('Cancel');
+
+    // ── Font options ─────────────────────────────────────────────────────────
+    // Build label => CSS-value pairs from the value object's curated list.
+    $allowedFonts = TenantThemeSettings::ALLOWED_FONTS;
+
+    // ── Color fields ─────────────────────────────────────────────────────────
+    $colorFields = [
+        ['key' => 'color_primary',   'value' => $t->colorPrimary,   'label' => __('Primary')],
+        ['key' => 'color_secondary', 'value' => $t->colorSecondary, 'label' => __('Secondary')],
+        ['key' => 'color_heading',   'value' => $t->colorHeading,   'label' => __('Heading text')],
+        ['key' => 'color_body',      'value' => $t->colorBody,      'label' => __('Body text')],
+        ['key' => 'color_surface',   'value' => $t->colorSurface,   'label' => __('Surface / card')],
+        ['key' => 'color_muted',     'value' => $t->colorMuted,     'label' => __('Muted background')],
+        ['key' => 'color_border',    'value' => $t->colorBorder,    'label' => __('Border')],
+    ];
+
+    // ── Button color fields ───────────────────────────────────────────────────
+    $buttonColorFields = [
+        ['key' => 'button_bg_color',         'value' => $t->buttonBgColor,         'label' => __('Button background')],
+        ['key' => 'button_text_color',       'value' => $t->buttonTextColor,       'label' => __('Button text')],
+        ['key' => 'button_hover_bg_color',   'value' => $t->buttonHoverBgColor,   'label' => __('Hover background')],
+        ['key' => 'button_hover_text_color', 'value' => $t->buttonHoverTextColor, 'label' => __('Hover text')],
+    ];
 @endphp
 
 {{-- Overlay --}}
@@ -85,19 +111,6 @@
             <section class="px-5 py-5 lg:px-6">
                 <h4 class="mb-4 text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{{ __('Colours') }}</h4>
                 <div class="space-y-4">
-
-                    @php
-                        $colorFields = [
-                            ['key' => 'color_primary',   'value' => $t->colorPrimary,   'label' => __('Primary')],
-                            ['key' => 'color_secondary', 'value' => $t->colorSecondary, 'label' => __('Secondary')],
-                            ['key' => 'color_heading',   'value' => $t->colorHeading,   'label' => __('Heading text')],
-                            ['key' => 'color_body',      'value' => $t->colorBody,      'label' => __('Body text')],
-                            ['key' => 'color_surface',   'value' => $t->colorSurface,   'label' => __('Surface / card')],
-                            ['key' => 'color_muted',     'value' => $t->colorMuted,     'label' => __('Muted background')],
-                            ['key' => 'color_border',    'value' => $t->colorBorder,    'label' => __('Border')],
-                        ];
-                    @endphp
-
                     @foreach ($colorFields as $cf)
                         <div class="flex items-center gap-3 rtl:flex-row-reverse">
                             <label for="brand_{{ $cf['key'] }}"
@@ -105,14 +118,12 @@
                                 {{ $cf['label'] }}
                             </label>
                             <div class="flex flex-1 items-center gap-2 rtl:flex-row-reverse">
-                                {{-- Native colour picker --}}
                                 <input type="color"
                                        id="brand_{{ $cf['key'] }}"
                                        value="{{ $cf['value'] }}"
                                        class="h-9 w-12 flex-shrink-0 cursor-pointer rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
                                        data-color-picker="{{ $cf['key'] }}"
                                        aria-label="{{ $cf['label'] }}">
-                                {{-- Hex text input --}}
                                 <input type="text"
                                        name="{{ $cf['key'] }}"
                                        value="{{ $cf['value'] }}"
@@ -132,26 +143,35 @@
                 <h4 class="mb-4 text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{{ __('Typography') }}</h4>
                 <div class="space-y-4">
 
+                    {{-- Body font (select) --}}
                     <div>
                         <label for="brand_font_primary" class="mb-1.5 block text-sm font-medium text-slate-700 ltr:text-left rtl:text-right">
                             {{ __('Body font family') }}
                         </label>
-                        <input type="text" id="brand_font_primary" name="font_primary"
-                               value="{{ $t->fontPrimary }}"
-                               placeholder="Cairo, sans-serif"
-                               class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none transition focus:border-slate-400 ltr:text-left rtl:text-right">
+                        <select id="brand_font_primary" name="font_primary"
+                                class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none transition focus:border-slate-400 ltr:text-left rtl:text-right">
+                            @foreach ($allowedFonts as $fontLabel => $fontValue)
+                                <option value="{{ $fontValue }}" @selected($t->fontPrimary === $fontValue)
+                                        style="font-family: {{ $fontValue }}">{{ $fontLabel }}</option>
+                            @endforeach
+                        </select>
                     </div>
 
+                    {{-- Heading font (select) --}}
                     <div>
                         <label for="brand_font_heading" class="mb-1.5 block text-sm font-medium text-slate-700 ltr:text-left rtl:text-right">
                             {{ __('Heading font family') }}
                         </label>
-                        <input type="text" id="brand_font_heading" name="font_heading"
-                               value="{{ $t->fontHeading }}"
-                               placeholder="Almarai, sans-serif"
-                               class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none transition focus:border-slate-400 ltr:text-left rtl:text-right">
+                        <select id="brand_font_heading" name="font_heading"
+                                class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none transition focus:border-slate-400 ltr:text-left rtl:text-right">
+                            @foreach ($allowedFonts as $fontLabel => $fontValue)
+                                <option value="{{ $fontValue }}" @selected($t->fontHeading === $fontValue)
+                                        style="font-family: {{ $fontValue }}">{{ $fontLabel }}</option>
+                            @endforeach
+                        </select>
                     </div>
 
+                    {{-- Font weights --}}
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label for="brand_weight_normal" class="mb-1.5 block text-sm font-medium text-slate-700 ltr:text-left rtl:text-right">
@@ -206,8 +226,9 @@
             {{-- ── BUTTONS ──────────────────────────────────────────────── --}}
             <section class="px-5 py-5 lg:px-6">
                 <h4 class="mb-4 text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">{{ __('Buttons') }}</h4>
-                <div class="space-y-4">
+                <div class="space-y-5">
 
+                    {{-- Button radius --}}
                     <div>
                         <label for="brand_button_radius" class="mb-1.5 block text-sm font-medium text-slate-700 ltr:text-left rtl:text-right">
                             {{ __('Button radius') }}
@@ -218,6 +239,7 @@
                                class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none transition focus:border-slate-400 ltr:text-left rtl:text-right">
                     </div>
 
+                    {{-- Button style --}}
                     <div>
                         <label class="mb-2 block text-sm font-medium text-slate-700 ltr:text-left rtl:text-right">
                             {{ __('Button style') }}
@@ -238,6 +260,42 @@
                                 </label>
                             @endforeach
                         </div>
+                    </div>
+
+                    {{-- Button colors ──────────────────────────────────── --}}
+                    <div>
+                        <p class="mb-3 text-sm font-medium text-slate-700 ltr:text-left rtl:text-right">
+                            {{ __('Button colours') }}
+                        </p>
+                        <div class="space-y-3">
+                            @foreach ($buttonColorFields as $bcf)
+                                <div class="flex items-center gap-3 rtl:flex-row-reverse">
+                                    <label for="brand_{{ $bcf['key'] }}"
+                                           class="w-36 flex-shrink-0 text-sm font-medium text-slate-600 ltr:text-left rtl:text-right">
+                                        {{ $bcf['label'] }}
+                                    </label>
+                                    <div class="flex flex-1 items-center gap-2 rtl:flex-row-reverse">
+                                        <input type="color"
+                                               id="brand_{{ $bcf['key'] }}"
+                                               value="{{ $bcf['value'] }}"
+                                               class="h-9 w-12 flex-shrink-0 cursor-pointer rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
+                                               data-color-picker="{{ $bcf['key'] }}"
+                                               aria-label="{{ $bcf['label'] }}">
+                                        <input type="text"
+                                               name="{{ $bcf['key'] }}"
+                                               value="{{ $bcf['value'] }}"
+                                               maxlength="7"
+                                               placeholder="#000000"
+                                               class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none transition focus:border-slate-400 ltr:text-left rtl:text-right"
+                                               data-color-hex="{{ $bcf['key'] }}"
+                                               aria-label="{{ $bcf['label'] }} hex">
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        <p class="mt-3 text-xs leading-5 text-slate-400 ltr:text-left rtl:text-right">
+                            {{ __('These override the primary colour for buttons specifically.') }}
+                        </p>
                     </div>
 
                 </div>
@@ -339,6 +397,8 @@
         });
 
         // ── Colour picker ↔ hex text sync ─────────────────────────────────────
+        // Handles both the palette colour pickers AND the new button colour pickers
+        // — they all use the same data-color-picker / data-color-hex pattern.
         document.querySelectorAll('[data-color-picker]').forEach(function (picker) {
             var key      = picker.dataset.colorPicker;
             var hexInput = document.querySelector('[data-color-hex="' + key + '"]');
