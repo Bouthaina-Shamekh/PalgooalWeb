@@ -13,7 +13,7 @@
             </div>
             <div class="mb-4">
                 <span class="font-semibold text-gray-600">إجمالي الفاتورة:</span>
-                ${{ number_format($invoice->total_cents / 100, 2) }} {{ $invoice->currency }}
+                {{ number_format($invoice->total_cents / 100, 2) }} {{ $invoice->currency }}
             </div>
             <div class="mb-4">
                 <span class="font-semibold text-gray-600">تاريخ الاستحقاق:</span>
@@ -82,8 +82,8 @@
                                         @endif
                                     </td>
                                     <td class="px-4 py-2">{{ $item->qty }}</td>
-                                    <td class="px-4 py-2">${{ number_format($item->unit_price_cents / 100, 2) }}</td>
-                                    <td class="px-4 py-2">${{ number_format($item->total_cents / 100, 2) }}</td>
+                                    <td class="px-4 py-2">{{ number_format($item->unit_price_cents / 100, 2) }} {{ $invoice->currency }}</td>
+                                    <td class="px-4 py-2">{{ number_format($item->total_cents / 100, 2) }} {{ $invoice->currency }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -95,25 +95,25 @@
                     <div class="p-3 bg-gray-50 rounded border">
                         <div class="text-xs text-gray-500">الإجمالي الفرعي</div>
                         <div class="font-semibold">
-                            ${{ number_format(($invoice->subtotal_cents ?? 0) / 100, 2) }} {{ $invoice->currency }}
+                            {{ number_format(($invoice->subtotal_cents ?? 0) / 100, 2) }} {{ $invoice->currency }}
                         </div>
                     </div>
                     <div class="p-3 bg-gray-50 rounded border">
                         <div class="text-xs text-gray-500">الخصم</div>
                         <div class="font-semibold">
-                            ${{ number_format(($invoice->discount_cents ?? 0) / 100, 2) }} {{ $invoice->currency }}
+                            {{ number_format(($invoice->discount_cents ?? 0) / 100, 2) }} {{ $invoice->currency }}
                         </div>
                     </div>
                     <div class="p-3 bg-gray-50 rounded border">
                         <div class="text-xs text-gray-500">الضريبة</div>
                         <div class="font-semibold">
-                            ${{ number_format(($invoice->tax_cents ?? 0) / 100, 2) }} {{ $invoice->currency }}
+                            {{ number_format(($invoice->tax_cents ?? 0) / 100, 2) }} {{ $invoice->currency }}
                         </div>
                     </div>
                     <div class="p-3 bg-gray-50 rounded border">
                         <div class="text-xs text-gray-500">الإجمالي المستحق</div>
                         <div class="font-semibold">
-                            ${{ number_format(($invoice->total_cents ?? 0) / 100, 2) }} {{ $invoice->currency }}
+                            {{ number_format(($invoice->total_cents ?? 0) / 100, 2) }} {{ $invoice->currency }}
                         </div>
                     </div>
                 </div>

@@ -2,7 +2,6 @@
 
 namespace App\Services\Billing;
 
-use App\Http\Controllers\Admin\Management\OrderController as ManagementOrderController;
 use App\Models\Domain;
 use App\Models\Invoice;
 use App\Models\Order;
@@ -10,6 +9,10 @@ use Illuminate\Support\Facades\DB;
 
 class InvoiceSettlementService
 {
+    public function __construct(
+        protected OrderActivationService $activationService,
+    ) {}
+
     public function markPaid(Invoice $invoice, ?string $paymentMethod = null): void
     {
         DB::transaction(function () use ($invoice, $paymentMethod) {
@@ -39,7 +42,7 @@ class InvoiceSettlementService
                 }
 
                 $order->loadMissing(['invoices.items', 'items']);
-                $activationResult = app(ManagementOrderController::class)->processActivation($order, $paymentMethod);
+                $activationResult = $this->activationService->activate($order, $paymentMethod);
                 $domainRegistration = $activationResult['domain_registration'] ?? null;
 
                 if (is_array($domainRegistration) && (($domainRegistration['ok'] ?? true) === false)) {

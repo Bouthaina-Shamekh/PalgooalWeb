@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Management;
 use App\Http\Controllers\Controller;
 use App\Models\{Invoice, InvoiceItem, Client, Domain, Order};
 use App\Models\Tenancy\Subscription;
+use App\Services\Billing\OrderActivationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{DB, Log, Mail};
 use Illuminate\Validation\Rule;
@@ -13,8 +14,14 @@ use Carbon\Carbon;
 
 class InvoiceController extends Controller
 {
+    public function __construct(
+        protected OrderActivationService $activationService,
+    ) {}
+
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Invoice::class);
+
         $q      = trim((string) $request->get('q', ''));
         $status = $request->get('status');
 
@@ -39,6 +46,8 @@ class InvoiceController extends Controller
 
     public function create()
     {
+        $this->authorize('create', Invoice::class);
+
         return view('dashboard.management.invoices.create', [
             'clients'       => Client::orderBy('first_name')->get(['id', 'first_name', 'last_name', 'email']),
             'subscriptions' => Subscription::with('client:id,first_name,last_name')
@@ -50,6 +59,8 @@ class InvoiceController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('create', Invoice::class);
+
         $allowedItemTypes = $this->allowedItemTypes();
 
         $data = $request->validate([
@@ -80,12 +91,10 @@ class InvoiceController extends Controller
         }
 
         return DB::transaction(function () use ($data, $due, $paidDate) {
-            $number  = $this->generateUniqueNumber();
             $totals  = $this->computeTotals($data['items']);
 
-            $invoice = Invoice::create([
+            $invoice = $this->createInvoiceRecord([
                 'client_id'       => $data['client_id'],
-                'number'          => $number,
                 'status'          => $data['status'],
                 'subtotal_cents'  => $totals['subtotal_cents'],
                 'discount_cents'  => $totals['discount_cents'],
@@ -110,12 +119,14 @@ class InvoiceController extends Controller
             // طھظپط¹ظٹظ„ ط§ظ„ط·ظ„ط¨ ط§ظ„ظ…ط±طھط¨ط· ظ„ظˆ ط§ظ„ط­ط§ظ„ط© Paid
             $this->maybeActivateRelatedOrder($invoice);
 
-            return redirect()->route('dashboard.invoices.index')->with('ok', 'طھظ… ط¥ظ†ط´ط§ط، ط§ظ„ظپط§طھظˆط±ط©');
+            return redirect()->route('dashboard.invoices.index')->with('ok', __('Invoice created successfully.'));
         });
     }
 
     public function edit(Invoice $invoice)
     {
+        $this->authorize('update', $invoice);
+
         return view('dashboard.management.invoices.edit', [
             'invoice'       => $invoice->load('items', 'client'),
             'clients'       => Client::orderBy('first_name')->get(['id', 'first_name', 'last_name', 'email']),
@@ -127,6 +138,8 @@ class InvoiceController extends Controller
 
     public function update(Request $request, Invoice $invoice)
     {
+        $this->authorize('update', $invoice);
+
         $allowedItemTypes = $this->allowedItemTypes();
 
         $data = $request->validate([
@@ -177,12 +190,14 @@ class InvoiceController extends Controller
 
             $this->maybeActivateRelatedOrder($invoice);
 
-            return redirect()->route('dashboard.invoices.index')->with('ok', 'طھظ… طھط­ط¯ظٹط« ط§ظ„ظپط§طھظˆط±ط©');
+            return redirect()->route('dashboard.invoices.index')->with('ok', __('Invoice updated successfully.'));
         });
     }
 
     public function destroy(Request $request, Invoice $invoice)
     {
+        $this->authorize('delete', $invoice);
+
         DB::transaction(function () use ($invoice) {
             $invoice->items()->delete();
             $invoice->delete();
@@ -191,23 +206,26 @@ class InvoiceController extends Controller
         if ($request->ajax()) {
             return response()->json(['ok' => true]);
         }
-        return redirect()->route('dashboard.invoices.index')->with('ok', 'طھظ… ط­ط°ظپ ط§ظ„ظپط§طھظˆط±ط©');
+        return redirect()->route('dashboard.invoices.index')->with('ok', __('Invoice deleted successfully.'));
     }
 
     // ط¥ط¬ط±ط§ط، ط¬ظ…ط§ط¹ظٹ ط¹ظ„ظ‰ ط§ظ„ظپظˆط§طھظٹط±
     public function bulk(Request $request)
     {
+        $this->authorize('bulk', Invoice::class);
+
         $data = $request->validate([
             'ids'    => 'required|array|min:1',
             'ids.*'  => 'integer|exists:invoices,id',
             'action' => 'required|string',
         ]);
 
-        $ids     = $data['ids'];
-        $action  = $data['action'];
-        $affected = 0;
+        $ids          = $data['ids'];
+        $action       = $data['action'];
+        $affected     = 0;
+        $pendingEmails = []; // جمع بيانات الإيميلات هنا وإرسالها بعد commit
 
-        DB::transaction(function () use (&$affected, $ids, $action) {
+        DB::transaction(function () use (&$affected, &$pendingEmails, $ids, $action) {
             if ($action === 'delete') {
                 $invoices = Invoice::whereIn('id', $ids)->get();
                 foreach ($invoices as $inv) {
@@ -238,13 +256,27 @@ class InvoiceController extends Controller
                 $invoices = Invoice::with('items')->whereIn('id', $ids)->get();
                 foreach ($invoices as $inv) {
                     $clone = $inv->replicate();
-                    $clone->number     = $this->generateUniqueNumber();
                     $clone->status     = 'draft';
                     $clone->paid_date  = null;
                     $clone->due_date   = now()->addDays(7);
                     $clone->created_at = now();
                     $clone->updated_at = now();
-                    $clone->save();
+
+                    // Retry on unique-number collision (same TOCTOU protection as createInvoiceRecord).
+                    $saved = false;
+                    for ($attempt = 0; $attempt < 5; $attempt++) {
+                        try {
+                            $clone->number = $this->generateUniqueNumber();
+                            $clone->save();
+                            $saved = true;
+                            break;
+                        } catch (\Illuminate\Database\QueryException $e) {
+                            if ($attempt < 4 && str_contains($e->getMessage(), '23000')) {
+                                continue;
+                            }
+                            throw $e;
+                        }
+                    }
 
                     foreach ($inv->items as $item) {
                         $newItem = $item->replicate();
@@ -259,6 +291,7 @@ class InvoiceController extends Controller
             }
 
             if ($action === 'reminder') {
+                // لا نُرسل الإيميل هنا — نجمع البيانات فقط ليُرسل بعد نجاح الـ commit
                 $invoices = Invoice::with('client')->whereIn('id', $ids)->get();
                 foreach ($invoices as $inv) {
                     $client = $inv->client;
@@ -266,42 +299,57 @@ class InvoiceController extends Controller
                     if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
                         continue;
                     }
-                    try {
-                        $amount   = number_format(($inv->total_cents ?? 0) / 100, 2);
-                        $currency = $inv->currency ?? 'USD';
-                        $bodyLines = [
-                            "ظ…ط±ط­ط¨ط§ظ‹ {$client->first_name},",
-                            '',
-                            "ظ‡ط°ظ‡ ط±ط³ط§ظ„ط© طھط°ظƒظٹط± ط¨ظپط§طھظˆط±ط© ط±ظ‚ظ… {$inv->number}.",
-                            "ظ‚ظٹظ…ط© ط§ظ„ظپط§طھظˆط±ط©: {$amount} {$currency}.",
-                            $inv->due_date ? "طھط§ط±ظٹط® ط§ظ„ط§ط³طھط­ظ‚ط§ظ‚: {$inv->due_date->format('Y-m-d')}." : '',
-                            '',
-                            'ظٹط±ط¬ظ‰ ط§ظ„طھظˆط§طµظ„ ظ…ط¹ظ†ط§ ظپظٹ ط­ط§ظ„ ظˆط¬ظˆط¯ ط£ظٹ ط§ط³طھظپط³ط§ط±.',
-                            'ظپط±ظٹظ‚ Palgoals',
-                        ];
-                        // ط§ط³طھط®ط¯ظ… Queue ط¥ظ† ظ…طھط§ط­: Mail::to($email)->queue(new YourMailable($inv));
-                        Mail::raw(implode(PHP_EOL, array_filter($bodyLines)), function ($message) use ($email, $inv) {
-                            $message->to($email)->subject('طھط°ظƒظٹط± ط¨ط§ظ„ط¯ظپط¹ - ' . $inv->number);
-                        });
-                        $affected++;
-                    } catch (\Throwable $e) {
-                        Log::error('Failed to send invoice reminder for invoice ' . $inv->id . ': ' . $e->getMessage());
-                    }
+                    $pendingEmails[] = [
+                        'to'      => $email,
+                        'subject' => __('Payment Reminder') . ' - ' . $inv->number,
+                        'name'    => $client->first_name,
+                        'number'  => $inv->number,
+                        'amount'  => number_format(($inv->total_cents ?? 0) / 100, 2),
+                        'currency'=> $inv->currency ?? 'USD',
+                        'due_date'=> $inv->due_date?->format('Y-m-d'),
+                        'inv_id'  => $inv->id,
+                    ];
                 }
                 return;
             }
         });
 
+        // إرسال الإيميلات بعد نجاح الـ commit — لا خطر من rollback هنا
+        foreach ($pendingEmails as $mail) {
+            try {
+                $bodyLines = [
+                    __('Hello :name,', ['name' => $mail['name']]),
+                    '',
+                    __('This is a payment reminder for invoice :number.', ['number' => $mail['number']]),
+                    __('Invoice amount: :amount :currency.', ['amount' => $mail['amount'], 'currency' => $mail['currency']]),
+                    $mail['due_date'] ? __('Due date: :date.', ['date' => $mail['due_date']]) : '',
+                    '',
+                    __('Please contact us if you have any questions.'),
+                    __('Palgoals Team'),
+                ];
+                Mail::raw(implode(PHP_EOL, array_filter($bodyLines)), function ($message) use ($mail) {
+                    $message->to($mail['to'])->subject($mail['subject']);
+                });
+                $affected++;
+            } catch (\Throwable $e) {
+                Log::error('Failed to send invoice reminder for invoice ' . $mail['inv_id'] . ': ' . $e->getMessage());
+            }
+        }
+
         if ($request->ajax()) {
             return response()->json(['affected' => $affected]);
         }
-        return redirect()->back()->with('ok', "طھظ… طھظ†ظپظٹط° ط§ظ„ط¥ط¬ط±ط§ط، ط¹ظ„ظ‰ {$affected} ظپط§طھظˆط±ط©(ط§طھ)");
+        return redirect()->back()->with('ok', __(':count invoice(s) updated.', ['count' => $affected]));
     }
 
     // ط¹ط±ط¶ ظپط§طھظˆط±ط© ظˆط§ط­ط¯ط©
     public function show(Invoice $invoice)
     {
-        $invoice->load(['items.subscription.plan', 'items.domain', 'client']);
+        $this->authorize('view', $invoice);
+
+        // Use the raw relation names for eager loading; the type-guarded accessors
+        // ($item->subscription / $item->domain) will read from these loaded relations.
+        $invoice->load(['items.subscriptionRelation.plan', 'items.domainRelation', 'client']);
         return view('dashboard.management.invoices.show', compact('invoice'));
     }
 
@@ -317,11 +365,12 @@ class InvoiceController extends Controller
     protected function validateReferenceIds(array $items): void
     {
         foreach ($items as $i => $item) {
-            if ($item['item_type'] === 'subscription' && !Subscription::where('id', $item['reference_id'])->exists()) {
-                abort(422, "Invalid subscription reference at item #" . ($i + 1));
+            $num = $i + 1;
+            if ($item['item_type'] === 'subscription' && ! Subscription::where('id', $item['reference_id'])->exists()) {
+                abort(422, __('Invalid subscription reference at item #:num.', ['num' => $num]));
             }
-            if ($item['item_type'] === 'domain' && !Domain::where('id', $item['reference_id'])->exists()) {
-                abort(422, "Invalid domain reference at item #" . ($i + 1));
+            if ($item['item_type'] === 'domain' && ! Domain::where('id', $item['reference_id'])->exists()) {
+                abort(422, __('Invalid domain reference at item #:num.', ['num' => $num]));
             }
         }
     }
@@ -350,13 +399,43 @@ class InvoiceController extends Controller
     /**
      * طھظˆظ„ظٹط¯ ط±ظ‚ظ… ظپط§طھظˆط±ط© ظپط±ظٹط¯ ظ…ط¹ طھط­ظ‚ظ‘ظ‚ ظ…ظ† ط§ظ„طھط¹ط§ط±ط¶.
      */
+    /**
+     * Generate a candidate invoice number (no DB check — collision handled at insert time).
+     * Uses 8 random chars → ~208 billion combinations, making collisions extremely rare.
+     */
     protected function generateUniqueNumber(): string
     {
-        do {
-            $number = 'INV-' . Str::upper(Str::random(6));
-        } while (Invoice::where('number', $number)->exists());
+        return 'INV-' . Str::upper(Str::random(8));
+    }
 
-        return $number;
+    /**
+     * Create an Invoice record, retrying on unique-number constraint violations.
+     * Handles the TOCTOU race that a pre-insert existence check cannot prevent.
+     *
+     * @param  array<string, mixed>  $attributes  All invoice attributes EXCEPT 'number'.
+     * @param  int                   $maxAttempts
+     * @return \App\Models\Invoice
+     */
+    protected function createInvoiceRecord(array $attributes, int $maxAttempts = 5): Invoice
+    {
+        $lastException = null;
+
+        for ($i = 0; $i < $maxAttempts; $i++) {
+            try {
+                return Invoice::create(
+                    array_merge($attributes, ['number' => $this->generateUniqueNumber()])
+                );
+            } catch (\Illuminate\Database\QueryException $e) {
+                // MySQL 23000 / SQLSTATE 23000 = integrity constraint violation (duplicate key).
+                if ($i < $maxAttempts - 1 && str_contains($e->getMessage(), '23000')) {
+                    $lastException = $e;
+                    continue;
+                }
+                throw $e;
+            }
+        }
+
+        throw $lastException;
     }
 
     /**
@@ -368,19 +447,19 @@ class InvoiceController extends Controller
             if ($invoice->status !== 'paid' || !$invoice->order_id) {
                 return;
             }
+
             $order = Order::find($invoice->order_id);
-            if (!$order) return;
+            if (!$order) {
+                return;
+            }
 
             if ($order->status !== 'active') {
                 $order->status = 'active';
                 $order->save();
-
-                // ط¥ظ† ظƒط§ظ† ظ„ط¯ظٹظƒ OrderController::processActivation
-                if (class_exists(\App\Http\Controllers\Admin\Management\OrderController::class)) {
-                    app(\App\Http\Controllers\Admin\Management\OrderController::class)
-                        ->processActivation($order);
-                }
             }
+
+            $order->loadMissing(['invoices.items', 'items']);
+            $this->activationService->activate($order);
         } catch (\Throwable $e) {
             Log::error('Failed to activate order from invoice ' . $invoice->id . ': ' . $e->getMessage());
         }

@@ -4,12 +4,16 @@ namespace App\Http\Controllers\Admin\Management;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
-use App\Services\Domains\RegistrarProvisioningService;
+use App\Services\Billing\OrderActivationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
+    public function __construct(
+        protected OrderActivationService $activationService,
+    ) {}
+
     // عرض جميع الطلبات مع بيانات العميل
     public function index(Request $request)
     {
@@ -75,243 +79,12 @@ class OrderController extends Controller
     }
 
     /**
-     * استخرج بيانات الدومين من بنود الطلب (أول بند يملك دومين)
-     */
-    protected function extractDomainData(Order $order): array
-    {
-        // إن لم تكن محمّلة، لا بأس سيتم جلبها كسولياً
-        $item = $order->items()
-            ->whereNotNull('domain')
-            ->where('domain', '<>', '')
-            ->orderBy('id')
-            ->first();
-
-        return [
-            'domain_name'   => $item->domain ?? null,
-            'domain_option' => $item->item_option ?? null,
-        ];
-    }
-
-    /**
-     * Process order activation: update invoices, create/update subscription and sync with provider
+     * @deprecated  Delegates to OrderActivationService::activate().
+     *              Kept for backwards compatibility — call the service directly instead.
      */
     public function processActivation(\App\Models\Order $order, ?string $paymentMethod = null): array
     {
-        $result = [
-            'domain_registration' => null,
-            'subscriptions' => collect(),
-        ];
-
-        // فعّل الفواتير المرتبطة (اجعل status = unpaid)
-        foreach ($order->invoices as $invoice) {
-            if ($invoice->status === 'draft') {
-                $invoice->status = 'unpaid';
-                $invoice->save();
-            }
-        }
-        // استخرج بيانات الدومين من البنود (نحتاجها لاحقًا أو قد نحتاجها مباشرة)
-        $domain = $this->extractDomainData($order);
-        $domainName   = $domain['domain_name'];
-        $domainOption = $domain['domain_option'];
-        $subscriptionIds = $order->invoices
-            ->flatMap(fn ($invoice) => $invoice->items
-                ->filter(fn ($item) => $item->item_type === 'subscription' && filled($item->reference_id))
-                ->pluck('reference_id'))
-            ->map(fn ($id) => (int) $id)
-            ->filter()
-            ->unique()
-            ->values();
-
-        // إذا كان الطلب يتعلق بدومين للـ "register" فقط، قم بالتسجيل مع المزود الافتراضي أولاً.
-        if (!empty($domainName) && in_array(strtolower((string) $domainOption), ['register', 'renew'], true)) {
-            try {
-                $result['domain_registration'] = app(RegistrarProvisioningService::class)
-                    ->provisionOrderDomain($order, $paymentMethod);
-            } catch (\Throwable $e) {
-                Log::error('Failed to provision registrar domain for order ' . $order->id . ': ' . $e->getMessage());
-                $result['domain_registration'] = [
-                    'ok' => false,
-                    'message' => $e->getMessage(),
-                ];
-            }
-        }
-
-        // حدد إن كان الطلب يخص اشتراكًا (من أول عنصر فاتورة من نوع subscription)
-        if ($subscriptionIds->isNotEmpty()) {
-            $subscriptions = \App\Models\Tenancy\Subscription::with(['client', 'plan', 'server', 'template'])
-                ->whereIn('id', $subscriptionIds)
-                ->get()
-                ->keyBy('id');
-
-            $activated = collect();
-
-            foreach ($subscriptionIds as $subscriptionId) {
-                $subscriptionModel = $subscriptions->get($subscriptionId);
-
-                if (! $subscriptionModel) {
-                    continue;
-                }
-
-                $startsAt = now();
-                $billingCycle = strtolower((string) ($subscriptionModel->billing_cycle ?? 'annually'));
-                $nextDueDate = str_contains($billingCycle, 'month')
-                    ? $startsAt->copy()->addMonth()
-                    : $startsAt->copy()->addYear();
-
-                $updateData = [
-                    'status' => 'active',
-                    'starts_at' => $startsAt,
-                    'ends_at' => $nextDueDate,
-                    'next_due_date' => $nextDueDate,
-                ];
-
-                if (! empty($domainOption)) {
-                    $updateData['domain_option'] = $domainOption;
-                }
-
-                if (! empty($domainName)) {
-                    $updateData['domain_name'] = $domainName;
-                }
-
-                $subscriptionModel->fill($updateData)->save();
-
-                app(\App\Services\Tenancy\TenantProvisioningService::class)->provision($subscriptionModel);
-
-                $activated->push($subscriptionModel->fresh(['client', 'plan', 'server', 'template']));
-            }
-
-            $result['subscriptions'] = $activated;
-
-            return $result;
-        }
-
-        $templateId = null;
-        if ($order->invoices && $order->invoices->count()) {
-            $firstInvoice = $order->invoices->first();
-            $firstItem = $firstInvoice->items->first();
-            if ($firstItem && $firstItem->item_type === 'subscription') {
-                $templateId = $firstItem->reference_id;
-            }
-        }
-        if (!$templateId) {
-            return $result;
-        }
-
-        $template = \App\Models\Template::find($templateId);
-        if (!($template && $template->plan_id)) {
-            return $result;
-        }
-
-        // حساب مدة الاشتراك حسب الخطة (شهرية أو سنوية)
-        $duration = 'month';
-        if (isset($template->plan) && method_exists($template->plan, 'getDurationUnit')) {
-            $duration = $template->plan->getDurationUnit();
-        } elseif (isset($template->plan) && isset($template->plan->duration_unit)) {
-            $duration = $template->plan->duration_unit;
-        }
-        $startsAt = now();
-        $endsAt = $duration === 'year' ? $startsAt->copy()->addYear() : $startsAt->copy()->addMonth();
-
-        // server_id من الخطة أو من الطلب (إن وُجد في الطلب)
-        $serverId = null;
-        if (isset($template->plan) && isset($template->plan->server_id)) {
-            $serverId = $template->plan->server_id;
-        } elseif (isset($order->server_id)) {
-            $serverId = $order->server_id;
-        }
-
-        // تحقق من وجود اشتراك مسبق لنفس العميل والخطة وربما نفس الدومين
-        $existingSubQuery = \App\Models\Tenancy\Subscription::where('client_id', $order->client_id)
-            ->where('plan_id', $template->plan_id);
-
-        if (!empty($domainName)) {
-            $existingSubQuery->where('domain_name', $domainName);
-        }
-
-        $existingSub = $existingSubQuery->first();
-
-        // مولّد اسم مستخدم فريد
-        $generateUsername = function () use ($order, $domainName) {
-            $username = null;
-
-            if (!empty($domainName)) {
-                $base = str_replace('.', '', $domainName);
-                $base = strtolower(preg_replace('/[^a-z0-9]/i', '', $base));
-                $base = substr($base, 0, 12);
-                $username = $base;
-            }
-
-            if (empty($username) && isset($order->extra) && is_array($order->extra) && !empty($order->extra['username'] ?? null)) {
-                $username = preg_replace('/[^a-z0-9]/i', '', $order->extra['username']);
-            }
-
-            if (empty($username)) {
-                $client = \App\Models\Client::find($order->client_id);
-                $base = null;
-                if ($client) {
-                    if (!empty($client->email) && strpos($client->email, '@') !== false) {
-                        $base = explode('@', $client->email)[0];
-                    } else {
-                        $base = ($client->first_name ?? '') . ($client->last_name ?? '');
-                    }
-                }
-                $base = strtolower(preg_replace('/[^a-z0-9]/i', '', $base ?? 'user'));
-                $base = substr($base, 0, 12);
-                $username = $base;
-            }
-
-            $candidate = $username;
-            $suffix = 0;
-            while (\App\Models\Tenancy\Subscription::where('username', $candidate)->exists()) {
-                $suffix++;
-                $candidate = $username . $suffix;
-                if ($suffix > 1000) break;
-            }
-            return $candidate;
-        };
-
-        if ($existingSub) {
-            $updateData = [
-                'status'        => 'active',
-                'starts_at'     => $startsAt,
-                'ends_at'       => $endsAt,
-                'domain_option' => $domainOption,
-                'domain_name'   => $domainName,
-            ];
-            if (empty($existingSub->server_id) && $serverId) {
-                $updateData['server_id'] = $serverId;
-            }
-            if (empty($existingSub->username)) {
-                $updateData['username'] = $generateUsername();
-            }
-            $existingSub->update($updateData);
-            $subscriptionModel = $existingSub;
-        } else {
-            $subscriptionModel = \App\Models\Tenancy\Subscription::create([
-                'client_id'     => $order->client_id,
-                'plan_id'       => $template->plan_id,
-                'status'        => 'active',
-                'price'         => $template->price,
-                'starts_at'     => $startsAt,
-                'ends_at'       => $endsAt,
-                'server_id'     => $serverId,
-                'server_package' => $template->plan?->server_package ?? ($template->plan?->name ?? null),
-                'username'      => $generateUsername(),
-                'domain_option' => $domainOption,
-                'domain_name'   => $domainName,
-            ]);
-        }
-
-        // مزامنة الاشتراك مع مزوّد السيرفر
-        try {
-            if (!empty($subscriptionModel) && $subscriptionModel instanceof \App\Models\Tenancy\Subscription) {
-                \App\Jobs\SyncSubscriptionToProvider::dispatch($subscriptionModel->id);
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to dispatch sync job for order ' . $order->id . ': ' . $e->getMessage());
-        }
-
-        return $result;
+        return $this->activationService->activate($order, $paymentMethod);
     }
 
     public function show($id)

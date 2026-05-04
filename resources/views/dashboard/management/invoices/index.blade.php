@@ -235,8 +235,6 @@
         </div>
     </div>
 </x-dashboard-layout>
-<script src="{{ asset('assets/dashboard/js/invoices-index.js') }}" defer></script>
 @push('scripts')
-    {{-- إن كان لديك الملف جاهزاً فسيعمل مباشرة، وإلا انسخ المحتوى أدناه لملف invoices-index.js --}}
     <script src="{{ asset('assets/dashboard/js/invoices-index.js') }}" defer></script>
 @endpush

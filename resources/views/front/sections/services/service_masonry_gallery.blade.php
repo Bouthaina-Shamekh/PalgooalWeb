@@ -147,15 +147,15 @@
                                             <img src="{{ $service['icon_media_url'] }}" alt="" class="h-full w-full object-contain" loading="lazy">
                                         </span>
                                     @elseif ($service['icon'] !== '')
-                                        <i class="{{ $service['icon'] }} text-xl text-red-brand md:text-2xl" aria-hidden="true"></i>
+                                        <i class="{{ $service['icon'] }} text-xl text-theme-secondary md:text-2xl" aria-hidden="true"></i>
                                     @else
                                         <span @class([
-                                            'text-red-brand rtl:rotate-180',
-                                            'text-sm' => $galleryLayout === 'masonry_a',
-                                            'text-xl mt-1 transform' => $galleryLayout === 'split_two',
-                                        ]) aria-hidden="true">
+    'text-theme-secondary rtl:rotate-180',
+    'text-sm' => $galleryLayout === 'masonry_a',
+    'text-xl mt-1 transform' => $galleryLayout === 'split_two',
+])>
                                             <svg width="10" height="13" viewBox="0 0 10 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M9.75 6.49512L0 12.9903V-7.34329e-05L9.75 6.49512Z" fill="#BA112C" />
+                                                <path d="M9.75 6.49512L0 12.9903V-7.34329e-05L9.75 6.49512Z" fill="currentColor" />
                                             </svg>
                                         </span>
                                     @endif
@@ -174,7 +174,7 @@
                         <a href="{{ $buttonUrl }}"
                             @if ($buttonNewTab) target="_blank" rel="noopener noreferrer" @endif
                             @class([
-                                'bg-red-brand bg-theme-secondary text-white rounded-xl text-lg md:text-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300',
+                                'btn-theme-primary rounded-xl text-lg md:text-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300',
                                 'px-14 py-4' => $galleryLayout === 'masonry_a',
                                 'md:px-14 md:py-4 px-6 py-3' => $galleryLayout === 'split_two',
                             ])>
