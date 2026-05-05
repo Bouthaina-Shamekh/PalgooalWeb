@@ -17,7 +17,7 @@
                     <div class="alert alert-success mb-4">{{ session('ok') }}</div>
                 @endif
                 @if (session('connection_result'))
-                    <div class="alert alert-info mb-4">{!! session('connection_result') !!}</div>
+                    <div class="alert alert-info mb-4" style="white-space:pre-line">{{ session('connection_result') }}</div>
                 @endif
                 <div class="px-4 py-4 border-b border-gray-100 dark:border-gray-700">
                     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

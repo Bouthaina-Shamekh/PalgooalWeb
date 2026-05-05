@@ -20,6 +20,19 @@
     --color-red-brand: #ba112c;
     --color-gray-light: #f2f2f2;
     --color-gray-dark: #626262;
+    --color-theme-primary: var(--theme-color-primary);
+    --color-theme-secondary: var(--theme-color-secondary);
+    --color-theme-surface: var(--theme-color-surface);
+    --color-theme-muted: var(--theme-color-muted);
+    --color-theme-heading: var(--theme-color-heading);
+    --color-theme-body: var(--theme-color-body);
+    --color-theme-border: var(--theme-color-border);
+    --font-theme-body: var(--theme-font-primary);
+    --font-theme-heading: var(--theme-font-heading);
+    --radius-theme-sm: var(--theme-radius-sm);
+    --radius-theme-md: var(--theme-radius-md);
+    --radius-theme-lg: var(--theme-radius-lg);
+    --radius-theme-xl: var(--theme-radius-xl);
     --text-title-h2: 1.875rem;
     --text-title-h3: 1.5rem;
     --text-suptitle: 1.125rem;
@@ -37,16 +50,87 @@ body {
 }
 
 @layer base {
-    body, * {
-        font-family: "Almarai", sans-serif;
+    :root {
+        --theme-color-primary: #240B36;
+        --theme-color-secondary: #AE1028;
+        --theme-color-surface: #ffffff;
+        --theme-color-muted: #f8fafc;
+        --theme-color-heading: #240B36;
+        --theme-color-body: #475569;
+        --theme-color-border: #e2e8f0;
+        --theme-font-primary: "Almarai", sans-serif;
+        --theme-font-heading: "Almarai", sans-serif;
+        --theme-font-size-base: 16px;
+        --theme-heading-font-weight: 700;
+        --theme-body-font-weight: 400;
+        --theme-weight-bold: var(--theme-heading-font-weight);
+        --theme-weight-normal: var(--theme-body-font-weight);
+        --theme-radius-sm: 0.25rem;
+        --theme-radius-md: 0.5rem;
+        --theme-radius-lg: 0.75rem;
+        --theme-radius-xl: 1rem;
+        --theme-button-radius: 0.5rem;
+        --theme-button-bg: #AE1028;
+        --theme-button-text: #ffffff;
+        --theme-button-hover-bg: #240B36;
+        --theme-button-hover-text: #ffffff;
+    }
+
+    body {
+        font-family: var(--theme-font-primary, "Almarai", sans-serif);
     }
 
     a,
     button {
         cursor: pointer;
-        font-family: "Almarai", sans-serif;
     }
 
+}
+
+@layer components {
+    .btn-theme-primary,
+    .btn-theme-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--theme-button-radius);
+        font-family: var(--theme-font-primary);
+        font-weight: var(--theme-weight-bold, var(--theme-heading-font-weight));
+        padding: 0.625rem 1.5rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+
+    .btn-theme-primary {
+        background-color: var(--theme-button-bg);
+        color: var(--theme-button-text);
+        border: 2px solid transparent;
+    }
+
+    .btn-theme-primary:hover {
+        background-color: var(--theme-button-hover-bg);
+        color: var(--theme-button-hover-text);
+    }
+
+    .btn-theme-primary:active {
+        transform: scale(0.97);
+    }
+
+    .btn-theme-secondary {
+        background-color: var(--theme-button-bg);
+        color: var(--theme-button-text);
+        border: 2px solid transparent;
+    }
+
+    .btn-theme-secondary:hover {
+        background-color: var(--theme-button-hover-bg);
+        color: var(--theme-button-hover-text);
+    }
+
+    .btn-theme-secondary:active {
+        transform: scale(0.97);
+    }
 }
 
 [data-gjs-type="wrapper"] {

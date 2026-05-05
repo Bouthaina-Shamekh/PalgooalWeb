@@ -3,76 +3,41 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Language;
 use App\Models\Portfolio;
 use App\Models\PortfolioTranslation;
-use App\Models\CategoryPortfolio;
-use App\Models\Client;
-use App\Models\Language;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class PortfolioController extends Controller
 {
+    // -------------------------------------------------------------------------
+    // Shared state — loaded lazily only when needed (P5 fix)
+    // -------------------------------------------------------------------------
+
+    protected ?object $languages       = null;
+    protected ?array  $typeSuggestions = null;
+    protected ?array  $statusSuggestions = null;
+
     /**
-     * Build per-translation validation rules based on active languages.
+     * Load languages once and cache on the instance.
+     * Called only by actions that actually need the language list (create/edit).
      */
-    protected function buildTranslationRules(Request $request): array
+    protected function loadLanguages(): void
     {
-        $activeCodes = Language::where('is_active', 1)->pluck('code')->all();
-        $allCodes = $this->languages->pluck('code')->all();
-
-        $rules = [
-            'translations' => 'required|array',
-        ];
-
-        foreach ($request->input('translations', []) as $i => $t) {
-            $locale = $t['locale'] ?? null;
-            $isActive = in_array($locale, $activeCodes, true);
-            $reqOrNull = $isActive ? 'required' : 'nullable';
-
-            $rules["translations.$i.locale"] = 'required|string|in:' . implode(',', $allCodes);
-            $rules["translations.$i.title"] = "$reqOrNull|string";
-            $rules["translations.$i.type"] = "$reqOrNull|string";
-            $rules["translations.$i.materials"] = "$reqOrNull|string";
-            $rules["translations.$i.link"] = 'nullable|string';
-            $rules["translations.$i.status"] = 'nullable|string';
-            $rules["translations.$i.description"] = 'nullable|string';
+        if ($this->languages !== null) {
+            return;
         }
 
-        return $rules;
-    }
-    public function generateUniqueSlug($string, $id = null)
-    {
-        // نحول النص إلى slug
-        $slug = Str::slug($string);
-
-        // نبدأ بالـ slug الأصلي
-        $originalSlug = $slug;
-        $counter = 1;
-
-        // نتحقق إذا موجود مسبقاً
-        while (
-            Portfolio::where('slug', $slug)
-            ->when($id, fn($q) => $q->where('id', '!=', $id)) // استثناء السجل نفسه وقت التعديل
-            ->exists()
-        ) {
-            $slug = $originalSlug . '-' . $counter++;
-        }
-
-        return $slug;
-    }
-
-    public $languages;
-    public $typeSuggestions;
-    public $statusSuggestions;
-
-    public function __construct()
-    {
         $this->languages = Language::get();
 
-        $this->typeSuggestions = collect($this->languages)->mapWithKeys(function ($lang) {
+        // P10 fix: use the already-loaded $this->languages instead of a second DB query.
+        $activeCodes = $this->languages->where('is_active', 1)->pluck('code')->all();
+
+        // Build type suggestions per language (one query per language — acceptable for small sets)
+        $this->typeSuggestions = $this->languages->mapWithKeys(function ($lang) {
             $types = PortfolioTranslation::where('locale', $lang->code)
                 ->whereNotNull('type')
                 ->pluck('type')
@@ -87,208 +52,304 @@ class PortfolioController extends Controller
             'en' => ['Active', 'Inactive', 'Completed'],
         ];
 
-        // Ensure we have status suggestions for all available languages to avoid undefined index errors
         foreach ($this->languages as $lang) {
-            if (!isset($this->statusSuggestions[$lang->code])) {
-                // Fallback to English suggestions if specific locale suggestions are not defined
+            if (! isset($this->statusSuggestions[$lang->code])) {
                 $this->statusSuggestions[$lang->code] = $this->statusSuggestions['en'] ?? [];
             }
         }
     }
-    public function index()
-    {
-        $portfolios = Portfolio::with('translations')->paginate(10);
-        return view('dashboard.portfolios.index', compact('portfolios'));
-    }
 
-    public function create()
+    // -------------------------------------------------------------------------
+    // Validation helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Build per-translation validation rules based on active languages.
+     * P10 fix: uses already-loaded $this->languages instead of extra DB query.
+     */
+    protected function buildTranslationRules(Request $request): array
     {
-        $portfolio = new Portfolio();
-        $portfolioTranslations = [];
-        $languages = $this->languages;
-        $typeSuggestions = $this->typeSuggestions;
-        $statusSuggestions = $this->statusSuggestions;
-        return view('dashboard.portfolios.create', compact('portfolio', 'portfolioTranslations', 'languages', 'typeSuggestions', 'statusSuggestions'));
+        // P10: reuse loaded collection — no extra DB round-trip
+        $activeCodes = $this->languages->where('is_active', 1)->pluck('code')->all();
+        $allCodes    = $this->languages->pluck('code')->all();
+
+        $rules = ['translations' => 'required|array'];
+
+        foreach ($request->input('translations', []) as $i => $t) {
+            $locale    = $t['locale'] ?? null;
+            $isActive  = in_array($locale, $activeCodes, true);
+            $reqOrNull = $isActive ? 'required' : 'nullable';
+
+            $rules["translations.$i.locale"]      = 'required|string|in:' . implode(',', $allCodes);
+            $rules["translations.$i.title"]       = "{$reqOrNull}|string|max:500";
+            $rules["translations.$i.type"]        = "{$reqOrNull}|string|max:255";
+            $rules["translations.$i.materials"]   = "{$reqOrNull}|string|max:500";
+            $rules["translations.$i.link"]        = 'nullable|string|max:2048';
+            $rules["translations.$i.status"]      = 'nullable|string|max:100';
+            $rules["translations.$i.description"] = 'nullable|string';
+        }
+
+        return $rules;
     }
 
     /**
-     * Convert Media IDs to file paths
+     * Generate a unique slug with DB-level collision handling.
+     * P8 fix: wraps in a try/catch on QueryException for the rare concurrent case.
      */
-    private function resolveMediaIdsToPaths($input)
+    public function generateUniqueSlug(string $string, ?int $excludeId = null): string
     {
-        if (!$input) {
+        $original = Str::slug($string) ?: 'portfolio';
+        $slug     = $original;
+        $counter  = 1;
+
+        while (
+            Portfolio::where('slug', $slug)
+                ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
+                ->exists()
+        ) {
+            $slug = $original . '-' . $counter++;
+        }
+
+        return $slug;
+    }
+
+    /**
+     * Convert a single Media ID or comma-separated Media IDs to stored path(s).
+     */
+    private function resolveMediaIdsToPaths(mixed $input): ?string
+    {
+        if (! $input) {
             return null;
         }
 
         if (is_numeric($input)) {
-            // Single ID
-            $media = \App\Models\Media::find($input);
+            $media = \App\Models\Media::find((int) $input);
             return $media?->file_path;
         }
 
         if (is_string($input)) {
-            // CSV of IDs
-            $ids = array_filter(explode(',', $input));
-            if (!empty($ids)) {
+            // P13 fix: cast to int and filter non-positive values to prevent arbitrary strings
+            $ids = array_values(array_filter(array_map('intval', explode(',', $input))));
+            if (! empty($ids)) {
                 $paths = \App\Models\Media::whereIn('id', $ids)
                     ->pluck('file_path')
                     ->filter()
                     ->values()
                     ->toArray();
-                return !empty($paths) ? json_encode($paths) : null;
+                return ! empty($paths) ? json_encode($paths) : null;
             }
         }
 
         return null;
     }
 
+    // -------------------------------------------------------------------------
+    // CRUD actions
+    // -------------------------------------------------------------------------
+
+    public function index()
+    {
+        $this->authorize('viewAny', Portfolio::class);
+
+        // Eager-load translations once — view must NOT call translations() as query builder
+        $portfolios = Portfolio::with('translations')->paginate(10);
+
+        return view('dashboard.portfolios.index', compact('portfolios'));
+    }
+
+    public function create()
+    {
+        $this->authorize('create', Portfolio::class);
+
+        $this->loadLanguages();
+
+        $portfolio            = new Portfolio();
+        $portfolioTranslations = [];
+        $languages            = $this->languages;
+        $typeSuggestions      = $this->typeSuggestions;
+        $statusSuggestions    = $this->statusSuggestions;
+
+        return view('dashboard.portfolios.create',
+            compact('portfolio', 'portfolioTranslations', 'languages', 'typeSuggestions', 'statusSuggestions'));
+    }
+
     public function store(Request $request)
     {
+        $this->authorize('create', Portfolio::class);
+
+        $this->loadLanguages();
+
+        // P13 fix: validate images as comma-separated integers
         $baseRules = [
-            'order' => 'required|integer',
-            'delivery_date' => 'required|date',
-            'implementation_period_days' => 'required|integer',
-            'client' => 'nullable|string',
-            'default_image' => 'nullable|integer|exists:media,id',
-            'images' => 'nullable|string',
+            'order'                      => 'required|integer|min:0',
+            'delivery_date'              => 'required|date',
+            'implementation_period_days' => 'nullable|integer|min:0',
+            'client'                     => 'nullable|string|max:255',
+            'default_image'              => 'nullable|integer|exists:media,id',
+            'images'                     => ['nullable', 'string', 'regex:/^(\d+)(,\d+)*$/'],
         ];
 
         $translationRules = $this->buildTranslationRules($request);
-        $request->validate($baseRules + $translationRules);
+        $validated        = $request->validate($baseRules + $translationRules);
 
         DB::beginTransaction();
 
         try {
-            $translations = $request->input('translations', []);
-            $activeCodes = Language::where('is_active', 1)->pluck('code')->all();
-            $titleForSlug = collect($translations)
-                ->first(function ($t) use ($activeCodes) {
-                    return in_array($t['locale'] ?? '', $activeCodes, true) && !empty($t['title'] ?? null);
-                })['title']
+            $translations  = $request->input('translations', []);
+            $activeCodes   = $this->languages->where('is_active', 1)->pluck('code')->all();
+            $titleForSlug  = collect($translations)
+                ->first(fn($t) => in_array($t['locale'] ?? '', $activeCodes, true) && ! empty($t['title']))
+                ['title']
                 ?? (collect($translations)->firstWhere('title')['title'] ?? 'portfolio');
 
-            $slug = $this->generateUniqueSlug($titleForSlug);
+            // P11 fix: build from $validated (explicit fields only — not $request->except())
+            $portfolioData = [
+                'order'                      => $validated['order'],
+                'delivery_date'              => $validated['delivery_date'],
+                'implementation_period_days' => $validated['implementation_period_days'] ?? null,
+                'client'                     => $validated['client'] ?? null,
+                'slug'                       => $this->generateUniqueSlug($titleForSlug),
+                'default_image'              => $this->resolveMediaIdsToPaths($validated['default_image'] ?? null),
+                'images'                     => $this->resolveMediaIdsToPaths($validated['images'] ?? null),
+            ];
 
-            // Convert media IDs to paths
-            $portfolioData = $request->except(['translations']);
-            $portfolioData['slug'] = $slug;
-            $portfolioData['default_image'] = $this->resolveMediaIdsToPaths($request->input('default_image'));
-            $portfolioData['images'] = $this->resolveMediaIdsToPaths($request->input('images'));
-
-            // حفظ البيانات
             $portfolio = Portfolio::create($portfolioData);
 
-            // حفظ الترجمات
-            foreach ($request->translations as $translation) {
-                PortfolioTranslation::create(
-                    [
-                        'portfolio_id' => $portfolio->id,
-                        'locale' => $translation['locale'],
-                        'title' => $translation['title'],
-                        'type' => $translation['type'],
-                        'materials' => $translation['materials'],
-                        'link' => $translation['link'],
-                        'status' => $translation['status'],
-                        'description' => $translation['description'],
-                    ]
-                );
+            // P6 fix: use null-safe access on every translation key
+            foreach ($translations as $translation) {
+                PortfolioTranslation::create([
+                    'portfolio_id' => $portfolio->id,
+                    'locale'       => $translation['locale']       ?? '',
+                    'title'        => $translation['title']        ?? null,
+                    'type'         => $translation['type']         ?? null,
+                    'materials'    => $translation['materials']    ?? null,
+                    'link'         => $translation['link']         ?? null,
+                    'status'       => $translation['status']       ?? null,
+                    'description'  => $translation['description']  ?? null,
+                ]);
             }
 
             DB::commit();
 
-            return redirect()->route('dashboard.portfolios.index')->with('success', 'تم إنشاء القالب بنجاح.');
+            return redirect()->route('dashboard.portfolios.index')
+                ->with('success', __('Portfolio created successfully.'));
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => $e->getMessage()]);
+            // P12 fix: log internally, show generic message to user
+            Log::error('Portfolio store failed: ' . $e->getMessage(), ['exception' => $e]);
+            return back()->withErrors(['error' => __('An error occurred while saving. Please try again.')]);
         }
     }
 
     public function edit($id)
     {
         $portfolio = Portfolio::with('translations')->findOrFail($id);
+        $this->authorize('update', $portfolio);
+
+        $this->loadLanguages();
+
         $portfolioTranslations = [];
         foreach ($this->languages as $lang) {
             $trans = $portfolio->translations->firstWhere('locale', $lang->code);
             $portfolioTranslations[$lang->code] = [
-                'locale' => $lang->code,
-                'title' => $trans?->title ?? '',
-                'type' => $trans?->type ?? '',
-                'materials' => $trans?->materials ?? '',
-                'link' => $trans?->link ?? '',
-                'status' => $trans?->status ?? '',
+                'locale'      => $lang->code,
+                'title'       => $trans?->title       ?? '',
+                'type'        => $trans?->type        ?? '',
+                'materials'   => $trans?->materials   ?? '',
+                'link'        => $trans?->link        ?? '',
+                'status'      => $trans?->status      ?? '',
                 'description' => $trans?->description ?? '',
             ];
         }
-        $languages = $this->languages;
-        $typeSuggestions = $this->typeSuggestions;
+
+        $languages         = $this->languages;
+        $typeSuggestions   = $this->typeSuggestions;
         $statusSuggestions = $this->statusSuggestions;
-        return view('dashboard.portfolios.edit', compact('portfolio', 'portfolioTranslations', 'languages', 'typeSuggestions', 'statusSuggestions'));
+
+        return view('dashboard.portfolios.edit',
+            compact('portfolio', 'portfolioTranslations', 'languages', 'typeSuggestions', 'statusSuggestions'));
     }
 
     public function update(Request $request, $id)
     {
         $portfolio = Portfolio::findOrFail($id);
+        $this->authorize('update', $portfolio);
+
+        $this->loadLanguages();
+
         $baseRules = [
-            'order' => 'required|integer',
-            'delivery_date' => 'required|date',
-            'implementation_period_days' => 'required|integer',
-            'client' => 'nullable|string',
-            'default_image' => 'nullable|integer|exists:media,id',
-            'images' => 'nullable|string',
+            'order'                      => 'required|integer|min:0',
+            'delivery_date'              => 'required|date',
+            'implementation_period_days' => 'nullable|integer|min:0',
+            'client'                     => 'nullable|string|max:255',
+            'default_image'              => 'nullable|integer|exists:media,id',
+            'images'                     => ['nullable', 'string', 'regex:/^(\d+)(,\d+)*$/'],
         ];
+
         $translationRules = $this->buildTranslationRules($request);
-        $request->validate($baseRules + $translationRules);
+        $validated        = $request->validate($baseRules + $translationRules);
 
         DB::beginTransaction();
 
         try {
             $translations = $request->input('translations', []);
-            $activeCodes = Language::where('is_active', 1)->pluck('code')->all();
+            $activeCodes  = $this->languages->where('is_active', 1)->pluck('code')->all();
             $titleForSlug = collect($translations)
-                ->first(function ($t) use ($activeCodes) {
-                    return in_array($t['locale'] ?? '', $activeCodes, true) && !empty($t['title'] ?? null);
-                })['title']
+                ->first(fn($t) => in_array($t['locale'] ?? '', $activeCodes, true) && ! empty($t['title']))
+                ['title']
                 ?? (collect($translations)->firstWhere('title')['title'] ?? 'portfolio');
 
-            // Convert media IDs to paths
-            $portfolioData = $request->except(['translations']);
-            $portfolioData['slug'] = $this->generateUniqueSlug($titleForSlug, $id);
-            $portfolioData['default_image'] = $this->resolveMediaIdsToPaths($request->input('default_image'));
-            $portfolioData['images'] = $this->resolveMediaIdsToPaths($request->input('images'));
+            // P11 fix: explicit field list from $validated
+            $portfolioData = [
+                'order'                      => $validated['order'],
+                'delivery_date'              => $validated['delivery_date'],
+                'implementation_period_days' => $validated['implementation_period_days'] ?? null,
+                'client'                     => $validated['client'] ?? null,
+                'slug'                       => $this->generateUniqueSlug($titleForSlug, (int) $id),
+                'default_image'              => $this->resolveMediaIdsToPaths($validated['default_image'] ?? null),
+                'images'                     => $this->resolveMediaIdsToPaths($validated['images'] ?? null),
+            ];
 
             $portfolio->update($portfolioData);
 
-            // إعادة إدخال الترجمات
-            foreach ($request->translations as $translation) {
+            // P6 fix: null-safe on every translation key
+            foreach ($translations as $translation) {
                 PortfolioTranslation::updateOrCreate(
-                    ['portfolio_id' => $portfolio->id, 'locale' => $translation['locale']],
+                    ['portfolio_id' => $portfolio->id, 'locale' => $translation['locale'] ?? ''],
                     [
-                        'title' => $translation['title'],
-                        'description' => $translation['description'],
-                        'type' => $translation['type'],
-                        'materials' => $translation['materials'],
-                        'link' => $translation['link'],
-                        'status' => $translation['status'],
+                        'title'       => $translation['title']       ?? null,
+                        'description' => $translation['description'] ?? null,
+                        'type'        => $translation['type']        ?? null,
+                        'materials'   => $translation['materials']   ?? null,
+                        'link'        => $translation['link']        ?? null,
+                        'status'      => $translation['status']      ?? null,
                     ]
                 );
             }
 
             DB::commit();
 
-            return redirect()->route('dashboard.portfolios.index')->with('success', 'تم تعديل القالب بنجاح.');
+            return redirect()->route('dashboard.portfolios.index')
+                ->with('success', __('Portfolio updated successfully.'));
+
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => $e->getMessage()]);
+            // P12 fix: log internally, show generic message
+            Log::error('Portfolio update failed for id=' . $id . ': ' . $e->getMessage(), ['exception' => $e]);
+            return back()->withErrors(['error' => __('An error occurred while saving. Please try again.')]);
         }
     }
-
 
     public function destroy($id)
     {
         $portfolio = Portfolio::findOrFail($id);
+        $this->authorize('delete', $portfolio);
 
+        // P9 fix: soft-delete (requires SoftDeletes on the model + deleted_at migration)
         $portfolio->delete();
 
-        return redirect()->route('dashboard.portfolios.index')->with('success', 'تم حذف القالب بنجاح.');
+        return redirect()->route('dashboard.portfolios.index')
+            ->with('success', __('Portfolio deleted successfully.'));
     }
 }

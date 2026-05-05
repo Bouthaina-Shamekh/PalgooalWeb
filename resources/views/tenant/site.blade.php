@@ -1,4 +1,6 @@
 @php
+    use App\Support\Tenancy\TenantThemeFontLoader;
+
     $pageTitle = $page->translations->firstWhere('locale', app()->getLocale())?->title
         ?? $page->translations->first()?->title
         ?? $page->slug
@@ -10,6 +12,7 @@
         ->orderByDesc('is_home')
         ->orderBy('id')
         ->get();
+    $tenantThemeFontUrl = TenantThemeFontLoader::googleFontsUrlForSubscription($subscription);
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'ar' ? 'rtl' : 'ltr' }}">
@@ -23,6 +26,9 @@
         href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Cairo:wght@200..1000&display=swap"
         rel="stylesheet"
     >
+    @if ($tenantThemeFontUrl)
+        <link href="{{ $tenantThemeFontUrl }}" rel="stylesheet">
+    @endif
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/tabler-icons.min.css') }}">
     @php $tenantThemeCssUrl = \App\Services\Tenancy\TenantThemeCssGenerator::publicUrlFor($subscription); @endphp
@@ -30,7 +36,7 @@
         <link rel="stylesheet" href="{{ $tenantThemeCssUrl }}">
     @endif
 </head>
-<body class="m-0 bg-white text-purple-brand overflow-x-hidden font-Cairo">
+<body class="m-0 bg-white text-purple-brand overflow-x-hidden font-theme-body">
     <main>
         @include('tenant.partials.render-sections', [
             'page' => $headerPage ?? null,

@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\Billing\OrderActivationService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\{DB, Log};
 
 class OrderController extends Controller
 {
@@ -17,6 +17,7 @@ class OrderController extends Controller
     // عرض جميع الطلبات مع بيانات العميل
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Order::class);
         $q = $request->get('q');
         $status = $request->get('status');
         $type = $request->get('type');
@@ -25,12 +26,14 @@ class OrderController extends Controller
 
         $query = Order::with('client'); // إن احتجت الدومين في الجدول، أضف 'items'
         if ($q) {
-            $query->where(function ($qr) use ($q) {
-                $qr->where('order_number', 'like', "%$q%")
-                    ->orWhereHas('client', function ($qc) use ($q) {
-                        $qc->where('first_name', 'like', "%$q%")
-                            ->orWhere('last_name', 'like', "%$q%")
-                            ->orWhere('email', 'like', "%$q%");
+            // Escape LIKE wildcards so searching for "%" or "_" is literal.
+            $qLike = '%' . addcslashes($q, '%_\\') . '%';
+            $query->where(function ($qr) use ($qLike) {
+                $qr->where('order_number', 'like', $qLike)
+                    ->orWhereHas('client', function ($qc) use ($qLike) {
+                        $qc->where('first_name', 'like', $qLike)
+                            ->orWhere('last_name', 'like', $qLike)
+                            ->orWhere('email', 'like', $qLike);
                     });
             });
         }
@@ -49,33 +52,41 @@ class OrderController extends Controller
     // إجراء جماعي على الطلبات (تغيير الحالة أو حذف)
     public function bulk(Request $request)
     {
+        $this->authorize('bulk', Order::class);
+
         $data = $request->validate([
             'ids'    => 'required|array|min:1',
-            'action' => 'required|string',
+            'ids.*'  => 'integer',
+            'action' => 'required|string|in:pending,active,cancelled,fraud,delete',
         ]);
 
-        $ids = $data['ids'];
+        $ids    = $data['ids'];
         $action = $data['action'];
         $affected = 0;
 
         if ($action === 'delete') {
-            $affected = Order::whereIn('id', $ids)->delete(); // سيحذف البنود تباعًا بسبب FK cascade
-        } elseif (in_array($action, ['pending', 'active', 'cancelled', 'fraud'])) {
+            // Soft delete — recoverable via restore()
+            $affected = Order::whereIn('id', $ids)->delete();
+        } elseif (in_array($action, ['pending', 'active', 'cancelled', 'fraud'], true)) {
             $affected = Order::whereIn('id', $ids)->update(['status' => $action]);
 
             if ($action === 'active') {
                 $orders = Order::with(['invoices.items', 'items'])->whereIn('id', $ids)->get();
                 foreach ($orders as $order) {
+                    // Each order activation is wrapped in its own transaction so one failure
+                    // doesn't prevent the others from being processed.
                     try {
-                        $this->processActivation($order);
-                    } catch (\Exception $e) {
+                        DB::transaction(function () use ($order) {
+                            $this->activationService->activate($order);
+                        });
+                    } catch (\Throwable $e) {
                         Log::error('Bulk activation failed for order ' . $order->id . ': ' . $e->getMessage());
                     }
                 }
             }
         }
 
-        return redirect()->back()->with('ok', "تم تنفيذ الإجراء على {$affected} طلب(ات)");
+        return redirect()->back()->with('ok', __(':count order(s) updated.', ['count' => $affected]));
     }
 
     /**
@@ -89,7 +100,8 @@ class OrderController extends Controller
 
     public function show($id)
     {
-        $order = \App\Models\Order::with(['client', 'items'])->findOrFail($id);
+        $order = \App\Models\Order::with(['client', 'items', 'invoices.items'])->findOrFail($id);
+        $this->authorize('view', $order);
         return view('dashboard.management.orders.show', compact('order'));
     }
 
@@ -97,20 +109,28 @@ class OrderController extends Controller
     public function updateStatus($id, Request $request)
     {
         $order = \App\Models\Order::findOrFail($id);
+        $this->authorize('update', $order);
+
         $request->validate([
             'status' => 'required|in:pending,active,cancelled,fraud',
         ]);
 
-        $order->status = $request->status;
-        $order->save();
+        $newStatus = $request->status;
 
-        if ($order->status === 'active') {
-            // حمّل العلاقات اللازمة لتقليل الاستعلامات داخل processActivation
-            $order->loadMissing(['invoices.items', 'items']);
-            $this->processActivation($order);
-        }
+        DB::transaction(function () use ($order, $newStatus) {
+            $order->status = $newStatus;
+            $order->save();
 
-        return redirect()->route('dashboard.orders.show', $order->id)->with('success', 'تم تحديث حالة الطلب بنجاح');
+            if ($newStatus === Order::STATUS_ACTIVE) {
+                // Load relations before activation to avoid lazy-loading inside the service.
+                $order->loadMissing(['invoices.items', 'items']);
+                $this->activationService->activate($order);
+            }
+        });
+
+        return redirect()
+            ->route('dashboard.orders.show', $order->id)
+            ->with('success', __('Order status updated successfully.'));
     }
 }
 

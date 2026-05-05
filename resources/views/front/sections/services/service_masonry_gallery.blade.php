@@ -5,6 +5,16 @@
     $title = trim((string) ($data['title'] ?? ''));
     $description = trim((string) ($data['description'] ?? ''));
 
+    $galleryLayout = match ($data['gallery_layout'] ?? 'masonry_a') {
+        'split_two', 'masonry_b' => 'split_two',
+        default => 'masonry_a',
+    };
+
+    $backgroundClass = match ($data['background_variant'] ?? 'white') {
+        'gray' => 'bg-theme-muted',
+        default => 'bg-theme-surface',
+    };
+
     $services = collect(is_array($data['services'] ?? null) ? $data['services'] : [])
         ->map(function ($item) {
             if (! is_array($item)) {
@@ -32,10 +42,6 @@
         })
         ->filter()
         ->values();
-
-    $buttonLabel = trim((string) ($data['button_label'] ?? ''));
-    $buttonUrl = trim((string) ($data['button_url'] ?? ''));
-    $buttonNewTab = filter_var($data['button_new_tab'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
     $galleryImages = collect(is_array($data['gallery_images'] ?? null) ? $data['gallery_images'] : [])
         ->map(function ($item) {
@@ -66,17 +72,9 @@
         ->filter()
         ->values();
 
-    $backgroundClass = match ($data['background_variant'] ?? 'white') {
-        'gray' => 'bg-gray-50 bg-theme-muted',
-        default => 'bg-white bg-theme-surface',
-    };
-
-    $galleryLayout = match ($data['gallery_layout'] ?? 'masonry_a') {
-        'split_two' => 'split_two',
-        'masonry_b' => 'split_two',
-        default => 'masonry_a',
-    };
-
+    $buttonLabel = trim((string) ($data['button_label'] ?? ''));
+    $buttonUrl = trim((string) ($data['button_url'] ?? ''));
+    $buttonNewTab = filter_var($data['button_new_tab'] ?? false, FILTER_VALIDATE_BOOLEAN);
     $hasButton = $buttonLabel !== '' && $buttonUrl !== '';
 
     $shouldRender = $brandPrefix !== ''
@@ -84,12 +82,12 @@
         || $title !== ''
         || $description !== ''
         || $services->isNotEmpty()
-        || $hasButton
-        || $galleryImages->isNotEmpty();
+        || $galleryImages->isNotEmpty()
+        || $hasButton;
 @endphp
 
 @if ($shouldRender)
-    <section id="{{ $sectionId }}" class="py-16 lg:py-24 px-4 sm:px-6 lg:px-12 {{ $backgroundClass }} overflow-hidden">
+    <section id="{{ $sectionId }}" class="{{ $backgroundClass }} font-theme-body py-16 lg:py-24 px-4 sm:px-6 lg:px-12 overflow-hidden">
         <div class="container mx-auto">
             <div @class([
                 'flex gap-12',
@@ -106,18 +104,18 @@
                     @if ($brandPrefix !== '' || $brandSuffix !== '')
                         <p class="text-lg md:text-xl">
                             @if ($brandPrefix !== '')
-                                <span class="text-red-brand text-theme-secondary">{{ $brandPrefix }}</span>
+                                <span class="text-theme-secondary">{{ $brandPrefix }}</span>
                             @endif
 
                             @if ($brandSuffix !== '')
-                                <span class="text-purple-brand text-theme-primary">{{ $brandSuffix }}</span>
+                                <span class="text-theme-primary">{{ $brandSuffix }}</span>
                             @endif
                         </p>
                     @endif
 
                     @if ($title !== '')
                         <h2 @class([
-                            'text-purple-brand text-theme-heading font-theme-heading font-extrabold uppercase leading-tight',
+                            'font-theme-heading text-theme-heading font-extrabold uppercase leading-tight',
                             'text-4xl md:text-[40px] mb-4' => $galleryLayout === 'masonry_a',
                             'text-3xl md:text-[40px] mb-4' => $galleryLayout === 'split_two',
                         ])>
@@ -126,7 +124,7 @@
                     @endif
 
                     @if ($description !== '')
-                        <p class="text-gray-dark text-theme-body text-lg leading-relaxed mb-4">
+                        <p class="text-theme-body text-lg leading-relaxed mb-4">
                             {{ $description }}
                         </p>
                     @endif
@@ -138,22 +136,27 @@
                         ])>
                             @foreach ($services as $service)
                                 <li @class([
-                                    'flex gap-3 text-lg md:text-xl text-purple-brand text-theme-heading',
-                                    'items-center justify-start hover:text-red-brand transition-colors duration-300' => $galleryLayout === 'masonry_a',
+                                    'flex gap-3 text-lg md:text-xl text-theme-heading',
+                                    'items-center justify-start hover:text-theme-secondary transition-colors duration-300' => $galleryLayout === 'masonry_a',
                                     'items-start justify-start' => $galleryLayout === 'split_two',
                                 ])>
                                     @if ($service['icon_source'] === 'media' && $service['icon_media_url'])
                                         <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center md:h-6 md:w-6" aria-hidden="true">
-                                            <img src="{{ $service['icon_media_url'] }}" alt="" class="h-full w-full object-contain" loading="lazy">
+                                            <img
+                                                src="{{ $service['icon_media_url'] }}"
+                                                alt=""
+                                                class="h-full w-full object-contain"
+                                                loading="lazy"
+                                            >
                                         </span>
                                     @elseif ($service['icon'] !== '')
-                                        <i class="{{ $service['icon'] }} text-xl text-theme-secondary md:text-2xl" aria-hidden="true"></i>
+                                        <i class="{{ $service['icon'] }} text-theme-secondary text-xl md:text-2xl" aria-hidden="true"></i>
                                     @else
                                         <span @class([
-    'text-theme-secondary rtl:rotate-180',
-    'text-sm' => $galleryLayout === 'masonry_a',
-    'text-xl mt-1 transform' => $galleryLayout === 'split_two',
-])>
+                                            'text-theme-secondary rtl:rotate-180',
+                                            'text-sm' => $galleryLayout === 'masonry_a',
+                                            'text-xl mt-1 transform' => $galleryLayout === 'split_two',
+                                        ]) aria-hidden="true">
                                             <svg width="10" height="13" viewBox="0 0 10 13" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                 <path d="M9.75 6.49512L0 12.9903V-7.34329e-05L9.75 6.49512Z" fill="currentColor" />
                                             </svg>
@@ -171,13 +174,15 @@
                     @endif
 
                     @if ($hasButton)
-                        <a href="{{ $buttonUrl }}"
+                        <a
+                            href="{{ $buttonUrl }}"
                             @if ($buttonNewTab) target="_blank" rel="noopener noreferrer" @endif
                             @class([
-                                'btn-theme-primary rounded-xl text-lg md:text-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300',
+                                'btn-theme-primary inline-flex items-center justify-center text-lg md:text-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300',
                                 'px-14 py-4' => $galleryLayout === 'masonry_a',
                                 'md:px-14 md:py-4 px-6 py-3' => $galleryLayout === 'split_two',
-                            ])>
+                            ])
+                        >
                             {{ $buttonLabel }}
                         </a>
                     @endif
@@ -189,14 +194,16 @@
                             <div class="grid grid-cols-3 gap-4 lg:gap-6 h-[200px] sm:h-[250px] lg:h-full">
                                 @foreach ($galleryImages->take(2) as $index => $galleryImage)
                                     <div @class([
-                                        'rounded-2xl overflow-hidden shadow-lg transform hover:-translate-y-2 transition-transform duration-500 h-full bg-gray-200',
+                                        'rounded-theme-lg overflow-hidden shadow-theme transform hover:-translate-y-2 transition-transform duration-500 h-full bg-theme-muted',
                                         'col-span-2' => $index === 0,
                                         'col-span-1 delay-100' => $index === 1,
                                     ])>
-                                        <img src="{{ $galleryImage['url'] }}"
+                                        <img
+                                            src="{{ $galleryImage['url'] }}"
                                             class="w-full h-full object-cover"
                                             alt="{{ $galleryImage['alt'] ?: $title ?: 'Service gallery image' }}"
-                                            loading="lazy">
+                                            loading="lazy"
+                                        >
                                     </div>
                                 @endforeach
                             </div>
@@ -206,16 +213,18 @@
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-[260px]">
                                 @foreach ($galleryImages as $galleryImage)
                                     <div @class([
-                                        'rounded-2xl overflow-hidden shadow-lg group h-full',
+                                        'rounded-theme-lg overflow-hidden shadow-theme group h-full bg-theme-muted',
                                         'md:col-span-2' => $galleryImage['grid_span'] === '2x1',
                                         'row-span-2' => $galleryImage['grid_span'] === '1x2',
                                         'md:col-span-2 row-span-2' => $galleryImage['grid_span'] === '2x2',
                                         'col-span-1' => $galleryImage['grid_span'] === '1x1',
                                     ])>
-                                        <img src="{{ $galleryImage['url'] }}"
+                                        <img
+                                            src="{{ $galleryImage['url'] }}"
                                             class="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110"
                                             alt="{{ $galleryImage['alt'] ?: $title ?: 'Service gallery image' }}"
-                                            loading="lazy">
+                                            loading="lazy"
+                                        >
                                     </div>
                                 @endforeach
                             </div>

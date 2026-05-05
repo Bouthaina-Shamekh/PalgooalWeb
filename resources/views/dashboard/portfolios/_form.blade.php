@@ -508,9 +508,7 @@
             });
         });
     </script>
-@endpush
 
-@push('scripts')
     <script>
         // تبويبات لغات ترجمة المعرض (معزولة عن خدمات)
         document.addEventListener('DOMContentLoaded', function() {

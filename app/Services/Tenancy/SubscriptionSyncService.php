@@ -43,12 +43,16 @@ class SubscriptionSyncService
             }
             Log::debug('Subscription ' . $subscription->id . ' will use server_package: ' . $package);
 
-            // Build base params (username will be set per attempt)
+            // Build base params (username will be set per attempt).
+            // P4: never fall back to a hard-coded password; generate a random one instead.
+            $accountPassword = $subscription->password
+                ?? \Illuminate\Support\Str::random(14) . '!A9';
+
             $baseParams = [
-                'domain' => $subscription->domain_name,
-                'plan' => (string)$package,
+                'domain'       => $subscription->domain_name,
+                'plan'         => (string) $package,
                 'contactemail' => $subscription->client->email ?? '',
-                'password' => $subscription->password ?? 'TempPass!123',
+                'password'     => $accountPassword,
             ];
 
             // If dry run requested, show the URL/params for the first candidate only
@@ -80,11 +84,13 @@ class SubscriptionSyncService
                 Log::info("Subscription sync attempt {$attempt} for subscription {$subscription->id} - username={$candidate}");
                 Log::debug('Createacct request for subscription ' . $subscription->id . ' attempt ' . $attempt . ': url=' . $apiUrl . ' params=' . json_encode($params, JSON_UNESCAPED_UNICODE) . ' headers=' . json_encode($header));
                 try {
+                    // P7: SSL verification is configurable; default ON.
+                    $sslVerify = config('services.whm.ssl_verify', true);
                     $ch = curl_init();
                     curl_setopt($ch, CURLOPT_URL, $apiUrl);
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $sslVerify);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $sslVerify ? 2 : 0);
                     curl_setopt($ch, CURLOPT_TIMEOUT, 20);
                     curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
                     $response = curl_exec($ch);
@@ -222,11 +228,12 @@ class SubscriptionSyncService
             ];
             $apiUrl = "https://{$host}:{$port}/json-api/removeacct?api.version=1&" . http_build_query($params);
             try {
+                $sslVerify = config('services.whm.ssl_verify', true);
                 $ch = curl_init();
                 curl_setopt($ch, CURLOPT_URL, $apiUrl);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $sslVerify);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $sslVerify ? 2 : 0);
                 curl_setopt($ch, CURLOPT_TIMEOUT, 30);
                 $header = [
                     'Authorization: whm ' . $username . ':' . $apiToken

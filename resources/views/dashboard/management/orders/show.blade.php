@@ -6,8 +6,8 @@
         </div>
         @if (session('sync_result'))
             <div class="mb-4">
-                <div class="rounded p-3 bg-blue-50 border border-blue-100 text-blue-800">
-                    {!! session('sync_result') !!}
+                <div class="rounded p-3 bg-blue-50 border border-blue-100 text-blue-800 whitespace-pre-line">
+                    {{ session('sync_result') }}
                 </div>
             </div>
         @endif

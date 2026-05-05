@@ -36,7 +36,7 @@
                             </div>
                             <div class="mb-2">
                                 <span class="font-semibold text-gray-600">الإجمالي:</span>
-                                ${{ number_format($invoice->total_cents / 100, 2) }} {{ $invoice->currency }}
+                                {{ number_format($invoice->total_cents / 100, 2) }} {{ $invoice->currency }}
                             </div>
                             <div class="mb-2">
                                 <span class="font-semibold text-gray-600">تاريخ الاستحقاق:</span>
@@ -67,9 +67,9 @@
                                                     <td class="px-2 py-1">{{ $item->description }}</td>
                                                     <td class="px-2 py-1">{{ $item->qty }}</td>
                                                     <td class="px-2 py-1">
-                                                        ${{ number_format($item->unit_price_cents / 100, 2) }}</td>
+                                                        {{ number_format($item->unit_price_cents / 100, 2) }} {{ $invoice->currency }}</td>
                                                     <td class="px-2 py-1">
-                                                        ${{ number_format($item->total_cents / 100, 2) }}
+                                                        {{ number_format($item->total_cents / 100, 2) }} {{ $invoice->currency }}
                                                     </td>
                                                 </tr>
                                             @endforeach

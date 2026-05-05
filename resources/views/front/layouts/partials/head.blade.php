@@ -1,6 +1,7 @@
 {{-- resources/views/front/layouts/partials/head.blade.php --}}
 @php
     use App\Support\SeoMeta;
+    use App\Support\Tenancy\TenantThemeFontLoader;
 
     /**
      * Normalize incoming SEO payload
@@ -52,10 +53,20 @@
     {{-- Fonts and Styles --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    @php
+        $_themeSubscription = $activeThemeSubscription
+            ?? $tenantSubscription
+            ?? $subscription
+            ?? null;
+        $_themeFontUrl = TenantThemeFontLoader::googleFontsUrlForSubscription($_themeSubscription);
+    @endphp
     <link
         href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Cairo:wght@200..1000&display=swap"
         rel="stylesheet"
     >
+    @if ($_themeFontUrl)
+        <link href="{{ $_themeFontUrl }}" rel="stylesheet">
+    @endif
     {{-- <link rel="stylesheet" href="{{ mix('assets/tamplate/css/tailwind.css') }}"> --}}
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}">
     <link rel="stylesheet" href="{{ route('frontend.assets.purple_topbar_css') }}">
@@ -67,10 +78,6 @@
         // $activeThemeSubscription — set explicitly by builder/preview controllers.
         // $tenantSubscription      — set by ServeTenantSite middleware for live tenant requests.
         // $subscription            — available on tenant/site.blade.php and some client views.
-        $_themeSubscription = $activeThemeSubscription
-            ?? $tenantSubscription
-            ?? $subscription
-            ?? null;
         $_themeCssUrl = \App\Services\Tenancy\TenantThemeCssGenerator::publicUrlFor($_themeSubscription);
     @endphp
     @if ($_themeCssUrl)

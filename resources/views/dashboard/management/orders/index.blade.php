@@ -50,7 +50,9 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-600">#</th>
+                        <th class="px-4 py-3 text-right text-xs font-bold text-gray-600">
+                            <input type="checkbox" id="select_all" title="تحديد الكل" />
+                        </th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-600">رقم الطلب</th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-600">العميل</th>
                         <th class="px-4 py-3 text-right text-xs font-bold text-gray-600">الحالة</th>
@@ -64,7 +66,6 @@
                         <tr class="hover:bg-gray-50">
                             <td class="px-4 py-2"><input type="checkbox" class="row_checkbox"
                                     value="{{ $order->id }}" /></td>
-                            <td class="px-4 py-2">{{ $order->id }}</td>
                             <td class="px-4 py-2 font-mono text-blue-700">{{ $order->order_number }}</td>
                             <td class="px-4 py-2">{{ $order->client->first_name ?? '-' }}</td>
                             <td class="px-4 py-2">

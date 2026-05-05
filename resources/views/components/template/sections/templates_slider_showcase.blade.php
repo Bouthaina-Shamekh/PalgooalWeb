@@ -1,4 +1,8 @@
 @php
+    use App\Models\Template;
+    use Illuminate\Support\Facades\Route;
+    use Illuminate\Support\Facades\Schema;
+
     $payload = is_array($data ?? null) ? $data : (is_array($content ?? null) ? $content : []);
 
     $style = isset($section) && is_array($section->style ?? null) ? $section->style : [];
@@ -21,36 +25,85 @@
         $previewLabel = __('Live Preview');
     }
 
-    $templates = collect($payload['templates'] ?? [])
+    $limit = isset($payload['limit']) && is_numeric($payload['limit']) ? (int) $payload['limit'] : 8;
+
+    if ($limit <= 0) {
+        $limit = 8;
+    }
+
+    $rawTemplates = collect($payload['templates'] ?? []);
+
+    if ($rawTemplates->isEmpty()) {
+        $rawTemplates = Template::query()
+            ->with('translations')
+            ->when(Schema::hasColumn('templates', 'is_active'), function ($query) {
+                $query->where('is_active', true);
+            })
+            ->latest('id')
+            ->limit($limit)
+            ->get();
+    }
+
+    $templates = $rawTemplates
         ->map(function ($template): ?array {
             if (!$template) {
                 return null;
             }
 
-            $translation = $template->translation(app()->getLocale()) ?? $template->translations->first();
-            $slug = trim((string) ($translation?->slug ?? ''));
-            $name = trim((string) ($translation?->name ?? __('Template')));
-            $description = trim(strip_tags((string) ($translation?->description ?? '')));
-            $previewSource = trim((string) ($translation?->preview_url ?? ''));
-            $image =
-                is_string($template->image ?? null) && $template->image !== ''
-                    ? asset('storage/' . ltrim($template->image, '/'))
-                    : null;
+            if (is_array($template)) {
+                $slug = trim((string) ($template['slug'] ?? ''));
+                $name = trim((string) ($template['name'] ?? __('Template')));
+                $description = trim(strip_tags((string) ($template['description'] ?? '')));
+                $previewSource = trim((string) ($template['preview_url_source'] ?? $template['preview_url'] ?? ''));
+                $imageValue = $template['image'] ?? null;
+                $id = $template['id'] ?? null;
+            } elseif (is_object($template)) {
+                if (method_exists($template, 'loadMissing')) {
+                    $template->loadMissing('translations');
+                }
+
+                $translations = collect($template->translations ?? []);
+                $translation = method_exists($template, 'translation')
+                    ? ($template->translation(app()->getLocale()) ?? $translations->first())
+                    : ($translations->firstWhere('locale', app()->getLocale()) ?? $translations->first());
+                $slug = trim((string) ($translation?->slug ?? ''));
+                $name = trim((string) ($translation?->name ?? __('Template')));
+                $description = trim(strip_tags((string) ($translation?->description ?? '')));
+                $previewSource = trim((string) ($translation?->preview_url ?? ''));
+                $imageValue = $template->image ?? null;
+                $id = $template->id ?? null;
+            } else {
+                return null;
+            }
+
+            $imageValue = is_string($imageValue) ? trim($imageValue) : '';
+            $image = null;
+
+            if ($imageValue !== '') {
+                $image = filter_var($imageValue, FILTER_VALIDATE_URL) || str_starts_with($imageValue, '//')
+                    ? $imageValue
+                    : asset('storage/' . ltrim($imageValue, '/'));
+            }
 
             if ($name === '') {
                 $name = __('Template');
             }
 
-            $detailsUrl = $slug !== '' ? route('template.show', $slug, false) : '#';
-            $redesignUrl = $slug !== '' ? route('template.show.redesign', $slug, false) : $detailsUrl;
+            $detailsUrl = $slug !== '' && Route::has('template.show') ? route('template.show', $slug, false) : '#';
+            $redesignUrl =
+                $slug !== '' && Route::has('template.show.redesign')
+                    ? route('template.show.redesign', $slug, false)
+                    : $detailsUrl;
             $hasValidPreviewSource =
                 $previewSource !== '' &&
                 (filter_var($previewSource, FILTER_VALIDATE_URL) || str_starts_with($previewSource, '//'));
             $previewUrl =
-                $slug !== '' && $hasValidPreviewSource ? route('template.preview', $slug, false) : $detailsUrl;
+                $slug !== '' && $hasValidPreviewSource && Route::has('template.preview')
+                    ? route('template.preview', $slug, false)
+                    : $detailsUrl;
 
             return [
-                'id' => $template->id,
+                'id' => $id,
                 'name' => $name,
                 'description' => $description,
                 'image' => $image,

@@ -6,11 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
 class Order extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     public const STATUS_PENDING   = 'pending';
     public const STATUS_ACTIVE    = 'active';
@@ -40,7 +41,8 @@ class Order extends Model
         static::creating(function (Order $order) {
             // توليد رقم الطلب إذا لم يُمرَّر
             if (empty($order->order_number)) {
-                $order->order_number = 'ORD-' . now()->format('Ymd') . '-' . Str::upper(Str::random(6));
+                // Candidate only — real collision guard is in createWithUniqueNumber().
+                $order->order_number = static::generateCandidateNumber();
             }
 
             // تعيين الحالة الافتراضية
@@ -78,10 +80,53 @@ class Order extends Model
         $this->attributes['order_number'] = $value;
     }
 
+    /**
+     * Generate a candidate order number — no DB check.
+     * Format: ORD-YYYYMMDD-XXXXXXXX (8 random chars ≈ 208 billion combinations per day).
+     */
+    public static function generateCandidateNumber(): string
+    {
+        return 'ORD-' . now()->format('Ymd') . '-' . Str::upper(Str::random(8));
+    }
+
+    /**
+     * Create an Order, retrying on unique order_number constraint violations (SQLSTATE 23000).
+     * Use this instead of Order::create() whenever order_number must be auto-generated.
+     *
+     * @param  array<string, mixed>  $attributes  Must NOT include 'order_number'.
+     * @param  int                   $maxAttempts
+     * @return static
+     */
+    public static function createWithUniqueNumber(array $attributes, int $maxAttempts = 5): static
+    {
+        $lastException = null;
+
+        for ($i = 0; $i < $maxAttempts; $i++) {
+            try {
+                $attributes['order_number'] = static::generateCandidateNumber();
+                return static::create($attributes);
+            } catch (\Illuminate\Database\QueryException $e) {
+                if ($i < $maxAttempts - 1 && str_contains($e->getMessage(), '23000')) {
+                    $lastException = $e;
+                    continue;
+                }
+                throw $e;
+            }
+        }
+
+        throw $lastException;
+    }
+
     public function client(): BelongsTo
     {
-        // client_id الآن Nullable
-        return $this->belongsTo(Client::class);
+        // client_id is nullable (set to NULL on client delete to preserve accounting records).
+        // withDefault() prevents null-pointer errors when accessing $order->client->name.
+        return $this->belongsTo(Client::class)->withDefault([
+            'first_name' => '—',
+            'last_name'  => '',
+            'email'      => '—',
+            'phone'      => '—',
+        ]);
     }
 
     public function items(): HasMany
@@ -107,7 +152,11 @@ class Order extends Model
      */
     public function getTotalCentsAttribute(): int
     {
-        return $this->subtotalCents();
+        // Use the already-loaded collection to avoid an extra DB round-trip.
+        if ($this->relationLoaded('items')) {
+            return (int) $this->items->sum('price_cents');
+        }
+        return (int) $this->items()->sum('price_cents');
     }
 
     /**

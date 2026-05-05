@@ -36,6 +36,12 @@ return [
 
     'template_registry' => [
         'fallback_view' => 'front.sections._missing-template',
-        'templates' => [],
+        'templates' => [
+            'portfolio_slider' => [
+                'label' => 'Portfolio Slider',
+                'view' => 'front.sections.portfolio.portfolio_slider',
+                'category' => 'portfolio',
+            ],
+        ],
     ],
 ];

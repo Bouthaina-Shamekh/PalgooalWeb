@@ -81,8 +81,8 @@ class SectionDefinitionFrontendViewDataFactory
 
         $translation = $section->translation($locale);
         $content = is_array($translation?->content ?? null) ? $translation->content : [];
-        $data = $this->normalizeContent($content, $definition, $locale, $translation);
         $resolvedType = $this->resolvedSectionType($definition->section_key);
+        $data = $this->normalizeContent($content, $definition, $locale, $translation, $templateKey);
         $templateResolution = SectionTemplateRegistry::resolve($templateKey, $definition->category);
         $resolvedView = $templateResolution['view'] ?? null;
 
@@ -167,6 +167,7 @@ class SectionDefinitionFrontendViewDataFactory
         SectionDefinition $definition,
         string $locale,
         ?SectionTranslation $translation,
+        ?string $templateKey = null,
     ): array {
         $normalizedContent = $content;
         $definitionFields = $definition->relationLoaded('fields')
@@ -199,10 +200,12 @@ class SectionDefinitionFrontendViewDataFactory
             }
         }
 
-        return SectionQueryResolver::resolve(
-            $this->resolvedSectionType($definition->section_key),
-            $normalizedContent,
-        );
+        $resolvedSectionType = $this->resolvedSectionType($definition->section_key);
+        $resolvedData = SectionQueryResolver::resolve($resolvedSectionType, $normalizedContent);
+
+        return $resolvedData === $normalizedContent && $templateKey
+            ? SectionQueryResolver::resolve($templateKey, $normalizedContent)
+            : $resolvedData;
     }
 
     /**

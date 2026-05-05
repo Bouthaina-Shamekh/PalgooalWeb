@@ -8,85 +8,38 @@ use App\Models\Tenancy\Subscription;
 use App\Models\Client;
 use App\Models\Plan;
 use App\Services\Tenancy\DomainVerificationService;
+use App\Services\Tenancy\SubscriptionSyncService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 
 class SubscriptionController extends Controller
 {
-    public function syncWithProvider(Subscription $subscription)
-    {
-        $server = $subscription->server;
-        if (!$server) {
-            return back()->with('connection_result', 'لا يوجد سيرفر مرتبط بهذا الاشتراك.');
-        }
-        $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
-        $port = 2087;
-        $username = $server->username;
-        $apiToken = $server->api_token;
-        $error = null;
-        $result = null;
-        if ($host && $username && $apiToken) {
-            $params = [
-                'username' => $subscription->username,
-                'domain' => $subscription->domain_name,
-                'plan' => $subscription->plan->slug ?? $subscription->plan->name,
-                'contactemail' => $subscription->client->email ?? '',
-                'password' => $subscription->password ?? 'TempPass!123',
-            ];
-            $apiUrl = "https://{$host}:{$port}/json-api/createacct?api.version=1&" . http_build_query($params);
-            try {
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $apiUrl);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-                $header = [
-                    'Authorization: whm ' . $username . ':' . $apiToken,
-                ];
-                curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-                $response = curl_exec($ch);
-                if (curl_errno($ch)) {
-                    $error = curl_error($ch);
-                } else {
-                    $data = json_decode($response, true);
-                    if (isset($data['metadata']['result']) && $data['metadata']['result'] == 1) {
-                        $result = 'تم إنشاء الحساب بنجاح على المزود.';
-                    } else {
-                        $error = ($data['metadata']['reason'] ?? $data['reason'] ?? 'فشل إنشاء الحساب.') . '<br><pre>' . print_r($data, true) . '</pre>';
-                    }
-                }
-                curl_close($ch);
-            } catch (\Exception $e) {
-                $error = $e->getMessage();
-            }
-        } else {
-            $error = 'بيانات السيرفر غير مكتملة.';
-        }
-        return back()->with('connection_result', $result ?: $error);
-    }
+    // -------------------------------------------------------------------------
+    // Index / CRUD
+    // -------------------------------------------------------------------------
 
-    public function provision(Subscription $subscription)
-    {
-        ProvisionSubscription::dispatch($subscription->id, true);
-
-        return back()->with('toast_success', 'تم إرسال طلب تفعيل الاشتراك إلى قائمة الانتظار.');
-    }
     public function index()
     {
+        $this->authorize('viewAny', Subscription::class);
+
         $query = Subscription::with(['client', 'plan']);
 
-        // domain filter
+        // domain filter (P11: escape LIKE wildcards)
         if ($domain = request('domain')) {
-            $query->where('domain_name', 'like', '%' . $domain . '%');
+            $domainLike = '%' . addcslashes($domain, '%_\\') . '%';
+            $query->where('domain_name', 'like', $domainLike);
         }
 
-        // generic q search (client name, domain)
+        // generic q search (P11: escape LIKE wildcards)
         if ($q = request('q')) {
-            $query->where(function ($qry) use ($q) {
-                $qry->whereHas('client', function ($c) use ($q) {
-                    $c->where('first_name', 'like', "%{$q}%")->orWhere('last_name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%");
-                })->orWhere('domain_name', 'like', "%{$q}%");
+            $qLike = '%' . addcslashes($q, '%_\\') . '%';
+            $query->where(function ($qry) use ($qLike) {
+                $qry->whereHas('client', function ($c) use ($qLike) {
+                    $c->where('first_name', 'like', $qLike)
+                      ->orWhere('last_name',  'like', $qLike)
+                      ->orWhere('email',       'like', $qLike);
+                })->orWhere('domain_name', 'like', $qLike);
             });
         }
 
@@ -97,7 +50,6 @@ class SubscriptionController extends Controller
         // sorting
         if ($sort = request('sort')) {
             $direction = request('direction', 'asc') === 'desc' ? 'desc' : 'asc';
-            // allow only safe columns
             if (in_array($sort, ['id', 'domain_name', 'status', 'starts_at'])) {
                 $query->orderBy($sort, $direction);
             }
@@ -110,21 +62,27 @@ class SubscriptionController extends Controller
     }
 
     /**
-     * Show sync logs (last_sync_message) for subscriptions
+     * Show sync logs (last_sync_message) for subscriptions.
      */
     public function syncLogs(Request $request)
     {
+        $this->authorize('viewAny', Subscription::class);
+
         $query = Subscription::with(['client', 'plan', 'server']);
 
+        // P11: escape LIKE wildcards
         if ($q = $request->get('q')) {
-            $query->where(function ($qr) use ($q) {
-                $qr->where('domain_name', 'like', "%{$q}%")->orWhereHas('client', function ($c) use ($q) {
-                    $c->where('first_name', 'like', "%{$q}%")->orWhere('last_name', 'like', "%{$q}%")->orWhere('email', 'like', "%{$q}%");
-                });
+            $qLike = '%' . addcslashes($q, '%_\\') . '%';
+            $query->where(function ($qr) use ($qLike) {
+                $qr->where('domain_name', 'like', $qLike)
+                   ->orWhereHas('client', function ($c) use ($qLike) {
+                       $c->where('first_name', 'like', $qLike)
+                         ->orWhere('last_name',  'like', $qLike)
+                         ->orWhere('email',       'like', $qLike);
+                   });
             });
         }
 
-        // filter by server
         if ($serverId = $request->get('server_id')) {
             $query->where('server_id', $serverId);
         }
@@ -132,160 +90,215 @@ class SubscriptionController extends Controller
         // date range filters (on updated_at)
         try {
             if ($from = $request->get('from')) {
-                $fromDate = \Carbon\Carbon::parse($from)->startOfDay();
-                $query->where('updated_at', '>=', $fromDate);
+                $query->where('updated_at', '>=', \Carbon\Carbon::parse($from)->startOfDay());
             }
             if ($to = $request->get('to')) {
-                $toDate = \Carbon\Carbon::parse($to)->endOfDay();
-                $query->where('updated_at', '<=', $toDate);
+                $query->where('updated_at', '<=', \Carbon\Carbon::parse($to)->endOfDay());
             }
         } catch (\Exception $e) {
             // ignore parse errors
         }
 
-        $subscriptions = $query->whereNotNull('last_sync_message')->orderBy('updated_at', 'desc')->paginate(30)->withQueryString();
+        $subscriptions = $query->whereNotNull('last_sync_message')
+            ->orderBy('updated_at', 'desc')
+            ->paginate(30)
+            ->withQueryString();
 
         $servers = \App\Models\Server::orderBy('name')->get();
 
         return view('dashboard.management.subscriptions.sync_logs', compact('subscriptions', 'servers'));
     }
 
-    /**
-     * AJAX: suggest a unique username based on domain, client or preferred value
-     */
-    public function suggestUsername(Request $request)
-    {
-        $data = $request->validate([
-            'domain_name' => ['nullable', 'string'],
-            'client_id' => ['nullable', 'integer', 'exists:clients,id'],
-            'preferred_username' => ['nullable', 'string'],
-        ]);
-
-        $makeBase = function ($s) {
-            $s = (string) $s;
-            $s = strtolower($s);
-            // remove dots and non-alphanumeric
-            $s = str_replace('.', '', $s);
-            $s = preg_replace('/[^a-z0-9]/', '', $s);
-            $s = trim($s);
-            if ($s === '') {
-                return 'user';
-            }
-            return substr($s, 0, 12);
-        };
-
-        $base = null;
-        if (!empty($data['domain_name'])) {
-            $base = $makeBase($data['domain_name']);
-        }
-
-        if (!$base && !empty($data['preferred_username'])) {
-            $base = $makeBase($data['preferred_username']);
-        }
-
-        if (!$base && !empty($data['client_id'])) {
-            $client = Client::find($data['client_id']);
-            if ($client) {
-                if (!empty($client->email) && strpos($client->email, '@') !== false) {
-                    $base = $makeBase(explode('@', $client->email)[0]);
-                } else {
-                    $name = ($client->first_name ?? '') . ($client->last_name ?? '');
-                    $base = $makeBase($name);
-                }
-            }
-        }
-
-        if (!$base) {
-            $base = 'user';
-        }
-
-        $candidate = $base;
-        $suffix = 0;
-        // ensure uniqueness
-        while (Subscription::where('username', $candidate)->exists()) {
-            $suffix++;
-            $candidate = $base . $suffix;
-            // safety break
-            if ($suffix > 1000) break;
-        }
-
-        return response()->json(['username' => $candidate, 'unique' => true]);
-    }
-
     public function create()
     {
-        $clients = Client::all();
-        $plans = Plan::all();
-        $servers = \App\Models\Server::where('is_active', 1)->get();
+        $this->authorize('create', Subscription::class);
+
+        // P9: select only the columns needed for the dropdowns
+        $clients = Client::orderBy('first_name')->select(['id', 'first_name', 'last_name', 'email'])->get();
+        $plans   = Plan::orderBy('name')->select(['id', 'name', 'server_package'])->get();
+        $servers = \App\Models\Server::where('is_active', 1)->select(['id', 'name'])->get();
+
         return view('dashboard.management.subscriptions.create', compact('clients', 'plans', 'servers'));
     }
 
     public function store(Request $request)
     {
+        $this->authorize('create', Subscription::class);
+
         $data = $request->validate([
-            'client_id' => ['required', 'exists:clients,id'],
-            'plan_id' => ['required', 'exists:plans,id'],
-            'status' => ['required', Rule::in(['pending', 'active', 'suspended', 'cancelled'])],
-            'price' => ['required', 'numeric', 'min:0'],
-            'username' => ['nullable', 'string', 'max:255'],
-            'server_id' => ['nullable', 'integer', 'exists:servers,id'],
+            'client_id'     => ['required', 'exists:clients,id'],
+            'plan_id'       => ['required', 'exists:plans,id'],
+            'status'        => ['required', Rule::in(['pending', 'active', 'suspended', 'cancelled'])],
+            'price'         => ['required', 'numeric', 'min:0'],
+            'username'      => ['nullable', 'string', 'max:255'],
+            'server_id'     => ['nullable', 'integer', 'exists:servers,id'],
             'next_due_date' => ['nullable', 'date'],
-            'starts_at' => ['required', 'date'],
-            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'starts_at'     => ['required', 'date'],
+            'ends_at'       => ['nullable', 'date', 'after_or_equal:starts_at'],
             'domain_option' => ['required', Rule::in(['new', 'subdomain', 'existing'])],
-            'domain_name' => ['required_if:domain_option,new,existing'],
+            'domain_name'   => ['required_if:domain_option,new,existing'],
         ]);
-        // Always set subscription.server_package from the chosen plan (do not trust request)
-        $plan = isset($data['plan_id']) ? \App\Models\Plan::find($data['plan_id']) : null;
-        if ($plan) {
-            $data['server_package'] = $plan->server_package ?? $plan->name ?? null;
-        } else {
-            $data['server_package'] = null;
-        }
+
+        // Always derive server_package from the chosen plan (never trust the request)
+        $plan = Plan::find($data['plan_id']);
+        $data['server_package'] = $plan ? ($plan->server_package ?? $plan->name ?? null) : null;
 
         $subscription = Subscription::create($data);
         app(DomainVerificationService::class)->reset($subscription);
-        return redirect()->route('dashboard.subscriptions.index')->with('ok', 'تم إضافة الاشتراك بنجاح');
+
+        return redirect()->route('dashboard.subscriptions.index')
+            ->with('ok', __('Subscription created successfully.'));
     }
 
     public function edit(Subscription $subscription)
     {
-        $clients = Client::all();
-        $plans = Plan::all();
-        $servers = \App\Models\Server::where('is_active', 1)->get();
+        $this->authorize('update', $subscription);
+
+        // P9: select only the columns needed for the dropdowns
+        $clients = Client::orderBy('first_name')->select(['id', 'first_name', 'last_name', 'email'])->get();
+        $plans   = Plan::orderBy('name')->select(['id', 'name', 'server_package'])->get();
+        $servers = \App\Models\Server::where('is_active', 1)->select(['id', 'name'])->get();
+
         return view('dashboard.management.subscriptions.edit', compact('subscription', 'clients', 'plans', 'servers'));
     }
 
     public function update(Request $request, Subscription $subscription)
     {
+        $this->authorize('update', $subscription);
+
         $data = $request->validate([
-            'client_id' => ['required', 'exists:clients,id'],
-            'plan_id' => ['required', 'exists:plans,id'],
-            'status' => ['required', Rule::in(['pending', 'active', 'suspended', 'cancelled'])],
-            'price' => ['required', 'numeric', 'min:0'],
-            'username' => ['nullable', 'string', 'max:255'],
-            'server_id' => ['nullable', 'integer', 'exists:servers,id'],
+            'client_id'     => ['required', 'exists:clients,id'],
+            'plan_id'       => ['required', 'exists:plans,id'],
+            'status'        => ['required', Rule::in(['pending', 'active', 'suspended', 'cancelled'])],
+            'price'         => ['required', 'numeric', 'min:0'],
+            'username'      => ['nullable', 'string', 'max:255'],
+            'server_id'     => ['nullable', 'integer', 'exists:servers,id'],
             'next_due_date' => ['nullable', 'date'],
-            'starts_at' => ['required', 'date'],
-            'ends_at' => ['nullable', 'date', 'after_or_equal:starts_at'],
+            'starts_at'     => ['required', 'date'],
+            'ends_at'       => ['nullable', 'date', 'after_or_equal:starts_at'],
             'domain_option' => ['required', Rule::in(['new', 'subdomain', 'existing'])],
-            'domain_name' => ['required_if:domain_option,new,existing'],
+            'domain_name'   => ['required_if:domain_option,new,existing'],
         ]);
+
         // Ensure server_package remains derived from the plan selection
-        $plan = isset($data['plan_id']) ? \App\Models\Plan::find($data['plan_id']) : null;
-        if ($plan) {
-            $data['server_package'] = $plan->server_package ?? $plan->name ?? null;
-        } else {
-            $data['server_package'] = null;
-        }
+        $plan = Plan::find($data['plan_id']);
+        $data['server_package'] = $plan ? ($plan->server_package ?? $plan->name ?? null) : null;
 
         $subscription->update($data);
         app(DomainVerificationService::class)->reset($subscription->fresh());
-        return redirect()->route('dashboard.subscriptions.index')->with('ok', 'تم تحديث الاشتراك بنجاح');
+
+        return redirect()->route('dashboard.subscriptions.index')
+            ->with('ok', __('Subscription updated successfully.'));
+    }
+
+    public function destroy(Subscription $subscription)
+    {
+        $this->authorize('delete', $subscription);
+
+        // Soft-delete — recoverable via restore()
+        $subscription->delete();
+
+        return redirect()->route('dashboard.subscriptions.index')
+            ->with('ok', __('Subscription deleted.'));
+    }
+
+    // -------------------------------------------------------------------------
+    // Bulk Actions
+    // -------------------------------------------------------------------------
+
+    /**
+     * Bulk actions handler for subscriptions.
+     * Accepts: ids[] (array), action (string): suspend|unsuspend|sync|terminate|delete
+     */
+    public function bulk(Request $request)
+    {
+        $this->authorize('bulk', Subscription::class);
+
+        $data = $request->validate([
+            'ids'    => ['required', 'array'],
+            'ids.*'  => ['integer', 'exists:subscriptions,id'],
+            'action' => ['required', Rule::in(['suspend', 'unsuspend', 'sync', 'terminate', 'delete'])],
+        ]);
+
+        $ids    = $data['ids'];
+        $action = $data['action'];
+
+        $subs = Subscription::whereIn('id', $ids)->get();
+
+        $dispatchedCount = 0;
+        foreach ($subs as $sub) {
+            try {
+                switch ($action) {
+                    case 'suspend':
+                        $sub->update(['status' => 'suspended']);
+                        break;
+                    case 'unsuspend':
+                        $sub->update(['status' => 'active']);
+                        break;
+                    case 'sync':
+                        if (class_exists(\App\Jobs\SyncSubscriptionToProvider::class)) {
+                            \App\Jobs\SyncSubscriptionToProvider::dispatch($sub->id);
+                            $dispatchedCount++;
+                        }
+                        break;
+                    case 'terminate':
+                        if (class_exists(\App\Jobs\TerminateSubscriptionOnProvider::class)) {
+                            \App\Jobs\TerminateSubscriptionOnProvider::dispatch($sub->id);
+                            $dispatchedCount++;
+                        } else {
+                            $sub->update(['status' => 'cancelled']);
+                        }
+                        break;
+                    case 'delete':
+                        // Soft-delete — recoverable
+                        $sub->delete();
+                        break;
+                }
+            } catch (\Exception $e) {
+                logger()->error('Bulk action failed for subscription ' . $sub->id . ': ' . $e->getMessage());
+            }
+        }
+
+        $message = __('Operation applied to selected subscriptions.');
+        if ($dispatchedCount > 0) {
+            $message .= ' ' . __(':count job(s) queued for background processing.', ['count' => $dispatchedCount]);
+        }
+
+        return redirect()->route('dashboard.subscriptions.index')->with('ok', $message);
+    }
+
+    // -------------------------------------------------------------------------
+    // Provider Actions — WHM API calls
+    // -------------------------------------------------------------------------
+
+    /**
+     * Sync (create) subscription account on WHM provider.
+     * Delegates to SubscriptionSyncService for retry logic and username candidates.
+     *
+     * P8: replaced inline cURL with service delegation.
+     */
+    public function syncWithProvider(Subscription $subscription, SubscriptionSyncService $syncService)
+    {
+        $this->authorize('manage', $subscription);
+
+        $message = $syncService->sync($subscription);
+
+        return back()->with('connection_result', $message);
+    }
+
+    public function provision(Subscription $subscription)
+    {
+        $this->authorize('manage', $subscription);
+
+        ProvisionSubscription::dispatch($subscription->id, true);
+
+        return back()->with('toast_success', __('Subscription provisioning request has been queued.'));
     }
 
     public function verifyDomain(Subscription $subscription, DomainVerificationService $verification)
     {
+        $this->authorize('manage', $subscription);
+
         $details = $verification->verify($subscription);
         $message = $details['label'];
 
@@ -299,380 +312,298 @@ class SubscriptionController extends Controller
         );
     }
 
-    public function destroy(Subscription $subscription)
+    public function cpanelLogin(Subscription $subscription)
     {
-        $subscription->delete();
-        return redirect()->route('dashboard.subscriptions.index')->with('ok', 'تم حذف الاشتراك');
-    }
+        $this->authorize('manage', $subscription);
 
-    /**
-     * Bulk actions handler for subscriptions.
-     * Accepts: ids[] (array), action (string): suspend|unsuspend|sync|terminate|delete
-     */
-    public function bulk(Request $request)
-    {
-        $data = $request->validate([
-            'ids' => ['required', 'array'],
-            'ids.*' => ['integer', 'exists:subscriptions,id'],
-            'action' => ['required', Rule::in(['suspend', 'unsuspend', 'sync', 'terminate', 'delete'])],
-        ]);
-
-        $ids = $data['ids'];
-        $action = $data['action'];
-
-        $subs = Subscription::whereIn('id', $ids)->get();
-
-        $dispatchedCount = 0;
-        foreach ($subs as $sub) {
-            try {
-                switch ($action) {
-                    case 'suspend':
-                        $sub->update(['status' => 'suspended']);
-                        // optionally dispatch suspend to provider
-                        break;
-                    case 'unsuspend':
-                        $sub->update(['status' => 'active']);
-                        break;
-                    case 'sync':
-                        // dispatch job to sync each subscription
-                        if (class_exists(\App\Jobs\SyncSubscriptionToProvider::class)) {
-                            \App\Jobs\SyncSubscriptionToProvider::dispatch($sub->id);
-                            $dispatchedCount++;
-                        }
-                        break;
-                    case 'terminate':
-                        // dispatch terminate job to perform provider-side removal and update status in background
-                        if (class_exists(\App\Jobs\TerminateSubscriptionOnProvider::class)) {
-                            \App\Jobs\TerminateSubscriptionOnProvider::dispatch($sub->id);
-                            $dispatchedCount++;
-                        } else {
-                            // fallback: update status locally
-                            $sub->update(['status' => 'cancelled']);
-                        }
-                        break;
-                    case 'delete':
-                        $sub->delete();
-                        break;
-                }
-            } catch (\Exception $e) {
-                // continue for others; log if needed
-                logger()->error('Bulk action failed for subscription ' . $sub->id . ': ' . $e->getMessage());
-            }
-        }
-
-        $message = 'تم تنفيذ العملية بنجاح على الاشتراكات المحددة';
-        if (!empty($dispatchedCount)) {
-            $message .= '. تم إرسال ' . $dispatchedCount . ' مهمة(ات) للمعالجة في الخلفية.';
-        }
-        return redirect()->route('dashboard.subscriptions.index')->with('ok', $message);
-    }
-    public function suspendToProvider(Subscription $subscription)
-    {
         $server = $subscription->server;
-        if (!$server) {
+        if (! $server) {
             return back()->with('connection_result', 'لا يوجد سيرفر مرتبط بهذا الاشتراك.');
         }
-        $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
-        $port = 2087;
-        $username = $server->username;
+
+        $host     = $this->resolveHost($server);
+        $whmUser  = $server->username;
         $apiToken = $server->api_token;
-        $error = null;
-        $result = null;
-        if ($host && $username && $apiToken) {
-            $params = [
-                'user' => $subscription->username,
-                'reason' => 'Suspended from dashboard',
-            ];
-            $apiUrl = "https://{$host}:{$port}/json-api/suspendacct?api.version=1&" . http_build_query($params);
-            try {
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $apiUrl);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-                $header = [
-                    'Authorization: whm ' . $username . ':' . $apiToken
-                ];
-                curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-                $response = curl_exec($ch);
-                if (curl_errno($ch)) {
-                    $error = curl_error($ch);
-                } else {
-                    $data = json_decode($response, true);
-                    if (isset($data['metadata']['result']) && $data['metadata']['result'] == 1) {
-                        $result = 'تم تعليق الموقع بنجاح على السيرفر.';
-                        $subscription->update(['status' => 'suspended']);
-                    } else {
-                        $error = ($data['metadata']['reason'] ?? $data['reason'] ?? 'فشل تعليق الموقع.') . '<br><pre>' . print_r($data, true) . '</pre>';
-                    }
-                }
-                curl_close($ch);
-            } catch (\Exception $e) {
-                $error = $e->getMessage();
-            }
-        } else {
-            $error = 'بيانات السيرفر غير مكتملة.';
+        $cpUser   = $subscription->username;
+
+        if (! $host || ! $whmUser || ! $apiToken || ! $cpUser) {
+            return back()->with('connection_result', 'بيانات السيرفر أو اسم المستخدم غير مكتملة.');
         }
-        return back()->with('connection_result', $result ?: $error);
+
+        $apiUrl = "https://{$host}:2087/json-api/create_user_session?api.version=1"
+            . '&user=' . urlencode($cpUser)
+            . '&service=cpaneld';
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $apiUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, config('services.whm.ssl_verify', true));
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, config('services.whm.ssl_verify', true) ? 2 : 0);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: whm ' . $whmUser . ':' . $apiToken,
+        ]);
+
+        $response = curl_exec($ch);
+        $curlError = curl_errno($ch) ? curl_error($ch) : null;
+        curl_close($ch);
+
+        if ($curlError) {
+            return back()->with('connection_result', 'فشل إنشاء رابط الدخول: ' . $curlError);
+        }
+
+        $data = json_decode($response, true);
+        if (isset($data['data']['url'])) {
+            return redirect()->away($data['data']['url']);
+        }
+
+        $reason = trim(
+            ($data['error'] ?? '') . ' ' .
+            ($data['metadata']['reason'] ?? '')
+        );
+        return back()->with('connection_result', 'فشل إنشاء رابط الدخول: ' . $reason);
+    }
+
+    public function suspendToProvider(Subscription $subscription)
+    {
+        $this->authorize('manage', $subscription);
+
+        $result = $this->whmCall($subscription, 'suspendacct', [
+            'user'   => $subscription->username,
+            'reason' => 'Suspended from dashboard',
+        ]);
+
+        if ($result['ok']) {
+            $subscription->update(['status' => 'suspended']);
+            return back()->with('connection_result', 'تم تعليق الموقع بنجاح على السيرفر.');
+        }
+
+        return back()->with('connection_result', $result['error']);
     }
 
     public function unsuspendToProvider(Subscription $subscription)
     {
-        $server = $subscription->server;
-        if (!$server) {
-            return back()->with('connection_result', 'لا يوجد سيرفر مرتبط بهذا الاشتراك.');
+        $this->authorize('manage', $subscription);
+
+        $result = $this->whmCall($subscription, 'unsuspendacct', [
+            'user' => $subscription->username,
+        ]);
+
+        if ($result['ok']) {
+            $subscription->update(['status' => 'active']);
+            return back()->with('connection_result', 'تم إلغاء تعليق الموقع بنجاح على السيرفر.');
         }
-        $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
-        $port = 2087;
-        $username = $server->username;
-        $apiToken = $server->api_token;
-        $error = null;
-        $result = null;
-        if ($host && $username && $apiToken) {
-            $params = [
-                'user' => $subscription->username,
-            ];
-            $apiUrl = "https://{$host}:{$port}/json-api/unsuspendacct?api.version=1&" . http_build_query($params);
-            try {
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $apiUrl);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-                $header = [
-                    'Authorization: whm ' . $username . ':' . $apiToken
-                ];
-                curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-                $response = curl_exec($ch);
-                if (curl_errno($ch)) {
-                    $error = curl_error($ch);
-                } else {
-                    $data = json_decode($response, true);
-                    if (isset($data['metadata']['result']) && $data['metadata']['result'] == 1) {
-                        $result = 'تم إلغاء تعليق الموقع بنجاح على السيرفر.';
-                        $subscription->update(['status' => 'active']);
-                    } else {
-                        $error = ($data['metadata']['reason'] ?? $data['reason'] ?? 'فشل إلغاء التعليق.') . '<br><pre>' . print_r($data, true) . '</pre>';
-                    }
-                }
-                curl_close($ch);
-            } catch (\Exception $e) {
-                $error = $e->getMessage();
-            }
-        } else {
-            $error = 'بيانات السيرفر غير مكتملة.';
-        }
-        return back()->with('connection_result', $result ?: $error);
+
+        return back()->with('connection_result', $result['error']);
     }
 
     public function terminateToProvider(Subscription $subscription)
     {
-        $server = $subscription->server;
-        if (!$server) {
-            return back()->with('connection_result', 'لا يوجد سيرفر مرتبط بهذا الاشتراك.');
+        $this->authorize('manage', $subscription);
+
+        $result = $this->whmCall($subscription, 'removeacct', [
+            'user' => $subscription->username,
+        ]);
+
+        if ($result['ok']) {
+            $subscription->update(['status' => 'cancelled']);
+            return back()->with('connection_result', 'تم حذف الموقع (Terminate) بنجاح من السيرفر.');
         }
-        $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
-        $port = 2087;
-        $username = $server->username;
-        $apiToken = $server->api_token;
-        $error = null;
-        $result = null;
-        if ($host && $username && $apiToken) {
-            $params = [
-                'user' => $subscription->username,
-            ];
-            $apiUrl = "https://{$host}:{$port}/json-api/removeacct?api.version=1&" . http_build_query($params);
-            try {
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, $apiUrl);
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-                $header = [
-                    'Authorization: whm ' . $username . ':' . $apiToken
-                ];
-                curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-                $response = curl_exec($ch);
-                if (curl_errno($ch)) {
-                    $error = curl_error($ch);
-                } else {
-                    $data = json_decode($response, true);
-                    if (isset($data['metadata']['result']) && $data['metadata']['result'] == 1) {
-                        $result = 'تم حذف الموقع (Terminate) بنجاح من السيرفر.';
-                        $subscription->update(['status' => 'cancelled']);
-                    } else {
-                        $error = ($data['metadata']['reason'] ?? $data['reason'] ?? 'فشل حذف الموقع.') . '<br><pre>' . print_r($data, true) . '</pre>';
-                    }
-                }
-                curl_close($ch);
-            } catch (\Exception $e) {
-                $error = $e->getMessage();
-            }
-        } else {
-            $error = 'بيانات السيرفر غير مكتملة.';
-        }
-        return back()->with('connection_result', $result ?: $error);
+
+        return back()->with('connection_result', $result['error']);
     }
 
     /**
-     * تسجيل دخول تلقائي إلى cPanel (SSO) لهذا الاشتراك
+     * تنصيب ووردبريس عبر wp-cli على السيرفر.
+     *
+     * P2 FIX: All user-controlled values passed to exec() are wrapped in escapeshellarg().
+     * P6 FIX: Removed dead/unreachable code that existed after the first return statement.
      */
-    public function cpanelLogin(Subscription $subscription)
+    public function installWordPressManual(Subscription $subscription)
     {
+        $this->authorize('manage', $subscription);
+
         $server = $subscription->server;
-        if (!$server) {
+        if (! $server) {
             return back()->with('connection_result', 'لا يوجد سيرفر مرتبط بهذا الاشتراك.');
         }
-        $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
-        $port = 2087;
-        $whmUser = $server->username;
+
+        // P2: sanitize every value that touches the shell
+        $user   = preg_replace('/[^a-z0-9]/', '', strtolower((string) $subscription->username));
+        $domain = $subscription->domain_name;
+
+        if (! $user) {
+            return back()->with('connection_result', 'اسم المستخدم غير صالح لتنفيذ الأمر.');
+        }
+
+        $wpPath     = escapeshellarg('/home/' . $user . '/public_html');
+        $themeZip   = escapeshellarg('/home/' . $user . '/public_html/theme.zip');
+        $wpcli      = '/usr/local/bin/wp';
+        $adminUser  = 'wpadmin';
+        $adminPass  = Str::random(16) . '!A1'; // random — never hardcoded
+        $adminEmail = 'admin@' . escapeshellarg($domain);
+        $dbName     = escapeshellarg($user . '_wp');
+        $dbUser     = escapeshellarg($user . '_wp');
+
+        $cmds = [
+            "cd {$wpPath} && HOME={$wpPath} " . escapeshellarg($wpcli) . " core download --force",
+            "cd {$wpPath} && HOME={$wpPath} " . escapeshellarg($wpcli)
+                . " config create --dbname={$dbName} --dbuser={$dbUser}"
+                . " --dbpass=" . escapeshellarg('StrongDBPass!') . " --dbhost=localhost --skip-check --force",
+            "cd {$wpPath} && HOME={$wpPath} " . escapeshellarg($wpcli) . " db create",
+            "cd {$wpPath} && HOME={$wpPath} " . escapeshellarg($wpcli)
+                . " core install --url=" . escapeshellarg($domain)
+                . " --title=" . escapeshellarg('SiteTitle')
+                . " --admin_user=" . escapeshellarg($adminUser)
+                . " --admin_password=" . escapeshellarg($adminPass)
+                . " --admin_email=" . escapeshellarg('admin@' . $domain),
+            "cd {$wpPath} && HOME={$wpPath} " . escapeshellarg($wpcli)
+                . " theme install {$themeZip} --activate",
+        ];
+
+        $output = [];
+        foreach ($cmds as $cmd) {
+            $out    = [];
+            $status = 0;
+            exec($cmd . ' 2>&1', $out, $status);
+            $output[] = ['cmd' => $cmd, 'output' => $out, 'status' => $status];
+            if ($status !== 0) {
+                return back()->with(
+                    'connection_result',
+                    'فشل تنفيذ الأمر. رمز الخروج: ' . $status . "\n" . implode("\n", $out)
+                );
+            }
+        }
+
+        return back()->with('connection_result', 'تم تنصيب ووردبريس وتفعيل القالب بنجاح.');
+    }
+
+    // -------------------------------------------------------------------------
+    // AJAX helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * AJAX: suggest a unique username based on domain, client or preferred value.
+     */
+    public function suggestUsername(Request $request)
+    {
+        $this->authorize('create', Subscription::class);
+
+        $data = $request->validate([
+            'domain_name'        => ['nullable', 'string'],
+            'client_id'          => ['nullable', 'integer', 'exists:clients,id'],
+            'preferred_username' => ['nullable', 'string'],
+        ]);
+
+        $makeBase = function (string $s): string {
+            $s = strtolower($s);
+            $s = str_replace('.', '', $s);
+            $s = preg_replace('/[^a-z0-9]/', '', $s);
+            $s = trim($s);
+            return $s !== '' ? substr($s, 0, 12) : 'user';
+        };
+
+        $base = null;
+        if (! empty($data['domain_name'])) {
+            $base = $makeBase($data['domain_name']);
+        }
+        if (! $base && ! empty($data['preferred_username'])) {
+            $base = $makeBase($data['preferred_username']);
+        }
+        if (! $base && ! empty($data['client_id'])) {
+            $client = Client::find($data['client_id']);
+            if ($client) {
+                $base = ! empty($client->email) && str_contains($client->email, '@')
+                    ? $makeBase(explode('@', $client->email)[0])
+                    : $makeBase(($client->first_name ?? '') . ($client->last_name ?? ''));
+            }
+        }
+        if (! $base) {
+            $base = 'user';
+        }
+
+        $candidate = $base;
+        $suffix    = 0;
+        while (Subscription::where('username', $candidate)->exists()) {
+            $suffix++;
+            $candidate = $base . $suffix;
+            if ($suffix > 1000) {
+                break;
+            }
+        }
+
+        return response()->json(['username' => $candidate, 'unique' => true]);
+    }
+
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Resolve the most appropriate hostname/IP to connect to for a server.
+     */
+    private function resolveHost(\App\Models\Server $server): ?string
+    {
+        $hostname = trim((string) ($server->hostname ?? ''));
+        return $hostname !== '' ? $hostname : ($server->ip ?? null);
+    }
+
+    /**
+     * Shared WHM JSON-API caller — eliminates the cURL boilerplate duplicated
+     * across suspendToProvider / unsuspendToProvider / terminateToProvider.
+     *
+     * P12 partial fix: remaining cURL duplication reduced to one private method.
+     * P7: SSL verification is now configurable via config('services.whm.ssl_verify').
+     *
+     * @return array{ok: bool, data: array|null, error: string}
+     */
+    private function whmCall(Subscription $subscription, string $endpoint, array $params): array
+    {
+        $server = $subscription->server;
+        if (! $server) {
+            return ['ok' => false, 'data' => null, 'error' => 'لا يوجد سيرفر مرتبط بهذا الاشتراك.'];
+        }
+
+        $host     = $this->resolveHost($server);
+        $whmUser  = $server->username;
         $apiToken = $server->api_token;
-        $cpUser = $subscription->username;
-        $error = null;
-        $loginUrl = null;
-        if ($host && $whmUser && $apiToken && $cpUser) {
-            $apiUrl = "https://{$host}:{$port}/json-api/create_user_session?api.version=1&user={$cpUser}&service=cpaneld";
+
+        if (! $host || ! $whmUser || ! $apiToken) {
+            return ['ok' => false, 'data' => null, 'error' => 'بيانات السيرفر غير مكتملة.'];
+        }
+
+        $sslVerify = config('services.whm.ssl_verify', true);
+        $apiUrl    = "https://{$host}:2087/json-api/{$endpoint}?api.version=1&" . http_build_query($params);
+
+        try {
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $apiUrl);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            $header = [
-                'Authorization: whm ' . $whmUser . ':' . $apiToken
-            ];
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-            $response = curl_exec($ch);
-            if (curl_errno($ch)) {
-                $error = curl_error($ch);
-            } else {
-                $data = json_decode($response, true);
-                if (isset($data['data']['url'])) {
-                    $loginUrl = $data['data']['url'];
-                } else {
-                    $error = ($data['error'] ?? '') . ' ' . ($data['metadata']['reason'] ?? '') . ' ' . ($data['cpanelresult']['data'][0]['reason'] ?? '') . ' ' . json_encode($data);
-                }
-            }
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $sslVerify);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $sslVerify ? 2 : 0);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: whm ' . $whmUser . ':' . $apiToken,
+            ]);
+
+            $response  = curl_exec($ch);
+            $curlError = curl_errno($ch) ? curl_error($ch) : null;
             curl_close($ch);
-        } else {
-            $error = 'بيانات السيرفر أو اسم المستخدم غير مكتملة.';
-        }
-        if ($loginUrl) {
-            return redirect()->away($loginUrl);
-        }
-        return back()->with('connection_result', 'فشل إنشاء رابط الدخول: ' . $error);
-    }
 
-
-    /**
-     * تنصيب ووردبريس يدويًا عبر تحميل wordpress.zip وفك الضغط وإنشاء قاعدة البيانات وwp-config
-     */
-    public function installWordPressManual(Subscription $subscription)
-    // --- مثال عملي: تنصيب ووردبريس عبر WP Toolkit ثم رفع وتفعيل قالب عبر wp-cli ---
-    // 1. استدعاء WP Toolkit API لتنصيب ووردبريس (تحتاج بيانات السيرفر واسم المستخدم والدومين)
-    // مثال (تخصيص حسب بيئتك):
-    // $apiUrl = "https://{$host}:2087/json-api/cpanel?cpanel_jsonapi_user={$cpUser}&cpanel_jsonapi_apiversion=2&cpanel_jsonapi_module=WpToolkit&cpanel_jsonapi_func=install_wp";
-    // $postFields = [
-    //     'domain' => $domain,
-    //     'path' => 'public_html',
-    //     'admin_user' => 'wpadmin',
-    //     'admin_pass' => 'StrongPass123',
-    //     'admin_email' => 'admin@' . $domain,
-    // ];
-    // ... تنفيذ الطلب عبر cURL بنفس طريقة باقي الدوال ...
-
-    // 2. بعد نجاح التنصيب، نفذ أوامر wp-cli لرفع وتفعيل القالب:
-    // مثال:
-    // $themeZip = '/path/to/theme.zip'; // ضع مسار القالب على السيرفر
-    // $wpPath = '/home/' . $cpUser . '/public_html';
-    // $cmd = "wp theme install $themeZip --activate --path=$wpPath";
-    // يمكنك تنفيذ الأمر عبر SSH أو من داخل السيرفر مباشرة:
-    // exec($cmd, $output, $status);
-    // إذا كنت تريد تنفيذ الأمر عبر SSH من Laravel:
-    // \Illuminate\Support\Facades\Process::run('ssh user@host "' . $cmd . '"');
-    // --- نهاية المثال ---
-    {
-        $server = $subscription->server;
-        if (!$server) {
-            return back()->with('connection_result', 'لا يوجد سيرفر مرتبط بهذا الاشتراك.');
-        }
-        $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
-        $port = 2083; // cPanel port
-        $cpUser = $subscription->username;
-        $apiToken = $server->api_token;
-        $domain = $subscription->domain_name;
-        $error = null;
-        $result = null;
-        // --- تنصيب ووردبريس وتفعيل قالب zip تلقائيًا عبر wp-cli ---
-        $user = $subscription->username;
-        $domain = $subscription->domain_name;
-        $wpPath = "/home/$user/public_html";
-        $themeZip = "/home/$user/public_html/theme.zip";
-        $adminUser = 'wpadmin';
-        $adminPass = 'StrongPass123!';
-        $adminEmail = 'admin@' . $domain;
-        $wpcli = '/usr/local/bin/wp';
-
-        // تشخيص: من ينفذ الأوامر وما هي بيئة wp-cli؟
-        $diagnose = [];
-        exec('whoami 2>&1', $diagnose['whoami']);
-        exec("cd $wpPath && $wpcli --info 2>&1", $diagnose['wpinfo']);
-        exec('ls -la ' . $wpPath . ' 2>&1', $diagnose['ls']);
-
-        // 1. تحميل وتنصيب ووردبريس مع ضبط HOME
-        $cmds = [
-            "cd $wpPath && HOME=$wpPath $wpcli core download --force",
-            "cd $wpPath && HOME=$wpPath $wpcli config create --dbname={$user}_wp --dbuser={$user}_wp --dbpass=StrongDBPass! --dbhost=localhost --skip-check --force",
-            "cd $wpPath && HOME=$wpPath $wpcli db create",
-            "cd $wpPath && HOME=$wpPath $wpcli core install --url=$domain --title=SiteTitle --admin_user=$adminUser --admin_password=$adminPass --admin_email=$adminEmail",
-        ];
-
-        // 2. رفع وتفعيل القالب (يجب أن يكون theme.zip موجود مسبقًا)
-        $cmds[] = "cd $wpPath && HOME=$wpPath $wpcli theme install $themeZip --activate";
-
-        $output = [];
-        $status = 0;
-        foreach ($cmds as $cmd) {
-            $out = [];
-            exec($cmd . ' 2>&1', $out, $status);
-            $output[] = [
-                'cmd' => $cmd,
-                'output' => $out,
-                'status' => $status
-            ];
-            if ($status !== 0) {
-                return back()->with('connection_result', 'فشل تنفيذ الأمر:<br><pre>' . print_r($diagnose, true) . print_r($output, true) . '</pre>');
+            if ($curlError) {
+                return ['ok' => false, 'data' => null, 'error' => 'cURL error: ' . $curlError];
             }
+
+            $data = json_decode($response, true);
+            if (isset($data['metadata']['result']) && $data['metadata']['result'] == 1) {
+                return ['ok' => true, 'data' => $data, 'error' => ''];
+            }
+
+            $reason = $data['metadata']['reason'] ?? $data['reason'] ?? 'فشل تنفيذ الإجراء على السيرفر.';
+            return ['ok' => false, 'data' => $data, 'error' => $reason];
+
+        } catch (\Exception $e) {
+            return ['ok' => false, 'data' => null, 'error' => $e->getMessage()];
         }
-        return back()->with('connection_result', 'تم تنصيب ووردبريس وتفعيل القالب بنجاح.<br><pre>' . print_r($diagnose, true) . print_r($output, true) . '</pre>');
-        // 2. فك الضغط عن wordpress.zip في public_html
-        $apiUrl = "https://{$host}:{$port}/execute/Fileman/extract_archive";
-        $postFields = http_build_query([
-            'archive' => 'public_html/latest.zip',
-            'dest' => 'public_html',
-        ]);
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $apiUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-        $response = curl_exec($ch);
-        $data = json_decode($response, true);
-        curl_close($ch);
-        if (!isset($data['status']) || $data['status'] != 1) {
-            return back()->with('connection_result', 'فشل فك الضغط عن wordpress.zip: <pre>' . print_r($data, true) . '</pre>');
-        }
-        // 3. نقل ملفات ووردبريس من public_html/wordpress إلى public_html (اختياري)
-        // يمكن تنفيذ ذلك عبر Fileman/mv_file أو Fileman/copy_file API إذا رغبت
-        // 4. إنشاء قاعدة بيانات ومستخدم وwp-config.php (يمكن إضافتها لاحقًا)
-        return back()->with('connection_result', 'تم تحميل وفك ضغط ووردبريس بنجاح. أكمل الإعدادات يدويًا أو أبلغني لإكمال قاعدة البيانات وwp-config تلقائيًا.');
     }
 }
-
