@@ -107,6 +107,11 @@ appends a numeric suffix until a unique value is found:
 portfolio → portfolio-1 → portfolio-2 …
 ```
 
+The `portfolios.slug` column carries a `UNIQUE` database constraint. In the rare case
+where two concurrent requests race past the existence check and both attempt to insert
+the same slug, `store()` and `update()` catch the resulting `QueryException` (SQLSTATE
+23000) and retry `generateUniqueSlug()` up to 3 times before re-throwing.
+
 ### Image Handling
 
 Images are stored as file paths resolved via `resolveMediaIdsToPaths()`. The controller
@@ -181,9 +186,6 @@ Portfolio::withTrashed()->find($id)->forceDelete();
 
 ## Known Gaps / Future Work
 
-- **Slug uniqueness is not DB-enforced under concurrency** — `generateUniqueSlug()` is
-  subject to a TOCTOU race. Add a `UNIQUE` index on `portfolios.slug` and wrap slug
-  generation in a retry loop that catches `QueryException` on duplicate key.
 - **`forceDelete()` does not cascade to `portfolio_translations`** — add a database-level
   `ON DELETE CASCADE` foreign key or override `forceDelete()` to remove translations first.
 - **No audit trail** — large content changes (image swaps, title edits) are not logged.
@@ -197,4 +199,5 @@ Portfolio::withTrashed()->find($id)->forceDelete();
 
 | Date | Change |
 |------|--------|
+| 2026-05-08 | `generateUniqueSlug()` callers (`store`, `update`) now retry up to 3 times on `QueryException` SQLSTATE 23000 (concurrent slug collision). |
 | 2026-05-05 | Authorization added to all 6 controller methods; `loadLanguages()` extracted to avoid N+1 on every request; `buildTranslationRules()` uses already-loaded language collection; explicit `$portfolioData` array replaces unsafe `$request->except()`; null-safe `?->` operators throughout; `Log::error()` + generic user message replaces exception leakage; `images` field validated as comma-separated integers via regex; `resolveMediaIdsToPaths()` casts IDs to `intval()`; `SoftDeletes` added to `Portfolio` model; migration added to make `default_image` nullable and add `deleted_at`; index view fixed to use eager-loaded collection (no N+1); `@can('edit')` corrected to `@can('update', $portfolio)`; delete confirmation dialog added; duplicate `@push('scripts')` blocks merged in `_form.blade.php`. |

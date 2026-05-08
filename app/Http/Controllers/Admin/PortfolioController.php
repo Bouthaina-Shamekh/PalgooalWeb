@@ -93,8 +93,9 @@ class PortfolioController extends Controller
     }
 
     /**
-     * Generate a unique slug with DB-level collision handling.
-     * P8 fix: wraps in a try/catch on QueryException for the rare concurrent case.
+     * Generate a unique slug by checking existing DB rows.
+     * Callers (store/update) wrap the actual insert/update in a retry loop that
+     * catches QueryException SQLSTATE 23000 for the rare concurrent collision case.
      */
     public function generateUniqueSlug(string $string, ?int $excludeId = null): string
     {
@@ -208,12 +209,24 @@ class PortfolioController extends Controller
                 'delivery_date'              => $validated['delivery_date'],
                 'implementation_period_days' => $validated['implementation_period_days'] ?? null,
                 'client'                     => $validated['client'] ?? null,
-                'slug'                       => $this->generateUniqueSlug($titleForSlug),
                 'default_image'              => $this->resolveMediaIdsToPaths($validated['default_image'] ?? null),
                 'images'                     => $this->resolveMediaIdsToPaths($validated['images'] ?? null),
             ];
 
-            $portfolio = Portfolio::create($portfolioData);
+            // P8 fix: retry on rare concurrent slug collision (SQLSTATE 23000)
+            $portfolio = null;
+            for ($attempt = 0; $attempt < 3; $attempt++) {
+                try {
+                    $portfolioData['slug'] = $this->generateUniqueSlug($titleForSlug);
+                    $portfolio = Portfolio::create($portfolioData);
+                    break;
+                } catch (\Illuminate\Database\QueryException $e) {
+                    if ($attempt < 2 && str_contains($e->getMessage(), '23000')) {
+                        continue;
+                    }
+                    throw $e;
+                }
+            }
 
             // P6 fix: use null-safe access on every translation key
             foreach ($translations as $translation) {
@@ -306,12 +319,23 @@ class PortfolioController extends Controller
                 'delivery_date'              => $validated['delivery_date'],
                 'implementation_period_days' => $validated['implementation_period_days'] ?? null,
                 'client'                     => $validated['client'] ?? null,
-                'slug'                       => $this->generateUniqueSlug($titleForSlug, (int) $id),
                 'default_image'              => $this->resolveMediaIdsToPaths($validated['default_image'] ?? null),
                 'images'                     => $this->resolveMediaIdsToPaths($validated['images'] ?? null),
             ];
 
-            $portfolio->update($portfolioData);
+            // P8 fix: retry on rare concurrent slug collision (SQLSTATE 23000)
+            for ($attempt = 0; $attempt < 3; $attempt++) {
+                try {
+                    $portfolioData['slug'] = $this->generateUniqueSlug($titleForSlug, (int) $id);
+                    $portfolio->update($portfolioData);
+                    break;
+                } catch (\Illuminate\Database\QueryException $e) {
+                    if ($attempt < 2 && str_contains($e->getMessage(), '23000')) {
+                        continue;
+                    }
+                    throw $e;
+                }
+            }
 
             // P6 fix: null-safe on every translation key
             foreach ($translations as $translation) {
