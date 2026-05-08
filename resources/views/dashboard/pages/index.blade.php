@@ -33,9 +33,11 @@
                             {{ t('dashboard.All_Pages', 'All Pages') }}
                         </h5>
                         <div>
+                            @can('create', \App\Models\Page::class)
                             <a href="{{ route('dashboard.pages.create') }}" class="btn btn-primary">
                                 {{ t('dashboard.Add_Page', 'Add Page') }}
                             </a>
+                            @endcan
                         </div>
                     </div>
                 </div>
@@ -90,6 +92,7 @@
                                                     {{ t('dashboard.Current_Homepage', 'Current Homepage') }}
                                                 </span>
                                             @else
+                                                @can('setHome', $p)
                                                 <form action="{{ route('dashboard.pages.set-home', $p) }}"
                                                     method="POST" class="inline">
                                                     @csrf
@@ -97,11 +100,13 @@
                                                         {{ t('dashboard.Make_Homepage', 'Make Homepage') }}
                                                     </button>
                                                 </form>
+                                                @endcan
                                             @endif
                                         </td>
 
                                         {{-- Status (toggle) --}}
                                         <td>
+                                            @can('toggleActive', $p)
                                             <form action="{{ route('dashboard.pages.toggle-active', $p) }}"
                                                 method="POST" class="inline">
                                                 @csrf
@@ -111,6 +116,11 @@
                                                     {{ $p->is_active ? __('منشورة') : __('مسودة') }}
                                                 </button>
                                             </form>
+                                            @else
+                                                <span class="px-2 py-1 rounded text-xs {{ $p->is_active ? 'bg-green-200 text-green-900' : 'bg-red-200 text-red-900' }}">
+                                                    {{ $p->is_active ? __('منشورة') : __('مسودة') }}
+                                                </span>
+                                            @endcan
                                         </td>
 
                                         {{-- Date --}}
@@ -148,18 +158,20 @@
                                             </a>
 
                                             {{-- Edit --}}
+                                            @can('update', $p)
                                             <a href="{{ route('dashboard.pages.edit', $p) }}"
                                                 class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary">
                                                 <i class="ti ti-edit text-xl leading-none"></i>
                                             </a>
+                                            @endcan
 
                                             {{-- Delete (SweetAlert confirm) --}}
+                                            @can('delete', $p)
                                             <button type="button"
                                                 class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary text-danger"
                                                 onclick="confirmDeletePage({{ $p->id }})">
                                                 <i class="ti ti-trash text-xl"></i>
                                             </button>
-
 
                                             {{-- Hidden delete form --}}
                                             <form id="delete-page-{{ $p->id }}"
@@ -168,6 +180,8 @@
                                                 @csrf
                                                 @method('DELETE')
                                             </form>
+                                            @endcan
+
                                             {{-- Sections Builder --}}
                                             <a href="{{ route('dashboard.pages.sections.index', $p) }}"
                                                 class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"

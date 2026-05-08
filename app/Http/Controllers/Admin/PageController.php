@@ -16,6 +16,8 @@ class PageController extends Controller
      */
     public function index()
     {
+        $this->authorize('viewAny', Page::class);
+
         $pages = Page::with('translations')
             ->withCount('sections')
             ->where('context', 'marketing') // Only marketing-site pages
@@ -30,6 +32,8 @@ class PageController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', Page::class);
+
         // Load all active languages to build translation tabs
         $languages = Language::where('is_active', true)
             ->orderBy('id') // You can switch to priority if the column exists
@@ -51,6 +55,8 @@ class PageController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Page::class);
+
         $validated = $request->validate([
             'builder_mode' => 'nullable|in:sections',
             'is_active'    => 'nullable|boolean',
@@ -71,11 +77,15 @@ class PageController extends Controller
                     }
 
                     /**
-                     * $attribute looks like: "translations.ar.slug"
-                     * We extract the locale part: "ar".
+                     * $attribute looks like: "translations.0.slug" (numeric index).
+                     * We extract the numeric index then look up the locale from the
+                     * submitted translations array, because the form sends a
+                     * numerically-indexed array — not keyed by locale code.
                      */
-                    $parts  = explode('.', $attribute);
-                    $locale = $parts[1] ?? null;
+                    $parts = explode('.', $attribute); // ['translations', '0', 'slug']
+                    $index = $parts[1] ?? null;
+
+                    $locale = $request->input("translations.{$index}.locale");
 
                     if (! $locale) {
                         return;
@@ -122,7 +132,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('dashboard.pages.index')
-            ->with('success', 'تم إنشاء الصفحة بنجاح.');
+            ->with('success', __('Page created successfully.'));
     }
 
     /**
@@ -130,7 +140,9 @@ class PageController extends Controller
      */
     public function edit(Page $page)
     {
-        if ($page->context !== 'marketing') {
+        $this->authorize('update', $page);
+
+        if (! $this->isMarketingContext($page)) {
             abort(404);
         }
 
@@ -150,7 +162,9 @@ class PageController extends Controller
      */
     public function update(Request $request, Page $page)
     {
-        if ($page->context !== 'marketing') {
+        $this->authorize('update', $page);
+
+        if (! $this->isMarketingContext($page)) {
             abort(404);
         }
 
@@ -169,13 +183,16 @@ class PageController extends Controller
                 'nullable',
                 'string',
                 'max:255',
-                function ($attribute, $value, $fail) use ($page) {
+                function ($attribute, $value, $fail) use ($page, $request) {
                     if (! $value) {
                         return;
                     }
 
-                    $parts  = explode('.', $attribute);
-                    $locale = $parts[1] ?? null;
+                    // $attribute is "translations.0.slug" (numeric index)
+                    $parts = explode('.', $attribute);
+                    $index = $parts[1] ?? null;
+
+                    $locale = $request->input("translations.{$index}.locale");
 
                     if (! $locale) {
                         return;
@@ -197,25 +214,30 @@ class PageController extends Controller
             'translations.*.meta_keywords'    => 'nullable|string',
         ]);
 
+        // P3: Ensure all submitted translation IDs belong to this page.
+        $ownTranslationIds = $page->translations()->pluck('id')->all();
+        foreach ($validated['translations'] as $t) {
+            if (! empty($t['id']) && ! in_array((int) $t['id'], $ownTranslationIds, true)) {
+                abort(403, 'Translation does not belong to this page.');
+            }
+        }
+
         DB::transaction(function () use ($validated, $page) {
             // Update main page flags
             $page->update([
-                'builder_mode' => 'sections',
+                'builder_mode' => $validated['builder_mode'] ?? 'sections',
                 'is_active'    => (bool) ($validated['is_active'] ?? false),
                 'is_home'      => (bool) ($validated['is_home'] ?? false),
                 'published_at' => $validated['published_at'] ?? null,
             ]);
 
-            // Update or create translations for each locale
+            // P2: Match on page_id + locale to prevent duplicate rows per locale.
             foreach ($validated['translations'] as $t) {
-                PageTranslation::updateOrCreate(
+                $page->translations()->updateOrCreate(
                     [
-                        // If "id" exists → update that record, otherwise create new
-                        'id' => $t['id'] ?? null,
+                        'locale' => $t['locale'],
                     ],
                     [
-                        'page_id'          => $page->id,
-                        'locale'           => $t['locale'],
                         'title'            => $t['title'],
                         'slug'             => $t['slug'] ?? null,
                         'meta_title'       => $t['meta_title'] ?? null,
@@ -228,7 +250,7 @@ class PageController extends Controller
 
         return redirect()
             ->back()
-            ->with('success', 'تم تحديث الصفحة بنجاح.');
+            ->with('success', __('Page updated successfully.'));
     }
 
     /**
@@ -236,7 +258,9 @@ class PageController extends Controller
      */
     public function destroy(Page $page)
     {
-        if ($page->context !== 'marketing') {
+        $this->authorize('delete', $page);
+
+        if (! $this->isMarketingContext($page)) {
             abort(404);
         }
 
@@ -244,7 +268,7 @@ class PageController extends Controller
 
         return redirect()
             ->back()
-            ->with('success', 'تم حذف الصفحة.');
+            ->with('success', __('Page deleted successfully.'));
     }
 
     /**
@@ -252,7 +276,9 @@ class PageController extends Controller
      */
     public function toggleActive(Page $page)
     {
-        if ($page->context !== 'marketing') {
+        $this->authorize('toggleActive', $page);
+
+        if (! $this->isMarketingContext($page)) {
             abort(404);
         }
 
@@ -260,7 +286,7 @@ class PageController extends Controller
 
         return redirect()
             ->back()
-            ->with('success', 'تم تحديث حالة الصفحة.');
+            ->with('success', __('Page status updated successfully.'));
     }
 
     /**
@@ -268,7 +294,9 @@ class PageController extends Controller
      */
     public function setHome(Page $page)
     {
-        if ($page->context !== 'marketing') {
+        $this->authorize('setHome', $page);
+
+        if (! $this->isMarketingContext($page)) {
             abort(404);
         }
 
@@ -282,14 +310,16 @@ class PageController extends Controller
 
         return redirect()
             ->back()
-            ->with('success', 'تم تعيين الصفحة كصفحة رئيسية.');
+            ->with('success', __('Page set as homepage successfully.'));
     }
     /**
      * Update the preferred builder mode for a marketing page.
      */
     public function updateBuilderMode(Request $request, Page $page)
     {
-        if ($page->context !== 'marketing') {
+        $this->authorize('updateBuilderMode', $page);
+
+        if (! $this->isMarketingContext($page)) {
             abort(404);
         }
 
@@ -303,6 +333,14 @@ class PageController extends Controller
 
         return redirect()
             ->back()
-            ->with('success', 'تم تحديث نوع البلدر للصفحة.');
+            ->with('success', __('Builder mode updated successfully.'));
+    }
+
+    /**
+     * Determine whether the current request concerns a marketing-context page.
+     */
+    private function isMarketingContext(Page $page): bool
+    {
+        return $page->context === 'marketing';
     }
 }
