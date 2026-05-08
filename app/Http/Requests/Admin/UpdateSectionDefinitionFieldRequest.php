@@ -14,7 +14,7 @@ class UpdateSectionDefinitionFieldRequest extends FormRequest
         $field = $this->route('field');
 
         return $field instanceof SectionDefinitionField
-            ? ($this->user()?->can('edit', $field) ?? false)
+            ? ($this->user()?->can('update', $field) ?? false)
             : false;
     }
 

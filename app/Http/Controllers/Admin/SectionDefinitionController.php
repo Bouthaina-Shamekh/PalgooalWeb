@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreSectionDefinitionRequest;
 use App\Http\Requests\Admin\UpdateSectionDefinitionRequest;
 use App\Models\SectionTranslation;
 use App\Models\Sections\SectionDefinition;
+use App\Models\Sections\SectionDefinitionField;
 use App\Models\Sections\Template as SectionTemplate;
 use App\Support\Sections\SectionMediaPreviewBuilder;
 use App\Support\Sections\SectionTemplateRegistry;
@@ -84,7 +85,7 @@ class SectionDefinitionController extends Controller
      */
     public function edit(SectionDefinition $sectionDefinition): View
     {
-        $this->authorize('edit', $sectionDefinition);
+        $this->authorize('update', $sectionDefinition);
 
         $sectionDefinition->load(['templates' => fn($query) => $query->orderByPivot('sort_order')->orderBy('id')]);
 
@@ -98,7 +99,7 @@ class SectionDefinitionController extends Controller
         UpdateSectionDefinitionRequest $request,
         SectionDefinition $sectionDefinition,
     ): RedirectResponse {
-        $this->authorize('edit', $sectionDefinition);
+        $this->authorize('update', $sectionDefinition);
 
         $validated = $request->validated();
 
@@ -136,7 +137,7 @@ class SectionDefinitionController extends Controller
                         ->delete();
                 }
 
-                $sectionDefinition->fields()->delete();
+                $sectionDefinition->fields()->each(fn (SectionDefinitionField $f) => $f->delete());
                 $sectionDefinition->templates()->detach();
                 $sectionDefinition->delete();
             });

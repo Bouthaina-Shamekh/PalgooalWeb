@@ -61,9 +61,11 @@
                             <a href="{{ route('dashboard.section_definitions.edit', $sectionDefinition) }}" class="btn btn-light">
                                 {{ __('Back To Definition') }}
                             </a>
+                            @can('create', \App\Models\Sections\SectionDefinitionField::class)
                             <a href="{{ route('dashboard.section_definitions.fields.create', $sectionDefinition) }}" class="btn btn-primary">
                                 {{ __('Add Field') }}
                             </a>
+                            @endcan
                         </div>
                     </div>
                 </div>
@@ -78,12 +80,15 @@
                         <p class="mb-4 text-sm text-slate-500">
                             {{ __('Add the first field to start defining the editable schema for this section blueprint.') }}
                         </p>
+                        @can('create', \App\Models\Sections\SectionDefinitionField::class)
                         <a href="{{ route('dashboard.section_definitions.fields.create', $sectionDefinition) }}" class="btn btn-primary">
                             {{ __('Create First Field') }}
                         </a>
+                        @endcan
                     </div>
                 </div>
             @else
+                @can('update', \App\Models\Sections\SectionDefinitionField::class)
                 <form action="{{ route('dashboard.section_definitions.fields.reorder', $sectionDefinition) }}" method="POST" class="space-y-6">
                     @csrf
 
@@ -151,10 +156,12 @@
                                                         </span>
                                                     </td>
                                                     <td>
+                                                        @can('update', $field)
                                                         <a href="{{ route('dashboard.section_definitions.fields.edit', [$sectionDefinition, $field]) }}"
                                                             class="btn btn-sm btn-secondary">
                                                             {{ __('Edit') }}
                                                         </a>
+                                                        @endcan
                                                     </td>
                                                 </tr>
                                             @endforeach
@@ -171,6 +178,7 @@
                         </button>
                     </div>
                 </form>
+                @endcan
             @endif
         </div>
     </div>

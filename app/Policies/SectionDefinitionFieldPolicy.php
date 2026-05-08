@@ -9,7 +9,7 @@ namespace App\Policies;
  * ModelPolicy. The bound ability names are:
  * - sectiondefinitionfields.view
  * - sectiondefinitionfields.create
- * - sectiondefinitionfields.edit
+ * - sectiondefinitionfields.update
  * - sectiondefinitionfields.delete
  */
 class SectionDefinitionFieldPolicy extends ModelPolicy

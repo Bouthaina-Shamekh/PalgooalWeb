@@ -75,9 +75,13 @@ class SectionDefinitionFieldController extends Controller
             $this->localeProvider->all(),
         );
 
-        $sectionDefinition->fields()->create(
-            $this->formDataFactory->persistableAttributes($validated, $localeCodes),
-        );
+        try {
+            $sectionDefinition->fields()->create(
+                $this->formDataFactory->persistableAttributes($validated, $localeCodes),
+            );
+        } catch (\LogicException $e) {
+            return back()->withInput()->withErrors(['item_schema' => $e->getMessage()]);
+        }
 
         return redirect()
             ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
@@ -91,7 +95,7 @@ class SectionDefinitionFieldController extends Controller
         SectionDefinition $sectionDefinition,
         SectionDefinitionField $field,
     ): View {
-        $this->authorize('edit', $field);
+        $this->authorize('update', $field);
         $this->ensureFieldBelongsToDefinition($sectionDefinition, $field);
 
         return view('dashboard.section_definitions.fields.edit', $this->formViewData($sectionDefinition, $field));
@@ -105,7 +109,7 @@ class SectionDefinitionFieldController extends Controller
         SectionDefinition $sectionDefinition,
         SectionDefinitionField $field,
     ): RedirectResponse {
-        $this->authorize('edit', $field);
+        $this->authorize('update', $field);
         $this->ensureFieldBelongsToDefinition($sectionDefinition, $field);
 
         $validated = $request->validated();
@@ -114,9 +118,13 @@ class SectionDefinitionFieldController extends Controller
             $this->localeProvider->all(),
         );
 
-        $field->update(
-            $this->formDataFactory->persistableAttributes($validated, $localeCodes),
-        );
+        try {
+            $field->update(
+                $this->formDataFactory->persistableAttributes($validated, $localeCodes),
+            );
+        } catch (\LogicException $e) {
+            return back()->withInput()->withErrors(['item_schema' => $e->getMessage()]);
+        }
 
         return redirect()
             ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
@@ -128,7 +136,7 @@ class SectionDefinitionFieldController extends Controller
      */
     public function reorder(Request $request, SectionDefinition $sectionDefinition): RedirectResponse
     {
-        $this->authorize('edit', SectionDefinitionField::class);
+        $this->authorize('update', SectionDefinitionField::class);
 
         $validated = $request->validate([
             'sort_orders' => ['required', 'array'],

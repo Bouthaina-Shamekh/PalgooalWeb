@@ -54,9 +54,11 @@
                             <a href="{{ route('dashboard.section_definitions.import') }}" class="btn btn-secondary">
                                 {{ __('Import JSON') }}
                             </a>
+                            @can('create', \App\Models\Sections\SectionDefinition::class)
                             <a href="{{ route('dashboard.section_definitions.create') }}" class="btn btn-primary">
                                 {{ __('Add Definition') }}
                             </a>
+                            @endcan
                         </div>
                     </div>
                 </div>
@@ -160,14 +162,19 @@
                                         <td>{{ $sectionDefinition->sort_order }}</td>
                                         <td>
                                             <div class="flex flex-wrap gap-2">
+                                                @can('update', $sectionDefinition)
                                                 <a href="{{ route('dashboard.section_definitions.edit', $sectionDefinition) }}"
                                                     class="btn btn-sm btn-secondary">
                                                     {{ __('Edit') }}
                                                 </a>
+                                                @endcan
+                                                @can('viewAny', \App\Models\Sections\SectionDefinitionField::class)
                                                 <a href="{{ route('dashboard.section_definitions.fields.index', $sectionDefinition) }}"
                                                     class="btn btn-sm btn-light">
                                                     {{ __('Fields') }}
                                                 </a>
+                                                @endcan
+                                                @can('delete', $sectionDefinition)
                                                 <form
                                                     action="{{ route('dashboard.section_definitions.destroy', $sectionDefinition) }}"
                                                     method="POST"
@@ -178,6 +185,7 @@
                                                         {{ __('Delete') }}
                                                     </button>
                                                 </form>
+                                                @endcan
                                             </div>
                                         </td>
                                     </tr>
