@@ -76,22 +76,21 @@
 
                             {{-- الإجراءات --}}
                             <td style="display: flex; gap: 5px;">
-                                @can('edit', 'App\\Models\\Testimonial')
+                                {{-- P6 fix: 'update' matches ModelPolicy ability 'testimonials.update' --}}
+                                @can('update', $testimonial)
                                     <a href="{{ route('dashboard.testimonials.edit', $testimonial->id) }}"
                                         class="btn btn-sm btn-warning">
                                         تعديل
                                     </a>
                                 @endcan
 
-                                @can('delete', 'App\\Models\\Testimonial')
+                                @can('delete', $testimonial)
                                     <form action="{{ route('dashboard.testimonials.destroy', $testimonial->id) }}"
-                                        method="POST">
+                                        method="POST"
+                                        onsubmit="return confirm('هل أنت متأكد من حذف هذه الشهادة؟')">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-danger"
-                                            onclick="return confirm('هل أنت متأكد من حذف هذه الشهادة؟');">
-                                            حذف
-                                        </button>
+                                        <button type="submit" class="btn btn-danger btn-sm">حذف</button>
                                     </form>
                                 @endcan
                             </td>

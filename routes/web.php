@@ -59,7 +59,9 @@ Route::middleware(['setLocale'])->group(function () {
     Route::get('/testimonials/submit', [TestimonialSubmissionController::class, 'create'])
         ->name('testimonials.submit');
 
+    // P8 fix: throttle public submissions — 5 attempts per minute per IP
     Route::post('/testimonials/submit', [TestimonialSubmissionController::class, 'store'])
+        ->middleware('throttle:5,1')
         ->name('testimonials.submit.store');
 
     /*

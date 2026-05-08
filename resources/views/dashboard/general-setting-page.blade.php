@@ -575,7 +575,8 @@
                 <button id="general-settings-discard" type="button" class="btn btn-outline-secondary btn-sm">
                     {{ t('dashboard.Discard', 'Discard') }}
                 </button>
-                @can('edit', 'App\\Models\\GeneralSetting')
+                {{-- P4 fix: 'update' matches ModelPolicy ability 'generalsettings.update' --}}
+                @can('update', 'App\\Models\\GeneralSetting')
                     <button type="submit" form="general-settings-form" class="btn btn-primary btn-sm">
                         {{ t('dashboard.Save_Changes', 'Save Changes') }}
                     </button>

@@ -195,6 +195,7 @@
                 let autoTimer = null;
                 let resumeTimer = null;
                 let scrollRaf = null;
+                let isPointerInside = false;
 
                 function isRtl() {
                     return window.getComputedStyle(track).direction === 'rtl';
@@ -293,6 +294,10 @@
                 }
 
                 function resumeAutoScroll(delay) {
+                    if (!isPointerInside) {
+                        return;
+                    }
+
                     window.clearTimeout(resumeTimer);
                     resumeTimer = window.setTimeout(startAutoScroll, delay || 0);
                 }
@@ -338,26 +343,29 @@
                     passive: true,
                 });
 
-                root.addEventListener('mouseenter', pauseAutoScroll);
-                root.addEventListener('mouseleave', function() {
+                root.addEventListener('mouseenter', function() {
+                    isPointerInside = true;
                     resumeAutoScroll(0);
+                });
+                root.addEventListener('mouseleave', function() {
+                    isPointerInside = false;
+                    pauseAutoScroll();
                 });
                 root.addEventListener('touchstart', pauseAutoScroll, {
                     passive: true,
                 });
                 root.addEventListener('touchend', function() {
-                    resumeAutoScroll(1500);
+                    pauseAutoScroll();
                 }, {
                     passive: true,
                 });
                 root.addEventListener('touchcancel', function() {
-                    resumeAutoScroll(1500);
+                    pauseAutoScroll();
                 }, {
                     passive: true,
                 });
 
                 setActiveIndex(nearestSlideIndex());
-                startAutoScroll();
             }
 
             function initializePortfolioSliders() {

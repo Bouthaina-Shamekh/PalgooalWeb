@@ -38,6 +38,7 @@ class SectionQueryResolver
             'services' => self::services($data),
             'testimonials' => self::testimonials($data),
             'reviews_showcase' => self::testimonials($data),
+            'reviews_slider' => self::reviewsSlider($data),
             'our_work_showcase' => self::portfolios($data),
             'portfolio_slider' => self::portfolioShowcase($data),
             'portfolio_showcase' => self::portfolioShowcase($data),
@@ -83,6 +84,59 @@ class SectionQueryResolver
         if ($limit) $q->limit($limit);
 
         $data['testimonials'] = $q->get();
+
+        return $data;
+    }
+
+    protected static function reviewsSlider(array $data): array
+    {
+        $testimonial = new Testimonial();
+        $table = $testimonial->getTable();
+        $limit = isset($data['limit']) && is_numeric($data['limit']) ? (int) $data['limit'] : 8;
+
+        if ($limit <= 0) {
+            $limit = 8;
+        }
+
+        $data['limit'] = $limit;
+        $data['reviews_items'] = collect();
+
+        if (! Schema::hasTable($table)) {
+            return $data;
+        }
+
+        $showFeaturedOnly = filter_var($data['show_featured_only'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $activeColumn = self::firstExistingColumn($table, ['is_approved', 'approved', 'is_active', 'active', 'status']);
+        $featuredColumn = self::firstExistingColumn($table, ['is_featured', 'featured']);
+        $sortColumn = self::firstExistingColumn($table, ['sort_order', 'order', 'sort']);
+
+        $query = Testimonial::query();
+
+        if (! Schema::hasColumn($table, 'deleted_at')) {
+            $query->withoutGlobalScope(\Illuminate\Database\Eloquent\SoftDeletingScope::class);
+        }
+
+        $query
+            ->with(self::testimonialRelations())
+            ->when($activeColumn !== null, function ($query) use ($activeColumn) {
+                self::applyActiveFilter($query, $activeColumn);
+            })
+            ->when($showFeaturedOnly && $featuredColumn !== null, function ($query) use ($featuredColumn) {
+                $query->where($featuredColumn, true);
+            })
+            ->when($sortColumn !== null, function ($query) use ($sortColumn) {
+                $query->orderBy($sortColumn)->orderByDesc('id');
+            }, function ($query) use ($table) {
+                Schema::hasColumn($table, 'created_at')
+                    ? $query->latest()
+                    : $query->latest('id');
+            })
+            ->limit($limit);
+
+        $data['reviews_items'] = $query->get()
+            ->map(fn ($testimonial): ?array => self::testimonialItemPayload($testimonial))
+            ->filter()
+            ->values();
 
         return $data;
     }
@@ -320,6 +374,68 @@ class SectionQueryResolver
                 : self::portfolioUrl($portfolio),
             'button_label' => $buttonLabel,
         ];
+    }
+
+    protected static function testimonialItemPayload(Testimonial $testimonial): ?array
+    {
+        $translations = collect($testimonial->translations ?? []);
+        $translation = method_exists($testimonial, 'translation')
+            ? ($testimonial->translation(app()->getLocale()) ?? $translations->first())
+            : ($translations->firstWhere('locale', app()->getLocale()) ?? $translations->first());
+
+        $name = trim((string) ($translation?->name ?? ''));
+        $position = trim((string) ($translation?->major ?? ''));
+        $text = trim((string) ($translation?->feedback ?? ''));
+
+        if ($name === '' && $text === '') {
+            return null;
+        }
+
+        return [
+            'name' => $name !== '' ? $name : __('Anonymous'),
+            'position' => $position,
+            'image' => self::testimonialImageUrl($testimonial),
+            'rating' => max(1, min(5, (int) ($testimonial->star ?? 5))),
+            'text' => $text,
+        ];
+    }
+
+    protected static function testimonialImageUrl(Testimonial $testimonial): string
+    {
+        $imageUrl = trim((string) ($testimonial->image_url ?? ''));
+
+        if ($imageUrl !== '') {
+            return $imageUrl;
+        }
+
+        $image = $testimonial->image ?? null;
+
+        return trim((string) ($image?->url ?? $image?->file_url ?? ''));
+    }
+
+    protected static function testimonialRelations(): array
+    {
+        $testimonial = new Testimonial();
+        $relations = [];
+
+        foreach (['translations', 'image'] as $relation) {
+            if (method_exists($testimonial, $relation)) {
+                $relations[] = $relation;
+            }
+        }
+
+        return $relations;
+    }
+
+    protected static function applyActiveFilter($query, string $column): void
+    {
+        if ($column === 'status') {
+            $query->whereIn($column, ['active', 'approved', 'published', '1', 1, true]);
+
+            return;
+        }
+
+        $query->where($column, true);
     }
 
     protected static function portfolioExternalUrl($value): string

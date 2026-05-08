@@ -35,7 +35,7 @@
             <tbody>
                 @foreach($portfolios as $portfolio)
                     @php
-                        {{-- P2+P3 fix: use the already eager-loaded collection, not the query builder --}}
+                        // P2+P3 fix: use the already eager-loaded collection, not the query builder
                         $trans = $portfolio->translations->firstWhere('locale', app()->getLocale());
                     @endphp
                     <tr>

@@ -28,6 +28,9 @@ class HomeController extends Controller
 
     public function general_settings()
     {
+        // P1 fix: authorize before exposing settings
+        $this->authorize('view', GeneralSetting::class);
+
         $generalSettingModel = GeneralSetting::first();
         $languages = Language::query()->orderBy('id')->get();
         $contentLanguages = $this->generalSettingContentLanguages($languages, $generalSettingModel?->default_language);
@@ -95,6 +98,9 @@ class HomeController extends Controller
 
     public function exportGeneralSettings(): StreamedResponse
     {
+        // P1 fix: only users who can view settings may export them
+        $this->authorize('view', GeneralSetting::class);
+
         $setting = GeneralSetting::first();
 
         $payload = [
@@ -142,6 +148,9 @@ class HomeController extends Controller
 
     public function importGeneralSettings(Request $request): RedirectResponse
     {
+        // P1 fix: only users who can update settings may import
+        $this->authorize('update', GeneralSetting::class);
+
         $request->validate([
             'settings_file' => ['required', 'file', 'mimes:json,txt', 'max:2048'],
         ]);
@@ -152,7 +161,7 @@ class HomeController extends Controller
         if (!is_array($decoded)) {
             return redirect()
                 ->route('dashboard.general_settings')
-                ->with('error', 'Invalid JSON file. Please upload a valid export file.');
+                ->with('error', __('ملف JSON غير صالح. يرجى رفع ملف تصدير صحيح.'));
         }
 
         $payload = $decoded['general_setting'] ?? $decoded;
@@ -160,7 +169,7 @@ class HomeController extends Controller
         if (!is_array($payload)) {
             return redirect()
                 ->route('dashboard.general_settings')
-                ->with('error', 'Invalid settings payload.');
+                ->with('error', __('محتوى الإعدادات غير صالح.'));
         }
 
         $validator = Validator::make($payload, [
@@ -211,7 +220,7 @@ class HomeController extends Controller
         if ($validator->fails()) {
             return redirect()
                 ->route('dashboard.general_settings')
-                ->with('error', 'Import failed: settings file has invalid values.');
+                ->with('error', __('فشل الاستيراد: الملف يحتوي على قيم غير صالحة.'));
         }
 
         $validated = $validator->validated();
@@ -265,6 +274,16 @@ class HomeController extends Controller
             (string) ($validated['contact_info']['address'] ?? ''),
         );
 
+        // P2 fix: normalise logo/favicon paths through the same pipeline as updateGeneralSettings.
+        // Without this, importing a file with a Media ID ("42") would store the literal string "42"
+        // rather than the resolved file_path, and an arbitrary path string would bypass sanitisation.
+        $logoFields = ['logo', 'dark_logo', 'sticky_logo', 'dark_sticky_logo', 'admin_logo', 'admin_dark_logo', 'favicon'];
+        foreach ($logoFields as $field) {
+            if (array_key_exists($field, $validated)) {
+                $validated[$field] = $this->normalizeMediaPath($validated[$field]);
+            }
+        }
+
         $setting = GeneralSetting::first();
         if ($setting) {
             $setting->update($validated);
@@ -274,11 +293,14 @@ class HomeController extends Controller
 
         return redirect()
             ->route('dashboard.general_settings')
-            ->with('success', 'General settings imported successfully.');
+            ->with('success', __('تم استيراد الإعدادات العامة بنجاح.'));
     }
 
     public function updateGeneralSettings(Request $request): RedirectResponse
     {
+        // P1 fix: authorize before modifying settings
+        $this->authorize('update', GeneralSetting::class);
+
         $validator = Validator::make($request->all(), [
             'logo_url' => ['nullable', 'string', 'max:2048'],
             'dark_logo_url' => ['nullable', 'string', 'max:2048'],
@@ -301,6 +323,8 @@ class HomeController extends Controller
             'contact_info' => ['nullable', 'array'],
             'contact_info.phone' => ['nullable', 'string', 'max:255'],
             'contact_info.email' => ['nullable', 'email', 'max:255'],
+            // P5 fix: contact_info.address was missing from validation — add max:1000 rule
+            'contact_info.address' => ['nullable', 'string', 'max:1000'],
             'social_links' => ['nullable', 'array'],
             'social_links.facebook' => ['nullable', 'url', 'max:255'],
             'social_links.twitter' => ['nullable', 'url', 'max:255'],
@@ -314,8 +338,10 @@ class HomeController extends Controller
             'gs_texts.*.contact_address' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        $validator->after(function ($validator) use ($request) {
-            $languages = Language::query()->orderBy('id')->get();
+        // P3 fix: load languages once and share between the ->after() closure and the save block.
+        $languages = Language::query()->orderBy('id')->get();
+
+        $validator->after(function ($validator) use ($request, $languages) {
             $defaultLocaleCode = $this->resolveDefaultLanguageCode(
                 $languages,
                 (int) $request->input('default_language')
@@ -351,7 +377,7 @@ class HomeController extends Controller
         $validated = $validator->validate();
 
         $setting = GeneralSetting::first() ?? new GeneralSetting();
-        $languages = Language::query()->orderBy('id')->get();
+        // P3 fix: reuse $languages loaded above — no second query
         $defaultLocaleCode = $this->resolveDefaultLanguageCode($languages, $validated['default_language']);
         $languageCodes = $this->generalSettingContentLanguages($languages, $validated['default_language'])
             ->pluck('code')
@@ -422,11 +448,14 @@ class HomeController extends Controller
 
         return redirect()
             ->route('dashboard.general_settings')
-            ->with('success', 'General settings updated successfully.');
+            ->with('success', __('تم حفظ الإعدادات العامة بنجاح.'));
     }
 
     public function autoSaveGeneralSettings(Request $request): JsonResponse
     {
+        // P1 fix: authorize before auto-saving
+        $this->authorize('update', GeneralSetting::class);
+
         $validator = Validator::make($request->all(), [
             'logo_url' => ['nullable', 'string', 'max:2048'],
             'dark_logo_url' => ['nullable', 'string', 'max:2048'],
@@ -449,6 +478,8 @@ class HomeController extends Controller
             'contact_info' => ['nullable', 'array'],
             'contact_info.phone' => ['nullable', 'string', 'max:255'],
             'contact_info.email' => ['nullable', 'email', 'max:255'],
+            // P5 fix: add missing address validation rule
+            'contact_info.address' => ['nullable', 'string', 'max:1000'],
             'social_links' => ['nullable', 'array'],
             'social_links.facebook' => ['nullable', 'url', 'max:255'],
             'social_links.twitter' => ['nullable', 'url', 'max:255'],
@@ -502,14 +533,10 @@ class HomeController extends Controller
             }
         }
 
-        $defaultLocaleCode = $this->resolveDefaultLanguageCode(
-            Language::query()->orderBy('id')->get(),
-            $setting->default_language
-        );
-        $languageCodes = $this->generalSettingContentLanguages(
-            Language::query()->orderBy('id')->get(),
-            $setting->default_language
-        )
+        // P3 fix: load languages once — reuse collection for both helper calls
+        $languages = Language::query()->orderBy('id')->get();
+        $defaultLocaleCode = $this->resolveDefaultLanguageCode($languages, $setting->default_language);
+        $languageCodes = $this->generalSettingContentLanguages($languages, $setting->default_language)
             ->pluck('code')
             ->map(fn ($code) => strtolower((string) $code))
             ->filter()

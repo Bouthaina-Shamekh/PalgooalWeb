@@ -108,6 +108,7 @@
 
                 <div class="border rounded-xl p-3">
                     @if ($selectedMenu)
+                        @can('update', $selectedMenu)
                         <form method="POST" action="{{ route('dashboard.menus.update', $selectedMenu) }}"
                             class="grid grid-cols-1 lg:grid-cols-2 gap-3 items-end">
                             @csrf
@@ -153,9 +154,11 @@
                                 </button>
                             </div>
                         </form>
+                        @endcan
                     @endif
                 </div>
 
+                @can('create', \App\Models\Header::class)
                 <details class="border rounded-xl p-3 bg-light"
                     @if ($errors->has('menu_name') || $errors->has('menu_location')) open @endif>
                     <summary class="cursor-pointer fw-semibold">
@@ -188,6 +191,7 @@
                         </div>
                     </form>
                 </details>
+                @endcan
             </div>
         </details>
 
@@ -217,13 +221,16 @@
                             </form>
 
                             <div class="flex items-center gap-2">
+                                @can('create', \App\Models\Header::class)
                                 <form method="POST" action="{{ route('dashboard.menus.duplicate', $selectedMenu) }}" class="w-full">
                                     @csrf
                                     <button type="submit" class="btn btn-outline-secondary w-full">
                                         {{ t('dashboard.Duplicate', 'Duplicate') }}
                                     </button>
                                 </form>
+                                @endcan
 
+                                @can('delete', $selectedMenu)
                                 <form method="POST" action="{{ route('dashboard.menus.destroy', $selectedMenu) }}" class="w-full"
                                     data-confirm="{{ t('dashboard.Delete_Menu_Confirm', 'Delete this menu?') }}">
                                     @csrf
@@ -232,10 +239,12 @@
                                         {{ t('dashboard.Delete', 'Delete') }}
                                     </button>
                                 </form>
+                                @endcan
                             </div>
                         </div>
                     </div>
 
+                    @can('update', $selectedMenu)
                     <div class="card">
                         <div class="card-header">
                             <h5 class="mb-0">
@@ -554,6 +563,7 @@
                             </form>
                         </div>
                     </div>
+                    @endcan
                 </div>
 
                 <div class="col-span-12 xl:col-span-6">
@@ -603,6 +613,7 @@
                                                         </div>
                                                     </div>
 
+                                                    @can('update', $selectedMenu)
                                                     <div class="flex gap-1">
                                                         <a href="{{ route('dashboard.menus', ['menu' => $selectedMenu->id, 'edit_item' => $item->id]) }}"
                                                             class="btn btn-outline-warning btn-sm">
@@ -618,6 +629,7 @@
                                                             </button>
                                                         </form>
                                                     </div>
+                                                    @endcan
                                                 </div>
                                             </div>
                                         </div>

@@ -15,6 +15,7 @@ class AppearanceController extends Controller
 {
     public function header(): View
     {
+        $this->authorize('view', GeneralSetting::class);
         $settings = $this->settings();
 
         $activeHeaderKey = $settings->active_header_variant;
@@ -36,6 +37,7 @@ class AppearanceController extends Controller
 
     public function updateHeaderVariant(Request $request): RedirectResponse
     {
+        $this->authorize('update', GeneralSetting::class);
         $validated = $request->validate([
             'active_header_variant' => [
                 'required',
@@ -46,11 +48,12 @@ class AppearanceController extends Controller
 
         $this->settings()->update($validated);
 
-        return back()->with('success', 'Header layout activated successfully.');
+        return back()->with('success', __('Header layout activated successfully.'));
     }
 
     public function updateHeaderSettings(Request $request): RedirectResponse
     {
+        $this->authorize('update', GeneralSetting::class);
         $settings = $this->settings();
         $activeVariant = $settings->active_header_variant;
         $hexColorRule = ['nullable', 'string', 'regex:/^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'];
@@ -92,16 +95,15 @@ class AppearanceController extends Controller
         if ($activeVariant === 'purple_topbar') {
             $defaults = $this->headerVariantDefaults($settings, 'purple_topbar');
             $allowedColorThemes = $this->purpleTopbarColorThemeKeys();
-            $languageCodes = Language::query()
-                ->where('is_active', true)
-                ->pluck('code')
+            $languages = Language::query()->where('is_active', true)->get();
+            $languageCodes = $languages->pluck('code')
                 ->map(fn ($code) => strtolower((string) $code))
                 ->filter()
                 ->values()
                 ->all();
 
             $defaultLocale = strtolower((string) (
-                Language::query()->find($settings->default_language)?->code
+                $languages->firstWhere('id', $settings->default_language)?->code
                 ?? config('app.locale', 'en')
             ));
 
@@ -142,7 +144,7 @@ class AppearanceController extends Controller
             }
 
             $normalizedCustomColors = $this->normalizePurpleTopbarCustomColors(
-                is_array($request->input('pv_custom_colors')) ? $request->input('pv_custom_colors') : [],
+                is_array($validated['pv_custom_colors'] ?? null) ? $validated['pv_custom_colors'] : [],
                 is_array($defaults['custom_colors'] ?? null)
                     ? $defaults['custom_colors']
                     : $this->purpleTopbarDefaultCustomColors(),
@@ -175,11 +177,12 @@ class AppearanceController extends Controller
             'header_variant_settings' => $headerVariantSettings,
         ]);
 
-        return back()->with('success', 'Header settings saved successfully.');
+        return back()->with('success', __('Header settings saved successfully.'));
     }
 
     public function footer(): View
     {
+        $this->authorize('view', GeneralSetting::class);
         $settings = $this->settings();
 
         $activeFooterKey = $settings->active_footer_variant;
@@ -201,6 +204,7 @@ class AppearanceController extends Controller
 
     public function updateFooterVariant(Request $request): RedirectResponse
     {
+        $this->authorize('update', GeneralSetting::class);
         $validated = $request->validate([
             'active_footer_variant' => [
                 'required',
@@ -211,11 +215,12 @@ class AppearanceController extends Controller
 
         $this->settings()->update($validated);
 
-        return back()->with('success', 'Footer layout activated successfully.');
+        return back()->with('success', __('Footer layout activated successfully.'));
     }
 
     public function updateFooterSettings(Request $request): RedirectResponse
     {
+        $this->authorize('update', GeneralSetting::class);
         $settings = $this->settings();
         $activeVariant = $settings->active_footer_variant;
         $hexColorRule = ['nullable', 'string', 'regex:/^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'];
@@ -261,16 +266,15 @@ class AppearanceController extends Controller
         if ($activeVariant === 'palgoals_marketing') {
             $defaults = $this->footerVariantDefaults($settings, 'palgoals_marketing');
             $allowedColorThemes = $this->palgoalsMarketingColorThemeKeys();
-            $languageCodes = Language::query()
-                ->where('is_active', true)
-                ->pluck('code')
+            $languages = Language::query()->where('is_active', true)->get();
+            $languageCodes = $languages->pluck('code')
                 ->map(fn ($code) => strtolower((string) $code))
                 ->filter()
                 ->values()
                 ->all();
 
             $defaultLocale = strtolower((string) (
-                Language::query()->find($settings->default_language)?->code
+                $languages->firstWhere('id', $settings->default_language)?->code
                 ?? config('app.locale', 'en')
             ));
 
@@ -330,7 +334,7 @@ class AppearanceController extends Controller
             }
 
             $normalizedCustomColors = $this->normalizePalgoalsMarketingCustomColors(
-                is_array($request->input('fm_custom_colors')) ? $request->input('fm_custom_colors') : [],
+                is_array($validated['fm_custom_colors'] ?? null) ? $validated['fm_custom_colors'] : [],
                 is_array($defaults['custom_colors'] ?? null)
                     ? $defaults['custom_colors']
                     : $this->palgoalsMarketingDefaultCustomColors(),
@@ -393,7 +397,7 @@ class AppearanceController extends Controller
             'footer_variant_settings' => $footerVariantSettings,
         ]);
 
-        return back()->with('success', 'Footer settings saved successfully.');
+        return back()->with('success', __('Footer settings saved successfully.'));
     }
 
     protected function settings(): GeneralSetting

@@ -22,6 +22,7 @@ class MenuController extends Controller
 {
     public function index(Request $request): View
     {
+        $this->authorize('viewAny', Header::class);
         $languages = $this->loadLanguages();
         $pages = $this->loadPages();
         $menuLocations = $this->menuLocations();
@@ -29,14 +30,21 @@ class MenuController extends Controller
         $menus = Header::query()->orderBy('name')->get();
 
         if ($menus->isEmpty()) {
-            Header::query()->create([
-                'name' => 'Main Menu',
-                'slug' => 'main-menu',
-                'location_key' => 'header_primary',
-                'is_active' => true,
-            ]);
+            $menus = DB::transaction(function () {
+                // Re-check inside transaction to avoid race condition
+                if (Header::query()->exists()) {
+                    return Header::query()->orderBy('name')->get();
+                }
 
-            $menus = Header::query()->orderBy('name')->get();
+                Header::query()->create([
+                    'name'         => 'Main Menu',
+                    'slug'         => 'main-menu',
+                    'location_key' => 'header_primary',
+                    'is_active'    => true,
+                ]);
+
+                return Header::query()->orderBy('name')->get();
+            });
         }
 
         $requestedMenuId = (int) $request->query('menu', 0);
@@ -71,6 +79,7 @@ class MenuController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', Header::class);
         $locations = $this->menuLocations();
 
         $validated = $request->validate([
@@ -95,6 +104,7 @@ class MenuController extends Controller
 
     public function update(Request $request, Header $menu): RedirectResponse
     {
+        $this->authorize('update', $menu);
         $locations = $this->menuLocations();
 
         $validated = $request->validate([
@@ -124,6 +134,7 @@ class MenuController extends Controller
 
     public function destroy(Header $menu): RedirectResponse
     {
+        $this->authorize('delete', $menu);
         $allMenus = Header::query()->orderBy('id')->get();
         if ($allMenus->count() <= 1) {
             return redirect()
@@ -145,6 +156,7 @@ class MenuController extends Controller
 
     public function duplicate(Header $menu): RedirectResponse
     {
+        $this->authorize('create', Header::class);
         $menu->loadMissing(['items.translations']);
 
         $copiedMenu = DB::transaction(function () use ($menu) {
@@ -185,6 +197,7 @@ class MenuController extends Controller
 
     public function storeItem(Request $request, Header $menu): RedirectResponse
     {
+        $this->authorize('update', $menu);
         $languages = $this->loadLanguages();
         $pages = $this->loadPages();
         $payload = $this->validateAndNormalizeItemPayload($request, $languages, $pages);
@@ -215,6 +228,7 @@ class MenuController extends Controller
         if ((int) $item->header_id !== (int) $menu->id) {
             abort(404);
         }
+        $this->authorize('update', $menu);
 
         $languages = $this->loadLanguages();
         $pages = $this->loadPages();
@@ -246,6 +260,7 @@ class MenuController extends Controller
         if ((int) $item->header_id !== (int) $menu->id) {
             abort(404);
         }
+        $this->authorize('update', $menu);
 
         $item->delete();
 
@@ -256,6 +271,7 @@ class MenuController extends Controller
 
     public function reorderItems(Request $request, Header $menu): JsonResponse
     {
+        $this->authorize('update', $menu);
         $validated = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['required', 'integer'],
@@ -484,28 +500,28 @@ class MenuController extends Controller
 
     protected function validateAndNormalizeItemPayload(Request $request, Collection $languages, Collection $pages): array
     {
+        $requestedType = strtolower(trim((string) $request->input('type', '')));
+
         $validated = $request->validate([
-            'type' => ['required', Rule::in(['link', 'page', 'dropdown'])],
-            'order' => ['nullable', 'integer', 'min:0'],
-            'page_id' => ['nullable', 'integer', 'exists:pages,id'],
+            'type'         => ['required', Rule::in(['link', 'page', 'dropdown'])],
+            'order'        => ['nullable', 'integer', 'min:0'],
+            'page_id'      => $requestedType === 'page'
+                ? ['required', 'integer', 'exists:pages,id']
+                : ['nullable', 'integer', 'exists:pages,id'],
             'translations' => ['nullable', 'array'],
-            'children' => ['nullable', 'array'],
+            'children'     => ['nullable', 'array'],
         ]);
 
         $type = (string) $validated['type'];
         $order = isset($validated['order']) ? (int) $validated['order'] : null;
 
         if ($type === 'page') {
-            $request->validate([
-                'page_id' => ['required', 'integer', 'exists:pages,id'],
-            ]);
-
             return [
-                'type' => 'page',
-                'order' => $order,
-                'page_id' => (int) $request->input('page_id'),
+                'type'         => 'page',
+                'order'        => $order,
+                'page_id'      => (int) $validated['page_id'],
                 'translations' => $this->blankTranslations($languages),
-                'children' => [],
+                'children'     => [],
             ];
         }
 
