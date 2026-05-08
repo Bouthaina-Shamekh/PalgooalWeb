@@ -23,6 +23,16 @@
         </div>
     @endif
 
+    @if ($errors->any())
+        <div class="mb-4 rounded bg-red-100 px-4 py-2 text-red-800">
+            <ul class="mb-0 list-disc ps-5">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="grid grid-cols-12 gap-x-6">
         <div class="col-span-12">
             <div class="card table-card">
@@ -34,7 +44,16 @@
                                 {{ __('Manage the developer-facing section blueprint records only. Field builders and rendering contracts stay separate.') }}
                             </p>
                         </div>
-                        <div class="mt-3 sm:mt-0">
+                        <div class="mt-3 flex flex-wrap gap-2 sm:mt-0">
+                            <a href="{{ route('dashboard.section_definitions.export') }}" class="btn btn-light">
+                                {{ __('Export All') }}
+                            </a>
+                            <button type="submit" form="section-definitions-export-selected" class="btn btn-light">
+                                {{ __('Export Selected') }}
+                            </button>
+                            <a href="{{ route('dashboard.section_definitions.import') }}" class="btn btn-secondary">
+                                {{ __('Import JSON') }}
+                            </a>
                             <a href="{{ route('dashboard.section_definitions.create') }}" class="btn btn-primary">
                                 {{ __('Add Definition') }}
                             </a>
@@ -43,10 +62,18 @@
                 </div>
 
                 <div class="card-body pt-3">
+                    <form id="section-definitions-export-selected" method="POST"
+                        action="{{ route('dashboard.section_definitions.export-selected') }}">
+                        @csrf
+                    </form>
+
                     <div class="table-responsive">
                         <table class="table table-hover w-full">
                             <thead>
                                 <tr>
+                                    <th class="w-10">
+                                        <span class="sr-only">{{ __('Select') }}</span>
+                                    </th>
                                     <th>#</th>
                                     <th>{{ __('Name') }}</th>
                                     <th>{{ __('Key') }}</th>
@@ -71,6 +98,12 @@
                                             : null;
                                     @endphp
                                     <tr>
+                                        <td>
+                                            <input type="checkbox" form="section-definitions-export-selected"
+                                                name="definition_ids[]" value="{{ $sectionDefinition->id }}"
+                                                class="form-check-input"
+                                                aria-label="{{ __('Select :name', ['name' => $sectionDefinition->label]) }}">
+                                        </td>
                                         <td>{{ $sectionDefinition->id }}</td>
                                         <td>
                                             <div class="font-medium text-slate-900">{{ $sectionDefinition->label }}
@@ -150,7 +183,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="11" class="py-8 text-center text-slate-500">
+                                        <td colspan="12" class="py-8 text-center text-slate-500">
                                             {{ __('No section definitions found yet.') }}
                                         </td>
                                     </tr>

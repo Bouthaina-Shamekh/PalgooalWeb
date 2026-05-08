@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\PageController;
 use App\Http\Controllers\Admin\SectionController;
 use App\Http\Controllers\Admin\SectionDefinitionController;
 use App\Http\Controllers\Admin\SectionDefinitionFieldController;
+use App\Http\Controllers\Admin\SectionDefinitionImportExportController;
 use App\Http\Controllers\Admin\AppearanceController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\ClientController as AdminClientController;
@@ -267,6 +268,11 @@ Route::group([
         ->name('section_definitions.')
         ->group(function () {
             Route::get('/', [SectionDefinitionController::class, 'index'])->name('index');
+            Route::get('/export', [SectionDefinitionImportExportController::class, 'exportAll'])->name('export');
+            Route::post('/export-selected', [SectionDefinitionImportExportController::class, 'exportSelected'])->name('export-selected');
+            Route::get('/import', [SectionDefinitionImportExportController::class, 'importForm'])->name('import');
+            Route::post('/import/preview', [SectionDefinitionImportExportController::class, 'preview'])->name('import.preview');
+            Route::post('/import/apply', [SectionDefinitionImportExportController::class, 'apply'])->name('import.apply');
             Route::get('/create', [SectionDefinitionController::class, 'create'])->name('create');
             Route::post('/', [SectionDefinitionController::class, 'store'])->name('store');
             Route::get('/{sectionDefinition}/edit', [SectionDefinitionController::class, 'edit'])
