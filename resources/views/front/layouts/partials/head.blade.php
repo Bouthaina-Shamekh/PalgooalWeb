@@ -50,9 +50,12 @@
     {{-- مهم: لا نضيف <title> ثاني هنا حتى لا يتكرر العنوان --}}
     {{-- <title> سيتم توليده داخل x-seo.meta من SeoMeta --}}
 
-    {{-- Fonts and Styles --}}
+    {{-- ─── Preconnect: establish early TCP/TLS to CDN origins ───────── --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+
+    {{-- ─── Fonts ───────────────────────────────────────────────────── --}}
     @php
         $_themeSubscription = $activeThemeSubscription
             ?? $tenantSubscription
@@ -67,12 +70,19 @@
     @if ($_themeFontUrl)
         <link href="{{ $_themeFontUrl }}" rel="stylesheet">
     @endif
+
+    {{-- ─── Core CSS ────────────────────────────────────────────────── --}}
     {{-- <link rel="stylesheet" href="{{ mix('assets/tamplate/css/tailwind.css') }}"> --}}
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}">
     <link rel="stylesheet" href="{{ route('frontend.assets.purple_topbar_css') }}">
     <link rel="stylesheet" href="{{ route('frontend.assets.palgoals_marketing_footer_css') }}">
     <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/tabler-icons.min.css') }}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+
+    {{-- Swiper CSS — needed before JS (moved CDN to jsdelivr for consistency) --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+
+    {{-- AOS (Animate On Scroll) CSS — was incorrectly placed at bottom of body in end.blade.php --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@next/dist/aos.css">
     @php
         // Resolve the subscription whose theme CSS should be loaded.
         // $activeThemeSubscription — set explicitly by builder/preview controllers.

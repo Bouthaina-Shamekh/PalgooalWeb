@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Language;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class LanguageController extends Controller
 {
@@ -45,6 +46,11 @@ class LanguageController extends Controller
             'is_rtl'    => $request->has('is_rtl'),
             'is_active' => $request->has('is_active'),
         ]);
+
+        // Bust caches so the new language appears immediately.
+        Cache::forget('active_languages');
+        Cache::forget('lang_' . strtolower($request->code));
+
         return redirect()->route('dashboard.languages.index')->with('success', 'Language added successfully!');
     }
 
@@ -86,6 +92,11 @@ class LanguageController extends Controller
             'is_active' => $request->has('is_active'),
         ]);
 
+        // Bust caches for the old and new code.
+        Cache::forget('active_languages');
+        Cache::forget('lang_' . $language->getOriginal('code'));
+        Cache::forget('lang_' . strtolower($request->code));
+
         return redirect()->route('dashboard.languages.index')->with('success', 'Language updated successfully!');
     }
 
@@ -95,6 +106,9 @@ class LanguageController extends Controller
         $language->is_rtl = $request->boolean('is_rtl');
         $language->save();
 
+        Cache::forget('active_languages');
+        Cache::forget('lang_' . $language->code);
+
         return response()->json(['success' => true]);
     }
 
@@ -103,6 +117,9 @@ class LanguageController extends Controller
     {
         $language->is_active = $request->boolean('is_active');
         $language->save();
+
+        Cache::forget('active_languages');
+        Cache::forget('lang_' . $language->code);
 
         return response()->json(['success' => true]);
     }
@@ -126,6 +143,9 @@ class LanguageController extends Controller
 
             // 4. الآن حذف اللغة نفسها
             $language->delete();
+
+            Cache::forget('active_languages');
+            Cache::forget('lang_' . $language->code);
 
             return response()->json([
                 'success' => true,

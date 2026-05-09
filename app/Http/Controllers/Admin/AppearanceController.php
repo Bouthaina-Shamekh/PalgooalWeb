@@ -8,6 +8,8 @@ use App\Models\Language;
 use App\Models\Media;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -38,7 +40,8 @@ class AppearanceController extends Controller
     public function updateHeaderVariant(Request $request): RedirectResponse
     {
         $this->authorize('update', GeneralSetting::class);
-        $validated = $request->validate([
+
+        $validator = Validator::make($request->all(), [
             'active_header_variant' => [
                 'required',
                 'string',
@@ -46,7 +49,15 @@ class AppearanceController extends Controller
             ],
         ]);
 
-        $this->settings()->update($validated);
+        if ($validator->fails()) {
+            return redirect()
+                ->route('dashboard.appearance.header')
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $this->settings()->update($validator->validated());
+        Cache::forget('general_settings');
 
         return redirect()
             ->route('dashboard.appearance.header')
@@ -60,7 +71,7 @@ class AppearanceController extends Controller
         $activeVariant = $settings->active_header_variant;
         $hexColorRule = ['nullable', 'string', 'regex:/^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'];
 
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'header_show_promo_bar' => ['nullable', 'boolean'],
             'header_is_sticky' => ['nullable', 'boolean'],
             'pv_texts' => ['nullable', 'array'],
@@ -89,6 +100,15 @@ class AppearanceController extends Controller
             'pv_custom_colors.dropdown_hover_bg' => $hexColorRule,
             'pv_custom_colors.subtext' => $hexColorRule,
         ]);
+
+        if ($validator->fails()) {
+            return redirect()
+                ->route('dashboard.appearance.header')
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $validated = $validator->validated();
 
         $headerVariantSettings = is_array($settings->header_variant_settings ?? null)
             ? $settings->header_variant_settings
@@ -178,6 +198,7 @@ class AppearanceController extends Controller
             'header_is_sticky' => $request->boolean('header_is_sticky'),
             'header_variant_settings' => $headerVariantSettings,
         ]);
+        Cache::forget('general_settings');
 
         return redirect()
             ->route('dashboard.appearance.header')
@@ -209,7 +230,8 @@ class AppearanceController extends Controller
     public function updateFooterVariant(Request $request): RedirectResponse
     {
         $this->authorize('update', GeneralSetting::class);
-        $validated = $request->validate([
+
+        $validator = Validator::make($request->all(), [
             'active_footer_variant' => [
                 'required',
                 'string',
@@ -217,7 +239,15 @@ class AppearanceController extends Controller
             ],
         ]);
 
-        $this->settings()->update($validated);
+        if ($validator->fails()) {
+            return redirect()
+                ->route('dashboard.appearance.footer')
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $this->settings()->update($validator->validated());
+        Cache::forget('general_settings');
 
         return redirect()
             ->route('dashboard.appearance.footer')
@@ -231,7 +261,7 @@ class AppearanceController extends Controller
         $activeVariant = $settings->active_footer_variant;
         $hexColorRule = ['nullable', 'string', 'regex:/^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'];
 
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'footer_show_contact_banner' => ['nullable', 'boolean'],
             'footer_show_payment_methods' => ['nullable', 'boolean'],
             'fm_texts' => ['nullable', 'array'],
@@ -264,6 +294,15 @@ class AppearanceController extends Controller
             'fm_custom_colors.border' => $hexColorRule,
             'fm_custom_colors.payment_card_bg' => $hexColorRule,
         ]);
+
+        if ($validator->fails()) {
+            return redirect()
+                ->route('dashboard.appearance.footer')
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $validated = $validator->validated();
 
         $footerVariantSettings = is_array($settings->footer_variant_settings ?? null)
             ? $settings->footer_variant_settings
@@ -402,6 +441,7 @@ class AppearanceController extends Controller
             'footer_show_payment_methods' => $request->boolean('footer_show_payment_methods'),
             'footer_variant_settings' => $footerVariantSettings,
         ]);
+        Cache::forget('general_settings');
 
         return redirect()
             ->route('dashboard.appearance.footer')

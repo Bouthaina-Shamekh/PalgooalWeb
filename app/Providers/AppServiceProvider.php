@@ -11,6 +11,7 @@ use App\Models\Sections\SectionDefinitionField;
 use App\Policies\SectionDefinitionFieldPolicy;
 use App\Policies\SectionDefinitionPolicy;
 use App\Support\Blocks\HeroBlock;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
@@ -49,14 +50,36 @@ class AppServiceProvider extends ServiceProvider
         });
         view()->composer('*', function ($view) {
             $currentLocale = app()->getLocale();
-            $currentLanguage = Language::where('code', $currentLocale)->first();
-            $languages = Language::where('is_active', true)->get();
-            $settings  = GeneralSetting::first();
+
+            // Cache per-locale language lookup (1 hour)
+            // Flush with: Cache::forget("lang_{$locale}") when a language is updated.
+            $currentLanguage = Cache::remember(
+                "lang_{$currentLocale}",
+                3600,
+                fn () => Language::where('code', $currentLocale)->first()
+            );
+
+            // Cache active languages list (1 hour)
+            // Flush with: Cache::forget('active_languages') when languages change.
+            $languages = Cache::remember(
+                'active_languages',
+                3600,
+                fn () => Language::where('is_active', true)->get()
+            );
+
+            // Cache general settings (1 hour)
+            // Flush with: Cache::forget('general_settings') on settings save.
+            $settings = Cache::remember(
+                'general_settings',
+                3600,
+                fn () => GeneralSetting::first()
+            );
+
             $view->with([
-                'currentLocale' => $currentLocale,
+                'currentLocale'   => $currentLocale,
                 'currentLanguage' => $currentLanguage,
-                'languages' => $languages,
-                'settings' => $settings,
+                'languages'       => $languages,
+                'settings'        => $settings,
             ]);
         });
         View::composer('*', function ($view) {

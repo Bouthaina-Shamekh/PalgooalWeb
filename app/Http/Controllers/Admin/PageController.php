@@ -8,6 +8,7 @@ use App\Models\PageTranslation;
 use App\Models\Language;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class PageController extends Controller
 {
@@ -57,7 +58,7 @@ class PageController extends Controller
     {
         $this->authorize('create', Page::class);
 
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'builder_mode' => 'nullable|in:sections',
             'is_active'    => 'nullable|boolean',
             'is_home'      => 'nullable|boolean',
@@ -105,6 +106,15 @@ class PageController extends Controller
             'translations.*.meta_description' => 'nullable|string|max:500',
             'translations.*.meta_keywords'    => 'nullable|string',
         ]);
+
+        if ($validator->fails()) {
+            return redirect()
+                ->route('dashboard.pages.create')
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $validated = $validator->validated();
 
         DB::transaction(function () use ($validated) {
             // Create the base Page record (context = marketing)
@@ -168,7 +178,7 @@ class PageController extends Controller
             abort(404);
         }
 
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'builder_mode' => 'nullable|in:sections',
             'is_active'    => 'nullable|boolean',
             'is_home'      => 'nullable|boolean',
@@ -214,6 +224,15 @@ class PageController extends Controller
             'translations.*.meta_keywords'    => 'nullable|string',
         ]);
 
+        if ($validator->fails()) {
+            return redirect()
+                ->route('dashboard.pages.edit', $page)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $validated = $validator->validated();
+
         // P3: Ensure all submitted translation IDs belong to this page.
         $ownTranslationIds = $page->translations()->pluck('id')->all();
         foreach ($validated['translations'] as $t) {
@@ -249,7 +268,7 @@ class PageController extends Controller
         });
 
         return redirect()
-            ->back()
+            ->route('dashboard.pages.edit', $page)
             ->with('success', __('Page updated successfully.'));
     }
 
@@ -267,7 +286,7 @@ class PageController extends Controller
         $page->delete();
 
         return redirect()
-            ->back()
+            ->route('dashboard.pages.index')
             ->with('success', __('Page deleted successfully.'));
     }
 
@@ -285,7 +304,7 @@ class PageController extends Controller
         $page->update(['is_active' => ! $page->is_active]);
 
         return redirect()
-            ->back()
+            ->route('dashboard.pages.index')
             ->with('success', __('Page status updated successfully.'));
     }
 
@@ -309,7 +328,7 @@ class PageController extends Controller
         });
 
         return redirect()
-            ->back()
+            ->route('dashboard.pages.index')
             ->with('success', __('Page set as homepage successfully.'));
     }
     /**
@@ -323,16 +342,25 @@ class PageController extends Controller
             abort(404);
         }
 
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'builder_mode' => 'required|in:sections',
         ]);
+
+        if ($validator->fails()) {
+            return redirect()
+                ->route('dashboard.pages.edit', $page)
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $validated = $validator->validated();
 
         $page->update([
             'builder_mode' => $validated['builder_mode'],
         ]);
 
         return redirect()
-            ->back()
+            ->route('dashboard.pages.edit', $page)
             ->with('success', __('Builder mode updated successfully.'));
     }
 
