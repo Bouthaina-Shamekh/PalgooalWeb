@@ -48,7 +48,9 @@ class AppearanceController extends Controller
 
         $this->settings()->update($validated);
 
-        return back()->with('success', __('Header layout activated successfully.'));
+        return redirect()
+            ->route('dashboard.appearance.header')
+            ->with('success', __('Header layout activated successfully.'));
     }
 
     public function updateHeaderSettings(Request $request): RedirectResponse
@@ -177,7 +179,9 @@ class AppearanceController extends Controller
             'header_variant_settings' => $headerVariantSettings,
         ]);
 
-        return back()->with('success', __('Header settings saved successfully.'));
+        return redirect()
+            ->route('dashboard.appearance.header')
+            ->with('success', __('Header settings saved successfully.'));
     }
 
     public function footer(): View
@@ -215,7 +219,9 @@ class AppearanceController extends Controller
 
         $this->settings()->update($validated);
 
-        return back()->with('success', __('Footer layout activated successfully.'));
+        return redirect()
+            ->route('dashboard.appearance.footer')
+            ->with('success', __('Footer layout activated successfully.'));
     }
 
     public function updateFooterSettings(Request $request): RedirectResponse
@@ -397,7 +403,9 @@ class AppearanceController extends Controller
             'footer_variant_settings' => $footerVariantSettings,
         ]);
 
-        return back()->with('success', __('Footer settings saved successfully.'));
+        return redirect()
+            ->route('dashboard.appearance.footer')
+            ->with('success', __('Footer settings saved successfully.'));
     }
 
     protected function settings(): GeneralSetting

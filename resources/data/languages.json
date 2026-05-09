@@ -3,96 +3,96 @@
         "code": "ar",
         "name": "Arabic",
         "native": "العربية",
-        "flag": "flags/ar.png"
+        "flag": "https://flagcdn.com/w40/sa.png"
     },
     {
         "code": "en",
         "name": "English",
         "native": "English",
-        "flag": "flags/gb.png"
+        "flag": "https://flagcdn.com/w40/gb.png"
     },
     {
         "code": "fr",
         "name": "French",
         "native": "Français",
-        "flag": "flags/fr.png"
+        "flag": "https://flagcdn.com/w40/fr.png"
     },
     {
         "code": "de",
         "name": "German",
         "native": "Deutsch",
-        "flag": "flags/de.png"
+        "flag": "https://flagcdn.com/w40/de.png"
     },
     {
         "code": "es",
         "name": "Spanish",
         "native": "Español",
-        "flag": "flags/es.png"
+        "flag": "https://flagcdn.com/w40/es.png"
     },
     {
         "code": "it",
         "name": "Italian",
         "native": "Italiano",
-        "flag": "flags/it.png"
+        "flag": "https://flagcdn.com/w40/it.png"
     },
     {
         "code": "tr",
         "name": "Turkish",
         "native": "Türkçe",
-        "flag": "flags/tr.png"
+        "flag": "https://flagcdn.com/w40/tr.png"
     },
     {
         "code": "ru",
         "name": "Russian",
         "native": "Русский",
-        "flag": "flags/ru.png"
+        "flag": "https://flagcdn.com/w40/ru.png"
     },
     {
         "code": "zh",
         "name": "Chinese",
         "native": "中文",
-        "flag": "flags/cn.png"
+        "flag": "https://flagcdn.com/w40/cn.png"
     },
     {
         "code": "pt",
         "name": "Portuguese",
         "native": "Português",
-        "flag": "flags/pt.png"
+        "flag": "https://flagcdn.com/w40/pt.png"
     },
     {
         "code": "ja",
         "name": "Japanese",
         "native": "日本語",
-        "flag": "flags/jp.png"
+        "flag": "https://flagcdn.com/w40/jp.png"
     },
     {
         "code": "ko",
         "name": "Korean",
         "native": "한국어",
-        "flag": "flags/kr.png"
+        "flag": "https://flagcdn.com/w40/kr.png"
     },
     {
         "code": "hi",
         "name": "Hindi",
         "native": "हिन्दी",
-        "flag": "flags/in.png"
+        "flag": "https://flagcdn.com/w40/in.png"
     },
     {
         "code": "fa",
         "name": "Persian",
         "native": "فارسی",
-        "flag": "flags/ir.png"
+        "flag": "https://flagcdn.com/w40/ir.png"
     },
     {
         "code": "ur",
         "name": "Urdu",
         "native": "اُردُو",
-        "flag": "flags/pk.png"
+        "flag": "https://flagcdn.com/w40/pk.png"
     },
     {
         "code": "id",
         "name": "Indonesian",
         "native": "Bahasa Indonesia",
-        "flag": "flags/id.png"
+        "flag": "https://flagcdn.com/w40/id.png"
     }
 ]
