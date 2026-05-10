@@ -1171,7 +1171,21 @@
                             body: formData,
                         });
 
-                        const payload = await response.json().catch(() => ({}));
+                        let payload = {};
+                        let payloadParsed = false;
+                        try {
+                            payload = await response.json();
+                            payloadParsed = true;
+                        } catch (_) {
+                            // Server returned non-JSON (e.g. session-expired redirect
+                            // to login page, or a server-level 502/504 error page).
+                            // Fall through with empty payload.
+                        }
+
+                        if (response.status === 419 || (!payloadParsed && !response.ok)) {
+                            // 419 = CSRF / session expired. Non-JSON non-ok = server-level error.
+                            throw new Error(@json(__('Your session may have expired. Please refresh the page and try again.')));
+                        }
 
                         if (response.status === 422) {
                             const validationMessages = Object.values(payload.errors || {}).flat();

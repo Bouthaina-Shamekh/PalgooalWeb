@@ -254,94 +254,136 @@ class SectionController extends Controller
      */
     public function update(Request $request, Page $page, Section $section)
     {
-        $this->ensureSectionBelongsToPage($page, $section);
+        // Always respond with JSON for AJAX / XHR / JSON-accepting requests so
+        // any error (validation, server-side exception, or unexpected redirect)
+        // surfaces as a readable message in the editor rather than the generic
+        // "could not be updated" fallback.
+        $isJsonRequest = $request->expectsJson()
+            || $request->ajax()
+            || $request->wantsJson()
+            || $request->hasHeader('X-Requested-With')
+            || $request->hasHeader('X-HTTP-Method-Override');
 
-        $validated = $request->validate([
-            'type'      => ['required', 'string', 'max:100', Rule::in([$section->type])],
-            'section_definition_id' => $this->sectionDefinitionIdRulesForUpdate($section),
-            'variant'   => 'nullable|string|max:100',
-            'style'     => 'nullable|array',
-            'order'     => 'nullable|integer|min:0',
-            'is_active' => 'nullable|boolean',
+        try {
+            $this->ensureSectionBelongsToPage($page, $section);
 
-            'translations'           => 'required|array',
-            'translations.*.locale'  => 'required|string',
-            'translations.*.title'   => 'nullable|string|max:255',
-            'translations.*.content' => 'nullable|array',
-        ]);
+            $validated = $request->validate([
+                'type'      => ['required', 'string', 'max:100', Rule::in([$section->type])],
+                // nullable: if omitted or empty the controller falls back to the
+                // section's currently linked definition (set when the section was created).
+                'section_definition_id' => $this->sectionDefinitionIdRulesForUpdate($section),
+                'variant'   => 'nullable|string|max:100',
+                'style'     => 'nullable|array',
+                'order'     => 'nullable|integer|min:0',
+                'is_active' => 'nullable|boolean',
 
-        $linkedSectionDefinition = $this->resolveLinkedSectionDefinitionForUpdate(
-            $section,
-            isset($validated['section_definition_id']) ? (int) $validated['section_definition_id'] : null,
-        );
-
-        $validated['translations'] = $this->normalizeSubmittedTranslations(
-            $validated['type'],
-            $validated['translations'] ?? [],
-            $linkedSectionDefinition,
-        );
-
-        DB::transaction(function () use ($validated, $section, $linkedSectionDefinition) {
-            $type = $validated['type'];
-
-            $section->update([
-                ...$this->sectionDefinitionAttributesForUpdate($type, $section, $linkedSectionDefinition),
-                'type'      => $type,
-                'variant'   => $validated['variant'] ?? null,
-                'style'     => $validated['style'] ?? $section->style,
-                'order'     => $validated['order'] ?? $section->order,
-                'is_active' => (bool) ($validated['is_active'] ?? false),
+                'translations'           => 'required|array',
+                'translations.*.locale'  => 'required|string',
+                'translations.*.title'   => 'nullable|string|max:255',
+                'translations.*.content' => 'nullable|array',
             ]);
 
-            $locales = [];
+            // Resolve the definition — falls back to the section's own FK when
+            // section_definition_id was not submitted or was submitted as empty.
+            $submittedDefinitionId = filled($validated['section_definition_id'] ?? null)
+                ? (int) $validated['section_definition_id']
+                : null;
 
-            foreach ($validated['translations'] as $locale => $translationData) {
-                $locales[] = $locale;
+            $linkedSectionDefinition = $this->resolveLinkedSectionDefinitionForUpdate(
+                $section,
+                $submittedDefinitionId,
+            );
 
-                $translation = SectionTranslation::firstOrNew([
-                    'section_id' => $section->id,
-                    'locale'     => $locale,
+            $validated['translations'] = $this->normalizeSubmittedTranslations(
+                $validated['type'],
+                $validated['translations'] ?? [],
+                $linkedSectionDefinition,
+            );
+
+            DB::transaction(function () use ($validated, $section, $linkedSectionDefinition) {
+                $type = $validated['type'];
+
+                $section->update([
+                    ...$this->sectionDefinitionAttributesForUpdate($type, $section, $linkedSectionDefinition),
+                    'type'      => $type,
+                    'variant'   => $validated['variant'] ?? null,
+                    'style'     => $validated['style'] ?? $section->style,
+                    'order'     => $validated['order'] ?? $section->order,
+                    'is_active' => (bool) ($validated['is_active'] ?? false),
                 ]);
 
-                $translation->title = $translationData['title'] ?? null;
-                $translation->content = $translationData['content'] ?? [];
-                $translation->save();
+                $locales = [];
+
+                foreach ($validated['translations'] as $locale => $translationData) {
+                    $locales[] = $locale;
+
+                    $translation = SectionTranslation::firstOrNew([
+                        'section_id' => $section->id,
+                        'locale'     => $locale,
+                    ]);
+
+                    $translation->title = $translationData['title'] ?? null;
+                    $translation->content = $translationData['content'] ?? [];
+                    $translation->save();
+                }
+
+                if (! empty($locales)) {
+                    SectionTranslation::where('section_id', $section->id)
+                        ->whereNotIn('locale', $locales)
+                        ->delete();
+                }
+            });
+
+            $this->normalizePageSectionOrders($page);
+
+            $section->refresh()->load('translations');
+
+            if ($isJsonRequest) {
+                $sectionTypeMeta = $section->resolvedTypeMeta($this->sectionTypesForSection($section));
+                $typeLabel = $sectionTypeMeta['label'];
+
+                $translation = $section->translation(app()->getLocale()) ?? $section->translations->first();
+
+                return response()->json([
+                    'ok' => true,
+                    'message' => 'Section has been updated successfully.',
+                    'section' => [
+                        'id' => $section->id,
+                        'title' => $translation?->title ?: $typeLabel,
+                        'type_label' => $typeLabel,
+                        'is_active' => (bool) $section->is_active,
+                    ],
+                ]);
             }
 
-            if (! empty($locales)) {
-                SectionTranslation::where('section_id', $section->id)
-                    ->whereNotIn('locale', $locales)
-                    ->delete();
-            }
-        });
+            return redirect()
+                ->to($this->workspaceRoute('index', $page, null, [
+                    'highlight' => $section->id,
+                ]))
+                ->with('success', 'Section has been updated successfully.');
 
-        $this->normalizePageSectionOrders($page);
-
-        $section->refresh()->load('translations');
-
-        if ($request->expectsJson() || $request->ajax() || $request->wantsJson()) {
-            $sectionTypeMeta = $section->resolvedTypeMeta($this->sectionTypesForSection($section));
-            $typeLabel = $sectionTypeMeta['label'];
-
-            $translation = $section->translation(app()->getLocale()) ?? $section->translations->first();
-
-            return response()->json([
-                'ok' => true,
-                'message' => 'Section has been updated successfully.',
-                'section' => [
-                    'id' => $section->id,
-                    'title' => $translation?->title ?: $typeLabel,
-                    'type_label' => $typeLabel,
-                    'is_active' => (bool) $section->is_active,
-                ],
+        } catch (ValidationException $e) {
+            // Re-throw validation exceptions — Laravel will convert them to the
+            // correct 422 JSON response automatically.
+            throw $e;
+        } catch (\Throwable $e) {
+            // Log unexpected errors so they appear in storage/logs/laravel.log.
+            \Illuminate\Support\Facades\Log::error('SectionController::update failed', [
+                'page_id'    => $page->id,
+                'section_id' => $section->id,
+                'error'      => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
             ]);
-        }
 
-        return redirect()
-            ->to($this->workspaceRoute('index', $page, null, [
-                'highlight' => $section->id,
-            ]))
-            ->with('success', 'Section has been updated successfully.');
+            if ($isJsonRequest) {
+                return response()->json([
+                    'ok'      => false,
+                    'message' => __('Section could not be updated due to a server error. Please try again or contact support.'),
+                ], 500);
+            }
+
+            throw $e;
+        }
     }
 
     /**
@@ -1317,7 +1359,11 @@ class SectionController extends Controller
 
     protected function sectionDefinitionIdRulesForUpdate(Section $section): array
     {
-        $rules = ['required', 'integer'];
+        // nullable: the form sends the section's current definition ID; if it
+        // arrives as empty (e.g. the sections table is missing the column on an
+        // older production DB) the update() method falls back to the section's
+        // own section_definition_id FK rather than failing validation.
+        $rules = ['nullable', 'integer'];
 
         if (Schema::hasTable('section_definitions')) {
             $rules[] = Rule::exists('section_definitions', 'id')
