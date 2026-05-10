@@ -1,7 +1,7 @@
 <script type="application/ld+json">
 {
-  "@context": "https://schema.org",
-  "@type": "Organization",
+  
+ 
   "name": "بال قول",
   "url": "https://palgoals.com",
   "logo": "https://palgoals.com/assets/images/logo.png",
@@ -12,12 +12,6 @@
     "https://x.com/palgoals",
     "https://www.linkedin.com/company/palgoals"
   ],
-  "contactPoint": {
-    "@type": "ContactPoint",
-    "telephone": "+970592345678",
-    "contactType": "customer support",
-    "areaServed": "PS, SA",
-    "availableLanguage": ["Arabic", "English"]
-  }
+ 
 }
 </script>
