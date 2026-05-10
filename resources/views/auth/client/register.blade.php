@@ -30,12 +30,12 @@
                             <div
                                 class="mt-1 flex items-center justify-center gap-2 text-[#626262] text-base leading-[25px]">
                                 <span class="font-almarai">Already Have An Accout?</span>
-                                <a href="{{ route('login') }}"
+                                <a href="{{ route('client.login') }}"
                                     class="font-almarai font-bold text-black hover:text-red-brand transition-colors">Login</a>
                             </div>
                         </div>
     
-                        <form class="mt-4 space-y-[10px]" action="{{ route('register.store') }}" method="post" novalidate>
+                        <form class="mt-4 space-y-[10px]" action="{{ route('client.register.store') }}" method="post" novalidate>
                             @csrf
                             <!-- First Name -->
                             <div class="bg-white rounded-[20px] h-[60.271px] w-full flex items-center gap-3 px-6">

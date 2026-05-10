@@ -19,6 +19,56 @@ Route::get('client/', function () {
     return redirect()->route('client.home');
 });
 
+// Explicit GET/POST auth routes — required for route:cache compatibility
+// (FortifyServiceProvider dynamic config doesn't work in CLI/cache context)
+Route::get('client/login', function () {
+    if (Auth::guard('client')->check()) {
+        return redirect()->route('client.home');
+    }
+    return view('auth.client.login');
+})->middleware('web')->name('client.login');
+
+Route::get('client/register', function () {
+    if (Auth::guard('client')->check()) {
+        return redirect()->route('client.home');
+    }
+    return view('auth.client.register');
+})->middleware('web')->name('client.register');
+
+Route::get('client/forgot-password', function () {
+    return view('auth.client.forgot-password');
+})->middleware('web')->name('client.password.request');
+
+Route::post('client/forgot-password', function (\Illuminate\Http\Request $request) {
+    $request->validate(['email' => 'required|email']);
+
+    $status = \Illuminate\Support\Facades\Password::broker('clients')
+        ->sendResetLink($request->only('email'));
+
+    return $status === \Illuminate\Support\Facades\Password::RESET_LINK_SENT  // 'passwords.sent'
+        ? back()->with('status', __($status))
+        : back()->withErrors(['email' => __($status)])->withInput();
+})->middleware('web')->name('client.password.email');
+
+Route::post('client/register', function (\Illuminate\Http\Request $request) {
+    $creator = app(\App\Actions\Fortify\CreateNewUser::class);
+    // Force client guard so CreateNewUser creates a Client model
+    \Illuminate\Support\Facades\Config::set('fortify.guard', 'client');
+
+    try {
+        $client = $creator->create($request->all());
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return redirect()->route('client.register')
+            ->withErrors($e->errors())
+            ->withInput();
+    }
+
+    Auth::guard('client')->login($client);
+    $request->session()->regenerate();
+
+    return redirect()->route('client.home');
+})->middleware('web')->name('client.register.store');
+
 Route::group([
     'middleware' => ['web', 'auth:client', 'client.dashboard.impersonation'],
     'prefix' => 'client',

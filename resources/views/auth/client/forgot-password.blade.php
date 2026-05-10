@@ -34,7 +34,7 @@
                         </div>
                     @endif
 
-                    <form class="mt-8 flex flex-col items-center gap-5" action="{{ route('password.email') }}" method="post">
+                    <form class="mt-8 flex flex-col items-center gap-5" action="{{ route('client.password.email') }}" method="post">
                         @csrf
 
                         <div class="w-full max-w-[406px]">
@@ -77,7 +77,7 @@
                             Send
                         </button>
 
-                        <a href="{{ route('login') }}"
+                        <a href="{{ route('client.login') }}"
                             class="text-black text-base font-almarai hover:text-red-brand transition-colors">
                             Back To Login
                         </a>

@@ -29,7 +29,7 @@
                         </h1>
                         <p class="mt-1 text-[#626262] text-base font-almarai">
                             Don't Have An Account Yet?
-                            <a href="{{route('register')}}" class="font-bold text-black hover:text-red-brand transition-colors"> Sign Up</a>
+                            <a href="{{ route('client.register') }}" class="font-bold text-black hover:text-red-brand transition-colors"> Sign Up</a>
                         </p>
                     </div>
 
@@ -77,7 +77,7 @@
                         </label>
 
                         <div class="flex justify-end pt-1">
-                            <a href="{{ route('password.request') }}"
+                            <a href="{{ route('client.password.request') }}"
                                 class="text-black text-base font-almarai hover:text-red-brand transition-colors">
                                 Forgot Your Password?
                             </a>
