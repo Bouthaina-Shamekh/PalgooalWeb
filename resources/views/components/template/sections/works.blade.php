@@ -45,7 +45,9 @@
                 data-category="">
                 <div class="relative">
                     <img src="../assets/images/Group 34130.jpg" alt=""
-                        class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                        class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300"
+        loading="lazy"
+    >
                     <span
                         class="absolute top-3 left-3 bg-secondary text-white text-xs px-3 py-1 rounded-full font-bold shadow tag"></span>
                 </div>
@@ -70,7 +72,8 @@
             data-category="{{ $categories }}" data-visible="true">
             <div class="relative">
                 <img src="{{ asset('storage/' . $work->default_image) }}" alt="متجر إلكتروني 1"
-                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300"
+                    loading="lazy">
                 <span
                     class="absolute top-3 left-3 bg-secondary text-white text-xs px-3 py-1 rounded-full font-bold shadow">
                 {{ $work->translations->firstWhere('locale', app()->getLocale())->type }}</span>
@@ -89,7 +92,9 @@
             data-category="store" data-visible="false">
             <div class="relative">
                 <img src="https://via.placeholder.com/600x400/999/222?text=Store+3" alt="متجر 3"
-                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300"
+        loading="lazy"
+    >
                 <span
                     class="absolute top-3 left-3 bg-secondary text-white text-xs px-3 py-1 rounded-full font-bold shadow">متجر</span>
             </div>
@@ -105,7 +110,9 @@
             data-category="website" data-visible="false">
             <div class="relative">
                 <img src="https://via.placeholder.com/600x400/888/111?text=Website+3" alt="موقع 3"
-                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300"
+        loading="lazy"
+    >
                 <span
                     class="absolute top-3 left-3 bg-primary text-white text-xs px-3 py-1 rounded-full font-bold shadow">موقع</span>
             </div>
@@ -121,7 +128,9 @@
             data-category="app" data-visible="false">
             <div class="relative">
                 <img src="https://via.placeholder.com/600x400/777/000?text=App+3" alt="تطبيق 3"
-                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300"
+        loading="lazy"
+    >
                 <span
                     class="absolute top-3 left-3 bg-tertiary text-white text-xs px-3 py-1 rounded-full font-bold shadow">تطبيق</span>
             </div>
@@ -137,7 +146,9 @@
             data-category="store" data-visible="false">
             <div class="relative">
                 <img src="https://via.placeholder.com/600x400/666/fff?text=Store+4" alt="متجر 4"
-                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300"
+        loading="lazy"
+    >
                 <span
                     class="absolute top-3 left-3 bg-secondary text-white text-xs px-3 py-1 rounded-full font-bold shadow">متجر</span>
             </div>
@@ -153,7 +164,9 @@
             data-category="website" data-visible="false">
             <div class="relative">
                 <img src="https://via.placeholder.com/600x400/555/eee?text=Website+4" alt="موقع 4"
-                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300"
+        loading="lazy"
+    >
                 <span
                     class="absolute top-3 left-3 bg-primary text-white text-xs px-3 py-1 rounded-full font-bold shadow">موقع</span>
             </div>
@@ -169,7 +182,9 @@
             data-category="app" data-visible="false">
             <div class="relative">
                 <img src="https://via.placeholder.com/600x400/444/ccc?text=App+4" alt="تطبيق 4"
-                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300">
+                    class="w-full h-56 object-cover group-hover:opacity-90 transition duration-300"
+        loading="lazy"
+    >
                 <span
                     class="absolute top-3 left-3 bg-tertiary text-white text-xs px-3 py-1 rounded-full font-bold shadow">تطبيق</span>
             </div>

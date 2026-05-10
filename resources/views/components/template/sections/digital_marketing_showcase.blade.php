@@ -119,7 +119,7 @@
                             <li class="flex items-start justify-start gap-3 text-lg text-purple-brand md:text-xl">
                                 @if (($serviceItem['icon_source'] ?? 'class') === 'media' && ! empty($serviceItem['icon_media_url']))
                                     <span class="mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center text-red-brand">
-                                        <img src="{{ $serviceItem['icon_media_url'] }}" alt="" class="h-5 w-5 object-contain">
+                                        <img src="{{ $serviceItem['icon_media_url'] }}" alt="" class="h-5 w-5 object-contain" loading="lazy">
                                     </span>
                                 @elseif (! empty($serviceItem['icon']))
                                     <span class="mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center text-red-brand">

@@ -1,4 +1,9 @@
 {
+<<<<<<< Updated upstream
     "/assets/dashboard/css/dashboard.css": "/assets/dashboard/css/dashboard.css?id=aa348a9fd5548d7160e5c920bfbb58d8",
     "/assets/tamplate/css/app.css": "/assets/tamplate/css/app.css?id=6eafb83ebc8895c4006961ab8cb4469a"
+=======
+    "/assets/dashboard/css/dashboard.css": "/assets/dashboard/css/dashboard.css?id=20176075867c8f97fd0618a876eda22f",
+    "/assets/tamplate/css/app.css": "/assets/tamplate/css/app.css?id=818f725747e7e1589363066c362395de"
+>>>>>>> Stashed changes
 }

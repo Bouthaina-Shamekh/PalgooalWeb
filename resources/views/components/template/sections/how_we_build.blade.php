@@ -128,7 +128,9 @@
                         @elseif (($step['icon_source'] ?? 'class') === 'media' && !empty($step['icon_media_url']))
                             <span class="inline-flex h-7 w-7 items-center justify-center" aria-hidden="true">
                                 <img src="{{ $step['icon_media_url'] }}" alt=""
-                                    class="h-full w-full object-contain">
+                                    class="h-full w-full object-contain"
+        loading="lazy"
+    >
                             </span>
                         @elseif ($step['icon'])
                             <i class="{{ $step['icon'] }} {{ $iconClasses }} text-2xl leading-none"

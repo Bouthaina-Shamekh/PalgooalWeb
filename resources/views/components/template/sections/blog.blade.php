@@ -28,7 +28,7 @@
     <div class="swiper-slide flex justify-center h-full">
         <article class="blog-card group bg-white dark:bg-gray-900 dark:shadow-none dark:border-gray-700" itemscope itemtype="https://schema.org/BlogPosting">
             <div class="relative">
-                <img src="{{ $imageUrl }}" loading="lazy" alt="صورة غلاف مقال: {{ $blog['title'] }}" class="blog-img">
+                <img src="{{ $imageUrl }}" loading="lazy" alt="صورة غلاف مقال: {{ $blog['title'] }}" class="blog-img" loading="lazy">
                 <span class="blog-tag bg-primary/90 dark:bg-primary">{{ $blog['categories'][0] ?? 'مدونة' }}</span>
             </div>
             <div class="blog-content">

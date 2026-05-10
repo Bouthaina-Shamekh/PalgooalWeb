@@ -34,7 +34,8 @@
                     <meta itemprop="availability" content="https://schema.org/InStock" />
                     <div class="relative">
                         <img src="{{ asset('storage/' . $template->image) }}" alt="{{ $name }}"
-                            class="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105 group-hover:brightness-95" />
+                            class="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105 group-hover:brightness-95"
+                            loading="lazy" />
                         @if ($template->discount_price)
                             <div
                                 class="bg-gradient-to-tr from-secondary to-primary text-white flex items-end justify-center w-24 h-10 absolute -top-2 rtl:-left-10 ltr:-right-10 ltr:rotate-[40deg] rtl:rotate-[320deg] animate-bounce shadow-lg font-bold text-base tracking-wide">

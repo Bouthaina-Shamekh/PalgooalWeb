@@ -109,7 +109,7 @@
                                 <li class="flex items-center justify-start gap-3 text-lg font-medium text-gray-700 transition-colors duration-300 hover:text-red-brand">
                                     @if (($output['icon_source'] ?? 'class') === 'media' && ! empty($output['icon_media_url']))
                                         <span class="flex h-5 w-5 flex-shrink-0 items-center justify-center text-red-brand">
-                                            <img src="{{ $output['icon_media_url'] }}" alt="" class="h-5 w-5 object-contain">
+                                            <img src="{{ $output['icon_media_url'] }}" alt="" class="h-5 w-5 object-contain" loading="lazy">
                                         </span>
                                     @elseif (! empty($output['icon']))
                                         <span class="flex h-5 w-5 flex-shrink-0 items-center justify-center text-red-brand">

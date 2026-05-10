@@ -175,7 +175,9 @@
                                     src="{{ $doneIconPath }}"
                                     class="w-5 mt-0.5 flex-shrink-0 {{ ! empty($feature['available']) ? '' : 'opacity-35 grayscale' }}"
                                     alt="Done"
-                                >
+                                
+        loading="lazy"
+    >
                                 <span dir="auto" style="unicode-bidi: plaintext;" class="flex-1 {{ $isRtl ? 'text-right' : 'text-left' }} {{ ! empty($feature['available']) ? '' : 'text-slate-400 line-through' }}">
                                     {{ $feature['text'] }}
                                 </span>

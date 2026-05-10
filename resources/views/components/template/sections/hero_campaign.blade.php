@@ -172,7 +172,9 @@
                                 <span class="inline-flex h-5 w-5 shrink-0 items-center justify-center md:h-6 md:w-6"
                                     aria-hidden="true">
                                     <img src="{{ $feature['icon_media_url'] }}" alt=""
-                                        class="h-full w-full object-contain">
+                                        class="h-full w-full object-contain"
+        loading="lazy"
+    >
                                 </span>
                             @elseif ($feature['icon'])
                                 <i class="{{ $feature['icon'] }} text-xl text-red-brand md:text-2xl"
