@@ -77,7 +77,7 @@
                         </label>
 
                         <div class="flex justify-end pt-1">
-                            <a href="#"
+                            <a href="{{ route('password.request') }}"
                                 class="text-black text-base font-almarai hover:text-red-brand transition-colors">
                                 Forgot Your Password?
                             </a>
