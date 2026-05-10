@@ -466,7 +466,7 @@
                     <!-- نموذج الدخول -->
 
                     <form id="login-form" class="mb-2" role="tabpanel" method="POST"
-                        action="{{ route('login.store') }}">
+                        action="{{ route('client.login.store') }}">
                         @csrf
                         <input type="hidden" name="redirect_to"
                             value="{{ request()->fullUrlWithQuery(['review' => 1]) }}">

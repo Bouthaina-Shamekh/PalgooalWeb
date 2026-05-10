@@ -293,7 +293,7 @@ Route::post('client/login', function (Request $request) use ($redirectClientResp
     return $redirectClientResponse($request)
         ->withErrors(['email' => 'Invalid login credentials.'])
         ->withInput();
-})->name('login.store');
+})->name('client.login.store');
 
 Route::post('client/logout', function (Request $request) use ($redirectClientResponse) {
     Auth::guard('client')->logout();

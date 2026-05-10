@@ -33,7 +33,7 @@
                         </p>
                     </div>
 
-                    <form action="{{ route('login.store') }}" class="mt-4 space-y-3" method="post">
+                    <form action="{{ route('client.login.store') }}" class="mt-4 space-y-3" method="post">
                         @csrf
                         <!-- Email -->
                         <label class="block">
