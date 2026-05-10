@@ -220,6 +220,12 @@ Route::group([
             Route::get('sections', [SectionController::class, 'index'])->name('index');
             Route::get('sections/preview', [SectionController::class, 'preview'])->name('preview');
 
+            // Backward-compat redirect: old code had GET sections/{section} — redirect to workspace
+            Route::get('sections/{section}', function (\App\Models\Page $page, \App\Models\Section $section) {
+                return redirect()->route('dashboard.pages.sections.index', ['page' => $page], 302)
+                    ->with('_redirect_highlight', $section->id);
+            })->whereNumber('section')->name('show-redirect');
+
             // Show form to create a new section for this page
             Route::get('sections/create', [SectionController::class, 'create'])->name('create');
 

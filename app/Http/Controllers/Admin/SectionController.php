@@ -356,7 +356,7 @@ class SectionController extends Controller
         ]);
 
         return redirect()
-            ->back()
+            ->to($this->workspaceRoute('index', $page, null, ['highlight' => $section->id]))
             ->with('success', 'Section visibility has been updated.');
     }
 
@@ -414,7 +414,8 @@ class SectionController extends Controller
             : $targetQuery->where('order', '>', $currentOrder)->orderBy('order')->first();
 
         if (! $target) {
-            return redirect()->back();
+            return redirect()
+                ->to($this->workspaceRoute('index', $page, null, ['highlight' => $section->id]));
         }
 
         DB::transaction(function () use ($section, $target, $currentOrder) {
@@ -423,7 +424,7 @@ class SectionController extends Controller
         });
 
         return redirect()
-            ->back()
+            ->to($this->workspaceRoute('index', $page, null, ['highlight' => $section->id]))
             ->with('success', 'Section order has been updated.');
     }
 
