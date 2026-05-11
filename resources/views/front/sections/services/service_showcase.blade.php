@@ -42,7 +42,7 @@
     $mediaUrl = \App\Support\Sections\SectionFrontendMediaResolver::resolve($data['image'] ?? null);
     $alt = trim((string) ($data['alt'] ?? ''));
 
-    $shouldRender = $brandPrefix !== ''
+    $hasContent = $brandPrefix !== ''
         || $brandSuffix !== ''
         || $title !== ''
         || $description !== ''
@@ -52,9 +52,14 @@
         || $mediaUrl;
 @endphp
 
-@if ($shouldRender)
-    <section id="{{ $sectionId }}" class="bg-theme-surface font-theme-body py-16 lg:py-24 px-4 sm:px-6 lg:px-12 overflow-hidden">
-        <div class="container mx-auto">
+<section id="{{ $sectionId }}" class="bg-theme-surface font-theme-body py-16 lg:py-24 px-4 sm:px-6 lg:px-12 overflow-hidden">
+    <div class="container mx-auto">
+        @if (! $hasContent)
+            <x-front.empty-section-state
+                title="{{ __('No service content yet') }}"
+                description="{{ __('Add service text, outputs, or media from the section editor.') }}"
+            />
+        @else
             <div class="flex flex-col lg:flex-row lg:items-stretch gap-12 lg:gap-24">
 
                 <div class="w-full lg:w-1/2 flex flex-col items-center lg:items-start text-center ltr:lg:text-left rtl:lg:text-right">
@@ -149,6 +154,6 @@
                 </div>
 
             </div>
-        </div>
-    </section>
-@endif
+        @endif
+    </div>
+</section>

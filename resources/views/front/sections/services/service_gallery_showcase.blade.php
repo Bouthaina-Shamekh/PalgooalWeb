@@ -34,7 +34,7 @@
         ? 'image-right'
         : 'image-left';
 
-    $shouldRender = $brandPrefix !== ''
+    $hasContent = $brandPrefix !== ''
         || $brandSuffix !== ''
         || $title !== ''
         || $description !== ''
@@ -42,9 +42,14 @@
         || $hasButton;
 @endphp
 
-@if ($shouldRender)
-    <section id="{{ $sectionId }}" class="bg-theme-muted font-theme-body py-16 lg:py-24 px-4 sm:px-6 lg:px-12 overflow-hidden">
-        <div class="container mx-auto">
+<section id="{{ $sectionId }}" class="bg-theme-muted font-theme-body py-16 lg:py-24 px-4 sm:px-6 lg:px-12 overflow-hidden">
+    <div class="container mx-auto">
+        @if (! $hasContent)
+            <x-front.empty-section-state
+                title="{{ __('No gallery content yet') }}"
+                description="{{ __('Add gallery images or text from the section editor.') }}"
+            />
+        @else
             <div @class([
                 'flex flex-col-reverse items-center gap-6 lg:gap-14',
                 'lg:flex-row-reverse' => $layoutDirection === 'image-right',
@@ -110,6 +115,6 @@
 
                 </div>
             </div>
-        </div>
-    </section>
-@endif
+        @endif
+    </div>
+</section>

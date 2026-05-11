@@ -77,7 +77,7 @@
     $buttonNewTab = filter_var($data['button_new_tab'] ?? false, FILTER_VALIDATE_BOOLEAN);
     $hasButton = $buttonLabel !== '' && $buttonUrl !== '';
 
-    $shouldRender = $brandPrefix !== ''
+    $hasContent = $brandPrefix !== ''
         || $brandSuffix !== ''
         || $title !== ''
         || $description !== ''
@@ -86,9 +86,14 @@
         || $hasButton;
 @endphp
 
-@if ($shouldRender)
-    <section id="{{ $sectionId }}" class="{{ $backgroundClass }} font-theme-body py-16 lg:py-24 px-4 sm:px-6 lg:px-12 overflow-hidden">
-        <div class="container mx-auto">
+<section id="{{ $sectionId }}" class="{{ $backgroundClass }} font-theme-body py-16 lg:py-24 px-4 sm:px-6 lg:px-12 overflow-hidden">
+    <div class="container mx-auto">
+        @if (! $hasContent)
+            <x-front.empty-section-state
+                title="{{ __('No service content yet') }}"
+                description="{{ __('Add service items, gallery images, or text from the section editor.') }}"
+            />
+        @else
             <div @class([
                 'flex gap-12',
                 'flex-col lg:flex-row items-center lg:gap-20' => $galleryLayout === 'masonry_a',
@@ -233,6 +238,6 @@
                 @endif
 
             </div>
-        </div>
-    </section>
-@endif
+        @endif
+    </div>
+</section>

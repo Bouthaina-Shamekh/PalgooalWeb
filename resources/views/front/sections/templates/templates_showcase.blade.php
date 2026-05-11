@@ -66,7 +66,7 @@
             <div data-templates-slider
                 class="scrollbar-hide flex select-none gap-5 overflow-x-auto scroll-smooth snap-x snap-mandatory px-4 pb-8 pt-2 md:gap-6 lg:px-0">
 
-                @foreach ($templates as $template)
+                @forelse ($templates as $template)
                     <div data-template-slide class="snap-start shrink-0 basis-[82vw] md:basis-[42vw] lg:basis-[31.6%]">
 
                         <div
@@ -117,7 +117,12 @@
                         </div>
 
                     </div>
-                @endforeach
+                @empty
+                    <x-front.empty-section-state
+                        title="{{ __('No templates yet') }}"
+                        description="{{ __('Published templates will appear here once they are available.') }}"
+                    />
+                @endforelse
 
             </div>
         </div>

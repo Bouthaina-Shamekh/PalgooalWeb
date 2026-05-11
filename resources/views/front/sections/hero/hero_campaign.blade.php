@@ -41,7 +41,7 @@
 
     $mediaUrl = \App\Support\Sections\SectionFrontendMediaResolver::resolve($data['image'] ?? null);
 
-    $shouldRender = $title !== ''
+    $hasContent = $title !== ''
         || $subtitle !== ''
         || $description !== ''
         || $featureListTitle !== ''
@@ -50,9 +50,15 @@
         || $mediaUrl;
 @endphp
 
-@if ($shouldRender)
-    <section id="{{ $sectionId }}" class="bg-theme-surface font-theme-body px-4 sm:px-6 lg:px-12 pt-6 pb-8 lg:pt-10 lg:pb-18 overflow-hidden">
-        <div class="container h-full mx-auto flex flex-col-reverse ltr:lg:flex-row rtl:lg:flex-row-reverse items-center justify-between gap-12 lg:gap-16">
+<section id="{{ $sectionId }}" class="bg-theme-surface font-theme-body px-4 sm:px-6 lg:px-12 pt-6 pb-8 lg:pt-10 lg:pb-18 overflow-hidden">
+    <div class="container h-full mx-auto">
+        @if (! $hasContent)
+            <x-front.empty-section-state
+                title="{{ __('No hero content yet') }}"
+                description="{{ __('Add hero text, features, or media from the section editor.') }}"
+            />
+        @else
+            <div class="flex flex-col-reverse ltr:lg:flex-row rtl:lg:flex-row-reverse items-center justify-between gap-12 lg:gap-16">
 
             <div class="lg:w-1/2 w-full text-center lg:text-start ltr:lg:order-1 rtl:lg:order-2 text-content">
 
@@ -138,6 +144,7 @@
                 </div>
             </div>
 
-        </div>
-    </section>
-@endif
+            </div>
+        @endif
+    </div>
+</section>

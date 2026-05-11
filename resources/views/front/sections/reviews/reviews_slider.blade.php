@@ -118,9 +118,10 @@
                     @endif
                 </article>
             @empty
-                <div class="w-full rounded-theme-xl border border-dashed border-theme-border bg-theme-surface px-6 py-10 text-center text-theme-body shadow-theme">
-                    {{ __('No approved testimonials available yet.') }}
-                </div>
+                <x-front.empty-section-state
+                    title="{{ __('No reviews yet') }}"
+                    description="{{ __('Approved testimonials will appear here once they are available.') }}"
+                />
             @endforelse
         </div>
 

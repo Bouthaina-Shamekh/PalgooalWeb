@@ -44,12 +44,17 @@
         default => 'md:grid-cols-5',
     };
 
-    $shouldRender = $title !== '' || $subtitle !== '' || $steps->isNotEmpty();
+    $hasContent = $title !== '' || $subtitle !== '' || $steps->isNotEmpty();
 @endphp
 
-@if ($shouldRender)
-    <section id="{{ $sectionId }}" class="bg-theme-primary font-theme-body py-16 lg:py-24 px-4 sm:px-6 lg:px-12 text-center overflow-hidden">
-        <div class="container mx-auto">
+<section id="{{ $sectionId }}" class="bg-theme-primary font-theme-body py-16 lg:py-24 px-4 sm:px-6 lg:px-12 text-center overflow-hidden">
+    <div class="container mx-auto">
+        @if (! $hasContent)
+            <x-front.empty-section-state
+                title="{{ __('No process steps yet') }}"
+                description="{{ __('Add process steps from the section editor.') }}"
+            />
+        @else
 
             @if ($title !== '' || $subtitle !== '')
                 <div class="mb-16">
@@ -116,6 +121,6 @@
                 </div>
             @endif
 
-        </div>
-    </section>
-@endif
+        @endif
+    </div>
+</section>

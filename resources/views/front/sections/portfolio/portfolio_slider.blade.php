@@ -147,9 +147,10 @@
                         </div>
                     </article>
                 @empty
-                    <div class="w-full rounded-theme-xl border border-dashed border-theme-border bg-theme-muted px-6 py-10 text-center text-theme-body">
-                        {{ __('No portfolio items available yet.') }}
-                    </div>
+                    <x-front.empty-section-state
+                        title="{{ __('No portfolio items yet') }}"
+                        description="{{ __('Add portfolio items from the dashboard to populate this section.') }}"
+                    />
                 @endforelse
             </div>
         </div>

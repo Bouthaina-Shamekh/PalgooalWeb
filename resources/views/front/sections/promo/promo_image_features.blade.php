@@ -41,7 +41,7 @@
     $buttonNewTab = filter_var($data['button_new_tab'] ?? data_get($data, 'cta_button.new_tab', false), FILTER_VALIDATE_BOOLEAN);
     $hasButton = $buttonLabel !== '' && $buttonUrl !== '';
 
-    $shouldRender = $title !== ''
+    $hasContent = $title !== ''
         || $description !== ''
         || $featuresTitle !== ''
         || $featureItems->isNotEmpty()
@@ -49,9 +49,14 @@
         || $hasButton;
 @endphp
 
-@if ($shouldRender)
-    <section id="{{ $sectionId }}" class="bg-theme-muted font-theme-body py-16 md:pb-20 md:pt-10 px-4 sm:px-6 lg:px-12">
-        <div class="container mx-auto">
+<section id="{{ $sectionId }}" class="bg-theme-muted font-theme-body py-16 md:pb-20 md:pt-10 px-4 sm:px-6 lg:px-12">
+    <div class="container mx-auto">
+        @if (! $hasContent)
+            <x-front.empty-section-state
+                title="{{ __('No promo content yet') }}"
+                description="{{ __('Add text, feature items, or media from the section editor.') }}"
+            />
+        @else
             <div class="bg-theme-surface rounded-theme-xl shadow-theme p-6 md:p-10 overflow-hidden">
                 <div class="grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-18 items-center">
 
@@ -126,6 +131,6 @@
 
                 </div>
             </div>
-        </div>
-    </section>
-@endif
+        @endif
+    </div>
+</section>

@@ -32,12 +32,17 @@
         ->filter()
         ->values();
 
-    $shouldRender = $items->isNotEmpty();
+    $hasContent = $items->isNotEmpty();
 @endphp
 
-@if ($shouldRender)
-    <section id="{{ $sectionId }}" class="{{ $backgroundClass }} font-theme-body py-12 relative px-4 sm:px-6 lg:px-12 overflow-hidden">
-        <div class="container mx-auto">
+<section id="{{ $sectionId }}" class="{{ $backgroundClass }} font-theme-body py-12 relative px-4 sm:px-6 lg:px-12 overflow-hidden">
+    <div class="container mx-auto">
+        @if (! $hasContent)
+            <x-front.empty-section-state
+                title="{{ __('No technology logos yet') }}"
+                description="{{ __('Add logo items from the section editor.') }}"
+            />
+        @else
             <div
                 id="{{ $sectionId }}-container"
                 class="flex items-center justify-start overflow-x-auto py-2 pb-6 gap-4 lg:gap-6 cursor-grab scrollbar-hide select-none"
@@ -75,9 +80,11 @@
                     @endif
                 @endforeach
             </div>
-        </div>
-    </section>
+        @endif
+    </div>
+</section>
 
+@if ($hasContent)
     @once
         @push('scripts')
             <script
