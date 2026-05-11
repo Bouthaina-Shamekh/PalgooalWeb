@@ -14,6 +14,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Laravel\Fortify\Contracts\LoginResponse;
 use Laravel\Fortify\Contracts\LogoutResponse;
+use Laravel\Fortify\Contracts\PasswordResetResponse;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
@@ -27,7 +28,7 @@ class FortifyServiceProvider extends ServiceProvider
 
         if ($request->is('dashboard/*')) {
             Config::set('fortify.guard', 'web');
-            Config::set('fortify.password', 'users');
+            Config::set('fortify.passwords', 'users');
             Config::set('fortify.prefix', 'admin');
             Config::set('fortify.home', '/admin/home');
             Config::set('fortify.views', true);
@@ -35,7 +36,7 @@ class FortifyServiceProvider extends ServiceProvider
 
         if ($request->is('client/*')) {
             Config::set('fortify.guard', 'client');
-            Config::set('fortify.password', 'clinents');
+            Config::set('fortify.passwords', 'clients');
             Config::set('fortify.prefix', 'client');
             Config::set('fortify.home', '/client/home');
             Config::set('fortify.views', true);
@@ -63,6 +64,19 @@ class FortifyServiceProvider extends ServiceProvider
                     return redirect()->intended('/client/login');
                 }
                 return redirect('/');
+            }
+        });
+
+        $this->app->instance(PasswordResetResponse::class, new class implements PasswordResetResponse {
+            public function toResponse($request)
+            {
+                if ($request->is('client/*')) {
+                    return redirect()->route('client.login')->with('status', __(
+                        'Your password has been reset successfully. Please login with your new password.'
+                    ));
+                }
+
+                return redirect()->to('/login')->with('status', __("Your password has been reset."));
             }
         });
     }
@@ -95,7 +109,7 @@ class FortifyServiceProvider extends ServiceProvider
     });
 
     Fortify::resetPasswordView(function (Request $request) {
-        return view('auth.reset-password', [
+        return view('auth.client.reset-password', [
             'request' => $request,
         ]);
     });

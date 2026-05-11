@@ -15,6 +15,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->redirectGuestsTo(function ($request) {
+            if ($request->is('client/*')) {
+                return route('client.login');
+            }
+
+            return '/login';
+        });
+
         $middleware->alias([
             'setLocale' => SetLocale::class,
             'client.dashboard.impersonation' => EnsureClientDashboardImpersonation::class,
