@@ -151,6 +151,7 @@
                         title="{{ __('No portfolio items yet') }}"
                         description="{{ __('Add portfolio items from the dashboard to populate this section.') }}"
                     />
+                    
                 @endforelse
             </div>
         </div>

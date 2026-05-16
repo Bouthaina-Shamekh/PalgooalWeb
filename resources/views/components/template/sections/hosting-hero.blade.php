@@ -1,1 +1,1 @@
-465465465
+{{-- hosting-hero: placeholder (section renders through definition-driven pipeline) --}}

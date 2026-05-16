@@ -164,6 +164,12 @@
             'edit' => __('admin.Edit Template'),
             'delete' => __('admin.Delete Template'),
         ],
+        'templatereviews' => [
+            'name' => __('admin.Template Reviews'),
+            'view' => __('admin.View Template Reviews'),
+            'update' => __('admin.Approve / Reject Template Reviews'),
+            'delete' => __('admin.Delete Template Reviews'),
+        ],
         'translationvalues' => [
             'name' => __('admin.Translation Values'),
             'view' => __('admin.View Translation Values'),

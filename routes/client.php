@@ -48,7 +48,7 @@ Route::post('client/forgot-password', function (\Illuminate\Http\Request $reques
     return $status === \Illuminate\Support\Facades\Password::RESET_LINK_SENT  // 'passwords.sent'
         ? back()->with('status', __($status))
         : back()->withErrors(['email' => __($status)])->withInput();
-})->middleware('web')->name('client.password.email');
+})->middleware(['web', 'throttle:5,1'])->name('client.password.email');
 
 Route::post('client/register', function (\Illuminate\Http\Request $request) {
     $creator = app(\App\Actions\Fortify\CreateNewUser::class);
@@ -343,7 +343,7 @@ Route::post('client/login', function (Request $request) use ($redirectClientResp
     return $redirectClientResponse($request)
         ->withErrors(['email' => 'Invalid login credentials.'])
         ->withInput();
-})->name('client.login.store');
+})->middleware('throttle:5,1')->name('client.login.store');
 
 Route::post('client/logout', function (Request $request) use ($redirectClientResponse) {
     Auth::guard('client')->logout();

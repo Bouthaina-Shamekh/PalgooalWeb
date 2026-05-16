@@ -4,9 +4,12 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TemplateReview extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'template_id','user_id','client_id',
         'author_name','author_email','rating','comment','approved',
@@ -33,6 +36,5 @@ class TemplateReview extends Model
     {
         return $this->belongsTo(Client::class)->withDefault();
     }
-    
 
 }

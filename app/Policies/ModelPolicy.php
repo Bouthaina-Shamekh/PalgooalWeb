@@ -23,9 +23,13 @@ class ModelPolicy
         $class_name = Str::lower($class_name);
         $class_name = $customMap[$class_name] ?? Str::plural($class_name);
 
-        if ($name == 'viewAny') {
-            $name = 'view';
-        }
+        // Normalize ability name: map Laravel's conventional method names to the
+        // keys stored in role_user.role_name (which the UI generates from abilities.php).
+        $nameAliases = [
+            'viewAny' => 'view',
+            'update'  => 'edit',  // abilities.php uses 'edit'; controllers use 'update'
+        ];
+        $name = $nameAliases[$name] ?? $name;
 
         $ability = $class_name . '.' . Str::kebab($name);
         $user = $arguments[0];

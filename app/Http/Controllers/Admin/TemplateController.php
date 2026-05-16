@@ -12,6 +12,7 @@ use App\Models\Plan;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -22,6 +23,8 @@ class TemplateController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Template::class);
+
         $search = trim((string) $request->query('q', ''));
         $selectedCategory = $request->filled('category')
             ? (int) $request->query('category')
@@ -75,9 +78,9 @@ class TemplateController extends Controller
         $categories = CategoryTemplate::with('translations')->get();
 
         $stats = [
-            'total' => Template::count(),
-            'visible' => $templates->total(),
-            'discounted' => Template::query()
+            'total'        => Template::count(),
+            'visible'      => $templates->total(),
+            'discounted'   => Template::query()
                 ->whereNotNull('discount_price')
                 ->where('discount_price', '>', 0)
                 ->whereColumn('discount_price', '<', 'price')
@@ -89,7 +92,7 @@ class TemplateController extends Controller
                         ->where('preview_url', '!=', '');
                 })
                 ->count(),
-            'categories' => $categories->count(),
+            'categories'   => $categories->count(),
         ];
 
         return view('dashboard.templates.index', compact(
@@ -106,9 +109,11 @@ class TemplateController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', Template::class);
+
         $categories = CategoryTemplate::with('translation')->get();
-        $languages = Language::all();
-        $plans = Plan::all();
+        $languages  = Language::where('is_active', true)->orderBy('id')->get();
+        $plans      = Plan::all();
 
         return view('dashboard.templates.create', compact('categories', 'languages', 'plans'));
     }
@@ -118,22 +123,24 @@ class TemplateController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
-            'price' => ['required', 'numeric', 'min:0'],
-            'discount_price' => ['nullable', 'numeric', 'min:0', 'lt:price'],
-            'discount_ends_at' => ['nullable', 'date'],
-            'rating' => ['nullable', 'numeric', 'min:0', 'max:5'],
-            'category_template_id' => ['required', 'exists:category_templates,id'],
-            'plan_id' => ['required', 'exists:plans,id'],
-            'image' => ['nullable', 'image'],
-            'image_media_id' => ['nullable', 'integer', 'exists:media,id', 'required_without:image'],
-            'translations' => ['required', 'array', 'min:1'],
-            'translations.*.locale' => ['required', 'string'],
-            'translations.*.name' => ['required', 'string', 'max:255'],
-            'translations.*.slug' => ['nullable', 'string', 'max:255'],
+        $this->authorize('create', Template::class);
+
+        $validated = $request->validate([
+            'price'                      => ['required', 'numeric', 'min:0'],
+            'discount_price'             => ['nullable', 'numeric', 'min:0', 'lt:price'],
+            'discount_ends_at'           => ['nullable', 'date'],
+            'rating'                     => ['nullable', 'numeric', 'min:0', 'max:5'],
+            'category_template_id'       => ['required', 'exists:category_templates,id'],
+            'plan_id'                    => ['required', 'exists:plans,id'],
+            'image'                      => ['nullable', 'image'],
+            'image_media_id'             => ['nullable', 'integer', 'exists:media,id', 'required_without:image'],
+            'translations'               => ['required', 'array', 'min:1'],
+            'translations.*.locale'      => ['required', 'string'],
+            'translations.*.name'        => ['required', 'string', 'max:255'],
+            'translations.*.slug'        => ['nullable', 'string', 'max:255'],
             'translations.*.description' => ['required', 'string'],
             'translations.*.preview_url' => ['nullable', 'url'],
-            'translations.*.details' => ['nullable'],
+            'translations.*.details'     => ['nullable'],
         ]);
 
         DB::beginTransaction();
@@ -143,33 +150,34 @@ class TemplateController extends Controller
 
             if ($request->hasFile('image')) {
                 $imagePath = $request->file('image')->store('templates', 'public');
-            } elseif ($request->filled('image_media_id')) {
-                $imagePath = Media::query()
-                    ->whereKey((int) $request->input('image_media_id'))
+            } elseif (filled($validated['image_media_id'] ?? null)) {
+                $rawPath   = Media::query()
+                    ->whereKey((int) $validated['image_media_id'])
                     ->value('file_path');
+                $imagePath = $rawPath ? ltrim((string) $rawPath, '/') : null;
             }
 
             $template = Template::create([
-                'price' => $request->price,
-                'discount_price' => $request->discount_price,
-                'discount_ends_at' => $request->discount_ends_at,
-                'rating' => $request->rating ?? 0,
-                'category_template_id' => $request->category_template_id,
-                'plan_id' => $request->plan_id,
-                'image' => $imagePath,
+                'price'                => $validated['price'],
+                'discount_price'       => $validated['discount_price'] ?? null,
+                'discount_ends_at'     => $validated['discount_ends_at'] ?? null,
+                'rating'               => $validated['rating'] ?? 0,
+                'category_template_id' => $validated['category_template_id'],
+                'plan_id'              => $validated['plan_id'],
+                'image'                => $imagePath,
             ]);
 
-            foreach ($request->translations as $translation) {
+            foreach ($validated['translations'] as $translation) {
                 $slug = $this->makeSlug($translation['slug'] ?? null, $translation['name'] ?? '');
 
                 TemplateTranslation::create([
                     'template_id' => $template->id,
-                    'locale' => $translation['locale'],
-                    'name' => $translation['name'],
-                    'slug' => $slug,
+                    'locale'      => $translation['locale'],
+                    'name'        => $translation['name'],
+                    'slug'        => $slug,
                     'preview_url' => $translation['preview_url'] ?? null,
                     'description' => $translation['description'],
-                    'details' => $translation['details'] ?? null,
+                    'details'     => $translation['details'] ?? null,
                 ]);
             }
 
@@ -180,6 +188,7 @@ class TemplateController extends Controller
                 ->with('success', 'تم إنشاء القالب بنجاح.');
         } catch (\Throwable $e) {
             DB::rollBack();
+            Log::error('TemplateController::store failed', ['error' => $e->getMessage()]);
 
             return back()
                 ->withInput()
@@ -192,6 +201,9 @@ class TemplateController extends Controller
      */
     public function show($id): RedirectResponse
     {
+        $template = Template::findOrFail($id);
+        $this->authorize('update', $template);
+
         return redirect()->route('dashboard.templates.edit', $id);
     }
 
@@ -201,8 +213,10 @@ class TemplateController extends Controller
     public function edit($id)
     {
         $template = Template::with('translations')->findOrFail($id);
+        $this->authorize('update', $template);
+
         $categories = CategoryTemplate::with('translation')->get();
-        $plans = Plan::all();
+        $plans      = Plan::all();
 
         return view('dashboard.templates.edit', compact('template', 'categories', 'plans'));
     }
@@ -213,23 +227,24 @@ class TemplateController extends Controller
     public function update(Request $request, $id): RedirectResponse
     {
         $template = Template::findOrFail($id);
+        $this->authorize('update', $template);
 
-        $request->validate([
-            'price' => ['required', 'numeric', 'min:0'],
-            'discount_price' => ['nullable', 'numeric', 'min:0', 'lt:price'],
-            'discount_ends_at' => ['nullable', 'date'],
-            'rating' => ['nullable', 'numeric', 'min:0', 'max:5'],
-            'category_template_id' => ['required', 'exists:category_templates,id'],
-            'plan_id' => ['required', 'exists:plans,id'],
-            'image' => ['nullable', 'image'],
-            'image_media_id' => ['nullable', 'integer', 'exists:media,id'],
-            'translations' => ['required', 'array', 'min:1'],
-            'translations.*.locale' => ['required', 'string'],
-            'translations.*.name' => ['required', 'string', 'max:255'],
-            'translations.*.slug' => ['nullable', 'string', 'max:255'],
+        $validated = $request->validate([
+            'price'                      => ['required', 'numeric', 'min:0'],
+            'discount_price'             => ['nullable', 'numeric', 'min:0', 'lt:price'],
+            'discount_ends_at'           => ['nullable', 'date'],
+            'rating'                     => ['nullable', 'numeric', 'min:0', 'max:5'],
+            'category_template_id'       => ['required', 'exists:category_templates,id'],
+            'plan_id'                    => ['required', 'exists:plans,id'],
+            'image'                      => ['nullable', 'image'],
+            'image_media_id'             => ['nullable', 'integer', 'exists:media,id'],
+            'translations'               => ['required', 'array', 'min:1'],
+            'translations.*.locale'      => ['required', 'string'],
+            'translations.*.name'        => ['required', 'string', 'max:255'],
+            'translations.*.slug'        => ['nullable', 'string', 'max:255'],
             'translations.*.description' => ['required', 'string'],
             'translations.*.preview_url' => ['nullable', 'url'],
-            'translations.*.details' => ['nullable'],
+            'translations.*.details'     => ['nullable'],
         ]);
 
         DB::beginTransaction();
@@ -239,11 +254,10 @@ class TemplateController extends Controller
                 if ($template->image && Storage::disk('public')->exists($template->image)) {
                     Storage::disk('public')->delete($template->image);
                 }
-
                 $template->image = $request->file('image')->store('templates', 'public');
-            } elseif ($request->filled('image_media_id')) {
+            } elseif (filled($validated['image_media_id'] ?? null)) {
                 $selectedImagePath = Media::query()
-                    ->whereKey((int) $request->input('image_media_id'))
+                    ->whereKey((int) $validated['image_media_id'])
                     ->value('file_path');
 
                 if (! empty($selectedImagePath)) {
@@ -252,29 +266,40 @@ class TemplateController extends Controller
             }
 
             $template->update([
-                'price' => $request->price,
-                'discount_price' => $request->discount_price,
-                'discount_ends_at' => $request->discount_ends_at,
-                'rating' => $request->filled('rating') ? $request->rating : $template->rating,
-                'category_template_id' => $request->category_template_id,
-                'plan_id' => $request->plan_id,
-                'image' => $template->image,
+                'price'                => $validated['price'],
+                'discount_price'       => $validated['discount_price'] ?? null,
+                'discount_ends_at'     => $validated['discount_ends_at'] ?? null,
+                'rating'               => $validated['rating'] ?? $template->rating,
+                'category_template_id' => $validated['category_template_id'],
+                'plan_id'              => $validated['plan_id'],
+                'image'                => $template->image,
             ]);
 
-            $template->translations()->delete();
+            // updateOrCreate avoids the brief data-loss window of delete+recreate.
+            $submittedLocales = [];
 
-            foreach ($request->translations as $translation) {
-                $slug = $this->makeSlug($translation['slug'] ?? null, $translation['name'] ?? '');
+            foreach ($validated['translations'] as $translation) {
+                $locale = $translation['locale'];
+                $slug   = $this->makeSlug($translation['slug'] ?? null, $translation['name'] ?? '');
 
-                TemplateTranslation::create([
-                    'template_id' => $template->id,
-                    'locale' => $translation['locale'],
-                    'name' => $translation['name'],
-                    'slug' => $slug,
-                    'preview_url' => $translation['preview_url'] ?? null,
-                    'description' => $translation['description'],
-                    'details' => $translation['details'] ?? null,
-                ]);
+                $template->translations()->updateOrCreate(
+                    ['locale' => $locale],
+                    [
+                        'name'        => $translation['name'],
+                        'slug'        => $slug,
+                        'preview_url' => $translation['preview_url'] ?? null,
+                        'description' => $translation['description'],
+                        'details'     => $translation['details'] ?? null,
+                    ]
+                );
+
+                $submittedLocales[] = $locale;
+            }
+
+            if (! empty($submittedLocales)) {
+                $template->translations()
+                    ->whereNotIn('locale', $submittedLocales)
+                    ->delete();
             }
 
             DB::commit();
@@ -284,6 +309,7 @@ class TemplateController extends Controller
                 ->with('success', 'تم تعديل القالب بنجاح.');
         } catch (\Throwable $e) {
             DB::rollBack();
+            Log::error('TemplateController::update failed', ['template_id' => $id, 'error' => $e->getMessage()]);
 
             return back()
                 ->withInput()
@@ -297,6 +323,7 @@ class TemplateController extends Controller
     public function destroy($id): RedirectResponse
     {
         $template = Template::findOrFail($id);
+        $this->authorize('delete', $template);
 
         if ($template->image && Storage::disk('public')->exists($template->image)) {
             Storage::disk('public')->delete($template->image);
@@ -310,10 +337,12 @@ class TemplateController extends Controller
     }
 
     /**
-     * Display the controller-driven template category management screen.
+     * Display the template category management screen.
      */
     public function categories()
     {
+        $this->authorize('viewAny', CategoryTemplate::class);
+
         return $this->renderCategoryManagement();
     }
 
@@ -322,6 +351,8 @@ class TemplateController extends Controller
      */
     public function storeCategory(Request $request): RedirectResponse
     {
+        $this->authorize('create', CategoryTemplate::class);
+
         $languages = $this->templateCategoryLanguages();
         $validated = $request->validate(
             $this->templateCategoryRules($languages),
@@ -349,6 +380,8 @@ class TemplateController extends Controller
      */
     public function editCategory(CategoryTemplate $category)
     {
+        $this->authorize('update', $category);
+
         return $this->renderCategoryManagement($category);
     }
 
@@ -357,6 +390,8 @@ class TemplateController extends Controller
      */
     public function updateCategory(Request $request, CategoryTemplate $category): RedirectResponse
     {
+        $this->authorize('update', $category);
+
         $category->loadMissing('translations');
 
         $languages = $this->templateCategoryLanguages();
@@ -379,10 +414,12 @@ class TemplateController extends Controller
     }
 
     /**
-     * Delete a template category when it is no longer used by templates.
+     * Delete a category that has no templates.
      */
     public function destroyCategory(CategoryTemplate $category): RedirectResponse
     {
+        $this->authorize('delete', $category);
+
         $isUsedByTemplates = Template::query()
             ->where('category_template_id', $category->id)
             ->exists();
@@ -405,22 +442,23 @@ class TemplateController extends Controller
             ->with('success', __('Category deleted successfully.'));
     }
 
-    /**
-     * Render the controller-driven template category management screen.
-     */
+    // -------------------------------------------------------------------------
+    // Private helpers
+    // -------------------------------------------------------------------------
+
     private function renderCategoryManagement(?CategoryTemplate $editingCategory = null)
     {
         $editingCategory?->loadMissing('translations');
 
-        $languages = $this->templateCategoryLanguages();
+        $languages  = $this->templateCategoryLanguages();
         $categories = CategoryTemplate::with('translations')->latest()->get();
 
         return view('dashboard.templates.category-management', [
-            'languages' => $languages,
-            'categories' => $categories,
-            'editingCategory' => $editingCategory,
+            'languages'        => $languages,
+            'categories'       => $categories,
+            'editingCategory'  => $editingCategory,
             'formTranslations' => $this->templateCategoryFormTranslations($languages, $editingCategory),
-            'activeLang' => old('active_lang', $languages->first()?->code ?? app()->getLocale()),
+            'activeLang'       => old('active_lang', $languages->first()?->code ?? app()->getLocale()),
         ]);
     }
 
@@ -438,9 +476,9 @@ class TemplateController extends Controller
 
     private function templateCategoryFormTranslations($languages, ?CategoryTemplate $editingCategory = null): array
     {
-        $oldTranslations = old('translations');
+        $oldTranslations      = old('translations');
         $existingTranslations = $editingCategory?->translations?->keyBy('locale') ?? collect();
-        $formTranslations = [];
+        $formTranslations     = [];
 
         foreach ($languages as $language) {
             $languageCode = (string) $language->code;
@@ -451,8 +489,8 @@ class TemplateController extends Controller
 
             if (is_array($oldTranslations[$languageCode] ?? null)) {
                 $formTranslations[$languageCode] = [
-                    'name' => (string) ($oldTranslations[$languageCode]['name'] ?? ''),
-                    'slug' => (string) ($oldTranslations[$languageCode]['slug'] ?? ''),
+                    'name'        => (string) ($oldTranslations[$languageCode]['name'] ?? ''),
+                    'slug'        => (string) ($oldTranslations[$languageCode]['slug'] ?? ''),
                     'description' => (string) ($oldTranslations[$languageCode]['description'] ?? ''),
                 ];
 
@@ -462,8 +500,8 @@ class TemplateController extends Controller
             $translation = $existingTranslations->get($languageCode);
 
             $formTranslations[$languageCode] = [
-                'name' => (string) ($translation?->name ?? ''),
-                'slug' => (string) ($translation?->slug ?? ''),
+                'name'        => (string) ($translation?->name ?? ''),
+                'slug'        => (string) ($translation?->slug ?? ''),
                 'description' => (string) ($translation?->description ?? ''),
             ];
         }
@@ -474,7 +512,7 @@ class TemplateController extends Controller
     private function templateCategoryRules($languages, ?CategoryTemplate $editingCategory = null): array
     {
         $rules = [
-            'active_lang' => ['nullable', 'string'],
+            'active_lang'  => ['nullable', 'string'],
             'translations' => ['required', 'array', 'min:1'],
         ];
 
@@ -506,13 +544,13 @@ class TemplateController extends Controller
     private function templateCategoryMessages(): array
     {
         return [
-            'translations.*.name.required' => 'ط§ظ„ط§ط³ظ… ظ…ط·ظ„ظˆط¨.',
-            'translations.*.name.max' => 'ظٹط¬ط¨ ط£ظ„ط§ ظٹطھط¬ط§ظˆط² ط§ظ„ط§ط³ظ… 255 ط­ط±ظپظ‹ط§.',
-            'translations.*.slug.required' => 'ط§ظ„ط±ط§ط¨ط· (slug) ظ…ط·ظ„ظˆط¨.',
-            'translations.*.slug.alpha_dash' => 'ظٹط¬ط¨ ط£ظ† ظٹط­طھظˆظٹ ط§ظ„ط±ط§ط¨ط· ط¹ظ„ظ‰ ط£ط­ط±ظپ ظˆط£ط±ظ‚ط§ظ… ظˆط´ط±ط·ط§طھ ظپظ‚ط·.',
-            'translations.*.slug.unique' => 'ظ‡ط°ط§ ط§ظ„ط±ط§ط¨ط· ظ…ط³طھط®ط¯ظ… ط¨ط§ظ„ظپط¹ظ„.',
-            'translations.*.slug.max' => 'ط§ظ„ط±ط§ط¨ط· ط·ظˆظٹظ„ ط¬ط¯ظ‹ط§.',
-            'translations.*.description.string' => 'ط§ظ„ظˆطµظپ ط؛ظٹط± طµط§ظ„ط­.',
+            'translations.*.name.required'      => __('The name field is required.'),
+            'translations.*.name.max'            => __('The name may not be greater than 255 characters.'),
+            'translations.*.slug.required'       => __('The slug field is required.'),
+            'translations.*.slug.alpha_dash'     => __('The slug may only contain letters, numbers, dashes and underscores.'),
+            'translations.*.slug.unique'         => __('This slug is already taken.'),
+            'translations.*.slug.max'            => __('The slug may not be greater than 255 characters.'),
+            'ranslations.*.description.string'  => __('The description must be a string.'),
         ];
     }
 
@@ -532,8 +570,8 @@ class TemplateController extends Controller
             $category->translations()->updateOrCreate(
                 ['locale' => $languageCode],
                 [
-                    'name' => (string) ($translation['name'] ?? ''),
-                    'slug' => (string) ($translation['slug'] ?? ''),
+                    'name'        => (string) ($translation['name'] ?? ''),
+                    'slug'        => (string) ($translation['slug'] ?? ''),
                     'description' => filled($translation['description'] ?? null)
                         ? (string) $translation['description']
                         : null,
@@ -543,26 +581,24 @@ class TemplateController extends Controller
     }
 
     /**
-     * Helper to generate a normalized slug value.
+     * Generate a URL-safe slug from the given value or fallback name.
      */
     private function makeSlug(?string $slug, string $fallbackName): string
     {
         $value = $slug ?: $fallbackName;
 
-        // ظ…ط³ط§ظپط§طھ ط£ظˆ _ â†’ -
+        // spaces / underscores -> hyphens
         $value = preg_replace('/[\s_]+/u', '-', $value);
 
-        // ط¥ط²ط§ظ„ط© ط£ظٹ ط´ظٹط، ط؛ظٹط± ط­ط±ظˆظپ/ط£ط±ظ‚ط§ظ…/ط´ط±ط·ط©
+        // strip anything that is not a letter, digit, or hyphen
         $value = preg_replace('/[^\p{L}\p{N}\-]+/u', '', $value);
 
-        // ظ…ظ†ط¹ -- ظ…ظƒط±ط±ط©
+        // collapse consecutive hyphens
         $value = preg_replace('/\-{2,}/u', '-', $value);
 
-        // ظ‚طµ ط§ظ„ط´ط±ط·ط§طھ ظ…ظ† ط§ظ„ط¨ط¯ط§ظٹط© ظˆط§ظ„ظ†ظ‡ط§ظٹط©
+        // trim leading/trailing hyphens
         $value = trim($value, '-');
 
         return $value !== '' ? $value : 'template-' . uniqid();
     }
 }
-
-

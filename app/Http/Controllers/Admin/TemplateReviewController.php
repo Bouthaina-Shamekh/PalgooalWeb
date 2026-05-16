@@ -14,6 +14,7 @@ class TemplateReviewController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', TemplateReview::class);
         $text = trim((string) $request->input('q', ''));
 
         // null = بدون فلتر، otherwise true/false
@@ -63,6 +64,8 @@ class TemplateReviewController extends Controller
      */
     public function approve(TemplateReview $review)
     {
+        $this->authorize('approve', $review);
+
         $review->approved = true;
         $review->save();
 
@@ -74,6 +77,8 @@ class TemplateReviewController extends Controller
      */
     public function reject(TemplateReview $review)
     {
+        $this->authorize('reject', $review);
+
         $review->approved = false;
         $review->save();
 
@@ -85,7 +90,8 @@ class TemplateReviewController extends Controller
      */
     public function destroy(TemplateReview $review)
     {
-        // يدعم SoftDeletes إن كانت مفعّلة على الموديل
+        $this->authorize('delete', $review);
+
         $review->delete();
 
         return back()->with('success', 'تم حذف المراجعة بنجاح.');
@@ -96,9 +102,11 @@ class TemplateReviewController extends Controller
      */
     public function bulk(Request $request)
     {
+        $this->authorize('bulk', TemplateReview::class);
+
         $data = $request->validate([
             'ids'    => ['required', 'array', 'min:1'],
-            'ids.*'  => ['integer', 'distinct'],
+            'ids.*'  => ['integer', 'distinct', 'exists:template_reviews,id'],
             'action' => ['required', 'in:approve,reject,delete'],
         ], [
             'ids.required' => 'يرجى اختيار عنصر واحد على الأقل.',
@@ -124,11 +132,10 @@ class TemplateReviewController extends Controller
 
         $messages = [
             'approve' => "تم اعتماد {$affected} مراجعة.",
-            'reject'  => "تم رفض {$affected} مراجعة.",
+       'reject'  => "تم رفض {$affected} مراجعة.",
             'delete'  => "تم حذف {$affected} مراجعة.",
         ];
 
         return back()->with('success', $messages[$action]);
     }
 }
-

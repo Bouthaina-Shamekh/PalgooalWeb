@@ -19,9 +19,6 @@ use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         $request = request();
@@ -54,6 +51,7 @@ class FortifyServiceProvider extends ServiceProvider
                 }
             }
         });
+
         $this->app->instance(LogoutResponse::class, new class implements LogoutResponse {
             public function toResponse($request)
             {
@@ -81,54 +79,55 @@ class FortifyServiceProvider extends ServiceProvider
         });
     }
 
-    /**
-     * Bootstrap any application services.
-     */
-   public function boot(): void
-{
-    Fortify::loginView(function () {
-        if (Config::get('fortify.guard') == 'client') {
-            return view('auth.client.login');
-        }
+    public function boot(): void
+    {
+        Fortify::loginView(function () {
+            if (Config::get('fortify.guard') == 'client') {
+                return view('auth.client.login');
+            }
 
-        return view('auth.login');
-    });
+            return view('auth.login');
+        });
 
-    Fortify::registerView(function () {
-        if (Config::get('fortify.guard') == 'client') {
-            return view('auth.client.register');
-        }
+        Fortify::registerView(function () {
+            if (Config::get('fortify.guard') == 'client') {
+                return view('auth.client.register');
+            }
 
-        return view('auth.register');
-    });
+            return view('auth.register');
+        });
 
-    Fortify::requestPasswordResetLinkView(function () {
+        Fortify::requestPasswordResetLinkView(function () {
+            if (Config::get('fortify.guard') === 'client') {
+                return view('auth.client.forgot-password');
+            }
 
-       return view('auth.client.forgot-password');
+            return view('auth.forgot-password');
+        });
 
-    });
+        Fortify::resetPasswordView(function (Request $request) {
+            if (Config::get('fortify.guard') === 'client') {
+                return view('auth.client.reset-password', ['request' => $request]);
+            }
 
-    Fortify::resetPasswordView(function (Request $request) {
-        return view('auth.client.reset-password', [
-            'request' => $request,
-        ]);
-    });
+            return view('auth.reset-password', ['request' => $request]);
+        });
 
-    Fortify::createUsersUsing(CreateNewUser::class);
-    Fortify::updateUserProfileInformationUsing(UpdateUserProfileInformation::class);
-    Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
-    Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
+        Fortify::createUsersUsing(CreateNewUser::class);
+        Fortify::updateUserProfileInformationUsing(UpdateUserProfileInformation::class);
+        Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
+        Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
 
-    RateLimiter::for('login', function (Request $request) {
-        $throttleKey = Str::transliterate(
-            Str::lower($request->input(Fortify::username())) . '|' . $request->ip()
-        );
+        RateLimiter::for('login', function (Request $request) {
+            $throttleKey = Str::transliterate(
+                Str::lower($request->input(Fortify::username())) . '|' . $request->ip()
+            );
 
-        return Limit::perMinute(5)->by($throttleKey);
-    });
+            return Limit::perMinute(5)->by($throttleKey);
+        });
 
-    RateLimiter::for('two-factor', function (Request $request) {
-        return Limit::perMinute(5)->by($request->session()->get('login.id'));
-    });
-}
+        RateLimiter::for('two-factor', function (Request $request) {
+            return Limit::perMinute(5)->by($request->session()->get('login.id'));
+        });
+    }
 }
