@@ -21,8 +21,11 @@ class CreateNewUser implements CreatesNewUsers
      */
     public function create(array $input)
     {
-        if(Config::get('fortify.guard') == 'client'){
+        if (Config::get('fortify.guard') == 'client') {
             Validator::make($input, [
+                'first_name' => ['required', 'string', 'max:255'],
+                'last_name' => ['required', 'string', 'max:255'],
+                'company_name' => ['required', 'string', 'max:255'],
                 'email' => [
                     'required',
                     'string',
@@ -30,13 +33,17 @@ class CreateNewUser implements CreatesNewUsers
                     'max:255',
                     Rule::unique(Client::class),
                 ],
+                'password' => ['required', 'string', 'min:8'],
+                'confirm_password' => ['required', 'same:password'],
             ])->validate();
-            if(isset($input['avatar']) && $input['avatar'] != null){
+
+            if (isset($input['avatar']) && $input['avatar'] != null) {
                 $avatar = $input['avatar'];
                 $avatar = $avatar->store('avatars');
-            }else{
+            } else {
                 $avatar = null;
             }
+
             return Client::create([
                 'first_name' => $input['first_name'],
                 'last_name' => $input['last_name'],
@@ -48,6 +55,7 @@ class CreateNewUser implements CreatesNewUsers
                 'avatar' => $avatar,
             ]);
         }
+
         Validator::make($input, [
             'name' => ['required', 'string', 'max:255'],
             'email' => [

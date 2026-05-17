@@ -37,6 +37,13 @@
     
                         <form class="mt-4 space-y-[10px]" action="{{ route('client.register.store') }}" method="post" novalidate>
                             @csrf
+
+                            @if ($errors->any())
+                                <div class="mb-3 rounded-[12px] bg-red-100 px-4 py-3 text-sm text-red-700 font-almarai">
+                                    {{ $errors->first() }}
+                                </div>
+                            @endif
+
                             <!-- First Name -->
                             <div class="bg-white rounded-[20px] h-[60.271px] w-full flex items-center gap-3 px-6">
                                 <svg class="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none"
@@ -52,6 +59,9 @@
                                     class="w-full h-full bg-transparent outline-none border-0 font-poppins text-[#696969] text-[18px] sm:text-[20px] tracking-[0.4px] placeholder:text-[#696969]"
                                     placeholder="First Name" />
                             </div>
+                            @error('first_name')
+                                <p class="mt-1 pl-2 text-sm text-red-600 font-almarai">{{ $message }}</p>
+                            @enderror
 
                             <!-- Last Name -->
                             <div class="bg-white rounded-[20px] h-[60.271px] w-full flex items-center gap-3 px-6">
@@ -68,6 +78,9 @@
                                     class="w-full h-full bg-transparent outline-none border-0 font-poppins text-[#696969] text-[18px] sm:text-[20px] tracking-[0.4px] placeholder:text-[#696969]"
                                     placeholder="Last Name" />
                             </div>
+                            @error('last_name')
+                                <p class="mt-1 pl-2 text-sm text-red-600 font-almarai">{{ $message }}</p>
+                            @enderror
 
                             <!-- Company Name -->
                             <div class="bg-white rounded-[20px] h-[60.271px] w-full flex items-center gap-3 px-6">
@@ -85,6 +98,9 @@
                                     class="w-full h-full bg-transparent outline-none border-0 font-poppins text-[#696969] text-[18px] sm:text-[20px] tracking-[0.4px] placeholder:text-[#696969]"
                                     placeholder="Company Name" />
                             </div>
+                            @error('company_name')
+                                <p class="mt-1 pl-2 text-sm text-red-600 font-almarai">{{ $message }}</p>
+                            @enderror
 
                             <!-- Email -->
                             <div class="bg-white rounded-[20px] h-[60.271px] w-full flex items-center gap-3 px-6">
@@ -100,6 +116,9 @@
                                     class="w-full h-full bg-transparent outline-none border-0 font-poppins text-[#696969] text-[18px] sm:text-[20px] tracking-[0.4px] placeholder:text-[#696969]"
                                     placeholder="Email" />
                             </div>
+                            @error('email')
+                                <p class="mt-1 pl-2 text-sm text-red-600 font-almarai">{{ $message }}</p>
+                            @enderror
     
                             <!-- Password -->
                             <div class="bg-white rounded-[20px] h-[60.271px] w-full flex items-center gap-3 px-6">
@@ -116,6 +135,9 @@
                                     class="w-full h-full bg-transparent outline-none border-0 font-poppins text-[#696969] text-[18px] sm:text-[20px] tracking-[0.4px] placeholder:text-[#696969]"
                                     placeholder="Password" />
                             </div>
+                            @error('password')
+                                <p class="mt-1 pl-2 text-sm text-red-600 font-almarai">{{ $message }}</p>
+                            @enderror
     
                             <!-- Re-Password -->
                             <div class="bg-white rounded-[20px] h-[60.271px] w-full flex items-center gap-3 px-6">
@@ -132,6 +154,9 @@
                                     class="w-full h-full bg-transparent outline-none border-0 font-poppins text-[#696969] text-[18px] sm:text-[20px] tracking-[0.4px] placeholder:text-[#696969]"
                                     placeholder="Confirm Password" />
                             </div>
+                            @error('confirm_password')
+                                <p class="mt-1 pl-2 text-sm text-red-600 font-almarai">{{ $message }}</p>
+                            @enderror
     
                             <div class="pt-3">
                                 <button type="submit"

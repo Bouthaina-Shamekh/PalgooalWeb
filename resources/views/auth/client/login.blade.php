@@ -2,8 +2,7 @@
     title="{{ __('Login') }} - {{ t('Frontend.Palgoals', 'Palgoals') }}"
     description="{{ __('Login to your account to access your dashboard and manage your projects.') }}"
     keywords="login, authentication, user access"
-    ogImage="{{ asset('assets/dashboard/images/authentication/img-auth-sideimg.jpg') }}"
->
+    ogImage="{{ asset('assets/dashboard/images/authentication/img-auth-sideimg.jpg') }}">
     <!-- Login Form Section -->
     <main class="bg-[#F2F2F2]">
         <div class="container mx-auto px-4 sm:px-6 lg:px-12 pt-6 pb-24">
@@ -35,6 +34,11 @@
 
                     <form action="{{ route('client.login.store') }}" class="mt-4 space-y-3" method="post">
                         @csrf
+                        @if ($errors->any())
+                        <div class="mb-3 rounded-[12px] bg-red-100 px-4 py-3 text-sm text-red-700 font-almarai">
+                            {{ $errors->first() }}
+                        </div>
+                        @endif
                         <!-- Email -->
                         <label class="block">
                             <span class="sr-only">Email</span>
@@ -49,9 +53,10 @@
                                             stroke-linecap="round" stroke-linejoin="round" />
                                     </svg>
                                 </span>
-                                <input type="email" name="email" autocomplete="email" placeholder="Email"
-                                    class="w-full h-[60px] rounded-[20px] bg-white pl-14 pr-6 text-[18px] sm:text-[20px] tracking-[0.4px] text-[#696969] font-poppins outline-none focus:ring-2 focus:ring-red-brand/30" />
+                                <input type="email" name="email" value="{{ old('email') }}" autocomplete="email" placeholder="Email"
+                                    class="w-full h-[60px] rounded-[20px] bg-white pl-14 pr-6 text-[18px] sm:text-[20px] tracking-[0.4px] text-[#696969] font-poppins outline-none focus:ring-2 focus:ring-red-brand/30 @error('email') ring-2 ring-red-500/40 @enderror" />
                             </div>
+                           
                         </label>
 
                         <!-- Password -->
@@ -72,8 +77,13 @@
                                 </span>
                                 <input type="password" name="password" autocomplete="current-password"
                                     placeholder="Password"
-                                    class="w-full h-[60px] rounded-[20px] bg-white pl-14 pr-6 text-[18px] sm:text-[20px] tracking-[0.4px] text-[#696969] font-poppins outline-none focus:ring-2 focus:ring-red-brand/30" />
+                                    class="w-full h-[60px] rounded-[20px] bg-white pl-14 pr-6 text-[18px] sm:text-[20px] tracking-[0.4px] text-[#696969] font-poppins outline-none focus:ring-2 focus:ring-red-brand/30 @error('password') ring-2 ring-red-500/40 @enderror" />
                             </div>
+                            @error('password')
+                            <p class="mt-1 pl-2 text-sm text-red-600 font-almarai">
+                                {{ $message }}
+                            </p>
+                            @enderror
                         </label>
 
                         <div class="flex justify-end pt-1">
@@ -167,4 +177,3 @@
     </main>
 
 </x-template.layouts.index-layouts>
-
