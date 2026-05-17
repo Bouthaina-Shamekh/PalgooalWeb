@@ -56,11 +56,7 @@
                                 <input type="email" name="email" value="{{ old('email') }}" autocomplete="email" placeholder="Email"
                                     class="w-full h-[60px] rounded-[20px] bg-white pl-14 pr-6 text-[18px] sm:text-[20px] tracking-[0.4px] text-[#696969] font-poppins outline-none focus:ring-2 focus:ring-red-brand/30 @error('email') ring-2 ring-red-500/40 @enderror" />
                             </div>
-                            @error('email')
-                            <p class="mt-1 pl-2 text-sm text-red-600 font-almarai">
-                                {{ $message }}
-                            </p>
-                            @enderror
+                           
                         </label>
 
                         <!-- Password -->
