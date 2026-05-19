@@ -17,6 +17,7 @@ class DomainProviderController extends Controller
      */
     public function index()
     {
+        $this->authorize('viewAny', DomainProvider::class);
         $providers = DomainProvider::orderBy('name')->get();
         return view('dashboard.management.domain_providers.index', compact('providers'));
     }
@@ -26,6 +27,7 @@ class DomainProviderController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', DomainProvider::class);
         return view('dashboard.management.domain_providers.create');
     }
 
@@ -34,6 +36,7 @@ class DomainProviderController extends Controller
      */
     public function store(DomainProviderRequest $request)
     {
+        $this->authorize('create', DomainProvider::class);
         $data = $request->validated();
 
         // ط¥ظ† ظ„ظ… ظٹظڈط±ط³ظ„ mode ط£ظˆ ظƒط§ظ† ظپط§ط¶ظٹظ‹ط§طŒ ظ†ط³طھظ†طھط¬ظ‡ ظ…ظ† endpoint
@@ -60,6 +63,7 @@ class DomainProviderController extends Controller
      */
     public function edit(DomainProvider $domainProvider)
     {
+        $this->authorize('update', $domainProvider);
         return view('dashboard.management.domain_providers.edit', compact('domainProvider'));
     }
 
@@ -68,6 +72,7 @@ class DomainProviderController extends Controller
      */
     public function update(DomainProviderRequest $request, DomainProvider $domainProvider)
     {
+        $this->authorize('update', $domainProvider);
         $data = $request->validated();
 
         // ظ„ط§ طھط³طھط¨ط¯ظ„ ط§ظ„ط­ظ‚ظˆظ„ ط§ظ„ط­ط³ظ‘ط§ط³ط© ط¥ظ† ظƒط§ظ†طھ ظپط§ط±ط؛ط©
@@ -101,6 +106,7 @@ class DomainProviderController extends Controller
      */
     public function destroy(DomainProvider $domainProvider)
     {
+        $this->authorize('delete', $domainProvider);
         $domainProvider->delete();
         return redirect()
             ->route('dashboard.domain_providers.index')
@@ -112,6 +118,7 @@ class DomainProviderController extends Controller
      */
     public function testConnection(DomainProvider $domainProvider)
     {
+        $this->authorize('update', $domainProvider);
         try {
             if (!$domainProvider->is_active) {
                 return response()->json([

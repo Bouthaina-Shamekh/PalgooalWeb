@@ -14,6 +14,7 @@ class LanguageController extends Controller
      */
     public function index()
     {
+        $this->authorize('viewAny', Language::class);
         $langs  = Language::paginate(10);
         return view('dashboard.lang.index', compact('langs'));
     }
@@ -23,6 +24,7 @@ class LanguageController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', Language::class);
         return view('dashboard.lang.create');
     }
 
@@ -31,6 +33,7 @@ class LanguageController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Language::class);
         $request->validate([
             'name'   => 'required|string|max:255',
             'native' => 'required|string|max:255',
@@ -67,6 +70,7 @@ class LanguageController extends Controller
      */
     public function edit(Request $request, string $id)
     {
+        $this->authorize('viewAny', Language::class);
         $language = $id;
         return view('dashboard.lang.edit')->with('language', Language::find($id));
     }
@@ -76,6 +80,7 @@ class LanguageController extends Controller
      */
     public function update(Request $request, Language $language)
     {
+        $this->authorize('update', $language);
         $request->validate([
             'name'   => 'required|string|max:255',
             'native' => 'required|string|max:255',
@@ -103,6 +108,7 @@ class LanguageController extends Controller
     //  Toggle RTL
     public function toggleRtl(Language $language, Request $request)
     {
+        $this->authorize('update', $language);
         $language->is_rtl = $request->boolean('is_rtl');
         $language->save();
 
@@ -115,6 +121,7 @@ class LanguageController extends Controller
     //  Toggle Status
     public function toggleStatus(Language $language, Request $request)
     {
+        $this->authorize('update', $language);
         $language->is_active = $request->boolean('is_active');
         $language->save();
 
@@ -129,6 +136,7 @@ class LanguageController extends Controller
      */
     public function destroy(Language $language)
     {
+        $this->authorize('delete', $language);
         try {
             // 1. جلب كافة الترجمات المرتبطة بهذه اللغة بناءً على الـ locale (code)
             $translations = \App\Models\TranslationValue::where('locale', $language->code)->get();

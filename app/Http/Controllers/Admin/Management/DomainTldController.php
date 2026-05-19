@@ -14,6 +14,7 @@ class DomainTldController extends Controller
 {
     public function index(Request $req)
     {
+        $this->authorize('viewAny', DomainTld::class);
         $providerId = (int) $req->query('provider_id', 0);
         $providers  = DomainProvider::active()->whereIn('type', ['namecheap', 'enom'])->get();
 
@@ -30,6 +31,7 @@ class DomainTldController extends Controller
 
     public function sync(Request $req)
     {
+        $this->authorize('create', DomainTld::class);
         $provider = DomainProvider::active()
             ->where('id', (int) $req->input('provider_id'))
             ->whereIn('type', ['namecheap', 'enom'])
@@ -50,6 +52,7 @@ class DomainTldController extends Controller
 
     public function updateSale(Request $req)
     {
+        $this->authorize('update', DomainTld::class);
         $data = $req->validate([
             'items' => ['required', 'array'],
             'items.*.id' => ['required', 'integer', 'exists:domain_tld_prices,id'],
@@ -287,6 +290,7 @@ class DomainTldController extends Controller
 
     public function saveCatalog(Request $req)
     {
+        $this->authorize('update', DomainTld::class);
         $visible  = $req->input('visible_ids', []);            // ط§ظ„طµظپظˆظپ ط§ظ„ظ…ط¹ط±ظˆط¶ط© ظپظٹ ط§ظ„طµظپط­ط© ط§ظ„ط­ط§ظ„ظٹط©
         $selected = array_keys($req->input('catalog', []));    // ط§ظ„ظ…ط®طھط§ط±ط© ظپظٹ ظ‡ط°ظ‡ ط§ظ„طµظپط­ط©
 
@@ -305,6 +309,7 @@ class DomainTldController extends Controller
 
     public function saveAll(Request $req)
     {
+        $this->authorize('update', DomainTld::class);
         // Unified save: catalog selection + sale price updates for visible rows only
         $visible  = $req->input('visible_ids', []);            // current page row ids
         $selected = array_keys($req->input('catalog', []));    // checked catalog ids
@@ -342,6 +347,7 @@ class DomainTldController extends Controller
 
     public function applyPricing(Request $req)
     {
+        $this->authorize('update', DomainTld::class);
         $v = $req->validate([
             'scope'            => ['required', 'in:page,provider'],
             'provider_id'      => ['nullable', 'integer', 'exists:domain_providers,id'],
@@ -440,6 +446,7 @@ class DomainTldController extends Controller
 
     public function destroy(DomainTld $domainTld)
     {
+        $this->authorize('delete', $domainTld);
         DB::transaction(function () use ($domainTld) {
             $domainTld->prices()->delete();
             $domainTld->delete();
@@ -449,6 +456,7 @@ class DomainTldController extends Controller
 
     public function bulkDestroy(Request $req)
     {
+        $this->authorize('delete', DomainTld::class);
         $data = $req->validate([
             'delete_ids'   => ['required', 'array'],
             'delete_ids.*' => ['integer', 'exists:domain_tlds,id'],

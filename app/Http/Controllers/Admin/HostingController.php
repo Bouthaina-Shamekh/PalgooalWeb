@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\ProvisioningService;
+use App\Models\Server;
 
 class HostingController extends Controller
 {
@@ -15,6 +16,7 @@ class HostingController extends Controller
 
     public function createAccount()
     {
+        $this->authorize('create', Server::class);
         // غير القيم التالية حسب الحاجة:
         $username = 'm21253';
         $domain = 'mak12.local';  // دومين وهمي

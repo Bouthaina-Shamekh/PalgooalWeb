@@ -177,4 +177,25 @@
             'edit' => __('admin.Edit Translation Value'),
             'delete' => __('admin.Delete Translation Value'),
         ],
+        'plancategories' => [
+            'name' => __('admin.Plan Categories'),
+            'view' => __('admin.View Plan Categories'),
+            'create' => __('admin.Create Plan Category'),
+            'edit' => __('admin.Edit Plan Category'),
+            'delete' => __('admin.Delete Plan Category'),
+        ],
+        'domainproviders' => [
+            'name' => __('admin.Domain Providers'),
+            'view' => __('admin.View Domain Providers'),
+            'create' => __('admin.Create Domain Provider'),
+            'edit' => __('admin.Edit Domain Provider'),
+            'delete' => __('admin.Delete Domain Provider'),
+        ],
+        'domaintlds' => [
+            'name' => __('admin.Domain TLDs'),
+            'view' => __('admin.View Domain TLDs'),
+            'create' => __('admin.Create Domain TLD'),
+            'edit' => __('admin.Edit Domain TLD'),
+            'delete' => __('admin.Delete Domain TLD'),
+        ],
     ];

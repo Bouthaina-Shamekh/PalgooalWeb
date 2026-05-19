@@ -23,6 +23,7 @@ class DomainController extends Controller
     /** ظ‚ط§ط¦ظ…ط© ط§ظ„ظ†ط·ط§ظ‚ط§طھ */
     public function index()
     {
+        $this->authorize('viewAny', Domain::class);
         $domains = Domain::latest()->paginate(10);
         return view('dashboard.management.domains.index', compact('domains'));
     }
@@ -30,6 +31,7 @@ class DomainController extends Controller
     /** ظپظˆط±ظ… ط¥ظ†ط´ط§ط، */
     public function create()
     {
+        $this->authorize('create', Domain::class);
         $clients = Client::all();
         $domain = new Domain();
         return view('dashboard.management.domains.create', compact('clients', 'domain'));
@@ -38,6 +40,7 @@ class DomainController extends Controller
     /** ط­ظپط¸ ط¥ظ†ط´ط§ط، */
     public function store(StoreDomainRequest $request)
     {
+        $this->authorize('create', Domain::class);
         $data = $request->validated();
 
         // طھط·ط¨ظٹط¹ ط§ط³ظ… ط§ظ„ظ†ط·ط§ظ‚
@@ -87,6 +90,7 @@ class DomainController extends Controller
     /** ظپظˆط±ظ… طھط¹ط¯ظٹظ„ */
     public function edit(Domain $domain)
     {
+        $this->authorize('update', $domain);
         $clients = Client::all();
         return view('dashboard.management.domains.edit', compact('domain', 'clients'));
     }
@@ -94,6 +98,7 @@ class DomainController extends Controller
     /** ط­ظپط¸ طھط¹ط¯ظٹظ„ */
     public function update(UpdateDomainRequest $request, Domain $domain)
     {
+        $this->authorize('update', $domain);
         $data = $request->validated();
         $data['domain_name'] = $this->normalizeDomain($data['domain_name']);
 
@@ -115,6 +120,7 @@ class DomainController extends Controller
     /** ط­ط°ظپ */
     public function destroy(Domain $domain)
     {
+        $this->authorize('delete', $domain);
         $domain->delete();
         return redirect()->route('dashboard.domains.index')->with('success', 'طھظ… ط­ط°ظپ ط§ظ„ط¯ظˆظ…ظٹظ† ط¨ظ†ط¬ط§ط­');
     }
@@ -122,6 +128,7 @@ class DomainController extends Controller
     /** ظپظˆط±ظ… ط¥ط¬ط±ط§ط،ط§طھ ط§ظ„طھط³ط¬ظٹظ„ */
     public function editRegister(Domain $domain)
     {
+        $this->authorize('update', $domain);
         $registrarOptions = [
             'enom' => 'enom',
             'namecheap' => 'namecheap',
@@ -136,6 +143,7 @@ class DomainController extends Controller
     /** طھظ†ظپظٹط° ط§ظ„طھط³ط¬ظٹظ„ ظ…ط¹ ط§ظ„ظ…ط²ظˆط¯ */
     public function updateRegister(Request $request, Domain $domain)
     {
+        $this->authorize('update', $domain);
         $validated = $request->validate([
             'registrar' => ['required', 'string', 'max:255'],
             'registration_date' => ['required', 'date'],
@@ -204,6 +212,7 @@ class DomainController extends Controller
     /** ظپظˆط±ظ… ط§ظ„طھط¬ط¯ظٹط¯ */
     public function editRenew(Domain $domain)
     {
+        $this->authorize('update', $domain);
         $currentRenewal = $domain->renewal_date ? Carbon::parse($domain->renewal_date) : null;
         $suggestedRenewal = ($currentRenewal ?? now())->copy()->addYear()->format('Y-m-d');
         $renewalDateValue = ($currentRenewal ?? now())->format('Y-m-d');
@@ -225,6 +234,7 @@ class DomainController extends Controller
     /** ط­ظپط¸ ط§ظ„طھط¬ط¯ظٹط¯ (Placeholder) */
     public function updateRenew(Request $request, Domain $domain)
     {
+        $this->authorize('update', $domain);
         $minimumRenewalDate = $domain->renewal_date
             ? Carbon::parse($domain->renewal_date)->format('Y-m-d')
             : now()->format('Y-m-d');
@@ -252,6 +262,7 @@ class DomainController extends Controller
     /** DNS: ظپظˆط±ظ… */
     public function editDns(Domain $domain)
     {
+        $this->authorize('update', $domain);
         $minNameservers = 2;
         $maxNameservers = 12;
 
@@ -346,6 +357,7 @@ class DomainController extends Controller
     /** DNS: ط­ظپط¸ + ط¯ظپط¹ ظ„ظ„ظ…ط³ط¬ظ„ */
     public function updateDns(UpdateDomainDnsRequest $request, Domain $domain)
     {
+        $this->authorize('update', $domain);
         $validated = $request->validated();
 
         $requestedNameservers = $this->normalizeNameservers($validated['nameservers'] ?? []);

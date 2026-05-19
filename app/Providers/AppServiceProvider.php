@@ -16,6 +16,25 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
+use App\Models\Plan;
+use App\Models\PlanCategory;
+use App\Models\DomainProvider;
+use App\Models\DomainTld;
+use App\Models\Server;
+use App\Models\Media;
+use App\Models\Service;
+use App\Models\TranslationValue;
+use App\Models\Section;
+use App\Policies\LanguagePolicy;
+use App\Policies\PlanPolicy;
+use App\Policies\PlanCategoryPolicy;
+use App\Policies\DomainProviderPolicy;
+use App\Policies\DomainTldPolicy;
+use App\Policies\ServerPolicy;
+use App\Policies\MediaPolicy;
+use App\Policies\ServicePolicy;
+use App\Policies\TranslationValuePolicy;
+use App\Policies\SectionPolicy;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -37,6 +56,16 @@ class AppServiceProvider extends ServiceProvider
         Schema::defaultStringLength(191);
         Gate::policy(SectionDefinition::class, SectionDefinitionPolicy::class);
         Gate::policy(SectionDefinitionField::class, SectionDefinitionFieldPolicy::class);
+        Gate::policy(Section::class, SectionPolicy::class);
+        Gate::policy(Language::class, LanguagePolicy::class);
+        Gate::policy(Plan::class, PlanPolicy::class);
+        Gate::policy(PlanCategory::class, PlanCategoryPolicy::class);
+        Gate::policy(DomainProvider::class, DomainProviderPolicy::class);
+        Gate::policy(DomainTld::class, DomainTldPolicy::class);
+        Gate::policy(Server::class, ServerPolicy::class);
+        Gate::policy(Media::class, MediaPolicy::class);
+        Gate::policy(Service::class, ServicePolicy::class);
+        Gate::policy(TranslationValue::class, TranslationValuePolicy::class);
         // 'is_admin' column does not exist — the correct column is 'super_admin'.
         Gate::define('access-dashboard', fn($user) => (bool)$user->super_admin);
         Gate::define('manage-reviews', fn($user) => (bool)$user->super_admin);

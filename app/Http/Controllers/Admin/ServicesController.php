@@ -20,12 +20,14 @@ class ServicesController extends Controller
     }
     public function index()
     {
+        $this->authorize('viewAny', Service::class);
         $services = Service::with('translations')->paginate(10);
         return view('dashboard.services.index', compact('services'));
     }
 
     public function create()
     {
+        $this->authorize('create', Service::class);
         $service = new Service();
         $serviceTranslations = [];
         $languages = $this->languages;
@@ -34,6 +36,7 @@ class ServicesController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('create', Service::class);
         $request->validate([
             'order' => 'required|integer',
             'icon' => 'nullable',
@@ -73,6 +76,7 @@ class ServicesController extends Controller
 
     public function edit($id)
     {
+        $this->authorize('viewAny', Service::class);
         $service = Service::with('translations')->findOrFail($id);
         $serviceTranslations = [];
         foreach ($this->languages as $lang) {
@@ -90,6 +94,7 @@ class ServicesController extends Controller
     public function update(Request $request, $id)
     {
         $service = Service::findOrFail($id);
+        $this->authorize('update', $service);
         $request->validate([
             'order' => 'required|integer',
             'icon' => 'nullable',
@@ -129,6 +134,7 @@ class ServicesController extends Controller
     public function destroy($id)
     {
         $service = Service::findOrFail($id);
+        $this->authorize('delete', $service);
 
         $service->delete();
 

@@ -45,6 +45,7 @@ class PlanCategoryController extends Controller
      */
     public function toggle(PlanCategory $plan_category)
     {
+        $this->authorize('update', $plan_category);
         try {
             $plan_category->is_active = !$plan_category->is_active;
             $plan_category->save();
@@ -65,12 +66,14 @@ class PlanCategoryController extends Controller
      */
     public function index()
     {
+        $this->authorize('viewAny', PlanCategory::class);
         $categories = PlanCategory::with('translations')->latest()->paginate(20);
         return view('dashboard.management.plan_categories.index', compact('categories'));
     }
 
     public function create()
     {
+        $this->authorize('create', PlanCategory::class);
         return view('dashboard.management.plan_categories.create');
     }
 
@@ -79,6 +82,7 @@ class PlanCategoryController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', PlanCategory::class);
         $validated = $request->validate([
             'translations' => 'nullable|array',
             'translations.*.title' => 'nullable|string|max:255',
@@ -112,6 +116,7 @@ class PlanCategoryController extends Controller
 
     public function edit(PlanCategory $plan_category)
     {
+        $this->authorize('update', $plan_category);
         $plan_category->load('translations');
         return view('dashboard.management.plan_categories.edit', ['category' => $plan_category]);
     }
@@ -121,6 +126,7 @@ class PlanCategoryController extends Controller
      */
     public function update(Request $request, PlanCategory $plan_category): RedirectResponse
     {
+        $this->authorize('update', $plan_category);
         $validated = $request->validate([
             'translations' => 'nullable|array',
             'translations.*.title' => 'nullable|string|max:255',
@@ -159,6 +165,7 @@ class PlanCategoryController extends Controller
      */
     public function destroy(PlanCategory $plan_category): RedirectResponse
     {
+        $this->authorize('delete', $plan_category);
         if ($plan_category->plans()->count() > 0) {
             return back()->with('error', 'لا يمكن حذف التصنيف لأنه مرتبط بخطط استضافة. يرجى حذف أو تعديل الخطط أولاً.');
         }

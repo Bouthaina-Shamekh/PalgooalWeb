@@ -33,6 +33,7 @@ class SectionController extends Controller
      */
     public function index(Page $page)
     {
+        $this->authorize('viewAny', Section::class);
         $page->loadMissing('translations');
 
         $sections = Section::with('translations')
@@ -62,6 +63,7 @@ class SectionController extends Controller
         Page $page,
         ?SectionWorkspacePreviewViewDataFactory $previewViewFactory = null,
     ) {
+        $this->authorize('viewAny', Section::class);
         $sections = Section::with('translations')
             ->where('page_id', $page->id)
             ->orderBy('order')
@@ -96,6 +98,7 @@ class SectionController extends Controller
      */
     public function create(Page $page)
     {
+        $this->authorize('create', Section::class);
         $languages = Language::where('is_active', true)
             ->orderBy('id')
             ->get();
@@ -116,6 +119,7 @@ class SectionController extends Controller
      */
     public function store(Request $request, Page $page)
     {
+        $this->authorize('create', Section::class);
         $validated = $request->validate([
             'type'      => ['required', 'string', 'max:100', Rule::in($this->allowedSectionTypeKeys())],
             'section_definition_id' => $this->sectionDefinitionIdRulesForCreate(),
@@ -177,6 +181,7 @@ class SectionController extends Controller
      */
     public function quickStore(Request $request, Page $page)
     {
+        $this->authorize('create', Section::class);
         $validated = $request->validate([
             'type'    => ['required', 'string', 'max:100', Rule::in($this->allowedSectionTypeKeys())],
             'section_definition_id' => $this->sectionDefinitionIdRulesForCreate(),
@@ -234,6 +239,7 @@ class SectionController extends Controller
      */
     public function edit(Page $page, Section $section)
     {
+        $this->authorize('update', $section);
         $this->ensureSectionBelongsToPage($page, $section);
 
         return view('dashboard.pages.sections.edit', $this->sectionEditorViewData($page, $section));
@@ -244,6 +250,7 @@ class SectionController extends Controller
      */
     public function editor(Page $page, Section $section)
     {
+        $this->authorize('update', $section);
         $this->ensureSectionBelongsToPage($page, $section);
 
         return view('dashboard.pages.sections.partials.sidebar-editor', $this->sectionEditorViewData($page, $section));
@@ -254,6 +261,7 @@ class SectionController extends Controller
      */
     public function update(Request $request, Page $page, Section $section)
     {
+        $this->authorize('update', $section);
         // Always respond with JSON for AJAX / XHR / JSON-accepting requests so
         // any error (validation, server-side exception, or unexpected redirect)
         // surfaces as a readable message in the editor rather than the generic
@@ -391,6 +399,7 @@ class SectionController extends Controller
      */
     public function toggleActive(Page $page, Section $section)
     {
+        $this->authorize('update', $section);
         $this->ensureSectionBelongsToPage($page, $section);
 
         $section->update([
@@ -407,6 +416,7 @@ class SectionController extends Controller
      */
     public function rename(Request $request, Page $page, Section $section)
     {
+        $this->authorize('update', $section);
         $this->ensureSectionBelongsToPage($page, $section);
 
         $validated = $request->validate([
@@ -437,6 +447,7 @@ class SectionController extends Controller
      */
     public function move(Request $request, Page $page, Section $section)
     {
+        $this->authorize('update', $section);
         $this->ensureSectionBelongsToPage($page, $section);
 
         $validated = $request->validate([
@@ -475,6 +486,7 @@ class SectionController extends Controller
      */
     public function reorder(Request $request, Page $page): JsonResponse
     {
+        $this->authorize('update', Section::class);
         $validated = $request->validate([
             'ids' => ['required', 'array', 'min:1'],
             'ids.*' => ['required'],
@@ -534,6 +546,7 @@ class SectionController extends Controller
      */
     public function duplicate(Page $page, Section $section)
     {
+        $this->authorize('create', Section::class);
         $this->ensureSectionBelongsToPage($page, $section);
         $section->loadMissing('translations');
 
@@ -574,6 +587,7 @@ class SectionController extends Controller
      */
     public function destroy(Page $page, Section $section)
     {
+        $this->authorize('delete', $section);
         $this->ensureSectionBelongsToPage($page, $section);
 
         $section->delete();

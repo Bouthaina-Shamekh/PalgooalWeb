@@ -36,6 +36,7 @@ class MediaController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Media::class);
         // If it's a normal browser request (HTML), return the media page view.
         // The front-end (JS) will then consume the JSON API from the same route.
         if (! $request->wantsJson()) {
@@ -95,6 +96,7 @@ class MediaController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Media::class);
         // Case 1: Multiple file upload using "files[]"
         if ($request->hasFile('files')) {
             $request->validate([
@@ -137,6 +139,7 @@ class MediaController extends Controller
      */
     public function show($id)
     {
+        $this->authorize('viewAny', Media::class);
         $media = Media::findOrFail($id);
 
         return response()->json(new MediaResource($media));
@@ -150,6 +153,7 @@ class MediaController extends Controller
      */
     public function edit($id)
     {
+        $this->authorize('viewAny', Media::class);
         $media = Media::findOrFail($id);
 
         return response()->json(new MediaResource($media));
@@ -168,7 +172,7 @@ class MediaController extends Controller
     public function update(Request $request, $id)
     {
         $media = Media::findOrFail($id);
-
+        $this->authorize('update', $media);
         $request->validate([
             'file_original_name' => 'nullable|string|max:255',
             'alt'         => 'nullable|string|max:255',
@@ -203,6 +207,7 @@ class MediaController extends Controller
     public function destroy($id)
     {
         $media = Media::findOrFail($id);
+        $this->authorize('delete', $media);
 
         if ($media->file_path) {
             $disk = $media->disk ?: 'public';

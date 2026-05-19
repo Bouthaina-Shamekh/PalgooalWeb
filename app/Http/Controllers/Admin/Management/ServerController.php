@@ -11,6 +11,7 @@ class ServerController extends Controller
 {
     public function accounts(Server $server)
     {
+        $this->authorize('viewAny', Server::class);
         $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
         $port = 2087;
         $username = $server->username;
@@ -52,17 +53,20 @@ class ServerController extends Controller
     }
     public function index()
     {
+        $this->authorize('viewAny', Server::class);
         $servers = Server::latest()->paginate(20);
         return view('dashboard.management.servers.index', compact('servers'));
     }
 
     public function create()
     {
+        $this->authorize('create', Server::class);
         return view('dashboard.management.servers.create');
     }
 
     public function store(Request $request)
     {
+        $this->authorize('create', Server::class);
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|string|max:50',
@@ -79,11 +83,13 @@ class ServerController extends Controller
 
     public function edit(Server $server)
     {
+        $this->authorize('update', $server);
         return view('dashboard.management.servers.edit', compact('server'));
     }
 
     public function update(Request $request, Server $server)
     {
+        $this->authorize('update', $server);
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'type' => 'required|string|max:50',
@@ -104,12 +110,14 @@ class ServerController extends Controller
 
     public function destroy(Server $server)
     {
+        $this->authorize('delete', $server);
         $server->delete();
         return redirect()->route('dashboard.servers.index')->with('ok', 'تم حذف السيرفر');
     }
 
     public function testConnection(Server $server)
     {
+        $this->authorize('update', $server);
         // اختبار الاتصال الفعلي بـ cPanel API
         $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
         $port = 2087;
@@ -192,6 +200,7 @@ class ServerController extends Controller
 
     public function ssoWhm(Server $server)
     {
+        $this->authorize('update', $server);
         $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
         $port = 2087;
         $username = $server->username;
@@ -243,6 +252,7 @@ class ServerController extends Controller
      */
     public function packages(Server $server)
     {
+        $this->authorize('update', $server);
         $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
         $port = 2087;
         $username = $server->username;

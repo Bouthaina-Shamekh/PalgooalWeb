@@ -21,6 +21,7 @@ class SubscriptionThemeController extends Controller
      */
     public function edit(Subscription $subscription): View
     {
+        $this->authorize('update', $subscription);
         $theme = TenantThemeSettings::fromArray(
             is_array($subscription->theme_settings) ? $subscription->theme_settings : []
         );
@@ -39,6 +40,7 @@ class SubscriptionThemeController extends Controller
      */
     public function update(UpdateSubscriptionThemeRequest $request, Subscription $subscription): RedirectResponse
     {
+        $this->authorize('update', $subscription);
         // Merge validated input on top of existing settings so untouched
         // tokens keep their previous saved values (not reset to defaults).
         $existing = is_array($subscription->theme_settings) ? $subscription->theme_settings : [];

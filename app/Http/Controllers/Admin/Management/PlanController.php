@@ -15,12 +15,14 @@ class PlanController extends Controller
 {
     public function index()
     {
+        $this->authorize('viewAny', Plan::class);
         $plans = Plan::latest()->paginate(20);
         return view('dashboard.management.plans.index', compact('plans'));
     }
 
     public function create()
     {
+        $this->authorize('create', Plan::class);
         $servers = Server::all();
         // eager load translations to avoid N+1 when rendering labels
         $categories = PlanCategory::with('translations')->get();
@@ -137,6 +139,7 @@ class PlanController extends Controller
 
     public function store(Request $r)
     {
+        $this->authorize('create', Plan::class);
         // normalize booleans
         $r->merge([
             'is_active' => $r->boolean('is_active'),
@@ -205,6 +208,7 @@ class PlanController extends Controller
 
     public function edit(Plan $plan)
     {
+        $this->authorize('update', $plan);
         $servers = Server::all();
         $categories = PlanCategory::with('translations')->get();
         $translation = $plan->translations()->where('locale', app()->getLocale())->first();
@@ -213,6 +217,7 @@ class PlanController extends Controller
 
     public function update(Request $r, Plan $plan)
     {
+        $this->authorize('update', $plan);
         $r->merge([
             'is_active' => $r->boolean('is_active'),
             'is_featured' => $r->boolean('is_featured'),
@@ -287,6 +292,7 @@ class PlanController extends Controller
 
     public function destroy(Plan $plan)
     {
+        $this->authorize('delete', $plan);
         $plan->delete();
         return back()->with('ok', 'طھظ… ط­ط°ظپ ط§ظ„ط®ط·ط©');
     }
@@ -296,6 +302,7 @@ class PlanController extends Controller
      */
     public function toggle(Plan $plan)
     {
+        $this->authorize('update', $plan);
         $plan->is_active = ! (bool) $plan->is_active;
         $plan->save();
 
