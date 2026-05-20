@@ -8,7 +8,7 @@
         <div class="container mx-auto px-4 sm:px-6 lg:px-12 pt-6 pb-24">
             <!-- Breadcrumb -->
             <p class="animate-from-left text-gray-dark text-base mb-8 capitalize flex items-center gap-2">
-                <a href="index.html" class="hover:text-purple-brand transition-colors flex items-center gap-1">
+                <a href="{{ url('/') }}" class="hover:text-purple-brand transition-colors flex items-center gap-1">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14.056" height="11.948" viewBox="0 0 14.056 11.948">
                         <path id="Icon_material-home" data-name="Icon material-home"
                             d="M8.622,16.448V12.231h2.811v4.217h3.514V10.825h2.108L10.028,4.5,3,10.825H5.108v5.622Z"
@@ -86,16 +86,21 @@
                             @enderror
                         </label>
 
-                        <div class="flex justify-end pt-1">
+                        <div class="flex items-center justify-between pt-1">
+                            <label class="flex items-center gap-2 cursor-pointer select-none">
+                                <input type="checkbox" name="remember" id="remember"
+                                    class="w-4 h-4 accent-red-brand rounded" />
+                                <span class="text-black text-base font-almarai">{{ __('Remember me') }}</span>
+                            </label>
                             <a href="{{ route('client.password.request') }}"
                                 class="text-black text-base font-almarai hover:text-red-brand transition-colors">
-                                Forgot Your Password?
+                                {{ __('Forgot Your Password?') }}
                             </a>
                         </div>
 
                         <button type="submit"
                             class="w-full h-[50px] rounded-[10px] bg-red-brand text-white text-[20px] font-almarai capitalize hover:brightness-95 active:brightness-90 transition">
-                            Login
+                            {{ __('Login') }}
                         </button>
 
                         <!-- OR -->

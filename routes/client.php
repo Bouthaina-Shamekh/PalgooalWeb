@@ -36,18 +36,20 @@ Route::get('client/register', function () {
 })->middleware('web')->name('client.register');
 
 Route::get('client/forgot-password', function () {
+    if (Auth::guard('client')->check()) {
+        return redirect()->route('client.home');
+    }
     return view('auth.client.forgot-password');
 })->middleware('web')->name('client.password.request');
 
 Route::post('client/forgot-password', function (\Illuminate\Http\Request $request) {
-    $request->validate(['email' => 'required|email']);
+    $request->validate(['email' => ['required', 'email', 'max:191']]);
 
-    $status = \Illuminate\Support\Facades\Password::broker('clients')
+    // Always attempt to send — never reveal whether the email exists (anti-enumeration).
+    \Illuminate\Support\Facades\Password::broker('clients')
         ->sendResetLink($request->only('email'));
 
-    return $status === \Illuminate\Support\Facades\Password::RESET_LINK_SENT  // 'passwords.sent'
-        ? back()->with('status', __($status))
-        : back()->withErrors(['email' => __($status)])->withInput();
+    return back()->with('status', __('If this email is registered, you will receive a password reset link shortly.'));
 })->middleware(['web', 'throttle:5,1'])->name('client.password.email');
 
 Route::post('client/register', function (\Illuminate\Http\Request $request) {
@@ -56,7 +58,11 @@ Route::post('client/register', function (\Illuminate\Http\Request $request) {
     \Illuminate\Support\Facades\Config::set('fortify.guard', 'client');
 
     try {
-        $client = $creator->create($request->all());
+        $client = $creator->create($request->only([
+            'first_name', 'last_name', 'company_name',
+            'email', 'password', 'confirm_password',
+            'phone', 'zip_code', 'avatar',
+        ]));
     } catch (\Illuminate\Validation\ValidationException $e) {
         return redirect()->route('client.register')
             ->withErrors($e->errors())
@@ -67,7 +73,7 @@ Route::post('client/register', function (\Illuminate\Http\Request $request) {
     $request->session()->regenerate();
 
     return redirect()->route('client.home');
-})->middleware('web')->name('client.register.store');
+})->middleware(['web', 'throttle:5,1'])->name('client.register.store');
 
 Route::group([
     'middleware' => ['web', 'auth:client', 'client.dashboard.impersonation'],
@@ -295,6 +301,10 @@ $redirectClientResponse = static function (Request $request) use ($resolveClient
 };
 
 Route::post('client/login', function (Request $request) use ($redirectClientResponse) {
+    $request->validate([
+        'email'    => ['required', 'email', 'max:191'],
+        'password' => ['required', 'string', 'max:255'],
+    ]);
     $credentials = $request->only('email', 'password');
     $client = Client::where('email', $credentials['email'] ?? '')->first();
 
@@ -330,7 +340,15 @@ Route::post('client/login', function (Request $request) use ($redirectClientResp
             ]);
         }
 
-        return $redirectClientResponse($request)->with('success', 'Login successful.');
+        // Redirect to the intended page or the client dashboard.
+        $target = null;
+        $redirectInput = trim((string) $request->input('redirect_to', ''));
+        if ($redirectInput !== '' && str_starts_with($redirectInput, '/') &&
+            !preg_match('#^/(?:assets|build|storage)(?:/|$)#', $redirectInput)) {
+            $target = $redirectInput;
+        }
+        return redirect()->to($target ?? route('client.home'))
+            ->with('success', __('Login successful.'));
     }
 
     if ($request->ajax() || $request->wantsJson() || $request->expectsJson()) {

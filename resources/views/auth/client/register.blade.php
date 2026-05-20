@@ -15,7 +15,8 @@
                             d="M12 3.172 2.93 11.1a1 1 0 0 0-.341.753V21a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-6h5v6a1 1 0 0 0 1 1h5a1 1 0 0 0 1-1v-9.147a1 1 0 0 0-.34-.753L12 3.172Z" />
                     </svg>
                     <p class="font-almarai leading-[25px]">
-                        Home /&nbsp; Sign Up
+                        <a href="{{ url('/') }}" class="hover:text-purple-brand transition-colors">Home</a>
+                        /&nbsp; Sign Up
                     </p>
                 </div>
     
@@ -29,7 +30,7 @@
                             </h1>
                             <div
                                 class="mt-1 flex items-center justify-center gap-2 text-[#626262] text-base leading-[25px]">
-                                <span class="font-almarai">Already Have An Accout?</span>
+                                <span class="font-almarai">Already Have An Account?</span>
                                 <a href="{{ route('client.login') }}"
                                     class="font-almarai font-bold text-black hover:text-red-brand transition-colors">Login</a>
                             </div>

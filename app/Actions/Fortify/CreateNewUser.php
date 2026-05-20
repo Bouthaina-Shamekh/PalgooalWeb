@@ -33,7 +33,7 @@ class CreateNewUser implements CreatesNewUsers
                     'max:255',
                     Rule::unique(Client::class),
                 ],
-                'password' => ['required', 'string', 'min:8'],
+                'password' => ['required', 'string', 'min:8', 'max:255'],
                 'confirm_password' => ['required', 'same:password'],
             ])->validate();
 
