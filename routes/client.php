@@ -13,7 +13,10 @@ use App\Http\Controllers\Client\SubscriptionThemeController;
 use App\Models\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 Route::get('client/', function () {
     return redirect()->route('client.home');
@@ -52,22 +55,41 @@ Route::post('client/forgot-password', function (\Illuminate\Http\Request $reques
     return back()->with('status', __('If this email is registered, you will receive a password reset link shortly.'));
 })->middleware(['web', 'throttle:5,1'])->name('client.password.email');
 
-Route::post('client/register', function (\Illuminate\Http\Request $request) {
-    $creator = app(\App\Actions\Fortify\CreateNewUser::class);
-    // Force client guard so CreateNewUser creates a Client model
-    \Illuminate\Support\Facades\Config::set('fortify.guard', 'client');
+Route::post('client/register', function (Request $request) {
+    // Validate client registration fields directly — avoids relying on the
+    // shared CreateNewUser Fortify action and the Config::set('fortify.guard')
+    // global-state hack that was used before.
+    $validated = Validator::make($request->only([
+        'first_name', 'last_name', 'company_name',
+        'email', 'password', 'confirm_password',
+        'phone', 'zip_code', 'avatar',
+    ]), [
+        'first_name'       => ['required', 'string', 'max:255'],
+        'last_name'        => ['required', 'string', 'max:255'],
+        'company_name'     => ['required', 'string', 'max:255'],
+        'email'            => ['required', 'string', 'email', 'max:255', Rule::unique(Client::class)],
+        'password'         => ['required', 'string', 'min:8', 'max:255'],
+        'confirm_password' => ['required', 'same:password'],
+        'phone'            => ['nullable', 'string', 'max:255'],
+        'zip_code'         => ['nullable', 'string', 'max:50'],
+        'avatar'           => ['nullable', 'image', 'max:2048'],
+    ])->validate();
 
-    try {
-        $client = $creator->create($request->only([
-            'first_name', 'last_name', 'company_name',
-            'email', 'password', 'confirm_password',
-            'phone', 'zip_code', 'avatar',
-        ]));
-    } catch (\Illuminate\Validation\ValidationException $e) {
-        return redirect()->route('client.register')
-            ->withErrors($e->errors())
-            ->withInput();
+    $avatar = null;
+    if ($request->hasFile('avatar')) {
+        $avatar = $request->file('avatar')->store('avatars');
     }
+
+    $client = Client::create([
+        'first_name'   => $validated['first_name'],
+        'last_name'    => $validated['last_name'],
+        'email'        => $validated['email'],
+        'password'     => Hash::make($validated['password']),
+        'company_name' => $validated['company_name'] ?? null,
+        'phone'        => $validated['phone'] ?? null,
+        'zip_code'     => $validated['zip_code'] ?? null,
+        'avatar'       => $avatar,
+    ]);
 
     Auth::guard('client')->login($client);
     $request->session()->regenerate();
@@ -99,7 +121,6 @@ Route::group([
     Route::get('subscriptions/{subscription}/site', [SubscriptionController::class, 'site'])->name('subscriptions.site');
     Route::post('subscriptions/{subscription}/brand-settings', [SubscriptionThemeController::class, 'update'])->name('subscriptions.brand-settings.update');
     Route::post('subscriptions/{subscription}/verify-domain', [SubscriptionController::class, 'verifyDomain'])->name('subscriptions.verify-domain');
-    Route::get('subscriptions/{subscription}/content', [SubscriptionController::class, 'content'])->name('subscriptions.content');
     Route::get('subscriptions/{subscription}/pages', [SubscriptionPageEditorController::class, 'pages'])->name('subscriptions.pages');
     Route::post('subscriptions/{subscription}/pages', [SubscriptionPageEditorController::class, 'storePage'])->name('subscriptions.pages.store');
     Route::match(['put', 'patch'], 'subscriptions/{subscription}/pages/{page}', [SubscriptionPageEditorController::class, 'updatePageSettings'])->name('subscriptions.pages.update');

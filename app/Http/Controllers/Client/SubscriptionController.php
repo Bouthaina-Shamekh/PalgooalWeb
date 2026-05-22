@@ -16,11 +16,6 @@ class SubscriptionController extends Controller
         return $this->renderContentManagement($request, $subscription, $verification);
     }
 
-    public function content(Request $request, Subscription $subscription, DomainVerificationService $verification)
-    {
-        return $this->renderContentManagement($request, $subscription, $verification);
-    }
-
     public function site(
         Request $request,
         Subscription $subscription,
@@ -87,7 +82,7 @@ class SubscriptionController extends Controller
     {
         $client = $request->user('client');
 
-        abort_unless($client && $subscription->client_id === $client->id, 403);
+        abort_unless($client && (int) $subscription->client_id === (int) $client->id, 403);
 
         return $subscription;
     }
