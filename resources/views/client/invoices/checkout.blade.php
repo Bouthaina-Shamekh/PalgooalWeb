@@ -1,340 +1,336 @@
 <x-client-layout>
-    @php
-        $status = (string) ($invoice->status ?? 'unpaid');
-        $paymentState = $payment_state ?: ($status === 'paid' ? 'paid' : '');
-        $totalMajor = number_format(($invoice->total_cents ?? 0) / 100, 2);
-        $currency = $invoice->currency ?? 'USD';
-        $canPay = in_array($status, ['draft', 'unpaid'], true);
-        $hasDomainItem = $invoice->items->contains(fn ($item) => $item->item_type === 'domain');
-        $statusClasses = [
-            'paid' => 'bg-success-500/10 text-success-700',
-            'unpaid' => 'bg-warning-500/10 text-warning-700',
-            'draft' => 'bg-secondary-500/10 text-secondary-700',
-            'cancelled' => 'bg-danger-500/10 text-danger-700',
-        ];
-        $statusClass = $statusClasses[$status] ?? 'bg-secondary-500/10 text-secondary-700';
-    @endphp
+@php
+    $status      = (string) ($invoice->status ?? 'unpaid');
+    $payState    = $payment_state ?: ($status === 'paid' ? 'paid' : '');
+    $totalMajor  = number_format(($invoice->total_cents ?? 0) / 100, 2);
+    $subMajor    = number_format(($invoice->subtotal_cents ?? $invoice->total_cents ?? 0) / 100, 2);
+    $currency    = $invoice->currency ?? 'USD';
+    $canPay      = in_array($status, ['draft', 'unpaid'], true);
+    $hasDomain   = $invoice->items->contains(fn($i) => $i->item_type === 'domain');
+    $clientName  = trim(($invoice->client->first_name ?? '') . ' ' . ($invoice->client->last_name ?? ''));
 
-    <div class="page-header">
-        <div class="page-block">
-            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    $statusMap = [
+        'paid'      => ['label' => 'مدفوعة',     'dot' => 'bg-emerald-500', 'pill' => 'bg-emerald-50 text-emerald-700 ring-emerald-200'],
+        'unpaid'    => ['label' => 'غير مدفوعة', 'dot' => 'bg-red-500',     'pill' => 'bg-red-50 text-red-700 ring-red-200'],
+        'draft'     => ['label' => 'مسودة',      'dot' => 'bg-amber-400',   'pill' => 'bg-amber-50 text-amber-700 ring-amber-200'],
+        'cancelled' => ['label' => 'ملغاة',      'dot' => 'bg-slate-400',   'pill' => 'bg-slate-100 text-slate-600 ring-slate-200'],
+    ];
+    $st = $statusMap[$status] ?? ['label' => ucfirst($status), 'dot' => 'bg-slate-400', 'pill' => 'bg-slate-100 text-slate-600 ring-slate-200'];
+@endphp
+
+{{-- Print Styles --}}
+@push('styles')
+<style>
+@media print {
+    body * { visibility: hidden !important; }
+    #invoice-printable, #invoice-printable * { visibility: visible !important; }
+    #invoice-printable { position: absolute; inset: 0; padding: 32px; }
+    .no-print { display: none !important; }
+}
+</style>
+@endpush
+
+{{-- Breadcrumb (no print) --}}
+<nav class="no-print flex items-center gap-2 text-sm text-slate-400 mb-6 font-cairo" dir="rtl">
+    <a href="{{ route('client.home') }}" class="hover:text-slate-700 transition">الرئيسية</a>
+    <i class="ti ti-chevron-left text-xs"></i>
+    <a href="{{ route('client.invoices') }}" class="hover:text-slate-700 transition">الفواتير</a>
+    <i class="ti ti-chevron-left text-xs"></i>
+    <span class="text-slate-700 font-medium">{{ $invoice->number }}</span>
+</nav>
+
+{{-- Flash (no print) --}}
+@if (session('success'))
+    <div class="no-print mb-5 flex items-center gap-3 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700" dir="rtl">
+        <i class="ti ti-circle-check flex-shrink-0"></i> {{ session('success') }}
+    </div>
+@endif
+@if (session('error'))
+    <div class="no-print mb-5 flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" dir="rtl">
+        <i class="ti ti-alert-circle flex-shrink-0"></i> {{ session('error') }}
+    </div>
+@endif
+@if (session('info'))
+    <div class="no-print mb-5 flex items-center gap-3 rounded-xl bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-700" dir="rtl">
+        <i class="ti ti-info-circle flex-shrink-0"></i> {{ session('info') }}
+    </div>
+@endif
+
+<div class="flex flex-col lg:flex-row gap-6" dir="rtl">
+
+    {{-- ══════════════════════════
+         INVOICE DETAILS (printable)
+    ══════════════════════════ --}}
+    <div class="flex-1 min-w-0" id="invoice-printable">
+
+        {{-- Invoice Card --}}
+        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+
+            {{-- Invoice Header --}}
+            <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 px-6 py-6 border-b border-slate-100">
                 <div>
-                    <ul class="breadcrumb">
-                        <li class="breadcrumb-item">
-                            <a href="{{ route('client.home') }}">{{ t('frontend.client_nav.home', 'Home') }}</a>
-                        </li>
-                        <li class="breadcrumb-item">
-                            <a href="{{ route('client.invoices') }}">{{ t('frontend.client_nav.invoices', 'Invoices') }}</a>
-                        </li>
-                        <li class="breadcrumb-item" aria-current="page">
-                            {{ t('frontend.client_invoices.checkout.title', 'Demo Payment Checkout') }}
-                        </li>
-                    </ul>
-                    <div class="page-header-title">
-                        <h2 class="mb-1">{{ t('frontend.client_invoices.checkout.title', 'Demo Payment Checkout') }}</h2>
-                        <p class="mb-0 text-sm text-muted">
-                            {{ t('frontend.client_invoices.checkout.subtitle', 'Review your invoice and test the payment experience without charging a real card.') }}
-                        </p>
+                    <div class="flex flex-wrap items-center gap-3 mb-2">
+                        <h1 class="text-xl font-bold text-slate-900">{{ $invoice->number }}</h1>
+                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 {{ $st['pill'] }}">
+                            <span class="h-1.5 w-1.5 rounded-full {{ $st['dot'] }}"></span>
+                            {{ $st['label'] }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400">
+                        صدرت: {{ $invoice->created_at?->format('d/m/Y H:i') ?? '—' }}
+                    </p>
+                </div>
+
+                <div class="text-start sm:text-end">
+                    <p class="text-xs text-slate-400 mb-1">الإجمالي المستحق</p>
+                    <p class="text-3xl font-bold text-slate-900">{{ $totalMajor }} <span class="text-lg font-normal text-slate-500">{{ $currency }}</span></p>
+                </div>
+            </div>
+
+            {{-- Invoice Meta --}}
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-0 divide-y sm:divide-y-0 sm:divide-x-reverse sm:divide-x border-b border-slate-100">
+                <div class="px-5 py-4">
+                    <p class="text-xs text-slate-400 mb-1">العميل</p>
+                    <p class="text-sm font-semibold text-slate-800">{{ $clientName ?: 'حسابي' }}</p>
+                    @if ($invoice->client?->email)
+                        <p class="text-xs text-slate-400 mt-0.5">{{ $invoice->client->email }}</p>
+                    @endif
+                </div>
+                <div class="px-5 py-4">
+                    <p class="text-xs text-slate-400 mb-1">تاريخ الاستحقاق</p>
+                    <p class="text-sm font-semibold text-slate-800">{{ $invoice->due_date?->format('d/m/Y') ?? '—' }}</p>
+                </div>
+                <div class="px-5 py-4">
+                    <p class="text-xs text-slate-400 mb-1">رقم الطلب</p>
+                    <p class="text-sm font-semibold text-slate-800">
+                        {{ $invoice->order->order_number ?? 'فاتورة مباشرة' }}
+                    </p>
+                </div>
+            </div>
+
+            {{-- Items --}}
+            <div class="px-6 py-5">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">بنود الفاتورة</p>
+
+                <div class="space-y-2">
+                    @forelse ($invoice->items as $item)
+                        <div class="flex items-center justify-between gap-4 rounded-xl bg-slate-50 px-4 py-3">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-semibold text-slate-800 truncate">{{ $item->description ?: 'بند غير مسمى' }}</p>
+                                <p class="text-xs text-slate-400 mt-0.5">الكمية: {{ $item->qty ?? 1 }}</p>
+                            </div>
+                            <div class="text-end flex-shrink-0">
+                                <p class="text-sm font-bold text-slate-800">
+                                    {{ number_format(($item->total_cents ?? 0) / 100, 2) }} {{ $currency }}
+                                </p>
+                                @if (($item->qty ?? 1) > 1)
+                                    <p class="text-xs text-slate-400">
+                                        {{ number_format(($item->unit_price_cents ?? 0) / 100, 2) }} × {{ $item->qty }}
+                                    </p>
+                                @endif
+                            </div>
+                        </div>
+                    @empty
+                        <div class="flex flex-col items-center justify-center py-8 text-center rounded-xl border border-dashed border-slate-200">
+                            <p class="text-sm text-slate-400">لا توجد بنود في هذه الفاتورة</p>
+                        </div>
+                    @endforelse
+                </div>
+
+                {{-- Totals --}}
+                <div class="mt-4 border-t border-slate-100 pt-4 space-y-2">
+                    <div class="flex items-center justify-between text-sm text-slate-500">
+                        <span>المجموع الفرعي</span>
+                        <span>{{ $subMajor }} {{ $currency }}</span>
+                    </div>
+                    <div class="flex items-center justify-between font-bold text-slate-900">
+                        <span>الإجمالي</span>
+                        <span class="text-lg">{{ $totalMajor }} {{ $currency }}</span>
                     </div>
                 </div>
-                <a href="{{ route('client.invoices') }}" class="btn btn-light-secondary">
-                    <i class="ti ti-arrow-left me-1"></i>
-                    {{ t('frontend.client_invoices.checkout.back', 'Back to Invoices') }}
-                </a>
+            </div>
+
+            {{-- Print Button --}}
+            <div class="no-print px-6 py-4 border-t border-slate-100 flex justify-end">
+                <button onclick="window.print()"
+                        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                    <i class="ti ti-printer text-base leading-none"></i>
+                    طباعة الفاتورة
+                </button>
             </div>
         </div>
     </div>
 
-    @if (session('success'))
-        <div class="alert alert-success" role="alert">{{ session('success') }}</div>
-    @endif
+    {{-- ══════════════════════════
+         PAYMENT PANEL (no print)
+    ══════════════════════════ --}}
+    <div class="no-print w-full lg:w-80 flex-shrink-0">
+        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden sticky top-24">
 
-    @if (session('error'))
-        <div class="alert alert-danger" role="alert">{{ session('error') }}</div>
-    @endif
-
-    @if (session('info'))
-        <div class="alert alert-info" role="alert">{{ session('info') }}</div>
-    @endif
-
-    <div class="grid grid-cols-12 gap-x-6 gap-y-6">
-        <div class="col-span-12 xl:col-span-7">
-            <div class="card">
-                <div class="card-body">
-                    <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div>
-                            <div class="flex flex-wrap items-center gap-2 mb-2">
-                                <h4 class="mb-0 text-body">{{ $invoice->number }}</h4>
-                                <span class="badge {{ $statusClass }}">
-                                    {{ t('frontend.client_invoices.status.' . $status, ucfirst($status)) }}
-                                </span>
-                            </div>
-                            <p class="mb-0 text-sm text-muted">
-                                {{ t('frontend.client_invoices.checkout.invoice_note', 'This page is connected to a demo gateway for user-experience testing only.') }}
-                            </p>
-                        </div>
-                        <div class="text-start md:text-end">
-                            <div class="text-sm text-muted mb-1">{{ t('frontend.client_invoices.checkout.total_due', 'Total Due') }}</div>
-                            <div class="text-2xl font-semibold text-body">{{ $totalMajor }} {{ $currency }}</div>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-12 gap-4 mt-6">
-                        <div class="col-span-12 md:col-span-4">
-                            <div class="rounded-2xl border border-secondary-200/60 p-4 h-full">
-                                <div class="text-xs uppercase tracking-wider text-muted mb-2">
-                                    {{ t('frontend.client_invoices.checkout.client_label', 'Client') }}
-                                </div>
-                                <div class="text-sm font-medium text-body">
-                                    {{ trim(($invoice->client->first_name ?? '') . ' ' . ($invoice->client->last_name ?? '')) ?: t('frontend.client_nav.account', 'My Account') }}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-span-12 md:col-span-4">
-                            <div class="rounded-2xl border border-secondary-200/60 p-4 h-full">
-                                <div class="text-xs uppercase tracking-wider text-muted mb-2">
-                                    {{ t('frontend.client_invoices.checkout.due_date', 'Due Date') }}
-                                </div>
-                                <div class="text-sm font-medium text-body">
-                                    {{ $invoice->due_date?->format('Y-m-d') ?? '-' }}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-span-12 md:col-span-4">
-                            <div class="rounded-2xl border border-secondary-200/60 p-4 h-full">
-                                <div class="text-xs uppercase tracking-wider text-muted mb-2">
-                                    {{ t('frontend.client_invoices.checkout.order_label', 'Order') }}
-                                </div>
-                                <div class="text-sm font-medium text-body">
-                                    {{ $invoice->order->order_number ?? t('frontend.client_invoices.checkout.direct_invoice', 'Direct Invoice') }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            {{-- Demo badge --}}
+            <div class="flex items-center gap-3 bg-slate-50 border-b border-slate-100 px-5 py-3">
+                <div class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
+                    <i class="ti ti-flask text-sm leading-none"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-700">بوابة تجريبية</p>
+                    <p class="text-xs text-slate-400">لا تُخصم رسوم حقيقية</p>
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">{{ t('frontend.client_invoices.checkout.items_title', 'Invoice Items') }}</h5>
-                </div>
-                <div class="card-body">
-                    <div class="space-y-3">
-                        @forelse ($invoice->items as $item)
-                            <div class="rounded-2xl border border-secondary-200/60 p-4">
-                                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                    <div>
-                                        <div class="font-medium text-body">{{ $item->description }}</div>
-                                        <div class="text-sm text-muted">
-                                            {{ t('frontend.client_invoices.checkout.quantity', 'Quantity') }}: {{ $item->qty }}
-                                        </div>
-                                    </div>
-                                    <div class="text-start md:text-end">
-                                        <div class="text-sm text-muted">{{ t('frontend.client_invoices.checkout.line_total', 'Line Total') }}</div>
-                                        <div class="font-semibold text-body">
-                                            {{ number_format(($item->total_cents ?? 0) / 100, 2) }} {{ $currency }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @empty
-                            <div class="rounded-2xl border border-dashed border-secondary-300 p-6 text-center text-sm text-muted">
-                                {{ t('frontend.client_invoices.checkout.no_items', 'No invoice items are available for this record.') }}
-                            </div>
-                        @endforelse
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-span-12 xl:col-span-5">
-            <div class="card sticky top-[90px]">
-                <div class="card-body">
-                    <div class="rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 mb-5">
-                        <div class="flex items-center gap-3">
-                            <span class="w-10 h-10 rounded-2xl bg-primary text-white inline-flex items-center justify-center shrink-0">
-                                <i class="ti ti-flask text-lg leading-none"></i>
-                            </span>
-                            <div>
-                                <div class="font-medium text-body">{{ t('frontend.client_invoices.checkout.demo_mode', 'Demo Gateway Enabled') }}</div>
-                                <div class="text-sm text-muted">
-                                    {{ t('frontend.client_invoices.checkout.demo_note', 'Use the test card below. No real charge will be created.') }}
-                                </div>
-                            </div>
+            <div class="p-5">
+                {{-- PAID state --}}
+                @if ($payState === 'paid')
+                    <div class="text-center py-4">
+                        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 mx-auto mb-3">
+                            <i class="ti ti-circle-check text-3xl leading-none text-emerald-600"></i>
                         </div>
-                    </div>
-
-                    @if ($paymentState === 'paid')
-                        <div class="rounded-2xl border border-success-200 bg-success-500/5 p-5">
-                            <div class="flex items-center gap-3 mb-3">
-                                <span class="w-12 h-12 rounded-2xl bg-success-500 text-white inline-flex items-center justify-center">
-                                    <i class="ti ti-check text-xl leading-none"></i>
-                                </span>
-                                <div>
-                                    <h5 class="mb-1">{{ t('frontend.client_invoices.checkout.paid_title', 'Payment Successful') }}</h5>
-                                    <p class="mb-0 text-sm text-muted">
-                                        {{ t('frontend.client_invoices.checkout.paid_note', 'The invoice is now marked as paid and the related order has been activated.') }}
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-1 gap-2">
-                                @if ($hasDomainItem)
-                                    <a href="{{ route('client.domains.index') }}" class="btn btn-primary">
-                                        {{ t('frontend.client_invoices.checkout.view_domains', 'View My Domains') }}
-                                    </a>
-                                @endif
-                                <a href="{{ route('client.invoices') }}" class="btn btn-light-secondary">
-                                    {{ t('frontend.client_invoices.checkout.view_invoices', 'Back to Invoices') }}
+                        <p class="font-bold text-slate-800 mb-1">تم الدفع بنجاح</p>
+                        <p class="text-xs text-slate-400 mb-5">تم تسجيل الفاتورة كمدفوعة</p>
+                        <div class="space-y-2">
+                            @if ($hasDomain)
+                                <a href="{{ route('client.domains.index') }}"
+                                   class="flex items-center justify-center gap-2 w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
+                                    <i class="ti ti-world text-sm leading-none"></i>
+                                    عرض نطاقاتي
                                 </a>
+                            @endif
+                            <a href="{{ route('client.invoices') }}"
+                               class="flex items-center justify-center gap-2 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                                <i class="ti ti-arrow-right text-sm leading-none"></i>
+                                العودة للفواتير
+                            </a>
+                        </div>
+                    </div>
+
+                {{-- CAN PAY state --}}
+                @elseif ($canPay)
+                    @if ($payState === 'failed')
+                        <div class="mb-4 flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-3 py-2.5 text-xs text-red-700">
+                            <i class="ti ti-alert-circle flex-shrink-0"></i>
+                            فشل الدفع التجريبي. أعد المحاولة.
+                        </div>
+                    @elseif ($payState === 'cancelled')
+                        <div class="mb-4 flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-700">
+                            <i class="ti ti-alert-triangle flex-shrink-0"></i>
+                            تم إلغاء الدفع. الفاتورة لا تزال غير مدفوعة.
+                        </div>
+                    @endif
+
+                    <p class="text-xs font-semibold text-slate-500 mb-3">معلومات البطاقة التجريبية</p>
+
+                    <form id="demoCheckoutForm" method="POST" action="{{ route('client.invoices.checkout.process', $invoice) }}" class="space-y-3">
+                        @csrf
+                        <input type="hidden" name="scenario" id="paymentScenario" value="{{ old('scenario', 'success') }}">
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">اسم حامل البطاقة</label>
+                            <input type="text" name="card_holder"
+                                   value="{{ old('card_holder', 'Demo Client') }}"
+                                   placeholder="Demo Client"
+                                   class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-slate-500 focus:bg-white"
+                                   dir="ltr">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">رقم البطاقة</label>
+                            <input type="text" name="card_number"
+                                   value="{{ old('card_number', '4242 4242 4242 4242') }}"
+                                   placeholder="4242 4242 4242 4242"
+                                   class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-slate-500 focus:bg-white"
+                                   dir="ltr">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">انتهاء الصلاحية</label>
+                                <input type="text" name="expiry_date"
+                                       value="{{ old('expiry_date', '12/30') }}"
+                                       placeholder="12/30"
+                                       class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-slate-500 focus:bg-white"
+                                       dir="ltr">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">CVC</label>
+                                <input type="text" name="cvc"
+                                       value="{{ old('cvc', '123') }}"
+                                       placeholder="123"
+                                       class="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-slate-500 focus:bg-white"
+                                       dir="ltr">
                             </div>
                         </div>
-                    @elseif ($canPay)
-                        @if ($paymentState === 'failed')
-                            <div class="rounded-2xl border border-danger-200 bg-danger-500/5 p-4 mb-4 text-sm text-danger-700">
-                                {{ t('frontend.client_invoices.checkout.failed_note', 'The last demo attempt failed. Update the form or retry the payment.') }}
-                            </div>
-                        @elseif ($paymentState === 'cancelled')
-                            <div class="rounded-2xl border border-warning-200 bg-warning-500/5 p-4 mb-4 text-sm text-warning-700">
-                                {{ t('frontend.client_invoices.checkout.cancelled_note', 'You left the demo payment without completing it. The invoice is still unpaid.') }}
+
+                        @if ($errors->any())
+                            <div class="flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-3 py-2.5 text-xs text-red-700">
+                                <i class="ti ti-alert-circle flex-shrink-0"></i>
+                                {{ $errors->first() }}
                             </div>
                         @endif
 
-                        <form id="demoCheckoutForm" method="POST" action="{{ route('client.invoices.checkout.process', $invoice) }}" class="space-y-4">
-                            @csrf
-                            <input type="hidden" name="scenario" id="paymentScenario" value="{{ old('scenario', 'success') }}">
+                        <button type="submit" id="payNowBtn" data-scenario="success"
+                                class="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-700">
+                            <i class="ti ti-lock-check text-sm leading-none"></i>
+                            دفع {{ $totalMajor }} {{ $currency }}
+                        </button>
 
-                            <div>
-                                <label for="card_holder" class="form-label">
-                                    {{ t('frontend.client_invoices.checkout.card_holder', 'Card Holder') }}
-                                </label>
-                                <input
-                                    id="card_holder"
-                                    type="text"
-                                    name="card_holder"
-                                    class="form-control"
-                                    value="{{ old('card_holder', 'Demo Client') }}"
-                                    placeholder="{{ t('frontend.client_invoices.checkout.card_holder_placeholder', 'Demo Client') }}"
-                                >
-                            </div>
-
-                            <div>
-                                <label for="card_number" class="form-label">
-                                    {{ t('frontend.client_invoices.checkout.card_number', 'Card Number') }}
-                                </label>
-                                <input
-                                    id="card_number"
-                                    type="text"
-                                    name="card_number"
-                                    class="form-control"
-                                    value="{{ old('card_number', '4242 4242 4242 4242') }}"
-                                    placeholder="4242 4242 4242 4242"
-                                >
-                            </div>
-
-                            <div class="grid grid-cols-12 gap-4">
-                                <div class="col-span-12 md:col-span-6">
-                                    <label for="expiry_date" class="form-label">
-                                        {{ t('frontend.client_invoices.checkout.expiry_date', 'Expiry Date') }}
-                                    </label>
-                                    <input
-                                        id="expiry_date"
-                                        type="text"
-                                        name="expiry_date"
-                                        class="form-control"
-                                        value="{{ old('expiry_date', '12/30') }}"
-                                        placeholder="12/30"
-                                    >
-                                </div>
-                                <div class="col-span-12 md:col-span-6">
-                                    <label for="cvc" class="form-label">
-                                        {{ t('frontend.client_invoices.checkout.cvc', 'CVC') }}
-                                    </label>
-                                    <input
-                                        id="cvc"
-                                        type="text"
-                                        name="cvc"
-                                        class="form-control"
-                                        value="{{ old('cvc', '123') }}"
-                                        placeholder="123"
-                                    >
-                                </div>
-                            </div>
-
-                            @if ($errors->any())
-                                <div class="rounded-2xl border border-danger-200 bg-danger-500/5 p-4 text-sm text-danger-700">
-                                    {{ $errors->first() }}
-                                </div>
-                            @endif
-
-                            <button type="submit" class="btn btn-primary w-full" id="payNowBtn" data-scenario="success">
-                                <i class="ti ti-lock-check me-1"></i>
-                                {{ t('frontend.client_invoices.checkout.pay_now', 'Pay') }} {{ $totalMajor }} {{ $currency }}
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="submit" data-scenario="failed"
+                                    class="flex items-center justify-center rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-100">
+                                محاكاة الرفض
                             </button>
-
-                            <div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-                                <button type="submit" class="btn btn-light-danger w-full" data-scenario="failed">
-                                    {{ t('frontend.client_invoices.checkout.simulate_failure', 'Simulate Failure') }}
-                                </button>
-                                <button type="submit" class="btn btn-light-secondary w-full" data-scenario="cancel">
-                                    {{ t('frontend.client_invoices.checkout.cancel_payment', 'Cancel Payment') }}
-                                </button>
-                            </div>
-
-                            <p class="mb-0 text-xs text-muted text-center">
-                                {{ t('frontend.client_invoices.checkout.test_card_help', 'Suggested test card: 4242 4242 4242 4242 with any future expiry date and any 3-digit CVC.') }}
-                            </p>
-                        </form>
-                    @else
-                        <div class="rounded-2xl border border-secondary-200/60 p-5">
-                            <h5 class="mb-2">{{ t('frontend.client_invoices.checkout.closed_title', 'Payment Is Not Available') }}</h5>
-                            <p class="mb-4 text-sm text-muted">
-                                {{ t('frontend.client_invoices.checkout.closed_note', 'This invoice is no longer open for demo checkout.') }}
-                            </p>
-                            <a href="{{ route('client.invoices') }}" class="btn btn-light-secondary w-full">
-                                {{ t('frontend.client_invoices.checkout.view_invoices', 'Back to Invoices') }}
-                            </a>
+                            <button type="submit" data-scenario="cancel"
+                                    class="flex items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">
+                                إلغاء
+                            </button>
                         </div>
-                    @endif
-                </div>
+
+                        <p class="text-center text-xs text-slate-400">
+                            بطاقة تجريبية: 4242 4242 4242 4242
+                        </p>
+                    </form>
+
+                {{-- CLOSED state --}}
+                @else
+                    <div class="text-center py-4">
+                        <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 mx-auto mb-3">
+                            <i class="ti ti-ban text-2xl leading-none text-slate-400"></i>
+                        </div>
+                        <p class="font-semibold text-slate-700 text-sm mb-1">الدفع غير متاح</p>
+                        <p class="text-xs text-slate-400 mb-4">هذه الفاتورة لم تعد مفتوحة للدفع</p>
+                        <a href="{{ route('client.invoices') }}"
+                           class="flex items-center justify-center gap-2 w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                            <i class="ti ti-arrow-right text-sm leading-none"></i>
+                            العودة للفواتير
+                        </a>
+                    </div>
+                @endif
             </div>
         </div>
     </div>
+</div>
 
-    @push('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const form = document.getElementById('demoCheckoutForm');
-                const payNowBtn = document.getElementById('payNowBtn');
-                const scenarioInput = document.getElementById('paymentScenario');
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('demoCheckoutForm');
+    const payNowBtn = document.getElementById('payNowBtn');
+    const scenarioInput = document.getElementById('paymentScenario');
+    if (!form || !payNowBtn || !scenarioInput) return;
 
-                if (!form || !payNowBtn || !scenarioInput) {
-                    return;
-                }
+    form.querySelectorAll('button[type="submit"][data-scenario]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            scenarioInput.value = btn.dataset.scenario || 'success';
+        });
+    });
 
-                const originalLabel = payNowBtn.innerHTML;
-                const processingLabel = @json(t('frontend.client_invoices.checkout.processing', 'Processing Demo Payment...'));
-                const scenarioButtons = form.querySelectorAll('button[type="submit"][data-scenario]');
-
-                scenarioButtons.forEach(function(button) {
-                    button.addEventListener('click', function() {
-                        scenarioInput.value = button.dataset.scenario || 'success';
-                    });
-                });
-
-                form.addEventListener('submit', function(event) {
-                    const submitter = event.submitter;
-                    const selectedScenario = submitter?.dataset?.scenario || scenarioInput.value || 'success';
-
-                    scenarioInput.value = selectedScenario;
-
-                    if (selectedScenario !== 'success') {
-                        return;
-                    }
-
-                    payNowBtn.disabled = true;
-                    payNowBtn.innerHTML = '<i class="ti ti-loader-2 me-1 animate-spin"></i>' + processingLabel;
-                });
-            });
-        </script>
-    @endpush
+    form.addEventListener('submit', function (e) {
+        const scenario = e.submitter?.dataset?.scenario || scenarioInput.value || 'success';
+        scenarioInput.value = scenario;
+        if (scenario !== 'success') return;
+        payNowBtn.disabled = true;
+        payNowBtn.innerHTML = '<i class="ti ti-loader-2 animate-spin text-sm leading-none"></i> جاري معالجة الدفع...';
+    });
+});
+</script>
+@endpush
 </x-client-layout>

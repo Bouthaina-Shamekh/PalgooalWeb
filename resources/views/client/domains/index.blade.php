@@ -1,335 +1,242 @@
 <x-client-layout>
-    @php
-        $statusStyles = [
-            'active' => 'bg-success-500/10 text-success-600',
-            'pending' => 'bg-warning-500/10 text-warning-600',
-            'expired' => 'bg-danger-500/10 text-danger-600',
-        ];
-        $subscriptionsUrl = route('client.subscriptions');
-    @endphp
+@php
+    $statusMap = [
+        'active'    => ['label' => 'نشط',    'dot' => 'bg-emerald-500', 'pill' => 'bg-emerald-50 text-emerald-700 ring-emerald-200'],
+        'pending'   => ['label' => 'معلق',   'dot' => 'bg-amber-400',   'pill' => 'bg-amber-50 text-amber-700 ring-amber-200'],
+        'expired'   => ['label' => 'منتهي',  'dot' => 'bg-red-500',     'pill' => 'bg-red-50 text-red-700 ring-red-200'],
+        'cancelled' => ['label' => 'ملغى',   'dot' => 'bg-slate-400',   'pill' => 'bg-slate-100 text-slate-600 ring-slate-200'],
+    ];
+@endphp
 
-    <div class="page-header">
-        <div class="page-block">
-            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <ul class="breadcrumb">
-                        <li class="breadcrumb-item">
-                            <a href="{{ route('client.home') }}">{{ t('frontend.client_nav.home', 'Home') }}</a>
-                        </li>
-                        <li class="breadcrumb-item" aria-current="page">
-                            {{ t('frontend.client_domains.index.title', 'My Domains') }}
-                        </li>
-                    </ul>
-                    <div class="page-header-title">
-                        <h2 class="mb-1">{{ t('frontend.client_domains.index.title', 'My Domains') }}</h2>
-                        <p class="mb-0 text-sm text-muted">
-                            {{ t('frontend.client_domains.index.subtitle', 'Review your registered domains, renewal dates, and current status.') }}
-                        </p>
-                    </div>
-                </div>
-                <div class="flex flex-wrap items-center gap-2">
-                    <a href="{{ route('client.domains.search') }}" class="btn btn-primary">
-                        <i class="ti ti-search me-1"></i>
-                        {{ t('frontend.client_domains.index.search_cta', 'Search New Domain') }}
-                    </a>
-                </div>
+{{-- Breadcrumb --}}
+<nav class="flex items-center gap-2 text-sm text-slate-400 mb-6 font-cairo" dir="rtl">
+    <a href="{{ route('client.home') }}" class="hover:text-slate-700 transition">الرئيسية</a>
+    <i class="ti ti-chevron-left text-xs"></i>
+    <span class="text-slate-700 font-medium">النطاقات</span>
+</nav>
+
+{{-- Flash Messages --}}
+@if (session('success'))
+    <div class="mb-5 flex items-center gap-3 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700" dir="rtl">
+        <i class="ti ti-circle-check flex-shrink-0"></i>
+        {{ session('success') }}
+    </div>
+@endif
+@if (session('error'))
+    <div class="mb-5 flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700" dir="rtl">
+        <i class="ti ti-alert-circle flex-shrink-0"></i>
+        {{ session('error') }}
+    </div>
+@endif
+
+{{-- Hero Card --}}
+<div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 lg:p-8 mb-6 shadow-xl" dir="rtl">
+    <div class="pointer-events-none absolute -top-10 -left-10 h-48 w-48 rounded-full bg-white/5"></div>
+    <div class="pointer-events-none absolute -bottom-10 -right-10 h-64 w-64 rounded-full bg-white/5"></div>
+
+    <div class="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex items-center gap-4">
+            <div class="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white shadow-inner">
+                <i class="ti ti-world text-2xl leading-none"></i>
             </div>
+            <div>
+                <h1 class="text-xl font-bold text-white lg:text-2xl">نطاقاتي</h1>
+                <p class="mt-1 text-sm text-slate-400">إدارة النطاقات المسجلة وتجديدها</p>
+            </div>
+        </div>
+        <a href="{{ route('client.domains.search') }}"
+           class="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-100">
+            <i class="ti ti-search text-base leading-none"></i>
+            البحث عن نطاق جديد
+        </a>
+    </div>
+
+    {{-- Stats --}}
+    <div class="relative mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        @php
+            $stats = [
+                ['icon' => 'ti-world',         'value' => $domainStats['total'] ?? 0,   'label' => 'إجمالي'],
+                ['icon' => 'ti-circle-check',  'value' => $domainStats['active'] ?? 0,  'label' => 'نشط'],
+                ['icon' => 'ti-loader-2',      'value' => $domainStats['pending'] ?? 0, 'label' => 'معلق'],
+                ['icon' => 'ti-alert-circle',  'value' => $domainStats['expired'] ?? 0, 'label' => 'منتهي'],
+            ];
+        @endphp
+        @foreach ($stats as $stat)
+        <div class="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm">
+            <div class="flex items-center gap-2 text-slate-400 text-xs mb-1">
+                <i class="ti {{ $stat['icon'] }} text-sm"></i>
+                {{ $stat['label'] }}
+            </div>
+            <p class="text-lg font-bold text-white leading-tight">{{ $stat['value'] }}</p>
+        </div>
+        @endforeach
+    </div>
+</div>
+
+{{-- Domains Table --}}
+<div class="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm" dir="rtl">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+            <i class="ti ti-list text-slate-500"></i>
+            <h2 class="font-semibold text-slate-800">قائمة النطاقات</h2>
+            <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500">
+                {{ $domains->total() }}
+            </span>
         </div>
     </div>
 
-    @if (session('success'))
-        <div class="alert alert-success" role="alert">
-            {{ session('success') }}
-        </div>
-    @endif
+    @forelse ($domains as $domain)
+        @php
+            $statusKey   = strtolower((string) $domain->status);
+            $status      = $statusMap[$statusKey] ?? ['label' => ucfirst($statusKey ?: '—'), 'dot' => 'bg-slate-400', 'pill' => 'bg-slate-100 text-slate-600 ring-slate-200'];
+            $renewalDate = $domain->renewal_date ? \Carbon\Carbon::parse($domain->renewal_date) : null;
+            $isExpiringSoon = $renewalDate && $renewalDate->diffInDays(now()) <= 30 && $renewalDate->isFuture();
+        @endphp
+        <div class="group border-b border-slate-100 last:border-0 transition hover:bg-slate-50/60">
+            <div class="flex items-center gap-4 px-6 py-4">
+                {{-- Icon --}}
+                <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+                    <i class="ti ti-world text-base leading-none"></i>
+                </div>
 
-    @if (session('error'))
-        <div class="alert alert-danger" role="alert">
-            {{ session('error') }}
-        </div>
-    @endif
-
-    <div class="grid grid-cols-12 gap-x-6 gap-y-6">
-        <div class="col-span-12">
-            <div class="card overflow-hidden">
-                <div class="card-body">
-                    <div class="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:items-center">
-                        <div>
-                            <span class="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                                Domain setup guidance
+                {{-- Info --}}
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="font-semibold text-slate-800 text-sm break-all">{{ $domain->domain_name }}</span>
+                        <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 {{ $status['pill'] }}">
+                            <span class="h-1.5 w-1.5 rounded-full {{ $status['dot'] }}"></span>
+                            {{ $status['label'] }}
+                        </span>
+                        @if ($isExpiringSoon)
+                            <span class="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                                <i class="ti ti-clock text-xs"></i>
+                                ينتهي قريباً
                             </span>
-                            <h4 class="mt-3 mb-2">Use this page for your domains, and your site dashboard for live status</h4>
-                            <p class="mb-0 text-sm text-muted leading-6">
-                                This page manages the domains in your account. Your actual live website address and custom-domain verification state are shown inside each site dashboard. If you connect a branded domain later, your platform subdomain stays active until the custom domain is fully ready.
-                            </p>
-                            <div class="mt-4 flex flex-wrap gap-2">
-                                <a href="{{ route('client.domains.search') }}" class="btn btn-primary">
-                                    <i class="ti ti-search me-1"></i>
-                                    Search New Domain
-                                </a>
-                                <a href="{{ $subscriptionsUrl }}" class="btn btn-light-secondary">
-                                    <i class="ti ti-layout-dashboard me-1"></i>
-                                    Open Site Dashboards
-                                </a>
-                            </div>
-                        </div>
-                        <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                            <div class="rounded-2xl border border-theme-border dark:border-themedark-border p-4">
-                                <div class="text-xs uppercase tracking-wide text-muted mb-2">1. Add a domain</div>
-                                <p class="mb-0 text-sm text-body">Search, buy, or keep managing the domains already attached to your account.</p>
-                            </div>
-                            <div class="rounded-2xl border border-theme-border dark:border-themedark-border p-4">
-                                <div class="text-xs uppercase tracking-wide text-muted mb-2">2. Connect it to a site</div>
-                                <p class="mb-0 text-sm text-body">Open the correct site dashboard to see the live address, verification badge, and the next required step.</p>
-                            </div>
-                            <div class="rounded-2xl border border-theme-border dark:border-themedark-border p-4">
-                                <div class="text-xs uppercase tracking-wide text-muted mb-2">3. Keep sharing the fallback</div>
-                                <p class="mb-0 text-sm text-body">Until verification completes, visitors should keep using the platform subdomain.</p>
-                            </div>
-                        </div>
+                        @endif
+                        @if ($domain->auto_renew)
+                            <span class="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200">
+                                <i class="ti ti-refresh text-xs"></i>
+                                تجديد تلقائي
+                            </span>
+                        @endif
                     </div>
+                    <p class="mt-0.5 text-xs text-slate-400">
+                        @if ($renewalDate)
+                            ينتهي في {{ $renewalDate->format('d/m/Y') }}
+                        @else
+                            لا يوجد تاريخ تجديد
+                        @endif
+                        @if ($domain->template)
+                            · {{ $domain->template->name }}
+                        @endif
+                    </p>
+                </div>
+
+                {{-- Actions --}}
+                <div class="flex flex-shrink-0 items-center gap-2 opacity-0 group-hover:opacity-100 transition">
+                    {{-- Copy --}}
+                    <button type="button"
+                            data-copy-value="{{ $domain->domain_name }}"
+                            title="نسخ النطاق"
+                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700">
+                        <i class="ti ti-copy text-sm leading-none"></i>
+                    </button>
+
+                    {{-- DNS --}}
+                    <a href="{{ route('client.domains.dns.edit', $domain->id) }}"
+                       title="إعدادات DNS"
+                       class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:bg-slate-50 hover:text-slate-700">
+                        <i class="ti ti-server text-sm leading-none"></i>
+                    </a>
+
+                    {{-- Renew --}}
+                    <form method="POST" action="{{ route('client.domains.renew', $domain->id) }}">
+                        @csrf
+                        <button type="submit"
+                                title="تجديد"
+                                class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200">
+                            <i class="ti ti-refresh text-sm leading-none"></i>
+                        </button>
+                    </form>
+
+                    {{-- Auto-renew toggle --}}
+                    <form method="POST" action="{{ route('client.domains.auto-renew', $domain->id) }}">
+                        @csrf
+                        @method('PATCH')
+                        <button type="submit"
+                                title="{{ $domain->auto_renew ? 'إيقاف التجديد التلقائي' : 'تفعيل التجديد التلقائي' }}"
+                                class="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition
+                                    {{ $domain->auto_renew
+                                        ? 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100'
+                                        : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50' }}">
+                            <i class="ti ti-refresh text-xs leading-none"></i>
+                            {{ $domain->auto_renew ? 'إيقاف التلقائي' : 'تفعيل التلقائي' }}
+                        </button>
+                    </form>
+
+                    {{-- Delete --}}
+                    <form method="POST" action="{{ route('client.domains.destroy', $domain->id) }}"
+                          onsubmit="return confirm('حذف هذا النطاق نهائياً؟')">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit"
+                                title="حذف"
+                                class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:bg-red-50 hover:text-red-600 hover:border-red-200">
+                            <i class="ti ti-trash text-sm leading-none"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
-
-        <div class="col-span-12 md:col-span-6 xl:col-span-3">
-            <div class="card">
-                <div class="card-body">
-                    <p class="text-sm text-gray-500 mb-2">{{ t('frontend.client_domains.index.total_domains', 'Total Domains') }}</p>
-                    <div class="flex items-center justify-between">
-                        <h3 class="mb-0">{{ $domainStats['total'] ?? 0 }}</h3>
-                        <span class="w-10 h-10 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center">
-                            <i class="ti ti-world text-lg leading-none"></i>
-                        </span>
-                    </div>
-                </div>
+    @empty
+        <div class="flex flex-col items-center justify-center py-16 text-center" dir="rtl">
+            <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 mb-4">
+                <i class="ti ti-world-off text-3xl leading-none text-slate-300"></i>
             </div>
+            <p class="font-semibold text-slate-600">لا توجد نطاقات بعد</p>
+            <p class="text-sm text-slate-400 mt-1">ابدأ بالبحث عن نطاق وإضافته لحسابك</p>
+            <a href="{{ route('client.domains.search') }}"
+               class="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700">
+                <i class="ti ti-search text-sm leading-none"></i>
+                البحث عن نطاق
+            </a>
         </div>
+    @endforelse
+</div>
 
-        <div class="col-span-12 md:col-span-6 xl:col-span-3">
-            <div class="card">
-                <div class="card-body">
-                    <p class="text-sm text-gray-500 mb-2">{{ t('frontend.client_domains.index.active_domains', 'Active Domains') }}</p>
-                    <div class="flex items-center justify-between">
-                        <h3 class="mb-0">{{ $domainStats['active'] ?? 0 }}</h3>
-                        <span class="w-10 h-10 rounded-full bg-success-500/10 text-success-500 inline-flex items-center justify-center">
-                            <i class="ti ti-circle-check text-lg leading-none"></i>
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-span-12 md:col-span-6 xl:col-span-3">
-            <div class="card">
-                <div class="card-body">
-                    <p class="text-sm text-gray-500 mb-2">{{ t('frontend.client_domains.index.pending_domains', 'Pending Domains') }}</p>
-                    <div class="flex items-center justify-between">
-                        <h3 class="mb-0">{{ $domainStats['pending'] ?? 0 }}</h3>
-                        <span class="w-10 h-10 rounded-full bg-warning-500/10 text-warning-500 inline-flex items-center justify-center">
-                            <i class="ti ti-loader-2 text-lg leading-none"></i>
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-span-12 md:col-span-6 xl:col-span-3">
-            <div class="card">
-                <div class="card-body">
-                    <p class="text-sm text-gray-500 mb-2">{{ t('frontend.client_domains.index.expired_domains', 'Expired Domains') }}</p>
-                    <div class="flex items-center justify-between">
-                        <h3 class="mb-0">{{ $domainStats['expired'] ?? 0 }}</h3>
-                        <span class="w-10 h-10 rounded-full bg-danger-500/10 text-danger-500 inline-flex items-center justify-center">
-                            <i class="ti ti-alert-circle text-lg leading-none"></i>
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-span-12">
-            <div class="card table-card">
-                <div class="card-header">
-                    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                            <h5 class="mb-1">{{ t('frontend.client_domains.index.portfolio_title', 'Domain Portfolio') }}</h5>
-                            <p class="mb-0 text-sm text-muted">
-                                {{ t('frontend.client_domains.index.portfolio_subtitle', 'All domains associated with your account are listed below.') }}
-                                Your live site address and custom-domain readiness are still tracked from the related subscription.
-                            </p>
-                        </div>
-                        <span class="badge bg-light-primary text-primary px-3 py-2">
-                            {{ $domains->total() }} {{ t('frontend.client_domains.index.records_label', 'records') }}
-                        </span>
-                    </div>
-                </div>
-                <div class="card-body pt-3">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>{{ t('frontend.client_domains.index.domain_name', 'Domain Name') }}</th>
-                                    <th>{{ t('frontend.client_domains.index.registration_date', 'Registered At') }}</th>
-                                    <th>{{ t('frontend.client_domains.index.renewal_date', 'Renewal Date') }}</th>
-                                    <th>{{ t('frontend.client_domains.index.auto_renew', 'Auto-Renew') }}</th>
-                                    <th>{{ t('frontend.client_domains.index.status', 'Status') }}</th>
-                                    <th>{{ t('frontend.client_domains.index.template', 'Template') }}</th>
-                                    <th class="text-end">{{ t('frontend.client_domains.index.actions', 'Actions') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($domains as $domain)
-                                    @php
-                                        $statusKey = strtolower((string) $domain->status);
-                                        $statusClass = $statusStyles[$statusKey] ?? 'bg-light-secondary text-secondary';
-                                    @endphp
-                                    <tr>
-                                        <td>
-                                            <div class="flex flex-col gap-2">
-                                                <div class="flex flex-wrap items-center gap-2">
-                                                    <span class="font-semibold text-body break-all">{{ $domain->domain_name }}</span>
-                                                    <button type="button" data-copy-value="{{ $domain->domain_name }}"
-                                                        class="inline-flex items-center gap-1 rounded-full border border-theme-border dark:border-themedark-border px-2.5 py-1 text-xs font-semibold text-muted transition hover:text-body">
-                                                        <i class="ti ti-copy text-sm leading-none"></i>
-                                                        <span data-copy-label>Copy</span>
-                                                    </button>
-                                                </div>
-                                                <span class="text-xs text-muted">
-                                                    {{ t('frontend.client_domains.index.domain_id', 'ID') }} #{{ $domain->id }}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td>{{ $domain->registration_date ? \Illuminate\Support\Carbon::parse($domain->registration_date)->format('Y-m-d') : '-' }}</td>
-                                        <td>{{ $domain->renewal_date ? \Illuminate\Support\Carbon::parse($domain->renewal_date)->format('Y-m-d') : '-' }}</td>
-                                        <td>
-                                            <div class="flex flex-col gap-2">
-                                                <span class="badge {{ $domain->auto_renew ? 'bg-success-500/10 text-success-600' : 'bg-secondary-500/10 text-secondary-600' }}">
-                                                    {{ $domain->auto_renew ? t('frontend.client_domains.index.auto_renew_on', 'On') : t('frontend.client_domains.index.auto_renew_off', 'Off') }}
-                                                </span>
-                                                <form action="{{ route('client.domains.auto-renew', $domain->id) }}" method="POST">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <button type="submit" class="btn btn-sm {{ $domain->auto_renew ? 'btn-light-danger' : 'btn-light-success' }}">
-                                                        {{ $domain->auto_renew ? t('frontend.client_domains.index.disable_auto_renew', 'Disable') : t('frontend.client_domains.index.enable_auto_renew', 'Enable') }}
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="badge rounded-full px-3 py-2 {{ $statusClass }}">
-                                                {{ ucfirst($statusKey ?: 'unknown') }}
-                                            </span>
-                                        </td>
-                                        <td>{{ $domain->template?->name ?: t('frontend.client_domains.index.no_template', 'No template assigned') }}</td>
-                                        <td class="text-end">
-                                            <div class="flex flex-wrap justify-end gap-2">
-                                                <a href="{{ route('client.domains.dns.edit', $domain->id) }}"
-                                                    class="btn btn-sm btn-light-info"
-                                                    title="{{ t('frontend.client_domains.index.change_dns', 'Change DNS') }}">
-                                                    <i class="ti ti-world me-1 text-base leading-none"></i>
-                                                    {{ t('frontend.client_domains.index.change_dns', 'Change DNS') }}
-                                                </a>
-                                                <form action="{{ route('client.domains.renew', $domain->id) }}" method="POST">
-                                                    @csrf
-                                                    <button type="submit"
-                                                        class="btn btn-sm btn-light-warning"
-                                                        title="{{ t('frontend.client_domains.index.renew', 'Renew') }}">
-                                                        <i class="ti ti-refresh me-1 text-base leading-none"></i>
-                                                        {{ t('frontend.client_domains.index.renew', 'Renew') }}
-                                                    </button>
-                                                </form>
-                                                <a href="{{ route('client.domains.edit', $domain->id) }}"
-                                                    class="w-9 h-9 rounded-xl inline-flex items-center justify-center btn-light-primary"
-                                                    title="{{ t('frontend.client_domains.index.edit', 'Edit') }}">
-                                                    <i class="ti ti-edit text-lg leading-none"></i>
-                                                </a>
-                                                <form action="{{ route('client.domains.destroy', $domain->id) }}" method="POST"
-                                                    onsubmit="return confirm('{{ t('frontend.client_domains.index.confirm_delete', 'Are you sure you want to delete this domain?') }}');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit"
-                                                        class="w-9 h-9 rounded-xl inline-flex items-center justify-center btn-light-danger"
-                                                        title="{{ t('frontend.client_domains.index.delete', 'Delete') }}">
-                                                        <i class="ti ti-trash text-lg leading-none"></i>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="7" class="py-10">
-                                            <div class="flex flex-col items-center justify-center text-center">
-                                                <span class="w-16 h-16 rounded-full bg-primary/10 text-primary inline-flex items-center justify-center mb-4">
-                                                    <i class="ti ti-world text-2xl leading-none"></i>
-                                                </span>
-                                                <h6 class="mb-2">{{ t('frontend.client_domains.index.empty_title', 'No domains found yet') }}</h6>
-                                                <p class="mb-4 text-sm text-muted">
-                                                    {{ t('frontend.client_domains.index.empty_subtitle', 'Start by searching for a new domain and add it to your account.') }}
-                                                </p>
-                                                <a href="{{ route('client.domains.search') }}" class="btn btn-primary">
-                                                    {{ t('frontend.client_domains.index.empty_cta', 'Search for a Domain') }}
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        @if ($domains->hasPages())
-            <div class="col-span-12">
-                <div class="flex justify-end">
-                    {{ $domains->links() }}
-                </div>
-            </div>
-        @endif
+{{-- Pagination --}}
+@if ($domains->hasPages())
+    <div class="mt-5 flex justify-center" dir="rtl">
+        {{ $domains->links() }}
     </div>
+@endif
 
-    @push('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                document.querySelectorAll('[data-copy-value]').forEach((button) => {
-                    button.addEventListener('click', async function () {
-                        const value = button.getAttribute('data-copy-value');
-                        const label = button.querySelector('[data-copy-label]') || button;
-                        const originalLabel = label.textContent;
-
-                        if (!value) {
-                            return;
-                        }
-
-                        try {
-                            if (navigator.clipboard && window.isSecureContext) {
-                                await navigator.clipboard.writeText(value);
-                            } else {
-                                const textarea = document.createElement('textarea');
-                                textarea.value = value;
-                                textarea.setAttribute('readonly', 'readonly');
-                                textarea.style.position = 'absolute';
-                                textarea.style.left = '-9999px';
-                                document.body.appendChild(textarea);
-                                textarea.select();
-                                document.execCommand('copy');
-                                textarea.remove();
-                            }
-
-                            label.textContent = 'Copied';
-                        } catch (error) {
-                            label.textContent = 'Copy failed';
-                        }
-
-                        window.setTimeout(() => {
-                            label.textContent = originalLabel;
-                        }, 1600);
-                    });
-                });
-            });
-        </script>
-    @endpush
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-copy-value]').forEach((btn) => {
+        btn.addEventListener('click', async function () {
+            const value = btn.getAttribute('data-copy-value');
+            const icon = btn.querySelector('i');
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(value);
+                } else {
+                    const ta = document.createElement('textarea');
+                    ta.value = value;
+                    ta.style.position = 'absolute';
+                    ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                }
+                if (icon) { icon.className = 'ti ti-check text-sm leading-none text-emerald-500'; }
+                setTimeout(() => { if (icon) icon.className = 'ti ti-copy text-sm leading-none'; }, 1600);
+            } catch (e) {}
+        });
+    });
+});
+</script>
+@endpush
 </x-client-layout>
