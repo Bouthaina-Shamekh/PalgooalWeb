@@ -41,16 +41,23 @@ class SubscriptionThemeController extends Controller
 
     private function resolveReturnUrl(Request $request): string
     {
+        // Accept an explicit same-origin path from the POST body.
         $url = trim((string) $request->input('_return_url', ''));
 
         if ($url !== '' && str_starts_with($url, '/') && ! str_starts_with($url, '//')) {
             return $url;
         }
 
+        // Fall back to the Referer header — but only when it points to our own
+        // origin, to prevent open-redirect attacks via a crafted Referer.
         $referer = trim((string) $request->headers->get('referer', ''));
 
         if ($referer !== '') {
-            return $referer;
+            $appUrl = rtrim((string) config('app.url', ''), '/');
+
+            if ($appUrl !== '' && str_starts_with($referer, $appUrl . '/')) {
+                return $referer;
+            }
         }
 
         return route('client.home');

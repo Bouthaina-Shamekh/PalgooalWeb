@@ -445,7 +445,7 @@ class SubscriptionPageEditorController extends SectionController
         $candidate = $baseSlug;
         $suffix = 2;
 
-        while ($this->slugExists($candidate, $locale, $ignorePageId)) {
+        while ($this->slugExists($candidate, $locale, $subscription, $ignorePageId)) {
             $candidate = $this->normalizeSlug(sprintf('%s-%d', $baseSlug, $suffix));
             $suffix++;
         }
@@ -453,14 +453,24 @@ class SubscriptionPageEditorController extends SectionController
         return $candidate;
     }
 
-    protected function slugExists(string $slug, string $locale, int|string|null $ignorePageId = null): bool
-    {
+    /**
+     * Check whether a slug already exists for a given locale, scoped to the
+     * subscription's tenant pages only (not globally across all tenants).
+     */
+    protected function slugExists(
+        string $slug,
+        string $locale,
+        Subscription $subscription,
+        int|string|null $ignorePageId = null
+    ): bool {
         $query = PageTranslation::query()
-            ->where('locale', $locale)
-            ->where('slug', $slug);
+            ->join('pages', 'pages.id', '=', 'page_translations.page_id')
+            ->where('page_translations.locale', $locale)
+            ->where('page_translations.slug', $slug)
+            ->where('pages.tenant_id', $subscription->getKey());
 
         if ($ignorePageId !== null) {
-            $query->where('page_id', '!=', $ignorePageId);
+            $query->where('page_translations.page_id', '!=', $ignorePageId);
         }
 
         return $query->exists();
@@ -475,3 +485,4 @@ class SubscriptionPageEditorController extends SectionController
         return $slug !== '' ? $slug : 'page';
     }
 }
+    

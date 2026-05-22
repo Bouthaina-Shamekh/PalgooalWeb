@@ -129,7 +129,7 @@ class HomeController extends Controller
 
     public function subscriptions(Request $request)
     {
-        $client = Client::findOrFail(Auth::guard('client')->id());
+        $client = $request->user('client');
         $search = trim((string) $request->query('q', ''));
         $status = trim((string) $request->query('status', 'all'));
         $allowedStatuses = ['all', 'active', 'pending', 'suspended', 'cancelled'];
@@ -216,10 +216,10 @@ class HomeController extends Controller
         ));
     }
 
-    public function invoices()
+    public function invoices(Request $request)
     {
-        $client = Client::find(Auth::guard('client')->user()->id);
-        $invoices = Invoice::with(['client', 'items'])->where('client_id',$client->id)->latest()->paginate(20);
+        $client = $request->user('client');
+        $invoices = Invoice::with(['client', 'items'])->where('client_id', $client->id)->latest()->paginate(20);
         return view('client.invoices',compact('invoices'));
     }
 
