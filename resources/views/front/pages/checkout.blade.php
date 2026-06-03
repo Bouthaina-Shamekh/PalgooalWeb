@@ -737,50 +737,51 @@
     <section id="view-success" class="hidden max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-16">
 
         <div
-            class="bg-white border border-gray-200 rounded-xl shadow p-8 text-center invoice-print-area">
+            class="bg-white border border-gray-200 rounded-xl shadow p-8 text-center invoice-print-area" dir="rtl">
             <!-- شعار الشركة للطباعة -->
             <div class="print-logo mb-6" style="display:none">
-                <img src="/assets/dashboard/images/logo-white.svg" alt="Palgoals Logo"
+                <img src="/assets/dashboard/images/logo-dark.svg" alt="Palgoals Logo"
                     style="height:60px; margin:auto;">
             </div>
             <div
-                class="mx-auto w-16 h-16 rounded-full grid place-items-center bg-green-100 text-green-700 mb-4 not-print">
-                ✓</div>
-            <h2 class="text-2xl font-extrabold mb-2" id="sx-success-msg">Order completed successfully</h2>
+                class="mx-auto w-16 h-16 rounded-full grid place-items-center bg-green-100 text-green-700 mb-4 not-print text-3xl">
+                ✓
+            </div>
+            <h2 class="text-2xl font-extrabold mb-2" id="sx-success-msg">تم إتمام الطلب بنجاح 🎉</h2>
             <p id="sx-success-subtitle" class="text-gray-600 mb-6 not-print">
-                Review the latest payment, provisioning, and domain status below.
+                راجع حالة الدفع والإعداد والنطاق أدناه. سيتم إعداد موقعك قريباً.
             </p>
-            <div id="sx-status-grid" class="mx-auto mb-6 grid max-w-4xl gap-3 text-left md:grid-cols-3 not-print">
+            <div id="sx-status-grid" class="mx-auto mb-6 grid max-w-4xl gap-3 text-right md:grid-cols-3 not-print">
                 <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
-                    <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Payment</p>
+                    <p class="mb-2 text-xs font-semibold text-gray-400">الدفع</p>
                     <div class="flex items-center justify-between gap-2">
-                        <span id="sx-payment-status-label" class="font-semibold text-gray-900">Pending</span>
                         <span id="sx-payment-status-badge"
                             class="inline-flex items-center rounded-full bg-sky-500/10 px-2.5 py-1 text-xs font-semibold text-sky-600">
-                            Submitted
+                            مُقدَّم
                         </span>
+                        <span id="sx-payment-status-label" class="font-semibold text-gray-900">قيد المراجعة</span>
                     </div>
                 </div>
                 <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
-                    <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Provisioning</p>
+                    <p class="mb-2 text-xs font-semibold text-gray-400">إعداد الموقع</p>
                     <div class="flex items-center justify-between gap-2">
-                        <span id="sx-provisioning-status-label" class="font-semibold text-gray-900">Pending</span>
                         <span id="sx-provisioning-status-badge"
                             class="inline-flex items-center rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-600">
-                            Queued
+                            في الطابور
                         </span>
+                        <span id="sx-provisioning-status-label" class="font-semibold text-gray-900">قيد الانتظار</span>
                     </div>
                 </div>
                 <div class="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4">
-                    <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">Domain</p>
+                    <p class="mb-2 text-xs font-semibold text-gray-400">النطاق</p>
                     <div class="flex items-center justify-between gap-2">
-                        <span id="sx-domain-status-label" class="font-semibold text-gray-900">Pending</span>
                         <span id="sx-domain-status-badge"
                             class="inline-flex items-center rounded-full bg-slate-500/10 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                            Pending
+                            قيد الانتظار
                         </span>
+                        <span id="sx-domain-status-label" class="font-semibold text-gray-900">—</span>
                     </div>
-                    <p id="sx-domain-value" class="mt-2 break-all text-sm text-gray-500">—</p>
+                    <p id="sx-domain-value" class="mt-2 break-all text-sm text-gray-500 text-right">—</p>
                 </div>
             </div>
             <!-- ملخص الفاتورة الاحترافي -->
@@ -801,20 +802,46 @@
             </div>
             <div class="flex flex-wrap items-center justify-center gap-3 not-print">
                 <a id="sx-visit-site" href="#" target="_blank" rel="noopener"
-                    class="hidden inline-flex items-center justify-center rounded-xl px-5 py-2.5 font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition shadow-sm">
-                    Visit website
+                    class="hidden inline-flex items-center gap-2 justify-center rounded-xl px-5 py-2.5 font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:scale-95 transition shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    زيارة موقعك
                 </a>
                 <button id="sx-dashboard"
-                    class="inline-flex items-center justify-center rounded-xl px-5 py-2.5 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">
-                    Manage this site
+                    class="inline-flex items-center gap-2 justify-center rounded-xl px-5 py-2.5 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                    إدارة موقعك
                 </button>
                 <button id="sx-print"
-                    class="rounded-xl px-5 py-2.5 font-semibold border border-gray-300 bg-white hover:bg-gray-50 active:scale-95 transition">
+                    class="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 font-semibold border border-gray-300 bg-white hover:bg-gray-50 active:scale-95 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                     طباعة الفاتورة
                 </button>
             </div>
             <div id="sx-hint" class="text-xs text-gray-500 mt-6 not-print">
-                Your subscriptions dashboard will always show the latest provisioning and domain updates.
+                يمكنك دائماً متابعة حالة الإعداد والنطاق من لوحة تحكم اشتراكاتك.
+            </div>
+
+            <!-- ما الذي يحدث بعد ذلك -->
+            <div class="mt-8 rounded-2xl border border-blue-100 bg-blue-50/60 px-6 py-5 text-right not-print" dir="rtl">
+                <h3 class="font-bold text-blue-900 mb-3 text-sm">📋 ما الذي يحدث بعد ذلك؟</h3>
+                <ol class="space-y-2 text-sm text-blue-800">
+                    <li class="flex items-start gap-2">
+                        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-200 text-blue-700 font-bold text-xs flex items-center justify-center mt-0.5">1</span>
+                        <span>سنراجع طلبك وطريقة الدفع خلال وقت قصير.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-200 text-blue-700 font-bold text-xs flex items-center justify-center mt-0.5">2</span>
+                        <span>سيتم إعداد موقعك تلقائياً بعد تأكيد الدفع.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-200 text-blue-700 font-bold text-xs flex items-center justify-center mt-0.5">3</span>
+                        <span>ستصلك رسالة بريد إلكتروني عند جاهزية موقعك وبيانات الدخول.</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="flex-shrink-0 w-5 h-5 rounded-full bg-blue-200 text-blue-700 font-bold text-xs flex items-center justify-center mt-0.5">4</span>
+                        <span>ادخل إلى لوحة التحكم لتخصيص محتوى موقعك وتعديل صفحاته.</span>
+                    </li>
+                </ol>
             </div>
         </div>
     </section>
@@ -1275,16 +1302,16 @@
                 body.appendChild(tr);
             };
 
-            appendRow('Order number', data.order_no, {
+            appendRow('رقم الطلب', data.order_no, {
                 rowClass: 'bg-gray-50',
                 valueClass: 'py-3 px-4 font-bold',
             });
-            appendRow('Mode', checkoutMode === 'template' ? 'Template checkout' : 'Hosting checkout');
-            appendRow('Product', data.template_name || data.plan_name || '');
-            appendRow('Payment', data.payment_status_label || '');
-            appendRow('Provisioning', data.provisioning_status_label || '');
-            appendRow('Domain', data.domain || '');
-            appendRow('Total', data.total || '', {
+            appendRow('نوع الاشتراك', checkoutMode === 'template' ? 'شراء قالب' : 'استضافة');
+            appendRow('المنتج', data.template_name || data.plan_name || '');
+            appendRow('الدفع', data.payment_status_label || '');
+            appendRow('إعداد الموقع', data.provisioning_status_label || '');
+            appendRow('النطاق', data.domain || '');
+            appendRow('الإجمالي', data.total || '', {
                 rowClass: 'bg-green-50 font-extrabold text-lg',
                 labelClass: 'py-4 px-4',
                 valueClass: 'py-4 px-4 text-green-700',
@@ -1317,23 +1344,23 @@
             };
 
             if (title) {
-                title.textContent = data.success_title || 'Order completed successfully';
+                title.textContent = data.success_title || 'تم إتمام الطلب بنجاح 🎉';
             }
 
             if (subtitle) {
-                subtitle.textContent = data.success_message || 'Review the latest payment, provisioning, and domain status below.';
+                subtitle.textContent = data.success_message || 'راجع حالة الدفع والإعداد والنطاق أدناه. سيتم إعداد موقعك قريباً.';
             }
 
-            document.getElementById('sx-payment-status-label')?.replaceChildren(document.createTextNode(data.payment_status_label || 'Pending'));
-            document.getElementById('sx-provisioning-status-label')?.replaceChildren(document.createTextNode(data.provisioning_status_label || 'Pending'));
-            document.getElementById('sx-domain-status-label')?.replaceChildren(document.createTextNode(data.domain_status_label || 'Pending'));
+            document.getElementById('sx-payment-status-label')?.replaceChildren(document.createTextNode(data.payment_status_label || 'قيد المراجعة'));
+            document.getElementById('sx-provisioning-status-label')?.replaceChildren(document.createTextNode(data.provisioning_status_label || 'قيد الانتظار'));
+            document.getElementById('sx-domain-status-label')?.replaceChildren(document.createTextNode(data.domain_status_label || '—'));
 
-            applyBadge('sx-payment-status-badge', data.payment_status_tone, data.payment_status_label || 'Pending');
-            applyBadge('sx-provisioning-status-badge', data.provisioning_status_tone, data.provisioning_status_label || 'Pending');
-            applyBadge('sx-domain-status-badge', data.domain_status_tone, data.domain_status_label || 'Pending');
+            applyBadge('sx-payment-status-badge', data.payment_status_tone, data.payment_status_label || 'مُقدَّم');
+            applyBadge('sx-provisioning-status-badge', data.provisioning_status_tone, data.provisioning_status_label || 'في الطابور');
+            applyBadge('sx-domain-status-badge', data.domain_status_tone, data.domain_status_label || 'قيد الانتظار');
 
             if (domainValue) {
-                domainValue.textContent = data.domain || 'Automatic subdomain';
+                domainValue.textContent = data.domain || 'سيتم توليد Subdomain تلقائياً';
             }
 
             if (dashboardButton) {
@@ -1358,8 +1385,8 @@
 
             if (hint) {
                 hint.textContent = data.site_url
-                    ? 'Your website is live now. You can open it immediately or continue to your subscriptions dashboard.'
-                    : 'Your subscriptions dashboard will always show the latest provisioning and domain updates.';
+                    ? 'موقعك جاهز الآن! يمكنك فتحه مباشرة أو الانتقال إلى لوحة التحكم لإدارة محتواه.'
+                    : 'يمكنك دائماً متابعة حالة الإعداد والنطاق من لوحة تحكم اشتراكاتك.';
             }
         }
         /* ========================== منطق الصفحة ========================== */

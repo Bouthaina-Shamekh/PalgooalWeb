@@ -705,7 +705,7 @@
                                     class="flex flex-1 items-center justify-center rounded-xl border border-[#E7E7E7] bg-[#F1F1F1] px-4 py-3 text-base font-extrabold text-purple-brand"
                                     id="period-dropdown-btn"
                                 >
-                                    <span id="period-label">1 Year</span>
+                                    <span id="period-label">سنة واحدة</span>
                                 </button>
 
                                 <button
@@ -723,13 +723,16 @@
                             </div>
 
                             <div id="period-dropdown-menu" class="mt-2 hidden overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+                                @php
+                                    $yearLabels = [1 => 'سنة واحدة', 2 => 'سنتان', 3 => '3 سنوات'];
+                                @endphp
                                 @foreach ([1, 2, 3] as $yearOption)
                                     <button
                                         type="button"
                                         class="period-option block w-full px-4 py-3 text-start text-purple-brand hover:bg-gray-100"
                                         data-period="{{ $yearOption }}"
                                     >
-                                        {{ $yearOption }} {{ Str::plural('Year', $yearOption) }}
+                                        {{ $yearLabels[$yearOption] }}
                                     </button>
                                 @endforeach
                             </div>

@@ -15,19 +15,19 @@
     $displayHost = $activeHost ?: $fallbackHost ?: ($siteUrl ? parse_url($siteUrl, PHP_URL_HOST) : null);
 
     $heroStatus = [
-        'label' => $siteUrl ? 'Live' : 'Draft',
+        'label' => $siteUrl ? t('site.Live', 'Live') : t('site.Draft', 'Draft'),
         'tone' => $siteUrl
             ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
             : 'border-amber-200 bg-amber-50 text-amber-700',
     ];
 
     $provisioningText = $subscription->provisioning_status === 'active'
-        ? 'Provisioned'
-        : ucfirst((string) ($subscription->provisioning_status ?? 'Pending'));
+        ? t('site.Provisioned', 'Provisioned')
+        : ucfirst((string) ($subscription->provisioning_status ?? t('site.Pending', 'Pending')));
 
     $domainLabel = $needsVerification
-        ? ($domainVerification['label'] ?? 'Verification pending (DNS not detected yet)')
-        : 'Platform subdomain active';
+        ? ($domainVerification['label'] ?? t('site.Verification_Pending', 'Verification pending (DNS not detected yet)'))
+        : t('site.Platform_Subdomain_Active', 'Platform subdomain active');
 
     $domainTone = match (true) {
         ! $needsVerification => 'border-sky-200 bg-sky-50 text-sky-700',
@@ -38,11 +38,11 @@
     };
 
     $domainSummary = match (true) {
-        ! $needsVerification => 'Your platform subdomain is already live. You can connect your own domain whenever you are ready.',
-        $verificationStatus === 'active' => 'Your custom domain is active now. The platform subdomain still exists as a safe fallback.',
-        $verificationStatus === 'ssl_pending' => 'We found the domain in DNS, but HTTPS is still finishing. Keep sharing the platform subdomain for now.',
-        $verificationStatus === 'failed' => 'We could not verify the custom domain yet. The platform subdomain stays live while you update the domain settings.',
-        default => 'Your custom domain is being checked. The platform subdomain stays live until everything is ready.',
+        ! $needsVerification => t('site.Domain_Summary_Subdomain', 'Your platform subdomain is already live. You can connect your own domain whenever you are ready.'),
+        $verificationStatus === 'active' => t('site.Domain_Summary_Active', 'Your custom domain is active now. The platform subdomain still exists as a safe fallback.'),
+        $verificationStatus === 'ssl_pending' => t('site.Domain_Summary_Ssl', 'We found the domain in DNS, but HTTPS is still finishing. Keep sharing the platform subdomain for now.'),
+        $verificationStatus === 'failed' => t('site.Domain_Summary_Failed', 'We could not verify the custom domain yet. The platform subdomain stays live while you update the domain settings.'),
+        default => t('site.Domain_Summary_Checking', 'Your custom domain is being checked. The platform subdomain stays live until everything is ready.'),
     };
 
     $onboardingSteps = collect($siteOnboarding['steps'] ?? []);
@@ -55,60 +55,60 @@
     $currentStepUrl = data_get($activeStep, 'url', $previewUrl);
 
     $heroPrimaryLabel = match ($currentStepKey) {
-        'manage_pages' => __('Manage your pages'),
-        'connect_domain' => __('Connect your domain'),
-        'complete' => __('View website'),
-        default => __('Start editing your site'),
+        'manage_pages' => t('site.Manage_Your_Pages', 'Manage your pages'),
+        'connect_domain' => t('site.Connect_Your_Domain', 'Connect your domain'),
+        'complete' => t('site.View_Website', 'View website'),
+        default => t('site.Start_Editing', 'Start editing your site'),
     };
 
     $currentStepTitle = match ($currentStepKey) {
-        'manage_pages' => __('Review your pages'),
-        'connect_domain' => __('Connect your domain'),
-        'complete' => __('Your setup is complete'),
-        default => __('Start with your homepage'),
+        'manage_pages' => t('site.Review_Your_Pages', 'Review your pages'),
+        'connect_domain' => t('site.Connect_Your_Domain', 'Connect your domain'),
+        'complete' => t('site.Setup_Complete', 'Your setup is complete'),
+        default => t('site.Start_With_Homepage', 'Start with your homepage'),
     };
 
     $currentStepHelper = match ($currentStepKey) {
-        'manage_pages' => __('Review the pages that came with your site and add or refine anything new.'),
-        'connect_domain' => __('Your site is already live on the platform subdomain. Connect a branded domain when you are ready.'),
-        'complete' => __('Homepage, pages, and domain are all in place. You can keep refining your site any time.'),
-        default => __('Start with your homepage. This is the fastest way to make your site feel like yours.'),
+        'manage_pages' => t('site.Step_Helper_Pages', 'Review the pages that came with your site and add or refine anything new.'),
+        'connect_domain' => t('site.Step_Helper_Domain', 'Your site is already live on the platform subdomain. Connect a branded domain when you are ready.'),
+        'complete' => t('site.Step_Helper_Complete', 'Homepage, pages, and domain are all in place. You can keep refining your site any time.'),
+        default => t('site.Step_Helper_Homepage', 'Start with your homepage. This is the fastest way to make your site feel like yours.'),
     };
 
     $currentStepButtonLabel = match ($currentStepKey) {
-        'manage_pages' => __('Manage pages'),
-        'connect_domain' => __('Open domain settings'),
-        'complete' => __('View website'),
-        default => __('Continue editing'),
+        'manage_pages' => t('site.Manage_Pages', 'Manage pages'),
+        'connect_domain' => t('site.Open_Domain_Settings', 'Open domain settings'),
+        'complete' => t('site.View_Website', 'View website'),
+        default => t('site.Continue_Editing', 'Continue editing'),
     };
 
     $currentStepHint = match ($currentStepKey) {
-        'manage_pages' => __("Next: You'll connect your domain"),
-        'connect_domain' => __('Next: Your onboarding will be complete'),
-        'complete' => __('Everything is connected and ready to share'),
-        default => __("Next: You'll review your pages"),
+        'manage_pages' => t('site.Hint_Connect_Domain', "Next: You'll connect your domain"),
+        'connect_domain' => t('site.Hint_Onboarding_Complete', 'Next: Your onboarding will be complete'),
+        'complete' => t('site.Hint_Ready_To_Share', 'Everything is connected and ready to share'),
+        default => t('site.Hint_Review_Pages', "Next: You'll review your pages"),
     };
 
     $currentCardTone = $currentStepKey === 'complete'
         ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-white'
         : 'border-[#240B36]/10 bg-gradient-to-br from-[#240B36]/[0.04] to-white';
 
-    $currentStepBadgeLabel = $currentStepKey === 'complete' ? __('Completed') : __('Current step');
+    $currentStepBadgeLabel = $currentStepKey === 'complete' ? t('site.Completed', 'Completed') : t('site.Current_Step', 'Current step');
     $currentStepButtonTone = $currentStepKey === 'complete'
         ? 'bg-emerald-600 hover:bg-emerald-700'
         : 'bg-[#240B36] hover:bg-[#34104d]';
 
     $stepCompletionMessages = [
-        'edit_homepage' => __('Homepage completed'),
-        'manage_pages' => __('Pages step completed'),
-        'connect_domain' => __('Domain connected'),
+        'edit_homepage' => t('site.Homepage_Completed', 'Homepage completed'),
+        'manage_pages' => t('site.Pages_Completed', 'Pages step completed'),
+        'connect_domain' => t('site.Domain_Connected', 'Domain connected'),
     ];
 
     $completedMilestones = $onboardingSteps
         ->filter(fn (array $step) => $step['completed'])
         ->map(fn (array $step) => [
             'key' => $step['key'],
-            'message' => $stepCompletionMessages[$step['key']] ?? __($step['label']),
+            'message' => $stepCompletionMessages[$step['key']] ?? $step['label'],
         ])
         ->values();
 
@@ -116,13 +116,13 @@
 
     $currentStepMomentum = match ($currentStepKey) {
         'manage_pages' => $latestCompletedMilestone
-            ? __('Nice progress. :message. Next, review the rest of your pages so visitors can explore more of your site.', ['message' => $latestCompletedMilestone['message']])
-            : __('Nice progress. Next, review the rest of your pages so visitors can explore more of your site.'),
+            ? strtr(t('site.Momentum_Pages_With_Msg', 'Nice progress. :message. Next, review the rest of your pages so visitors can explore more of your site.'), [':message' => $latestCompletedMilestone['message']])
+            : t('site.Momentum_Pages', 'Nice progress. Next, review the rest of your pages so visitors can explore more of your site.'),
         'connect_domain' => $latestCompletedMilestone
-            ? __('Nice progress. :message. Next, connect your domain when you are ready to share your branded address.', ['message' => $latestCompletedMilestone['message']])
-            : __('Nice progress. Next, connect your domain when you are ready to share your branded address.'),
-        'complete' => __('Homepage completed, pages reviewed, and domain connected. Your site is ready to share.'),
-        default => __('Once your homepage feels right, the next step is reviewing the rest of your pages.'),
+            ? strtr(t('site.Momentum_Domain_With_Msg', 'Nice progress. :message. Next, connect your domain when you are ready to share your branded address.'), [':message' => $latestCompletedMilestone['message']])
+            : t('site.Momentum_Domain', 'Nice progress. Next, connect your domain when you are ready to share your branded address.'),
+        'complete' => t('site.Momentum_Complete', 'Homepage completed, pages reviewed, and domain connected. Your site is ready to share.'),
+        default => t('site.Momentum_Default', 'Once your homepage feels right, the next step is reviewing the rest of your pages.'),
     };
 @endphp
 
@@ -138,7 +138,7 @@
                 <div class="max-w-3xl space-y-6 text-start">
                     <div class="flex flex-wrap items-center gap-3">
                         <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] {{ $heroStatus['tone'] }}">
-                            {{ __($heroStatus['label']) }}
+                            {{ $heroStatus['label'] }}
                         </span>
 
                         @if ($displayHost)
@@ -147,12 +147,12 @@
                     </div>
 
                     <div class="space-y-3">
-                        <p class="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">{{ __('Site dashboard') }}</p>
+                        <p class="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">{{ t('site.Site_Dashboard', 'Site dashboard') }}</p>
                         <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
                             {{ $siteName }}
                         </h1>
                         <p class="max-w-2xl text-base leading-7 text-slate-600">
-                            {{ __('Your website is ready. Start with your homepage to make it feel like your business, then keep refining from there.') }}
+                            {{ t('site.Hero_Subtitle', 'Your website is ready. Start with your homepage to make it feel like your business, then keep refining from there.') }}
                         </p>
                     </div>
 
@@ -163,13 +163,13 @@
                         </a>
                         <a href="{{ $previewUrl }}" target="_blank" rel="noopener"
                             class="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-                            {{ __('Preview') }}
+                            {{ t('site.Preview', 'Preview') }}
                         </a>
                     </div>
 
                     <div class="flex flex-wrap gap-6 text-sm text-slate-500">
-                        <span>{{ __('Template') }}: <span class="font-medium text-slate-700">{{ $templateName }}</span></span>
-                        <span>{{ __('Status') }}: <span class="font-medium text-slate-700">{{ $provisioningText }}</span></span>
+                        <span>{{ t('site.Template', 'Template') }}: <span class="font-medium text-slate-700">{{ $templateName }}</span></span>
+                        <span>{{ t('site.Status', 'Status') }}: <span class="font-medium text-slate-700">{{ $provisioningText }}</span></span>
                     </div>
                 </div>
             </section>
@@ -180,9 +180,7 @@
                         <div class="space-y-3">
                             <div class="flex flex-wrap items-center gap-3 text-sm text-slate-500 rtl:flex-row-reverse">
                                 <span>
-                                    {{ $currentStepKey === 'complete'
-                                        ? __(':completed of :total completed', ['completed' => $completedSteps, 'total' => $totalSteps])
-                                        : __('Step :step of :total', ['step' => $currentStepPosition, 'total' => $totalSteps]) }}
+                                    {{ strtr($currentStepKey === 'complete' ? t('site.Steps_Completed_Of', ':completed of :total completed') : t('site.Step_Of_Total', 'Step :step of :total'), $currentStepKey === 'complete' ? [':completed' => $completedSteps, ':total' => $totalSteps] : [':step' => $currentStepPosition, ':total' => $totalSteps]) }}
                                 </span>
                                 <span>{{ $progressPercent }}%</span>
                                 <div class="flex items-center gap-1.5 rtl:flex-row-reverse" aria-hidden="true">
@@ -202,7 +200,7 @@
                                             : ($step['active']
                                                 ? 'border-[#240B36]/10 bg-white text-[#240B36]'
                                                 : 'border-slate-200 bg-white text-slate-500') }}">
-                                        {{ __(':step. :label', ['step' => $loop->iteration, 'label' => __($step['label'])]) }}
+                                        {{ $loop->iteration . '. ' . $step['label'] }}
                                     </span>
                                 @endforeach
                             </div>
@@ -212,7 +210,7 @@
                             <div class="rounded-2xl border border-emerald-200/80 bg-white/80 p-4 shadow-sm">
                                 <div class="flex flex-wrap items-center gap-2 text-start rtl:flex-row-reverse">
                                     <span class="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">
-                                        {{ __('Completed so far') }}
+                                        {{ t('site.Completed_So_Far', 'Completed so far') }}
                                     </span>
 
                                     @foreach ($completedMilestones as $milestone)
@@ -253,14 +251,14 @@
                 <aside class="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-sm">
                     <div class="space-y-4 text-start">
                         <div class="space-y-2">
-                            <p class="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">{{ __('Domain') }}</p>
+                            <p class="text-sm font-semibold uppercase tracking-[0.24em] text-slate-400">{{ t('site.Domain', 'Domain') }}</p>
                             <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold {{ $domainTone }}">
                                 {{ $domainLabel }}
                             </span>
                         </div>
 
                         <div class="space-y-2">
-                            <h3 class="text-lg font-semibold text-slate-950">{{ __('Your site is live') }}</h3>
+                            <h3 class="text-lg font-semibold text-slate-950">{{ t('site.Your_Site_Is_Live', 'Your site is live') }}</h3>
                             <p class="text-sm leading-6 text-slate-600">{{ $domainSummary }}</p>
                             @if ($displayHost)
                                 <p class="text-sm font-medium text-slate-700">{{ $displayHost }}</p>
@@ -270,7 +268,7 @@
                         <div class="pt-1">
                             <a href="{{ $domainsUrl }}"
                                 class="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
-                                {{ __('Use your own domain') }}
+                                {{ t('site.Use_Your_Own_Domain', 'Use your own domain') }}
                             </a>
                         </div>
                     </div>
@@ -281,23 +279,23 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <a href="{{ $headerEditorUrl }}"
                         class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                        {{ __('Edit header') }}
+                        {{ t('site.Edit_Header', 'Edit header') }}
                     </a>
                     <a href="{{ $footerEditorUrl }}"
                         class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                        {{ __('Edit footer') }}
+                        {{ t('site.Edit_Footer', 'Edit footer') }}
                     </a>
                     <a href="{{ $pagesUrl }}"
                         class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                        {{ __('Manage pages') }}
+                        {{ t('site.Manage_Pages', 'Manage pages') }}
                     </a>
                     <a href="{{ $domainsUrl }}"
                         class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                        {{ __('Connect domain') }}
+                        {{ t('site.Connect_Domain', 'Connect domain') }}
                     </a>
                     <a href="{{ $previewUrl }}" target="_blank" rel="noopener"
                         class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
-                        {{ __('View website') }}
+                        {{ t('site.View_Website', 'View website') }}
                     </a>
                 </div>
             </section>

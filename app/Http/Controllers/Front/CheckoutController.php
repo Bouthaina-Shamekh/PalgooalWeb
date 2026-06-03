@@ -375,7 +375,7 @@ class CheckoutController extends Controller
                             'reference_id'     => $subscription?->id,
                             'description'      => trim($config['description']) !== ''
                                 ? $config['description']
-                                : ($subscription ? 'Subscription #' . $subscription->id : 'Subscription'),
+                                : ($subscription ? 'اشتراك #' . $subscription->id : 'اشتراك'),
                             'qty'              => 1,
                             'unit_price_cents' => $config['unit_cents'],
                             'total_cents'      => $config['unit_cents'],
@@ -394,8 +394,8 @@ class CheckoutController extends Controller
                             'item_type'        => 'domain',
                             'reference_id'     => null,
                             'description'      => $domainName
-                                ? 'Domain registration: ' . $domainName
-                                : 'Domain registration',
+                                ? 'تسجيل نطاق: ' . $domainName
+                                : 'تسجيل نطاق',
                             'qty'              => 1,
                             'unit_price_cents' => $unitCentsDomain,
                             'total_cents'      => $unitCentsDomain,
@@ -637,13 +637,13 @@ class CheckoutController extends Controller
             && filled($subscription?->activeSiteHost());
 
         if ($isTemplateCheckout) {
-            $title = $siteReady ? 'Your website is ready' : 'We are preparing your site';
+            $title = $siteReady ? 'موقعك جاهز الآن! 🎉' : 'جارٍ إعداد موقعك...';
             $message = $siteReady
-                ? 'Your website was provisioned successfully and is ready to open now.'
-                : 'Payment was received and provisioning has started. We will finish preparing your site shortly.';
+                ? 'تم إعداد موقعك بنجاح وهو جاهز للزيارة الآن.'
+                : 'تم استلام الدفع وبدأ إعداد الموقع. سنُنهي تجهيز موقعك قريباً.';
         } else {
-            $title = 'Order received successfully';
-            $message = 'Payment, provisioning, and domain status are shown below using the current backend flow.';
+            $title = 'تم استلام طلبك بنجاح 🎉';
+            $message = 'راجع حالة الدفع والإعداد والنطاق أدناه.';
         }
 
         return [
@@ -669,23 +669,23 @@ class CheckoutController extends Controller
     protected function paymentStatusMeta(string $status): array
     {
         return match ($status) {
-            'paid' => ['value' => 'paid', 'label' => 'Payment confirmed', 'tone' => 'emerald'],
-            'unpaid' => ['value' => 'unpaid', 'label' => 'Awaiting payment confirmation', 'tone' => 'amber'],
-            default => ['value' => $status ?: 'draft', 'label' => 'Payment submitted', 'tone' => 'sky'],
+            'paid'   => ['value' => 'paid',   'label' => 'تم تأكيد الدفع',          'tone' => 'emerald'],
+            'unpaid' => ['value' => 'unpaid', 'label' => 'في انتظار تأكيد الدفع',   'tone' => 'amber'],
+            default  => ['value' => $status ?: 'draft', 'label' => 'تم إرسال الدفع', 'tone' => 'sky'],
         };
     }
 
     protected function provisioningStatusMeta(?string $status, bool $hasProvisioning): array
     {
         if (! $hasProvisioning) {
-            return ['value' => 'not_applicable', 'label' => 'No site provisioning required', 'tone' => 'slate'];
+            return ['value' => 'not_applicable', 'label' => 'لا يلزم إعداد موقع', 'tone' => 'slate'];
         }
 
         return match ($status) {
-            Subscription::PROVISIONING_ACTIVE => ['value' => Subscription::PROVISIONING_ACTIVE, 'label' => 'Site provisioned', 'tone' => 'emerald'],
-            Subscription::PROVISIONING_IN_PROGRESS => ['value' => Subscription::PROVISIONING_IN_PROGRESS, 'label' => 'Provisioning in progress', 'tone' => 'sky'],
-            Subscription::PROVISIONING_FAILED => ['value' => Subscription::PROVISIONING_FAILED, 'label' => 'Provisioning failed', 'tone' => 'red'],
-            default => ['value' => $status ?: Subscription::PROVISIONING_PENDING, 'label' => 'Queued for provisioning', 'tone' => 'amber'],
+            Subscription::PROVISIONING_ACTIVE      => ['value' => Subscription::PROVISIONING_ACTIVE,      'label' => 'تم إعداد الموقع',       'tone' => 'emerald'],
+            Subscription::PROVISIONING_IN_PROGRESS => ['value' => Subscription::PROVISIONING_IN_PROGRESS, 'label' => 'جارٍ إعداد الموقع',     'tone' => 'sky'],
+            Subscription::PROVISIONING_FAILED      => ['value' => Subscription::PROVISIONING_FAILED,      'label' => 'فشل إعداد الموقع',      'tone' => 'red'],
+            default                                => ['value' => $status ?: Subscription::PROVISIONING_PENDING, 'label' => 'في طابور الإعداد', 'tone' => 'amber'],
         };
     }
 
@@ -699,27 +699,27 @@ class CheckoutController extends Controller
 
         if (filled($resolvedDomain)) {
             if (($subscription?->domain_option ?: $normalizedOption) === 'subdomain' && $isTemplateCheckout) {
-                return ['value' => 'auto_subdomain', 'label' => 'Auto subdomain assigned', 'tone' => 'emerald'];
+                return ['value' => 'auto_subdomain', 'label' => 'تم تعيين Subdomain تلقائي', 'tone' => 'emerald'];
             }
 
             if ($subscription?->requiresDomainVerification()) {
                 return match ($subscription->effectiveDomainVerificationStatus()) {
-                    Subscription::DOMAIN_VERIFICATION_ACTIVE => ['value' => 'custom_domain_active', 'label' => 'Custom domain active', 'tone' => 'emerald'],
-                    Subscription::DOMAIN_VERIFICATION_SSL_PENDING => ['value' => 'custom_domain_ssl_pending', 'label' => 'Waiting for HTTPS (SSL not ready)', 'tone' => 'sky'],
-                    Subscription::DOMAIN_VERIFICATION_DNS_PENDING => ['value' => 'custom_domain_dns_pending', 'label' => 'Verification pending (DNS not detected yet)', 'tone' => 'amber'],
-                    Subscription::DOMAIN_VERIFICATION_FAILED => ['value' => 'custom_domain_failed', 'label' => 'Custom domain verification failed', 'tone' => 'red'],
-                    default => ['value' => 'custom_domain_pending', 'label' => 'Verification pending (DNS not detected yet)', 'tone' => 'amber'],
+                    Subscription::DOMAIN_VERIFICATION_ACTIVE      => ['value' => 'custom_domain_active',      'label' => 'النطاق المخصص نشط',                  'tone' => 'emerald'],
+                    Subscription::DOMAIN_VERIFICATION_SSL_PENDING => ['value' => 'custom_domain_ssl_pending', 'label' => 'في انتظار HTTPS (SSL قيد الإعداد)',   'tone' => 'sky'],
+                    Subscription::DOMAIN_VERIFICATION_DNS_PENDING => ['value' => 'custom_domain_dns_pending', 'label' => 'في انتظار التحقق (DNS لم يُكتشف بعد)', 'tone' => 'amber'],
+                    Subscription::DOMAIN_VERIFICATION_FAILED      => ['value' => 'custom_domain_failed',      'label' => 'فشل التحقق من النطاق المخصص',         'tone' => 'red'],
+                    default                                        => ['value' => 'custom_domain_pending',     'label' => 'في انتظار التحقق (DNS لم يُكتشف بعد)', 'tone' => 'amber'],
                 };
             }
 
-            return ['value' => 'selected', 'label' => 'Domain selected', 'tone' => 'emerald'];
+            return ['value' => 'selected', 'label' => 'تم اختيار النطاق', 'tone' => 'emerald'];
         }
 
         if ($isTemplateCheckout) {
-            return ['value' => 'auto_subdomain_pending', 'label' => 'Automatic subdomain will be assigned', 'tone' => 'sky'];
+            return ['value' => 'auto_subdomain_pending', 'label' => 'سيتم تعيين Subdomain تلقائياً', 'tone' => 'sky'];
         }
 
-        return ['value' => 'pending', 'label' => 'Domain status pending', 'tone' => 'amber'];
+        return ['value' => 'pending', 'label' => 'حالة النطاق قيد الانتظار', 'tone' => 'amber'];
     }
 
     public function processCart(Request $request)

@@ -13,31 +13,31 @@
     $navSections = [
         'Main' => [
             [
-                'label' => 'Dashboard',
+                'label' => t('site.Dashboard', 'Dashboard'),
                 'href' => $siteDashboardUrl,
                 'active' => request()->routeIs('client.subscriptions.site'),
                 'icon' => 'dashboard',
             ],
             [
-                'label' => 'Pages',
+                'label' => t('site.Pages', 'Pages'),
                 'href' => $pagesUrl,
                 'active' => request()->routeIs('client.subscriptions.pages*'),
                 'icon' => 'pages',
             ],
             [
-                'label' => 'Editor',
+                'label' => t('site.Editor', 'Editor'),
                 'href' => $editorUrl,
                 'active' => request()->routeIs('client.subscriptions.homepage-editor.*'),
                 'icon' => 'editor',
             ],
             [
-                'label' => 'Header',
+                'label' => t('site.Header', 'Header'),
                 'href' => $headerEditorUrl,
                 'active' => request()->routeIs('client.subscriptions.site-header-editor.*'),
                 'icon' => 'header',
             ],
             [
-                'label' => 'Footer',
+                'label' => t('site.Footer', 'Footer'),
                 'href' => $footerEditorUrl,
                 'active' => request()->routeIs('client.subscriptions.site-footer-editor.*'),
                 'icon' => 'footer',
@@ -45,13 +45,13 @@
         ],
         'Growth' => [
             [
-                'label' => 'Domain',
+                'label' => t('site.Domain', 'Domain'),
                 'href' => $domainUrl,
                 'active' => request()->routeIs('client.domains.*'),
                 'icon' => 'domain',
             ],
             [
-                'label' => 'Settings',
+                'label' => t('site.Settings', 'Settings'),
                 'href' => $settingsUrl,
                 'active' => request()->routeIs('client.subscriptions.show', 'client.subscriptions.content'),
                 'icon' => 'settings',
@@ -72,7 +72,7 @@
             </span>
             <div class="min-w-0 text-start">
                 <p class="truncate text-sm font-semibold text-slate-950">{{ $siteName }}</p>
-                <p class="truncate text-xs text-slate-500">{{ __('Site dashboard') }}</p>
+                <p class="truncate text-xs text-slate-500">{{ t('site.Site_Dashboard', 'Site dashboard') }}</p>
             </div>
         </div>
     </div>
@@ -80,7 +80,7 @@
     <div class="flex-1 space-y-6">
         @foreach ($navSections as $sectionTitle => $items)
             <div class="space-y-2">
-                <p class="px-3 text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{{ __($sectionTitle) }}</p>
+                <p class="px-3 text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">{{ t('site.' . str_replace(' ', '_', $sectionTitle), $sectionTitle) }}</p>
                 <nav class="space-y-1.5">
                     @foreach ($items as $item)
                         @php
@@ -123,7 +123,7 @@
                             </span>
 
                             <span class="text-start">
-                                <span class="block">{{ __($item['label']) }}</span>
+                                <span class="block">{{ $item['label'] }}</span>
                             </span>
                         </a>
                     @endforeach
@@ -141,7 +141,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H18m0 0v4.5M18 6l-7.5 7.5M6 10.5v7.875A1.125 1.125 0 0 0 7.125 19.5H15a1.125 1.125 0 0 0 1.125-1.125V10.5" />
                     </svg>
                 </span>
-                <span class="text-start">{{ __('View website') }}</span>
+                <span class="text-start">{{ t('site.View_Website', 'View website') }}</span>
             </span>
             <svg class="h-4 w-4 text-slate-400 {{ $isRtl ? 'rotate-180' : '' }}" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fill-rule="evenodd" d="M7.22 4.47a.75.75 0 0 1 1.06 0l4.75 4.75a.75.75 0 0 1 0 1.06l-4.75 4.75a.75.75 0 1 1-1.06-1.06L11.44 10 7.22 5.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
@@ -156,7 +156,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="m15 19.5-7.5-7.5L15 4.5" />
                     </svg>
                 </span>
-                <span class="text-start">{{ __('Back to account') }}</span>
+                <span class="text-start">{{ t('site.Back_To_Account', 'Back to account') }}</span>
             </span>
         </a>
     </div>

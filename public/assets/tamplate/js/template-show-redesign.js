@@ -72,7 +72,7 @@
     }
 
     function renderPeriodState() {
-        label.textContent = years === 1 ? '1 Year' : `${years} Years`;
+        label.textContent = years === 1 ? 'سنة واحدة' : `${years} سنوات`;
         priceValue.textContent = formatMoney(finalPrice * years);
 
         if (originalPriceValue) {
