@@ -346,6 +346,7 @@ Route::group([
         ->group(function () {
             Route::get('/', [MediaController::class, 'index'])->name('index');
             Route::post('/', [MediaController::class, 'store'])->name('store');
+            Route::delete('/bulk', [MediaController::class, 'bulkDestroy'])->name('bulk-destroy');
             Route::get('/{id}', [MediaController::class, 'show'])->name('show');
             Route::get('/{id}/edit', [MediaController::class, 'edit'])->name('edit');
             Route::match(['put', 'patch'], '/{id}', [MediaController::class, 'update'])->name('update');

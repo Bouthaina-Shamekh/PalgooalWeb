@@ -198,6 +198,37 @@ class MediaController extends Controller
     }
 
     /**
+     * Bulk delete multiple media files in a single request.
+     *
+     * Payload: { "ids": [1, 2, 3, ...] }
+     * Returns count of deleted items.
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $this->authorize('create', Media::class); // reuse create gate for bulk actions
+
+        $request->validate([
+            'ids'   => 'required|array|min:1',
+            'ids.*' => 'integer|exists:media,id',
+        ]);
+
+        $items = Media::whereIn('id', $request->ids)->get();
+
+        foreach ($items as $media) {
+            $this->authorize('delete', $media);
+            if ($media->file_path) {
+                Storage::disk($media->disk ?: 'public')->delete($media->file_path);
+            }
+            $media->delete();
+        }
+
+        return response()->json([
+            'message' => 'تم الحذف بنجاح',
+            'deleted' => $items->count(),
+        ]);
+    }
+
+    /**
      * Delete a media file from storage AND its database record.
      *
      * Notes:
