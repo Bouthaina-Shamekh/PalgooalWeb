@@ -1,26 +1,21 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\View;
-
-// Front Controllers
+use App\Http\Controllers\Admin\Management\DomainSearchController;
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Front\CartController;
 use App\Http\Controllers\Front\CheckoutController;
+use App\Http\Controllers\Front\PageController as FrontPageController;
 use App\Http\Controllers\Front\TemplateController as FrontTemplateController;
 use App\Http\Controllers\Front\TemplateReviewController;
-use App\Http\Controllers\Front\ThemeCssController;
 use App\Http\Controllers\Front\TestimonialSubmissionController;
-use App\Http\Controllers\Front\PageController as FrontPageController;
+use App\Http\Controllers\Front\ThemeCssController;
 use App\Http\Controllers\Tenancy\DomainVerificationProbeController;
-
-// Admin / Management Controllers (used in frontend routes)
-use App\Http\Controllers\Admin\Management\DomainSearchController;
 use App\Http\Middleware\ServeTenantSite;
-
-// Models
 use App\Models\Plan;
 use App\Models\Portfolio;
 use App\Models\Tenancy\Subscription;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\View;
 
 Route::middleware(['setLocale'])->group(function () {
 
@@ -241,6 +236,12 @@ Route::middleware(['setLocale'])->group(function () {
             ]);
         })->name('tenant.preview.page');
     }
+
+    Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])
+    ->name('google.redirect');
+
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
+    ->name('google.callback');
 
     /*
     |--------------------------------------------------------------------------
