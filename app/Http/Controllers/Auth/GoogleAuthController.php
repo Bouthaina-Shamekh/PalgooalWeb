@@ -23,19 +23,20 @@ class GoogleAuthController extends Controller
         $nameParts = explode(' ', $fullName, 2);
 
         $client = Client::updateOrCreate(
-            ['email' => $googleUser->getEmail()],
-            [
-                'first_name' => $nameParts[0] ?? 'Client',
-                'last_name' => $nameParts[1] ?? '',
-                'password' => bcrypt(Str::random(32)),
-                'avatar' => $googleUser->getAvatar(),
-                'can_login' => 1,
-                'status' => 1,
-            ]
-        );
+    ['email' => $googleUser->getEmail()],
+    [
+        'first_name' => $nameParts[0] ?? 'Client',
+        'last_name' => $nameParts[1] ?? '',
+        'company_name' => $googleUser->getName() ?? 'Google User',
+        'password' => bcrypt(Str::random(32)),
+        'avatar' => $googleUser->getAvatar(),
+        'can_login' => 1,
+        'status' => 'active',
+    ]
+);
 
         Auth::guard('client')->login($client, true);
 
-        return redirect()->intended(route('client.dashboard'));
+        return redirect('/client/home');
     }
 }

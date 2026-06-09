@@ -170,6 +170,13 @@ Route::middleware(['setLocale'])->group(function () {
     | - Keep more specific routes (like /templates, /domains, /checkout/...)
     |   ABOVE this route so they are matched first.
     */
+
+    Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])
+    ->name('google.redirect');
+
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
+    ->name('google.callback');
+
     Route::get('/{slug}', [FrontPageController::class, 'show'])
         ->where(
             'slug',
@@ -237,11 +244,7 @@ Route::middleware(['setLocale'])->group(function () {
         })->name('tenant.preview.page');
     }
 
-    Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])
-    ->name('google.redirect');
-
-Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
-    ->name('google.callback');
+   
 
     /*
     |--------------------------------------------------------------------------
