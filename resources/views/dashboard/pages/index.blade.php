@@ -53,7 +53,6 @@
                                     <th>{{ t('dashboard.Homepage', 'Homepage') }}</th>
                                     <th>{{ t('dashboard.Status', 'Status') }}</th>
                                     <th>{{ t('dashboard.Date', 'Date') }}</th>
-                                    <th>{{ __('Builder') }}</th>
                                     <th>{{ t('dashboard.Action', 'Action') }}</th>
                                 </tr>
                             </thead>
@@ -64,7 +63,6 @@
                                         $title = $translation?->title ?? ($p->slug ?? '#' . $p->id);
                                         $slug = $translation?->slug ?? ($p->slug ?? '');
                                         $frontUrl = $p->is_home ? url('/') : ($slug ? url($slug) : url('/'));
-                                        $currentBuilderMode = $p->builder_mode === 'sections' ? 'sections' : 'visual';
                                     @endphp
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
@@ -113,12 +111,12 @@
                                                 <button type="submit"
                                                     class="px-2 py-1 rounded text-xs
                                                         {{ $p->is_active ? 'bg-green-200 text-green-900' : 'bg-red-200 text-red-900' }}">
-                                                    {{ $p->is_active ? __('منشورة') : __('مسودة') }}
+                                                    {{ $p->is_active ? t('dashboard.Published', 'Published') : t('dashboard.Draft', 'Draft') }}
                                                 </button>
                                             </form>
                                             @else
                                                 <span class="px-2 py-1 rounded text-xs {{ $p->is_active ? 'bg-green-200 text-green-900' : 'bg-red-200 text-red-900' }}">
-                                                    {{ $p->is_active ? __('منشورة') : __('مسودة') }}
+                                                    {{ $p->is_active ? t('dashboard.Published', 'Published') : t('dashboard.Draft', 'Draft') }}
                                                 </span>
                                             @endcan
                                         </td>
@@ -126,26 +124,6 @@
                                         {{-- Date --}}
                                         <td>
                                             {{ optional($p->created_at)->translatedFormat('Y-m-d h:i A') }}
-                                        </td>
-
-                                        <td>
-                                            <div class="space-y-2">
-                                                <span class="text-xs px-2 py-1 rounded {{ $currentBuilderMode === 'visual' ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-800' }}">
-                                                    {{ $currentBuilderMode === 'visual' ? __('Visual Builder Archived') : __('Sections Builder') }}
-                                                </span>
-
-                                                <div class="flex items-center gap-1">
-                                                    <form action="{{ route('dashboard.pages.builder-mode', $p) }}"
-                                                        method="POST" class="inline">
-                                                        @csrf
-                                                        <input type="hidden" name="builder_mode" value="sections">
-                                                        <button type="submit"
-                                                            class="btn btn-sm {{ $currentBuilderMode === 'sections' ? 'btn-warning' : 'btn-light-warning' }}">
-                                                            {{ __('Sections') }}
-                                                        </button>
-                                                    </form>
-                                                </div>
-                                            </div>
                                         </td>
 
                                         {{-- Actions --}}
@@ -185,7 +163,7 @@
                                             {{-- Sections Builder --}}
                                             <a href="{{ route('dashboard.pages.sections.index', $p) }}"
                                                 class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
-                                                title="{{ __('Sections Builder') }}">
+                                                title="{{ t('dashboard.Sections_Builder', 'Sections Builder') }}">
                                                 <i class="ti ti-layout-list text-xl leading-none"></i>
                                             </a>
 
@@ -193,8 +171,8 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center text-slate-500 py-4">
-                                            {{ __('لا توجد صفحات حتى الآن.') }}
+                                        <td colspan="7" class="text-center text-slate-500 py-4">
+                                            {{ t('dashboard.No_Pages_Yet', 'No pages yet.') }}
                                         </td>
                                     </tr>
                                 @endforelse
@@ -224,7 +202,7 @@
         // Fallback if SweetAlert is not available
         if (typeof Swal === 'undefined') {
             const ok = window.confirm(
-                '{{ __('هل أنت متأكد من حذف الصفحة؟ لن تتمكن من التراجع عن هذا الإجراء.') }}'
+                '{{ t('dashboard.Confirm_Delete_Page_Text', 'Are you sure you want to delete this page? This action cannot be undone.') }}'
             );
             if (ok) {
                 const form = document.getElementById('delete-page-' + pageId);
@@ -234,12 +212,12 @@
         }
 
         Swal.fire({
-            title: '{{ __('هل أنت متأكد من حذف هذه الصفحة؟') }}',
-            text: '{{ __('لن تتمكن من التراجع عن هذا الإجراء!') }}',
+            title: '{{ t('dashboard.Confirm_Delete_Page_Title', 'Are you sure you want to delete this page?') }}',
+            text: '{{ t('dashboard.Action_Cannot_Be_Undone', 'This action cannot be undone!') }}',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonText: '{{ __('نعم، احذف الصفحة') }}',
-            cancelButtonText: '{{ __('إلغاء') }}',
+            confirmButtonText: '{{ t('dashboard.Yes_Delete_Page', 'Yes, delete the page') }}',
+            cancelButtonText: '{{ t('common.Cancel', 'Cancel') }}',
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6'
         }).then((result) => {

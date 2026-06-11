@@ -165,7 +165,7 @@
                         {{-- Slug --}}
                         <div>
                             <label class="block mb-1 font-semibold">
-                                Slug ({{ $langCode }})
+                                {{ t('dashboard.Slug', 'Slug') }} ({{ $langCode }})
                             </label>
                             <input
                                 type="text"
@@ -177,7 +177,7 @@
                                 data-lang="{{ $langCode }}"
                             >
                             <p class="text-xs text-gray-500">
-                                {{ __('Spaces and underscores will be converted to dashes (-). We keep letters, numbers, and dashes only (supports Arabic & English).') }}
+                                {{ t('dashboard.Slug_Hint', 'Spaces and underscores will be converted to dashes (-). We keep letters, numbers, and dashes only (supports Arabic & English).') }}
                             </p>
                             @error("translations.$langCode.slug")
                                 <span class="text-red-500 text-sm">{{ $message }}</span>
@@ -200,7 +200,7 @@
                                 <span class="text-red-500 text-sm">{{ $message }}</span>
                             @enderror
                             <p class="text-xs text-gray-500 mt-1">
-                                {{ __('This field uses a rich-text editor. HTML will be saved in the database as the content value.') }}
+                                {{ t('dashboard.Content_Hint', 'This field uses a rich-text editor. HTML will be saved in the database as the content value.') }}
                             </p>
                         </div>
 
@@ -270,7 +270,7 @@
                             {{-- Open Graph Image (Media Library Picker) --}}
                             <x-dashboard.media-picker
                                 :name="'translations['.$langCode.'][og_image]'" {{-- matches request()->input() structure --}}
-                                :label="__('Open Graph Image URL').' ('.$langCode.')'"
+                                :label="t('dashboard.Open_Graph_Image_URL', 'Open Graph Image URL').' ('.$langCode.')'"
                                 :value="$ogImageId ?? $ogImageUrl"            {{-- prefer Media ID, fallback to direct URL --}}
                                 :preview-urls="$previewUrls"                  {{-- initial preview (edit mode) --}}
                                 :multiple="false"                             {{-- one OG image per locale --}}
@@ -297,13 +297,13 @@
             <input type="hidden" name="builder_mode" value="{{ $defaultBuilderMode }}">
 
             <label class="block font-semibold mb-1">
-                {{ __('Builder Type') }}
+                {{ t('dashboard.Builder_Type', 'Builder Type') }}
             </label>
 
             <div class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                <span class="block font-medium">{{ __('Sections Builder') }}</span>
+                <span class="block font-medium">{{ t('dashboard.Sections_Builder', 'Sections Builder') }}</span>
                 <span class="block text-xs text-slate-500">
-                    {{ __('Visual Builder is archived; new and updated pages use SectionDefinitions.') }}
+                    {{ t('dashboard.Visual_Builder_Archived_Hint', 'Visual Builder is archived; new and updated pages use SectionDefinitions.') }}
                 </span>
             </div>
 
@@ -365,7 +365,7 @@
             </label>
 
             <p class="text-xs text-gray-500 mt-1">
-                {{ __('If enabled, this page will be used as the main marketing homepage.') }}
+                {{ t('dashboard.Homepage_Hint', 'If enabled, this page will be used as the main marketing homepage.') }}
             </p>
         </div>
 

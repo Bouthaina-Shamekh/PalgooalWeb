@@ -26,96 +26,96 @@
     $previewBaseUrl = $workspaceRouteFor('preview', [], false);
     $previewUrl = $previewBaseUrl . ($selectedSectionId ? '?highlight=' . $selectedSectionId : '');
     $autoEditSectionId = (int) request('edit');
-    $addSectionLabel = $isClientWorkspace ? __('Add Block') : __('Add Section');
-    $refreshPreviewLabel = $isClientWorkspace ? __('Reload Preview') : __('Refresh Preview');
-    $emptyStateTitle = $isClientWorkspace ? __('Start by adding your first block') : __('Start by adding your first section');
+    $addSectionLabel = $isClientWorkspace ? t('dashboard.Add_Block', 'Add Block') : t('dashboard.Add_Section', 'Add Section');
+    $refreshPreviewLabel = $isClientWorkspace ? t('dashboard.Reload_Preview', 'Reload Preview') : t('dashboard.Refresh_Preview', 'Refresh Preview');
+    $emptyStateTitle = $isClientWorkspace ? t('dashboard.Start_By_Adding_First_Block', 'Start by adding your first block') : t('dashboard.Start_By_Adding_First_Section', 'Start by adding your first section');
     $emptyStateDescription = $isClientWorkspace
-        ? __('Choose a ready-made block such as a hero, features list, or call to action, then edit the content on the right.')
-        : __('Use the section library to create a ready-to-edit block instantly, then fine-tune it in the editor.');
-    $openLibraryLabel = $isClientWorkspace ? __('Browse Blocks') : __('Open Section Library');
-    $previewRefreshingLabel = $isClientWorkspace ? __('Updating preview...') : __('Refreshing preview...');
-    $libraryTitle = $isClientWorkspace ? __('Add a Block') : __('Add Section to Page');
+        ? t('dashboard.Empty_State_Block_Description', 'Choose a ready-made block such as a hero, features list, or call to action, then edit the content on the right.')
+        : t('dashboard.Empty_State_Section_Description', 'Use the section library to create a ready-to-edit block instantly, then fine-tune it in the editor.');
+    $openLibraryLabel = $isClientWorkspace ? t('dashboard.Browse_Blocks', 'Browse Blocks') : t('dashboard.Open_Section_Library', 'Open Section Library');
+    $previewRefreshingLabel = $isClientWorkspace ? t('dashboard.Updating_Preview', 'Updating preview...') : t('dashboard.Refreshing_Preview', 'Refreshing preview...');
+    $libraryTitle = $isClientWorkspace ? t('dashboard.Add_A_Block', 'Add a Block') : t('dashboard.Add_Section_To_Page', 'Add Section to Page');
     $libraryDescription = $isClientWorkspace
-        ? __('Pick a block for this page. We will add it right away and open its settings so you can start editing.')
-        : __('Choose a block and we will add it instantly, then open the editor for final customization.');
-    $librarySearchPlaceholder = $isClientWorkspace ? __('Search blocks') : __('Search section types');
-    $libraryAddHint = $isClientWorkspace ? __('Adds to your page right away') : __('Creates a draft instantly');
-    $libraryAddActionLabel = $isClientWorkspace ? __('Use Block') : __('Add');
-    $clientLibraryIntroTitle = __('How block adding works');
+        ? t('dashboard.Library_Block_Description', 'Pick a block for this page. We will add it right away and open its settings so you can start editing.')
+        : t('dashboard.Library_Section_Description', 'Choose a block and we will add it instantly, then open the editor for final customization.');
+    $librarySearchPlaceholder = $isClientWorkspace ? t('dashboard.Search_Blocks', 'Search blocks') : t('dashboard.Search_Section_Types', 'Search section types');
+    $libraryAddHint = $isClientWorkspace ? t('dashboard.Adds_To_Page_Right_Away', 'Adds to your page right away') : t('dashboard.Creates_Draft_Instantly', 'Creates a draft instantly');
+    $libraryAddActionLabel = $isClientWorkspace ? t('dashboard.Use_Block', 'Use Block') : t('dashboard.Add', 'Add');
+    $clientLibraryIntroTitle = t('dashboard.How_Block_Adding_Works', 'How block adding works');
     $clientLibraryIntroSteps = [
-        __('1. Pick a block that matches the part of the page you want to create.'),
-        __('2. The block is added to this page immediately.'),
-        __('3. Its settings open right away so you can edit text, images, and buttons.'),
+        t('dashboard.Library_Intro_Step_1', '1. Pick a block that matches the part of the page you want to create.'),
+        t('dashboard.Library_Intro_Step_2', '2. The block is added to this page immediately.'),
+        t('dashboard.Library_Intro_Step_3', '3. Its settings open right away so you can edit text, images, and buttons.'),
     ];
     $clientLibraryCategoryMeta = [
         'hero' => [
-            'label' => __('Page Start'),
-            'description' => __('Opening blocks for your main headline, call to action, and first impression.'),
+            'label' => t('dashboard.Category_Hero_Label', 'Page Start'),
+            'description' => t('dashboard.Category_Hero_Description', 'Opening blocks for your main headline, call to action, and first impression.'),
         ],
         'services' => [
-            'label' => __('What You Offer'),
-            'description' => __('Blocks that explain services, departments, or capabilities in a clear way.'),
+            'label' => t('dashboard.Category_Services_Label', 'What You Offer'),
+            'description' => t('dashboard.Category_Services_Description', 'Blocks that explain services, departments, or capabilities in a clear way.'),
         ],
         'process' => [
-            'label' => __('How It Works'),
-            'description' => __('Step-by-step blocks that explain your workflow or service journey.'),
+            'label' => t('dashboard.Category_Process_Label', 'How It Works'),
+            'description' => t('dashboard.Category_Process_Description', 'Step-by-step blocks that explain your workflow or service journey.'),
         ],
         'testimonials' => [
-            'label' => __('Trust & Reviews'),
-            'description' => __('Blocks that show customer feedback and build confidence.'),
+            'label' => t('dashboard.Category_Testimonials_Label', 'Trust & Reviews'),
+            'description' => t('dashboard.Category_Testimonials_Description', 'Blocks that show customer feedback and build confidence.'),
         ],
         'portfolio' => [
-            'label' => __('Work Examples'),
-            'description' => __('Blocks for featured projects, case studies, or portfolio highlights.'),
+            'label' => t('dashboard.Category_Portfolio_Label', 'Work Examples'),
+            'description' => t('dashboard.Category_Portfolio_Description', 'Blocks for featured projects, case studies, or portfolio highlights.'),
         ],
         'pricing' => [
-            'label' => __('Pricing'),
-            'description' => __('Blocks that help visitors compare plans and choose an offer.'),
+            'label' => t('dashboard.Category_Pricing_Label', 'Pricing'),
+            'description' => t('dashboard.Category_Pricing_Description', 'Blocks that help visitors compare plans and choose an offer.'),
         ],
         'domains' => [
-            'label' => __('Domain Search'),
-            'description' => __('A ready-made search block for domain-related pages or landing sections.'),
+            'label' => t('dashboard.Category_Domains_Label', 'Domain Search'),
+            'description' => t('dashboard.Category_Domains_Description', 'A ready-made search block for domain-related pages or landing sections.'),
         ],
         'templates' => [
-            'label' => __('Templates & Catalog'),
-            'description' => __('Blocks for showcasing template cards, listings, and previews.'),
+            'label' => t('dashboard.Category_Templates_Label', 'Templates & Catalog'),
+            'description' => t('dashboard.Category_Templates_Description', 'Blocks for showcasing template cards, listings, and previews.'),
         ],
         'features' => [
-            'label' => __('Features'),
-            'description' => __('Simple feature grids for key benefits, highlights, or selling points.'),
+            'label' => t('dashboard.Category_Features_Label', 'Features'),
+            'description' => t('dashboard.Category_Features_Description', 'Simple feature grids for key benefits, highlights, or selling points.'),
         ],
         'other' => [
-            'label' => __('More Blocks'),
-            'description' => __('Additional page blocks you can add and customize.'),
+            'label' => t('dashboard.Category_Other_Label', 'More Blocks'),
+            'description' => t('dashboard.Category_Other_Description', 'Additional page blocks you can add and customize.'),
         ],
     ];
-    $previewFrameTitleLabel = $isClientWorkspace ? __('Live page preview') : __('Live sections preview');
+    $previewFrameTitleLabel = $isClientWorkspace ? t('dashboard.Live_Page_Preview', 'Live page preview') : t('dashboard.Live_Sections_Preview', 'Live sections preview');
     $sidebarIntroTitle = $isClientWorkspace
-        ? ($workspaceContentLabel ?? ($page->is_home ? __('You are editing your homepage') : __('You are editing this page')))
+        ? ($workspaceContentLabel ?? ($page->is_home ? t('dashboard.Editing_Homepage', 'You are editing your homepage') : t('dashboard.Editing_This_Page', 'You are editing this page')))
         : null;
     $sidebarIntroDescription = $isClientWorkspace
-        ? __('This workspace is focused on page blocks only. Add, reorder, rename, and edit blocks here without the extra admin controls.')
+        ? t('dashboard.Sidebar_Intro_Description', 'This workspace is focused on page blocks only. Add, reorder, rename, and edit blocks here without the extra admin controls.')
         : null;
-    $pageStructureTitle = $isClientWorkspace ? __('Page Blocks') : __('Page Elements');
+    $pageStructureTitle = $isClientWorkspace ? t('dashboard.Page_Blocks', 'Page Blocks') : t('dashboard.Page_Elements', 'Page Elements');
     $pageStructureDescription = $isClientWorkspace
-        ? __('Drag to reorder blocks, then open any block to edit its content.')
-        : __('Customize this page sections and keep the structure organized.');
-    $addNewElementLabel = $isClientWorkspace ? __('Add Block') : __('Add New Element');
-    $noElementsLabel = $isClientWorkspace ? __('No blocks have been added yet.') : __('No elements have been added yet.');
-    $bottomTipLabel = $isClientWorkspace ? __('Tip: open any block to edit text, images, buttons, and other page content.') : __('Changes save automatically');
+        ? t('dashboard.Page_Structure_Block_Description', 'Drag to reorder blocks, then open any block to edit its content.')
+        : t('dashboard.Page_Structure_Section_Description', 'Customize this page sections and keep the structure organized.');
+    $addNewElementLabel = $isClientWorkspace ? t('dashboard.Add_Block', 'Add Block') : t('dashboard.Add_New_Element', 'Add New Element');
+    $noElementsLabel = $isClientWorkspace ? t('dashboard.No_Blocks_Added_Yet', 'No blocks have been added yet.') : t('dashboard.No_Elements_Added_Yet', 'No elements have been added yet.');
+    $bottomTipLabel = $isClientWorkspace ? t('dashboard.Bottom_Tip_Block', 'Tip: open any block to edit text, images, buttons, and other page content.') : t('dashboard.Changes_Save_Automatically', 'Changes save automatically');
     $previewDraftUrl = $workspaceRouteFor('preview');
     $pageIsLive = (bool) $page->is_active;
-    $publishStateBadge = $pageIsLive ? __('Live') : __('Draft');
-    $publishStateLabel = $pageIsLive ? __('Visible on your site') : __('Saved as draft');
+    $publishStateBadge = $pageIsLive ? t('dashboard.Live', 'Live') : t('dashboard.Draft', 'Draft');
+    $publishStateLabel = $pageIsLive ? t('dashboard.Visible_On_Your_Site', 'Visible on your site') : t('dashboard.Saved_As_Draft', 'Saved as draft');
     $publishStateDescription = $pageIsLive
-        ? __('Saved changes appear on the live page after you save. Use preview first if you want to double-check the page before sharing it.')
-        : __('This page is currently hidden from visitors. You can still preview changes here, then make the page visible from your pages manager when you are ready.');
-    $previewDraftLabel = __('Preview Draft');
-    $publishActionLabel = $pageIsLive ? __('Publish & View Live Page') : __('Hidden From Visitors');
+        ? t('dashboard.Publish_State_Live_Description', 'Saved changes appear on the live page after you save. Use preview first if you want to double-check the page before sharing it.')
+        : t('dashboard.Publish_State_Draft_Description', 'This page is currently hidden from visitors. You can still preview changes here, then make the page visible from your pages manager when you are ready.');
+    $previewDraftLabel = t('dashboard.Preview_Draft', 'Preview Draft');
+    $publishActionLabel = $pageIsLive ? t('dashboard.Publish_And_View_Live_Page', 'Publish & View Live Page') : t('dashboard.Hidden_From_Visitors', 'Hidden From Visitors');
     $publishHelperLabel = $pageIsLive
-        ? __('Preview opens your in-progress version. Publish opens the live page your visitors can already see.')
-        : __('This page is hidden right now, so preview is the safest way to review it before making it visible.');
-    $reloadPreviewShortLabel = $isClientWorkspace ? __('Reload') : $refreshPreviewLabel;
+        ? t('dashboard.Publish_Helper_Live', 'Preview opens your in-progress version. Publish opens the live page your visitors can already see.')
+        : t('dashboard.Publish_Helper_Draft', 'This page is hidden right now, so preview is the safest way to review it before making it visible.');
+    $reloadPreviewShortLabel = $isClientWorkspace ? t('dashboard.Reload', 'Reload') : $refreshPreviewLabel;
 @endphp
 
 @extends('dashboard.pages.sections.layouts.workspace')
@@ -333,11 +333,11 @@
     <div class="flex flex-wrap items-center gap-2 rtl:flex-row-reverse xl:flex-nowrap">
         <div class="flex items-center gap-1 rounded-full bg-slate-100/90 p-1 shadow-inner rtl:flex-row-reverse">
             <button type="button" data-preview-device="desktop"
-                class="preview-device-button is-active inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900">{{ __('Desktop') }}</button>
+                class="preview-device-button is-active inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900">{{ t('dashboard.Desktop', 'Desktop') }}</button>
             <button type="button" data-preview-device="tablet"
-                class="preview-device-button inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900">{{ __('Tablet') }}</button>
+                class="preview-device-button inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900">{{ t('dashboard.Tablet', 'Tablet') }}</button>
             <button type="button" data-preview-device="mobile"
-                class="preview-device-button inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900">{{ __('Mobile') }}</button>
+                class="preview-device-button inline-flex items-center rounded-full px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900">{{ t('dashboard.Mobile', 'Mobile') }}</button>
         </div>
 
         <button type="button" data-refresh-sections-preview
@@ -429,7 +429,7 @@
                 </div>
                 <button type="button" data-close-section-library
                     class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50"
-                    aria-label="{{ __('Close') }}">
+                    aria-label="{{ t('common.Close', 'Close') }}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor" stroke-width="1.7">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -468,7 +468,7 @@
                         $categoryMeta = $isClientWorkspace
                             ? ($clientLibraryCategoryMeta[$category] ?? [
                                 'label' => \Illuminate\Support\Str::headline($category),
-                                'description' => __('Ready-made blocks for this part of your page.'),
+                                'description' => t('dashboard.Ready_Made_Blocks_Hint', 'Ready-made blocks for this part of your page.'),
                             ])
                             : null;
                     @endphp
@@ -481,7 +481,7 @@
                                     <p class="mt-1 text-xs leading-5 text-slate-500">{{ $categoryMeta['description'] }}</p>
                                 @endif
                             </div>
-                            <span class="text-xs text-slate-400">{{ count($items) }} {{ $isClientWorkspace ? __('blocks') : __('types') }}</span>
+                            <span class="text-xs text-slate-400">{{ count($items) }} {{ $isClientWorkspace ? t('dashboard.Blocks', 'blocks') : t('dashboard.Types', 'types') }}</span>
                         </div>
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             @foreach ($items as $type => $meta)
@@ -491,7 +491,7 @@
                                         : (!empty($meta['preview']) && file_exists(public_path($meta['preview']))
                                             ? asset($meta['preview'])
                                             : null);
-                                    $cardDescription = $meta['description'] ?? __('No description provided.');
+                                    $cardDescription = $meta['description'] ?? t('dashboard.No_Description_Provided', 'No description provided.');
                                     $cardType = $meta['type'] ?? $type;
                                     $cardVariant = $meta['variant'] ?? null;
                                     $cardSectionDefinitionId = $meta['section_definition_id'] ?? null;
@@ -560,17 +560,17 @@
     <div data-sections-sidebar-outline class="space-y-5">
         @if ($pageBuilderMode !== 'sections' && ! $isClientWorkspace)
             <div class="rounded-3xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
-                <h3 class="text-base font-semibold text-slate-900">{{ __('Sections are not the active builder yet') }}
+                <h3 class="text-base font-semibold text-slate-900">{{ t('dashboard.Sections_Not_Active_Builder_Yet', 'Sections are not the active builder yet') }}
                 </h3>
                 <p class="mt-2 text-sm leading-6 text-slate-600">
-                    {{ __('This page is still marked with the archived Visual Builder mode. Switch it to Sections Builder so these sections appear on the frontend.') }}
+                    {{ t('dashboard.Switch_To_Sections_Builder_Hint', 'This page is still marked with the archived Visual Builder mode. Switch it to Sections Builder so these sections appear on the frontend.') }}
                 </p>
                 @if (filled($workspaceBuilderModeUrl))
                     <form action="{{ $workspaceBuilderModeUrl }}" method="POST" class="mt-4">
                         @csrf
                         <input type="hidden" name="builder_mode" value="sections">
                         <button type="submit"
-                            class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">{{ __('Switch to Sections Builder') }}</button>
+                            class="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">{{ t('dashboard.Switch_To_Sections_Builder', 'Switch to Sections Builder') }}</button>
                     </form>
                 @endif
             </div>
@@ -581,14 +581,14 @@
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div class="min-w-0 flex-1">
                         <div class="flex flex-wrap items-center gap-2 rtl:flex-row-reverse">
-                            <p class="text-xs font-semibold uppercase tracking-[0.2em] {{ $pageIsLive ? 'text-emerald-700' : 'text-amber-700' }}">{{ __('Editing') }}</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.2em] {{ $pageIsLive ? 'text-emerald-700' : 'text-amber-700' }}">{{ t('dashboard.Editing', 'Editing') }}</p>
                             <span class="inline-flex rounded-full border {{ $pageIsLive ? 'border-emerald-200 bg-white text-emerald-700' : 'border-amber-200 bg-white text-amber-700' }} px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em]">
                                 {{ $publishStateBadge }}
                             </span>
                         </div>
                         <h3 class="mt-2 text-base font-semibold text-slate-900">{{ $sidebarIntroTitle }}</h3>
                         <p class="mt-1 text-sm text-slate-600">
-                            {{ $pageIsLive ? __('This page is already live. Save changes, then preview or open it when needed.') : __('This page is still in draft. Use preview to review it before making it visible.') }}
+                            {{ $pageIsLive ? t('dashboard.Page_Already_Live_Hint', 'This page is already live. Save changes, then preview or open it when needed.') : t('dashboard.Page_Still_Draft_Hint', 'This page is still in draft. Use preview to review it before making it visible.') }}
                         </p>
                     </div>
                 </div>
@@ -602,7 +602,7 @@
                     @if ($pageIsLive)
                         <a href="{{ $frontUrl }}" target="_blank"
                             class="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
-                            {{ __('Open Live Page') }}
+                            {{ t('dashboard.Open_Live_Page', 'Open Live Page') }}
                         </a>
                     @endif
                 </div>
@@ -619,7 +619,7 @@
                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6 4.5 12l6 6M19.5 12h-15" />
                 </svg>
-                <span>{{ $isClientWorkspace ? __('Need a new block? Open the block library') : __('Need help? Open the section library') }}</span>
+                <span>{{ $isClientWorkspace ? t('dashboard.Need_New_Block_Open_Library', 'Need a new block? Open the block library') : t('dashboard.Need_Help_Open_Section_Library', 'Need help? Open the section library') }}</span>
             </button>
         </div>
 
@@ -677,7 +677,7 @@
                         </svg>
                     </span>
                     <span class="flex-1 ltr:text-left rtl:text-right">
-                        {{ $isClientWorkspace ? __('Brand Settings') : __('Theme Settings') }}
+                        {{ $isClientWorkspace ? t('dashboard.Brand_Settings', 'Brand Settings') : t('dashboard.Theme_Settings', 'Theme Settings') }}
                     </span>
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 flex-shrink-0 text-slate-400 ltr:rotate-180 rtl:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.7">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
@@ -718,19 +718,19 @@
             const sidebarOpenButton = document.getElementById('sections-sidebar-open-btn');
             const reorderUrl = sidebarSortableList?.dataset.reorderUrl || '';
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            const reorderFailedMessage = @json($isClientWorkspace ? __('Block order could not be updated. Please try again.') : __('Section order could not be updated. Please try again.'));
-            const quickAddFailedMessage = @json($isClientWorkspace ? __('Block could not be added. Please try again.') : __('Section could not be added. Please try again.'));
-            const quickAddLoadingLabel = @json($isClientWorkspace ? __('Adding block...') : __('Adding...'));
-            const editorOpenFailedMessage = @json($isClientWorkspace ? __('Block settings could not be opened. Please try again.') : __('Section editor could not be opened. Please try again.'));
-            const editorSaveFailedMessage = @json($isClientWorkspace ? __('Block could not be updated. Please review the form and try again.') : __('Section could not be updated. Please review the form and try again.'));
-            const editorLoadingLabel = @json($isClientWorkspace ? __('Opening block settings...') : __('Loading editor...'));
-            const editorSaveSuccessMessage = @json($isClientWorkspace ? __('Block has been updated successfully.') : __('Section has been updated successfully.'));
-            const editorSavedLabel = @json(__('Saved'));
-            const successAlertTitle = @json(__('Success'));
-            const errorAlertTitle = @json(__('Error'));
-            const validationAlertTitle = @json(__('Please review the form'));
-            const activeStatusLabel = @json($isClientWorkspace ? __('Visible') : __('Active'));
-            const hiddenStatusLabel = @json(__('Hidden'));
+            const reorderFailedMessage = @json($isClientWorkspace ? t('dashboard.Block_Order_Could_Not_Be_Updated', 'Block order could not be updated. Please try again.') : t('dashboard.Section_Order_Could_Not_Be_Updated', 'Section order could not be updated. Please try again.'));
+            const quickAddFailedMessage = @json($isClientWorkspace ? t('dashboard.Block_Could_Not_Be_Added', 'Block could not be added. Please try again.') : t('dashboard.Section_Could_Not_Be_Added', 'Section could not be added. Please try again.'));
+            const quickAddLoadingLabel = @json($isClientWorkspace ? t('dashboard.Adding_Block', 'Adding block...') : t('dashboard.Adding', 'Adding...'));
+            const editorOpenFailedMessage = @json($isClientWorkspace ? t('dashboard.Block_Settings_Could_Not_Be_Opened', 'Block settings could not be opened. Please try again.') : t('dashboard.Section_Editor_Could_Not_Be_Opened', 'Section editor could not be opened. Please try again.'));
+            const editorSaveFailedMessage = @json($isClientWorkspace ? t('dashboard.Block_Could_Not_Be_Updated', 'Block could not be updated. Please review the form and try again.') : t('dashboard.Section_Could_Not_Be_Updated', 'Section could not be updated. Please review the form and try again.'));
+            const editorLoadingLabel = @json($isClientWorkspace ? t('dashboard.Opening_Block_Settings', 'Opening block settings...') : t('dashboard.Loading_Editor', 'Loading editor...'));
+            const editorSaveSuccessMessage = @json($isClientWorkspace ? t('dashboard.Block_Updated_Successfully', 'Block has been updated successfully.') : t('dashboard.Section_Updated_Successfully', 'Section has been updated successfully.'));
+            const editorSavedLabel = @json(t('common.Saved', 'Saved'));
+            const successAlertTitle = @json(t('common.Success', 'Success'));
+            const errorAlertTitle = @json(t('common.Error', 'Error'));
+            const validationAlertTitle = @json(t('common.Please_Review_The_Form', 'Please review the form'));
+            const activeStatusLabel = @json($isClientWorkspace ? t('dashboard.Visible', 'Visible') : t('dashboard.Active', 'Active'));
+            const hiddenStatusLabel = @json(t('dashboard.Hidden', 'Hidden'));
             const autoEditSectionId = Number(@json($autoEditSectionId));
             const frameBaseUrl = @json($previewBaseUrl);
             const previewFrameTitle = @json($previewFrameTitleLabel);
@@ -1184,7 +1184,7 @@
 
                         if (response.status === 419 || (!payloadParsed && !response.ok)) {
                             // 419 = CSRF / session expired. Non-JSON non-ok = server-level error.
-                            throw new Error(@json(__('Your session may have expired. Please refresh the page and try again.')));
+                            throw new Error(@json(t('dashboard.Session_May_Have_Expired', 'Your session may have expired. Please refresh the page and try again.')));
                         }
 
                         if (response.status === 422) {

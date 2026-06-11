@@ -1,21 +1,21 @@
 {{-- Canonical controller-driven admin sections workspace. Deprecated admin Livewire section editors are retained only for fallback safety and are not routed. --}}
 @php
     $translation = $page->translation();
-    $pageTitle = $translation?->title ?? __('Sections Workspace');
+    $pageTitle = $translation?->title ?? t('dashboard.Sections_Workspace', 'Sections Workspace');
     $frontUrl =
         $workspaceFrontUrl ?? ($page->is_home ? url('/') : ($translation?->slug ? url($translation->slug) : url('/')));
     $workspaceShellBackUrl = $workspaceShellBackUrl ?? route('dashboard.pages.index');
-    $workspaceShellBackLabel = $workspaceShellBackLabel ?? __('Back to pages');
+    $workspaceShellBackLabel = $workspaceShellBackLabel ?? t('dashboard.Back_To_Pages', 'Back to pages');
     $workspaceVisualBuilderUrl = $workspaceVisualBuilderUrl ?? null;
     $workspaceMode = $workspaceMode ?? 'admin';
     $isClientWorkspace = $workspaceMode === 'client';
     $workspaceModeLabel =
-        $workspaceModeLabel ?? ($workspaceMode === 'client' ? __('Client homepage editor') : __('Admin workspace'));
-    $workspaceModeDisplayLabel = $isClientWorkspace ? __('Site Editor') : $workspaceModeLabel;
-    $workspaceTitleSuffix = $isClientWorkspace ? __('Page Editor') : __('Sections Workspace');
-    $workspacePreviewLabel = $isClientWorkspace ? __('View Page') : __('Preview');
-    $workspaceShowSidebarLabel = $isClientWorkspace ? __('Show Blocks') : __('Show Sidebar');
-    $workspaceHideSidebarLabel = $isClientWorkspace ? __('Hide Blocks') : __('Hide Sidebar');
+        $workspaceModeLabel ?? ($workspaceMode === 'client' ? t('dashboard.Client_Homepage_Editor', 'Client homepage editor') : t('dashboard.Admin_Workspace', 'Admin workspace'));
+    $workspaceModeDisplayLabel = $isClientWorkspace ? t('dashboard.Site_Editor', 'Site Editor') : $workspaceModeLabel;
+    $workspaceTitleSuffix = $isClientWorkspace ? t('dashboard.Page_Editor', 'Page Editor') : t('dashboard.Sections_Workspace', 'Sections Workspace');
+    $workspacePreviewLabel = $isClientWorkspace ? t('dashboard.View_Page', 'View Page') : t('dashboard.Preview', 'Preview');
+    $workspaceShowSidebarLabel = $isClientWorkspace ? t('dashboard.Show_Blocks', 'Show Blocks') : t('dashboard.Show_Sidebar', 'Show Sidebar');
+    $workspaceHideSidebarLabel = $isClientWorkspace ? t('dashboard.Hide_Blocks', 'Hide Blocks') : t('dashboard.Hide_Sidebar', 'Hide Sidebar');
     $workspaceLanguages = collect($languages ?? [])
         ->filter(fn($language) => filled($language->code))
         ->values();
@@ -25,7 +25,7 @@
         ->filter(fn($workspacePageOption) => filled(data_get($workspacePageOption, 'url')))
         ->values();
     $hasWorkspacePageSwitcher = $isClientWorkspace && $workspacePageOptions->isNotEmpty();
-    $workspacePageSwitcherLabel = data_get($workspacePageSwitcher, 'label', __('Page'));
+    $workspacePageSwitcherLabel = data_get($workspacePageSwitcher, 'label', t('dashboard.Page', 'Page'));
     $adminLogoPath = $settings?->admin_logo ?: $settings?->logo;
     $adminLogoHref = !empty($adminLogoPath)
         ? (\Illuminate\Support\Str::startsWith($adminLogoPath, ['http://', 'https://', '//'])
@@ -35,7 +35,7 @@
     $sectionsIconLibrary = collect(config('sections.icon_library', []))
         ->map(function (array $icon) {
             return [
-                'label' => __($icon['label'] ?? ''),
+                'label' => t($icon['label'] ?? '', $icon['label'] ?? ''),
                 'value' => $icon['value'] ?? '',
                 'keywords' => $icon['keywords'] ?? '',
             ];
@@ -68,6 +68,11 @@
 <body class="h-full bg-slate-100 text-slate-900">
     <div id="sections-workspace-shell" class="sections-workspace-shell flex h-screen flex-col overflow-hidden">
         <header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur shadow-sm">
+            @if ($isClientWorkspace)
+                <div style="height:3px;background:#2563eb;"></div>
+            @else
+                <div style="height:3px;background:#1e293b;"></div>
+            @endif
             <div class="px-4 py-2 lg:px-6">
                 <div class="flex flex-wrap items-center justify-between gap-2 xl:flex-nowrap">
                     <div class="flex min-w-0 items-center gap-3 rtl:flex-row-reverse">
@@ -93,12 +98,12 @@
                                     <div class="relative min-w-[11rem] max-w-[15rem] sm:max-w-[19rem]">
                                         <select onchange="if (this.value) { window.location.href = this.value; }"
                                             class="h-10 w-full appearance-none rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-900 shadow-sm transition outline-none hover:border-slate-300 focus:border-sky-300 focus:ring-2 focus:ring-sky-100 rtl:pl-10 rtl:pr-4 ltr:pl-4 ltr:pr-10"
-                                            aria-label="{{ __('Switch page') }}">
+                                            aria-label="{{ t('dashboard.Switch_Page', 'Switch page') }}">
                                             @foreach ($workspacePageOptions as $workspacePageOption)
                                                 <option value="{{ $workspacePageOption['url'] }}"
                                                     @selected(!empty($workspacePageOption['active']))>
                                                     {{ $workspacePageOption['label'] }}@if (!empty($workspacePageOption['is_home']))
-                                                        • {{ __('Home') }}
+                                                        • {{ t('common.Home', 'Home') }}
                                                     @endif
                                                 </option>
                                             @endforeach
@@ -111,10 +116,15 @@
                                         </svg>
                                     </div>
                                     @if (filled($workspaceModeDisplayLabel))
-                                        <span
-                                            class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
-                                            {{ $workspaceModeDisplayLabel }}
-                                        </span>
+                                        @if ($isClientWorkspace)
+                                            <span class="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-700">
+                                                {{ $workspaceModeDisplayLabel }}
+                                            </span>
+                                        @else
+                                            <span class="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                                                {{ $workspaceModeDisplayLabel }}
+                                            </span>
+                                        @endif
                                     @endif
                                 </div>
                             @else
@@ -126,14 +136,19 @@
                                     @if ($page->is_home)
                                         <span
                                             class="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
-                                            {{ __('Home') }}
+                                            {{ t('common.Home', 'Home') }}
                                         </span>
                                     @endif
                                     @if (filled($workspaceModeDisplayLabel))
-                                        <span
-                                            class="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-sky-700">
-                                            {{ $workspaceModeDisplayLabel }}
-                                        </span>
+                                        @if ($isClientWorkspace)
+                                            <span class="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-700">
+                                                {{ $workspaceModeDisplayLabel }}
+                                            </span>
+                                        @else
+                                            <span class="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">
+                                                {{ $workspaceModeDisplayLabel }}
+                                            </span>
+                                        @endif
                                     @endif
                                 </div>
                             @endif
@@ -180,7 +195,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round"
                                             d="M9 18.75h6M12 15.75v3" />
                                     </svg>
-                                    {{ __('Visual Builder') }}
+                                    {{ t('dashboard.Visual_Builder', 'Visual Builder') }}
                                 </a>
                             @endif
                         </div>
@@ -239,8 +254,8 @@
     <script>
         window.sectionsShowAlert = function(options = {}) {
             const tone = options.tone === 'success' ? 'success' : 'error';
-            const title = String(options.title || (tone === 'success' ? @json(__('Success')) :
-                @json(__('Something went wrong'))));
+            const title = String(options.title || (tone === 'success' ? @json(t('common.Success', 'Success')) :
+                @json(t('common.Something_Went_Wrong', 'Something went wrong'))));
             const messages = Array.isArray(options.messages) ? options.messages.filter(Boolean) : [];
             const text = String(options.text || '');
 
@@ -279,7 +294,7 @@
                 title,
                 text: html ? undefined : (text || ''),
                 html: html || undefined,
-                confirmButtonText: @json(__('OK')),
+                confirmButtonText: @json(t('common.Ok', 'OK')),
                 customClass: {
                     popup: 'rounded-[1.5rem]',
                     confirmButton: 'inline-flex items-center rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white',
@@ -303,7 +318,7 @@
             if (errorMessage) {
                 window.sectionsShowAlert({
                     tone: 'error',
-                    title: @json(__('Error')),
+                    title: @json(t('common.Error', 'Error')),
                     messages: [errorMessage],
                 });
             }
@@ -311,7 +326,7 @@
             if (Array.isArray(validationErrors) && validationErrors.length > 0) {
                 window.sectionsShowAlert({
                     tone: 'error',
-                    title: @json(__('Please review the form')),
+                    title: @json(t('common.Please_Review_The_Form', 'Please review the form')),
                     messages: validationErrors,
                 });
             }
@@ -518,7 +533,7 @@
 
                 grid.innerHTML = '';
                 countLabel.textContent =
-                    `${filteredIcons.length} ${filteredIcons.length === 1 ? @json(__('icon')) : @json(__('icons'))}`;
+                    `${filteredIcons.length} ${filteredIcons.length === 1 ? @json(t('common.Icon', 'icon')) : @json(t('common.Icons', 'icons'))}`;
                 emptyState.classList.toggle('hidden', filteredIcons.length > 0);
                 grid.classList.toggle('hidden', filteredIcons.length === 0);
                 clearButton.classList.toggle('hidden', activeValue === '');
@@ -886,10 +901,10 @@
 
                     if (summary) {
                         summary.textContent = source === 'svg' ?
-                            (svgValue ? @json(__('Custom SVG icon')) : featureItemHint) :
+                            (svgValue ? @json(t('dashboard.Custom_Svg_Icon', 'Custom SVG icon')) : featureItemHint) :
                             source === 'media' ?
-                            (mediaValue ? @json(__('SVG from media library')) : featureItemHint) :
-                            (iconValue ? @json(__('Tabler icon selected')) : featureItemHint);
+                            (mediaValue ? @json(t('dashboard.Svg_From_Media_Library', 'SVG from media library')) : featureItemHint) :
+                            (iconValue ? @json(t('dashboard.Tabler_Icon_Selected', 'Tabler icon selected')) : featureItemHint);
                     }
                 };
 
@@ -1267,9 +1282,9 @@
 
                     if (summary) {
                         summary.textContent = source === 'media' ?
-                            (mediaValue ? @json(__('SVG from media library')) : outputItemHint) :
-                            (iconValue ? @json(__('Tabler icon selected')) : (textValue ?
-                                @json(__('Visible in the outputs list')) : outputItemHint));
+                            (mediaValue ? @json(t('dashboard.Svg_From_Media_Library', 'SVG from media library')) : outputItemHint) :
+                            (iconValue ? @json(t('dashboard.Tabler_Icon_Selected', 'Tabler icon selected')) : (textValue ?
+                                @json(t('dashboard.Visible_In_The_Outputs_List', 'Visible in the outputs list')) : outputItemHint));
                     }
                 };
 
@@ -1629,9 +1644,9 @@
 
                     if (summary) {
                         summary.textContent = source === 'media' ?
-                            (mediaValue ? @json(__('SVG from media library')) : serviceItemHint) :
-                            (iconValue ? @json(__('Tabler icon selected')) : (textValue ?
-                                @json(__('Uses the default service marker')) : serviceItemHint));
+                            (mediaValue ? @json(t('dashboard.Svg_From_Media_Library', 'SVG from media library')) : serviceItemHint) :
+                            (iconValue ? @json(t('dashboard.Tabler_Icon_Selected', 'Tabler icon selected')) : (textValue ?
+                                @json(t('dashboard.Uses_The_Default_Service_Marker', 'Uses the default service marker')) : serviceItemHint));
                     }
                 };
 
@@ -2021,15 +2036,15 @@
 
                     if (summary) {
                         let summaryText = source === 'svg' ?
-                            (svgValue ? @json(__('Custom SVG icon')) : buildStepItemHint) :
+                            (svgValue ? @json(t('dashboard.Custom_Svg_Icon', 'Custom SVG icon')) : buildStepItemHint) :
                             source === 'media' ?
-                            (mediaValue ? @json(__('SVG from media library')) : buildStepItemHint) :
-                            (iconValue ? @json(__('Tabler icon selected')) : buildStepItemHint);
+                            (mediaValue ? @json(t('dashboard.Svg_From_Media_Library', 'SVG from media library')) : buildStepItemHint) :
+                            (iconValue ? @json(t('dashboard.Tabler_Icon_Selected', 'Tabler icon selected')) : buildStepItemHint);
 
                         if (isAccent) {
                             summaryText = summaryText === buildStepItemHint ?
-                                @json(__('Highlighted in red')) :
-                                `${summaryText} • ${@json(__('Highlighted in red'))}`;
+                                @json(t('dashboard.Highlighted_In_Red', 'Highlighted in red')) :
+                                `${summaryText} • ${@json(t('dashboard.Highlighted_In_Red', 'Highlighted in red'))}`;
                         }
 
                         summary.textContent = summaryText;
@@ -2698,15 +2713,15 @@
                     // Guard is kept so the function works if the element ever exists.
                     if (statusEl) {
                         if (source === 'class') {
-                            statusEl.textContent = iconClass || @json(__('No icon selected'));
+                            statusEl.textContent = iconClass || @json(t('dashboard.No_Icon_Selected', 'No icon selected'));
                         } else if (source === 'media') {
                             statusEl.textContent = mediaId
-                                ? @json(__('Media file selected'))
-                                : @json(__('No media selected'));
+                                ? @json(t('dashboard.Media_File_Selected', 'Media file selected'))
+                                : @json(t('dashboard.No_Media_Selected', 'No media selected'));
                         } else if (source === 'svg') {
-                            statusEl.textContent = @json(__('Edit the inline SVG field below'));
+                            statusEl.textContent = @json(t('dashboard.Edit_The_Inline_Svg_Field_Below', 'Edit the inline SVG field below'));
                         } else {
-                            statusEl.textContent = @json(__('No icon set'));
+                            statusEl.textContent = @json(t('dashboard.No_Icon_Set', 'No icon set'));
                         }
                     }
                     // Both action buttons are always visible in the redesigned card;

@@ -105,6 +105,7 @@ class PageController extends Controller
             'translations.*.meta_title'       => 'nullable|string|max:255',
             'translations.*.meta_description' => 'nullable|string|max:500',
             'translations.*.meta_keywords'    => 'nullable|string',
+            'translations.*.og_image'         => 'nullable',
         ]);
 
         if ($validator->fails()) {
@@ -136,13 +137,14 @@ class PageController extends Controller
                     'meta_title'       => $t['meta_title'] ?? null,
                     'meta_description' => $t['meta_description'] ?? null,
                     'meta_keywords'    => $t['meta_keywords'] ?? null,
+                    'og_image'         => $t['og_image'] ?? null,
                 ]);
             }
         });
 
         return redirect()
             ->route('dashboard.pages.index')
-            ->with('success', __('Page created successfully.'));
+            ->with('success', t('dashboard.Page_Created_Successfully', 'Page created successfully.'));
     }
 
     /**
@@ -222,6 +224,7 @@ class PageController extends Controller
             'translations.*.meta_title'       => 'nullable|string',
             'translations.*.meta_description' => 'nullable|string',
             'translations.*.meta_keywords'    => 'nullable|string',
+            'translations.*.og_image'         => 'nullable',
         ]);
 
         if ($validator->fails()) {
@@ -262,6 +265,7 @@ class PageController extends Controller
                         'meta_title'       => $t['meta_title'] ?? null,
                         'meta_description' => $t['meta_description'] ?? null,
                         'meta_keywords'    => $t['meta_keywords'] ?? null,
+                        'og_image'         => $t['og_image'] ?? null,
                     ]
                 );
             }
@@ -269,7 +273,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('dashboard.pages.edit', $page)
-            ->with('success', __('Page updated successfully.'));
+            ->with('success', t('dashboard.Page_Updated_Successfully', 'Page updated successfully.'));
     }
 
     /**
@@ -287,7 +291,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('dashboard.pages.index')
-            ->with('success', __('Page deleted successfully.'));
+            ->with('success', t('dashboard.Page_Deleted_Successfully', 'Page deleted successfully.'));
     }
 
     /**
@@ -305,7 +309,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('dashboard.pages.index')
-            ->with('success', __('Page status updated successfully.'));
+            ->with('success', t('dashboard.Page_Status_Updated_Successfully', 'Page status updated successfully.'));
     }
 
     /**
@@ -329,7 +333,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('dashboard.pages.index')
-            ->with('success', __('Page set as homepage successfully.'));
+            ->with('success', t('dashboard.Page_Set_As_Homepage_Successfully', 'Page set as homepage successfully.'));
     }
     /**
      * Update the preferred builder mode for a marketing page.
@@ -361,7 +365,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('dashboard.pages.edit', $page)
-            ->with('success', __('Builder mode updated successfully.'));
+            ->with('success', t('dashboard.Builder_Mode_Updated_Successfully', 'Builder mode updated successfully.'));
     }
 
     /**

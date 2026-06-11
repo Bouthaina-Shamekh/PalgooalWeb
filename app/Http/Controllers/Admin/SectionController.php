@@ -173,7 +173,7 @@ class SectionController extends Controller
 
         return redirect()
             ->to($this->workspaceRoute('index', $page))
-            ->with('success', 'Section has been created successfully.');
+            ->with('success', t('dashboard.Section_Created_Successfully', 'Section has been created successfully.'));
     }
 
     /**
@@ -225,13 +225,13 @@ class SectionController extends Controller
                 'editor_url' => $editorUrl,
                 'section_id' => $createdSection->id,
                 'section_card_html' => $this->renderSectionOutlineItem($page, $createdSection),
-                'message' => 'Section added. Continue customizing it in the editor.',
+                'message' => t('dashboard.Section_Added_Continue_Customizing', 'Section added. Continue customizing it in the editor.'),
             ]);
         }
 
         return redirect()
             ->to($redirectUrl)
-            ->with('success', 'Section added. Continue customizing it in the editor.');
+            ->with('success', t('dashboard.Section_Added_Continue_Customizing', 'Section added. Continue customizing it in the editor.'));
     }
 
     /**
@@ -354,7 +354,7 @@ class SectionController extends Controller
 
                 return response()->json([
                     'ok' => true,
-                    'message' => 'Section has been updated successfully.',
+                    'message' => t('dashboard.Section_Updated_Successfully', 'Section has been updated successfully.'),
                     'section' => [
                         'id' => $section->id,
                         'title' => $translation?->title ?: $typeLabel,
@@ -368,7 +368,7 @@ class SectionController extends Controller
                 ->to($this->workspaceRoute('index', $page, null, [
                     'highlight' => $section->id,
                 ]))
-                ->with('success', 'Section has been updated successfully.');
+                ->with('success', t('dashboard.Section_Updated_Successfully', 'Section has been updated successfully.'));
 
         } catch (ValidationException $e) {
             // Re-throw validation exceptions — Laravel will convert them to the
@@ -386,7 +386,7 @@ class SectionController extends Controller
             if ($isJsonRequest) {
                 return response()->json([
                     'ok'      => false,
-                    'message' => __('Section could not be updated due to a server error. Please try again or contact support.'),
+                    'message' => t('dashboard.Section_Could_Not_Be_Updated_Server_Error', 'Section could not be updated due to a server error. Please try again or contact support.'),
                 ], 500);
             }
 
@@ -408,7 +408,7 @@ class SectionController extends Controller
 
         return redirect()
             ->to($this->workspaceRoute('index', $page, null, ['highlight' => $section->id]))
-            ->with('success', 'Section visibility has been updated.');
+            ->with('success', t('dashboard.Section_Visibility_Updated_Successfully', 'Section visibility has been updated.'));
     }
 
     /**
@@ -439,7 +439,7 @@ class SectionController extends Controller
 
         return redirect()
             ->to($this->workspaceRoute('index', $page, null, ['highlight' => $section->id]))
-            ->with('success', 'Section title has been updated.');
+            ->with('success', t('dashboard.Section_Title_Updated_Successfully', 'Section title has been updated.'));
     }
 
     /**
@@ -478,7 +478,7 @@ class SectionController extends Controller
 
         return redirect()
             ->to($this->workspaceRoute('index', $page, null, ['highlight' => $section->id]))
-            ->with('success', 'Section order has been updated.');
+            ->with('success', t('dashboard.Section_Order_Updated_Successfully', 'Section order has been updated.'));
     }
 
     /**
@@ -579,7 +579,7 @@ class SectionController extends Controller
 
         return redirect()
             ->to($this->workspaceRoute('index', $page, null, ['highlight' => $duplicate->id]))
-            ->with('success', 'Section duplicated as a draft copy.');
+            ->with('success', t('dashboard.Section_Duplicated_Successfully', 'Section duplicated as a draft copy.'));
     }
 
     /**
@@ -595,7 +595,7 @@ class SectionController extends Controller
 
         return redirect()
             ->to($this->workspaceRoute('index', $page))
-            ->with('success', 'Section has been deleted successfully.');
+            ->with('success', t('dashboard.Section_Deleted_Successfully', 'Section has been deleted successfully.'));
     }
 
     /**
@@ -638,7 +638,7 @@ class SectionController extends Controller
      */
     protected function workspaceModeLabel(): ?string
     {
-        return __('Admin workspace');
+        return t('dashboard.Admin_Workspace', 'Admin workspace');
     }
 
     /**
@@ -700,7 +700,7 @@ class SectionController extends Controller
      */
     protected function workspaceShellBackLabel(): string
     {
-        return __('Back to pages');
+        return t('dashboard.Back_To_Pages', 'Back to pages');
     }
 
     /**
@@ -952,7 +952,7 @@ class SectionController extends Controller
             $libraryTypes[$definitionKey] = [
                 'type' => $definitionKey,
                 'label' => $definition->label,
-                'description' => $definition->description ?: __('Definition-driven section'),
+                'description' => $definition->description ?: t('dashboard.Definition_Driven_Section', 'Definition-driven section'),
                 'category' => $definition->category ?: 'other',
                 'preview_url' => $definition->previewMedia?->url,
                 'preview' => data_get($definition->settings, 'preview'),
@@ -1252,7 +1252,7 @@ class SectionController extends Controller
     ): array {
         if (! $sectionDefinition instanceof SectionDefinition) {
             throw ValidationException::withMessages([
-                'section_definition_id' => __('Normal page sections must stay linked to an active section definition.'),
+                'section_definition_id' => t('dashboard.Section_Must_Stay_Linked_To_Definition', 'Normal page sections must stay linked to an active section definition.'),
             ]);
         }
 
@@ -1342,7 +1342,7 @@ class SectionController extends Controller
 
         if (! $sectionDefinitionId || ! Schema::hasTable('section_definitions')) {
             throw ValidationException::withMessages([
-                'section_definition_id' => __('Normal page sections must stay linked to an active section definition.'),
+                'section_definition_id' => t('dashboard.Section_Must_Stay_Linked_To_Definition', 'Normal page sections must stay linked to an active section definition.'),
             ]);
         }
 
@@ -1359,7 +1359,7 @@ class SectionController extends Controller
 
         if (! $definition instanceof SectionDefinition) {
             throw ValidationException::withMessages([
-                'section_definition_id' => __('The linked section definition is no longer available.'),
+                'section_definition_id' => t('dashboard.Linked_Section_Definition_No_Longer_Available', 'The linked section definition is no longer available.'),
             ]);
         }
 
