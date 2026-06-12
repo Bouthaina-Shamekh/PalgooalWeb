@@ -566,3 +566,38 @@ return view('...', compact('template', 'categories', 'languages', 'plans'));
     {{ t('dashboard.Status_Active', 'نشط') }}
 </span>
 ```
+
+---
+
+### Session: Admin Plans Edit (لوحة الإدارة)
+- `resources/views/dashboard/management/plans/edit.blade.php` — إعادة كتابة كاملة:
+  - **breadcrumb معياري**: الرئيسية → الباقات → تعديل الباقة + اسم الباقة في العنوان
+  - **4 أقسام مرقمة** بأرقام عربية: معلومات أساسية → التسعير → حزمة السيرفر → ترجمات الباقة
+  - **تخطيط** `col-span-8` (فورم) + `col-span-4` (help sidebar) مثل create
+  - **إصلاح بق**: `is_active` و`is_featured` من checkbox → radio buttons مع strict comparison على `$plan->is_active ? '1' : '0'`
+  - **server package warning**: رسالة واضحة باللون البرتقالي عند عدم وجود باقات (بدلاً من قائمة فارغة)
+  - كل النصوص → `t('dashboard.*')`
+  - إزالة `__()` الموجودة (Monthly, Annual, Available, إلخ)
+- `app/Http/Controllers/Admin/Management/ServerController.php`:
+  - **`packages()`**: عند إرجاع `packages:[]` يُضاف `warning` يوضح السبب للمشرف
+  - إزالة debug `_raw` المؤقتة من الـ response
+- `database/seeders/DashboardTranslationsSeeder.php` — إضافة 19 ترجمة:
+  - `dashboard.Edit_Plan`، `dashboard.Edit_Hosting_Plan`، `dashboard.Update_Plan`
+  - `dashboard.Plan_Translations`، `dashboard.Pricing`، `dashboard.Normal`
+  - `dashboard.Auto_Generated`، `dashboard.Error_Loading`، `dashboard.Loading`
+  - `dashboard.Feature_Placeholder`، `dashboard.Featured_Badge_Hint`، `dashboard.Plan_Name`
+  - `dashboard.Help_Features`، `dashboard.Help_Features_Desc`
+  - `dashboard.Server`، `dashboard.Token_Saved`، `dashboard.Token_Saved_Hint`
+
+### ملاحظة: listpkgs للرسيلر
+`listpkgs` مع credentials الرسيلر يُعيد فقط الباقات التي أنشأها الرسيلر نفسه (من WHM كـ reseller).
+باقات الـ root **غير مرئية** للرسيلر عبر هذا الـ endpoint.
+الحل: سجّل الدخول لـ WHM كـ reseller → Packages → Add a Package.
+
+### ملاحظة: WHM API Reseller Privileges
+عند استخدام WHM API Token لرسيلر، يجب تفعيل الصلاحيات من WHM (root) → Resellers → Edit Reseller Nameservers and Privileges:
+- `view-privs` (Account Summary) ← ضروري لتشغيل `myprivs` — بدونه: "Permission denied"
+- `create-user-session` ← للـ SSO
+- `list-accts` ← قراءة الحسابات
+- `add-pkg` / `edit-pkg` ← إدارة الباقات
+- `create-acct` / `kill-acct` / `suspend-acct` / `unsuspend-acct` ← إدارة الحسابات

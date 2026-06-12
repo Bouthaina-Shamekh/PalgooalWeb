@@ -663,6 +663,25 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.templates.form.js.no_image'                    => 'لا توجد صورة',
             'dashboard.templates.form.js.no_image_selected'           => 'لم يتم اختيار صورة بعد',
             'dashboard.templates.form.js.choose_image_from_library'   => 'اختيار صورة من المكتبة',
+
+            // ── Session: Admin Plans Edit ─────────────────────────
+            'dashboard.Edit_Plan'               => 'تعديل الباقة',
+            'dashboard.Edit_Hosting_Plan'       => 'تعديل باقة الاستضافة',
+            'dashboard.Update_Plan'             => 'حفظ التعديلات',
+            'dashboard.Plan_Translations'       => 'ترجمات الباقة',
+            'dashboard.Pricing'                 => 'التسعير',
+            'dashboard.Normal'                  => 'عادية',
+            'dashboard.Auto_Generated'          => 'يُنشأ تلقائياً إذا تُرك فارغاً',
+            'dashboard.Error_Loading'           => 'خطأ في التحميل',
+            'dashboard.Loading'                 => 'جارٍ التحميل...',
+            'dashboard.Feature_Placeholder'     => 'مثال: دومين مجاني',
+            'dashboard.Featured_Badge_Hint'     => 'يظهر عند تفعيل الخيار المميز. اتركه فارغاً للنص الافتراضي.',
+            'dashboard.Plan_Name'               => 'اسم الباقة',
+            'dashboard.Help_Features'           => 'المميزات',
+            'dashboard.Help_Features_Desc'      => 'يمكن إضافة مميزات منفصلة للخطة الشهرية والسنوية، أو استخدام نفس القائمة للاثنتين.',
+            'dashboard.Server'                  => 'السيرفر',
+            'dashboard.Token_Saved'             => 'توكن محفوظ',
+            'dashboard.Token_Saved_Hint'        => 'توكن محفوظ — اتركه فارغاً للإبقاء على الحالي، أو اكتب توكناً جديداً للاستبدال',
         ];
 
         $locale = 'ar';

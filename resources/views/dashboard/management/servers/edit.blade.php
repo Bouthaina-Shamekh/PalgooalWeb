@@ -62,7 +62,15 @@
                             </div>
                             <div>
                                 <label class="block mb-1">API Token</label>
-                                <input type="password" name="api_token" class="form-control" value="">
+                                <input type="password" name="api_token" class="form-control font-mono" dir="ltr"
+                                       placeholder="{{ $server->api_token ? '●●●●●●●●●●●● (' . t('dashboard.Token_Saved', 'توكن محفوظ') . ')' : '' }}"
+                                       autocomplete="new-password">
+                                @if($server->api_token)
+                                    <p class="text-xs text-success mt-1">
+                                        <i class="ti ti-circle-check me-1"></i>
+                                        {{ t('dashboard.Token_Saved_Hint', 'توكن محفوظ — اتركه فارغاً للإبقاء على الحالي، أو اكتب توكناً جديداً للاستبدال') }}
+                                    </p>
+                                @endif
                             </div>
                             <div>
                                 <label class="block mb-1">الحالة</label>

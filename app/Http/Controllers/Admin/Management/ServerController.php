@@ -420,10 +420,12 @@ class ServerController extends Controller
             return response()->json(['error' => $error, 'packages' => $packages], 400);
         }
 
-        // If no packages found and app debug enabled, include a debugSample of the raw response
-        if (empty($packages) && config('app.debug')) {
-            $debugSample = isset($response) ? substr($response, 0, 2000) : null;
-            return response()->json(['packages' => $packages, 'debugSample' => $debugSample]);
+        // الباقات فارغة — الرسيلر لا يملك باقات بعد (يجب إنشاؤها من WHM كـ reseller)
+        if (empty($packages)) {
+            return response()->json([
+                'packages' => [],
+                'warning'  => 'لا توجد باقات لهذا السيرفر. أنشئ الباقات من WHM → Packages → Add a Package بتسجيل الدخول كـ reseller.',
+            ]);
         }
 
         return response()->json(['packages' => $packages]);
