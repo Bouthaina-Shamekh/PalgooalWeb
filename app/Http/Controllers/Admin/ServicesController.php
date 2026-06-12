@@ -18,11 +18,26 @@ class ServicesController extends Controller
     {
         $this->languages = Language::get();
     }
-    public function index()
+    public function index(Request $request)
     {
         $this->authorize('viewAny', Service::class);
-        $services = Service::with('translations')->paginate(10);
-        return view('dashboard.services.index', compact('services'));
+
+        $search  = trim((string) $request->get('search', ''));
+        $perPage = in_array((int) $request->get('per_page'), [10, 25, 50])
+            ? (int) $request->get('per_page') : 10;
+
+        $services = Service::with('translations')
+            ->when($search !== '', function ($q) use ($search) {
+                $q->whereHas('translations', function ($t) use ($search) {
+                    $t->where('title', 'like', '%' . addcslashes($search, '%_\\') . '%');
+                });
+            })
+            ->orderBy('order')
+            ->orderBy('id')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('dashboard.services.index', compact('services', 'search', 'perPage'));
     }
 
     public function create()
@@ -49,28 +64,24 @@ class ServicesController extends Controller
 
         try {
             // حفظ البيانات
-            $service = Service::create($request->all());
+            $service = Service::create($request->only(['order', 'icon', 'url']));
 
-
-            // حفظ الترجمات
             foreach ($request->serviceTranslations as $translation) {
-                ServiceTranslation::create(
-                    [
-                        'service_id' => $service->id,
-                        'locale' => $translation['locale'],
-                        'title' => $translation['title'],
-                        'description' => $translation['description']
-                    ]
-                );
+                ServiceTranslation::create([
+                    'service_id'  => $service->id,
+                    'locale'      => $translation['locale'],
+                    'title'       => $translation['title'],
+                    'description' => $translation['description'],
+                ]);
             }
 
             DB::commit();
 
-            return redirect()->route('dashboard.services.index')->with('success', 'تم إنشاء القالب بنجاح.');
+            return redirect()->route('dashboard.services.index')
+                ->with('ok', t('dashboard.Service_Created', 'Service created successfully.'));
         } catch (\Exception $e) {
             DB::rollBack();
-            dd($e);
-            return back()->withErrors(['error' => $e->getMessage()]);
+            return back()->with('error', t('dashboard.Service_Error', 'An error occurred. Please try again.'));
         }
     }
 
@@ -123,10 +134,11 @@ class ServicesController extends Controller
 
             DB::commit();
 
-            return redirect()->route('dashboard.services.index')->with('success', 'تم تعديل القالب بنجاح.');
+            return redirect()->route('dashboard.services.index')
+                ->with('ok', t('dashboard.Service_Updated', 'Service updated successfully.'));
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors(['error' => $e->getMessage()]);
+            return back()->with('error', t('dashboard.Service_Error', 'An error occurred. Please try again.'));
         }
     }
 
@@ -138,7 +150,8 @@ class ServicesController extends Controller
 
         $service->delete();
 
-        return redirect()->route('dashboard.services.index')->with('success', 'تم حذف القالب بنجاح.');
+        return redirect()->route('dashboard.services.index')
+            ->with('ok', t('dashboard.Service_Deleted', 'Service deleted successfully.'));
     }
 }
 

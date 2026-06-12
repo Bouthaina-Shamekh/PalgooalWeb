@@ -71,7 +71,7 @@ class ClientController extends Controller
 
         return redirect()
             ->route('dashboard.clients')
-            ->with('success', 'Client added successfully.');
+            ->with('ok', t('dashboard.Client_Created', 'Client added successfully.'));
     }
 
     public function show(Request $request, Client $client): View
@@ -140,7 +140,7 @@ class ClientController extends Controller
 
         return redirect()
             ->route('dashboard.clients.show', ['client' => $client, 'tab' => 'details'])
-            ->with('success', 'Client updated successfully.');
+            ->with('ok', t('dashboard.Client_Updated', 'Client updated successfully.'));
     }
 
     public function destroy(Client $client): RedirectResponse
@@ -162,7 +162,7 @@ class ClientController extends Controller
 
         return redirect()
             ->route('dashboard.clients')
-            ->with('success', 'Client deleted successfully.');
+            ->with('ok', t('dashboard.Client_Deleted', 'Client deleted successfully.'));
     }
 
     public function impersonate(Request $request, Client $client): RedirectResponse
@@ -188,7 +188,7 @@ class ClientController extends Controller
 
         return redirect()
             ->route('client.home')
-            ->with('success', 'You are now logged in as the client.');
+            ->with('ok', t('dashboard.Client_Impersonated', 'You are now logged in as the client.'));
     }
 
     public function storeContact(Request $request, Client $client): RedirectResponse
@@ -237,7 +237,7 @@ class ClientController extends Controller
 
         return redirect()
             ->route('dashboard.clients.show', ['client' => $client, 'tab' => 'contacts'])
-            ->with('success', 'Contact added successfully.');
+            ->with('ok', t('dashboard.Contact_Created', 'Contact added successfully.'));
     }
 
     public function destroyContact(Client $client, ClientContact $contact): RedirectResponse
@@ -261,7 +261,7 @@ class ClientController extends Controller
 
         return redirect()
             ->route('dashboard.clients.show', ['client' => $client, 'tab' => 'contacts'])
-            ->with('success', 'Contact deleted successfully.');
+            ->with('ok', t('dashboard.Contact_Deleted', 'Contact deleted successfully.'));
     }
 
     public function storeNote(Request $request, Client $client): RedirectResponse
@@ -289,7 +289,7 @@ class ClientController extends Controller
 
         return redirect()
             ->route('dashboard.clients.show', ['client' => $client, 'tab' => 'notes'])
-            ->with('success', 'Note added successfully.');
+            ->with('ok', t('dashboard.Note_Created', 'Note added successfully.'));
     }
 
     public function destroyNote(Client $client, ClientNote $note): RedirectResponse
@@ -311,7 +311,7 @@ class ClientController extends Controller
 
         return redirect()
             ->route('dashboard.clients.show', ['client' => $client, 'tab' => 'notes'])
-            ->with('success', 'Note deleted successfully.');
+            ->with('ok', t('dashboard.Note_Deleted', 'Note deleted successfully.'));
     }
 
     private function validateClient(Request $request, ?Client $client = null): array
@@ -335,7 +335,7 @@ class ClientController extends Controller
                 'company_name' => ['nullable', 'string', 'max:255'],
                 'phone' => ['required', 'string', 'max:255'],
                 'can_login' => ['required', 'boolean'],
-                'avatar' => ['nullable', 'image', 'max:2048'],
+                'avatar' => ['nullable', 'string', 'max:500'],
                 'status' => ['required', Rule::in(['active', 'inactive'])],
                 'country' => ['nullable', 'string', 'max:2'],
                 'city' => ['nullable', 'string', 'max:255'],
@@ -371,12 +371,8 @@ class ClientController extends Controller
             $payload['password'] = bcrypt($validated['password']);
         }
 
-        if ($request->hasFile('avatar')) {
-            if ($client) {
-                $this->deleteAvatar($client);
-            }
-
-            $payload['avatar'] = $request->file('avatar')->store('avatars', 'public');
+        if ($request->filled('avatar')) {
+            $payload['avatar'] = $request->input('avatar');
         }
 
         return $payload;

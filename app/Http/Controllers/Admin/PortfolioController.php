@@ -148,14 +148,26 @@ class PortfolioController extends Controller
     // CRUD actions
     // -------------------------------------------------------------------------
 
-    public function index()
+    public function index(Request $request)
     {
         $this->authorize('viewAny', Portfolio::class);
 
-        // Eager-load translations once — view must NOT call translations() as query builder
-        $portfolios = Portfolio::with('translations')->paginate(10);
+        $search  = trim((string) $request->get('search', ''));
+        $perPage = in_array((int) $request->get('per_page'), [10, 25, 50])
+            ? (int) $request->get('per_page') : 10;
 
-        return view('dashboard.portfolios.index', compact('portfolios'));
+        $portfolios = Portfolio::with('translations')
+            ->when($search !== '', function ($q) use ($search) {
+                $q->whereHas('translations', function ($t) use ($search) {
+                    $t->where('title', 'like', '%' . addcslashes($search, '%_\\') . '%')
+                      ->orWhere('type', 'like', '%' . addcslashes($search, '%_\\') . '%');
+                })->orWhere('client', 'like', '%' . addcslashes($search, '%_\\') . '%');
+            })
+            ->orderBy('order')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('dashboard.portfolios.index', compact('portfolios', 'search', 'perPage'));
     }
 
     public function create()
@@ -245,13 +257,13 @@ class PortfolioController extends Controller
             DB::commit();
 
             return redirect()->route('dashboard.portfolios.index')
-                ->with('success', __('Portfolio created successfully.'));
+                ->with('ok', t('dashboard.Portfolio_Created', 'Portfolio created successfully.'));
 
         } catch (\Exception $e) {
             DB::rollBack();
             // P12 fix: log internally, show generic message to user
             Log::error('Portfolio store failed: ' . $e->getMessage(), ['exception' => $e]);
-            return back()->withErrors(['error' => __('An error occurred while saving. Please try again.')]);
+            return back()->with('error', t('dashboard.Portfolio_Error', 'An error occurred while saving. Please try again.'));
         }
     }
 
@@ -355,13 +367,13 @@ class PortfolioController extends Controller
             DB::commit();
 
             return redirect()->route('dashboard.portfolios.index')
-                ->with('success', __('Portfolio updated successfully.'));
+                ->with('ok', t('dashboard.Portfolio_Updated', 'Portfolio updated successfully.'));
 
         } catch (\Exception $e) {
             DB::rollBack();
             // P12 fix: log internally, show generic message
             Log::error('Portfolio update failed for id=' . $id . ': ' . $e->getMessage(), ['exception' => $e]);
-            return back()->withErrors(['error' => __('An error occurred while saving. Please try again.')]);
+            return back()->with('error', t('dashboard.Portfolio_Error', 'An error occurred while saving. Please try again.'));
         }
     }
 
@@ -374,6 +386,6 @@ class PortfolioController extends Controller
         $portfolio->delete();
 
         return redirect()->route('dashboard.portfolios.index')
-            ->with('success', __('Portfolio deleted successfully.'));
+            ->with('ok', t('dashboard.Portfolio_Deleted', 'Portfolio deleted successfully.'));
     }
 }

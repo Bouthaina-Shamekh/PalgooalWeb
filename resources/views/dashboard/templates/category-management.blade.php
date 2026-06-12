@@ -39,15 +39,21 @@
                 </div>
             </section>
 
-            @if (session('success'))
+            @if (session('ok'))
                 <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-medium text-emerald-800 shadow-sm">
-                    {{ session('success') }}
+                    {{ session('ok') }}
+                </div>
+            @endif
+
+            @if (session('error'))
+                <div class="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-800 shadow-sm">
+                    {{ session('error') }}
                 </div>
             @endif
 
             @if ($errors->any())
                 <div class="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm font-medium text-rose-800 shadow-sm">
-                    <p class="font-bold">{{ __('Please review the highlighted category fields.') }}</p>
+                    <p class="font-bold">{{ t('dashboard.Category_Validation_Error', 'يرجى مراجعة حقول التصنيف المحددة.') }}</p>
                     <ul class="mt-2 list-disc space-y-1 pr-5 text-sm">
                         @foreach ($errors->all() as $error)
                             <li>{{ $error }}</li>
@@ -89,20 +95,20 @@
                                                     #{{ $category->id }}
                                                 </span>
                                                 <span class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
-                                                    {{ $category->translations->count() }} {{ __('translations') }}
+                                                    {{ $category->translations->count() }} {{ t('dashboard.Translations_Count', 'ترجمات') }}
                                                 </span>
                                             </div>
 
                                             <h3 class="mt-3 truncate text-lg font-black tracking-tight text-slate-900">
-                                                {{ $primaryTranslation?->name ?? __('Untitled Category') }}
+                                                {{ $primaryTranslation?->name ?? t('dashboard.Untitled_Category', 'فئة بدون عنوان') }}
                                             </h3>
 
                                             <p class="mt-2 text-sm font-semibold text-slate-500">
-                                                {{ $primaryTranslation?->slug ?? __('No slug yet') }}
+                                                {{ $primaryTranslation?->slug ?? t('dashboard.No_Slug_Yet', 'لا يوجد رابط بعد') }}
                                             </p>
 
                                             <p class="mt-3 text-sm leading-7 text-slate-500">
-                                                {{ \Illuminate\Support\Str::limit(strip_tags((string) ($primaryTranslation?->description ?? '')), 140) ?: __('No description yet.') }}
+                                                {{ \Illuminate\Support\Str::limit(strip_tags((string) ($primaryTranslation?->description ?? '')), 140) ?: t('dashboard.No_Description_Yet', 'لا يوجد وصف بعد.') }}
                                             </p>
 
                                             <div class="mt-3 flex flex-wrap gap-2">
@@ -210,7 +216,7 @@
                                 <div class="flex items-center justify-between gap-3">
                                     <div>
                                         <h3 class="text-lg font-black text-slate-900">{{ $language->name ?? strtoupper($languageCode) }}</h3>
-                                        <p class="mt-1 text-sm text-slate-500">{{ __('Category translation fields for this language.') }}</p>
+                                        <p class="mt-1 text-sm text-slate-500">{{ t('dashboard.Category_Translation_Fields', 'حقول ترجمة التصنيف لهذه اللغة.') }}</p>
                                     </div>
                                     <span class="inline-flex items-center rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 shadow-sm">
                                         {{ strtoupper($languageCode) }}

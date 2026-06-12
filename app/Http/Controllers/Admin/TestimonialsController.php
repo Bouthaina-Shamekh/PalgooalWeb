@@ -41,17 +41,28 @@ class TestimonialsController extends Controller
     /**
      * عرض قائمة التقييمات.
      */
-    public function index()
+    public function index(Request $request)
     {
         // P1 fix: authorize before returning data
         $this->authorize('viewAny', Testimonial::class);
 
+        $search  = trim((string) $request->get('search', ''));
+        $perPage = in_array((int) $request->get('per_page'), [10, 25, 50])
+            ? (int) $request->get('per_page') : 10;
+
         $testimonials = Testimonial::with(['translations', 'image'])
+            ->when($search !== '', function ($q) use ($search) {
+                $q->whereHas('translations', function ($t) use ($search) {
+                    $t->where('name', 'like', '%' . addcslashes($search, '%_\\') . '%')
+                      ->orWhere('major', 'like', '%' . addcslashes($search, '%_\\') . '%');
+                });
+            })
             ->orderBy('order')
             ->orderBy('id')
-            ->paginate(10);
+            ->paginate($perPage)
+            ->withQueryString();
 
-        return view('dashboard.testimonials.index', compact('testimonials'));
+        return view('dashboard.testimonials.index', compact('testimonials', 'search', 'perPage'));
     }
 
     /**
@@ -119,7 +130,7 @@ class TestimonialsController extends Controller
 
             return redirect()
                 ->route('dashboard.testimonials.index')
-                ->with('success', 'تمت إضافة التقييم بنجاح.');
+                ->with('ok', t('dashboard.Testimonial_Created', 'Testimonial added successfully.'));
 
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -127,7 +138,7 @@ class TestimonialsController extends Controller
             Log::error('Testimonial store failed: ' . $th->getMessage(), ['exception' => $th]);
 
             return back()
-                ->withErrors(['error' => __('حدث خطأ أثناء الحفظ، يرجى المحاولة مجدداً.')])
+                ->with('error', t('dashboard.Testimonial_Error', 'An error occurred while saving. Please try again.'))
                 ->withInput();
         }
     }
@@ -228,7 +239,7 @@ class TestimonialsController extends Controller
 
             return redirect()
                 ->route('dashboard.testimonials.index')
-                ->with('success', 'تم تحديث التقييم بنجاح.');
+                ->with('ok', t('dashboard.Testimonial_Updated', 'Testimonial updated successfully.'));
 
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -236,7 +247,7 @@ class TestimonialsController extends Controller
             Log::error('Testimonial update failed for id=' . $id . ': ' . $th->getMessage(), ['exception' => $th]);
 
             return back()
-                ->withErrors(['error' => __('حدث خطأ أثناء الحفظ، يرجى المحاولة مجدداً.')])
+                ->with('error', t('dashboard.Testimonial_Error', 'An error occurred while saving. Please try again.'))
                 ->withInput();
         }
     }
@@ -256,7 +267,7 @@ class TestimonialsController extends Controller
 
         return redirect()
             ->route('dashboard.testimonials.index')
-            ->with('success', 'تم حذف التقييم بنجاح.');
+            ->with('ok', t('dashboard.Testimonial_Deleted', 'Testimonial deleted successfully.'));
     }
 
     // -------------------------------------------------------------------------
@@ -326,19 +337,19 @@ class TestimonialsController extends Controller
                     if ($feedback === '') {
                         $validator->errors()->add(
                             "testimonialTranslations.$code.feedback",
-                            __('هذا الحقل مطلوب للغة :lang.', ['lang' => $label])
+                            strtr(t('dashboard.Field_Required_For_Lang', 'This field is required for :lang.'), [':lang' => $label])
                         );
                     }
                     if ($name === '') {
                         $validator->errors()->add(
                             "testimonialTranslations.$code.name",
-                            __('هذا الحقل مطلوب للغة :lang.', ['lang' => $label])
+                            strtr(t('dashboard.Field_Required_For_Lang', 'This field is required for :lang.'), [':lang' => $label])
                         );
                     }
                     if ($major === '') {
                         $validator->errors()->add(
                             "testimonialTranslations.$code.major",
-                            __('هذا الحقل مطلوب للغة :lang.', ['lang' => $label])
+                            strtr(t('dashboard.Field_Required_For_Lang', 'This field is required for :lang.'), [':lang' => $label])
                         );
                     }
                 }
@@ -347,7 +358,7 @@ class TestimonialsController extends Controller
             if (! $hasCompleteLanguage) {
                 $validator->errors()->add(
                     'testimonialTranslations',
-                    __('يرجى تعبئة جميع الحقول للغة واحدة على الأقل.')
+                    t('dashboard.Translation_Required', 'Please fill in all fields for at least one language.')
                 );
             }
         });

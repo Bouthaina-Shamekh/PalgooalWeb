@@ -54,21 +54,35 @@ class PlanCategoryController extends Controller
                 return response()->json(['success' => true, 'is_active' => $plan_category->is_active]);
             }
 
-            return back()->with('ok', 'تم تحديث حالة التصنيف بنجاح');
+            return back()->with('ok', t('dashboard.Category_Status_Updated', 'Category status updated.'));
         } catch (\Throwable $e) {
             Log::error('PlanCategory toggle failed: ' . $e->getMessage(), ['id' => $plan_category->id]);
-            return back()->with('error', 'تعذر تحديث حالة التصنيف.');
+            return back()->with('error', t('dashboard.Category_Status_Failed', 'Failed to update category status.'));
         }
     }
 
     /**
      * عرض قائمة التصنيفات
      */
-    public function index()
+    public function index(Request $request)
     {
         $this->authorize('viewAny', PlanCategory::class);
-        $categories = PlanCategory::with('translations')->latest()->paginate(20);
-        return view('dashboard.management.plan_categories.index', compact('categories'));
+
+        $search  = $request->get('search');
+        $perPage = in_array((int) $request->get('per_page'), [10, 20, 50])
+            ? (int) $request->get('per_page') : 20;
+
+        $categories = PlanCategory::with('translations')
+            ->when($search, function ($q) use ($search) {
+                $q->whereHas('translations', function ($t) use ($search) {
+                    $t->where('title', 'like', '%' . addcslashes($search, '%_\\') . '%');
+                });
+            })
+            ->latest()
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('dashboard.management.plan_categories.index', compact('categories', 'search', 'perPage'));
     }
 
     public function create()
@@ -92,7 +106,9 @@ class PlanCategoryController extends Controller
 
         DB::beginTransaction();
         try {
-            $category = PlanCategory::create([]);
+            $category = PlanCategory::create([
+                'is_active' => $request->boolean('is_active', true),
+            ]);
 
             foreach ($request->input('translations', []) as $locale => $trans) {
                 $slug = $this->generateUniqueSlug($trans['slug'] ?? null, $trans['title'] ?? '', $locale, $category->id);
@@ -106,11 +122,12 @@ class PlanCategoryController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('dashboard.plan_categories.index')->with('ok', 'تم إضافة التصنيف بنجاح');
+            return redirect()->route('dashboard.plan_categories.index')
+                ->with('ok', t('dashboard.Category_Created', 'Category created successfully.'));
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('PlanCategory store failed: ' . $e->getMessage(), ['input' => $request->all()]);
-            return back()->withInput()->with('error', 'تعذر إنشاء التصنيف. حاول مرة أخرى.');
+            return back()->withInput()->with('error', t('dashboard.Category_Create_Failed', 'Failed to create category. Please try again.'));
         }
     }
 
@@ -136,7 +153,8 @@ class PlanCategoryController extends Controller
 
         DB::beginTransaction();
         try {
-            $plan_category->touch(); // تحديث timestamps
+            $plan_category->is_active = $request->boolean('is_active', false);
+            $plan_category->touch();
 
             foreach ($request->input('translations', []) as $locale => $trans) {
                 $slug = $this->generateUniqueSlug($trans['slug'] ?? null, $trans['title'] ?? '', $locale, $plan_category->id);
@@ -152,11 +170,12 @@ class PlanCategoryController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('dashboard.plan_categories.index')->with('ok', 'تم تحديث التصنيف بنجاح');
+            return redirect()->route('dashboard.plan_categories.index')
+                ->with('ok', t('dashboard.Category_Updated', 'Category updated successfully.'));
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('PlanCategory update failed: ' . $e->getMessage(), ['id' => $plan_category->id, 'input' => $request->all()]);
-            return back()->withInput()->with('error', 'تعذر تحديث التصنيف. حاول مرة أخرى.');
+            return back()->withInput()->with('error', t('dashboard.Category_Update_Failed', 'Failed to update category. Please try again.'));
         }
     }
 
@@ -167,15 +186,15 @@ class PlanCategoryController extends Controller
     {
         $this->authorize('delete', $plan_category);
         if ($plan_category->plans()->count() > 0) {
-            return back()->with('error', 'لا يمكن حذف التصنيف لأنه مرتبط بخطط استضافة. يرجى حذف أو تعديل الخطط أولاً.');
+            return back()->with('error', t('dashboard.Category_Has_Plans', 'Cannot delete: this category is linked to hosting plans. Remove or re-assign the plans first.'));
         }
 
         try {
             $plan_category->delete();
-            return back()->with('ok', 'تم حذف التصنيف بنجاح');
+            return back()->with('ok', t('dashboard.Category_Deleted', 'Category deleted successfully.'));
         } catch (\Throwable $e) {
             Log::error('PlanCategory delete failed: ' . $e->getMessage(), ['id' => $plan_category->id]);
-            return back()->with('error', 'تعذر حذف التصنيف: قد يكون مرتبطًا بسجلات أخرى أو هناك خطأ.');
+            return back()->with('error', t('dashboard.Category_Delete_Failed', 'Failed to delete category: it may be linked to other records.'));
         }
     }
 }

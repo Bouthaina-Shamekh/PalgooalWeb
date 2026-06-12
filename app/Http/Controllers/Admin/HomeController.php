@@ -3,9 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Client;
 use App\Models\GeneralSetting;
+use App\Models\Invoice;
 use App\Models\Language;
 use App\Models\Media;
+use App\Models\Plan;
+use App\Models\Template;
+use App\Models\Tenancy\Subscription;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +22,28 @@ class HomeController extends Controller
 {
     public function index()
     {
-        return view('dashboard.index');
+        $stats = [
+            'clients_total'     => Client::count(),
+            'clients_this_month'=> Client::whereMonth('created_at', now()->month)
+                                         ->whereYear('created_at', now()->year)->count(),
+            'subs_active'       => Subscription::where('status', 'active')->count(),
+            'subs_pending'      => Subscription::where('status', 'pending')->count(),
+            'subs_suspended'    => Subscription::where('status', 'suspended')->count(),
+            'subs_total'        => Subscription::count(),
+            'revenue_paid'      => Invoice::paid()->sum('total_cents') / 100,
+            'revenue_unpaid'    => Invoice::unpaid()->sum('total_cents') / 100,
+            'plans_active'      => Plan::where('is_active', true)->count(),
+            'templates_total'   => Template::count(),
+        ];
+
+        $recentSubscriptions = Subscription::with(['client', 'plan'])
+            ->latest()
+            ->limit(6)
+            ->get();
+
+        $recentClients = Client::latest()->limit(6)->get();
+
+        return view('dashboard.index', compact('stats', 'recentSubscriptions', 'recentClients'));
     }
 
     public function testimonials()

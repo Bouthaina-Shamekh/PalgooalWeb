@@ -185,14 +185,14 @@ class TemplateController extends Controller
 
             return redirect()
                 ->route('dashboard.templates.index')
-                ->with('success', 'تم إنشاء القالب بنجاح.');
+                ->with('ok', t('dashboard.Template_Created', 'تم إنشاء القالب بنجاح.'));
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('TemplateController::store failed', ['error' => $e->getMessage()]);
 
             return back()
                 ->withInput()
-                ->withErrors(['error' => 'حدث خطأ أثناء إنشاء القالب: ' . $e->getMessage()]);
+                ->with('error', t('dashboard.Template_Error', 'حدث خطأ أثناء معالجة القالب، يرجى المحاولة مرة أخرى.'));
         }
     }
 
@@ -216,9 +216,10 @@ class TemplateController extends Controller
         $this->authorize('update', $template);
 
         $categories = CategoryTemplate::with('translation')->get();
+        $languages  = Language::where('is_active', true)->orderBy('id')->get();
         $plans      = Plan::all();
 
-        return view('dashboard.templates.edit', compact('template', 'categories', 'plans'));
+        return view('dashboard.templates.edit', compact('template', 'categories', 'languages', 'plans'));
     }
 
     /**
@@ -306,14 +307,14 @@ class TemplateController extends Controller
 
             return redirect()
                 ->route('dashboard.templates.index')
-                ->with('success', 'تم تعديل القالب بنجاح.');
+                ->with('ok', t('dashboard.Template_Updated', 'تم تعديل القالب بنجاح.'));
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('TemplateController::update failed', ['template_id' => $id, 'error' => $e->getMessage()]);
 
             return back()
                 ->withInput()
-                ->withErrors(['error' => 'حدث خطأ أثناء تعديل القالب: ' . $e->getMessage()]);
+                ->with('error', t('dashboard.Template_Error', 'حدث خطأ أثناء معالجة القالب، يرجى المحاولة مرة أخرى.'));
         }
     }
 
@@ -333,7 +334,7 @@ class TemplateController extends Controller
 
         return redirect()
             ->route('dashboard.templates.index')
-            ->with('success', 'تم حذف القالب بنجاح.');
+            ->with('ok', t('dashboard.Template_Deleted', 'تم حذف القالب بنجاح.'));
     }
 
     /**
@@ -372,7 +373,7 @@ class TemplateController extends Controller
 
         return redirect()
             ->route('dashboard.category')
-            ->with('success', __('Category created successfully.'));
+            ->with('ok', t('dashboard.Category_Created', 'تم إنشاء التصنيف بنجاح.'));
     }
 
     /**
@@ -410,7 +411,7 @@ class TemplateController extends Controller
 
         return redirect()
             ->route('dashboard.category')
-            ->with('success', __('Category updated successfully.'));
+            ->with('ok', t('dashboard.Category_Updated', 'تم تعديل التصنيف بنجاح.'));
     }
 
     /**
@@ -427,9 +428,7 @@ class TemplateController extends Controller
         if ($isUsedByTemplates) {
             return redirect()
                 ->route('dashboard.category')
-                ->withErrors([
-                    'error' => __('This category cannot be deleted while templates still belong to it.'),
-                ]);
+                ->with('error', t('dashboard.Category_In_Use_Error', 'لا يمكن حذف هذا التصنيف لأنه يحتوي على قوالب مرتبطة به.'));
         }
 
         DB::transaction(function () use ($category) {
@@ -439,7 +438,7 @@ class TemplateController extends Controller
 
         return redirect()
             ->route('dashboard.category')
-            ->with('success', __('Category deleted successfully.'));
+            ->with('ok', t('dashboard.Category_Deleted', 'تم حذف التصنيف بنجاح.'));
     }
 
     // -------------------------------------------------------------------------
@@ -544,13 +543,13 @@ class TemplateController extends Controller
     private function templateCategoryMessages(): array
     {
         return [
-            'translations.*.name.required'      => __('The name field is required.'),
-            'translations.*.name.max'            => __('The name may not be greater than 255 characters.'),
-            'translations.*.slug.required'       => __('The slug field is required.'),
-            'translations.*.slug.alpha_dash'     => __('The slug may only contain letters, numbers, dashes and underscores.'),
-            'translations.*.slug.unique'         => __('This slug is already taken.'),
-            'translations.*.slug.max'            => __('The slug may not be greater than 255 characters.'),
-            'ranslations.*.description.string'  => __('The description must be a string.'),
+            'translations.*.name.required'       => t('dashboard.Validation_Name_Required', 'حقل الاسم مطلوب.'),
+            'translations.*.name.max'             => t('dashboard.Validation_Name_Max', 'يجب ألا يتجاوز الاسم 255 حرفاً.'),
+            'translations.*.slug.required'        => t('dashboard.Validation_Slug_Required', 'حقل الـ slug مطلوب.'),
+            'translations.*.slug.alpha_dash'      => t('dashboard.Validation_Slug_Alpha_Dash', 'يجب أن يحتوي الـ slug على أحرف وأرقام وشرطات فقط.'),
+            'translations.*.slug.unique'          => t('dashboard.Validation_Slug_Unique', 'هذا الـ slug مستخدم بالفعل.'),
+            'translations.*.slug.max'             => t('dashboard.Validation_Slug_Max', 'يجب ألا يتجاوز الـ slug 255 حرفاً.'),
+            'translations.*.description.string'   => t('dashboard.Validation_Description_String', 'يجب أن يكون الوصف نصاً.'),
         ];
     }
 
