@@ -131,133 +131,179 @@ class ServerController extends Controller
     public function testConnection(Server $server)
     {
         $this->authorize('update', $server);
-        // اختبار الاتصال الفعلي بـ cPanel API
-        $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
-        $port = 2087;
+
+        $host     = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
         $username = $server->username;
         $password = $server->password;
         $apiToken = $server->api_token;
-        $error = null;
-        $success = false;
-        if ($host && $username && ($password || $apiToken)) {
-            if ($apiToken) {
-                // جرب الاتصال باستخدام API Token (WHM API)
-                $apiUrl = "https://{$host}:{$port}/json-api/listaccts?api.version=1";
-                try {
-                    $ch = curl_init();
-                    curl_setopt($ch, CURLOPT_URL, $apiUrl);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-                    $header = [
-                        'Authorization: whm ' . $username . ':' . $apiToken
-                    ];
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-                    $response = curl_exec($ch);
-                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    if (curl_errno($ch)) {
-                        $error = curl_error($ch);
-                    } else {
-                        $data = json_decode($response, true);
-                        if ($httpCode == 200 && isset($data['metadata']['result']) && $data['metadata']['result'] == 1) {
-                            $success = true;
-                        } elseif ($httpCode == 200 && isset($data['status']) && $data['status'] == 1) {
-                            $success = true;
-                        } else {
-                            $error = $data['metadata']['reason'] ?? $data['reason'] ?? 'فشل التحقق من التوكن';
-                        }
-                    }
-                    curl_close($ch);
-                } catch (\Exception $e) {
-                    $error = $e->getMessage();
-                }
-            } elseif ($password) {
-                // جرب الاتصال باستخدام الباسورد (cPanel API)
-                $url = "https://{$host}:{$port}/login/?login_only=1";
-                $postFields = http_build_query([
-                    'user' => $username,
-                    'pass' => $password,
+        $error    = null;
+        $success  = false;
+
+        if (!$host || !$username) {
+            return back()->with('connection_result', 'فشل الاتصال: يجب تحديد IP/Hostname واسم المستخدم');
+        }
+
+        if ($apiToken) {
+            // ── WHM API token: استخدم /json-api/version — يعمل مع root والـ reseller بدون صلاحيات خاصة
+            $apiUrl = "https://{$host}:2087/json-api/version?api.version=1";
+            try {
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $apiUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                    'Authorization: whm ' . $username . ':' . $apiToken,
                 ]);
-                try {
-                    $ch = curl_init();
-                    curl_setopt($ch, CURLOPT_URL, $url);
-                    curl_setopt($ch, CURLOPT_POST, 1);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-                    $response = curl_exec($ch);
-                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-                    if (curl_errno($ch)) {
-                        $error = curl_error($ch);
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curlErr  = curl_errno($ch) ? curl_error($ch) : null;
+                curl_close($ch);
+
+                if ($curlErr) {
+                    $error = $curlErr;
+                } else {
+                    $data = json_decode($response, true);
+
+                    // نجاح: الـ version endpoint يرجع metadata.result=1 عند التوثيق الصحيح
+                    if ($httpCode === 200 && isset($data['metadata']['result']) && $data['metadata']['result'] == 1) {
+                        $success = true;
+                    } elseif ($httpCode === 200 && isset($data['data']['version'])) {
+                        // بعض الإصدارات ترجع data.version مباشرة بدون metadata
+                        $success = true;
                     } else {
-                        $data = json_decode($response, true);
-                        if ($httpCode == 200 && isset($data['status']) && $data['status'] == 1) {
-                            $success = true;
+                        $reason = $data['metadata']['reason']
+                                ?? $data['cpanelresult']['error']
+                                ?? $data['reason']
+                                ?? null;
+
+                        if ($reason) {
+                            $error = $reason;
+                            // تلميح مفيد إذا كان الخطأ Access denied
+                            if (str_contains(strtolower($reason), 'access denied') || str_contains($reason, '1014')) {
+                                $error .= ' — تأكد أن التوكن نوعه WHM API Token (يُنشأ من WHM → Manage API Tokens) وليس cPanel API Token';
+                            }
                         } else {
-                            $error = $data['reason'] ?? 'بيانات الدخول غير صحيحة أو لا يمكن الاتصال';
+                            $error = 'استجابة غير متوقعة من السيرفر (HTTP ' . $httpCode . '): ' . substr($response, 0, 200);
                         }
                     }
-                    curl_close($ch);
-                } catch (\Exception $e) {
-                    $error = $e->getMessage();
                 }
+            } catch (\Exception $e) {
+                $error = $e->getMessage();
+            }
+
+        } elseif ($password) {
+            // ── كلمة مرور: تسجيل دخول عبر WHM login endpoint
+            $url = "https://{$host}:2087/login/?login_only=1";
+            try {
+                $ch = curl_init();
+                curl_setopt($ch, CURLOPT_URL, $url);
+                curl_setopt($ch, CURLOPT_POST, 1);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(['user' => $username, 'pass' => $password]));
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                $response = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curlErr  = curl_errno($ch) ? curl_error($ch) : null;
+                curl_close($ch);
+
+                if ($curlErr) {
+                    $error = $curlErr;
+                } else {
+                    $data = json_decode($response, true);
+                    if ($httpCode === 200 && isset($data['status']) && $data['status'] == 1) {
+                        $success = true;
+                    } else {
+                        $error = $data['reason'] ?? 'بيانات الدخول غير صحيحة';
+                    }
+                }
+            } catch (\Exception $e) {
+                $error = $e->getMessage();
             }
         } else {
-            $error = 'يجب تحديد IP/Hostname واسم المستخدم وكلمة المرور أو API Token';
+            $error = 'يجب إدخال API Token أو كلمة المرور';
         }
-        return back()->with('connection_result', $success ? 'تم الاتصال وتوثيق الدخول بنجاح (WHM/cPanel API)' : 'فشل الاتصال: ' . $error);
+
+        return back()->with(
+            'connection_result',
+            $success
+                ? 'تم الاتصال وتوثيق الدخول بنجاح ✓'
+                : 'فشل الاتصال: ' . $error
+        );
     }
 
     public function ssoWhm(Server $server)
     {
         $this->authorize('update', $server);
-        $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
-        $port = 2087;
+
+        $host     = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
         $username = $server->username;
         $password = $server->password;
         $apiToken = $server->api_token;
-        $error = null;
-        $loginUrl = null;
-        if ($host && $username && ($password || $apiToken)) {
-            $apiUrl = "https://{$host}:{$port}/json-api/create_user_session?api.version=1&user={$username}&service=whostmgrd";
+
+        if (!$host || !$username || (!$apiToken && !$password)) {
+            return back()->with('connection_result', 'يجب تحديد IP/Hostname واسم المستخدم وAPI Token أو كلمة المرور');
+        }
+
+        $authHeader = $apiToken
+            ? 'Authorization: whm ' . $username . ':' . $apiToken
+            : 'Authorization: Basic ' . base64_encode($username . ':' . $password);
+
+        // ── محاولة ١: WHM session (root أو reseller مع صلاحية create-user-session)
+        $loginUrl = $this->tryCreateSession($host, 2087, $username, $authHeader, 'whostmgrd');
+
+        // ── محاولة ٢: cPanel session (reseller يملك cPanel account بنفس اسم المستخدم)
+        if (!$loginUrl) {
+            $loginUrl = $this->tryCreateSession($host, 2087, $username, $authHeader, 'cpaneld');
+        }
+
+        if ($loginUrl) {
+            return redirect()->away($loginUrl);
+        }
+
+        // ── Fallback: فتح صفحة WHM مباشرة (المستخدم يُدخل بياناته يدوياً)
+        $directUrl = "https://{$host}:2087/";
+        return back()->with(
+            'connection_result',
+            'تعذّر إنشاء رابط دخول تلقائي (الحساب reseller). ' .
+            'يمكنك <a href="' . e($directUrl) . '" target="_blank" class="alert-link">فتح WHM مباشرة</a> ' .
+            'وتسجيل الدخول يدوياً. ' .
+            'ملاحظة: التوكن يجب أن يكون WHM API Token (من WHM → Manage API Tokens) وليس cPanel API Token.'
+        );
+    }
+
+    /**
+     * محاولة إنشاء session عبر WHM create_user_session API.
+     * ترجع الـ URL عند النجاح، أو null عند الفشل.
+     */
+    private function tryCreateSession(string $host, int $port, string $username, string $authHeader, string $service): ?string
+    {
+        $apiUrl = "https://{$host}:{$port}/json-api/create_user_session?api.version=1"
+                . "&user=" . urlencode($username)
+                . "&service=" . urlencode($service);
+        try {
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $apiUrl);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
             curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            if ($apiToken) {
-                $header = [
-                    'Authorization: whm ' . $username . ':' . $apiToken
-                ];
-            } else {
-                $header = [
-                    'Authorization: Basic ' . base64_encode($username . ':' . $password)
-                ];
-            }
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [$authHeader]);
             $response = curl_exec($ch);
-            if (curl_errno($ch)) {
-                $error = curl_error($ch);
-            } else {
-                $data = json_decode($response, true);
-                if (isset($data['data']['url'])) {
-                    $loginUrl = $data['data']['url'];
-                } else {
-                    $error = ($data['error'] ?? '') . ' ' . ($data['metadata']['reason'] ?? '') . ' ' . ($data['cpanelresult']['data'][0]['reason'] ?? '') . ' ' . json_encode($data);
-                }
-            }
+            $curlErr  = curl_errno($ch) ? curl_error($ch) : null;
             curl_close($ch);
-        } else {
-            $error = 'يجب تحديد IP/Hostname واسم المستخدم وكلمة المرور أو API Token';
+
+            if ($curlErr || !$response) {
+                return null;
+            }
+            $data = json_decode($response, true);
+            return $data['data']['url'] ?? null;
+        } catch (\Exception $e) {
+            return null;
         }
-        if ($loginUrl) {
-            return redirect()->away($loginUrl);
-        }
-        return back()->with('connection_result', 'فشل إنشاء رابط الدخول: ' . $error);
     }
 
     /**
