@@ -3,8 +3,8 @@
      ═══════════════════════════════════════════════════════ --}}
 <div class="card mb-4">
     <div class="card-header">
-        <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center"
+        <div class="flex items-center gap-2">
+            <span class="badge bg-primary rounded-circle flex items-center justify-center"
                   style="width:28px;height:28px;font-size:14px;">١</span>
             <h5 class="mb-0">{{ t('dashboard.Service_Info', 'Service Information') }}</h5>
         </div>
@@ -69,8 +69,8 @@
      ═══════════════════════════════════════════════════════ --}}
 <div class="card mb-4">
     <div class="card-header">
-        <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center"
+        <div class="flex items-center gap-2">
+            <span class="badge bg-primary rounded-circle flex items-center justify-center"
                   style="width:28px;height:28px;font-size:14px;">٢</span>
             <h5 class="mb-0">{{ t('dashboard.Service_Translations', 'Service Translations') }}</h5>
         </div>
@@ -104,10 +104,10 @@
                  role="tabpanel"
                  aria-labelledby="service-lang-tab-{{ $lang->code }}"
                  class="service-lang-panel {{ $loop->first ? '' : 'hidden' }}">
-                <div class="row g-4">
+                <div class="grid grid-cols-12 gap-4">
 
                     {{-- عنوان الخدمة --}}
-                    <div class="col-12">
+                    <div class="col-span-12">
                         <label class="form-label" for="service-title-{{ $lang->code }}">
                             {{ t('dashboard.Service_Title_Label', 'Service Title') }}
                             @if ($loop->first)
@@ -129,7 +129,7 @@
                     </div>
 
                     {{-- وصف الخدمة --}}
-                    <div class="col-12">
+                    <div class="col-span-12">
                         <label class="form-label" for="service-desc-{{ $lang->code }}">
                             {{ t('dashboard.Service_Description_Label', 'Description') }}
                             <span class="text-muted small">({{ t('dashboard.Optional', 'optional') }})</span>

@@ -7,7 +7,7 @@
                     <a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home') }}</a>
                 </li>
                 <li class="breadcrumb-item">
-                    <a href="{{ route('dashboard.services.index') }}">{{ t('dashboard.services', 'Services') }}</a>
+                    <a href="{{ route('dashboard.services.index') }}">{{ t('dashboard.Services_List', 'Services') }}</a>
                 </li>
                 <li class="breadcrumb-item" aria-current="page">{{ t('dashboard.Edit_Service', 'Edit Service') }}</li>
             </ul>

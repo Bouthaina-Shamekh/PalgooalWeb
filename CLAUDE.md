@@ -511,3 +511,58 @@ $languages = Language::where('is_active', true)->orderBy('id')->get();
 return view('...', compact('template', 'categories', 'languages', 'plans'));
 ```
 **تحقق دائماً** أن كلاً من `create()` و `edit()` يُمرران `$languages` — غيابها يُسبب 500 error صامت.
+
+### Session: Admin Dashboard Home (لوحة الإدارة)
+- `resources/views/dashboard/index.blade.php` — إعادة كتابة كاملة (كانت الصفحة فارغة ثم تحتاج تحسين):
+  - **إصلاح `page-header` markup**: كان يستخدم `page-header-left`/`page-header-right` → أصبح `page-block > breadcrumb + page-header-title` (النمط المعياري في المشروع)
+  - **4 بطاقات KPI**: العملاء + الاشتراكات النشطة + الإيرادات + القوالب/الباقات
+    - كل بطاقة: `style="border-top: 3px solid #..."` للتميز اللوني
+    - أيقونات `ti ti-*` داخل `div` بـ `inline-style` للألوان (بدلاً من `bg-opacity-10` من Bootstrap التي لم تعمل)
+    - زر "عرض الكل" في `card-footer`
+    - مؤشر ثانوي: عملاء هذا الشهر / اشتراكات معلقة / فواتير غير مدفوعة / باقات نشطة
+  - **جدول آخر الاشتراكات** (`col-span-7`): عميل + باقة + status badge + وقت نسبي
+    - status badges: Tailwind-native `bg-green-100 text-green-700` إلخ (لا Bootstrap)
+  - **قائمة آخر العملاء** (`col-span-5`): avatar بحرف أول + اسم + إيميل + badge الحالة + وقت نسبي
+    - **إصلاح avatar**: `style="width:36px;height:36px;background:#4f46e5;"` مع `text-white` صريح (كان يظهر مربعاً ملوناً بدون حروف)
+  - **Quick Actions** (6 روابط): إضافة عميل، إضافة اشتراك، القوالب، الباقات، الشهادات، المحافظ
+    - كل رابط: أيقونة ملونة بـ `inline-style` + نص `t()` + `border-dashed border-gray-200`
+  - كل النصوص تستخدم `t('dashboard.*')`
+- `app/Http/Controllers/Admin/HomeController.php` — تحديث `index()`:
+  - إضافة 10 إحصائيات في `$stats` array (clients_total, clients_this_month, subs_active, subs_pending, subs_suspended, subs_total, revenue_paid, revenue_unpaid, plans_active, templates_total)
+  - `$recentSubscriptions = Subscription::with(['client', 'plan'])->latest()->limit(6)->get()`
+  - `$recentClients = Client::latest()->limit(6)->get()`
+  - استخدام `Invoice::paid()->sum('total_cents') / 100` و `Invoice::unpaid()->sum('total_cents') / 100`
+- `database/seeders/DashboardTranslationsSeeder.php` — إضافة 28 ترجمة:
+  - `dashboard.Dashboard`، `dashboard.Total_Clients`، `dashboard.This_Month`، `dashboard.No_New_This_Month`
+  - `dashboard.Active_Subscriptions`، `dashboard.Total_Subs`، `dashboard.Pending`
+  - `dashboard.Paid_Revenue`، `dashboard.Unpaid`، `dashboard.All_Paid`
+  - `dashboard.Templates_And_Plans`، `dashboard.Active_Plans`
+  - `dashboard.View_All`، `dashboard.View_Templates`، `dashboard.View_Invoices`
+  - `dashboard.Recent_Subscriptions`، `dashboard.Recent_Clients`
+  - `dashboard.No_Subscriptions_Yet`، `dashboard.No_Clients_Yet`
+  - `dashboard.Client`، `dashboard.Plan`، `dashboard.Status`، `dashboard.Date`
+  - `dashboard.Quick_Actions`، `dashboard.Templates`، `dashboard.Plans`، `dashboard.Testimonials`، `dashboard.Portfolios`
+
+### ملاحظة: أنماط CSS للـ KPI Cards والـ Avatars
+**أيقونات KPI** — لا تستخدم Bootstrap `bg-opacity-*` مع Tailwind (لا يعمل). استخدم `inline-style`:
+```blade
+<div class="flex items-center justify-center rounded-xl text-indigo-600"
+     style="width:48px;height:48px;background:#eef2ff;">
+    <i class="ti ti-users" style="font-size:22px;"></i>
+</div>
+```
+
+**Client Avatar بحرف أول** — لا تستخدم Bootstrap utility classes. استخدم `inline-style` كاملاً:
+```blade
+<div class="flex items-center justify-center rounded-full font-bold text-white text-sm"
+     style="width:36px;height:36px;background:#4f46e5;line-height:1;">
+    {{ strtoupper(mb_substr($client->first_name ?? 'U', 0, 1)) }}
+</div>
+```
+
+**Status Badges** — Tailwind-native (لا Bootstrap `badge`):
+```blade
+<span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-green-100 text-green-700">
+    {{ t('dashboard.Status_Active', 'نشط') }}
+</span>
+```

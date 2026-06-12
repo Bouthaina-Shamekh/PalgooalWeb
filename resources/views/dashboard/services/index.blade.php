@@ -6,7 +6,7 @@
                 <li class="breadcrumb-item">
                     <a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home') }}</a>
                 </li>
-                <li class="breadcrumb-item" aria-current="page">{{ t('dashboard.services', 'Services') }}</li>
+                <li class="breadcrumb-item" aria-current="page">{{ t('dashboard.Services_List', 'Services') }}</li>
             </ul>
             <div class="page-header-title">
                 <h2 class="mb-0">{{ t('dashboard.Services_List', 'Services') }}</h2>
@@ -29,27 +29,23 @@
     @endif
 
     <div class="card table-card">
-        <div class="card-header d-flex flex-wrap align-items-center gap-3">
-
-            {{-- Search + per-page form --}}
+        <div class="card-header">
             <form method="GET" action="{{ route('dashboard.services.index') }}"
-                  class="d-flex align-items-center gap-2 flex-grow-1 flex-wrap">
-                <div class="input-group" style="max-width:320px;">
+                  class="flex flex-wrap items-center gap-3">
+
+                {{-- Search --}}
+                <div class="relative flex-1" style="min-width:200px;max-width:320px;">
+                    <span class="absolute inset-y-0 right-3 flex items-center text-gray-400 pointer-events-none">
+                        <i class="ti ti-search text-base"></i>
+                    </span>
                     <input type="text" name="search" value="{{ $search }}"
-                        class="form-control"
-                        placeholder="{{ t('dashboard.Search_Services', 'Search services…') }}">
-                    @if ($search)
-                        <a href="{{ route('dashboard.services.index') }}" class="btn btn-outline-secondary"
-                           title="{{ t('dashboard.Clear_Search', 'Clear') }}">
-                            <i class="ti ti-x"></i>
-                        </a>
-                    @endif
-                    <button type="submit" class="btn btn-outline-primary">
-                        <i class="ti ti-search"></i>
-                    </button>
+                           class="form-control pe-9"
+                           placeholder="{{ t('dashboard.Search_Services', 'Search services…') }}">
                 </div>
-                <div class="d-flex align-items-center gap-1">
-                    <span class="text-muted small">{{ t('dashboard.Per_Page', 'Per page') }}:</span>
+
+                {{-- Per page --}}
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-sm text-gray-500 whitespace-nowrap">{{ t('dashboard.Per_Page', 'Per page') }}:</span>
                     <select name="per_page" class="form-select form-select-sm w-auto"
                             onchange="this.form.submit()">
                         @foreach ([10, 25, 50] as $n)
@@ -57,21 +53,30 @@
                         @endforeach
                     </select>
                 </div>
+
+                {{-- Clear --}}
+                @if ($search)
+                    <a href="{{ route('dashboard.services.index') }}" class="shrink-0 btn btn-light btn-sm flex items-center gap-1">
+                        <i class="ti ti-x"></i>
+                        {{ t('dashboard.Clear_Search', 'Clear') }}
+                    </a>
+                @endif
+
+                {{-- Add button (inside form as <a>, does not submit) --}}
+                @can('create', 'App\\Models\\Service')
+                    <a href="{{ route('dashboard.services.create') }}" class="shrink-0 btn btn-primary flex items-center gap-1 whitespace-nowrap ms-auto">
+                        <i class="ti ti-plus"></i>
+                        {{ t('dashboard.Add_Service', 'Add Service') }}
+                    </a>
+                @endcan
+
             </form>
-
-            @can('create', 'App\\Models\\Service')
-                <a href="{{ route('dashboard.services.create') }}" class="btn btn-primary ms-auto">
-                    <i class="ti ti-plus me-1"></i>
-                    {{ t('dashboard.Add_Service', 'Add Service') }}
-                </a>
-            @endcan
-
         </div>
 
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                    <thead>
+                    <thead class="table-light">
                         <tr>
                             <th>#</th>
                             <th>{{ t('dashboard.Service_Icon', 'Icon') }}</th>
@@ -103,7 +108,7 @@
                                 <td>{{ $trans?->title ?? '—' }}</td>
                                 <td>{{ $service->order }}</td>
                                 <td>
-                                    <div class="d-flex align-items-center gap-2">
+                                    <div class="flex items-center gap-2 flex-nowrap">
                                         @can('update', $service)
                                             <a href="{{ route('dashboard.services.edit', $service->id) }}"
                                                class="text-warning p-1"
