@@ -401,6 +401,18 @@ class ServerController extends Controller
                             return is_string($v) && $v !== '';
                         })));
 
+                        // فلترة: أظهر فقط باقات الرسيلر (المسبوقة باسم المستخدم_)
+                        // مثال: username=palgooal → يُظهر palgooal_plu, palgooal_abutair فقط
+                        $prefix = $username . '_';
+                        $filtered = array_values(array_filter($packages, function ($name) use ($prefix) {
+                            return str_starts_with($name, $prefix);
+                        }));
+
+                        // إذا وُجدت باقات مفلترة استخدمها، وإلا أظهر الكل (fallback للحسابات التي لا تتبع نمط الـ prefix)
+                        if (!empty($filtered)) {
+                            $packages = $filtered;
+                        }
+
                         // Development helper: if debug and packages empty, include a small sample of the raw response for diagnostics
                         if (empty($packages) && config('app.debug')) {
                             Log::debug('Server packages raw response for server ' . $server->id . ': ' . substr($response ?? '', 0, 1000));
@@ -420,7 +432,6 @@ class ServerController extends Controller
             return response()->json(['error' => $error, 'packages' => $packages], 400);
         }
 
-        // الباقات فارغة — الرسيلر لا يملك باقات بعد (يجب إنشاؤها من WHM كـ reseller)
         if (empty($packages)) {
             return response()->json([
                 'packages' => [],
