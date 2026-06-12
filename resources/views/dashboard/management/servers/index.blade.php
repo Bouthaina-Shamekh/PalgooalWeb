@@ -146,7 +146,7 @@
                                                 <a href="{{ route('dashboard.servers.accounts', $server) }}"
                                                    class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
                                                    title="{{ t('dashboard.View_Accounts', 'View accounts') }}">
-                                                    <i class="ti ti-list-details text-lg leading-none"></i>
+                                                    <i class="ti ti-world text-lg leading-none"></i>
                                                 </a>
 
                                                 @if($server->type === 'cpanel')

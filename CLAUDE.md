@@ -601,3 +601,133 @@ return view('...', compact('template', 'categories', 'languages', 'plans'));
 - `list-accts` ← قراءة الحسابات
 - `add-pkg` / `edit-pkg` ← إدارة الباقات
 - `create-acct` / `kill-acct` / `suspend-acct` / `unsuspend-acct` ← إدارة الحسابات
+
+### Session: Admin Section Definitions Index (لوحة الإدارة)
+- `resources/views/dashboard/section_definitions/index.blade.php` — إعادة كتابة كاملة:
+  - إصلاح flash: `session('success')` → `session('ok')` + إضافة `session('error')`
+  - كل النصوص من `__()` → `t('dashboard.*')`
+  - إضافة بحث server-side (label + section_key + category) + per_page (10/25/50) + clear button
+  - أزرار الإجراءات: من نصوص → icon buttons (تعديل / إدارة الحقول / حذف) مع hover colors
+  - badges ملونة للحالة (نشط/معطل) وللمكتبة (ظاهر/مخفي)
+  - empty state احترافي مع SVG + dual-state (فارغ / لا نتائج بحث)
+  - select-all checkbox يشغّل جميع checkboxes في نموذج تصدير المحدد
+  - أزرار toolbar: Export All + Export Selected + Import JSON + Add Definition
+- `app/Http/Controllers/Admin/SectionDefinitionController.php` — تحديث `index()`:
+  - إضافة `$search` + `$perPage` parameters
+  - `withQueryString()` على الـ paginator
+  - تمرير `$search` و`$perPage` للـ view
+- `database/seeders/DashboardTranslationsSeeder.php` — إضافة 21 ترجمة:
+  - `dashboard.Section_Definitions`، `dashboard.Search_Sections`، `dashboard.Add_Definition`
+  - `dashboard.Export_All`، `dashboard.Export_Selected`، `dashboard.Import_JSON`
+  - `dashboard.Section_Label`، `dashboard.Section_Key`، `dashboard.Template`، `dashboard.Fields`
+  - `dashboard.Library`، `dashboard.Sort_Order`، `dashboard.Manage_Fields`
+  - `dashboard.Visible`، `dashboard.Hidden`، `dashboard.Sections`
+  - `dashboard.Confirm_Delete_Section`، `dashboard.No_Section_Definitions`، `dashboard.No_Section_Definitions_Desc`
+  - `dashboard.Select_All`
+
+### Session: Admin Section Definition Fields (لوحة الإدارة)
+- `resources/views/dashboard/section_definitions/fields/index.blade.php` — إعادة كتابة كاملة:
+  - إصلاح flash: `session('success')` → `session('ok')` + إضافة `session('error')`
+  - كل النصوص من `__()` → `t('dashboard.*')`
+  - حذف النصوص الوصفية الطويلة للمطورين → استبدال بـ `t('dashboard.Field_Definitions_Desc', ...)`
+  - badge status/library: `rounded` → `rounded-full` موحّد مع باقي المشروع
+  - زر Edit النصي (`btn btn-sm btn-secondary`) → icon button مع hover
+  - **إضافة زر Delete** بأيقونة `ti-trash` (route موجود لكن لم يكن في الـ view)
+  - empty state: SVG icon احترافي + `t('dashboard.No_Fields_Yet', ...)`
+  - `trans_choice()` → عدد رقمي + `t('dashboard.Fields', ...)`
+  - `card table-card` + `p-0` على card-body + `table-hover mb-0`
+  - زر "Save Field Order" → `btn btn-primary` مع أيقونة `ti-device-floppy`
+- `app/Http/Controllers/Admin/SectionDefinitionController.php`:
+  - `store()`: `with('error', __(...))` → `with('error', t('dashboard.Section_Def_Create_Error', ...))`
+  - `destroy()`: خطأ → `with('error', t(...))` + نجاح → `with('ok', t(...))`
+  - `redirectAfterSave()`: `with('success', __(...))` × 2 → `with('ok', t(...))`
+  - `formViewData()`: `editorModeOptions` → `t('dashboard.Dynamic', ...)`
+  - `templateOptions()`: `__('Unknown Template')` → `t('dashboard.Unknown_Template', ...)`
+- `app/Http/Controllers/Admin/SectionDefinitionFieldController.php`:
+  - `index()`: `__('General')` في groupBy → `t('dashboard.General', 'عام')`
+  - `store()`: `with('success', __(...))` → `with('ok', t('dashboard.Field_Created', ...))`
+  - `update()`: نفس الإصلاح → `t('dashboard.Field_Updated', ...)`
+  - `reorder()`: نفس الإصلاح → `t('dashboard.Field_Reordered', ...)`
+  - `destroy()`: نفس الإصلاح → `t('dashboard.Field_Deleted', ...)`
+- `database/seeders/DashboardTranslationsSeeder.php` — إضافة 38 ترجمة جديدة:
+  - `dashboard.Field_Definitions`، `dashboard.Field_Definitions_Desc`، `dashboard.Back_To_Definition`
+  - `dashboard.Add_Field`، `dashboard.Create_First_Field`، `dashboard.No_Fields_Yet`، `dashboard.No_Fields_Desc`
+  - `dashboard.Save_Field_Order`، `dashboard.Fields_Reorder_Hint`
+  - `dashboard.Field_Sort`، `dashboard.Field_Label`، `dashboard.Field_Key`، `dashboard.Field_Type`، `dashboard.Field_Scope`، `dashboard.Field_Required`
+  - `dashboard.Translatable`، `dashboard.Shared`، `dashboard.Required`، `dashboard.Optional`، `dashboard.Validation`
+  - `dashboard.Dynamic`، `dashboard.Custom_Preset`، `dashboard.Visible_In_Library`، `dashboard.Hidden_From_Library`
+  - `dashboard.No_Template_Selected`، `dashboard.General`، `dashboard.Unknown_Template`
+  - `dashboard.Confirm_Delete_Field`، `dashboard.Field_Created`، `dashboard.Field_Updated`، `dashboard.Field_Reordered`، `dashboard.Field_Deleted`
+  - `dashboard.Section_Def_Save_Fields`، `dashboard.Section_Def_Updated`
+  - `dashboard.Section_Def_Create_Error`، `dashboard.Section_Def_Delete_Error`، `dashboard.Section_Def_Deleted`
+
+### Session: Admin Section Definition Fields — Create/Edit (لوحة الإدارة)
+- `resources/views/dashboard/section_definitions/fields/create.blade.php` — إعادة كتابة:
+  - breadcrumb: كل `__()` → `t('dashboard.*')`
+  - `__('Create Field')` → `t('dashboard.Create_Field', ...)`
+  - `__('Create Field Definition')` → `t('dashboard.Create_Field_Definition', ...)`
+- `resources/views/dashboard/section_definitions/fields/edit.blade.php` — إعادة كتابة:
+  - breadcrumb: كل `__()` → `t('dashboard.*')`
+  - confirm delete: `__('Delete this field definition?')` → `t('dashboard.Confirm_Delete_Field', ...)`
+- `resources/views/dashboard/section_definitions/fields/form.blade.php` — إعادة كتابة كاملة:
+  - كل `__()` → `t('dashboard.*')` (30+ استخدام)
+  - إضافة `dir="ltr" font-mono` على حقل key والـ textareas التقنية (validation_rules, options, settings)
+  - إضافة `cursor-pointer` على toggle labels
+  - زر "Delete Field" + "Save/Update" أُضيفت لهما أيقونات Tabler
+  - sidebar: `sticky top-6` لتثبيت في الشاشات الطويلة
+  - JS: placeholder label → `t('dashboard.Field_Label', ...)` + remove button → Tabler icon بدلاً من `×`
+- `resources/views/dashboard/section_definitions/fields/partials/repeater-item-schema-editor.blade.php` — إعادة كتابة:
+  - `__('Key')` / `__('Label')` / `__('Type')` / `__('Options')` / `__('Required')` / `__('Translatable')` → `t('dashboard.*')`
+  - `__('Remove sub-field')` → icon button `ti-trash`
+  - `__('Add Sub-field')` → `t('dashboard.Add_Sub_field', ...)` مع أيقونة `ti-plus`
+  - `dir="ltr" font-mono` على حقول key والـ options textarea
+  - `__('Repeater sub-fields are invalid...')` → `t('dashboard.Repeater_Schema_Error', ...)`
+- `database/seeders/DashboardTranslationsSeeder.php` — إضافة 33 ترجمة جديدة:
+  - `dashboard.Create_Field`، `dashboard.Create_Field_Definition`، `dashboard.Edit_Field`، `dashboard.Edit_Field_Definition`
+  - `dashboard.Delete_Field`، `dashboard.Update_Field`
+  - `dashboard.Field_Metadata`، `dashboard.Field_Metadata_Desc`
+  - `dashboard.Field_Key_Hint`، `dashboard.Field_Key_Lowercase_Hint`، `dashboard.Field_Label_Placeholder`
+  - `dashboard.Field_Group`، `dashboard.Field_Group_Hint`
+  - `dashboard.Translatable_Hint`، `dashboard.Required_Hint`
+  - `dashboard.Repeater_Sub_fields`، `dashboard.Repeater_Sub_fields_Desc`
+  - `dashboard.Default_Value`، `dashboard.Default_Value_Desc`، `dashboard.Default_Value_Hint`
+  - `dashboard.Shared_Default_Value`، `dashboard.Default_Value_Placeholder`، `dashboard.Default_Value_For`
+  - `dashboard.Validation_And_Options`، `dashboard.Validation_Desc`، `dashboard.Validation_Rules_Hint`
+  - `dashboard.Options`، `dashboard.Options_Hint`، `dashboard.Settings_Hint`
+  - `dashboard.Remove_Sub_field`، `dashboard.Add_Sub_field`، `dashboard.Repeater_Schema_Error`
+
+### Session: Admin Section Definitions Create/Edit (لوحة الإدارة)
+- `resources/views/dashboard/section_definitions/edit.blade.php` — إعادة كتابة كاملة:
+  - كل `__()` → `t('dashboard.*')`
+  - `session('success')` → `session('ok')` + إضافة `session('error')`
+  - تخطيط `col-span-8` (فورم داخل card) + `col-span-4` (help sidebar) — النمط المعياري للمشروع
+  - إزالة زر `btn btn-light-primary` المنفصل → أزرار في `card-footer` للـ sidebar
+  - الـ sidebar يحتوي: حفظ التعديلات + حفظ وإدارة الحقول + إدارة الحقول + إلغاء
+  - نقل `<form>` ليلف الـ `grid` بأكمله (الفورم + الـ sidebar داخل نفس الـ form)
+- `resources/views/dashboard/section_definitions/create.blade.php` — إعادة كتابة كاملة:
+  - نفس التخطيط `col-span-8` + `col-span-4`
+  - الـ sidebar: إنشاء التعريف ومتابعة + إلغاء
+  - كل `__()` → `t()`
+- `resources/views/dashboard/section_definitions/form.blade.php` — إعادة كتابة كاملة:
+  - إزالة قسم أزرار الإجراءات (نُقلت للـ sidebar في edit/create)
+  - كل `__()` → `t('dashboard.*')` (15+ استخدام في الـ Blade + 6 في JS)
+  - `dir="ltr" font-mono` على حقلَي `key` و `template_key`
+  - `cursor-pointer` على labels الـ checkboxes
+  - إصلاح `__('Renderer candidate: :view', ['view' => ...])` → Blade: `t('dashboard.Def_Renderer_Candidate_Label', ...) . ' ' . $view`
+  - JS: متغيرات النصوص مُعرَّفة كـ `const` في أعلى الـ IIFE بدلاً من `{{ __() }}` مبعثرة في الكود
+  - إزالة `btn btn-light-primary` → الأزرار في sidebar
+- `database/seeders/DashboardTranslationsSeeder.php` — إضافة 35 ترجمة جديدة:
+  - `dashboard.Name`، `dashboard.Category`
+  - `dashboard.Edit_Definition`، `dashboard.Edit_Section_Definition`
+  - `dashboard.Create_Definition`، `dashboard.Create_Section_Definition`
+  - `dashboard.Definition_Information`، `dashboard.Def_Workflow_Title`، `dashboard.Def_Workflow_Desc`
+  - `dashboard.Def_Name_Placeholder`، `dashboard.Def_Key_Hint`، `dashboard.Def_Description_Placeholder`، `dashboard.Def_Category_Placeholder`
+  - `dashboard.Preview_Image`، `dashboard.Def_Preview_Image_Hint`
+  - `dashboard.Def_Template_Key`، `dashboard.Def_Template_Key_Hint`
+  - `dashboard.Def_Code_Override`، `dashboard.Def_Convention_Key`، `dashboard.Def_No_Template`، `dashboard.Def_No_Template_Desc`
+  - `dashboard.Def_View_Resolution`، `dashboard.Def_Renderer_Candidate_Label`
+  - `dashboard.Editor_Mode`، `dashboard.Def_Editor_Mode_Hint`
+  - `dashboard.Def_Dynamic_Workflow_Title`، `dashboard.Def_Dynamic_Workflow_Desc`
+  - `dashboard.Def_Active_Hint`، `dashboard.Def_Visible_Hint`
+  - `dashboard.Update_Definition`، `dashboard.Update_And_Manage_Fields`، `dashboard.Create_Definition_Continue`
+  - `dashboard.Def_Sidebar_Hint`، `dashboard.Def_Create_Sidebar_Hint`

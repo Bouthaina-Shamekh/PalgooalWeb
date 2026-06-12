@@ -25,17 +25,15 @@ class SectionDefinitionFieldFormDataFactory
     public function fieldTypeOptions(): array
     {
         return [
-            SectionDefinitionField::FIELD_TYPE_TEXT => __('Text'),
-            SectionDefinitionField::FIELD_TYPE_TEXTAREA => __('Textarea'),
-            SectionDefinitionField::FIELD_TYPE_RICHTEXT => __('Rich Text'),
-            SectionDefinitionField::FIELD_TYPE_URL => __('URL'),
-            SectionDefinitionField::FIELD_TYPE_MEDIA => __('Media'),
-            SectionDefinitionField::FIELD_TYPE_NUMBER => __('Number'),
-            SectionDefinitionField::FIELD_TYPE_BOOLEAN => __('Boolean'),
-            SectionDefinitionField::FIELD_TYPE_SELECT => __('Select'),
-            // Phase 5A: repeater is a recognized type. The item_schema editor
-            // UI and the dynamic editor rendering panel are deferred to Phase 5B.
-            SectionDefinitionField::FIELD_TYPE_REPEATER => __('Repeater'),
+            SectionDefinitionField::FIELD_TYPE_TEXT      => t('dashboard.FieldType_Text', 'نص'),
+            SectionDefinitionField::FIELD_TYPE_TEXTAREA  => t('dashboard.FieldType_Textarea', 'نص متعدد الأسطر'),
+            SectionDefinitionField::FIELD_TYPE_RICHTEXT  => t('dashboard.FieldType_Richtext', 'نص غني'),
+            SectionDefinitionField::FIELD_TYPE_URL       => t('dashboard.FieldType_Url', 'رابط URL'),
+            SectionDefinitionField::FIELD_TYPE_MEDIA     => t('dashboard.FieldType_Media', 'ميديا'),
+            SectionDefinitionField::FIELD_TYPE_NUMBER    => t('dashboard.FieldType_Number', 'رقم'),
+            SectionDefinitionField::FIELD_TYPE_BOOLEAN   => t('dashboard.FieldType_Boolean', 'صح/خطأ'),
+            SectionDefinitionField::FIELD_TYPE_SELECT    => t('dashboard.FieldType_Select', 'قائمة اختيار'),
+            SectionDefinitionField::FIELD_TYPE_REPEATER  => t('dashboard.FieldType_Repeater', 'Repeater'),
         ];
     }
 

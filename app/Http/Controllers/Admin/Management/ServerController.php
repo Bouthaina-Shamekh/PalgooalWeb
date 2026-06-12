@@ -3,43 +3,49 @@
 namespace App\Http\Controllers\Admin\Management;
 
 use App\Http\Controllers\Controller;
+use App\Models\Client;
+use App\Models\Plan;
 use App\Models\Server;
+use App\Models\Tenancy\Subscription;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ServerController extends Controller
 {
     public function accounts(Server $server)
     {
         $this->authorize('viewAny', Server::class);
-        $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
-        $port = 2087;
+
+        $host     = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
         $username = $server->username;
         $apiToken = $server->api_token;
         $accounts = [];
-        $error = null;
+        $error    = null;
+
         if ($host && $username && $apiToken) {
-            $apiUrl = "https://{$host}:{$port}/json-api/listaccts?api.version=1";
+            $apiUrl = "https://{$host}:2087/json-api/listaccts?api.version=1";
             try {
                 $ch = curl_init();
                 curl_setopt($ch, CURLOPT_URL, $apiUrl);
                 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
                 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-                curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-                $header = [
-                    'Authorization: whm ' . $username . ':' . $apiToken
-                ];
-                curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: whm ' . $username . ':' . $apiToken]);
                 $response = curl_exec($ch);
                 if (curl_errno($ch)) {
                     $error = curl_error($ch);
                 } else {
                     $data = json_decode($response, true);
-                    if (isset($data['acct']) && is_array($data['acct'])) {
+                    // WHM API v1 يرجع data.acct، بعض الإصدارات ترجع acct مباشرة
+                    if (isset($data['data']['acct']) && is_array($data['data']['acct'])) {
+                        $accounts = $data['data']['acct'];
+                    } elseif (isset($data['acct']) && is_array($data['acct'])) {
                         $accounts = $data['acct'];
                     } else {
-                        $error = $data['metadata']['reason'] ?? $data['reason'] ?? 'لم يتم العثور على بيانات.';
+                        $error = $data['metadata']['reason'] ?? $data['data']['reason'] ?? $data['reason'] ?? 'لم يتم العثور على بيانات.';
                     }
                 }
                 curl_close($ch);
@@ -49,7 +55,90 @@ class ServerController extends Controller
         } else {
             $error = 'يجب توفر hostname أو IP واسم المستخدم وAPI Token.';
         }
-        return view('dashboard.management.servers.accounts', compact('server', 'accounts', 'error'));
+
+        // جلب الاشتراكات الموجودة لهذا السيرفر ومقارنتها بالحسابات
+        $linkedUsernames = Subscription::where('server_id', $server->id)
+            ->whereNotNull('cpanel_username')
+            ->pluck('cpanel_username')
+            ->map(fn($u) => strtolower(trim($u)))
+            ->toArray();
+
+        $linkedDomains = Subscription::where('server_id', $server->id)
+            ->whereNotNull('domain_name')
+            ->pluck('domain_name')
+            ->map(fn($d) => strtolower(trim($d)))
+            ->toArray();
+
+        // إضافة حقل is_linked لكل حساب
+        foreach ($accounts as &$acc) {
+            $accUser   = strtolower(trim($acc['user'] ?? ''));
+            $accDomain = strtolower(trim($acc['domain'] ?? ''));
+            $acc['is_linked'] = in_array($accUser, $linkedUsernames)
+                             || in_array($accDomain, $linkedDomains);
+        }
+        unset($acc);
+
+        // جلب الباقات لعرضها في modal الإنشاء
+        $plans = Plan::orderBy('name')->get(['id', 'name']);
+
+        $linkedCount   = count(array_filter($accounts, fn($a) => $a['is_linked']));
+        $unlinkedCount = count($accounts) - $linkedCount;
+
+        return view('dashboard.management.servers.accounts',
+            compact('server', 'accounts', 'error', 'plans', 'linkedCount', 'unlinkedCount'));
+    }
+
+    /**
+     * إنشاء عميل + اشتراك من حساب WHM
+     */
+    public function importAccount(Request $request, Server $server)
+    {
+        $this->authorize('update', $server);
+
+        $request->validate([
+            'cpanel_username' => 'required|string|max:100',
+            'domain_name'     => 'required|string|max:255',
+            'email'           => 'required|email|max:255',
+            'plan_id'         => 'required|exists:plans,id',
+            'billing_cycle'   => 'required|in:monthly,annually',
+            'starts_at'       => 'nullable|date',
+            'server_package'  => 'nullable|string|max:100',
+        ]);
+
+        // إيجاد أو إنشاء العميل بناءً على الإيميل
+        $client = Client::firstOrCreate(
+            ['email' => $request->email],
+            [
+                'first_name' => $request->cpanel_username,
+                'last_name'  => '',
+                'status'     => 'active',
+                'can_login'  => true,
+                'password'   => Hash::make(Str::random(16)),
+            ]
+        );
+
+        // إنشاء الاشتراك
+        $subscription = Subscription::create([
+            'client_id'       => $client->id,
+            'plan_id'         => $request->plan_id,
+            'server_id'       => $server->id,
+            'status'          => 'active',
+            'billing_cycle'   => $request->billing_cycle,
+            'price'           => 0,
+            'username'        => $request->cpanel_username,
+            'cpanel_username' => $request->cpanel_username,
+            'domain_name'     => $request->domain_name,
+            'domain_option'   => 'existing',
+            'server_package'  => $request->server_package,
+            'starts_at'       => $request->starts_at ?: now(),
+        ]);
+
+        return response()->json([
+            'ok'              => true,
+            'subscription_id' => $subscription->id,
+            'client_id'       => $client->id,
+            'message'         => 'تم إنشاء الاشتراك بنجاح',
+        ]);
     }
     public function index(Request $request)
     {

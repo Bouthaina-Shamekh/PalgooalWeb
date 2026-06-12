@@ -458,6 +458,9 @@ Route::group([
     Route::get('servers/{server}/packages', [ServerController::class, 'packages'])
         ->name('servers.packages');
 
+    Route::post('servers/{server}/import-account', [ServerController::class, 'importAccount'])
+        ->name('servers.import-account');
+
     // -------------------------------------------------------------------------
     // Sites Overview
     // -------------------------------------------------------------------------

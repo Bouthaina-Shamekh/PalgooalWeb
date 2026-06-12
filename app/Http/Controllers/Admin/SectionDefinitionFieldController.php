@@ -33,7 +33,7 @@ class SectionDefinitionFieldController extends Controller
             ->orderBy('id')
             ->get();
 
-        $fieldGroups = $fields->groupBy(fn (SectionDefinitionField $field) => $field->group_name ?: __('General'));
+        $fieldGroups = $fields->groupBy(fn (SectionDefinitionField $field) => $field->group_name ?: t('dashboard.General', 'عام'));
 
         return view('dashboard.section_definitions.fields.index', [
             'sectionDefinition' => $sectionDefinition,
@@ -85,7 +85,7 @@ class SectionDefinitionFieldController extends Controller
 
         return redirect()
             ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
-            ->with('success', __('Field definition created successfully.'));
+            ->with('ok', t('dashboard.Field_Created', 'تم إنشاء الحقل بنجاح.'));
     }
 
     /**
@@ -128,7 +128,7 @@ class SectionDefinitionFieldController extends Controller
 
         return redirect()
             ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
-            ->with('success', __('Field definition updated successfully.'));
+            ->with('ok', t('dashboard.Field_Updated', 'تم تحديث الحقل بنجاح.'));
     }
 
     /**
@@ -164,7 +164,7 @@ class SectionDefinitionFieldController extends Controller
 
         return redirect()
             ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
-            ->with('success', __('Field order updated successfully.'));
+            ->with('ok', t('dashboard.Field_Reordered', 'تم حفظ ترتيب الحقول بنجاح.'));
     }
 
     /**
@@ -181,7 +181,7 @@ class SectionDefinitionFieldController extends Controller
 
         return redirect()
             ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
-            ->with('success', __('Field definition deleted successfully.'));
+            ->with('ok', t('dashboard.Field_Deleted', 'تم حذف الحقل بنجاح.'));
     }
 
     /**

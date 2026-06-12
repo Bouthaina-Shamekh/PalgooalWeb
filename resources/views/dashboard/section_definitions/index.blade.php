@@ -1,210 +1,290 @@
 <x-dashboard-layout>
+
+    {{-- Page Header --}}
     <div class="page-header">
         <div class="page-block">
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard.home') }}">{{ __('Home') }}</a></li>
-                <li class="breadcrumb-item" aria-current="page">{{ __('Section Definitions') }}</li>
+                <li class="breadcrumb-item">
+                    <a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'الرئيسية') }}</a>
+                </li>
+                <li class="breadcrumb-item" aria-current="page">
+                    {{ t('dashboard.Section_Definitions', 'تعريفات الأقسام') }}
+                </li>
             </ul>
             <div class="page-header-title">
-                <h2 class="mb-0">{{ __('Section Definitions') }}</h2>
+                <h2 class="mb-0">{{ t('dashboard.Section_Definitions', 'تعريفات الأقسام') }}</h2>
             </div>
         </div>
     </div>
 
-    @if (session('success'))
-        <div class="mb-4 rounded bg-green-100 px-4 py-2 text-green-800">
-            {{ session('success') }}
+    {{-- Flash --}}
+    @if(session('ok'))
+        <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
+            <i class="ti ti-circle-check me-2"></i>{{ session('ok') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
-
-    @if (session('error'))
-        <div class="mb-4 rounded bg-red-100 px-4 py-2 text-red-800">
-            {{ session('error') }}
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
+            <i class="ti ti-alert-circle me-2"></i>{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
-
-    @if ($errors->any())
-        <div class="mb-4 rounded bg-red-100 px-4 py-2 text-red-800">
-            <ul class="mb-0 list-disc ps-5">
-                @foreach ($errors->all() as $error)
+    @if($errors->any())
+        <div class="alert alert-danger mb-4">
+            <ul class="mb-0">
+                @foreach($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
             </ul>
         </div>
     @endif
 
-    <div class="grid grid-cols-12 gap-x-6">
-        <div class="col-span-12">
-            <div class="card table-card">
-                <div class="card-header">
-                    <div class="sm:flex items-center justify-between">
-                        <div>
-                            <h5 class="mb-1">{{ __('Definition Registry') }}</h5>
-                            <p class="mb-0 text-sm text-slate-500">
-                                {{ __('Manage the developer-facing section blueprint records only. Field builders and rendering contracts stay separate.') }}
-                            </p>
-                        </div>
-                        <div class="mt-3 flex flex-wrap gap-2 sm:mt-0">
-                            <a href="{{ route('dashboard.section_definitions.export') }}" class="btn btn-light">
-                                {{ __('Export All') }}
-                            </a>
-                            <button type="submit" form="section-definitions-export-selected" class="btn btn-light">
-                                {{ __('Export Selected') }}
-                            </button>
-                            <a href="{{ route('dashboard.section_definitions.import') }}" class="btn btn-secondary">
-                                {{ __('Import JSON') }}
-                            </a>
-                            @can('create', \App\Models\Sections\SectionDefinition::class)
-                            <a href="{{ route('dashboard.section_definitions.create') }}" class="btn btn-primary">
-                                {{ __('Add Definition') }}
-                            </a>
-                            @endcan
-                        </div>
-                    </div>
+    <div class="card table-card">
+
+        {{-- Toolbar --}}
+        <div class="card-header">
+            <form method="GET" action="{{ route('dashboard.section_definitions.index') }}"
+                  class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
+
+                {{-- Search --}}
+                <div class="relative flex-1" style="min-width:200px;">
+                    <span class="absolute inset-y-0 right-3 flex items-center text-gray-400 pointer-events-none">
+                        <i class="ti ti-search text-base"></i>
+                    </span>
+                    <input type="text" name="search" value="{{ $search ?? '' }}"
+                           placeholder="{{ t('dashboard.Search_Sections', 'بحث بالاسم أو المفتاح أو الفئة...') }}"
+                           class="w-full border rounded-xl pr-9 pl-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
                 </div>
 
-                <div class="card-body pt-3">
-                    <form id="section-definitions-export-selected" method="POST"
-                        action="{{ route('dashboard.section_definitions.export-selected') }}">
-                        @csrf
-                    </form>
-
-                    <div class="table-responsive">
-                        <table class="table table-hover w-full">
-                            <thead>
-                                <tr>
-                                    <th class="w-10">
-                                        <span class="sr-only">{{ __('Select') }}</span>
-                                    </th>
-                                    <th>#</th>
-                                    <th>{{ __('Name') }}</th>
-                                    <th>{{ __('Key') }}</th>
-                                    <th>{{ __('Category') }}</th>
-                                    <th>{{ __('Template') }}</th>
-                                    <th>{{ __('Editor Mode') }}</th>
-                                    <th>{{ __('Fields') }}</th>
-                                    <th>{{ __('Status') }}</th>
-                                    <th>{{ __('Library') }}</th>
-                                    <th>{{ __('Sort Order') }}</th>
-                                    <th>{{ __('Action') }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($sectionDefinitions as $sectionDefinition)
-                                    @php
-                                        $primaryTemplate = $sectionDefinition->templates->first();
-                                        $primaryTemplateKey = $primaryTemplate?->template_key;
-                                        $primaryTemplateLabel = $primaryTemplateKey
-                                            ? $templateRegistry[$primaryTemplateKey]['label'] ??
-                                                ($primaryTemplate->label ?? $primaryTemplateKey)
-                                            : null;
-                                    @endphp
-                                    <tr>
-                                        <td>
-                                            <input type="checkbox" form="section-definitions-export-selected"
-                                                name="definition_ids[]" value="{{ $sectionDefinition->id }}"
-                                                class="form-check-input"
-                                                aria-label="{{ __('Select :name', ['name' => $sectionDefinition->label]) }}">
-                                        </td>
-                                        <td>{{ $sectionDefinition->id }}</td>
-                                        <td>
-                                            <div class="font-medium text-slate-900">{{ $sectionDefinition->label }}
-                                            </div>
-                                            @if ($sectionDefinition->description)
-                                                <div class="mt-1 text-xs text-slate-500">
-                                                    {{ \Illuminate\Support\Str::limit($sectionDefinition->description, 90) }}
-                                                </div>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <code class="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">
-                                                {{ $sectionDefinition->section_key }}
-                                            </code>
-                                        </td>
-                                        <td>{{ $sectionDefinition->category ?: '-' }}</td>
-                                        <td>
-                                            @if ($primaryTemplateKey)
-                                                <div class="font-medium text-slate-900">{{ $primaryTemplateLabel }}
-                                                </div>
-                                                <div class="mt-1 text-xs text-slate-500">{{ $primaryTemplateKey }}
-                                                </div>
-                                            @else
-                                                <span class="text-slate-400">-</span>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <span class="rounded bg-blue-100 px-2 py-1 text-xs text-blue-800">
-                                                {{ __('Dynamic') }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <div class="font-medium text-slate-900">
-                                                {{ $sectionDefinition->fields_count }}</div>
-                                            <div class="mt-1">
-                                                <a href="{{ route('dashboard.section_definitions.fields.index', $sectionDefinition) }}"
-                                                    class="text-xs text-primary">
-                                                    {{ __('Manage Fields') }}
-                                                </a>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span
-                                                class="rounded px-2 py-1 text-xs {{ $sectionDefinition->is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                                {{ $sectionDefinition->is_active ? __('Active') : __('Inactive') }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span
-                                                class="rounded px-2 py-1 text-xs {{ $sectionDefinition->is_visible ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700' }}">
-                                                {{ $sectionDefinition->is_visible ? __('Visible') : __('Hidden') }}
-                                            </span>
-                                        </td>
-                                        <td>{{ $sectionDefinition->sort_order }}</td>
-                                        <td>
-                                            <div class="flex flex-wrap gap-2">
-                                                @can('update', $sectionDefinition)
-                                                <a href="{{ route('dashboard.section_definitions.edit', $sectionDefinition) }}"
-                                                    class="btn btn-sm btn-secondary">
-                                                    {{ __('Edit') }}
-                                                </a>
-                                                @endcan
-                                                @can('viewAny', \App\Models\Sections\SectionDefinitionField::class)
-                                                <a href="{{ route('dashboard.section_definitions.fields.index', $sectionDefinition) }}"
-                                                    class="btn btn-sm btn-light">
-                                                    {{ __('Fields') }}
-                                                </a>
-                                                @endcan
-                                                @can('delete', $sectionDefinition)
-                                                <form
-                                                    action="{{ route('dashboard.section_definitions.destroy', $sectionDefinition) }}"
-                                                    method="POST"
-                                                    onsubmit="return confirm(@js(__('Delete this section definition? This will also delete :count linked section instance(s) and their translations. Media records, uploaded files, Blade files, and config entries will not be deleted.', ['count' => $sectionDefinition->sections_count])));">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-danger">
-                                                        {{ __('Delete') }}
-                                                    </button>
-                                                </form>
-                                                @endcan
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="12" class="py-8 text-center text-slate-500">
-                                            {{ __('No section definitions found yet.') }}
-                                        </td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="mt-4">
-                        {{ $sectionDefinitions->links() }}
-                    </div>
+                {{-- Per-page --}}
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-sm text-gray-500 whitespace-nowrap">{{ t('dashboard.Per_Page', 'لكل صفحة') }}</span>
+                    <select name="per_page" onchange="this.form.submit()"
+                            class="border rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                        @foreach([10, 25, 50] as $n)
+                            <option value="{{ $n }}" {{ ($perPage ?? 20) == $n ? 'selected' : '' }}>{{ $n }}</option>
+                        @endforeach
+                    </select>
                 </div>
+
+                {{-- Clear --}}
+                @if($search)
+                    <a href="{{ route('dashboard.section_definitions.index') }}"
+                       class="shrink-0 btn btn-light flex items-center gap-1 text-sm">
+                        <i class="ti ti-x text-base"></i>
+                        {{ t('dashboard.Clear_Search', 'مسح') }}
+                    </a>
+                @endif
+
+                {{-- Action buttons --}}
+                <div class="flex gap-2 shrink-0 ms-auto flex-wrap">
+                    <a href="{{ route('dashboard.section_definitions.export') }}" class="btn btn-light btn-sm">
+                        <i class="ti ti-download me-1"></i>
+                        {{ t('dashboard.Export_All', 'تصدير الكل') }}
+                    </a>
+                    <button type="submit" form="section-definitions-export-selected" class="btn btn-light btn-sm">
+                        <i class="ti ti-file-export me-1"></i>
+                        {{ t('dashboard.Export_Selected', 'تصدير المحدد') }}
+                    </button>
+                    <a href="{{ route('dashboard.section_definitions.import') }}" class="btn btn-light btn-sm">
+                        <i class="ti ti-upload me-1"></i>
+                        {{ t('dashboard.Import_JSON', 'استيراد JSON') }}
+                    </a>
+                    @can('create', \App\Models\Sections\SectionDefinition::class)
+                        <a href="{{ route('dashboard.section_definitions.create') }}" class="btn btn-primary btn-sm">
+                            <i class="ti ti-plus me-1"></i>
+                            {{ t('dashboard.Add_Definition', 'إضافة تعريف') }}
+                        </a>
+                    @endcan
+                </div>
+
+            </form>
+        </div>
+
+        {{-- Hidden export-selected form --}}
+        <form id="section-definitions-export-selected" method="POST"
+              action="{{ route('dashboard.section_definitions.export-selected') }}">
+            @csrf
+        </form>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th class="w-10">
+                                <input type="checkbox" id="select-all" class="form-check-input"
+                                       title="{{ t('dashboard.Select_All', 'تحديد الكل') }}">
+                            </th>
+                            <th>#</th>
+                            <th>{{ t('dashboard.Section_Label', 'الاسم') }}</th>
+                            <th>{{ t('dashboard.Section_Key', 'المفتاح') }}</th>
+                            <th>{{ t('dashboard.Category', 'الفئة') }}</th>
+                            <th>{{ t('dashboard.Template', 'القالب') }}</th>
+                            <th>{{ t('dashboard.Fields', 'الحقول') }}</th>
+                            <th>{{ t('dashboard.Status', 'الحالة') }}</th>
+                            <th>{{ t('dashboard.Library', 'المكتبة') }}</th>
+                            <th>{{ t('dashboard.Sort_Order', 'الترتيب') }}</th>
+                            <th>{{ t('dashboard.Actions', 'إجراءات') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($sectionDefinitions as $def)
+                            @php
+                                $primaryTemplate      = $def->templates->first();
+                                $primaryTemplateKey   = $primaryTemplate?->template_key;
+                                $primaryTemplateLabel = $primaryTemplateKey
+                                    ? ($templateRegistry[$primaryTemplateKey]['label'] ?? ($primaryTemplate->label ?? $primaryTemplateKey))
+                                    : null;
+                            @endphp
+                            <tr>
+                                <td>
+                                    <input type="checkbox" form="section-definitions-export-selected"
+                                           name="definition_ids[]" value="{{ $def->id }}"
+                                           class="form-check-input def-checkbox">
+                                </td>
+                                <td class="text-muted text-sm">{{ $def->id }}</td>
+                                <td>
+                                    <div class="font-medium text-gray-800">{{ $def->label }}</div>
+                                    @if($def->description)
+                                        <div class="text-xs text-gray-400 mt-0.5">
+                                            {{ \Illuminate\Support\Str::limit($def->description, 80) }}
+                                        </div>
+                                    @endif
+                                </td>
+                                <td>
+                                    <code class="bg-gray-100 rounded px-2 py-0.5 text-xs text-gray-700 font-mono">
+                                        {{ $def->section_key }}
+                                    </code>
+                                </td>
+                                <td class="text-sm text-gray-500">{{ $def->category ?: '—' }}</td>
+                                <td>
+                                    @if($primaryTemplateKey)
+                                        <div class="text-sm font-medium text-gray-800">{{ $primaryTemplateLabel }}</div>
+                                        <div class="text-xs text-gray-400 font-mono mt-0.5">{{ $primaryTemplateKey }}</div>
+                                    @else
+                                        <span class="text-gray-400">—</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <span class="font-medium text-gray-800">{{ $def->fields_count }}</span>
+                                    <div class="mt-0.5">
+                                        <a href="{{ route('dashboard.section_definitions.fields.index', $def) }}"
+                                           class="text-xs text-primary hover:underline">
+                                            {{ t('dashboard.Manage_Fields', 'إدارة الحقول') }}
+                                        </a>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if($def->is_active)
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700">
+                                            {{ t('dashboard.Active', 'نشط') }}
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700">
+                                            {{ t('dashboard.Inactive', 'معطل') }}
+                                        </span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($def->is_visible)
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                            {{ t('dashboard.Visible', 'ظاهر') }}
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-500">
+                                            {{ t('dashboard.Hidden', 'مخفي') }}
+                                        </span>
+                                    @endif
+                                </td>
+                                <td class="text-sm text-gray-500">{{ $def->sort_order }}</td>
+                                <td class="whitespace-nowrap">
+                                    <div class="flex items-center gap-0.5">
+                                        @can('update', $def)
+                                            <a href="{{ route('dashboard.section_definitions.edit', $def) }}"
+                                               class="w-8 h-8 rounded-xl inline-flex items-center justify-center text-gray-500 hover:text-primary hover:bg-primary/10 transition"
+                                               title="{{ t('dashboard.Edit', 'تعديل') }}">
+                                                <i class="ti ti-edit text-lg leading-none"></i>
+                                            </a>
+                                        @endcan
+                                        @can('viewAny', \App\Models\Sections\SectionDefinitionField::class)
+                                            <a href="{{ route('dashboard.section_definitions.fields.index', $def) }}"
+                                               class="w-8 h-8 rounded-xl inline-flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition"
+                                               title="{{ t('dashboard.Manage_Fields', 'إدارة الحقول') }}">
+                                                <i class="ti ti-layout-list text-lg leading-none"></i>
+                                            </a>
+                                        @endcan
+                                        @can('delete', $def)
+                                            <form action="{{ route('dashboard.section_definitions.destroy', $def) }}"
+                                                  method="POST" style="display:inline-block"
+                                                  onsubmit="return confirm('{{ t('dashboard.Confirm_Delete_Section', 'حذف هذا التعريف؟') }} ({{ $def->sections_count }} {{ t('dashboard.Sections', 'أقسام') }})')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit"
+                                                        class="w-8 h-8 rounded-xl inline-flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 transition"
+                                                        title="{{ t('dashboard.Delete', 'حذف') }}">
+                                                    <i class="ti ti-trash text-lg leading-none"></i>
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="11">
+                                    <div class="flex flex-col items-center justify-center py-16 text-center">
+                                        <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                        @if($search)
+                                            <p class="text-base font-semibold text-gray-700 mb-1">
+                                                {{ t('dashboard.No_Search_Results', 'لا توجد نتائج') }}
+                                            </p>
+                                            <p class="text-sm text-gray-400 mb-5">
+                                                {{ t('dashboard.Try_Different_Search', 'جرّب كلمة بحث مختلفة') }}
+                                            </p>
+                                            <a href="{{ route('dashboard.section_definitions.index') }}" class="btn btn-light btn-sm">
+                                                {{ t('dashboard.Clear_Search', 'مسح البحث') }}
+                                            </a>
+                                        @else
+                                            <p class="text-base font-semibold text-gray-700 mb-1">
+                                                {{ t('dashboard.No_Section_Definitions', 'لا توجد تعريفات أقسام بعد') }}
+                                            </p>
+                                            <p class="text-sm text-gray-400 mb-5">
+                                                {{ t('dashboard.No_Section_Definitions_Desc', 'أضف تعريفاً جديداً للبدء') }}
+                                            </p>
+                                            @can('create', \App\Models\Sections\SectionDefinition::class)
+                                                <a href="{{ route('dashboard.section_definitions.create') }}" class="btn btn-primary btn-sm">
+                                                    <i class="ti ti-plus me-1"></i>
+                                                    {{ t('dashboard.Add_Definition', 'إضافة تعريف') }}
+                                                </a>
+                                            @endcan
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
+
+            @if($sectionDefinitions->hasPages())
+                <div class="p-4">
+                    {{ $sectionDefinitions->appends(request()->query())->links() }}
+                </div>
+            @endif
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+    document.getElementById('select-all')?.addEventListener('change', function () {
+        document.querySelectorAll('.def-checkbox').forEach(cb => cb.checked = this.checked);
+    });
+    </script>
+    @endpush
+
 </x-dashboard-layout>

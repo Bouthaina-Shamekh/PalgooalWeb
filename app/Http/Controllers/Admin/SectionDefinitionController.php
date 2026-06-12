@@ -21,21 +21,33 @@ class SectionDefinitionController extends Controller
     /**
      * List section blueprint definitions for admin/developer management.
      */
-    public function index(): View
+    public function index(\Illuminate\Http\Request $request): View
     {
         $this->authorize('viewAny', SectionDefinition::class);
+
+        $search  = $request->get('search');
+        $perPage = in_array((int) $request->get('per_page'), [10, 25, 50])
+            ? (int) $request->get('per_page')
+            : 20;
 
         $sectionDefinitions = SectionDefinition::query()
             ->with(['templates' => fn($query) => $query->orderByPivot('sort_order')->orderBy('id')])
             ->withCount('fields')
             ->withCount('sections')
+            ->when($search, fn($q) => $q
+                ->where('label', 'like', "%{$search}%")
+                ->orWhere('section_key', 'like', "%{$search}%")
+                ->orWhere('category', 'like', "%{$search}%")
+            )
             ->orderBy('sort_order')
             ->orderBy('id')
-            ->paginate(20);
+            ->paginate($perPage)
+            ->withQueryString();
 
         $templateRegistry = SectionTemplateRegistry::all();
 
-        return view('dashboard.section_definitions.index', compact('sectionDefinitions', 'templateRegistry'));
+        return view('dashboard.section_definitions.index',
+            compact('sectionDefinitions', 'templateRegistry', 'search', 'perPage'));
     }
 
     /**
@@ -74,7 +86,7 @@ class SectionDefinitionController extends Controller
         if (! $sectionDefinition instanceof SectionDefinition) {
             return redirect()
                 ->route('dashboard.section_definitions.index')
-                ->with('error', __('Section definition could not be created.'));
+                ->with('error', t('dashboard.Section_Def_Create_Error', 'تعذّر إنشاء تعريف القسم.'));
         }
 
         return $this->redirectAfterSave($sectionDefinition, (string) $request->input('after_save', 'fields'), true);
@@ -146,12 +158,12 @@ class SectionDefinitionController extends Controller
 
             return redirect()
                 ->route('dashboard.section_definitions.index')
-                ->with('error', __('Section definition could not be deleted. Please review linked records and try again.'));
+                ->with('error', t('dashboard.Section_Def_Delete_Error', 'تعذّر حذف تعريف القسم. راجع السجلات المرتبطة وحاول مجدداً.'));
         }
 
         return redirect()
             ->route('dashboard.section_definitions.index')
-            ->with('success', __('Section definition and linked section instances were deleted successfully.'));
+            ->with('ok', t('dashboard.Section_Def_Deleted', 'تم حذف تعريف القسم والأقسام المرتبطة به بنجاح.'));
     }
 
     /**
@@ -189,7 +201,7 @@ class SectionDefinitionController extends Controller
             'sectionDefinition' => $sectionDefinition,
             'templateOptions' => $this->templateOptions($sectionDefinition),
             'editorModeOptions' => [
-                SectionDefinition::EDITOR_MODE_DYNAMIC => __('Dynamic'),
+                SectionDefinition::EDITOR_MODE_DYNAMIC => t('dashboard.Dynamic', 'ديناميكي'),
             ],
             'previewMediaValue' => $previewMediaId,
             'previewMediaPreviewUrls' => app(SectionMediaPreviewBuilder::class)->build($previewMediaId),
@@ -215,7 +227,7 @@ class SectionDefinitionController extends Controller
                 $sectionDefinition?->category,
             ) ?? [
                 'template_key' => $currentTemplateKey,
-                'label' => __('Unknown Template') . ' (' . $currentTemplateKey . ')',
+                'label' => t('dashboard.Unknown_Template', 'قالب غير معروف') . ' (' . $currentTemplateKey . ')',
                 'view' => '',
                 'category' => null,
                 'meta' => [],
@@ -297,11 +309,11 @@ class SectionDefinitionController extends Controller
         if ($wasCreated || $afterSave === 'fields') {
             return redirect()
                 ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
-                ->with('success', __('Section definition saved. Continue by managing its field definitions.'));
+                ->with('ok', t('dashboard.Section_Def_Save_Fields', 'تم حفظ تعريف القسم. تابع بإدارة الحقول.'));
         }
 
         return redirect()
             ->route('dashboard.section_definitions.edit', $sectionDefinition)
-            ->with('success', __('Section definition updated successfully.'));
+            ->with('ok', t('dashboard.Section_Def_Updated', 'تم تحديث تعريف القسم بنجاح.'));
     }
 }
