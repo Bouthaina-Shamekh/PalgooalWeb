@@ -19,20 +19,28 @@ class SubscriptionController extends Controller
     // Index / CRUD
     // -------------------------------------------------------------------------
 
-    public function index()
+    public function index(Request $request)
     {
         $this->authorize('viewAny', Subscription::class);
 
+        $q         = $request->get('q');
+        $domain    = $request->get('domain');
+        $status    = $request->get('status');
+        $sort      = $request->get('sort');
+        $direction = $request->get('direction', 'asc') === 'desc' ? 'desc' : 'asc';
+        $perPage   = in_array((int) $request->get('per_page'), [10, 20, 50])
+            ? (int) $request->get('per_page') : 20;
+
         $query = Subscription::with(['client', 'plan']);
 
-        // domain filter (P11: escape LIKE wildcards)
-        if ($domain = request('domain')) {
+        // domain filter
+        if ($domain) {
             $domainLike = '%' . addcslashes($domain, '%_\\') . '%';
             $query->where('domain_name', 'like', $domainLike);
         }
 
-        // generic q search (P11: escape LIKE wildcards)
-        if ($q = request('q')) {
+        // generic q search
+        if ($q) {
             $qLike = '%' . addcslashes($q, '%_\\') . '%';
             $query->where(function ($qry) use ($qLike) {
                 $qry->whereHas('client', function ($c) use ($qLike) {
@@ -43,22 +51,22 @@ class SubscriptionController extends Controller
             });
         }
 
-        if ($status = request('status')) {
+        if ($status) {
             $query->where('status', $status);
         }
 
         // sorting
-        if ($sort = request('sort')) {
-            $direction = request('direction', 'asc') === 'desc' ? 'desc' : 'asc';
-            if (in_array($sort, ['id', 'domain_name', 'status', 'starts_at'])) {
-                $query->orderBy($sort, $direction);
-            }
+        if ($sort && in_array($sort, ['id', 'domain_name', 'status', 'starts_at'])) {
+            $query->orderBy($sort, $direction);
         } else {
             $query->latest();
         }
 
-        $subscriptions = $query->paginate(20)->withQueryString();
-        return view('dashboard.management.subscriptions.index', compact('subscriptions'));
+        $subscriptions = $query->paginate($perPage)->withQueryString();
+
+        return view('dashboard.management.subscriptions.index', compact(
+            'subscriptions', 'q', 'domain', 'status', 'sort', 'direction', 'perPage'
+        ));
     }
 
     /**
@@ -147,7 +155,7 @@ class SubscriptionController extends Controller
         app(DomainVerificationService::class)->reset($subscription);
 
         return redirect()->route('dashboard.subscriptions.index')
-            ->with('ok', __('Subscription created successfully.'));
+            ->with('ok', t('dashboard.Subscription_Created', 'Subscription created successfully.'));
     }
 
     public function edit(Subscription $subscription)

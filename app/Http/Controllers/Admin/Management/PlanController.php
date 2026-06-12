@@ -13,11 +13,27 @@ use Illuminate\Support\Facades\Validator;
 
 class PlanController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $this->authorize('viewAny', Plan::class);
-        $plans = Plan::latest()->paginate(20);
-        return view('dashboard.management.plans.index', compact('plans'));
+        $search  = $request->get('search');
+        $perPage = in_array((int) $request->get('per_page'), [5, 10, 25])
+            ? (int) $request->get('per_page')
+            : 10;
+
+        $plans = Plan::with(['translations', 'category.translations', 'server'])
+            ->latest()
+            ->when($search, fn ($q) => $q
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('slug', 'like', "%{$search}%")
+                ->orWhereHas('translations', fn ($q2) => $q2
+                    ->where('title', 'like', "%{$search}%")
+                )
+            )
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('dashboard.management.plans.index', compact('plans', 'search', 'perPage'));
     }
 
     public function create()

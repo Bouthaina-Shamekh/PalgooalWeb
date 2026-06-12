@@ -49,7 +49,7 @@
                                 <input type="text" name="ip" class="form-control" value="{{ old('ip', $server->ip) }}">
                             </div>
                             <div>
-                                <label class="block mb-1">Hostname</label>
+                                <label class="block mb-1">{{ t('dashboard.Hostname', 'Hostname') }}</label>
                                 <input type="text" name="hostname" class="form-control" value="{{ old('hostname', $server->hostname) }}">
                             </div>
                             <div>

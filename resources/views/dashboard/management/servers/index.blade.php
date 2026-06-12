@@ -1,51 +1,84 @@
 <x-dashboard-layout>
+    {{-- Page Header --}}
     <div class="page-header">
         <div class="page-block">
             <ul class="breadcrumb">
-                <li class="breadcrumb-item"><a href="#">الرئيسية</a></li>
-                <li class="breadcrumb-item" aria-current="page">السيرفرات</li>
+                <li class="breadcrumb-item">
+                    <a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home') }}</a>
+                </li>
+                <li class="breadcrumb-item" aria-current="page">{{ t('dashboard.servers', 'Servers') }}</li>
             </ul>
             <div class="page-header-title">
-                <h2 class="mb-0">قائمة السيرفرات</h2>
+                <h2 class="mb-0">{{ t('dashboard.servers', 'Servers') }}</h2>
             </div>
         </div>
     </div>
 
+    {{-- Flash messages --}}
+    @if(session('ok'))
+        <div class="alert alert-success mb-4 flex items-center gap-2">
+            <i class="ti ti-circle-check text-xl"></i>
+            <span>{{ session('ok') }}</span>
+        </div>
+    @endif
+    @if(session('connection_result'))
+        <div class="alert alert-info mb-4 flex items-center gap-2">
+            <i class="ti ti-info-circle text-xl"></i>
+            <span>{{ session('connection_result') }}</span>
+        </div>
+    @endif
+
     <div class="grid grid-cols-12 gap-x-6">
         <div class="col-span-12">
             <div class="card table-card">
-                @if(session('connection_result'))
-                    <div class="alert alert-info mb-4">{{ session('connection_result') }}</div>
-                @endif
-                <div class="card-header">
-                    <div class="sm:flex items-center justify-between">
-                        <h5 class="mb-3 sm:mb-0">قائمة السيرفرات</h5>
-                        <div class="flex items-center gap-2">
-                            <a href="{{ route('dashboard.servers.create') }}" class="btn btn-primary">
-                                إضافة سيرفر جديد
-                            </a>
-                        </div>
-                    </div>
-                </div>
 
-                {{-- Filters UI فقط (بدون backend wire) --}}
-                <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mb-4 px-4">
-                    <input
-                        type="text"
-                        placeholder="بحث عن السيرفرات..."
-                        class="w-full sm:w-80 border rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                        disabled
-                    />
-                    <div class="flex items-center gap-2">
-                        <label class="text-sm text-gray-500">لكل صفحة</label>
-                        <select
-                            class="border rounded-xl px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/30"
-                            disabled
-                        >
-                            <option value="10">10</option>
-                            <option value="25">25</option>
-                        </select>
-                    </div>
+                {{-- Card toolbar --}}
+                <div class="card-header">
+                    <form method="GET" action="{{ route('dashboard.servers.index') }}"
+                          class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+
+                        {{-- Search --}}
+                        <div class="relative flex-1">
+                            <span class="absolute inset-y-0 right-3 flex items-center text-gray-400 pointer-events-none">
+                                <i class="ti ti-search text-base"></i>
+                            </span>
+                            <input
+                                type="text"
+                                name="search"
+                                value="{{ $search ?? '' }}"
+                                placeholder="{{ t('dashboard.Search_Servers', 'Search servers…') }}"
+                                class="w-full border rounded-xl pr-9 pl-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+                        </div>
+
+                        {{-- Per-page --}}
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-sm text-gray-500 whitespace-nowrap">{{ t('dashboard.Per_Page', 'Per page') }}</span>
+                            <select name="per_page" onchange="this.form.submit()"
+                                    class="border rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                                @foreach([10, 25, 50] as $n)
+                                    <option value="{{ $n }}" {{ ($perPage ?? 20) == $n ? 'selected' : '' }}>{{ $n }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Clear search button --}}
+                        @if($search)
+                            <a href="{{ route('dashboard.servers.index') }}"
+                               class="shrink-0 btn btn-light flex items-center gap-1 text-sm">
+                                <i class="ti ti-x text-base"></i>
+                                {{ t('dashboard.Clear_Search', 'Clear') }}
+                            </a>
+                        @endif
+
+                        {{-- Add server --}}
+                        <a href="{{ route('dashboard.servers.create') }}"
+                           class="shrink-0 btn btn-primary flex items-center gap-2 whitespace-nowrap">
+                            <i class="ti ti-plus text-base"></i>
+                            {{ t('dashboard.Add_Server', 'Add server') }}
+                        </a>
+
+                    </form>
                 </div>
 
                 <div class="card-body pt-3">
@@ -53,69 +86,137 @@
                         <table class="table table-hover w-full">
                             <thead>
                                 <tr>
-                                    <th class="text-right">#</th>
-                                    <th class="text-right">الاسم</th>
-                                    <th class="text-right">النوع</th>
+                                    <th class="text-right w-10">#</th>
+                                    <th class="text-right">{{ t('dashboard.Server_Name', 'Name') }}</th>
+                                    <th class="text-right">{{ t('dashboard.Server_Type', 'Type') }}</th>
                                     <th class="text-right">IP</th>
-                                    <th class="text-right">Hostname</th>
-                                    <th class="text-right">الحالة</th>
-                                    <th class="text-right">خيارات</th>
+                                    <th class="text-right">{{ t('dashboard.Hostname', 'Hostname') }}</th>
+                                    <th class="text-right">{{ t('dashboard.Status', 'Status') }}</th>
+                                    <th class="text-right">{{ t('dashboard.Actions', 'Actions') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse ($servers as $server)
-                                    @php
-                                        $rowIndex = ($servers->firstItem() ?? 1) + $loop->index;
-                                    @endphp
+                                    @php $rowIndex = ($servers->firstItem() ?? 1) + $loop->index; @endphp
                                     <tr>
-                                        <td>{{ $rowIndex }}</td>
-                                        <td class="font-semibold">{{ $server->name }}</td>
-                                        <td class="text-sm">{{ $server->type }}</td>
-                                        <td>{{ $server->ip }}</td>
-                                        <td>{{ $server->hostname }}</td>
+                                        <td class="text-gray-400 text-sm">{{ $rowIndex }}</td>
+
+                                        <td class="font-semibold text-gray-800">{{ $server->name }}</td>
+
+                                        <td>
+                                            <span class="inline-flex items-center text-xs font-medium px-2.5 py-0.5 rounded-full
+                                                {{ $server->type === 'cpanel'
+                                                    ? 'bg-blue-100 text-blue-700'
+                                                    : 'bg-violet-100 text-violet-700' }}">
+                                                {{ $server->type }}
+                                            </span>
+                                        </td>
+
+                                        <td class="text-sm text-gray-500 font-mono">{{ $server->ip ?: '—' }}</td>
+                                        <td class="text-sm text-gray-500 font-mono">{{ $server->hostname ?: '—' }}</td>
+
                                         <td>
                                             @if($server->is_active)
-                                                <span class="badge bg-emerald-500/10 text-emerald-600 rounded-full text-xs px-2 py-0.5">مفعل</span>
+                                                <span class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                                    {{ t('dashboard.Active', 'Active') }}
+                                                </span>
                                             @else
-                                                <span class="badge bg-gray-500/10 text-gray-600 rounded-full text-xs px-2 py-0.5">معطل</span>
+                                                <span class="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                                                    {{ t('dashboard.Inactive', 'Inactive') }}
+                                                </span>
                                             @endif
                                         </td>
+
                                         <td class="whitespace-nowrap">
-                                            <a href="{{ route('dashboard.servers.edit', $server) }}" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary" title="تعديل">
-                                                <i class="ti ti-edit text-xl leading-none"></i>
-                                            </a>
-                                            <form action="{{ route('dashboard.servers.destroy', $server) }}" method="POST" style="display:inline-block" onsubmit="return confirm('هل أنت متأكد من الحذف؟');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary" title="حذف">
-                                                    <i class="ti ti-trash text-xl leading-none"></i>
-                                                </button>
-                                            </form>
-                                            <a href="{{ route('dashboard.servers.test-connection', $server) }}" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary" title="فحص الاتصال">
-                                                <i class="ti ti-plug text-xl leading-none"></i>
-                                            </a>
-                                            <a href="{{ route('dashboard.servers.accounts', $server) }}" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary" title="عرض المواقع">
-                                                <i class="ti ti-list-details text-xl leading-none"></i>
-                                            </a>
-                                            @if($server->type == 'cpanel')
-                                                <a href="{{ route('dashboard.servers.sso-whm', $server) }}" target="_blank" class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary" title="دخول السيرفر (SSO)">
-                                                    <i class="ti ti-login text-xl leading-none"></i>
+                                            <div class="flex items-center gap-0.5">
+                                                <a href="{{ route('dashboard.servers.edit', $server) }}"
+                                                   class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
+                                                   title="{{ t('dashboard.Edit', 'Edit') }}">
+                                                    <i class="ti ti-edit text-lg leading-none"></i>
                                                 </a>
-                                            @endif
+
+                                                <a href="{{ route('dashboard.servers.test-connection', $server) }}"
+                                                   class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
+                                                   title="{{ t('dashboard.Test_Connection', 'Test connection') }}">
+                                                    <i class="ti ti-plug text-lg leading-none"></i>
+                                                </a>
+
+                                                <a href="{{ route('dashboard.servers.accounts', $server) }}"
+                                                   class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
+                                                   title="{{ t('dashboard.View_Accounts', 'View accounts') }}">
+                                                    <i class="ti ti-list-details text-lg leading-none"></i>
+                                                </a>
+
+                                                @if($server->type === 'cpanel')
+                                                    <a href="{{ route('dashboard.servers.sso-whm', $server) }}"
+                                                       target="_blank"
+                                                       class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary"
+                                                       title="{{ t('dashboard.Login_SSO', 'Login (SSO)') }}">
+                                                        <i class="ti ti-login text-lg leading-none"></i>
+                                                    </a>
+                                                @endif
+
+                                                <form action="{{ route('dashboard.servers.destroy', $server) }}"
+                                                      method="POST"
+                                                      style="display:inline-block"
+                                                      onsubmit="return confirm('{{ t('dashboard.Confirm_Delete', 'Are you sure you want to delete this server?') }}')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit"
+                                                            class="w-8 h-8 rounded-xl inline-flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 transition"
+                                                            title="{{ t('dashboard.Delete', 'Delete') }}">
+                                                        <i class="ti ti-trash text-lg leading-none"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center text-gray-500 py-8">لا يوجد سيرفرات.</td>
+                                        <td colspan="7">
+                                            <div class="flex flex-col items-center justify-center py-16 text-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3v5.25a3 3 0 0 1-3 3m-13.5 0v3.75m13.5-3.75v3.75m-13.5 3.75h13.5" />
+                                                </svg>
+                                                @if($search)
+                                                    <p class="text-base font-semibold text-gray-700 mb-1">
+                                                        {{ t('dashboard.No_Search_Results', 'No results found') }}
+                                                    </p>
+                                                    <p class="text-sm text-gray-400 mb-5">
+                                                        {{ t('dashboard.Try_Different_Search', 'Try a different search term') }}
+                                                    </p>
+                                                    <a href="{{ route('dashboard.servers.index') }}" class="btn btn-light btn-sm">
+                                                        {{ t('dashboard.Clear_Search', 'Clear search') }}
+                                                    </a>
+                                                @else
+                                                    <p class="text-base font-semibold text-gray-700 mb-1">
+                                                        {{ t('dashboard.No_Servers', 'No servers yet') }}
+                                                    </p>
+                                                    <p class="text-sm text-gray-400 mb-5">
+                                                        {{ t('dashboard.No_Servers_Desc', 'Add your first server to start managing hosting accounts') }}
+                                                    </p>
+                                                    <a href="{{ route('dashboard.servers.create') }}" class="btn btn-primary btn-sm flex items-center gap-2">
+                                                        <i class="ti ti-plus text-base"></i>
+                                                        {{ t('dashboard.Add_Server', 'Add server') }}
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        </td>
                                     </tr>
                                 @endforelse
                             </tbody>
                         </table>
                     </div>
-                    <div class="mt-4">
-                        {{ $servers->links() }}
-                    </div>
+
+                    @if($servers->hasPages())
+                        <div class="mt-4">
+                            {{ $servers->appends(request()->query())->links() }}
+                        </div>
+                    @endif
                 </div>
+
             </div>
         </div>
     </div>

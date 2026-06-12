@@ -330,7 +330,7 @@
                                 <i class="fas fa-users"></i>
                             </span>
                             <span class="pc-mtext">
-                                {{ __('Users') }}
+                                {{ t('dashboard.Users', 'Users') }}
                             </span>
                             @if (App::getLocale() == 'en')
                                 <span class="pc-arrow"><i data-feather="chevron-right"></i></span>

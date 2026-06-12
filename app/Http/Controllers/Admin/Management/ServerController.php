@@ -51,11 +51,24 @@ class ServerController extends Controller
         }
         return view('dashboard.management.servers.accounts', compact('server', 'accounts', 'error'));
     }
-    public function index()
+    public function index(Request $request)
     {
         $this->authorize('viewAny', Server::class);
-        $servers = Server::latest()->paginate(20);
-        return view('dashboard.management.servers.index', compact('servers'));
+        $search  = $request->get('search');
+        $perPage = in_array((int) $request->get('per_page'), [10, 25, 50])
+            ? (int) $request->get('per_page')
+            : 20;
+
+        $servers = Server::latest()
+            ->when($search, fn ($q) => $q
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('ip', 'like', "%{$search}%")
+                ->orWhere('hostname', 'like', "%{$search}%")
+            )
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('dashboard.management.servers.index', compact('servers', 'search', 'perPage'));
     }
 
     public function create()
