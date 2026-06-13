@@ -96,25 +96,22 @@
         </div>
     </div>
 
-    {{-- ═══ Alpine Tabs ═══ --}}
+    {{-- ═══ JS Tabs ═══ --}}
     @php $sdTabDefault = session('_blade_tab') === 'blade' ? 'blade' : 'info'; @endphp
-    <div x-data="{
-            tab: localStorage.getItem('sd-edit-{{ $sectionDefinition->id }}-tab') || '{{ $sdTabDefault }}',
-            setTab(t) { this.tab = t; localStorage.setItem('sd-edit-{{ $sectionDefinition->id }}-tab', t); }
-         }">
+    <div id="sd-tabs-wrapper">
 
         <div class="card mb-4">
             <div class="card-body py-0 px-2">
                 <nav class="flex gap-0">
-                    <button type="button" @click="setTab('info')"
-                            :class="tab === 'info' ? 'border-b-2 border-indigo-600 text-indigo-700 bg-indigo-50/60 font-semibold' : 'border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'"
-                            class="flex items-center gap-2 px-5 py-3.5 text-sm transition-all rounded-t-lg">
+                    <button type="button" id="sd-tab-btn-info"
+                            onclick="sdSetTab('info')"
+                            class="sd-tab-btn flex items-center gap-2 px-5 py-3.5 text-sm transition-all rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50">
                         <i class="ti ti-settings text-base"></i>
                         {{ t('dashboard.Definition_Information', 'معلومات التعريف') }}
                     </button>
-                    <button type="button" @click="setTab('blade')"
-                            :class="tab === 'blade' ? 'border-b-2 border-indigo-600 text-indigo-700 bg-indigo-50/60 font-semibold' : 'border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50'"
-                            class="flex items-center gap-2 px-5 py-3.5 text-sm transition-all rounded-t-lg">
+                    <button type="button" id="sd-tab-btn-blade"
+                            onclick="sdSetTab('blade')"
+                            class="sd-tab-btn flex items-center gap-2 px-5 py-3.5 text-sm transition-all rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50">
                         <i class="ti ti-code text-base"></i>
                         {{ t('dashboard.Blade_Template', 'قالب Blade') }}
                         @if ($bladeFileStatus === 'exists')
@@ -130,7 +127,7 @@
         </div>
 
         {{-- TAB 1 — Definition Information --}}
-        <div x-show="tab === 'info'" x-cloak>
+        <div id="sd-pane-info" class="sd-tab-pane">
             <form action="{{ route('dashboard.section_definitions.update', $sectionDefinition) }}"
                   method="POST" id="section-def-form">
                 @csrf
@@ -182,7 +179,7 @@
         </div>
 
         {{-- TAB 2 — Blade Editor --}}
-        <div x-show="tab === 'blade'" x-cloak>
+        <div id="sd-pane-blade" class="sd-tab-pane">
             <div class="grid grid-cols-12 gap-6">
                 <div class="col-span-12 xl:col-span-8">
                     <div class="card mb-4">
@@ -335,7 +332,49 @@
             </div>
         </div>
 
-    </div>{{-- end Alpine --}}
+    </div>{{-- end JS tabs wrapper --}}
+
+    @push('scripts')
+    <script>
+    (function () {
+        var SD_KEY = 'sd-edit-{{ $sectionDefinition->id }}-tab';
+        var defaultTab = '{{ $sdTabDefault }}';
+
+        function sdSetTab(name) {
+            // persist
+            try { localStorage.setItem(SD_KEY, name); } catch(e) {}
+
+            // toggle panes
+            document.querySelectorAll('.sd-tab-pane').forEach(function (p) {
+                p.style.display = (p.id === 'sd-pane-' + name) ? '' : 'none';
+            });
+
+            // toggle button styles
+            var activeClasses   = ['border-b-2','border-indigo-600','text-indigo-700','bg-indigo-50/60','font-semibold'];
+            var inactiveClasses = ['border-b-2','border-transparent','text-slate-500'];
+            document.querySelectorAll('.sd-tab-btn').forEach(function (btn) {
+                var isActive = btn.id === 'sd-tab-btn-' + name;
+                activeClasses.forEach(function (c) {
+                    btn.classList.toggle(c, isActive);
+                });
+                inactiveClasses.forEach(function (c) {
+                    btn.classList.toggle(c, !isActive);
+                });
+                // hover classes — keep always
+                btn.classList.add('hover:text-slate-700', 'hover:bg-slate-50');
+            });
+        }
+
+        // expose globally for onclick=""
+        window.sdSetTab = sdSetTab;
+
+        // init from localStorage or server-side default
+        var saved = null;
+        try { saved = localStorage.getItem(SD_KEY); } catch(e) {}
+        sdSetTab(saved === 'blade' || saved === 'info' ? saved : defaultTab);
+    })();
+    </script>
+    @endpush
 
     <form action="{{ route('dashboard.section_definitions.write_blade', $sectionDefinition) }}"
           method="POST" id="blade-write-form" class="d-none">

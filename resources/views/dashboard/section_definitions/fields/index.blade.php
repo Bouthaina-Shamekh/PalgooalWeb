@@ -115,7 +115,13 @@
                 </div>
             @else
                 @can('update', \App\Models\Sections\SectionDefinitionField::class)
-                <form action="{{ route('dashboard.section_definitions.fields.reorder', $sectionDefinition) }}" method="POST" class="space-y-6">
+                {{--
+                    IMPORTANT: Delete forms must NOT be nested inside the reorder form.
+                    Nested forms cause _method=DELETE to leak into the reorder submission.
+                    Delete buttons use data-* + JS to submit a shared form outside this form.
+                --}}
+                <form action="{{ route('dashboard.section_definitions.fields.reorder', $sectionDefinition) }}"
+                      method="POST" id="field-reorder-form" class="space-y-6">
                     @csrf
 
                     @foreach ($fieldGroups as $groupLabel => $groupFields)
@@ -194,18 +200,14 @@
                                                                 </a>
                                                             @endcan
                                                             @can('delete', $field)
-                                                                <form action="{{ route('dashboard.section_definitions.fields.destroy', [$sectionDefinition, $field]) }}"
-                                                                      method="POST"
-                                                                      style="display:inline-block"
-                                                                      onsubmit="return confirm('{{ t('dashboard.Confirm_Delete_Field', 'حذف هذا الحقل؟') }}')">
-                                                                    @csrf
-                                                                    @method('DELETE')
-                                                                    <button type="submit"
-                                                                            class="w-8 h-8 rounded-xl inline-flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 transition"
-                                                                            title="{{ t('dashboard.Delete', 'حذف') }}">
-                                                                        <i class="ti ti-trash text-lg leading-none"></i>
-                                                                    </button>
-                                                                </form>
+                                                                {{-- type="button" prevents submitting the reorder form --}}
+                                                                <button type="button"
+                                                                        class="field-delete-btn w-8 h-8 rounded-xl inline-flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 transition"
+                                                                        data-url="{{ route('dashboard.section_definitions.fields.destroy', [$sectionDefinition, $field]) }}"
+                                                                        data-name="{{ $field->label }}"
+                                                                        title="{{ t('dashboard.Delete', 'حذف') }}">
+                                                                    <i class="ti ti-trash text-lg leading-none"></i>
+                                                                </button>
                                                             @endcan
                                                         </div>
                                                     </td>
@@ -229,4 +231,30 @@
             @endif
         </div>
     </div>
+
+    {{--
+        Shared delete form placed OUTSIDE the reorder form.
+        JS sets the action URL before submitting.
+    --}}
+    <form action="" method="POST" id="field-delete-form" style="display:none;">
+        @csrf
+        @method('DELETE')
+    </form>
+
+    @push('scripts')
+    <script>
+    (function () {
+        var deleteForm = document.getElementById('field-delete-form');
+        document.querySelectorAll('.field-delete-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var name = btn.dataset.name || '';
+                if (!window.confirm('{{ t('dashboard.Confirm_Delete_Field', 'حذف هذا الحقل نهائياً؟') }}' + (name ? '\n' + name : ''))) return;
+                deleteForm.action = btn.dataset.url;
+                deleteForm.submit();
+            });
+        });
+    })();
+    </script>
+    @endpush
+
 </x-dashboard-layout>

@@ -107,6 +107,15 @@ class SectionDefinitionController extends Controller
         $bladeFileStatus = $writer->fileStatus($sectionDefinition);
         $bladeExpectedPath = $writer->displayPath($sectionDefinition);
 
+        // If blade_source is empty but the file exists on disk, pre-populate from file
+        // (happens when the file was created externally — status is 'external')
+        if (empty($sectionDefinition->blade_source) && in_array($bladeFileStatus, ['exists', 'external'])) {
+            $diskPath = $writer->resolvedPath($sectionDefinition);
+            if ($diskPath && file_exists($diskPath)) {
+                $sectionDefinition->blade_source = file_get_contents($diskPath);
+            }
+        }
+
         return view('dashboard.section_definitions.edit', array_merge(
             $this->formViewData($sectionDefinition),
             compact('bladeFileStatus', 'bladeExpectedPath'),
