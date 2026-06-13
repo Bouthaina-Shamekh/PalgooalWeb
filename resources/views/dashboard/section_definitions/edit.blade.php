@@ -619,9 +619,29 @@
             fetch(url, {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-                body: body
+                body: body,
+                redirect: 'follow'
             })
-                .then(function (res) { return res.json(); })
+                .then(function (res) {
+                    // كشف redirect — يعني POST تحوّل لـ GET في مكان ما
+                    if (res.redirected) {
+                        throw new Error('تم redirect إلى: ' + res.url + '\nالمتصفح حوّل POST→GET تلقائياً');
+                    }
+                    // قرأ الجسم كنص أولاً لعرض رسالة واضحة عند الخطأ
+                    return res.text().then(function (text) {
+                        if (res.status === 405) {
+                            throw new Error('HTTP 405 — الـ URL الفعلي: ' + res.url + '\nالـ URL المُرسَل: ' + url);
+                        }
+                        if (res.status === 419) {
+                            throw new Error('HTTP 419 — انتهت صلاحية CSRF token. أعد تحميل الصفحة.');
+                        }
+                        if (!res.ok) {
+                            throw new Error('HTTP ' + res.status + ': ' + text.substring(0, 200));
+                        }
+                        try { return JSON.parse(text); }
+                        catch (e) { throw new Error('الاستجابة ليست JSON: ' + text.substring(0, 200)); }
+                    });
+                })
                 .then(function (json) {
                     if (!json.ok) { throw new Error(json.error || 'خطأ غير معروف'); }
                     // Success — show inline green bar above footer
@@ -635,7 +655,7 @@
                     setTimeout(function () { if (bar.parentNode) bar.parentNode.removeChild(bar); }, 4000);
                 })
                 .catch(function (err) {
-                    alert('فشلت كتابة الملف: ' + err.message);
+                    alert('فشلت كتابة الملف:\n' + err.message);
                 })
                 .finally(function () {
                     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
@@ -655,9 +675,19 @@
 
         /* ── 7. MONACO INIT ── */
         window.__monacoRequire(['vs/editor/editor.main'], function () {
-            // ملاحظة: نترك window.define = Monaco's define عمداً
-            // لأن Monaco يُحمّل language workers (php.js وغيرها) بشكل غير متزامن بعد هذا الـ callback
-            // scripts الـ theme التي تحتاج define/require تعمل قبل هذا الـ block ولا تتأثر
+            // إصلاح AMD conflict: نُزيل define.amd حتى تعود feather/sweetalert2/Sortable
+            // لاستخدام window globals بدلاً من محاولة التسجيل كـ AMD modules في loader Monaco
+            // (window.define يبقى موجوداً لكن بدون define.amd = scripts تتجاهل AMD path)
+            if (typeof window.define === 'function') {
+                if (typeof window.__amd_define_backup === 'function') {
+                    // كان هناك AMD loader حقيقي قبل Monaco — نُعيده
+                    window.define  = window.__amd_define_backup;
+                    window.require = window.__amd_require_backup;
+                } else {
+                    // لم يكن هناك AMD — نُخفي define.amd فقط (لا نحذف define لأن workers قد تحتاجه)
+                    try { window.define.amd = false; } catch (e) {}
+                }
+            }
 
             // Catppuccin Mocha — custom theme
             monaco.editor.defineTheme('catppuccin-mocha', {
