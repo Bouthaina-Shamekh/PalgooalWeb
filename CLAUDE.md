@@ -732,63 +732,77 @@ return view('...', compact('template', 'categories', 'languages', 'plans'));
   - `dashboard.Update_Definition`، `dashboard.Update_And_Manage_Fields`، `dashboard.Create_Definition_Continue`
   - `dashboard.Def_Sidebar_Hint`، `dashboard.Def_Create_Sidebar_Hint`
 
-### Session: Admin Section Definitions — Blade Editor & Delete Fixes (لوحة الإدارة)
+### Session: Blade Editor Fix — POST→GET Redirect & Truncated File
 
 #### المشاكل التي تم إصلاحها:
 
-**١. `SectionDefinitionController.php` — استعادة الملف المبتور**
-- الملف كان مبتوراً عند السطر 286 — `templateOptions()` مفتوحة بدون جسم + 4 methods مفقودة
-- الحل: استعادة الكود المفقود من git باستخدام `git show 755702b:app/Http/Controllers/Admin/SectionDefinitionController.php | tail -80`
-- المethods المستعادة: `templateOptions()` + `persistableAttributes()` + `syncTemplateSelection()` + `redirectAfterSave()`
-- **قاعدة مهمة**: عند تلف الملف — لا تُعيد كتابته من الذاكرة. استخدم `git show <commit>:<file>` للاستعادة الدقيقة
+**١. الملف `edit.blade.php` كان مبتوراً عند السطر 635**
+- السبب: حفظ غير مكتمل في جلسة سابقة
+- الأعراض: Monaco لا يُهيأ، أزرار الكتابة لا تعمل (لا event listeners)
+- الإصلاح: إعادة بناء الملف كاملاً بـ `head -611 + append` من bash
 
-**٢. زر الحذف — لا يظهر dialog تأكيد**
-- السبب الجذري: `onsubmit="return confirm('{{ t(...) }}')"` مع نص عربي داخل HTML attribute يكسر JS string parsing
-- الإصلاح: استبدال inline `onsubmit` بـ `data-*` attributes + JS event listener منفصل
+**٢. زر "كتابة الملف" يُعيد 405 Method Not Allowed**
+- السبب الجذري: document root في Apache هو `public_html/` وليس `public_html/public/`
+  - طلب POST إلى `/admin/section-definitions/{id}/write-blade`
+  - Apache يُعيد توجيهه (301) إلى `/public/admin/...`
+  - الـ 301 redirect يُحوّل POST → GET
+  - GET على route يقبل POST فقط → 405 MethodNotAllowed
+- الإثبات:
+  ```javascript
+  // fetch إلى /public/ URL يُرجع 200 OK:
+  fetch('https://palgoals.wpgoals.com/public/admin/section-definitions/15/write-blade', { method: 'POST', ... })
+  // → {"ok":true, "message":"تم كتابة ملف Blade على الـ disk بنجاح."}
+  ```
+- الإصلاح في `doWrite()`:
+  ```javascript
+  // ❌ خطأ (كان موجوداً): يُزيل /public/ بدلاً من إضافتها
+  var url = writeForm.action.replace(/\/public\//g, '/');
+  
+  // ✅ صحيح: يُضيف /public/ إذا لم تكن موجودة
+  var url = writeForm.action;
+  if (!/\/public\//.test(url)) {
+      url = url.replace(/(https?:\/\/[^\/]+)\//, '$1/public/');
+  }
+  ```
+- استخدام `redirect: 'manual'` في fetch لكشف `opaqueredirect` (علامة على أن redirect حدث)
 
-**٣. الحذف — لا يحذف ملف Blade من الـ disk**
-- السبب: `destroy()` لم يكن يحتوي على أي منطق لحذف الملفات
-- الإصلاح: إضافة `deleteFile()` في `SectionTemplateFileWriter` + استدعاؤها في `destroy()` قبل DB transaction
+**٣. AMD conflict: feather/Swal/Sortable undefined بعد تحميل Monaco**
+- السبب: Monaco `loader.js` يضبط `window.define.amd = true`؛ UMD libraries تكتشف AMD وتُسجّل كـ AMD modules بدلاً من window globals
+- الإصلاح بمرحلتين:
+  ```javascript
+  // قبل loader.js: احفظ AMD loader الأصلي وأزله
+  window.__amd_define_backup  = window.define;
+  window.__amd_require_backup = window.require;
+  window.define = undefined; window.require = undefined;
+  
+  // بعد loader.js: أخفِ define.amd حتى تتجاهله UMD scripts
+  window.__monacoRequire = window.require;
+  try { window.define.amd = false; } catch (e) {}
+  
+  // قبل __monacoRequire.config(): أعد تفعيل AMD لـ Monaco modules
+  try { window.define.amd = {}; } catch (e) {}
+  ```
 
 #### الملفات المُعدَّلة:
+- `resources/views/dashboard/section_definitions/edit.blade.php` — إعادة بناء كامل (863 سطر):
+  - إصلاح URL bug في `doWrite()`
+  - إكمال Monaco init + event listeners + scaffold + insert-at-cursor + fullscreen + zoom
+  - AMD isolation صحيح (ثلاث مراحل: قبل loader / بعد loader / داخل require callback)
 
-- **`app/Http/Controllers/Admin/SectionDefinitionController.php`**:
-  - استعادة 4 methods مبتورة من git history
-  - `destroy()`: إضافة حذف ملف Blade قبل حذف سجل DB:
-    ```php
-    $writer = app(SectionTemplateFileWriter::class);
-    $fileResult = $writer->deleteFile($sectionDefinition);
-    // ثم DB::transaction لحذف السجل...
-    $message = t('dashboard.Section_Def_Deleted', '...');
-    if (! empty($fileResult['deleted'])) {
-        $message .= ' ' . t('dashboard.Blade_File_Deleted', '...');
-    }
-    return redirect()->route('...')->with('ok', $message);
-    ```
+#### ملاحظة مهمة — Apache Redirect على السيرفر:
+```
+السيرفر: palgoals.wpgoals.com
+Document root: /home/palgoalswpgoals/public_html/    (وليس .../public_html/public/)
+Laravel public: /home/palgoalswpgoals/public_html/public/
 
-- **`app/Support/Sections/SectionTemplateFileWriter.php`**:
-  - إضافة method `deleteFile(SectionDefinition $definition): array`:
-    - يُرجع `['ok' => true, 'deleted' => false, 'skipped' => '...']` إذا المسار غير صالح أو الملف غير موجود
-    - يُرجع `['ok' => true, 'deleted' => true, 'path' => '...']` عند النجاح
-    - يُرجع `['ok' => false, 'error' => '...']` إذا فشل `unlink()`
+أي fetch/form POST إلى https://palgoals.wpgoals.com/admin/...
+سيُعاد توجيهه (301) إلى https://palgoals.wpgoals.com/public/admin/...
+→ الـ 301 يُحوّل POST إلى GET → 405 على routes التي تقبل POST فقط
 
-- **`resources/views/dashboard/section_definitions/index.blade.php`**:
-  - زر الحذف: استبدال `onsubmit` inline بـ `data-sections` + `data-name` attributes
-  - إضافة JS handler في `@push('scripts')`:
-    ```javascript
-    document.querySelectorAll('.def-delete-btn').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var msg = '{{ t(...) }}' + '\n' + btn.dataset.name
-                    + '\n({{ t(...) }}: ' + btn.dataset.sections + ')';
-            if (window.confirm(msg)) { btn.closest('.def-delete-form').submit(); }
-        });
-    });
-    ```
-  - **سبب نمط `data-*`**: النصوص العربية داخل HTML attributes آمنة، لكن داخل JS string literals في inline handlers تُسبب مشاكل encoding
-
-- **`database/seeders/DashboardTranslationsSeeder.php`** — إضافة 3 مفاتيح جديدة:
-  - `dashboard.Blade_File_Deleted` — 'تم حذف ملف Blade من الـ disk.'
-  - `dashboard.Blade_Source_Code` — 'كود Blade'
+الحل: استخدم /public/ prefix في fetch URLs دائماً:
+url.replace(/(https?:\/\/[^\/]+)\//, '$1/public/')
+```
+ode` — 'كود Blade'
   - `dashboard.Blade_Invalid_Key` — 'مفتاح غير صالح'
 
 - **`.env`**: `APP_DEBUG` أُعيد إلى `false` (كان `true` مؤقتاً لتتبع الخطأ 500)

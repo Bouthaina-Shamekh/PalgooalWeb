@@ -440,8 +440,14 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
     <script>
-    // احفظ require الخاص بـ Monaco فقط — لا تُعد define بعد (editor.main.js لا يزال يحتاجه)
+    // احفظ require الخاص بـ Monaco
     window.__monacoRequire = window.require;
+    // أخفِ define.amd فوراً (synchronous — قبل أي script آخر يمكن تشغيله)
+    // Monaco modules تستخدم pure AMD calls لا تفحص define.amd
+    // أما feather / sweetalert2 / Sortable (UMD) تفحص define.amd → ستتجاهل AMD وتسجّل في window
+    if (typeof window.define === 'function') {
+        try { window.define.amd = false; } catch (e) {}
+    }
     </script>
     @push('scripts')
     <script>
@@ -458,6 +464,8 @@
     (function () {
         'use strict';
 
+        // feather/Swal/Sortable قد حفظت نفسها في window.* بالفعل — أعد define.amd حتى تتمكن وحدات Monaco من التسجيل
+        if (typeof window.define === 'function') { try { window.define.amd = {}; } catch (e) {} }
         window.__monacoRequire.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
 
         var data           = window.__sdEditorData;
@@ -601,205 +609,164 @@
             return phpLines.concat(htmlParts).join('\n');
         }
 
-        /* ── 5. WRITE TO DISK (fetch — avoids POST→GET redirect on proxied servers) ── */
+
+        /* ── 5. WRITE TO DISK ── */
         function doWrite(btn) {
             if (!writeForm || !monacoInstance) return;
             var msg = btn ? btn.dataset.confirm : null;
             if (msg && !window.confirm(msg)) return;
 
-            // إذا كانت هناك /public/ في الـ URL نحذفها لتجنب redirect يُحوّل POST → GET
-            var url    = writeForm.action.replace(/\/public\//g, '/');
-            var csrf   = writeForm.querySelector('[name=_token]') ? writeForm.querySelector('[name=_token]').value : '';
-            var code   = getCode();
-            var body   = new URLSearchParams({ _token: csrf, blade_source: code });
+            // إضافة /public/ إذا لم تكن موجودة — السيرفر يُعيد توجيه /admin/ → /public/admin/ (R=301, POST→GET)
+            var url = writeForm.action;
+            if (!/\/public\//.test(url)) {
+                url = url.replace(/(https?:\/\/[^\/]+)\//, '$1/public/');
+            }
+            var csrf = writeForm.querySelector('[name=_token]') ? writeForm.querySelector('[name=_token]').value : '';
+            var code = getCode();
+            var body = new URLSearchParams({ _token: csrf, blade_source: code });
 
-            // Disable button while saving
             if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
 
             fetch(url, {
-                method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-                body: body,
-                redirect: 'follow'
+                method:   'POST',
+                headers:  { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                body:     body,
+                redirect: 'manual'
             })
                 .then(function (res) {
-                    // كشف redirect — يعني POST تحوّل لـ GET في مكان ما
-                    if (res.redirected) {
-                        throw new Error('تم redirect إلى: ' + res.url + '\nالمتصفح حوّل POST→GET تلقائياً');
+                    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+                    if (res.type === 'opaqueredirect' || res.status === 0) {
+                        if (window.Swal) Swal.fire({ icon: 'error', title: 'خطأ في الإرسال', text: 'الطلب تحوّل لـ GET (redirect).' });
+                        else alert('خطأ: الطلب تحوّل لـ GET.');
+                        return;
                     }
-                    // قرأ الجسم كنص أولاً لعرض رسالة واضحة عند الخطأ
-                    return res.text().then(function (text) {
-                        if (res.status === 405) {
-                            throw new Error('HTTP 405 — الـ URL الفعلي: ' + res.url + '\nالـ URL المُرسَل: ' + url);
+                    return res.json().then(function (data) {
+                        if (data.ok) {
+                            if (window.Swal) Swal.fire({ icon: 'success', title: data.message || 'تم الحفظ', timer: 2500, showConfirmButton: false });
+                            else alert(data.message || 'تم كتابة ملف Blade بنجاح.');
+                        } else {
+                            if (window.Swal) Swal.fire({ icon: 'error', title: 'فشل', text: data.error || 'فشلت الكتابة.' });
+                            else alert(data.error || 'فشلت الكتابة.');
                         }
-                        if (res.status === 419) {
-                            throw new Error('HTTP 419 — انتهت صلاحية CSRF token. أعد تحميل الصفحة.');
-                        }
-                        if (!res.ok) {
-                            throw new Error('HTTP ' + res.status + ': ' + text.substring(0, 200));
-                        }
-                        try { return JSON.parse(text); }
-                        catch (e) { throw new Error('الاستجابة ليست JSON: ' + text.substring(0, 200)); }
                     });
                 })
-                .then(function (json) {
-                    if (!json.ok) { throw new Error(json.error || 'خطأ غير معروف'); }
-                    // Success — show inline green bar above footer
-                    var bar = document.createElement('div');
-                    bar.className = 'alert alert-success alert-dismissible fade show mb-0';
-                    bar.style.cssText = 'border-radius:0;margin:0;padding:10px 16px;';
-                    bar.innerHTML = '<i class="ti ti-circle-check me-2"></i>' + json.message
-                        + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-                    var footer = document.querySelector('#blade-editor-card .card-footer');
-                    if (footer) footer.parentNode.insertBefore(bar, footer);
-                    setTimeout(function () { if (bar.parentNode) bar.parentNode.removeChild(bar); }, 4000);
-                })
                 .catch(function (err) {
-                    alert('فشلت كتابة الملف:\n' + err.message);
-                })
-                .finally(function () {
                     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+                    if (window.Swal) Swal.fire({ icon: 'error', title: 'خطأ في الاتصال', text: err.message });
+                    else alert('خطأ: ' + err.message);
                 });
         }
 
-        /* ── 6. COPY PATH ── */
+        /* ── 6. INSERT AT CURSOR ── */
+        function insertAtCursor(snippet) {
+            if (!monacoInstance) return;
+            var pos   = monacoInstance.getPosition();
+            var range = new window.monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column);
+            monacoInstance.executeEdits('insert-field', [{ range: range, text: '\n' + snippet + '\n' }]);
+            monacoInstance.focus();
+        }
+
+        /* ── 7. EVENT LISTENERS (outside Monaco init — no Monaco API needed) ── */
+        if (writeBtn)     writeBtn.addEventListener('click',     function () { doWrite(this); });
+        if (writeBtnSide) writeBtnSide.addEventListener('click', function () { doWrite(this); });
+
         if (copyPathBtn) {
             copyPathBtn.addEventListener('click', function () {
-                navigator.clipboard.writeText(copyPathBtn.dataset.path).then(function () {
-                    var i = copyPathBtn.querySelector('i');
-                    i.className = 'ti ti-check'; copyPathBtn.style.color = '#16a34a';
-                    setTimeout(function () { i.className = 'ti ti-copy text-base'; copyPathBtn.style.color = ''; }, 1600);
-                });
+                var path = copyPathBtn.dataset.path || '';
+                if (navigator.clipboard && path) {
+                    navigator.clipboard.writeText(path).then(function () {
+                        copyPathBtn.innerHTML = '<i class="ti ti-check"></i>';
+                        setTimeout(function () { copyPathBtn.innerHTML = '<i class="ti ti-copy text-base"></i>'; }, 1500);
+                    });
+                }
             });
         }
 
-        /* ── 7. MONACO INIT ── */
+        /* ── 8. CTRL+S SHORTCUT ── */
+        document.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                var bladeTabBtn = document.getElementById('sd-tab-btn-blade');
+                if (bladeTabBtn && bladeTabBtn.classList.contains('border-indigo-600')) {
+                    e.preventDefault();
+                    doWrite(writeBtn);
+                }
+            }
+        });
+
+        /* ── 9. MONACO INITIALIZATION ── */
         window.__monacoRequire(['vs/editor/editor.main'], function () {
-            // إصلاح AMD conflict: نُزيل define.amd حتى تعود feather/sweetalert2/Sortable
-            // لاستخدام window globals بدلاً من محاولة التسجيل كـ AMD modules في loader Monaco
-            // (window.define يبقى موجوداً لكن بدون define.amd = scripts تتجاهل AMD path)
+            // Restore AMD after Monaco loads
             if (typeof window.define === 'function') {
                 if (typeof window.__amd_define_backup === 'function') {
-                    // كان هناك AMD loader حقيقي قبل Monaco — نُعيده
                     window.define  = window.__amd_define_backup;
                     window.require = window.__amd_require_backup;
                 } else {
-                    // لم يكن هناك AMD — نُخفي define.amd فقط (لا نحذف define لأن workers قد تحتاجه)
                     try { window.define.amd = false; } catch (e) {}
                 }
             }
 
-            // Catppuccin Mocha — custom theme
+            var container = document.getElementById('monaco-editor-container');
+            if (!container) return;
+
+            // Catppuccin Mocha theme
             monaco.editor.defineTheme('catppuccin-mocha', {
-                base: 'vs-dark',
-                inherit: true,
+                base: 'vs-dark', inherit: true,
                 rules: [
                     { token: '',                foreground: 'cdd6f4' },
                     { token: 'comment',         foreground: '6c7086', fontStyle: 'italic' },
                     { token: 'keyword',         foreground: 'cba6f7', fontStyle: 'bold' },
                     { token: 'string',          foreground: 'a6e3a1' },
-                    { token: 'number',          foreground: 'fab387' },
-                    { token: 'type',            foreground: '89dceb' },
-                    { token: 'variable',        foreground: 'cdd6f4' },
-                    { token: 'identifier',      foreground: '89b4fa' },
-                    { token: 'delimiter',       foreground: '89dceb' },
                     { token: 'tag',             foreground: 'f38ba8' },
                     { token: 'attribute.name',  foreground: 'fab387' },
                     { token: 'attribute.value', foreground: 'a6e3a1' },
-                    { token: 'metatag',         foreground: 'cba6f7' },
                 ],
                 colors: {
-                    'editor.background':                  '#1e1e2e',
-                    'editor.foreground':                  '#cdd6f4',
-                    'editorLineNumber.foreground':        '#45475a',
-                    'editorLineNumber.activeForeground':  '#89b4fa',
-                    'editor.lineHighlightBackground':     '#313244',
-                    'editor.lineHighlightBorder':         '#31324400',
-                    'editorCursor.foreground':            '#f5c2e7',
-                    'editor.selectionBackground':         '#45475a',
-                    'editor.inactiveSelectionBackground': '#2a2a3a',
-                    'editorGutter.background':            '#1e1e2e',
-                    'editorWidget.background':            '#313244',
-                    'editorWidget.border':                '#585b70',
-                    'input.background':                   '#45475a',
-                    'input.foreground':                   '#cdd6f4',
-                    'input.border':                       '#585b70',
-                    'focusBorder':                        '#89b4fa',
-                    'list.hoverBackground':               '#313244',
-                    'list.activeSelectionBackground':     '#45475a',
-                    'minimap.background':                 '#181825',
-                    'minimapSlider.background':           '#45475a66',
-                    'minimapSlider.hoverBackground':      '#585b7088',
-                    'minimapSlider.activeBackground':     '#6c708699',
-                    'scrollbarSlider.background':         '#45475a88',
-                    'scrollbarSlider.hoverBackground':    '#585b7099',
-                    'scrollbarSlider.activeBackground':   '#6c7086aa',
-                    'editorBracketMatch.background':      '#45475a',
-                    'editorBracketMatch.border':          '#89b4fa',
-                    'editorIndentGuide.background':       '#313244',
-                    'editorIndentGuide.activeBackground': '#45475a',
+                    'editor.background':              '#1e1e2e',
+                    'editor.foreground':              '#cdd6f4',
+                    'editorLineNumber.foreground':    '#45475a',
+                    'editor.lineHighlightBackground': '#313244',
+                    'editorCursor.foreground':        '#f5c2e7',
+                    'editor.selectionBackground':     '#45475a',
+                    'editorGutter.background':        '#1e1e2e',
                 }
             });
 
-            monacoInstance = monaco.editor.create(
-                document.getElementById('monaco-editor-container'), {
-                value:                   initialContent,
-                language:                'php',
-                theme:                   'catppuccin-mocha',
-                fontSize:                13,
-                fontFamily:              '"JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, "Courier New", monospace',
-                fontLigatures:           true,
-                lineNumbers:             'on',
-                lineNumbersMinChars:     4,
-                minimap:                 { enabled: true, scale: 1, renderCharacters: false, maxColumn: 80 },
-                wordWrap:                'off',
-                scrollBeyondLastLine:    false,
-                automaticLayout:         true,
-                tabSize:                 4,
-                insertSpaces:            true,
-                detectIndentation:       false,
-                folding:                 true,
-                foldingStrategy:         'indentation',
-                showFoldingControls:     'always',
-                glyphMargin:             true,
-                renderLineHighlight:     'line',
-                scrollbar:               { useShadows: false, verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
-                padding:                 { top: 16, bottom: 16 },
-                fixedOverflowWidgets:    true,
-                renderWhitespace:        'selection',
-                bracketPairColorization: { enabled: true },
-                guides:                  { bracketPairs: true, indentation: true },
-                suggest:                 { showWords: true },
-                quickSuggestions:        { other: true, comments: false, strings: false },
-                formatOnPaste:           false,
-                smoothScrolling:         true,
-                cursorSmoothCaretAnimation: 'on',
-                cursorBlinking:          'smooth',
-                contextmenu:             true,
-                mouseWheelZoom:          true,
+            monacoInstance = monaco.editor.create(container, {
+                value:                initialContent,
+                language:             'html',
+                theme:                'catppuccin-mocha',
+                fontSize:             13,
+                fontFamily:           '"JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace',
+                lineNumbers:          'on',
+                minimap:              { enabled: true, scale: 1, renderCharacters: false },
+                wordWrap:             'off',
+                scrollBeyondLastLine: false,
+                automaticLayout:      true,
+                tabSize:              4,
+                insertSpaces:         true,
+                folding:              true,
+                renderLineHighlight:  'line',
+                padding:              { top: 16, bottom: 16 },
+                smoothScrolling:      true,
+                cursorBlinking:       'smooth',
             });
 
-            // expose globally so sdSetTab can trigger layout()
+            // Expose globally for tab switch layout()
             window.__monacoInstance = monacoInstance;
 
-            // ── Ctrl+S ──
+            // Ctrl+S inside Monaco
             monacoInstance.addCommand(
                 monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
-                function () {
-                    var tab = null;
-                    try { tab = localStorage.getItem('sd-edit-' + sdEditId + '-tab'); } catch(e){}
-                    if (tab === 'blade') { doWrite(writeBtn); }
-                    else { var f = document.getElementById('section-def-form'); if (f) f.submit(); }
-                }
+                function () { doWrite(writeBtn); }
             );
 
-            // ── Content change → stats + indicators ──
+            // Content change → stats + indicators
             monacoInstance.onDidChangeModelContent(function () {
                 updateStats();
                 updateFieldIndicators();
             });
 
-            // ── Smart Scaffold ──
+            // Scaffold button
             if (scaffoldBtn) {
                 scaffoldBtn.addEventListener('click', function () {
                     var code    = getCode().trim();
@@ -810,9 +777,9 @@
                         return;
                     }
                     if (missing.length > 0) {
-                        var names = missing.map(function (f) { return '+ ' + f.field_key + ' (' + f.field_type + ')'; }).join('\n');
+                        var names = missing.map(function (f) { return '+ ' + f.field_key; }).join('\n');
                         if (!window.confirm('سيتم إضافة ' + missing.length + ' حقل ناقص:\n\n' + names + '\n\nمتابعة؟')) return;
-                        var snippets = missing.map(function (f) { return '{{-- ' + f.field_key + ' --}}\n' + generateSnippet(f); }).join('\n\n');
+                        var snippets = missing.map(function (f) { return generateSnippet(f); }).join('\n\n');
                         setCode(getCode().trimEnd() + '\n\n' + snippets);
                         return;
                     }
@@ -822,135 +789,73 @@
                 });
             }
 
-            // ── Insert at cursor ──
-            document.querySelectorAll('.field-insert-btn').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    var snippet = generateSnippet({ field_key: btn.dataset.key, field_type: btn.dataset.type, field_scope: btn.dataset.scope });
-                    var pos   = monacoInstance.getPosition();
-                    var range = new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column);
-                    monacoInstance.executeEdits('insert-field', [{ range: range, text: '\n' + snippet + '\n' }]);
-                    monacoInstance.focus();
+            // Field insert buttons
+            document.querySelectorAll('.field-insert-btn').forEach(function (ibtn) {
+                ibtn.addEventListener('click', function () {
+                    var snippet = generateSnippet({ field_key: ibtn.dataset.key, field_type: ibtn.dataset.type, field_scope: ibtn.dataset.scope });
+                    insertAtCursor(snippet);
+                    updateFieldIndicators();
+                    updateStats();
                 });
             });
 
-            // ── Write buttons ──
-            if (writeBtn)     writeBtn.addEventListener('click',     function () { doWrite(writeBtn); });
-            if (writeBtnSide) writeBtnSide.addEventListener('click', function () { doWrite(writeBtnSide); });
-
-            // ── Copy code ──
+            // Copy code
             if (copyCodeBtn) {
                 copyCodeBtn.addEventListener('click', function () {
                     var val = getCode();
                     if (!val) return;
                     navigator.clipboard.writeText(val).then(function () {
-                        var i = copyCodeBtn.querySelector('i');
-                        i.className = 'ti ti-check me-1'; copyCodeBtn.style.color = '#16a34a';
-                        setTimeout(function () { i.className = 'ti ti-copy me-1'; copyCodeBtn.style.color = ''; }, 1600);
+                        copyCodeBtn.innerHTML = '<i class="ti ti-check me-1"></i>نُسخ';
+                        setTimeout(function () { copyCodeBtn.innerHTML = '<i class="ti ti-copy me-1"></i>نسخ'; }, 1600);
                     });
                 });
             }
 
-            // ── Clear code ──
+            // Clear code
             if (clearCodeBtn) {
                 clearCodeBtn.addEventListener('click', function () {
-                    if (!getCode().trim() || !window.confirm('مسح كامل الكود؟')) return;
-                    setCode('');
-                    monacoInstance.focus();
+                    if (!getCode().trim() || window.confirm('مسح كامل الكود؟')) {
+                        setCode('');
+                        monacoInstance.focus();
+                    }
                 });
             }
 
-            // ── Fullscreen toggle ──
+            // Fullscreen toggle
             var fullscreenBtn  = document.getElementById('fullscreen-btn');
             var fullscreenIcon = document.getElementById('fullscreen-icon');
             var editorCard     = document.getElementById('blade-editor-card');
             var isFullscreen   = false;
-
-            function toggleFullscreen() {
-                isFullscreen = !isFullscreen;
-                editorCard.classList.toggle('blade-fullscreen', isFullscreen);
-                document.body.classList.toggle('monaco-fullscreen-active', isFullscreen);
-                if (fullscreenIcon) {
-                    fullscreenIcon.className = isFullscreen
-                        ? 'ti ti-minimize'
-                        : 'ti ti-maximize';
-                }
-                if (fullscreenBtn) {
-                    fullscreenBtn.title = isFullscreen ? 'تصغير (Esc)' : 'تكبير';
-                }
-                // Allow CSS transition to complete before recalculating Monaco layout
-                setTimeout(function () {
-                    if (monacoInstance) { monacoInstance.layout(); }
-                }, 60);
-            }
-
             if (fullscreenBtn) {
-                fullscreenBtn.addEventListener('click', toggleFullscreen);
+                fullscreenBtn.addEventListener('click', function () {
+                    isFullscreen = !isFullscreen;
+                    editorCard.classList.toggle('blade-fullscreen', isFullscreen);
+                    document.body.classList.toggle('monaco-fullscreen-active', isFullscreen);
+                    if (fullscreenIcon) {
+                        fullscreenIcon.className = isFullscreen ? 'ti ti-minimize' : 'ti ti-maximize';
+                    }
+                    setTimeout(function () { if (monacoInstance) monacoInstance.layout(); }, 60);
+                });
             }
 
-            // ESC key exits fullscreen
-            document.addEventListener('keydown', function (e) {
-                if (e.key === 'Escape' && isFullscreen) { toggleFullscreen(); }
-            });
-
-            // ── Font size zoom ──
-            var FONT_MIN = 8;
-            var FONT_MAX = 32;
-            var FONT_STEP = 1;
-            var currentFontSize = 13;
+            // Zoom in/out
+            var zoomIn  = document.getElementById('zoom-in-btn');
+            var zoomOut = document.getElementById('zoom-out-btn');
             var fontSizeDisplay = document.getElementById('font-size-display');
-            var zoomInBtn  = document.getElementById('zoom-in-btn');
-            var zoomOutBtn = document.getElementById('zoom-out-btn');
-
-            function setFontSize(size) {
-                size = Math.max(FONT_MIN, Math.min(FONT_MAX, size));
-                currentFontSize = size;
-                monacoInstance.updateOptions({ fontSize: size });
-                if (fontSizeDisplay) fontSizeDisplay.textContent = size + 'px';
-                // Save preference
-                try { localStorage.setItem('monaco_font_size', size); } catch(e) {}
+            var currentFontSize = 13;
+            function applyFontSize(sz) {
+                currentFontSize = Math.max(10, Math.min(24, sz));
+                monacoInstance.updateOptions({ fontSize: currentFontSize });
+                if (fontSizeDisplay) fontSizeDisplay.textContent = currentFontSize + 'px';
             }
+            if (zoomIn)  zoomIn.addEventListener('click',  function () { applyFontSize(currentFontSize + 1); });
+            if (zoomOut) zoomOut.addEventListener('click', function () { applyFontSize(currentFontSize - 1); });
 
-            // Restore saved font size
-            try {
-                var saved = parseInt(localStorage.getItem('monaco_font_size'), 10);
-                if (saved >= FONT_MIN && saved <= FONT_MAX) { setFontSize(saved); }
-            } catch(e) {}
-
-            if (zoomInBtn)  zoomInBtn.addEventListener('click',  function () { setFontSize(currentFontSize + FONT_STEP); });
-            if (zoomOutBtn) zoomOutBtn.addEventListener('click', function () { setFontSize(currentFontSize - FONT_STEP); });
-
-            // Ctrl++ / Ctrl+- keyboard shortcuts
-            monacoInstance.addCommand(
-                monaco.KeyMod.CtrlCmd | monaco.KeyCode.Equal,
-                function () { setFontSize(currentFontSize + FONT_STEP); }
-            );
-            monacoInstance.addCommand(
-                monaco.KeyMod.CtrlCmd | monaco.KeyCode.Minus,
-                function () { setFontSize(currentFontSize - FONT_STEP); }
-            );
-            monacoInstance.addCommand(
-                monaco.KeyMod.CtrlCmd | monaco.KeyCode.Digit0,
-                function () { setFontSize(13); }  // Ctrl+0 reset
-            );
-
-            // Sync display when Monaco's own Ctrl+Scroll changes font size
-            monacoInstance.onDidChangeConfiguration(function () {
-                var opts = monacoInstance.getOptions();
-                var fs = opts.get(monaco.editor.EditorOption.fontSize);
-                if (fs && fs !== currentFontSize) {
-                    currentFontSize = fs;
-                    if (fontSizeDisplay) fontSizeDisplay.textContent = Math.round(fs) + 'px';
-                    try { localStorage.setItem('monaco_font_size', Math.round(fs)); } catch(e) {}
-                }
-            });
-
-            // ── Init ──
-            updateStats();
             updateFieldIndicators();
-            delete window.__sdEditorData;
+            updateStats();
         });
 
-    })();
+    }());
     </script>
     @endverbatim
     @endpush
