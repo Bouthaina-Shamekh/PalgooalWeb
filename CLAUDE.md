@@ -872,3 +872,76 @@ SectionDefinition::query()
   - `dashboard.Blade_Source_Saved`، `dashboard.Blade_Confirm_Overwrite`
   - `dashboard.Blade_Editor_Hint`، `dashboard.Blade_Scaffold_Hint`
   - `dashboard.Blade_File_Last_Written`، `dashboard.Blade_File_Not_Written`
+
+### Session: Smart Scaffold + Blade Editor UX Overhaul (لوحة الإدارة)
+
+#### المشكلة:
+زر "Scaffold من الحقول" كان يمسح الكود المكتوب يدوياً بالكامل عند الضغط عليه.
+
+#### التغييرات المُنجزة:
+
+**`resources/views/dashboard/section_definitions/edit.blade.php`** — إعادة كتابة كاملة:
+
+**١. معمارية التبويبات (Tab Architecture)**
+- تبويب ١: معلومات التعريف (الفورم الرئيسي)
+- تبويب ٢: قالب Blade (المحرر)
+- Alpine.js `x-data` مع `localStorage` لحفظ التبويب النشط عبر reloads
+- Info Ribbon في الأعلى: الاسم + المفتاح + حالة Blade + عدد الحقول + آخر تحديث
+
+**٢. نظام Scaffold الذكي (3 حالات)**
+```
+المحرر فارغ  → Scaffold كامل لكل الحقول (السلوك القديم)
+بعض الحقول ناقصة → "إضافة الناقص" — يُضيف فقط الحقول غير الموجودة في الكود
+كل الحقول موجودة → يسأل "هل تريد استبدال الكود كاملاً؟" (confirm)
+```
+- كشف استخدام الحقل: يبحث عن `$field_key` أو `'field_key'` أو `"field_key"` في الكود
+- زر Scaffold يغيّر نصّه ديناميكياً: `Scaffold كامل` / `إضافة الناقص (N)` / `Scaffold (استبدال)`
+
+**٣. إدراج عند المؤشر (Insert at Cursor)**
+- كل حقل في الـ sidebar له زر `+` خاص به
+- الضغط على `+` يُدرج snippet الحقل عند موضع المؤشر الحالي في المحرر
+- المؤشر ينتقل تلقائياً إلى نهاية الكود المُدرج
+- يعمل بدون مسح أي شيء موجود
+
+**٤. مؤشرات بصرية حية (Live Visual Indicators)**
+- نقطة خضراء (●): الحقل مستخدم في الكود الحالي
+- نقطة برتقالية (●): الحقل غير موجود في الكود بعد
+- زر `+` يتحوّل إلى `✓` (أخضر) عند الاستخدام، مع إمكانية إعادة الإدراج
+- تتحدّث المؤشرات تلقائياً مع كل ضغطة مفتاح في المحرر
+
+**٥. تحسينات UX أخرى**
+- `Tab` key يُدرج 4 مسافات (بدلاً من الانتقال للعنصر التالي)
+- `Ctrl+S`: يحفظ الفورم في تبويب المعلومات، أو يكتب الملف على الـ disk في تبويب Blade
+- عداد الأسطر والأحرف في footer المحرر
+- Copy code / Copy path / Clear code buttons
+- لون المحرر: Catppuccin Mocha (dark theme)
+
+#### الأنماط المهمة:
+
+**كشف استخدام الحقل:**
+```javascript
+function isFieldUsed(code, key) {
+    return code.indexOf('$' + key) !== -1
+        || code.indexOf("'" + key + "'") !== -1
+        || code.indexOf('"' + key + '"') !== -1;
+}
+```
+
+**Smart Scaffold Logic:**
+```javascript
+var missing = getMissingFields(editor.value);
+if (!code.trim())      → generateFullScaffold()
+else if (missing > 0)  → confirm() → append missing snippets only
+else                   → confirm("replace all?") → generateFullScaffold()
+```
+
+**Insert at cursor:**
+```javascript
+function insertAtCursor(snippet) {
+    var start = editor.selectionStart;
+    editor.value = before + '\n' + snippet + '\n' + after;
+    editor.setSelectionRange(newPos, newPos);
+    editor.focus();
+}
+```
+

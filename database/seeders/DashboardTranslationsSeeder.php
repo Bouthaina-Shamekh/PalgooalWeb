@@ -833,6 +833,12 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Blade_File_Deleted'      => 'تم حذف ملف Blade من الـ disk.',
             'dashboard.Blade_Source_Code'       => 'كود Blade',
             'dashboard.Blade_Invalid_Key'       => 'مفتاح غير صالح',
+
+            // Edit page UX improvements
+            'dashboard.Last_Updated'            => 'آخر تحديث',
+            'dashboard.For_Reference'           => 'للمرجعية',
+            'dashboard.Shortcut_Save'           => 'اضغط Ctrl+S للحفظ السريع',
+            'dashboard.Copy'                    => 'نسخ',
         ];
 
         $locale  = 'ar';
