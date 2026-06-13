@@ -429,7 +429,20 @@
         <input type="hidden" name="blade_source" id="blade-write-source">
     </form>
 
+    {{-- ── عزل Monaco AMD loader عن أي AMD loader آخر في الـ theme ── --}}
+    <script>
+    // حفظ أي AMD loader موجود مسبقاً (theme / RequireJS)
+    window.__amd_define_backup  = window.define;
+    window.__amd_require_backup = window.require;
+    // إزالتهما لأن Monaco loader.js يكتشف وجودهما ويتصرف بشكل مختلف
+    window.define  = undefined;
+    window.require = undefined;
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
+    <script>
+    // احفظ require الخاص بـ Monaco فقط — لا تُعد define بعد (editor.main.js لا يزال يحتاجه)
+    window.__monacoRequire = window.require;
+    </script>
     @push('scripts')
     <script>
     window.__sdEditorData = {
@@ -445,7 +458,7 @@
     (function () {
         'use strict';
 
-        require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
+        window.__monacoRequire.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
 
         var data           = window.__sdEditorData;
         var fieldsData     = data.fields;
@@ -609,7 +622,11 @@
         }
 
         /* ── 7. MONACO INIT ── */
-        require(['vs/editor/editor.main'], function () {
+        window.__monacoRequire(['vs/editor/editor.main'], function () {
+
+            // Monaco محمّل بالكامل — الآن نستعيد الـ AMD loader الأصلي للـ theme
+            window.define  = window.__amd_define_backup;
+            window.require = window.__amd_require_backup;
 
             // Catppuccin Mocha — custom theme
             monaco.editor.defineTheme('catppuccin-mocha', {

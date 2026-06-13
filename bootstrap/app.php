@@ -29,6 +29,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.frontend' => ServeTenantSite::class,
         ]);
 
+        $middleware->trustProxies(at: '*');
+
         $middleware->prependToGroup('web', ServeTenantSite::class);
         $middleware->appendToGroup('web', EnsureClientCanLogin::class);
     })
