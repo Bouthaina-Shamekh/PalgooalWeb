@@ -10,9 +10,11 @@ use App\Models\Sections\SectionDefinition;
 use App\Models\Sections\SectionDefinitionField;
 use App\Models\Sections\Template as SectionTemplate;
 use App\Support\Sections\SectionMediaPreviewBuilder;
+use App\Support\Sections\SectionTemplateFileWriter;
 use App\Support\Sections\SectionTemplateRegistry;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -101,7 +103,14 @@ class SectionDefinitionController extends Controller
 
         $sectionDefinition->load(['templates' => fn($query) => $query->orderByPivot('sort_order')->orderBy('id')]);
 
-        return view('dashboard.section_definitions.edit', $this->formViewData($sectionDefinition));
+        $writer          = app(SectionTemplateFileWriter::class);
+        $bladeFileStatus = $writer->fileStatus($sectionDefinition);
+        $bladeExpectedPath = $writer->displayPath($sectionDefinition);
+
+        return view('dashboard.section_definitions.edit', array_merge(
+            $this->formViewData($sectionDefinition),
+            compact('bladeFileStatus', 'bladeExpectedPath'),
+        ));
     }
 
     /**
@@ -115,11 +124,30 @@ class SectionDefinitionController extends Controller
 
         $validated = $request->validated();
 
-        DB::transaction(function () use ($sectionDefinition, $validated) {
+        DB::transaction(function () use ($sectionDefinition, $validated, $request) {
             $sectionDefinition->update($this->persistableAttributes($validated));
+
+            // Persist blade_source when provided
+            $bladeSource = $request->input('blade_source');
+            if ($bladeSource !== null) {
+                $sectionDefinition->blade_source = $bladeSource !== '' ? $bladeSource : null;
+                $sectionDefinition->saveQuietly();
+            }
 
             $this->syncTemplateSelection($sectionDefinition, $validated['template_key'] ?? null);
         });
+
+        // Optionally write file to disk if blade_source was provided
+        if ($request->filled('blade_source')) {
+            $sectionDefinition->refresh();
+            $writer = app(SectionTemplateFileWriter::class);
+            $result = $writer->write($sectionDefinition);
+
+            if (! $result['ok']) {
+                return $this->redirectAfterSave($sectionDefinition, (string) $request->input('after_save', 'edit'))
+                    ->with('warning', t('dashboard.Blade_Write_Failed', 'تم حفظ البيانات لكن فشلت كتابة ملف Blade: ') . $result['error']);
+            }
+        }
 
         return $this->redirectAfterSave($sectionDefinition, (string) $request->input('after_save', 'edit'));
     }
@@ -132,6 +160,10 @@ class SectionDefinitionController extends Controller
     public function destroy(SectionDefinition $sectionDefinition): RedirectResponse
     {
         $this->authorize('delete', $sectionDefinition);
+
+        // Delete the Blade file from disk BEFORE removing DB record
+        $writer = app(SectionTemplateFileWriter::class);
+        $fileResult = $writer->deleteFile($sectionDefinition);
 
         try {
             DB::transaction(function () use ($sectionDefinition): void {
@@ -161,9 +193,52 @@ class SectionDefinitionController extends Controller
                 ->with('error', t('dashboard.Section_Def_Delete_Error', 'تعذّر حذف تعريف القسم. راجع السجلات المرتبطة وحاول مجدداً.'));
         }
 
+        $message = t('dashboard.Section_Def_Deleted', 'تم حذف تعريف القسم والأقسام المرتبطة به بنجاح.');
+        if (! empty($fileResult['deleted'])) {
+            $message .= ' ' . t('dashboard.Blade_File_Deleted', 'تم حذف ملف Blade من الـ disk.');
+        }
+
         return redirect()
             ->route('dashboard.section_definitions.index')
-            ->with('ok', t('dashboard.Section_Def_Deleted', 'تم حذف تعريف القسم والأقسام المرتبطة به بنجاح.'));
+            ->with('ok', $message);
+    }
+
+    /**
+     * Write blade_source to the correct disk path without re-submitting the full form.
+     *
+     * POST /admin/section-definitions/{id}/write-blade
+     * Restricted to super_admin.
+     */
+    public function writeBladeFile(Request $request, SectionDefinition $sectionDefinition): RedirectResponse
+    {
+        $this->authorize('update', $sectionDefinition);
+
+
+        $bladeSource = $request->input('blade_source');
+
+        if ($bladeSource !== null) {
+            $sectionDefinition->blade_source = $bladeSource !== '' ? $bladeSource : null;
+            $sectionDefinition->saveQuietly();
+        }
+
+        if (empty($sectionDefinition->blade_source)) {
+            return redirect()
+                ->route('dashboard.section_definitions.edit', $sectionDefinition)
+                ->with('error', t('dashboard.Blade_Write_Failed', 'لا يوجد كود Blade للكتابة.'));
+        }
+
+        $writer = app(SectionTemplateFileWriter::class);
+        $result = $writer->write($sectionDefinition);
+
+        if (! $result['ok']) {
+            return redirect()
+                ->route('dashboard.section_definitions.edit', $sectionDefinition)
+                ->with('error', t('dashboard.Blade_Write_Failed', 'فشلت كتابة ملف Blade: ') . $result['error']);
+        }
+
+        return redirect()
+            ->route('dashboard.section_definitions.edit', $sectionDefinition)
+            ->with('ok', t('dashboard.Blade_Write_Success', 'تم كتابة ملف Blade على الـ disk بنجاح.'));
     }
 
     /**

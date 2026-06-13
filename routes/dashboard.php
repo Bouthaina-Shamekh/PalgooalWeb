@@ -290,6 +290,9 @@ Route::group([
             Route::delete('/{sectionDefinition}', [SectionDefinitionController::class, 'destroy'])
                 ->whereNumber('sectionDefinition')
                 ->name('destroy');
+            Route::post('/{sectionDefinition}/write-blade', [SectionDefinitionController::class, 'writeBladeFile'])
+                ->whereNumber('sectionDefinition')
+                ->name('write_blade');
 
             Route::prefix('/{sectionDefinition}/fields')
                 ->whereNumber('sectionDefinition')

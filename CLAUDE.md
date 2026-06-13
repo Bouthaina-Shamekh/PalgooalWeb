@@ -731,3 +731,144 @@ return view('...', compact('template', 'categories', 'languages', 'plans'));
   - `dashboard.Def_Active_Hint`، `dashboard.Def_Visible_Hint`
   - `dashboard.Update_Definition`، `dashboard.Update_And_Manage_Fields`، `dashboard.Create_Definition_Continue`
   - `dashboard.Def_Sidebar_Hint`، `dashboard.Def_Create_Sidebar_Hint`
+
+### Session: Admin Section Definitions — Blade Editor & Delete Fixes (لوحة الإدارة)
+
+#### المشاكل التي تم إصلاحها:
+
+**١. `SectionDefinitionController.php` — استعادة الملف المبتور**
+- الملف كان مبتوراً عند السطر 286 — `templateOptions()` مفتوحة بدون جسم + 4 methods مفقودة
+- الحل: استعادة الكود المفقود من git باستخدام `git show 755702b:app/Http/Controllers/Admin/SectionDefinitionController.php | tail -80`
+- المethods المستعادة: `templateOptions()` + `persistableAttributes()` + `syncTemplateSelection()` + `redirectAfterSave()`
+- **قاعدة مهمة**: عند تلف الملف — لا تُعيد كتابته من الذاكرة. استخدم `git show <commit>:<file>` للاستعادة الدقيقة
+
+**٢. زر الحذف — لا يظهر dialog تأكيد**
+- السبب الجذري: `onsubmit="return confirm('{{ t(...) }}')"` مع نص عربي داخل HTML attribute يكسر JS string parsing
+- الإصلاح: استبدال inline `onsubmit` بـ `data-*` attributes + JS event listener منفصل
+
+**٣. الحذف — لا يحذف ملف Blade من الـ disk**
+- السبب: `destroy()` لم يكن يحتوي على أي منطق لحذف الملفات
+- الإصلاح: إضافة `deleteFile()` في `SectionTemplateFileWriter` + استدعاؤها في `destroy()` قبل DB transaction
+
+#### الملفات المُعدَّلة:
+
+- **`app/Http/Controllers/Admin/SectionDefinitionController.php`**:
+  - استعادة 4 methods مبتورة من git history
+  - `destroy()`: إضافة حذف ملف Blade قبل حذف سجل DB:
+    ```php
+    $writer = app(SectionTemplateFileWriter::class);
+    $fileResult = $writer->deleteFile($sectionDefinition);
+    // ثم DB::transaction لحذف السجل...
+    $message = t('dashboard.Section_Def_Deleted', '...');
+    if (! empty($fileResult['deleted'])) {
+        $message .= ' ' . t('dashboard.Blade_File_Deleted', '...');
+    }
+    return redirect()->route('...')->with('ok', $message);
+    ```
+
+- **`app/Support/Sections/SectionTemplateFileWriter.php`**:
+  - إضافة method `deleteFile(SectionDefinition $definition): array`:
+    - يُرجع `['ok' => true, 'deleted' => false, 'skipped' => '...']` إذا المسار غير صالح أو الملف غير موجود
+    - يُرجع `['ok' => true, 'deleted' => true, 'path' => '...']` عند النجاح
+    - يُرجع `['ok' => false, 'error' => '...']` إذا فشل `unlink()`
+
+- **`resources/views/dashboard/section_definitions/index.blade.php`**:
+  - زر الحذف: استبدال `onsubmit` inline بـ `data-sections` + `data-name` attributes
+  - إضافة JS handler في `@push('scripts')`:
+    ```javascript
+    document.querySelectorAll('.def-delete-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var msg = '{{ t(...) }}' + '\n' + btn.dataset.name
+                    + '\n({{ t(...) }}: ' + btn.dataset.sections + ')';
+            if (window.confirm(msg)) { btn.closest('.def-delete-form').submit(); }
+        });
+    });
+    ```
+  - **سبب نمط `data-*`**: النصوص العربية داخل HTML attributes آمنة، لكن داخل JS string literals في inline handlers تُسبب مشاكل encoding
+
+- **`database/seeders/DashboardTranslationsSeeder.php`** — إضافة 3 مفاتيح جديدة:
+  - `dashboard.Blade_File_Deleted` — 'تم حذف ملف Blade من الـ disk.'
+  - `dashboard.Blade_Source_Code` — 'كود Blade'
+  - `dashboard.Blade_Invalid_Key` — 'مفتاح غير صالح'
+
+- **`.env`**: `APP_DEBUG` أُعيد إلى `false` (كان `true` مؤقتاً لتتبع الخطأ 500)
+
+#### دورة حياة ملف Blade (Blade File Lifecycle):
+```
+إنشاء definition → edit → Scaffold stub → كتابة الملف (write) → ملف على disk
+حذف definition → deleteFile() تلقائياً → ملف يُحذف من disk
+```
+
+#### أنماط مهمة:
+
+**confirm dialog مع نصوص عربية — استخدم `data-*` دائماً:**
+```blade
+{{-- ✅ صحيح --}}
+<button type="button" class="def-delete-btn"
+        data-name="{{ $def->label }}"
+        data-sections="{{ $def->sections_count }}">حذف</button>
+
+{{-- ❌ خطأ: نص عربي في JS string داخل HTML attribute --}}
+<form onsubmit="return confirm('{{ t('dashboard.Key', 'نص عربي') }}')">
+```
+
+**حذف الملف عند حذف السجل — قبل الـ transaction:**
+```php
+// احذف الملف أولاً (المسار يعتمد على بيانات السجل التي ستُحذف)
+$fileResult = $writer->deleteFile($sectionDefinition);
+try {
+    DB::transaction(fn() => $sectionDefinition->delete());
+} catch (Throwable $e) { ... }
+```
+
+**استعادة ملف مبتور من git:**
+```bash
+git log --oneline app/Path/To/Controller.php
+git show <commit-hash>:app/Path/To/Controller.php | tail -100
+```
+
+### ملاحظة: ظهور SectionDefinition في مكتبة الأقسام
+`sectionLibraryTypes()` في `SectionController` يقرأ من قاعدة البيانات (ليس من الـ disk):
+```php
+SectionDefinition::query()
+    ->where('is_active', true)
+    ->where('is_visible', true)
+    ->get();
+```
+أي definition بـ `is_active = true` + `is_visible = true` يظهر تلقائياً في `/admin/pages/1/sections`.
+الملف الـ Blade مطلوب فقط للـ rendering على الواجهة الأمامية — غيابه يُظهر `_missing-template.blade.php`.
+
+### Session: Admin Section Blade Editor (فيچر جديد)
+- `docs/section-blade-editor.md` — ملف توثيق مُنشأ مسبقاً (تصميم معتمد)
+- **الهدف**: تمكين المطور من كتابة كود Blade مباشرةً من لوحة الإدارة وكتابته على الـ disk
+- **المسار المستهدف**: `resources/views/front/sections/{category}/{template_key}.blade.php`
+
+#### التغييرات المُنجزة:
+- `database/migrations/XXXX_add_blade_source_to_section_definitions_table.php` — إنشاء:
+  - عمود `blade_source` (longText nullable)
+  - عمود `blade_written_at` (timestamp nullable)
+- `app/Support/Sections/SectionTemplateFileWriter.php` — إنشاء service:
+  - `resolvedPath()`: يبني المسار الكامل
+  - `fileStatus()`: يُرجع `exists` / `missing` / `external`
+  - `write()`: يكتب الملف على الـ disk ويُحدّث `blade_written_at`
+  - حماية: regex على category/key، التحقق من أن المسار داخل `resources/views/front/sections/`
+- `app/Http/Controllers/Admin/SectionDefinitionController.php` — تحديث:
+  - `edit()`: إضافة `$bladeFilePath`، `$bladeFileStatus`، `$bladeExpectedPath`
+  - `update()`: حفظ `blade_source` عند وجوده في الـ request
+  - `writeBladeFile()`: endpoint جديد للكتابة المستقلة (super_admin فقط)
+- `resources/views/dashboard/section_definitions/edit.blade.php` — تحديث:
+  - إضافة card ثانٍ "قالب Blade" أسفل الفورم الرئيسي في عمود `col-span-8`
+  - file status badge (✅ / ❌ / ⚠️) مع المسار المتوقع
+  - `<textarea dir="ltr" class="form-control font-mono">` للكود
+  - زر "Scaffold من الحقول" (JS client-side)
+  - زر "حفظ وكتابة الملف" (POST إلى write-blade endpoint)
+  - Scaffold JS: يُنشئ stub تلقائياً من الحقول المعرَّفة
+- `routes/dashboard.php` — إضافة route: `POST section-definitions/{id}/write-blade`
+- `database/seeders/DashboardTranslationsSeeder.php` — إضافة ~20 مفتاح:
+  - `dashboard.Blade_Template`، `dashboard.Blade_File_Status`
+  - `dashboard.Blade_File_Exists`، `dashboard.Blade_File_Missing`، `dashboard.Blade_File_External`
+  - `dashboard.Blade_Expected_Path`، `dashboard.Blade_Write_File`، `dashboard.Blade_Scaffold`
+  - `dashboard.Blade_Write_Success`، `dashboard.Blade_Write_Failed`
+  - `dashboard.Blade_Source_Saved`، `dashboard.Blade_Confirm_Overwrite`
+  - `dashboard.Blade_Editor_Hint`، `dashboard.Blade_Scaffold_Hint`
+  - `dashboard.Blade_File_Last_Written`، `dashboard.Blade_File_Not_Written`

@@ -218,12 +218,14 @@
                                         @can('delete', $def)
                                             <form action="{{ route('dashboard.section_definitions.destroy', $def) }}"
                                                   method="POST" style="display:inline-block"
-                                                  onsubmit="return confirm('{{ t('dashboard.Confirm_Delete_Section', 'حذف هذا التعريف؟') }} ({{ $def->sections_count }} {{ t('dashboard.Sections', 'أقسام') }})')">
+                                                  class="def-delete-form">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit"
-                                                        class="w-8 h-8 rounded-xl inline-flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 transition"
-                                                        title="{{ t('dashboard.Delete', 'حذف') }}">
+                                                <button type="button"
+                                                        class="w-8 h-8 rounded-xl inline-flex items-center justify-center text-red-400 hover:text-red-600 hover:bg-red-50 transition def-delete-btn"
+                                                        title="{{ t('dashboard.Delete', 'حذف') }}"
+                                                        data-sections="{{ $def->sections_count }}"
+                                                        data-name="{{ $def->label }}">
                                                     <i class="ti ti-trash text-lg leading-none"></i>
                                                 </button>
                                             </form>
@@ -281,8 +283,23 @@
 
     @push('scripts')
     <script>
+    // Select-all checkbox
     document.getElementById('select-all')?.addEventListener('change', function () {
         document.querySelectorAll('.def-checkbox').forEach(cb => cb.checked = this.checked);
+    });
+
+    // Delete confirmation — uses data-* attrs so Arabic text stays in HTML, not JS strings
+    document.querySelectorAll('.def-delete-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var name     = btn.dataset.name     || '';
+            var sections = btn.dataset.sections || '0';
+            var msg      = '{{ t('dashboard.Confirm_Delete_Section', 'هل أنت متأكد من حذف التعريف؟') }}'
+                         + '\n' + name
+                         + '\n({{ t('dashboard.Sections', 'أقسام مرتبطة') }}: ' + sections + ')';
+            if (window.confirm(msg)) {
+                btn.closest('.def-delete-form').submit();
+            }
+        });
     });
     </script>
     @endpush
