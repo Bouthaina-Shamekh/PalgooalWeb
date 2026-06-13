@@ -218,10 +218,9 @@ class SectionDefinitionController extends Controller
      * POST /admin/section-definitions/{id}/write-blade
      * Restricted to super_admin.
      */
-    public function writeBladeFile(Request $request, SectionDefinition $sectionDefinition): RedirectResponse
+    public function writeBladeFile(Request $request, SectionDefinition $sectionDefinition)
     {
         $this->authorize('update', $sectionDefinition);
-
 
         $bladeSource = $request->input('blade_source');
 
@@ -231,23 +230,35 @@ class SectionDefinitionController extends Controller
         }
 
         if (empty($sectionDefinition->blade_source)) {
+            $msg = t('dashboard.Blade_Write_Failed', 'لا يوجد كود Blade للكتابة.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['ok' => false, 'error' => $msg], 422);
+            }
             return redirect()
                 ->route('dashboard.section_definitions.edit', $sectionDefinition)
-                ->with('error', t('dashboard.Blade_Write_Failed', 'لا يوجد كود Blade للكتابة.'));
+                ->with('error', $msg);
         }
 
         $writer = app(SectionTemplateFileWriter::class);
         $result = $writer->write($sectionDefinition);
 
         if (! $result['ok']) {
+            $msg = t('dashboard.Blade_Write_Failed', 'فشلت كتابة ملف Blade: ') . $result['error'];
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['ok' => false, 'error' => $msg], 500);
+            }
             return redirect()
                 ->route('dashboard.section_definitions.edit', $sectionDefinition)
-                ->with('error', t('dashboard.Blade_Write_Failed', 'فشلت كتابة ملف Blade: ') . $result['error']);
+                ->with('error', $msg);
         }
 
+        $msg = t('dashboard.Blade_Write_Success', 'تم كتابة ملف Blade على الـ disk بنجاح.');
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['ok' => true, 'message' => $msg]);
+        }
         return redirect()
             ->route('dashboard.section_definitions.edit', $sectionDefinition)
-            ->with('ok', t('dashboard.Blade_Write_Success', 'تم كتابة ملف Blade على الـ disk بنجاح.'));
+            ->with('ok', $msg);
     }
 
     /**

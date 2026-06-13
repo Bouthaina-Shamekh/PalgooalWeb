@@ -601,13 +601,44 @@
             return phpLines.concat(htmlParts).join('\n');
         }
 
-        /* ── 5. WRITE TO DISK ── */
+        /* ── 5. WRITE TO DISK (fetch — avoids POST→GET redirect on proxied servers) ── */
         function doWrite(btn) {
-            if (!writeForm || !writeSource || !monacoInstance) return;
+            if (!writeForm || !monacoInstance) return;
             var msg = btn ? btn.dataset.confirm : null;
             if (msg && !window.confirm(msg)) return;
-            writeSource.value = getCode();
-            writeForm.submit();
+
+            var url    = writeForm.action;
+            var csrf   = writeForm.querySelector('[name=_token]') ? writeForm.querySelector('[name=_token]').value : '';
+            var code   = getCode();
+            var body   = new URLSearchParams({ _token: csrf, blade_source: code });
+
+            // Disable button while saving
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+
+            fetch(url, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                body: body
+            })
+                .then(function (res) { return res.json(); })
+                .then(function (json) {
+                    if (!json.ok) { throw new Error(json.error || 'خطأ غير معروف'); }
+                    // Success — show inline green bar above footer
+                    var bar = document.createElement('div');
+                    bar.className = 'alert alert-success alert-dismissible fade show mb-0';
+                    bar.style.cssText = 'border-radius:0;margin:0;padding:10px 16px;';
+                    bar.innerHTML = '<i class="ti ti-circle-check me-2"></i>' + json.message
+                        + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                    var footer = document.querySelector('#blade-editor-card .card-footer');
+                    if (footer) footer.parentNode.insertBefore(bar, footer);
+                    setTimeout(function () { if (bar.parentNode) bar.parentNode.removeChild(bar); }, 4000);
+                })
+                .catch(function (err) {
+                    alert('فشلت كتابة الملف: ' + err.message);
+                })
+                .finally(function () {
+                    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+                });
         }
 
         /* ── 6. COPY PATH ── */
