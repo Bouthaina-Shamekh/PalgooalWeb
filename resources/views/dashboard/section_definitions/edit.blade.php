@@ -607,7 +607,8 @@
             var msg = btn ? btn.dataset.confirm : null;
             if (msg && !window.confirm(msg)) return;
 
-            var url    = writeForm.action;
+            // إذا كانت هناك /public/ في الـ URL نحذفها لتجنب redirect يُحوّل POST → GET
+            var url    = writeForm.action.replace(/\/public\//g, '/');
             var csrf   = writeForm.querySelector('[name=_token]') ? writeForm.querySelector('[name=_token]').value : '';
             var code   = getCode();
             var body   = new URLSearchParams({ _token: csrf, blade_source: code });
@@ -654,10 +655,9 @@
 
         /* ── 7. MONACO INIT ── */
         window.__monacoRequire(['vs/editor/editor.main'], function () {
-
-            // Monaco محمّل بالكامل — الآن نستعيد الـ AMD loader الأصلي للـ theme
-            window.define  = window.__amd_define_backup;
-            window.require = window.__amd_require_backup;
+            // ملاحظة: نترك window.define = Monaco's define عمداً
+            // لأن Monaco يُحمّل language workers (php.js وغيرها) بشكل غير متزامن بعد هذا الـ callback
+            // scripts الـ theme التي تحتاج define/require تعمل قبل هذا الـ block ولا تتأثر
 
             // Catppuccin Mocha — custom theme
             monaco.editor.defineTheme('catppuccin-mocha', {
