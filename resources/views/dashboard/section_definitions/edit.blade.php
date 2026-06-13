@@ -208,7 +208,7 @@
                         </div>
                     </div>
 
-                    <div class="card">
+                    <div class="card" id="blade-editor-card">
                         <div class="card-header d-flex align-items-center gap-3 flex-wrap" style="background:#f8fafc;">
                             <div class="flex items-center gap-2">
                                 <i class="ti ti-code text-indigo-500"></i>
@@ -229,13 +229,22 @@
                                 <button type="button" id="clear-code-btn" class="btn btn-sm btn-light text-red-500">
                                     <i class="ti ti-trash me-1"></i>{{ t('dashboard.Clear', 'مسح') }}
                                 </button>
+                                <div class="d-flex align-items-center gap-1 border border-slate-200 rounded px-1" style="background:#f1f5f9;">
+                                    <button type="button" id="zoom-out-btn" class="btn btn-sm p-0" style="width:22px;height:22px;line-height:1;background:transparent;border:none;" title="تصغير الخط (Ctrl+-)">
+                                        <i class="ti ti-minus" style="font-size:11px;"></i>
+                                    </button>
+                                    <span id="font-size-display" class="font-mono text-slate-500" style="font-size:11px;min-width:26px;text-align:center;">13px</span>
+                                    <button type="button" id="zoom-in-btn" class="btn btn-sm p-0" style="width:22px;height:22px;line-height:1;background:transparent;border:none;" title="تكبير الخط (Ctrl++)">
+                                        <i class="ti ti-plus" style="font-size:11px;"></i>
+                                    </button>
+                                </div>
+                                <button type="button" id="fullscreen-btn" class="btn btn-sm btn-light" title="{{ t('dashboard.Fullscreen', 'تكبير') }}">
+                                    <i class="ti ti-maximize" id="fullscreen-icon"></i>
+                                </button>
                             </div>
                         </div>
-                        <div class="card-body p-0" style="background:#1e1e2e;">
-                            <textarea id="blade-source-editor"
-                                      class="form-control font-mono border-0"
-                                      dir="ltr" rows="28" spellcheck="false" autocomplete="off"
-                                      style="font-size:13px;line-height:1.65;tab-size:4;resize:vertical;border-radius:0;background:#1e1e2e;color:#cdd6f4;padding:16px 20px;min-height:420px;">{{ old('blade_source', $sectionDefinition->blade_source) }}</textarea>
+                        <div class="card-body p-0" style="background:#1e1e2e;border-radius:0;">
+                            <div id="monaco-editor-container" dir="ltr" style="height:580px;"></div>
                         </div>
                         <div class="card-footer d-flex align-items-center gap-3" style="background:#f8fafc;">
                             <span class="text-sm text-slate-400 me-auto font-mono" id="blade-editor-stats"></span>
@@ -334,6 +343,37 @@
 
     </div>{{-- end JS tabs wrapper --}}
 
+    <style>
+    /* ── Monaco Fullscreen ── */
+    #blade-editor-card.blade-fullscreen {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 9999 !important;
+        border-radius: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        margin: 0 !important;
+    }
+    #blade-editor-card.blade-fullscreen .card-header {
+        flex-shrink: 0;
+    }
+    #blade-editor-card.blade-fullscreen .card-body {
+        flex: 1 1 auto !important;
+        overflow: hidden !important;
+        min-height: 0 !important;
+    }
+    #blade-editor-card.blade-fullscreen #monaco-editor-container {
+        height: 100% !important;
+    }
+    #blade-editor-card.blade-fullscreen .card-footer {
+        flex-shrink: 0;
+    }
+    /* prevent page scroll when fullscreen */
+    body.monaco-fullscreen-active {
+        overflow: hidden !important;
+    }
+    </style>
+
     @push('scripts')
     <script>
     (function () {
@@ -348,6 +388,13 @@
             document.querySelectorAll('.sd-tab-pane').forEach(function (p) {
                 p.style.display = (p.id === 'sd-pane-' + name) ? '' : 'none';
             });
+
+            // trigger Monaco layout after pane becomes visible
+            if (name === 'blade') {
+                setTimeout(function () {
+                    if (window.__monacoInstance) { window.__monacoInstance.layout(); }
+                }, 60);
+            }
 
             // toggle button styles
             var activeClasses   = ['border-b-2','border-indigo-600','text-indigo-700','bg-indigo-50/60','font-semibold'];
@@ -382,13 +429,15 @@
         <input type="hidden" name="blade_source" id="blade-write-source">
     </form>
 
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs/loader.js"></script>
     @push('scripts')
     <script>
     window.__sdEditorData = {
-        fields:      @json($bladeFields->toArray()),
-        sectionKey:  @json($sectionDefinition->section_key),
-        editId:      {{ $sectionDefinition->id }},
-        scaffoldDate:'{{ now()->toDateString() }}'
+        fields:         @json($bladeFields->toArray()),
+        sectionKey:     @json($sectionDefinition->section_key),
+        editId:         {{ $sectionDefinition->id }},
+        scaffoldDate:   '{{ now()->toDateString() }}',
+        initialContent: @json(old('blade_source', $sectionDefinition->blade_source) ?? '')
     };
     </script>
     @verbatim
@@ -396,12 +445,15 @@
     (function () {
         'use strict';
 
-        var fieldsData   = window.__sdEditorData.fields;
-        var sectionKey   = window.__sdEditorData.sectionKey;
-        var sdEditId     = String(window.__sdEditorData.editId);
-        var scaffoldDate = window.__sdEditorData.scaffoldDate;
+        require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.44.0/min/vs' } });
 
-        var editor         = document.getElementById('blade-source-editor');
+        var data           = window.__sdEditorData;
+        var fieldsData     = data.fields;
+        var sectionKey     = data.sectionKey;
+        var sdEditId       = String(data.editId);
+        var scaffoldDate   = data.scaffoldDate;
+        var initialContent = data.initialContent || '';
+
         var writeBtn       = document.getElementById('blade-write-btn');
         var writeBtnSide   = document.getElementById('blade-write-btn-sidebar');
         var writeForm      = document.getElementById('blade-write-form');
@@ -413,8 +465,12 @@
         var copyCodeBtn    = document.getElementById('copy-code-btn');
         var clearCodeBtn   = document.getElementById('clear-code-btn');
         var copyPathBtn    = document.getElementById('copy-path-btn');
+        var monacoInstance = null;
 
         /* ── 1. DETECTION ── */
+        function getCode() { return monacoInstance ? monacoInstance.getValue() : ''; }
+        function setCode(v) { if (monacoInstance) monacoInstance.setValue(v); }
+
         function isFieldUsed(code, key) {
             return code.indexOf('$' + key) !== -1
                 || code.indexOf("'" + key + "'") !== -1
@@ -426,37 +482,30 @@
 
         /* ── 2. VISUAL INDICATORS ── */
         function updateFieldIndicators() {
-            if (!editor) return;
-            var code = editor.value;
+            var code = getCode();
             var missing = 0;
             fieldsData.forEach(function (f) {
                 var used = isFieldUsed(code, f.field_key);
                 var dot  = document.getElementById('field-dot-' + f.field_key);
                 var btn  = document.getElementById('field-insert-' + f.field_key);
                 if (!used) missing++;
-                if (dot) {
-                    dot.style.background = used ? '#16a34a' : '#d97706';
-                    dot.title = used ? 'مستخدم في الكود' : 'غير مستخدم بعد';
-                }
+                if (dot) { dot.style.background = used ? '#16a34a' : '#d97706'; }
                 if (btn) {
                     if (used) {
                         btn.innerHTML = '<i class="ti ti-check" style="font-size:10px;color:#16a34a;"></i>';
                         btn.style.background  = '#f0fdf4';
                         btn.style.borderColor = '#bbf7d0';
                         btn.style.color       = '#16a34a';
-                        btn.title = 'موجود — انقر للإدراج مجدداً';
                     } else {
                         btn.innerHTML = '<i class="ti ti-plus" style="font-size:10px;"></i>';
                         btn.style.background  = '';
                         btn.style.borderColor = '';
                         btn.style.color       = '';
-                        btn.title = 'إدراج عند موضع المؤشر';
                     }
                 }
             });
             if (scaffoldLabel && scaffoldBadge) {
-                var currentCode = editor.value.trim();
-                if (!currentCode) {
+                if (!getCode().trim()) {
                     scaffoldLabel.textContent = 'Scaffold كامل';
                     scaffoldBadge.style.display = 'none';
                 } else if (missing > 0) {
@@ -470,7 +519,14 @@
             }
         }
 
-        /* ── 3. CODE GENERATION ── */
+        /* ── 3. STATS ── */
+        function updateStats() {
+            if (!monacoInstance || !statsEl) return;
+            var model = monacoInstance.getModel();
+            statsEl.textContent = model.getLineCount() + ' سطر · ' + model.getValue().length + ' حرف';
+        }
+
+        /* ── 4. CODE GENERATION ── */
         function generateSnippet(f) {
             var k = f.field_key, type = f.field_type, scope = f.field_scope;
             var src = scope === 'translatable'
@@ -480,32 +536,24 @@
             if (type === 'media' || type === 'image') {
                 lines = [
                     '@php $' + k + ' = \\App\\Support\\Sections\\SectionFrontendMediaResolver::resolve($sharedData[\'' + k + '\'] ?? null); @endphp',
-                    '@if ($' + k + ')',
-                    '    <img src="{{ $' + k + ' }}" alt="">',
-                    '@endif'
+                    '@if ($' + k + ')', '    <img src="{{ $' + k + ' }}" alt="">', '@endif'
                 ];
             } else if (type === 'boolean' || type === 'toggle') {
                 lines = ['@if (' + src + ')', '    {{-- ' + k + ' enabled --}}', '@endif'];
             } else if (type === 'repeater') {
                 lines = [
                     '@php $' + k + ' = is_array($sharedData[\'' + k + '\'] ?? null) ? $sharedData[\'' + k + '\'] : []; @endphp',
-                    '@foreach ($' + k + ' as $' + k + 'Item)',
-                    '    {{-- render item --}}',
-                    '@endforeach'
+                    '@foreach ($' + k + ' as $' + k + 'Item)', '    {{-- render item --}}', '@endforeach'
                 ];
             } else if (type === 'textarea' || type === 'richtext' || type === 'html') {
                 lines = [
                     '@php $' + k + ' = trim((string)(' + src + ')); @endphp',
-                    '@if ($' + k + ')',
-                    '    <div>{!! $' + k + ' !!}</div>',
-                    '@endif'
+                    '@if ($' + k + ')', '    <div>{!! $' + k + ' !!}</div>', '@endif'
                 ];
             } else {
                 lines = [
                     '@php $' + k + ' = trim((string)(' + src + ')); @endphp',
-                    '@if ($' + k + ')',
-                    '    <p>{{ $' + k + ' }}</p>',
-                    '@endif'
+                    '@if ($' + k + ')', '    <p>{{ $' + k + ' }}</p>', '@endif'
                 ];
             }
             return lines.join('\n');
@@ -530,11 +578,9 @@
                     var s = scope === 'translatable' ? "$translatableData['" + k + "'] ?? ''" : "$sharedData['" + k + "'] ?? ''";
                     var isHtml = (type === 'textarea' || type === 'richtext' || type === 'html');
                     phpLines.push('    $' + k + ' = trim((string)(' + s + '));');
-                    if (isHtml) {
-                        htmlParts.push(comment, '    @if ($' + k + ')', '        <div>{!! $' + k + ' !!}</div>', '    @endif');
-                    } else {
-                        htmlParts.push(comment, '    @if ($' + k + ')', '        <p>{{ $' + k + ' }}</p>', '    @endif');
-                    }
+                    htmlParts.push(comment, '    @if ($' + k + ')',
+                        isHtml ? '        <div>{!! $' + k + ' !!}</div>' : '        <p>{{ $' + k + ' }}</p>',
+                        '    @endif');
                 }
             });
             phpLines.push('@endphp', '');
@@ -542,99 +588,16 @@
             return phpLines.concat(htmlParts).join('\n');
         }
 
-        /* ── 4. SMART SCAFFOLD ── */
-        if (scaffoldBtn && editor) {
-            scaffoldBtn.addEventListener('click', function () {
-                var code    = editor.value.trim();
-                var missing = getMissingFields(editor.value);
-                if (!code) {
-                    editor.value = fieldsData.length ? generateFullScaffold()
-                        : '{{-- لا حقول بعد --}}\n<section class="section-' + sectionKey + '">\n</section>';
-                    updateStats(); updateFieldIndicators(); return;
-                }
-                if (missing.length > 0) {
-                    var names = missing.map(function (f) { return '+ ' + f.field_key + ' (' + f.field_type + ')'; }).join('\n');
-                    if (!window.confirm('سيتم إضافة ' + missing.length + ' حقل ناقص:\n\n' + names + '\n\nمتابعة؟')) return;
-                    var snippets = missing.map(function (f) { return '{{-- ' + f.field_key + ' --}}\n' + generateSnippet(f); }).join('\n\n');
-                    editor.value = editor.value.trimEnd() + '\n\n' + snippets;
-                    updateStats(); updateFieldIndicators(); return;
-                }
-                if (window.confirm('كل الحقول موجودة.\n\nاستبدال الكود كاملاً بـ scaffold جديد؟')) {
-                    editor.value = generateFullScaffold();
-                    updateStats(); updateFieldIndicators();
-                }
-            });
-        }
-
-        /* ── 5. INSERT AT CURSOR ── */
-        function insertAtCursor(snippet) {
-            if (!editor) return;
-            var start  = editor.selectionStart;
-            var end    = editor.selectionEnd;
-            var before = editor.value.substring(0, start);
-            var after  = editor.value.substring(end);
-            var pre    = (before.length > 0 && before.slice(-1) !== '\n') ? '\n' : '';
-            var post   = (after.length  > 0 && after[0] !== '\n') ? '\n' : '';
-            editor.value = before + pre + snippet + post + after;
-            var newPos = start + pre.length + snippet.length;
-            editor.setSelectionRange(newPos, newPos);
-            editor.focus();
-            updateStats(); updateFieldIndicators();
-        }
-        document.querySelectorAll('.field-insert-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                insertAtCursor(generateSnippet({ field_key: btn.dataset.key, field_type: btn.dataset.type, field_scope: btn.dataset.scope }));
-            });
-        });
-
-        /* ── 6. STATS ── */
-        function updateStats() {
-            if (!editor || !statsEl) return;
-            var lines = editor.value ? editor.value.split('\n').length : 0;
-            statsEl.textContent = lines + ' سطر · ' + (editor.value ? editor.value.length : 0) + ' حرف';
-        }
-        if (editor) {
-            editor.addEventListener('input', function () { updateStats(); updateFieldIndicators(); });
-            editor.addEventListener('keydown', function (e) {
-                if (e.key === 'Tab') {
-                    e.preventDefault();
-                    var s = editor.selectionStart;
-                    editor.value = editor.value.substring(0, s) + '    ' + editor.value.substring(editor.selectionEnd);
-                    editor.selectionStart = editor.selectionEnd = s + 4;
-                    updateStats();
-                }
-            });
-            updateStats(); updateFieldIndicators();
-        }
-
-        /* ── 7. WRITE TO DISK ── */
+        /* ── 5. WRITE TO DISK ── */
         function doWrite(btn) {
-            if (!writeForm || !writeSource || !editor) return;
+            if (!writeForm || !writeSource || !monacoInstance) return;
             var msg = btn ? btn.dataset.confirm : null;
             if (msg && !window.confirm(msg)) return;
-            writeSource.value = editor.value;
+            writeSource.value = getCode();
             writeForm.submit();
         }
-        if (writeBtn)     writeBtn.addEventListener('click',     function () { doWrite(writeBtn); });
-        if (writeBtnSide) writeBtnSide.addEventListener('click', function () { doWrite(writeBtnSide); });
 
-        /* ── 8. COPY + CLEAR ── */
-        if (copyCodeBtn && editor) {
-            copyCodeBtn.addEventListener('click', function () {
-                if (!editor.value) return;
-                navigator.clipboard.writeText(editor.value).then(function () {
-                    var i = copyCodeBtn.querySelector('i');
-                    i.className = 'ti ti-check me-1'; copyCodeBtn.style.color = '#16a34a';
-                    setTimeout(function () { i.className = 'ti ti-copy me-1'; copyCodeBtn.style.color = ''; }, 1600);
-                });
-            });
-        }
-        if (clearCodeBtn && editor) {
-            clearCodeBtn.addEventListener('click', function () {
-                if (!editor.value.trim() || !window.confirm('مسح كامل الكود؟')) return;
-                editor.value = ''; updateStats(); updateFieldIndicators(); editor.focus();
-            });
-        }
+        /* ── 6. COPY PATH ── */
         if (copyPathBtn) {
             copyPathBtn.addEventListener('click', function () {
                 navigator.clipboard.writeText(copyPathBtn.dataset.path).then(function () {
@@ -645,17 +608,269 @@
             });
         }
 
-        /* ── 9. CTRL+S ── */
-        document.addEventListener('keydown', function (e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                var tab = localStorage.getItem('sd-edit-' + sdEditId + '-tab') || 'info';
-                if (tab === 'blade') { doWrite(writeBtn); }
-                else { var form = document.getElementById('section-def-form'); if (form) form.submit(); }
-            }
-        });
+        /* ── 7. MONACO INIT ── */
+        require(['vs/editor/editor.main'], function () {
 
-        delete window.__sdEditorData;
+            // Catppuccin Mocha — custom theme
+            monaco.editor.defineTheme('catppuccin-mocha', {
+                base: 'vs-dark',
+                inherit: true,
+                rules: [
+                    { token: '',                foreground: 'cdd6f4' },
+                    { token: 'comment',         foreground: '6c7086', fontStyle: 'italic' },
+                    { token: 'keyword',         foreground: 'cba6f7', fontStyle: 'bold' },
+                    { token: 'string',          foreground: 'a6e3a1' },
+                    { token: 'number',          foreground: 'fab387' },
+                    { token: 'type',            foreground: '89dceb' },
+                    { token: 'variable',        foreground: 'cdd6f4' },
+                    { token: 'identifier',      foreground: '89b4fa' },
+                    { token: 'delimiter',       foreground: '89dceb' },
+                    { token: 'tag',             foreground: 'f38ba8' },
+                    { token: 'attribute.name',  foreground: 'fab387' },
+                    { token: 'attribute.value', foreground: 'a6e3a1' },
+                    { token: 'metatag',         foreground: 'cba6f7' },
+                ],
+                colors: {
+                    'editor.background':                  '#1e1e2e',
+                    'editor.foreground':                  '#cdd6f4',
+                    'editorLineNumber.foreground':        '#45475a',
+                    'editorLineNumber.activeForeground':  '#89b4fa',
+                    'editor.lineHighlightBackground':     '#313244',
+                    'editor.lineHighlightBorder':         '#31324400',
+                    'editorCursor.foreground':            '#f5c2e7',
+                    'editor.selectionBackground':         '#45475a',
+                    'editor.inactiveSelectionBackground': '#2a2a3a',
+                    'editorGutter.background':            '#1e1e2e',
+                    'editorWidget.background':            '#313244',
+                    'editorWidget.border':                '#585b70',
+                    'input.background':                   '#45475a',
+                    'input.foreground':                   '#cdd6f4',
+                    'input.border':                       '#585b70',
+                    'focusBorder':                        '#89b4fa',
+                    'list.hoverBackground':               '#313244',
+                    'list.activeSelectionBackground':     '#45475a',
+                    'minimap.background':                 '#181825',
+                    'minimapSlider.background':           '#45475a66',
+                    'minimapSlider.hoverBackground':      '#585b7088',
+                    'minimapSlider.activeBackground':     '#6c708699',
+                    'scrollbarSlider.background':         '#45475a88',
+                    'scrollbarSlider.hoverBackground':    '#585b7099',
+                    'scrollbarSlider.activeBackground':   '#6c7086aa',
+                    'editorBracketMatch.background':      '#45475a',
+                    'editorBracketMatch.border':          '#89b4fa',
+                    'editorIndentGuide.background':       '#313244',
+                    'editorIndentGuide.activeBackground': '#45475a',
+                }
+            });
+
+            monacoInstance = monaco.editor.create(
+                document.getElementById('monaco-editor-container'), {
+                value:                   initialContent,
+                language:                'php',
+                theme:                   'catppuccin-mocha',
+                fontSize:                13,
+                fontFamily:              '"JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, "Courier New", monospace',
+                fontLigatures:           true,
+                lineNumbers:             'on',
+                lineNumbersMinChars:     4,
+                minimap:                 { enabled: true, scale: 1, renderCharacters: false, maxColumn: 80 },
+                wordWrap:                'off',
+                scrollBeyondLastLine:    false,
+                automaticLayout:         true,
+                tabSize:                 4,
+                insertSpaces:            true,
+                detectIndentation:       false,
+                folding:                 true,
+                foldingStrategy:         'indentation',
+                showFoldingControls:     'always',
+                glyphMargin:             true,
+                renderLineHighlight:     'line',
+                scrollbar:               { useShadows: false, verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
+                padding:                 { top: 16, bottom: 16 },
+                fixedOverflowWidgets:    true,
+                renderWhitespace:        'selection',
+                bracketPairColorization: { enabled: true },
+                guides:                  { bracketPairs: true, indentation: true },
+                suggest:                 { showWords: true },
+                quickSuggestions:        { other: true, comments: false, strings: false },
+                formatOnPaste:           false,
+                smoothScrolling:         true,
+                cursorSmoothCaretAnimation: 'on',
+                cursorBlinking:          'smooth',
+                contextmenu:             true,
+                mouseWheelZoom:          true,
+            });
+
+            // expose globally so sdSetTab can trigger layout()
+            window.__monacoInstance = monacoInstance;
+
+            // ── Ctrl+S ──
+            monacoInstance.addCommand(
+                monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
+                function () {
+                    var tab = null;
+                    try { tab = localStorage.getItem('sd-edit-' + sdEditId + '-tab'); } catch(e){}
+                    if (tab === 'blade') { doWrite(writeBtn); }
+                    else { var f = document.getElementById('section-def-form'); if (f) f.submit(); }
+                }
+            );
+
+            // ── Content change → stats + indicators ──
+            monacoInstance.onDidChangeModelContent(function () {
+                updateStats();
+                updateFieldIndicators();
+            });
+
+            // ── Smart Scaffold ──
+            if (scaffoldBtn) {
+                scaffoldBtn.addEventListener('click', function () {
+                    var code    = getCode().trim();
+                    var missing = getMissingFields(getCode());
+                    if (!code) {
+                        setCode(fieldsData.length ? generateFullScaffold()
+                            : '{{-- لا حقول بعد --}}\n<section class="section-' + sectionKey + '">\n</section>');
+                        return;
+                    }
+                    if (missing.length > 0) {
+                        var names = missing.map(function (f) { return '+ ' + f.field_key + ' (' + f.field_type + ')'; }).join('\n');
+                        if (!window.confirm('سيتم إضافة ' + missing.length + ' حقل ناقص:\n\n' + names + '\n\nمتابعة؟')) return;
+                        var snippets = missing.map(function (f) { return '{{-- ' + f.field_key + ' --}}\n' + generateSnippet(f); }).join('\n\n');
+                        setCode(getCode().trimEnd() + '\n\n' + snippets);
+                        return;
+                    }
+                    if (window.confirm('كل الحقول موجودة.\n\nاستبدال الكود كاملاً بـ scaffold جديد؟')) {
+                        setCode(generateFullScaffold());
+                    }
+                });
+            }
+
+            // ── Insert at cursor ──
+            document.querySelectorAll('.field-insert-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var snippet = generateSnippet({ field_key: btn.dataset.key, field_type: btn.dataset.type, field_scope: btn.dataset.scope });
+                    var pos   = monacoInstance.getPosition();
+                    var range = new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column);
+                    monacoInstance.executeEdits('insert-field', [{ range: range, text: '\n' + snippet + '\n' }]);
+                    monacoInstance.focus();
+                });
+            });
+
+            // ── Write buttons ──
+            if (writeBtn)     writeBtn.addEventListener('click',     function () { doWrite(writeBtn); });
+            if (writeBtnSide) writeBtnSide.addEventListener('click', function () { doWrite(writeBtnSide); });
+
+            // ── Copy code ──
+            if (copyCodeBtn) {
+                copyCodeBtn.addEventListener('click', function () {
+                    var val = getCode();
+                    if (!val) return;
+                    navigator.clipboard.writeText(val).then(function () {
+                        var i = copyCodeBtn.querySelector('i');
+                        i.className = 'ti ti-check me-1'; copyCodeBtn.style.color = '#16a34a';
+                        setTimeout(function () { i.className = 'ti ti-copy me-1'; copyCodeBtn.style.color = ''; }, 1600);
+                    });
+                });
+            }
+
+            // ── Clear code ──
+            if (clearCodeBtn) {
+                clearCodeBtn.addEventListener('click', function () {
+                    if (!getCode().trim() || !window.confirm('مسح كامل الكود؟')) return;
+                    setCode('');
+                    monacoInstance.focus();
+                });
+            }
+
+            // ── Fullscreen toggle ──
+            var fullscreenBtn  = document.getElementById('fullscreen-btn');
+            var fullscreenIcon = document.getElementById('fullscreen-icon');
+            var editorCard     = document.getElementById('blade-editor-card');
+            var isFullscreen   = false;
+
+            function toggleFullscreen() {
+                isFullscreen = !isFullscreen;
+                editorCard.classList.toggle('blade-fullscreen', isFullscreen);
+                document.body.classList.toggle('monaco-fullscreen-active', isFullscreen);
+                if (fullscreenIcon) {
+                    fullscreenIcon.className = isFullscreen
+                        ? 'ti ti-minimize'
+                        : 'ti ti-maximize';
+                }
+                if (fullscreenBtn) {
+                    fullscreenBtn.title = isFullscreen ? 'تصغير (Esc)' : 'تكبير';
+                }
+                // Allow CSS transition to complete before recalculating Monaco layout
+                setTimeout(function () {
+                    if (monacoInstance) { monacoInstance.layout(); }
+                }, 60);
+            }
+
+            if (fullscreenBtn) {
+                fullscreenBtn.addEventListener('click', toggleFullscreen);
+            }
+
+            // ESC key exits fullscreen
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && isFullscreen) { toggleFullscreen(); }
+            });
+
+            // ── Font size zoom ──
+            var FONT_MIN = 8;
+            var FONT_MAX = 32;
+            var FONT_STEP = 1;
+            var currentFontSize = 13;
+            var fontSizeDisplay = document.getElementById('font-size-display');
+            var zoomInBtn  = document.getElementById('zoom-in-btn');
+            var zoomOutBtn = document.getElementById('zoom-out-btn');
+
+            function setFontSize(size) {
+                size = Math.max(FONT_MIN, Math.min(FONT_MAX, size));
+                currentFontSize = size;
+                monacoInstance.updateOptions({ fontSize: size });
+                if (fontSizeDisplay) fontSizeDisplay.textContent = size + 'px';
+                // Save preference
+                try { localStorage.setItem('monaco_font_size', size); } catch(e) {}
+            }
+
+            // Restore saved font size
+            try {
+                var saved = parseInt(localStorage.getItem('monaco_font_size'), 10);
+                if (saved >= FONT_MIN && saved <= FONT_MAX) { setFontSize(saved); }
+            } catch(e) {}
+
+            if (zoomInBtn)  zoomInBtn.addEventListener('click',  function () { setFontSize(currentFontSize + FONT_STEP); });
+            if (zoomOutBtn) zoomOutBtn.addEventListener('click', function () { setFontSize(currentFontSize - FONT_STEP); });
+
+            // Ctrl++ / Ctrl+- keyboard shortcuts
+            monacoInstance.addCommand(
+                monaco.KeyMod.CtrlCmd | monaco.KeyCode.Equal,
+                function () { setFontSize(currentFontSize + FONT_STEP); }
+            );
+            monacoInstance.addCommand(
+                monaco.KeyMod.CtrlCmd | monaco.KeyCode.Minus,
+                function () { setFontSize(currentFontSize - FONT_STEP); }
+            );
+            monacoInstance.addCommand(
+                monaco.KeyMod.CtrlCmd | monaco.KeyCode.Digit0,
+                function () { setFontSize(13); }  // Ctrl+0 reset
+            );
+
+            // Sync display when Monaco's own Ctrl+Scroll changes font size
+            monacoInstance.onDidChangeConfiguration(function () {
+                var opts = monacoInstance.getOptions();
+                var fs = opts.get(monaco.editor.EditorOption.fontSize);
+                if (fs && fs !== currentFontSize) {
+                    currentFontSize = fs;
+                    if (fontSizeDisplay) fontSizeDisplay.textContent = Math.round(fs) + 'px';
+                    try { localStorage.setItem('monaco_font_size', Math.round(fs)); } catch(e) {}
+                }
+            });
+
+            // ── Init ──
+            updateStats();
+            updateFieldIndicators();
+            delete window.__sdEditorData;
+        });
 
     })();
     </script>
