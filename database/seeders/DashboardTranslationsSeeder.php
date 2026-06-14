@@ -838,27 +838,55 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Last_Updated'            => 'آخر تحديث',
             'dashboard.For_Reference'           => 'للمرجعية',
             'dashboard.Shortcut_Save'           => 'اضغط Ctrl+S للحفظ السريع',
+            
             'dashboard.Copy'                    => 'نسخ',
+
+            // ── Session: Pages UX (create/edit/form) ──────────────
+            'dashboard.All_Pages'               => 'الصفحات',
+            'dashboard.Add_Page'                => 'إضافة صفحة',
+            'dashboard.Edit_Page'               => 'تعديل الصفحة',
+            'dashboard.No_Pages_Yet'            => 'لا توجد صفحات بعد.',
+            'dashboard.Page_Title'              => 'عنوان الصفحة',
+            'dashboard.Page_Content'            => 'محتوى الصفحة',
+            'dashboard.Slug'                    => 'الرابط (Slug)',
+            'dashboard.Slug_Hint'               => 'المسافات والشرطات السفلية تتحول إلى شرطات (-). يُقبل الحروف والأرقام والشرطات فقط.',
+            'dashboard.Content_Hint'            => 'محرر نصوص غني — سيتم حفظ HTML في قاعدة البيانات.',
+            'dashboard.SEO_Meta'                => 'SEO والمشاركة',
+            'dashboard.Meta_Title'              => 'Meta Title',
+            'dashboard.Meta_Description'        => 'Meta Description',
+            'dashboard.Meta_Keywords'           => 'الكلمات المفتاحية',
+            'dashboard.Open_Graph_Image_URL'    => 'صورة Open Graph',
+            'dashboard.Short_description_for_search_engines'           => 'وصف قصير لمحركات البحث',
+            'dashboard.Aim_for_50_160_characters_Leave_empty_to_reuse_the_title' => '50–160 حرفاً. اتركه فارغاً لإعادة استخدام العنوان.',
+            'dashboard.Separate_keywords_with_a_comma_or_Arabic_comma' => 'افصل الكلمات بفاصلة (,) أو فاصلة عربية (،).',
+            'dashboard.Publishing_Options'      => 'خيارات النشر',
+            'dashboard.Builder_Type'            => 'نوع المنشئ',
+            'dashboard.Sections_Builder'        => 'Sections Builder',
+            'dashboard.Visual_Builder_Archived_Hint' => 'المنشئ المرئي مؤرشف — تستخدم الصفحات الجديدة SectionDefinitions.',
+            'dashboard.Published'               => 'منشور',
+            'dashboard.Draft'                   => 'مسودة',
+            'dashboard.Homepage'                => 'الصفحة الرئيسية',
+            'dashboard.Make_Homepage'           => 'جعل هذه الصفحة الرئيسية',
+            'dashboard.Homepage_Hint'           => 'عند التفعيل تصبح هذه الصفحة هي الصفحة الرئيسية للموقع.',
+            'dashboard.Current_Homepage'        => 'الصفحة الرئيسية الحالية',
+            'dashboard.Publish_Date'            => 'تاريخ النشر',
+            'dashboard.Publish'                 => 'نشر الصفحة',
+            'dashboard.Update'                  => 'حفظ التعديلات',
+            'dashboard.Page_Help_Title'         => 'ملاحظات',
+            'dashboard.Page_Help_1'             => 'أضف الصفحة أولاً ثم أضف أقسامها من قائمة الصفحات.',
+            'dashboard.Page_Help_2'             => 'الـ Slug يُولَّد تلقائياً من العنوان ويمكن تعديله.',
+            'dashboard.Page_Help_3'             => 'بيانات SEO اختيارية — تُحسّن ظهور الصفحة في محركات البحث.',
+            'dashboard.Confirm_Delete_Page_Title' => 'هل تريد حذف هذه الصفحة؟',
+            'dashboard.Confirm_Delete_Page_Text'  => 'هل أنت متأكد من حذف هذه الصفحة؟ هذا الإجراء لا يمكن التراجع عنه.',
+            'dashboard.Yes_Delete_Page'           => 'نعم، احذف الصفحة',
+            'dashboard.Action_Cannot_Be_Undone'   => 'هذا الإجراء لا يمكن التراجع عنه!',
         ];
 
-        $locale  = 'ar';
-        $created = 0;
-        $updated = 0;
-
-        cache()->flush();
-
         foreach ($translations as $key => $value) {
-            $record = TranslationValue::firstOrNew(['key' => $key, 'locale' => $locale]);
-            $record->value = $value;
-            $record->save();
-
-            if ($record->wasRecentlyCreated) {
-                $created++;
-            } else {
-                $updated++;
-            }
+            TranslationValue::updateOrCreate(
+                ['key' => $key, 'locale' => 'ar'],
+                ['value' => $value],
+            );
         }
-
-        $this->command->info("✅ Arabic dashboard translations: {$created} created, {$updated} updated.");
     }
 }

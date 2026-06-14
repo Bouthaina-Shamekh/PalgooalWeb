@@ -3,30 +3,32 @@
         <div class="page-block">
             <ul class="breadcrumb">
                 <li class="breadcrumb-item">
-                    <a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home') }}</a>
+                    <a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'الرئيسية') }}</a>
                 </li>
                 <li class="breadcrumb-item">
-                    <a href="{{ route('dashboard.pages.index') }}">{{ t('dashboard.All_Pages', 'All Pages') }}</a>
+                    <a href="{{ route('dashboard.pages.index') }}">{{ t('dashboard.All_Pages', 'الصفحات') }}</a>
                 </li>
                 <li class="breadcrumb-item" aria-current="page">
-                    {{ t('dashboard.Add_Pages', 'Add Pages') }}
+                    {{ t('dashboard.Add_Page', 'إضافة صفحة') }}
                 </li>
             </ul>
             <div class="page-header-title">
-                <h2 class="mb-0">{{ t('dashboard.Add_Pages', 'Add Pages') }}</h2>
+                <h2 class="mb-0">{{ t('dashboard.Add_Page', 'إضافة صفحة') }}</h2>
             </div>
         </div>
     </div>
 
-    @if (session('success'))
-        <div class="bg-green-100 text-green-800 px-4 py-2 rounded mb-4">
-            {{ session('success') }}
-        </div>
+    @if (session('ok'))
+        <div class="alert alert-success">{{ session('ok') }}</div>
+    @endif
+
+    @if (session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
 
     @if ($errors->any())
-        <div class="bg-red-100 text-red-800 px-4 py-2 rounded mb-4 text-sm">
-            <ul class="list-disc ms-4">
+        <div class="alert alert-danger">
+            <ul class="mb-0 ps-3">
                 @foreach ($errors->all() as $error)
                     <li>{{ $error }}</li>
                 @endforeach
@@ -34,12 +36,13 @@
         </div>
     @endif
 
-    <form action="{{ route('dashboard.pages.store') }}" method="POST" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <form action="{{ route('dashboard.pages.store') }}" method="POST">
         @csrf
-
-        @include('dashboard.pages.partials.form', [
-            'page' => null,
-            'languages' => $languages,
-        ])
+        <div class="grid grid-cols-12 gap-6">
+            @include('dashboard.pages.partials.form', [
+                'page'      => null,
+                'languages' => $languages,
+            ])
+        </div>
     </form>
 </x-dashboard-layout>

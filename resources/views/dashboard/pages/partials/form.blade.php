@@ -4,42 +4,39 @@
     /** @var \App\Models\Page|null $page */
     /** @var \Illuminate\Support\Collection|\App\Models\Language[] $languages */
 
-    // Are we editing an existing page or creating a new one?
     $isEdit        = isset($page) && $page?->exists;
-    $defaultStatus = $isEdit ? (int) $page->is_active : 1;  // 1 = Published, 0 = Draft
-    $defaultIsHome = $isEdit ? (int) $page->is_home   : 0;  // 1 = Homepage
+    $defaultStatus = $isEdit ? (int) $page->is_active : 1;
+    $defaultIsHome = $isEdit ? (int) $page->is_home   : 0;
 
     $defaultBuilderMode = 'sections';
 @endphp
 
-{{-- ===========================
-     LEFT COLUMN: PAGE CONTENT
-   =========================== --}}
-<div class="col-span-2">
-    <div class="card p-6 space-y-6">
-        <h2 class="text-lg font-bold">
-            {{ $isEdit ? t('dashboard.Edit_Page', 'Edit Page') : t('dashboard.Add_Page', 'Add Page') }}
-        </h2>
+{{-- ============================
+     العمود الرئيسي (col-span-8)
+     ============================ --}}
+<div class="col-span-12 xl:col-span-8">
 
-        {{-- -------------------------
-             Language tabs (buttons)
-           ------------------------- --}}
-        <div>
-            <ul class="flex border-b mb-4 space-x-2 rtl:space-x-reverse" role="tablist">
+    {{-- ── القسم ١: محتوى الصفحة ── --}}
+    <div class="card mb-4">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center"
+                  style="width:26px;height:26px;font-size:13px;">١</span>
+            <h5 class="mb-0">{{ t('dashboard.Page_Content', 'محتوى الصفحة') }}</h5>
+        </div>
+        <div class="card-body">
+
+            {{-- تبويبات اللغات --}}
+            <ul class="nav nav-tabs mb-4" role="tablist">
                 @foreach ($languages as $index => $lang)
                     @php
                         /** @var \App\Models\Language $lang */
                         $langCode    = $lang->code;
-                        $isActiveTab = $index === 0; // first language is active by default
+                        $isActiveTab = $index === 0;
                     @endphp
-
-                    <li>
+                    <li class="nav-item" role="presentation">
                         <button
                             type="button"
-                            class="px-4 py-2 rounded-t transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400
-                                {{ $isActiveTab
-                                    ? 'bg-white text-slate-900 shadow-sm border border-slate-200 border-b-white font-semibold'
-                                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200 border border-transparent' }}"
+                            class="nav-link {{ $isActiveTab ? 'active' : '' }}"
                             data-lang-tab="{{ $langCode }}"
                             role="tab"
                             aria-controls="lang-panel-{{ $langCode }}"
@@ -52,38 +49,21 @@
                 @endforeach
             </ul>
 
-            {{-- -------------------------
-                 Language panels (fields)
-               ------------------------- --}}
+            {{-- ألواح اللغات --}}
             @foreach ($languages as $index => $lang)
                 @php
                     /** @var \App\Models\Language $lang */
                     $langCode = $lang->code;
 
-                    // Existing translation for this locale (edit mode only)
                     $existingTranslation = $isEdit
                         ? $page->translations->firstWhere('locale', $langCode)
                         : null;
 
-                    // Values with old() fallback (for validation errors)
-                    $titleValue = old("translations.$langCode.title", $existingTranslation->title ?? '');
-                    $slugValue  = old("translations.$langCode.slug",  $existingTranslation->slug  ?? '');
-
-                    $contentValue = old(
-                        "translations.$langCode.content",
-                        $existingTranslation->content ?? ''
-                    );
-
-                    $metaTitleValue = old(
-                        "translations.$langCode.meta_title",
-                        $existingTranslation->meta_title ?? ''
-                    );
-
-                    $metaDescriptionValue = old(
-                        "translations.$langCode.meta_description",
-                        $existingTranslation->meta_description ?? ''
-                    );
-
+                    $titleValue       = old("translations.$langCode.title",        $existingTranslation->title        ?? '');
+                    $slugValue        = old("translations.$langCode.slug",         $existingTranslation->slug         ?? '');
+                    $contentValue     = old("translations.$langCode.content",      $existingTranslation->content      ?? '');
+                    $metaTitleValue   = old("translations.$langCode.meta_title",   $existingTranslation->meta_title   ?? '');
+                    $metaDescValue    = old("translations.$langCode.meta_description", $existingTranslation->meta_description ?? '');
                     $metaKeywordsValue = old(
                         "translations.$langCode.meta_keywords",
                         is_array($existingTranslation?->meta_keywords ?? null)
@@ -91,33 +71,22 @@
                             : ($existingTranslation->meta_keywords ?? '')
                     );
 
-                    // OG value in DB (could be media_id or direct URL, we normalize below)
-                    $storedOg = old(
-                        "translations.$langCode.og_image",
-                        $existingTranslation->og_image ?? null
-                    );
-
-                    $ogImageId  = null; // media ID (if used)
-                    $ogImageUrl = null; // final image URL for preview
+                    $storedOg   = old("translations.$langCode.og_image", $existingTranslation->og_image ?? null);
+                    $ogImageId  = null;
+                    $ogImageUrl = null;
 
                     if (is_numeric($storedOg)) {
-                        // Case A: we stored a Media ID from our Media Library
                         $media = Media::find((int) $storedOg);
-
                         if ($media) {
-                            $ogImageId = $media->id;
-                            // Adjust this to match your Media model accessors / columns
+                            $ogImageId  = $media->id;
                             $ogImageUrl = $media->url ?? ($media->file_url ?? null);
                         }
                     } elseif (is_string($storedOg) && $storedOg !== '') {
-                        // Case B: we stored a direct URL
                         $ogImageUrl = $storedOg;
                     }
 
-                    // Prepare preview array for the media-picker component
                     $previewUrls = $ogImageUrl ? [$ogImageUrl] : [];
-
-                    $isActivePanel = $index === 0; // first language panel visible by default
+                    $isActivePanel = $index === 0;
                 @endphp
 
                 <div
@@ -127,441 +96,449 @@
                     role="tabpanel"
                     aria-labelledby="lang-tab-{{ $langCode }}"
                 >
-                    {{-- Hidden locale (always required in request) --}}
-                    <input
-                        type="hidden"
-                        name="translations[{{ $langCode }}][locale]"
-                        value="{{ $langCode }}"
-                    >
+                    <input type="hidden" name="translations[{{ $langCode }}][locale]" value="{{ $langCode }}">
 
-                    {{-- Existing translation ID (edit mode) --}}
                     @if ($isEdit && $existingTranslation)
-                        <input
-                            type="hidden"
-                            name="translations[{{ $langCode }}][id]"
-                            value="{{ $existingTranslation->id }}"
-                        >
+                        <input type="hidden" name="translations[{{ $langCode }}][id]" value="{{ $existingTranslation->id }}">
                     @endif
 
-                    <div class="space-y-4">
-                        {{-- Page Title --}}
-                        <div>
-                            <label class="block mb-1 font-semibold">
-                                {{ t('dashboard.Page_Title', 'Page Title') }} ({{ $langCode }})
-                            </label>
-                            <input
-                                type="text"
-                                name="translations[{{ $langCode }}][title]"
-                                class="w-full border p-2 rounded mb-1"
-                                placeholder="{{ t('dashboard.Page_Title', 'Page Title') }}"
-                                value="{{ $titleValue }}"
-                                data-slug-source="{{ $langCode }}" {{-- used to auto-generate slug --}}
-                            >
-                            @error("translations.$langCode.title")
-                                <span class="text-red-500 text-sm">{{ $message }}</span>
-                            @enderror
+                    {{-- عنوان الصفحة --}}
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {{ t('dashboard.Page_Title', 'عنوان الصفحة') }}
+                            <span class="badge bg-light text-muted ms-1 fw-normal">{{ strtoupper($langCode) }}</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="translations[{{ $langCode }}][title]"
+                            class="form-control @error("translations.$langCode.title") is-invalid @enderror"
+                            placeholder="{{ t('dashboard.Page_Title', 'عنوان الصفحة') }}"
+                            value="{{ $titleValue }}"
+                            data-slug-source="{{ $langCode }}"
+                        >
+                        @error("translations.$langCode.title")
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    {{-- الـ Slug --}}
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {{ t('dashboard.Slug', 'الرابط (Slug)') }}
+                            <span class="badge bg-light text-muted ms-1 fw-normal">{{ strtoupper($langCode) }}</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="translations[{{ $langCode }}][slug]"
+                            class="form-control font-mono @error("translations.$langCode.slug") is-invalid @enderror"
+                            dir="ltr"
+                            placeholder="page-slug"
+                            value="{{ $slugValue }}"
+                            data-slug-input
+                            data-lang="{{ $langCode }}"
+                        >
+                        <div class="form-text">
+                            {{ t('dashboard.Slug_Hint', 'المسافات والشرطات السفلية تتحول إلى شرطات (-). يُقبل الحروف والأرقام والشرطات فقط.') }}
                         </div>
+                        @error("translations.$langCode.slug")
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
 
-                        {{-- Slug --}}
-                        <div>
-                            <label class="block mb-1 font-semibold">
-                                {{ t('dashboard.Slug', 'Slug') }} ({{ $langCode }})
-                            </label>
-                            <input
-                                type="text"
-                                name="translations[{{ $langCode }}][slug]"
-                                class="w-full border p-2 rounded mb-1"
-                                placeholder="page-slug"
-                                value="{{ $slugValue }}"
-                                data-slug-input
-                                data-lang="{{ $langCode }}"
-                            >
-                            <p class="text-xs text-gray-500">
-                                {{ t('dashboard.Slug_Hint', 'Spaces and underscores will be converted to dashes (-). We keep letters, numbers, and dashes only (supports Arabic & English).') }}
-                            </p>
-                            @error("translations.$langCode.slug")
-                                <span class="text-red-500 text-sm">{{ $message }}</span>
-                            @enderror
+                    {{-- محتوى الصفحة --}}
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {{ t('dashboard.Page_Content', 'محتوى الصفحة') }}
+                            <span class="badge bg-light text-muted ms-1 fw-normal">{{ strtoupper($langCode) }}</span>
+                        </label>
+                        <textarea
+                            name="translations[{{ $langCode }}][content]"
+                            class="form-control js-page-content-editor @error("translations.$langCode.content") is-invalid @enderror"
+                            style="min-height:180px;"
+                            data-wysiwyg="page-content"
+                            data-lang="{{ $langCode }}"
+                            placeholder="{{ t('dashboard.Page_Content', 'محتوى الصفحة') }}"
+                        >{{ $contentValue }}</textarea>
+                        @error("translations.$langCode.content")
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text">
+                            {{ t('dashboard.Content_Hint', 'محرر نصوص غني — سيتم حفظ HTML في قاعدة البيانات.') }}
                         </div>
+                    </div>
 
-                        {{-- Page Content (WYSIWYG) --}}
-                        <div>
-                            <label class="block mb-1 font-semibold">
-                                {{ t('dashboard.Page_Content', 'Page Content') }} ({{ $langCode }})
-                            </label>
-                            <textarea
-                                name="translations[{{ $langCode }}][content]"
-                                class="w-full border rounded h-32 js-page-content-editor"
-                                data-wysiwyg="page-content"
-                                data-lang="{{ $langCode }}"
-                                placeholder="{{ t('dashboard.Page_Content', 'Page Content') }}"
-                            >{{ $contentValue }}</textarea>
-                            @error("translations.$langCode.content")
-                                <span class="text-red-500 text-sm">{{ $message }}</span>
-                            @enderror
-                            <p class="text-xs text-gray-500 mt-1">
-                                {{ t('dashboard.Content_Hint', 'This field uses a rich-text editor. HTML will be saved in the database as the content value.') }}
-                            </p>
-                        </div>
-
-                        {{-- ======================
-                             SEO META BLOCK
-                           ====================== --}}
-                        <div class="border-t pt-4 space-y-3">
-                            <h3 class="text-sm font-semibold text-gray-600">
-                                {{ t('dashboard.SEO_Meta', 'SEO Meta') }}
-                            </h3>
-
-                            {{-- Meta Title --}}
-                            <div>
-                                <label class="block mb-1 font-semibold">
-                                    {{ t('dashboard.Meta_Title', 'Meta Title') }} ({{ $langCode }})
-                                </label>
-                                <input
-                                    type="text"
-                                    name="translations[{{ $langCode }}][meta_title]"
-                                    class="w-full border p-2 rounded mb-1"
-                                    placeholder="{{ t('dashboard.Meta_Title', 'Meta Title') }}"
-                                    value="{{ $metaTitleValue }}"
-                                >
-                                @error("translations.$langCode.meta_title")
-                                    <span class="text-red-500 text-sm">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            {{-- Meta Description --}}
-                            <div>
-                                <label class="block mb-1 font-semibold">
-                                    {{ t('dashboard.Meta_Description', 'Meta Description') }} ({{ $langCode }})
-                                </label>
-                                <textarea
-                                    name="translations[{{ $langCode }}][meta_description]"
-                                    class="w-full border p-2 rounded h-24"
-                                    placeholder="{{ t('dashboard.Short_description_for_search_engines', 'Short description for search engines') }}"
-                                >{{ $metaDescriptionValue }}</textarea>
-                                <p class="text-xs text-gray-500">
-                                    {{ t('dashboard.Aim_for_50_160_characters_Leave_empty_to_reuse_the_title', 'Aim for 50-160 characters. Leave empty to reuse the title.') }}
-                                </p>
-                                @error("translations.$langCode.meta_description")
-                                    <span class="text-red-500 text-sm">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            {{-- Meta Keywords --}}
-                            <div>
-                                <label class="block mb-1 font-semibold">
-                                    {{ t('dashboard.Meta_Keywords', 'Meta Keywords') }} ({{ $langCode }})
-                                </label>
-                                <input
-                                    type="text"
-                                    name="translations[{{ $langCode }}][meta_keywords]"
-                                    class="w-full border p-2 rounded mb-1"
-                                    placeholder="keyword-1, keyword-2"
-                                    value="{{ $metaKeywordsValue }}"
-                                >
-                                <p class="text-xs text-gray-500">
-                                    {{ t('dashboard.Separate_keywords_with_a_comma_or_Arabic_comma', 'Separate keywords with a comma or Arabic comma.') }}
-                                </p>
-                                @error("translations.$langCode.meta_keywords")
-                                    <span class="text-red-500 text-sm">{{ $message }}</span>
-                                @enderror
-                            </div>
-
-                            {{-- Open Graph Image (Media Library Picker) --}}
-                            <x-dashboard.media-picker
-                                :name="'translations['.$langCode.'][og_image]'" {{-- matches request()->input() structure --}}
-                                :label="t('dashboard.Open_Graph_Image_URL', 'Open Graph Image URL').' ('.$langCode.')'"
-                                :value="$ogImageId ?? $ogImageUrl"            {{-- prefer Media ID, fallback to direct URL --}}
-                                :preview-urls="$previewUrls"                  {{-- initial preview (edit mode) --}}
-                                :multiple="false"                             {{-- one OG image per locale --}}
-                                class="mt-4"
-                            />
-                        </div> {{-- /SEO Meta --}}
-                    </div> {{-- /.space-y-4 --}}
-                </div> {{-- /language panel --}}
+                </div>{{-- /lang-panel --}}
             @endforeach
+
+        </div>{{-- /card-body --}}
+    </div>{{-- /card ١ --}}
+
+    {{-- ── القسم ٢: SEO وبيانات مشاركة ── --}}
+    <div class="card mb-4">
+        <div class="card-header d-flex align-items-center gap-2">
+            <span class="badge bg-primary rounded-circle d-flex align-items-center justify-content-center"
+                  style="width:26px;height:26px;font-size:13px;">٢</span>
+            <h5 class="mb-0">{{ t('dashboard.SEO_Meta', 'SEO والمشاركة') }}</h5>
         </div>
-    </div>
-</div>
+        <div class="card-body">
 
-{{-- ===========================
-     RIGHT COLUMN: PUBLISHING
-   =========================== --}}
-<div class="space-y-6">
-    <div class="card p-4 space-y-4">
-        <h3 class="font-semibold">
-            {{ t('dashboard.Publishing_Options', 'Publishing Options') }}
-        </h3>
+            {{-- تبويبات اللغات للـ SEO --}}
+            <ul class="nav nav-tabs mb-4" role="tablist">
+                @foreach ($languages as $index => $lang)
+                    <li class="nav-item" role="presentation">
+                        <button
+                            type="button"
+                            class="nav-link {{ $index === 0 ? 'active' : '' }}"
+                            data-seo-tab="{{ $lang->code }}"
+                            role="tab"
+                        >
+                            {{ $lang->name }}
+                        </button>
+                    </li>
+                @endforeach
+            </ul>
 
-        <div>
-            <input type="hidden" name="builder_mode" value="{{ $defaultBuilderMode }}">
+            @foreach ($languages as $index => $lang)
+                @php
+                    $langCode = $lang->code;
+                    $existingTranslation = $isEdit
+                        ? $page->translations->firstWhere('locale', $langCode)
+                        : null;
 
-            <label class="block font-semibold mb-1">
-                {{ t('dashboard.Builder_Type', 'Builder Type') }}
-            </label>
-
-            <div class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                <span class="block font-medium">{{ t('dashboard.Sections_Builder', 'Sections Builder') }}</span>
-                <span class="block text-xs text-slate-500">
-                    {{ t('dashboard.Visual_Builder_Archived_Hint', 'Visual Builder is archived; new and updated pages use SectionDefinitions.') }}
-                </span>
-            </div>
-
-            @error('builder_mode')
-                <span class="text-red-500 text-sm">{{ $message }}</span>
-            @enderror
-        </div>
-
-        {{-- Status (draft / published) --}}
-        <div>
-            <label class="block font-semibold mb-1">
-                {{ t('dashboard.Status', 'Status') }}
-            </label>
-            @php
-                $statusOld = old('is_active', $defaultStatus);
-            @endphp
-
-            <label class="flex items-center gap-2">
-                <input
-                    type="radio"
-                    name="is_active"
-                    value="0"
-                    class="form-radio"
-                    {{ (string) $statusOld === '0' ? 'checked' : '' }}
-                >
-                <span>{{ t('dashboard.Draft', 'Draft') }}</span>
-            </label>
-
-            <label class="flex items-center gap-2">
-                <input
-                    type="radio"
-                    name="is_active"
-                    value="1"
-                    class="form-radio"
-                    {{ (string) $statusOld === '1' ? 'checked' : '' }}
-                >
-                <span>{{ t('dashboard.Published', 'Published') }}</span>
-            </label>
-        </div>
-
-        {{-- Homepage flag --}}
-        <div>
-            <label class="block font-semibold mb-1">
-                {{ t('dashboard.Homepage', 'Homepage') }}
-            </label>
-            @php
-                $isHomeOld = old('is_home', $defaultIsHome);
-            @endphp
-
-            <label class="flex items-center gap-2">
-                <input
-                    type="checkbox"
-                    name="is_home"
-                    value="1"
-                    class="form-checkbox"
-                    {{ (string) $isHomeOld === '1' ? 'checked' : '' }}
-                >
-                <span>{{ t('dashboard.Make_Homepage', 'Make Homepage') }}</span>
-            </label>
-
-            <p class="text-xs text-gray-500 mt-1">
-                {{ t('dashboard.Homepage_Hint', 'If enabled, this page will be used as the main marketing homepage.') }}
-            </p>
-        </div>
-
-        {{-- Publish Date --}}
-        <div>
-            <label class="block font-semibold mb-1">
-                {{ t('dashboard.Publish_Date', 'Publish Date') }}
-            </label>
-            @php
-                $publishedAtOld = old(
-                    'published_at',
-                    $isEdit && $page->published_at
-                        ? $page->published_at->format('Y-m-d\TH:i')
-                        : ''
-                );
-            @endphp
-
-            <input
-                type="datetime-local"
-                name="published_at"
-                class="w-full border p-2 rounded"
-                value="{{ $publishedAtOld }}"
-            >
-            @error('published_at')
-                <span class="text-red-500 text-sm">{{ $message }}</span>
-            @enderror
-        </div>
-
-        {{-- Submit button --}}
-        <button
-            type="submit"
-            class="w-full inline-flex items-center justify-center gap-2 rounded bg-primary py-2 text-sm font-semibold text-white transition hover:bg-primary/80 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2 disabled:opacity-70 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:focus:ring-offset-slate-900"
-        >
-            {{ $isEdit ? t('dashboard.Update', 'Update') : t('dashboard.Publish', 'Publish') }}
-        </button>
-    </div>
-</div>
-
-
-    {{-- CKEditor 5 CDN (rich-text WYSIWYG editor for page content) --}}
-    <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            /**
-             * --------------------------------------------------------------
-             * Language tabs (pure vanilla JS)
-             * --------------------------------------------------------------
-             */
-            const tabs   = document.querySelectorAll('[data-lang-tab]');
-            const panels = document.querySelectorAll('[data-lang-panel]');
-
-            tabs.forEach(function (tab) {
-                tab.addEventListener('click', function () {
-                    const lang = tab.getAttribute('data-lang-tab');
-
-                    // Reset all tabs to inactive state
-                    tabs.forEach(function (t) {
-                        t.classList.remove(
-                            'bg-white',
-                            'text-slate-900',
-                            'shadow-sm',
-                            'border',
-                            'border-slate-200',
-                            'border-b-white',
-                            'font-semibold'
-                        );
-                        t.classList.add(
-                            'bg-slate-100',
-                            'text-slate-500',
-                            'border-transparent'
-                        );
-                    });
-
-                    // Mark clicked tab as active
-                    tab.classList.remove('bg-slate-100', 'text-slate-500', 'border-transparent');
-                    tab.classList.add(
-                        'bg-white',
-                        'text-slate-900',
-                        'shadow-sm',
-                        'border',
-                        'border-slate-200',
-                        'border-b-white',
-                        'font-semibold'
+                    $metaTitleValue    = old("translations.$langCode.meta_title",       $existingTranslation->meta_title       ?? '');
+                    $metaDescValue     = old("translations.$langCode.meta_description", $existingTranslation->meta_description ?? '');
+                    $metaKeywordsValue = old(
+                        "translations.$langCode.meta_keywords",
+                        is_array($existingTranslation?->meta_keywords ?? null)
+                            ? implode(',', $existingTranslation->meta_keywords)
+                            : ($existingTranslation->meta_keywords ?? '')
                     );
 
-                    // Show only the matching panel
-                    panels.forEach(function (panel) {
-                        if (panel.getAttribute('data-lang-panel') === lang) {
-                            panel.classList.remove('hidden');
-                        } else {
-                            panel.classList.add('hidden');
+                    $storedOg   = old("translations.$langCode.og_image", $existingTranslation->og_image ?? null);
+                    $ogImageId  = null;
+                    $ogImageUrl = null;
+
+                    if (is_numeric($storedOg)) {
+                        $media = Media::find((int) $storedOg);
+                        if ($media) {
+                            $ogImageId  = $media->id;
+                            $ogImageUrl = $media->url ?? ($media->file_url ?? null);
                         }
-                    });
-                });
-            });
-
-            /**
-             * --------------------------------------------------------------
-             * Slug normalizer (Unicode-friendly: Arabic + English)
-             * --------------------------------------------------------------
-             */
-            function normalizeSlug(value) {
-                if (!value) return '';
-
-                value = value.trim();
-                value = value.toLowerCase();                 // lowercase ASCII
-                value = value.replace(/[\s_]+/g, '-');       // spaces & underscores -> dash
-                value = value.replace(/[ـ]+/g, '');          // remove Arabic tatweel
-                value = value.replace(/[^\p{L}\p{N}-]+/gu, ''); // keep letters, digits, dash
-                value = value.replace(/-+/g, '-');           // collapse multiple dashes
-                value = value.replace(/^-+|-+$/g, '');       // trim dashes at edges
-
-                return value;
-            }
-
-            /**
-             * --------------------------------------------------------------
-             * Slug inputs (manual editing)
-             * --------------------------------------------------------------
-             */
-            const slugInputs = document.querySelectorAll('[data-slug-input]');
-
-            slugInputs.forEach(function (input) {
-                input.addEventListener('input', function () {
-                    const caretPos   = input.selectionStart;
-                    const normalized = normalizeSlug(input.value);
-                    input.value      = normalized;
-
-                    try {
-                        input.setSelectionRange(caretPos, caretPos);
-                    } catch (e) {
-                        // Ignore if browser does not support setSelectionRange
-                    }
-                });
-
-                input.addEventListener('change', function () {
-                    if (input.value !== '') {
-                        // Mark slug as manually edited -> stop auto sync from title
-                        input.dataset.touched = '1';
-                    }
-                });
-            });
-
-            /**
-             * --------------------------------------------------------------
-             * Auto-generate slug from title (per language)
-             * --------------------------------------------------------------
-             */
-            const titleInputs = document.querySelectorAll('[data-slug-source]');
-
-            titleInputs.forEach(function (titleInput) {
-                titleInput.addEventListener('input', function () {
-                    const lang      = titleInput.dataset.slugSource;
-                    const slugInput = document.querySelector(
-                        '[data-slug-input][data-lang="' + lang + '"]'
-                    );
-
-                    if (!slugInput) return;
-
-                    // If user already edited slug manually, do not override it
-                    if (slugInput.dataset.touched === '1') {
-                        return;
+                    } elseif (is_string($storedOg) && $storedOg !== '') {
+                        $ogImageUrl = $storedOg;
                     }
 
-                    slugInput.value = normalizeSlug(titleInput.value);
-                });
-            });
+                    $previewUrls = $ogImageUrl ? [$ogImageUrl] : [];
+                @endphp
 
-            /**
-             * --------------------------------------------------------------
-             * Initialize CKEditor 5 for all page-content textareas
-             * --------------------------------------------------------------
-             * - Targets: <textarea data-wysiwyg="page-content" ...>
-             * - Each language panel has its own editor instance.
-             * - Editor writes HTML back to the original <textarea>,
-             *   so Laravel receives the value in the request.
-             * --------------------------------------------------------------
-             */
-            const contentTextareas = document.querySelectorAll('textarea[data-wysiwyg="page-content"]');
+                <div
+                    id="seo-panel-{{ $langCode }}"
+                    class="{{ $index === 0 ? '' : 'hidden' }}"
+                    data-seo-panel="{{ $langCode }}"
+                >
+                    {{-- Meta Title --}}
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {{ t('dashboard.Meta_Title', 'Meta Title') }}
+                            <span class="badge bg-light text-muted ms-1 fw-normal">{{ strtoupper($langCode) }}</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="translations[{{ $langCode }}][meta_title]"
+                            class="form-control @error("translations.$langCode.meta_title") is-invalid @enderror"
+                            placeholder="{{ t('dashboard.Meta_Title', 'Meta Title') }}"
+                            value="{{ $metaTitleValue }}"
+                        >
+                        @error("translations.$langCode.meta_title")
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
 
-            contentTextareas.forEach(function (textarea) {
-                ClassicEditor
-                    .create(textarea, {
-                        toolbar: [
-                            'heading', '|',
-                            'bold', 'italic', 'link',
-                            'bulletedList', 'numberedList', 'blockQuote', '|',
-                            'undo', 'redo'
-                        ],
-                        language: document.documentElement.lang || 'ar',
-                    })
-                    .catch(error => {
-                        console.error('CKEditor initialization error:', error);
-                    });
+                    {{-- Meta Description --}}
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {{ t('dashboard.Meta_Description', 'Meta Description') }}
+                            <span class="badge bg-light text-muted ms-1 fw-normal">{{ strtoupper($langCode) }}</span>
+                        </label>
+                        <textarea
+                            name="translations[{{ $langCode }}][meta_description]"
+                            class="form-control @error("translations.$langCode.meta_description") is-invalid @enderror"
+                            style="height:90px;"
+                            placeholder="{{ t('dashboard.Short_description_for_search_engines', 'وصف قصير لمحركات البحث') }}"
+                        >{{ $metaDescValue }}</textarea>
+                        <div class="form-text">
+                            {{ t('dashboard.Aim_for_50_160_characters_Leave_empty_to_reuse_the_title', '50–160 حرفاً. اتركه فارغاً لإعادة استخدام العنوان.') }}
+                        </div>
+                        @error("translations.$langCode.meta_description")
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    {{-- Meta Keywords --}}
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {{ t('dashboard.Meta_Keywords', 'الكلمات المفتاحية') }}
+                            <span class="badge bg-light text-muted ms-1 fw-normal">{{ strtoupper($langCode) }}</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="translations[{{ $langCode }}][meta_keywords]"
+                            class="form-control @error("translations.$langCode.meta_keywords") is-invalid @enderror"
+                            placeholder="keyword-1, keyword-2"
+                            value="{{ $metaKeywordsValue }}"
+                        >
+                        <div class="form-text">
+                            {{ t('dashboard.Separate_keywords_with_a_comma_or_Arabic_comma', 'افصل الكلمات بفاصلة (,) أو فاصلة عربية (،).') }}
+                        </div>
+                        @error("translations.$langCode.meta_keywords")
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    {{-- Open Graph Image --}}
+                    <x-dashboard.media-picker
+                        :name="'translations['.$langCode.'][og_image]'"
+                        :label="t('dashboard.Open_Graph_Image_URL', 'صورة Open Graph').' ('.strtoupper($langCode).') '"
+                        :value="$ogImageId ?? $ogImageUrl"
+                        :preview-urls="$previewUrls"
+                        :multiple="false"
+                        class="mt-2"
+                    />
+
+                </div>{{-- /seo-panel --}}
+            @endforeach
+
+        </div>{{-- /card-body --}}
+    </div>{{-- /card ٢ --}}
+
+</div>{{-- /col-span-8 --}}
+
+
+{{-- ============================
+     الـ Sidebar (col-span-4)
+     ============================ --}}
+<div class="col-span-12 xl:col-span-4">
+    <div class="sticky top-6 space-y-4">
+
+        {{-- بطاقة النشر --}}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">{{ t('dashboard.Publishing_Options', 'خيارات النشر') }}</h5>
+            </div>
+            <div class="card-body">
+
+                {{-- Builder Mode (hidden) --}}
+                <input type="hidden" name="builder_mode" value="{{ $defaultBuilderMode }}">
+
+                {{-- نوع المنشئ --}}
+                <div class="mb-3">
+                    <label class="form-label">{{ t('dashboard.Builder_Type', 'نوع المنشئ') }}</label>
+                    <div class="rounded border bg-light px-3 py-2 small text-muted">
+                        <span class="d-block fw-semibold text-body">{{ t('dashboard.Sections_Builder', 'Sections Builder') }}</span>
+                        <span class="d-block text-muted" style="font-size:11px;">
+                            {{ t('dashboard.Visual_Builder_Archived_Hint', 'المنشئ المرئي مؤرشف — تستخدم الصفحات الجديدة SectionDefinitions.') }}
+                        </span>
+                    </div>
+                    @error('builder_mode')
+                        <div class="text-danger small mt-1">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                {{-- الحالة --}}
+                <div class="mb-3">
+                    <label class="form-label">{{ t('dashboard.Status', 'الحالة') }}</label>
+                    @php $statusOld = old('is_active', $defaultStatus); @endphp
+
+                    <div class="form-check mb-1">
+                        <input
+                            type="radio" name="is_active" value="1"
+                            id="status_published"
+                            class="form-check-input"
+                            {{ (string) $statusOld === '1' ? 'checked' : '' }}
+                        >
+                        <label class="form-check-label cursor-pointer" for="status_published">
+                            <span class="badge bg-success">{{ t('dashboard.Published', 'منشور') }}</span>
+                        </label>
+                    </div>
+
+                    <div class="form-check">
+                        <input
+                            type="radio" name="is_active" value="0"
+                            id="status_draft"
+                            class="form-check-input"
+                            {{ (string) $statusOld === '0' ? 'checked' : '' }}
+                        >
+                        <label class="form-check-label cursor-pointer" for="status_draft">
+                            <span class="badge bg-secondary">{{ t('dashboard.Draft', 'مسودة') }}</span>
+                        </label>
+                    </div>
+                </div>
+
+                {{-- الصفحة الرئيسية --}}
+                <div class="mb-3">
+                    <label class="form-label">{{ t('dashboard.Homepage', 'الصفحة الرئيسية') }}</label>
+                    @php $isHomeOld = old('is_home', $defaultIsHome); @endphp
+
+                    <div class="form-check">
+                        <input
+                            type="checkbox" name="is_home" value="1"
+                            id="is_home"
+                            class="form-check-input"
+                            {{ (string) $isHomeOld === '1' ? 'checked' : '' }}
+                        >
+                        <label class="form-check-label cursor-pointer" for="is_home">
+                            {{ t('dashboard.Make_Homepage', 'جعل هذه الصفحة الرئيسية') }}
+                        </label>
+                    </div>
+                    <div class="form-text">
+                        {{ t('dashboard.Homepage_Hint', 'عند التفعيل تصبح هذه الصفحة هي الصفحة الرئيسية للموقع.') }}
+                    </div>
+                </div>
+
+                {{-- تاريخ النشر --}}
+                <div class="mb-3">
+                    <label class="form-label">{{ t('dashboard.Publish_Date', 'تاريخ النشر') }}</label>
+                    @php
+                        $publishedAtOld = old(
+                            'published_at',
+                            $isEdit && $page->published_at
+                                ? $page->published_at->format('Y-m-d\TH:i')
+                                : ''
+                        );
+                    @endphp
+                    <input
+                        type="datetime-local"
+                        name="published_at"
+                        class="form-control @error('published_at') is-invalid @enderror"
+                        value="{{ $publishedAtOld }}"
+                    >
+                    @error('published_at')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+            </div>{{-- /card-body --}}
+
+            <div class="card-footer d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-fill">
+                    <i class="ti ti-device-floppy me-1"></i>
+                    {{ $isEdit ? t('dashboard.Update', 'حفظ التعديلات') : t('dashboard.Publish', 'نشر الصفحة') }}
+                </button>
+                <a href="{{ route('dashboard.pages.index') }}" class="btn btn-light">
+                    {{ t('common.Cancel', 'إلغاء') }}
+                </a>
+            </div>
+        </div>{{-- /card النشر --}}
+
+        {{-- بطاقة تلميحات --}}
+        <div class="card border-0 bg-light">
+            <div class="card-body small text-muted">
+                <p class="mb-2 fw-semibold text-body">
+                    <i class="ti ti-info-circle me-1 text-primary"></i>
+                    {{ t('dashboard.Page_Help_Title', 'ملاحظات') }}
+                </p>
+                <ul class="mb-0 ps-3">
+                    <li>{{ t('dashboard.Page_Help_1', 'أضف الصفحة أولاً ثم أضف أقسامها من قائمة الصفحات.') }}</li>
+                    <li>{{ t('dashboard.Page_Help_2', 'الـ Slug يُولَّد تلقائياً من العنوان ويمكن تعديله.') }}</li>
+                    <li>{{ t('dashboard.Page_Help_3', 'بيانات SEO اختيارية — تُحسّن ظهور الصفحة في محركات البحث.') }}</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>{{-- /sticky --}}
+</div>{{-- /col-span-4 --}}
+
+
+{{-- CKEditor 5 CDN --}}
+<script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/classic/ckeditor.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* ── Language tabs — Content Section ── */
+    var tabs   = document.querySelectorAll('[data-lang-tab]');
+    var panels = document.querySelectorAll('[data-lang-panel]');
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            var lang = tab.getAttribute('data-lang-tab');
+            tabs.forEach(function (t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            panels.forEach(function (p) {
+                if (p.getAttribute('data-lang-panel') === lang) {
+                    p.classList.remove('hidden');
+                } else {
+                    p.classList.add('hidden');
+                }
             });
         });
-    </script>
+    });
 
+    /* ── Language tabs — SEO Section ── */
+    var seoTabs   = document.querySelectorAll('[data-seo-tab]');
+    var seoPanels = document.querySelectorAll('[data-seo-panel]');
+
+    seoTabs.forEach(function (tab) {
+        tab.addEventListener('click', function () {
+            var lang = tab.getAttribute('data-seo-tab');
+            seoTabs.forEach(function (t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            seoPanels.forEach(function (p) {
+                if (p.getAttribute('data-seo-panel') === lang) {
+                    p.classList.remove('hidden');
+                } else {
+                    p.classList.add('hidden');
+                }
+            });
+        });
+    });
+
+    /* ── Slug normalizer ── */
+    function normalizeSlug(value) {
+        if (!value) return '';
+        value = value.trim().toLowerCase();
+        value = value.replace(/[\s_]+/g, '-');
+        value = value.replace(/[ـ]+/g, '');
+        value = value.replace(/[^\p{L}\p{N}-]+/gu, '');
+        value = value.replace(/-+/g, '-');
+        value = value.replace(/^-+|-+$/g, '');
+        return value;
+    }
+
+    /* ── Slug inputs ── */
+    document.querySelectorAll('[data-slug-input]').forEach(function (input) {
+        input.addEventListener('input', function () {
+            var pos  = input.selectionStart;
+            input.value = normalizeSlug(input.value);
+            try { input.setSelectionRange(pos, pos); } catch (e) {}
+        });
+        input.addEventListener('change', function () {
+            if (input.value !== '') input.dataset.touched = '1';
+        });
+    });
+
+    /* ── Auto-generate slug from title ── */
+    document.querySelectorAll('[data-slug-source]').forEach(function (titleInput) {
+        titleInput.addEventListener('input', function () {
+            var lang      = titleInput.dataset.slugSource;
+            var slugInput = document.querySelector('[data-slug-input][data-lang="' + lang + '"]');
+            if (!slugInput || slugInput.dataset.touched === '1') return;
+            slugInput.value = normalizeSlug(titleInput.value);
+        });
+    });
+
+    /* ── CKEditor 5 ── */
+    document.querySelectorAll('textarea[data-wysiwyg="page-content"]').forEach(function (textarea) {
+        ClassicEditor.create(textarea, {
+            toolbar: [
+                'heading', '|',
+                'bold', 'italic', 'link',
+                'bulletedList', 'numberedList', 'blockQuote', '|',
+                'undo', 'redo'
+            ],
+            language: document.documentElement.lang || 'ar',
+        }).catch(function (err) { console.error('CKEditor error:', err); });
+    });
+
+});
+</script>

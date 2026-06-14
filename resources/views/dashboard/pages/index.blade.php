@@ -18,10 +18,12 @@
     </div>
     <!-- [ breadcrumb ] end -->
 
-    @if (session('success'))
-        <div class="bg-green-100 text-green-800 px-4 py-2 rounded mb-4">
-            {{ session('success') }}
-        </div>
+    @if (session('ok'))
+        <div class="alert alert-success">{{ session('ok') }}</div>
+    @endif
+
+    @if (session('error'))
+        <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
 
     <div class="grid grid-cols-12 gap-x-6">
@@ -187,10 +189,8 @@
             </div>
         </div>
     </div>
-</x-dashboard-layout>
-
-
-<script>
+    @push('scripts')
+    <script>
     /**
      * Confirm page deletion using SweetAlert.
      *
@@ -226,7 +226,6 @@
                 if (form) {
                     form.submit();
                 }
-            }
-        });
-    }
-</script>
+    </script>
+    @endpush
+</x-dashboard-layout>
