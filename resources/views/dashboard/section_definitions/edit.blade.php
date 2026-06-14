@@ -610,7 +610,101 @@
         }
 
 
-        /* ── 5. WRITE TO DISK ── */
+        /* ── 5. TOAST NOTIFICATION ── */
+        function showWriteToast(type, title, detail) {
+            // إزالة أي toast سابق
+            var prev = document.getElementById('blade-write-toast');
+            if (prev) prev.remove();
+
+            var isSuccess = type === 'success';
+            var colors = isSuccess
+                ? { bg: '#f0fdf4', border: '#86efac', icon: '#16a34a', bar: '#16a34a', text: '#166534' }
+                : { bg: '#fef2f2', border: '#fca5a5', icon: '#dc2626', bar: '#dc2626', text: '#991b1b' };
+
+            var iconSvg = isSuccess
+                ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'
+                : '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>';
+
+            var toast = document.createElement('div');
+            toast.id = 'blade-write-toast';
+            toast.dir = 'rtl';
+            toast.style.cssText = [
+                'position:fixed',
+                'top:24px',
+                'right:24px',
+                'z-index:99999',
+                'min-width:320px',
+                'max-width:460px',
+                'background:' + colors.bg,
+                'border:1.5px solid ' + colors.border,
+                'border-radius:14px',
+                'box-shadow:0 8px 32px rgba(0,0,0,.13),0 2px 8px rgba(0,0,0,.07)',
+                'overflow:hidden',
+                'transform:translateX(120%)',
+                'transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .35s ease',
+                'opacity:0',
+                'font-family:inherit',
+            ].join(';');
+
+            toast.innerHTML =
+                '<div style="display:flex;align-items:flex-start;gap:12px;padding:16px 16px 14px;">' +
+                    '<div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:' + colors.icon + '22;display:flex;align-items:center;justify-content:center;color:' + colors.icon + ';">' + iconSvg + '</div>' +
+                    '<div style="flex:1;min-width:0;">' +
+                        '<div style="font-weight:700;font-size:14px;color:' + colors.text + ';line-height:1.3;margin-bottom:' + (detail ? '4px' : '0') + ';">' + title + '</div>' +
+                        (detail ? '<div style="font-size:12px;color:#64748b;line-height:1.5;word-break:break-word;">' + detail + '</div>' : '') +
+                    '</div>' +
+                    '<button id="blade-toast-close" style="flex-shrink:0;background:none;border:none;cursor:pointer;padding:2px;color:#94a3b8;line-height:1;margin-top:-2px;" title="إغلاق">' +
+                        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>' +
+                    '</button>' +
+                '</div>' +
+                '<div id="blade-toast-bar" style="height:3px;background:' + colors.bar + ';width:100%;transform-origin:right;transition:transform linear;"></div>';
+
+            document.body.appendChild(toast);
+
+            // Close button event
+            var closeBtn = document.getElementById('blade-toast-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function () { dismissToast(toast); });
+            }
+
+            // Animate in
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    toast.style.transform = 'translateX(0)';
+                    toast.style.opacity   = '1';
+                });
+            });
+
+            // Progress bar countdown
+            var duration = isSuccess ? 3500 : 6000;
+            var bar = document.getElementById('blade-toast-bar');
+            if (bar) {
+                bar.style.transition = 'transform ' + duration + 'ms linear';
+                requestAnimationFrame(function () {
+                    requestAnimationFrame(function () {
+                        bar.style.transform = 'scaleX(0)';
+                    });
+                });
+            }
+
+            // Auto dismiss
+            var timer = setTimeout(function () { dismissToast(toast); }, duration);
+            toast.addEventListener('mouseenter', function () { clearTimeout(timer); if (bar) bar.style.animationPlayState = 'paused'; bar.style.transition = 'none'; });
+            toast.addEventListener('mouseleave', function () {
+                var remaining = bar ? parseFloat(bar.style.transform.replace('scaleX(', '')) * duration : 1000;
+                if (bar) { bar.style.transition = 'transform ' + Math.max(remaining, 800) + 'ms linear'; bar.style.transform = 'scaleX(0)'; }
+                timer = setTimeout(function () { dismissToast(toast); }, Math.max(remaining, 800));
+            });
+        }
+
+        function dismissToast(toast) {
+            if (!toast || !toast.parentNode) return;
+            toast.style.transform  = 'translateX(120%)';
+            toast.style.opacity    = '0';
+            setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 400);
+        }
+
+        /* ── 6. WRITE TO DISK ── */
         function doWrite(btn) {
             if (!writeForm || !monacoInstance) return;
             var msg = btn ? btn.dataset.confirm : null;
@@ -648,36 +742,30 @@
                 .then(function (res) {
                     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
                     if (res.type === 'opaqueredirect' || res.status === 0) {
-                        if (window.Swal) Swal.fire({ icon: 'error', title: 'خطأ في الإرسال', text: 'الطلب تحوّل لـ GET (redirect).' });
-                        else alert('خطأ: الطلب تحوّل لـ GET.');
+                        showWriteToast('error', 'خطأ في الإرسال', 'الطلب تحوّل لـ GET — تحقق من إعدادات Apache.');
                         return;
                     }
                     return res.text().then(function (text) {
                         var data;
                         try { data = JSON.parse(text); } catch (e) {
-                            // السيرفر أرجع HTML بدلاً من JSON — خطأ PHP/Laravel
-                            var snippet = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 400);
-                            if (window.Swal) Swal.fire({ icon: 'error', title: 'خطأ في السيرفر (HTTP ' + res.status + ')', text: snippet, width: 600 });
-                            else alert('خطأ HTTP ' + res.status + ':\n' + snippet);
+                            var snippet = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 300);
+                            showWriteToast('error', 'خطأ في السيرفر (HTTP ' + res.status + ')', snippet);
                             return;
                         }
                         if (data.ok) {
-                            if (window.Swal) Swal.fire({ icon: 'success', title: data.message || 'تم الحفظ', timer: 2500, showConfirmButton: false });
-                            else alert(data.message || 'تم كتابة ملف Blade بنجاح.');
+                            showWriteToast('success', data.message || 'تم كتابة الملف بنجاح', '');
                         } else {
-                            if (window.Swal) Swal.fire({ icon: 'error', title: 'فشل', text: data.error || 'فشلت الكتابة.' });
-                            else alert(data.error || 'فشلت الكتابة.');
+                            showWriteToast('error', 'فشلت الكتابة', data.error || 'حدث خطأ غير معروف.');
                         }
                     });
                 })
                 .catch(function (err) {
                     if (btn) { btn.disabled = false; btn.style.opacity = ''; }
-                    if (window.Swal) Swal.fire({ icon: 'error', title: 'خطأ في الاتصال', text: err.message });
-                    else alert('خطأ: ' + err.message);
+                    showWriteToast('error', 'خطأ في الاتصال', err.message);
                 });
         }
 
-        /* ── 6. INSERT AT CURSOR ── */
+        /* ── 7. INSERT AT CURSOR ── */
         function insertAtCursor(snippet) {
             if (!monacoInstance) return;
             var pos   = monacoInstance.getPosition();
@@ -686,7 +774,7 @@
             monacoInstance.focus();
         }
 
-        /* ── 7. EVENT LISTENERS (outside Monaco init — no Monaco API needed) ── */
+        /* ── 8. EVENT LISTENERS (outside Monaco init — no Monaco API needed) ── */
         if (writeBtn)     writeBtn.addEventListener('click',     function () { doWrite(this); });
         if (writeBtnSide) writeBtnSide.addEventListener('click', function () { doWrite(this); });
 
@@ -702,7 +790,7 @@
             });
         }
 
-        /* ── 8. CTRL+S SHORTCUT ── */
+        /* ── 9. CTRL+S SHORTCUT ── */
         document.addEventListener('keydown', function (e) {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 var bladeTabBtn = document.getElementById('sd-tab-btn-blade');
@@ -713,7 +801,7 @@
             }
         });
 
-        /* ── 9. MONACO INITIALIZATION ── */
+        /* ── 10. MONACO INITIALIZATION ── */
         window.__monacoRequire(['vs/editor/editor.main'], function () {
             // Restore AMD after Monaco loads
             if (typeof window.define === 'function') {
