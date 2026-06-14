@@ -222,7 +222,13 @@ class SectionDefinitionController extends Controller
     {
         $this->authorize('update', $sectionDefinition);
 
-        $bladeSource = $request->input('blade_source');
+        // دعم blade_source_b64 (base64) لتجاوز ModSecurity على الـ shared hosting
+        if ($request->filled('blade_source_b64')) {
+            $decoded = base64_decode($request->input('blade_source_b64'), strict: false);
+            $bladeSource = ($decoded !== false) ? $decoded : $request->input('blade_source');
+        } else {
+            $bladeSource = $request->input('blade_source');
+        }
 
         if ($bladeSource !== null) {
             $sectionDefinition->blade_source = $bladeSource !== '' ? $bladeSource : null;

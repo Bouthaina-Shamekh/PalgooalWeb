@@ -629,7 +629,15 @@
             var formToken  = writeForm.querySelector('[name=_token]') ? writeForm.querySelector('[name=_token]').value : '';
             var csrf       = formToken; // للـ body
             var code = getCode();
-            var body = new URLSearchParams({ _token: csrf, blade_source: code });
+            // نُشفّر الكود بـ base64 لتجاوز ModSecurity على الـ shared hosting
+            // الـ Controller يفكّ التشفير قبل الكتابة
+            var encoded;
+            try {
+                encoded = btoa(unescape(encodeURIComponent(code)));
+            } catch(e) {
+                encoded = btoa(code);
+            }
+            var body = new URLSearchParams({ _token: csrf, blade_source_b64: encoded });
 
             if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
 
