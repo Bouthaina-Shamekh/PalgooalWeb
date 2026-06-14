@@ -623,15 +623,22 @@
             if (!isLocal && !/\/public\//.test(url)) {
                 url = url.replace(/(https?:\/\/[^\/]+)\//, '$1/public/');
             }
-            var csrf = writeForm.querySelector('[name=_token]') ? writeForm.querySelector('[name=_token]').value : '';
+            // قراءة XSRF-TOKEN من الـ cookie (أكثر موثوقية من _token في الـ form عند redirect)
+            var xsrfCookie = document.cookie.split(';').map(function(c){return c.trim();}).find(function(c){return c.startsWith('XSRF-TOKEN=');});
+            var xsrfToken  = xsrfCookie ? decodeURIComponent(xsrfCookie.split('=').slice(1).join('=')) : '';
+            var formToken  = writeForm.querySelector('[name=_token]') ? writeForm.querySelector('[name=_token]').value : '';
+            var csrf       = formToken; // للـ body
             var code = getCode();
             var body = new URLSearchParams({ _token: csrf, blade_source: code });
 
             if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
 
+            var fetchHeaders = { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' };
+            if (xsrfToken) { fetchHeaders['X-XSRF-TOKEN'] = xsrfToken; }
+
             fetch(url, {
                 method:   'POST',
-                headers:  { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                headers:  fetchHeaders,
                 body:     body,
                 redirect: 'manual'
             })
@@ -642,7 +649,15 @@
                         else alert('خطأ: الطلب تحوّل لـ GET.');
                         return;
                     }
-                    return res.json().then(function (data) {
+                    return res.text().then(function (text) {
+                        var data;
+                        try { data = JSON.parse(text); } catch (e) {
+                            // السيرفر أرجع HTML بدلاً من JSON — خطأ PHP/Laravel
+                            var snippet = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 400);
+                            if (window.Swal) Swal.fire({ icon: 'error', title: 'خطأ في السيرفر (HTTP ' + res.status + ')', text: snippet, width: 600 });
+                            else alert('خطأ HTTP ' + res.status + ':\n' + snippet);
+                            return;
+                        }
                         if (data.ok) {
                             if (window.Swal) Swal.fire({ icon: 'success', title: data.message || 'تم الحفظ', timer: 2500, showConfirmButton: false });
                             else alert(data.message || 'تم كتابة ملف Blade بنجاح.');
