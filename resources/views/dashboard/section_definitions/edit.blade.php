@@ -616,13 +616,8 @@
             var msg = btn ? btn.dataset.confirm : null;
             if (msg && !window.confirm(msg)) return;
 
-            // إضافة /public/ فقط على السيرفر الإنتاجي (وليس على localhost/127.0.0.1)
-            // السيرفر يُعيد توجيه /admin/ → /public/admin/ (R=301, POST→GET) — لكن localhost لا يحتاج ذلك
+            // URL مباشر — بعد إصلاح .htaccess في public_html لا حاجة لإضافة /public/
             var url = writeForm.action;
-            var isLocal = /127\.0\.0\.1|localhost/.test(url);
-            if (!isLocal && !/\/public\//.test(url)) {
-                url = url.replace(/(https?:\/\/[^\/]+)\//, '$1/public/');
-            }
             // قراءة XSRF-TOKEN من الـ cookie (أكثر موثوقية من _token في الـ form عند redirect)
             var xsrfCookie = document.cookie.split(';').map(function(c){return c.trim();}).find(function(c){return c.startsWith('XSRF-TOKEN=');});
             var xsrfToken  = xsrfCookie ? decodeURIComponent(xsrfCookie.split('=').slice(1).join('=')) : '';

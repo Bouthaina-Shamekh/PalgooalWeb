@@ -1,0 +1,16 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # 1. إذا كان الملف/المجلد موجوداً في public_html مباشرةً → أرجعه كما هو
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # 2. إذا كان الملف موجوداً داخل public/ (CSS, JS, images, fonts...) → أرجعه من هناك
+    RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    # 3. كل الطلبات الأخرى (routes Laravel) → مرّرها لـ index.php
+    RewriteRule ^ index.php [L]
+</IfModule>
