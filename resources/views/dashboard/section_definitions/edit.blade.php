@@ -616,9 +616,11 @@
             var msg = btn ? btn.dataset.confirm : null;
             if (msg && !window.confirm(msg)) return;
 
-            // إضافة /public/ إذا لم تكن موجودة — السيرفر يُعيد توجيه /admin/ → /public/admin/ (R=301, POST→GET)
+            // إضافة /public/ فقط على السيرفر الإنتاجي (وليس على localhost/127.0.0.1)
+            // السيرفر يُعيد توجيه /admin/ → /public/admin/ (R=301, POST→GET) — لكن localhost لا يحتاج ذلك
             var url = writeForm.action;
-            if (!/\/public\//.test(url)) {
+            var isLocal = /127\.0\.0\.1|localhost/.test(url);
+            if (!isLocal && !/\/public\//.test(url)) {
                 url = url.replace(/(https?:\/\/[^\/]+)\//, '$1/public/');
             }
             var csrf = writeForm.querySelector('[name=_token]') ? writeForm.querySelector('[name=_token]').value : '';
