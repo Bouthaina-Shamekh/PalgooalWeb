@@ -96,7 +96,7 @@ class DomainController extends Controller
             'total_cents' => $price_cents,
         ]);
 
-        return redirect()->route('client.domains.index')->with('success', 'تمت إضافة النطاق بنجاح');
+        return redirect()->route('client.domains.index')->with('ok', t('client.Domain_Created', 'تمت إضافة النطاق بنجاح.'));
     }
 
     /**
@@ -138,7 +138,7 @@ class DomainController extends Controller
             ]);
         }
 
-        return redirect()->route('client.domains.index')->with('success', 'تم تعديل النطاق بنجاح');
+        return redirect()->route('client.domains.index')->with('ok', t('client.Domain_Updated', 'تم تعديل النطاق بنجاح.'));
     }
 
     /**
@@ -148,7 +148,7 @@ class DomainController extends Controller
     {
         $domain = $this->ownedDomain($domain);
         $domain->delete();
-        return redirect()->route('client.domains.index')->with('success', 'تم حذف النطاق بنجاح');
+        return redirect()->route('client.domains.index')->with('ok', t('client.Domain_Deleted', 'تم حذف النطاق بنجاح.'));
     }
  
     public function toggleAutoRenew(Domain $domain)
@@ -161,7 +161,9 @@ class DomainController extends Controller
 
         return redirect()
             ->route('client.domains.index')
-            ->with('success', 'Auto-renew ' . ($domain->auto_renew ? 'enabled' : 'disabled') . ' for ' . $domain->domain_name . '.');
+            ->with('ok', $domain->auto_renew
+                ? strtr(t('client.Auto_Renew_Enabled', 'تم تفعيل التجديد التلقائي للنطاق :domain.'), [':domain' => $domain->domain_name])
+                : strtr(t('client.Auto_Renew_Disabled', 'تم تعطيل التجديد التلقائي للنطاق :domain.'), [':domain' => $domain->domain_name]));
     }
 
     /**
@@ -332,7 +334,7 @@ class DomainController extends Controller
 
         if ($existingInvoice) {
             return redirect()->route('client.invoices.checkout', $existingInvoice)
-                ->with('success', 'An existing unpaid invoice was found for this domain. Continue with payment.');
+                ->with('ok', t('client.Domain_Invoice_Exists', 'توجد فاتورة غير مدفوعة لهذا النطاق. تابع عملية الدفع.'));
         }
 
         try {
@@ -400,7 +402,7 @@ class DomainController extends Controller
             });
 
             return redirect()->route('client.invoices.checkout', $invoice)
-                ->with('success', 'Your order has been created. Continue to the demo payment page.');
+                ->with('ok', t('client.Domain_Order_Created', 'تم إنشاء طلبك بنجاح. تابع إلى صفحة الدفع.'));
 
         } catch (\Throwable $e) {
             Log::error('Domain purchase checkout creation failed', [
@@ -626,15 +628,7 @@ class DomainController extends Controller
     {
         do {
             $number = 'INV-' . Str::upper(Str::random(6));
-        } while (Invoice::where('number', $number)->exists());
-
+        } while (Invoice::where('invoice_number', $number)->exists());
         return $number;
-    }
-
-    protected function ownedDomain(Domain $domain): Domain
-    {
-        abort_if((int) $domain->client_id !== (int) Auth::guard('client')->id(), 404);
-
-        return $domain;
     }
 }

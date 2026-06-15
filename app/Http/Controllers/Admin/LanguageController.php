@@ -54,7 +54,7 @@ class LanguageController extends Controller
         Cache::forget('active_languages');
         Cache::forget('lang_' . strtolower($request->code));
 
-        return redirect()->route('dashboard.languages.index')->with('success', 'Language added successfully!');
+        return redirect()->route('dashboard.languages.index')->with('ok', t('dashboard.Language_Created', 'Language added successfully.'));
     }
 
     /**
@@ -102,7 +102,7 @@ class LanguageController extends Controller
         Cache::forget('lang_' . $language->getOriginal('code'));
         Cache::forget('lang_' . strtolower($request->code));
 
-        return redirect()->route('dashboard.languages.index')->with('success', 'Language updated successfully!');
+        return redirect()->route('dashboard.languages.index')->with('ok', t('dashboard.Language_Updated', 'Language updated successfully.'));
     }
 
     //  Toggle RTL
@@ -162,8 +162,8 @@ class LanguageController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'error' => 'Failed to delete: ' . $e->getMessage()
-            ], 500);
+                'error' => 'Failed to delete: ' .$e->getMessage()
+            ]);
         }
     }
 }

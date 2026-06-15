@@ -124,7 +124,7 @@ class HomeController extends Controller
 
         return redirect()
             ->route('client.update_account')
-            ->with('success', 'Account updated successfully.');
+            ->with('ok', t('client.Account_Updated', 'تم تحديث حسابك بنجاح.'));
     }
 
     public function subscriptions(Request $request)

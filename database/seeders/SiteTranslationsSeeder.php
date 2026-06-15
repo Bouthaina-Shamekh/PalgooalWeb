@@ -99,6 +99,43 @@ class SiteTranslationsSeeder extends Seeder
             'site.Edit_Header'               => 'تعديل الترويسة',
             'site.Edit_Footer'               => 'تعديل التذييل',
             'site.Connect_Domain'            => 'ربط النطاق',
+
+            // ── Phase 1 i18n refactor ─────────────────────────────
+
+            // TestimonialSubmissionController (public form)
+            'site.Testimonial_Received'      => 'شكراً لك! تم استلام تقييمك وسنقوم بمراجعته قبل نشره.',
+            'site.Unexpected_Error'          => 'حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى.',
+
+            // Client portal — DomainController
+            'client.Domain_Created'          => 'تمت إضافة النطاق بنجاح.',
+            'client.Domain_Updated'          => 'تم تعديل النطاق بنجاح.',
+            'client.Domain_Deleted'          => 'تم حذف النطاق بنجاح.',
+            'client.Auto_Renew_Enabled'      => 'تم تفعيل التجديد التلقائي للنطاق :domain.',
+            'client.Auto_Renew_Disabled'     => 'تم تعطيل التجديد التلقائي للنطاق :domain.',
+            'client.Domain_Invoice_Exists'   => 'توجد فاتورة غير مدفوعة لهذا النطاق. تابع عملية الدفع.',
+            'client.Domain_Order_Created'    => 'تم إنشاء طلبك بنجاح. تابع إلى صفحة الدفع.',
+
+            // Client portal — DomainDnsController
+            'client.Nameservers_Updated'     => 'تم تحديث خوادم الأسماء بنجاح.',
+
+            // Client portal — HomeController
+            'client.Account_Updated'         => 'تم تحديث حسابك بنجاح.',
+
+            // Client portal — InvoiceCheckoutController
+            'client.Demo_Payment_Completed'  => 'تمت عملية الدفع التجريبي بنجاح.',
+            // common.* keys (used in section editor workspace)
+            'common.Cancel'               => 'إلغاء',
+            'common.Close'                => 'إغلاق',
+            'common.Error'                => 'خطأ',
+            'common.Home'                 => 'الرئيسية',
+            'common.Icon'                 => 'أيقونة',
+            'common.Icons'                => 'أيقونات',
+            'common.Ok'                   => 'موافق',
+            'common.Please_Review_The_Form' => 'يرجى مراجعة النموذج.',
+            'common.Saved'                => 'تم الحفظ',
+            'common.Something_Went_Wrong' => 'حدث خطأ ما، يرجى المحاولة مرة أخرى.',
+            'common.Success'              => 'تمّ بنجاح',
+
         ];
 
         $locale = 'ar';

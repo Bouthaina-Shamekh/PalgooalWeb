@@ -802,160 +802,89 @@ Laravel public: /home/palgoalswpgoals/public_html/public/
 الحل: استخدم /public/ prefix في fetch URLs دائماً:
 url.replace(/(https?:\/\/[^\/]+)\//, '$1/public/')
 ```
-ode` — 'كود Blade'
-  - `dashboard.Blade_Invalid_Key` — 'مفتاح غير صالح'
 
-- **`.env`**: `APP_DEBUG` أُعيد إلى `false` (كان `true` مؤقتاً لتتبع الخطأ 500)
+### Session: Admin Pages Create/Edit (لوحة الإدارة)
+- `resources/views/dashboard/pages/create.blade.php` — إعادة كتابة:
+  - Flash: `session('success')` → `session('ok')` + إضافة `session('error')`
+  - Errors: custom red div → `alert alert-danger`
+  - الـ grid ينتقل من الـ `<form>` نفسه إلى `<div>` داخله (نمط صحيح)
+- `resources/views/dashboard/pages/edit.blade.php` — إعادة كتابة:
+  - نفس إصلاحات create
+  - breadcrumb موسّع يُظهر اسم الصفحة في العنوان
+- `resources/views/dashboard/pages/partials/form.blade.php` — إعادة كتابة كاملة:
+  - **تقسيم إلى قسمين مرقمين**:
+    - **القسم ١** — محتوى الصفحة: تبويبات `nav nav-tabs` لكل لغة
+    - **القسم ٢** — SEO والمشاركة: تبويبات مستقلة لكل لغة (meta_title, meta_description, meta_keywords, og_image)
+  - كل الحقول: `w-full border p-2 rounded` → `form-control` + `form-label`
+  - Slug inputs: `dir="ltr" font-mono` + auto-generate من العنوان
+  - `is_active`: radio buttons مع `form-check` (بدلاً من custom radio styling)
+  - Sidebar: `sticky top-6` + `form-check` للـ checkbox + `btn btn-primary` للحفظ + زر إلغاء
+  - بطاقة تلميحات خفيفة في أسفل الـ sidebar
+  - `<script>` يبقى في نهاية الـ partial (CKEditor + tabs + slug normalizer) — لا يحتاج `@push`
+- `resources/views/dashboard/pages/index.blade.php` — إصلاح:
+  - Flash key: `session('success')` → `session('ok')` + إضافة `session('error')`
+  - `<script>` خارج `</x-dashboard-layout>` → نُقل داخل `@push('scripts')` / `@endpush`
+- `database/seeders/DashboardTranslationsSeeder.php` — إضافة 35 ترجمة جديدة:
+  - `dashboard.All_Pages`، `dashboard.Add_Page`، `dashboard.Edit_Page`، `dashboard.No_Pages_Yet`
+  - `dashboard.Page_Title`، `dashboard.Page_Content`، `dashboard.Slug`، `dashboard.Slug_Hint`، `dashboard.Content_Hint`
+  - `dashboard.SEO_Meta`، `dashboard.Meta_Title`، `dashboard.Meta_Description`، `dashboard.Meta_Keywords`، `dashboard.Open_Graph_Image_URL`
+  - `dashboard.Short_description_for_search_engines`، `dashboard.Aim_for_50_160_characters_*`، `dashboard.Separate_keywords_*`
+  - `dashboard.Publishing_Options`، `dashboard.Builder_Type`، `dashboard.Sections_Builder`، `dashboard.Visual_Builder_Archived_Hint`
+  - `dashboard.Published`، `dashboard.Draft`، `dashboard.Publish`، `dashboard.Update`، `dashboard.Publish_Date`
+  - `dashboard.Homepage`، `dashboard.Make_Homepage`، `dashboard.Homepage_Hint`، `dashboard.Current_Homepage`
+  - `dashboard.Page_Help_Title`، `dashboard.Page_Help_1/2/3`
+  - `dashboard.Confirm_Delete_Page_Title/Text`، `dashboard.Yes_Delete_Page`، `dashboard.Action_Cannot_Be_Undone`
 
-#### دورة حياة ملف Blade (Blade File Lifecycle):
-```
-إنشاء definition → edit → Scaffold stub → كتابة الملف (write) → ملف على disk
-حذف definition → deleteFile() تلقائياً → ملف يُحذف من disk
-```
+### Session: Write-Blade Toast UI (لوحة الإدارة)
+- `resources/views/dashboard/section_definitions/edit.blade.php` — إضافة نظام toast احترافي:
+  - `showWriteToast(type, title, detail)`: نافذة إشعار fixed-position أعلى اليمين
+  - أخضر مع ✓ للنجاح (تختفي بعد 3.5 ثانية) / أحمر مع ⚠ للخطأ (تبقى 6 ثوانٍ)
+  - شريط تقدم `scaleX(0)` بـ CSS linear transition يتقلص مع الوقت
+  - `mouseenter` يوقف الـ timer، `mouseleave` يستأنفه بالوقت المتبقي
+  - Close button بـ `addEventListener('click', ...)` بعد إضافة الـ DOM (تجنب quote-nesting bug)
+  - `dismissToast()`: `translateX(120%)` + `opacity:0` ثم `removeChild` بعد 400ms
+  - استبدال كل استدعاءات `Swal.fire()` في `doWrite()` بـ `showWriteToast()`
 
-#### أنماط مهمة:
-
-**confirm dialog مع نصوص عربية — استخدم `data-*` دائماً:**
+### ملاحظة: توليد Slug تلقائي في صفحات متعددة اللغة
 ```blade
-{{-- ✅ صحيح --}}
-<button type="button" class="def-delete-btn"
-        data-name="{{ $def->label }}"
-        data-sections="{{ $def->sections_count }}">حذف</button>
+{{-- slug-source: يُطلق auto-generate --}}
+<input data-slug-source="{{ $langCode }}" ...>
 
-{{-- ❌ خطأ: نص عربي في JS string داخل HTML attribute --}}
-<form onsubmit="return confirm('{{ t('dashboard.Key', 'نص عربي') }}')">
+{{-- slug-input: يستقبل القيمة المُولَّدة --}}
+<input data-slug-input data-lang="{{ $langCode }}" dir="ltr" class="form-control font-mono" ...>
 ```
-
-**حذف الملف عند حذف السجل — قبل الـ transaction:**
-```php
-// احذف الملف أولاً (المسار يعتمد على بيانات السجل التي ستُحذف)
-$fileResult = $writer->deleteFile($sectionDefinition);
-try {
-    DB::transaction(fn() => $sectionDefinition->delete());
-} catch (Throwable $e) { ... }
-```
-
-**استعادة ملف مبتور من git:**
-```bash
-git log --oneline app/Path/To/Controller.php
-git show <commit-hash>:app/Path/To/Controller.php | tail -100
-```
-
-### ملاحظة: ظهور SectionDefinition في مكتبة الأقسام
-`sectionLibraryTypes()` في `SectionController` يقرأ من قاعدة البيانات (ليس من الـ disk):
-```php
-SectionDefinition::query()
-    ->where('is_active', true)
-    ->where('is_visible', true)
-    ->get();
-```
-أي definition بـ `is_active = true` + `is_visible = true` يظهر تلقائياً في `/admin/pages/1/sections`.
-الملف الـ Blade مطلوب فقط للـ rendering على الواجهة الأمامية — غيابه يُظهر `_missing-template.blade.php`.
-
-### Session: Admin Section Blade Editor (فيچر جديد)
-- `docs/section-blade-editor.md` — ملف توثيق مُنشأ مسبقاً (تصميم معتمد)
-- **الهدف**: تمكين المطور من كتابة كود Blade مباشرةً من لوحة الإدارة وكتابته على الـ disk
-- **المسار المستهدف**: `resources/views/front/sections/{category}/{template_key}.blade.php`
-
-#### التغييرات المُنجزة:
-- `database/migrations/XXXX_add_blade_source_to_section_definitions_table.php` — إنشاء:
-  - عمود `blade_source` (longText nullable)
-  - عمود `blade_written_at` (timestamp nullable)
-- `app/Support/Sections/SectionTemplateFileWriter.php` — إنشاء service:
-  - `resolvedPath()`: يبني المسار الكامل
-  - `fileStatus()`: يُرجع `exists` / `missing` / `external`
-  - `write()`: يكتب الملف على الـ disk ويُحدّث `blade_written_at`
-  - حماية: regex على category/key، التحقق من أن المسار داخل `resources/views/front/sections/`
-- `app/Http/Controllers/Admin/SectionDefinitionController.php` — تحديث:
-  - `edit()`: إضافة `$bladeFilePath`، `$bladeFileStatus`، `$bladeExpectedPath`
-  - `update()`: حفظ `blade_source` عند وجوده في الـ request
-  - `writeBladeFile()`: endpoint جديد للكتابة المستقلة (super_admin فقط)
-- `resources/views/dashboard/section_definitions/edit.blade.php` — تحديث:
-  - إضافة card ثانٍ "قالب Blade" أسفل الفورم الرئيسي في عمود `col-span-8`
-  - file status badge (✅ / ❌ / ⚠️) مع المسار المتوقع
-  - `<textarea dir="ltr" class="form-control font-mono">` للكود
-  - زر "Scaffold من الحقول" (JS client-side)
-  - زر "حفظ وكتابة الملف" (POST إلى write-blade endpoint)
-  - Scaffold JS: يُنشئ stub تلقائياً من الحقول المعرَّفة
-- `routes/dashboard.php` — إضافة route: `POST section-definitions/{id}/write-blade`
-- `database/seeders/DashboardTranslationsSeeder.php` — إضافة ~20 مفتاح:
-  - `dashboard.Blade_Template`، `dashboard.Blade_File_Status`
-  - `dashboard.Blade_File_Exists`، `dashboard.Blade_File_Missing`، `dashboard.Blade_File_External`
-  - `dashboard.Blade_Expected_Path`، `dashboard.Blade_Write_File`، `dashboard.Blade_Scaffold`
-  - `dashboard.Blade_Write_Success`، `dashboard.Blade_Write_Failed`
-  - `dashboard.Blade_Source_Saved`، `dashboard.Blade_Confirm_Overwrite`
-  - `dashboard.Blade_Editor_Hint`، `dashboard.Blade_Scaffold_Hint`
-  - `dashboard.Blade_File_Last_Written`، `dashboard.Blade_File_Not_Written`
-
-### Session: Smart Scaffold + Blade Editor UX Overhaul (لوحة الإدارة)
-
-#### المشكلة:
-زر "Scaffold من الحقول" كان يمسح الكود المكتوب يدوياً بالكامل عند الضغط عليه.
-
-#### التغييرات المُنجزة:
-
-**`resources/views/dashboard/section_definitions/edit.blade.php`** — إعادة كتابة كاملة:
-
-**١. معمارية التبويبات (Tab Architecture)**
-- تبويب ١: معلومات التعريف (الفورم الرئيسي)
-- تبويب ٢: قالب Blade (المحرر)
-- Alpine.js `x-data` مع `localStorage` لحفظ التبويب النشط عبر reloads
-- Info Ribbon في الأعلى: الاسم + المفتاح + حالة Blade + عدد الحقول + آخر تحديث
-
-**٢. نظام Scaffold الذكي (3 حالات)**
-```
-المحرر فارغ  → Scaffold كامل لكل الحقول (السلوك القديم)
-بعض الحقول ناقصة → "إضافة الناقص" — يُضيف فقط الحقول غير الموجودة في الكود
-كل الحقول موجودة → يسأل "هل تريد استبدال الكود كاملاً؟" (confirm)
-```
-- كشف استخدام الحقل: يبحث عن `$field_key` أو `'field_key'` أو `"field_key"` في الكود
-- زر Scaffold يغيّر نصّه ديناميكياً: `Scaffold كامل` / `إضافة الناقص (N)` / `Scaffold (استبدال)`
-
-**٣. إدراج عند المؤشر (Insert at Cursor)**
-- كل حقل في الـ sidebar له زر `+` خاص به
-- الضغط على `+` يُدرج snippet الحقل عند موضع المؤشر الحالي في المحرر
-- المؤشر ينتقل تلقائياً إلى نهاية الكود المُدرج
-- يعمل بدون مسح أي شيء موجود
-
-**٤. مؤشرات بصرية حية (Live Visual Indicators)**
-- نقطة خضراء (●): الحقل مستخدم في الكود الحالي
-- نقطة برتقالية (●): الحقل غير موجود في الكود بعد
-- زر `+` يتحوّل إلى `✓` (أخضر) عند الاستخدام، مع إمكانية إعادة الإدراج
-- تتحدّث المؤشرات تلقائياً مع كل ضغطة مفتاح في المحرر
-
-**٥. تحسينات UX أخرى**
-- `Tab` key يُدرج 4 مسافات (بدلاً من الانتقال للعنصر التالي)
-- `Ctrl+S`: يحفظ الفورم في تبويب المعلومات، أو يكتب الملف على الـ disk في تبويب Blade
-- عداد الأسطر والأحرف في footer المحرر
-- Copy code / Copy path / Clear code buttons
-- لون المحرر: Catppuccin Mocha (dark theme)
-
-#### الأنماط المهمة:
-
-**كشف استخدام الحقل:**
 ```javascript
-function isFieldUsed(code, key) {
-    return code.indexOf('$' + key) !== -1
-        || code.indexOf("'" + key + "'") !== -1
-        || code.indexOf('"' + key + '"') !== -1;
-}
+// إذا عدَّل المستخدم الـ slug يدوياً → data-touched="1" → يوقف التوليد التلقائي
+input.addEventListener('change', () => { if (input.value !== '') input.dataset.touched = '1'; });
+titleInput.addEventListener('input', () => {
+    if (slugInput.dataset.touched === '1') return;
+    slugInput.value = normalizeSlug(titleInput.value);
+});
 ```
 
-**Smart Scaffold Logic:**
-```javascript
-var missing = getMissingFields(editor.value);
-if (!code.trim())      → generateFullScaffold()
-else if (missing > 0)  → confirm() → append missing snippets only
-else                   → confirm("replace all?") → generateFullScaffold()
-```
+### Session: Section Definitions Developer Docs (توثيق النظام)
+- `docs/section-definitions.md` — **إنشاء** ملف توثيق شامل (507 سطر):
+  - شرح المشكلة التي يحلّها النظام (أقسام ثابتة vs ديناميكية)
+  - المعمارية: طبقتان — Definition Layer (SectionDefinition + Field) / Content Layer (Section + Translation)
+  - جدول حقول SectionDefinition: section_key, label, category, blade_source, editor_mode, blade_written_at
+  - أنواع الحقول: text/textarea/richtext/url/media/number/boolean/select/repeater
+  - نطاق الحقل: `shared` (قيمة واحدة لجميع اللغات) / `translatable` (قيمة لكل لغة)
+  - رحلة Render الكاملة: `SectionRenderer::render()` → `renderDefinitionDriven()` → `SectionDefinitionRuntimeResolver` → `SectionDefinitionFrontendViewDataFactory` → Blade view
+  - Convention-based view resolution: `template_key: hero_main` + `category: hero` → `front.sections.hero.hero_main`
+  - تسلسل كتابة Blade من Monaco: base64 encode → POST → decode PHP → `SectionTemplateFileWriter::write()` → disk
+  - خطوات إنشاء تعريف جديد خطوة بخطوة (7 خطوات كاملة مع أمثلة كود)
+  - بنية الملفات الكاملة للنظام
+  - أنماط استخدام `$fields` داخل Blade view (text/repeater/boolean/media)
+  - FAQ: base64 encoding، فرق section_key و template_key، متى يُستخدم legacy render
+  - جدول مراجع سريع لجميع الكلاسات والمسارات
 
-**Insert at cursor:**
-```javascript
-function insertAtCursor(snippet) {
-    var start = editor.selectionStart;
-    editor.value = before + '\n' + snippet + '\n' + after;
-    editor.setSelectionRange(newPos, newPos);
-    editor.focus();
-}
+### ملاحظة: زر اللغات (Lang Switcher) — النمط الاحترافي
+CSS `.lang-switcher` + `.lang-tab-btn` يُستخدم في `pages/partials/form.blade.php`:
+```css
+.lang-switcher { display: inline-flex; gap: 6px; padding: 4px; background: #f1f5f9; border-radius: 12px; }
+.lang-tab-btn  { padding: 6px 14px; border-radius: 9px; background: transparent; transition: all .18s; }
+.lang-tab-btn.active { background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.10); font-weight: 600; }
+.lang-tab-btn.has-error { color: #dc2626 !important; }
 ```
-
+كل زر يعرض: flag emoji + lang name + lang code uppercase
+يُفعَّل بـ JS `makeSwitcher('data-lang-tab', 'data-lang-panel')` — helper قابل لإعادة الاستخدام

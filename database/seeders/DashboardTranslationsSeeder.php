@@ -78,6 +78,9 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Active'              => 'مفعل',
             'dashboard.Inactive'            => 'معطل',
             'dashboard.Edit'                => 'تعديل',
+            'dashboard.User_Created'        => 'تم إضافة مستخدم جديد بنجاح.',
+            'dashboard.User_Updated'        => 'تم تعديل المستخدم بنجاح.',
+            'dashboard.User_Deleted'        => 'تم حذف المستخدم بنجاح.',
             'dashboard.Test_Connection'     => 'اختبار الاتصال',
             'dashboard.View_Accounts'       => 'عرض المواقع',
             'dashboard.Login_SSO'           => 'دخول السيرفر (SSO)',
@@ -92,7 +95,6 @@ class DashboardTranslationsSeeder extends Seeder
             // ── Plans table ───────────────────────────────────────
             'dashboard.Search_Plans'        => 'بحث عن الباقات...',
             'dashboard.Add_Plan'            => 'إضافة باقة',
-            'dashboard.Plan_Name'           => 'الاسم',
             'dashboard.Plan_Category'       => 'التصنيف',
             'dashboard.Plan_Server'         => 'السيرفر',
             'dashboard.Plan_Price'          => 'السعر',
@@ -142,7 +144,6 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Featured_Badge_Label_Hint'   => 'يظهر عند تمييز الباقة. اتركه فارغاً للنص الافتراضي',
             'dashboard.Server_Package'              => 'حزمة السيرفر',
             'dashboard.Select_Server_First'         => 'حدد السيرفر أولاً',
-            'dashboard.Loading'                     => 'جاري التحميل...',
             'dashboard.None'                        => 'لا شيء',
             'dashboard.Plan_Name_Label'             => 'اسم الباقة',
             'dashboard.Description'                 => 'الوصف',
@@ -270,7 +271,6 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Login_CPanel'                => 'دخول cPanel',
             'dashboard.Suspend'                     => 'تعليق',
             'dashboard.Unsuspend'                   => 'إلغاء التعليق',
-            'dashboard.Bulk_Terminate'              => 'حذف نهائي من السيرفر',
             'dashboard.Provision_Reactivate'        => 'إعادة التفعيل',
             'dashboard.Sync_Success'                => 'نجحت',
             'dashboard.Sync_Failed'                 => 'فشل',
@@ -499,9 +499,6 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Template_Error'              => 'حدث خطأ أثناء معالجة القالب، يرجى المحاولة مرة أخرى.',
 
             // ── Template categories ────────────────────────────────
-            'dashboard.Category_Created'            => 'تم إنشاء التصنيف بنجاح.',
-            'dashboard.Category_Updated'            => 'تم تعديل التصنيف بنجاح.',
-            'dashboard.Category_Deleted'            => 'تم حذف التصنيف بنجاح.',
             'dashboard.Category_In_Use_Error'       => 'لا يمكن حذف هذا التصنيف لأنه يحتوي على قوالب مرتبطة به.',
             'dashboard.Category_Validation_Error'   => 'يرجى مراجعة حقول التصنيف المحددة.',
 
@@ -534,9 +531,7 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Recent_Clients'          => 'آخر العملاء',
             'dashboard.No_Subscriptions_Yet'    => 'لا توجد اشتراكات بعد',
             'dashboard.No_Clients_Yet'          => 'لا يوجد عملاء بعد',
-            'dashboard.Client'                  => 'العميل',
             'dashboard.Plan'                    => 'الباقة',
-            'dashboard.Status'                  => 'الحالة',
             'dashboard.Date'                    => 'التاريخ',
             'dashboard.Quick_Actions'           => 'إجراءات سريعة',
             'dashboard.Templates'               => 'القوالب',
@@ -722,7 +717,6 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Translatable'            => 'قابل للترجمة',
             'dashboard.Shared'                  => 'مشترك',
             'dashboard.Required'                => 'مطلوب',
-            'dashboard.Optional'                => 'اختياري',
             'dashboard.Validation'              => 'التحقق',
             'dashboard.Dynamic'                 => 'ديناميكي',
             'dashboard.Custom_Preset'           => 'Preset مخصص',
@@ -831,8 +825,6 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Blade_Source_Saved'      => 'تم حفظ كود Blade في قاعدة البيانات.',
             'dashboard.Blade_Confirm_Overwrite' => 'الملف موجود مسبقاً. هل تريد استبداله؟',
             'dashboard.Blade_File_Deleted'      => 'تم حذف ملف Blade من الـ disk.',
-            'dashboard.Blade_Source_Code'       => 'كود Blade',
-            'dashboard.Blade_Invalid_Key'       => 'مفتاح غير صالح',
 
             // Edit page UX improvements
             'dashboard.Last_Updated'            => 'آخر تحديث',
@@ -879,14 +871,123 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Confirm_Delete_Page_Title' => 'هل تريد حذف هذه الصفحة؟',
             'dashboard.Confirm_Delete_Page_Text'  => 'هل أنت متأكد من حذف هذه الصفحة؟ هذا الإجراء لا يمكن التراجع عنه.',
             'dashboard.Yes_Delete_Page'           => 'نعم، احذف الصفحة',
-            'dashboard.Action_Cannot_Be_Undone'   => 'هذا الإجراء لا يمكن التراجع عنه!',
+            'dashboard.Action_Cannot_Be_Undone'   => 'هذا الإجراء لا يمكن التراجع عنه.',
+
+            // ── Phase 1 i18n refactor ─────────────────────────────────────────
+
+            // UserController
+
+            // LanguageController
+            'dashboard.Language_Created'            => 'تمت إضافة اللغة بنجاح.',
+            'dashboard.Language_Updated'            => 'تم تحديث اللغة بنجاح.',
+
+            // TemplateReviewController
+            'dashboard.Review_Approved'             => 'تم اعتماد المراجعة بنجاح.',
+            'dashboard.Review_Rejected'             => 'تم إلغاء اعتماد المراجعة.',
+            'dashboard.Review_Deleted'              => 'تم حذف المراجعة بنجاح.',
+            'dashboard.Review_Bulk_Approved'        => 'تم اعتماد :count مراجعة.',
+            'dashboard.Review_Bulk_Rejected'        => 'تم رفض :count مراجعة.',
+            'dashboard.Review_Bulk_Deleted'         => 'تم حذف :count مراجعة.',
+
+            // AppearanceController
+            'dashboard.Header_Layout_Activated'     => 'تم تفعيل تخطيط الهيدر بنجاح.',
+            'dashboard.Header_Settings_Saved'       => 'تم حفظ إعدادات الهيدر بنجاح.',
+            'dashboard.Footer_Layout_Activated'     => 'تم تفعيل تخطيط الفوتر بنجاح.',
+            'dashboard.Footer_Settings_Saved'       => 'تم حفظ إعدادات الفوتر بنجاح.',
+
+            // HomeController (general settings)
+            'dashboard.Invalid_Json_File'           => 'ملف JSON غير صالح. يرجى رفع ملف تصدير صحيح.',
+            'dashboard.Invalid_Settings_Content'    => 'محتوى الإعدادات غير صالح.',
+            'dashboard.Import_Invalid_Values'       => 'فشل الاستيراد: الملف يحتوي على قيم غير صالحة.',
+            'dashboard.Settings_Imported'           => 'تم استيراد الإعدادات العامة بنجاح.',
+            'dashboard.Settings_Saved'              => 'تم حفظ الإعدادات العامة بنجاح.',
+
+            // MenuController
+            'dashboard.Menu_Created_Success'        => 'تم إنشاء القائمة بنجاح.',
+            'dashboard.Menu_Updated_Success'        => 'تم تحديث القائمة بنجاح.',
+            'dashboard.Menu_Deleted_Success'        => 'تم حذف القائمة بنجاح.',
+            'dashboard.Menu_Duplicated_Success'     => 'تم نسخ القائمة بنجاح.',
+            'dashboard.Menu_Item_Created_Success'   => 'تم إضافة عنصر القائمة بنجاح.',
+            'dashboard.Menu_Item_Updated_Success'   => 'تم تحديث عنصر القائمة بنجاح.',
+            'dashboard.Menu_Item_Deleted_Success'   => 'تم حذف عنصر القائمة بنجاح.',
+
+            // PageController
+            'dashboard.Page_Created_Successfully'           => 'تم إنشاء الصفحة بنجاح.',
+            'dashboard.Page_Updated_Successfully'           => 'تم تحديث الصفحة بنجاح.',
+            'dashboard.Page_Deleted_Successfully'           => 'تم حذف الصفحة بنجاح.',
+            'dashboard.Page_Status_Updated_Successfully'    => 'تم تحديث حالة الصفحة بنجاح.',
+            'dashboard.Page_Set_As_Homepage_Successfully'   => 'تم تعيين الصفحة الرئيسية بنجاح.',
+            'dashboard.Builder_Mode_Updated_Successfully'   => 'تم تحديث نمط المنشئ بنجاح.',
+
+            // SectionController
+            'dashboard.Section_Created_Successfully'            => 'تم إنشاء القسم بنجاح.',
+            'dashboard.Section_Added_Continue_Customizing'      => 'تم إضافة القسم. يمكنك الآن تخصيصه.',
+            'dashboard.Section_Updated_Successfully'            => 'تم تحديث القسم بنجاح.',
+            'dashboard.Section_Visibility_Updated_Successfully' => 'تم تحديث ظهور القسم بنجاح.',
+            'dashboard.Section_Title_Updated_Successfully'      => 'تم تحديث عنوان القسم بنجاح.',
+            'dashboard.Section_Order_Updated_Successfully'      => 'تم تحديث ترتيب الأقسام بنجاح.',
+            'dashboard.Section_Duplicated_Successfully'         => 'تم نسخ القسم بنجاح.',
+            'dashboard.Section_Deleted_Successfully'            => 'تم حذف القسم بنجاح.',
+
+            // Phase 1 — MenuController keys
+            'dashboard.Admin_Workspace'                             => 'مساحة العمل',
+            'dashboard.Back_To_Pages'                               => 'العودة إلى الصفحات',
+            'dashboard.Menu_Delete_Last_Forbidden'                  => 'لا يمكن حذف القائمة الأخيرة.',
+            'dashboard.Menu_Item_Label_Required'                    => 'حقل العنوان مطلوب لعناصر القائمة من هذا النوع.',
+            'dashboard.Menu_Item_URL_Required'                      => 'حقل الرابط مطلوب لعناصر القائمة من نوع "رابط".',
+            'dashboard.Dropdown_Requires_Children'                  => 'يجب أن يحتوي القائمة المنسدلة على عناصر فرعية.',
+            'dashboard.Dropdown_Child_Label_And_URL_Required'       => 'جميع العناصر الفرعية في القائمة المنسدلة تحتاج عنواناً ورابطاً.',
+            'dashboard.Dropdown_Child_Page_Required'                => 'جميع العناصر الفرعية من نوع صفحة تحتاج إلى تحديد صفحة.',
+            'dashboard.Invalid_Reorder_Payload'                     => 'بيانات إعادة الترتيب غير صالحة.',
+
+            // Phase 1 — SectionController keys
+            'dashboard.Definition_Driven_Section'                   => 'قسم يعتمد على تعريف.',
+            'dashboard.Linked_Section_Definition_No_Longer_Available' => 'تعريف القسم المرتبط لم يعد متاحاً.',
+            'dashboard.Section_Could_Not_Be_Updated_Server_Error'   => 'تعذّر تحديث القسم، حدث خطأ في الخادم.',
+            'dashboard.Section_Must_Stay_Linked_To_Definition'      => 'يجب أن يبقى هذا القسم مرتبطاً بتعريفه.',
+
+
+            // Phase 2A — FormRequests: DNS nameservers
+            'dashboard.Nameservers_Min_Two'         => 'الرجاء تقديم اسمَي خادم نطاق على الأقل.',
+            'dashboard.Nameservers_Max'              => 'يمكنك إضافة حتى :max خادم نطاق.',
+            'dashboard.Nameserver_Invalid_Format'    => 'يجب أن يكون كل خادم نطاق اسم مضيف صالحاً (مثال: ns1.example.com).',
+            'dashboard.Nameservers_Duplicate'        => 'لا يُسمح بتكرار خوادم النطاق.',
+            'dashboard.Glue_Record_Invalid_IP'       => 'يجب أن يكون كل عنوان IP للـ Glue Record عنوان IPv4 صالحاً.',
+
+            // Phase 2A — FormRequests: SectionDefinition
+            'dashboard.Template_Key_Invalid'         => 'مفتاح القالب يمكن أن يحتوي فقط على أحرف صغيرة وأرقام وشرطات سفلية وشرطات.',
+
+            // Phase 2A — OrderController
+            'dashboard.Orders_Updated'               => 'تم تحديث :count طلب.',
+            'dashboard.Order_Status_Updated'         => 'تم تحديث حالة الطلب بنجاح.',
+
+            // Phase 2A — SubscriptionController (admin)
+            'dashboard.Subscription_Updated'         => 'تم تحديث الاشتراك بنجاح.',
+            'dashboard.Subscription_Deleted'         => 'تم حذف الاشتراك بنجاح.',
+            'dashboard.Bulk_Operation_Applied'       => 'تم تطبيق العملية على الاشتراكات المحددة.',
+            'dashboard.Jobs_Queued'                  => 'تم إضافة :count مهمة إلى قائمة المعالجة.',
+            'dashboard.Provisioning_Queued'          => 'تم إضافة طلب تفعيل الاشتراك إلى قائمة الانتظار.',
+
         ];
 
+        $locale = 'ar';
+        $created = 0;
+        $updated = 0;
+
+        cache()->flush();
+
         foreach ($translations as $key => $value) {
-            TranslationValue::updateOrCreate(
-                ['key' => $key, 'locale' => 'ar'],
-                ['value' => $value],
-            );
+            $record = TranslationValue::firstOrNew(['key' => $key, 'locale' => $locale]);
+            $record->value = $value;
+            $record->save();
+
+            if ($record->wasRecentlyCreated) {
+                $created++;
+            } else {
+                $updated++;
+            }
         }
+
+        $this->command->info("✅ Arabic dashboard translations: {$created} created, {$updated} updated.");
     }
 }

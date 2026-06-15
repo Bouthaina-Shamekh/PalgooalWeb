@@ -64,12 +64,12 @@ class UpdateDomainDnsRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'nameservers.required' => __('Please provide at least two nameservers.'),
-            'nameservers.min'      => __('Please provide at least two nameservers.'),
-            'nameservers.max'      => __('You can add up to :max nameservers.'),
-            'nameservers.*.regex'  => __('Each nameserver must be a valid hostname (e.g., ns1.example.com).'),
-            'nameservers.*.distinct' => __('Duplicate nameservers are not allowed.'),
-            'nameserver_ips.*.ipv4' => __('Each glue record IP must be a valid IPv4 address.'),
+            'nameservers.required' => t('dashboard.Nameservers_Min_Two', 'Please provide at least two nameservers.'),
+            'nameservers.min'      => t('dashboard.Nameservers_Min_Two', 'Please provide at least two nameservers.'),
+            'nameservers.max'      => t('dashboard.Nameservers_Max', 'You can add up to :max nameservers.'),
+            'nameservers.*.regex'  => t('dashboard.Nameserver_Invalid_Format', 'Each nameserver must be a valid hostname (e.g., ns1.example.com).'),
+            'nameservers.*.distinct' => t('dashboard.Nameservers_Duplicate', 'Duplicate nameservers are not allowed.'),
+            'nameserver_ips.*.ipv4' => t('dashboard.Glue_Record_Invalid_IP', 'Each glue record IP must be a valid IPv4 address.'),
         ];
     }
 }

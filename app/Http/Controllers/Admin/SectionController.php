@@ -173,7 +173,7 @@ class SectionController extends Controller
 
         return redirect()
             ->to($this->workspaceRoute('index', $page))
-            ->with('success', t('dashboard.Section_Created_Successfully', 'Section has been created successfully.'));
+            ->with('ok', t('dashboard.Section_Created_Successfully', 'Section has been created successfully.'));
     }
 
     /**
@@ -231,7 +231,7 @@ class SectionController extends Controller
 
         return redirect()
             ->to($redirectUrl)
-            ->with('success', t('dashboard.Section_Added_Continue_Customizing', 'Section added. Continue customizing it in the editor.'));
+            ->with('ok', t('dashboard.Section_Added_Continue_Customizing', 'Section added. Continue customizing it in the editor.'));
     }
 
     /**
@@ -368,7 +368,7 @@ class SectionController extends Controller
                 ->to($this->workspaceRoute('index', $page, null, [
                     'highlight' => $section->id,
                 ]))
-                ->with('success', t('dashboard.Section_Updated_Successfully', 'Section has been updated successfully.'));
+                ->with('ok', t('dashboard.Section_Updated_Successfully', 'Section has been updated successfully.'));
 
         } catch (ValidationException $e) {
             // Re-throw validation exceptions — Laravel will convert them to the
@@ -408,7 +408,7 @@ class SectionController extends Controller
 
         return redirect()
             ->to($this->workspaceRoute('index', $page, null, ['highlight' => $section->id]))
-            ->with('success', t('dashboard.Section_Visibility_Updated_Successfully', 'Section visibility has been updated.'));
+            ->with('ok', t('dashboard.Section_Visibility_Updated_Successfully', 'Section visibility has been updated.'));
     }
 
     /**
@@ -439,7 +439,7 @@ class SectionController extends Controller
 
         return redirect()
             ->to($this->workspaceRoute('index', $page, null, ['highlight' => $section->id]))
-            ->with('success', t('dashboard.Section_Title_Updated_Successfully', 'Section title has been updated.'));
+            ->with('ok', t('dashboard.Section_Title_Updated_Successfully', 'Section title has been updated.'));
     }
 
     /**
@@ -478,7 +478,7 @@ class SectionController extends Controller
 
         return redirect()
             ->to($this->workspaceRoute('index', $page, null, ['highlight' => $section->id]))
-            ->with('success', t('dashboard.Section_Order_Updated_Successfully', 'Section order has been updated.'));
+            ->with('ok', t('dashboard.Section_Order_Updated_Successfully', 'Section order has been updated.'));
     }
 
     /**
@@ -579,7 +579,7 @@ class SectionController extends Controller
 
         return redirect()
             ->to($this->workspaceRoute('index', $page, null, ['highlight' => $duplicate->id]))
-            ->with('success', t('dashboard.Section_Duplicated_Successfully', 'Section duplicated as a draft copy.'));
+            ->with('ok', t('dashboard.Section_Duplicated_Successfully', 'Section duplicated as a draft copy.'));
     }
 
     /**
@@ -595,7 +595,7 @@ class SectionController extends Controller
 
         return redirect()
             ->to($this->workspaceRoute('index', $page))
-            ->with('success', t('dashboard.Section_Deleted_Successfully', 'Section has been deleted successfully.'));
+            ->with('ok', t('dashboard.Section_Deleted_Successfully', 'Section has been deleted successfully.'));
     }
 
     /**

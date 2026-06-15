@@ -191,9 +191,9 @@ class Plan extends Model
         }
 
         if ($this->is_featured && (!$label || $label === '')) {
-            return __('Most Popular');
+            return t('dashboard.Most_Popular', 'Most Popular');
         }
 
-        return $label ?: null;
+        return $label;
     }
 }

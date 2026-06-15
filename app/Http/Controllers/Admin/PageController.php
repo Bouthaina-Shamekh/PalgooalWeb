@@ -144,7 +144,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('dashboard.pages.index')
-            ->with('success', t('dashboard.Page_Created_Successfully', 'Page created successfully.'));
+            ->with('ok', t('dashboard.Page_Created_Successfully', 'Page created successfully.'));
     }
 
     /**
@@ -273,7 +273,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('dashboard.pages.edit', $page)
-            ->with('success', t('dashboard.Page_Updated_Successfully', 'Page updated successfully.'));
+            ->with('ok', t('dashboard.Page_Updated_Successfully', 'Page updated successfully.'));
     }
 
     /**
@@ -291,7 +291,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('dashboard.pages.index')
-            ->with('success', t('dashboard.Page_Deleted_Successfully', 'Page deleted successfully.'));
+            ->with('ok', t('dashboard.Page_Deleted_Successfully', 'Page deleted successfully.'));
     }
 
     /**
@@ -309,7 +309,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('dashboard.pages.index')
-            ->with('success', t('dashboard.Page_Status_Updated_Successfully', 'Page status updated successfully.'));
+            ->with('ok', t('dashboard.Page_Status_Updated_Successfully', 'Page status updated successfully.'));
     }
 
     /**
@@ -333,7 +333,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('dashboard.pages.index')
-            ->with('success', t('dashboard.Page_Set_As_Homepage_Successfully', 'Page set as homepage successfully.'));
+            ->with('ok', t('dashboard.Page_Set_As_Homepage_Successfully', 'Page set as homepage successfully.'));
     }
     /**
      * Update the preferred builder mode for a marketing page.
@@ -365,7 +365,7 @@ class PageController extends Controller
 
         return redirect()
             ->route('dashboard.pages.edit', $page)
-            ->with('success', t('dashboard.Builder_Mode_Updated_Successfully', 'Builder mode updated successfully.'));
+            ->with('ok', t('dashboard.Builder_Mode_Updated_Successfully', 'Builder mode updated successfully.'));
     }
 
     /**

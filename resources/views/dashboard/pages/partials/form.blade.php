@@ -11,6 +11,84 @@
     $defaultBuilderMode = 'sections';
 @endphp
 
+@push('styles')
+<style>
+/* ── Language Switcher ───────────────────────── */
+.lang-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 4px;
+    background: #f1f5f9;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.lang-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 9px;
+    background: transparent;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .18s ease;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+
+.lang-tab-btn:hover {
+    background: #fff;
+    color: #334155;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+}
+
+.lang-tab-btn.active {
+    background: #fff;
+    color: var(--bs-primary, #4f46e5);
+    box-shadow: 0 2px 8px rgba(0,0,0,.10);
+    font-weight: 600;
+}
+
+.lang-flag {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.lang-name {
+    font-size: 13px;
+}
+
+.lang-code {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: inherit;
+    opacity: .55;
+    background: currentColor;
+    -webkit-background-clip: text;
+}
+
+.lang-tab-btn.active .lang-code {
+    opacity: .4;
+}
+
+/* validation error indicator on tab */
+.lang-tab-btn.has-error {
+    color: #dc2626 !important;
+}
+.lang-tab-btn.has-error.active {
+    background: #fef2f2;
+    box-shadow: 0 2px 8px rgba(220,38,38,.15);
+}
+</style>
+@endpush
+
 {{-- ============================
      العمود الرئيسي (col-span-8)
      ============================ --}}
@@ -26,28 +104,31 @@
         <div class="card-body">
 
             {{-- تبويبات اللغات --}}
-            <ul class="nav nav-tabs mb-4" role="tablist">
+            <div class="lang-switcher mb-4" role="tablist">
                 @foreach ($languages as $index => $lang)
                     @php
                         /** @var \App\Models\Language $lang */
                         $langCode    = $lang->code;
                         $isActiveTab = $index === 0;
+                        // خريطة أعلام اللغات
+                        $flags = ['ar' => '🇸🇦', 'en' => '🇬🇧', 'fr' => '🇫🇷', 'de' => '🇩🇪', 'tr' => '🇹🇷', 'es' => '🇪🇸'];
+                        $flag  = $flags[$langCode] ?? '🌐';
                     @endphp
-                    <li class="nav-item" role="presentation">
-                        <button
-                            type="button"
-                            class="nav-link {{ $isActiveTab ? 'active' : '' }}"
-                            data-lang-tab="{{ $langCode }}"
-                            role="tab"
-                            aria-controls="lang-panel-{{ $langCode }}"
-                            aria-selected="{{ $isActiveTab ? 'true' : 'false' }}"
-                            id="lang-tab-{{ $langCode }}"
-                        >
-                            {{ $lang->name }}
-                        </button>
-                    </li>
+                    <button
+                        type="button"
+                        class="lang-tab-btn {{ $isActiveTab ? 'active' : '' }}"
+                        data-lang-tab="{{ $langCode }}"
+                        role="tab"
+                        aria-controls="lang-panel-{{ $langCode }}"
+                        aria-selected="{{ $isActiveTab ? 'true' : 'false' }}"
+                        id="lang-tab-{{ $langCode }}"
+                    >
+                        <span class="lang-flag">{{ $flag }}</span>
+                        <span class="lang-name">{{ $lang->name }}</span>
+                        <span class="lang-code">{{ strtoupper($langCode) }}</span>
+                    </button>
                 @endforeach
-            </ul>
+            </div>
 
             {{-- ألواح اللغات --}}
             @foreach ($languages as $index => $lang)
@@ -183,20 +264,24 @@
         <div class="card-body">
 
             {{-- تبويبات اللغات للـ SEO --}}
-            <ul class="nav nav-tabs mb-4" role="tablist">
+            <div class="lang-switcher mb-4" role="tablist">
                 @foreach ($languages as $index => $lang)
-                    <li class="nav-item" role="presentation">
-                        <button
-                            type="button"
-                            class="nav-link {{ $index === 0 ? 'active' : '' }}"
-                            data-seo-tab="{{ $lang->code }}"
-                            role="tab"
-                        >
-                            {{ $lang->name }}
-                        </button>
-                    </li>
+                    @php
+                        $flags = ['ar' => '🇸🇦', 'en' => '🇬🇧', 'fr' => '🇫🇷', 'de' => '🇩🇪', 'tr' => '🇹🇷', 'es' => '🇪🇸'];
+                        $flag  = $flags[$lang->code] ?? '🌐';
+                    @endphp
+                    <button
+                        type="button"
+                        class="lang-tab-btn {{ $index === 0 ? 'active' : '' }}"
+                        data-seo-tab="{{ $lang->code }}"
+                        role="tab"
+                    >
+                        <span class="lang-flag">{{ $flag }}</span>
+                        <span class="lang-name">{{ $lang->name }}</span>
+                        <span class="lang-code">{{ strtoupper($lang->code) }}</span>
+                    </button>
                 @endforeach
-            </ul>
+            </div>
 
             @foreach ($languages as $index => $lang)
                 @php
@@ -455,76 +540,35 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
-    /* ── Language tabs — Content Section ── */
-    var tabs   = document.querySelectorAll('[data-lang-tab]');
-    var panels = document.querySelectorAll('[data-lang-panel]');
-
-    tabs.forEach(function (tab) {
-        tab.addEventListener('click', function () {
-            var lang = tab.getAttribute('data-lang-tab');
-            tabs.forEach(function (t) { t.classList.remove('active'); });
-            tab.classList.add('active');
-            panels.forEach(function (p) {
-                if (p.getAttribute('data-lang-panel') === lang) {
-                    p.classList.remove('hidden');
-                } else {
-                    p.classList.add('hidden');
-                }
+    /* ── helpers ── */
+    function makeSwitcher(attrTab, attrPanel) {
+        var tabs   = document.querySelectorAll('[' + attrTab + ']');
+        var panels = document.querySelectorAll('[' + attrPanel + ']');
+        tabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                var lang = tab.getAttribute(attrTab);
+                tabs.forEach(function (t) { t.classList.remove('active'); });
+                tab.classList.add('active');
+                panels.forEach(function (p) {
+                    p.classList.toggle('hidden', p.getAttribute(attrPanel) !== lang);
+                });
             });
         });
-    });
-
-    /* ── Language tabs — SEO Section ── */
-    var seoTabs   = document.querySelectorAll('[data-seo-tab]');
-    var seoPanels = document.querySelectorAll('[data-seo-panel]');
-
-    seoTabs.forEach(function (tab) {
-        tab.addEventListener('click', function () {
-            var lang = tab.getAttribute('data-seo-tab');
-            seoTabs.forEach(function (t) { t.classList.remove('active'); });
-            tab.classList.add('active');
-            seoPanels.forEach(function (p) {
-                if (p.getAttribute('data-seo-panel') === lang) {
-                    p.classList.remove('hidden');
-                } else {
-                    p.classList.add('hidden');
-                }
-            });
-        });
-    });
-
-    /* ── Slug normalizer ── */
-    function normalizeSlug(value) {
-        if (!value) return '';
-        value = value.trim().toLowerCase();
-        value = value.replace(/[\s_]+/g, '-');
-        value = value.replace(/[ـ]+/g, '');
-        value = value.replace(/[^\p{L}\p{N}-]+/gu, '');
-        value = value.replace(/-+/g, '-');
-        value = value.replace(/^-+|-+$/g, '');
-        return value;
     }
 
-    /* ── Slug inputs ── */
-    document.querySelectorAll('[data-slug-input]').forEach(function (input) {
-        input.addEventListener('input', function () {
-            var pos  = input.selectionStart;
-            input.value = normalizeSlug(input.value);
-            try { input.setSelectionRange(pos, pos); } catch (e) {}
-        });
-        input.addEventListener('change', function () {
-            if (input.value !== '') input.dataset.touched = '1';
-        });
-    });
+    makeSwitcher('data-lang-tab', 'data-lang-panel');
+    makeSwitcher('data-seo-tab',  'data-seo-panel');
 
-    /* ── Auto-generate slug from title ── */
-    document.querySelectorAll('[data-slug-source]').forEach(function (titleInput) {
-        titleInput.addEventListener('input', function () {
-            var lang      = titleInput.dataset.slugSource;
-            var slugInput = document.querySelector('[data-slug-input][data-lang="' + lang + '"]');
-            if (!slugInput || slugInput.dataset.touched === '1') return;
-            slugInput.value = normalizeSlug(titleInput.value);
-        });
+    /* ── تمييز التبويبات التي بها أخطاء ── */
+    document.querySelectorAll('.is-invalid').forEach(function (field) {
+        // حقل الاسم مثل "translations[ar][title]" → نستخرج langCode
+        var nameAttr = field.getAttribute('name') || '';
+        var match    = nameAttr.match(/translations\[([^\]]+)\]/);
+        if (!match) return;
+        var lang = match[1];
+        // أشعل has-error على تبويبات اللغة المعنية
+        document.querySelectorAll('[data-lang-tab="' + lang + '"], [data-seo-tab="' + lang + '"]')
+            .forEach(function (btn) { btn.classList.add('has-error'); });
     });
 
     /* ── CKEditor 5 ── */

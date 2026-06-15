@@ -988,9 +988,6 @@
   .ms-3 {
     margin-inline-start: calc(var(--spacing) * 3);
   }
-  .ms-4 {
-    margin-inline-start: calc(var(--spacing) * 4);
-  }
   .ms-auto {
     margin-inline-start: auto;
   }
@@ -1813,9 +1810,6 @@
   }
   .max-w-\[507px\] {
     max-width: 507px;
-  }
-  .max-w-\[735px\] {
-    max-width: 735px;
   }
   .max-w-\[800px\] {
     max-width: 800px;
@@ -4606,9 +4600,6 @@
   }
   .text-\[\#F53003\] {
     color: #F53003;
-  }
-  .text-\[\#a8a8a8\] {
-    color: #a8a8a8;
   }
   .text-\[\#d9d9d9\] {
     color: #d9d9d9;

@@ -226,6 +226,9 @@
                 if (form) {
                     form.submit();
                 }
+            }
+        });
+    }
     </script>
     @endpush
 </x-dashboard-layout>

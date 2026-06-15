@@ -187,7 +187,7 @@ class HomeController extends Controller
         if (!is_array($decoded)) {
             return redirect()
                 ->route('dashboard.general_settings')
-                ->with('error', __('ملف JSON غير صالح. يرجى رفع ملف تصدير صحيح.'));
+                ->with('error', t('dashboard.Invalid_Json_File', 'ملف JSON غير صالح. يرجى رفع ملف تصدير صحيح.'));
         }
 
         $payload = $decoded['general_setting'] ?? $decoded;
@@ -195,7 +195,7 @@ class HomeController extends Controller
         if (!is_array($payload)) {
             return redirect()
                 ->route('dashboard.general_settings')
-                ->with('error', __('محتوى الإعدادات غير صالح.'));
+                ->with('error', t('dashboard.Invalid_Settings_Content', 'محتوى الإعدادات غير صالح.'));
         }
 
         $validator = Validator::make($payload, [
@@ -246,7 +246,7 @@ class HomeController extends Controller
         if ($validator->fails()) {
             return redirect()
                 ->route('dashboard.general_settings')
-                ->with('error', __('فشل الاستيراد: الملف يحتوي على قيم غير صالحة.'));
+                ->with('error', t('dashboard.Import_Invalid_Values', 'فشل الاستيراد: الملف يحتوي على قيم غير صالحة.'));
         }
 
         $validated = $validator->validated();
@@ -319,7 +319,7 @@ class HomeController extends Controller
 
         return redirect()
             ->route('dashboard.general_settings')
-            ->with('success', __('تم استيراد الإعدادات العامة بنجاح.'));
+            ->with('ok', t('dashboard.Settings_Imported', 'تم استيراد الإعدادات العامة بنجاح.'));
     }
 
     public function updateGeneralSettings(Request $request): RedirectResponse
@@ -474,7 +474,7 @@ class HomeController extends Controller
 
         return redirect()
             ->route('dashboard.general_settings')
-            ->with('success', __('تم حفظ الإعدادات العامة بنجاح.'));
+            ->with('ok', t('dashboard.Settings_Saved', 'تم حفظ الإعدادات العامة بنجاح.'));
     }
 
     public function autoSaveGeneralSettings(Request $request): JsonResponse
@@ -895,10 +895,6 @@ class HomeController extends Controller
         }
 
         $normalized = ltrim($normalized, '/');
-        if (str_starts_with($normalized, 'storage/')) {
-            $normalized = substr($normalized, strlen('storage/'));
-        }
-
         return $normalized;
     }
 }

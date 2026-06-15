@@ -88,7 +88,7 @@ class TestimonialSubmissionController extends Controller
 
             return redirect()
                 ->route('testimonials.submit')
-                ->with('success', __('شكراً لك! تم استلام تقييمك وسنقوم بمراجعته قبل نشره.'));
+                ->with('ok', t('site.Testimonial_Received', 'شكراً لك! تم استلام تقييمك وسنقوم بمراجعته قبل نشره.'));
 
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -99,8 +99,8 @@ class TestimonialSubmissionController extends Controller
             }
 
             return back()->withErrors([
-                'error' => __('حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى.'),
-            ])->withInput();
+                'error' => t('site.Unexpected_Error', 'حدث خطأ غير متوقع، يرجى المحاولة مرة أخرى.'),
+            ]);
         }
     }
 }

@@ -69,7 +69,7 @@ class TemplateReviewController extends Controller
         $review->approved = true;
         $review->save();
 
-        return back()->with('success', 'تم اعتماد المراجعة بنجاح.');
+        return back()->with('ok', t('dashboard.Review_Approved', 'تم اعتماد المراجعة بنجاح.'));
     }
 
     /**
@@ -82,7 +82,7 @@ class TemplateReviewController extends Controller
         $review->approved = false;
         $review->save();
 
-        return back()->with('success', 'تم إلغاء اعتماد المراجعة.');
+        return back()->with('ok', t('dashboard.Review_Rejected', 'تم إلغاء اعتماد المراجعة.'));
     }
 
     /**
@@ -94,7 +94,7 @@ class TemplateReviewController extends Controller
 
         $review->delete();
 
-        return back()->with('success', 'تم حذف المراجعة بنجاح.');
+        return back()->with('ok', t('dashboard.Review_Deleted', 'تم حذف المراجعة بنجاح.'));
     }
 
     /**
@@ -131,11 +131,11 @@ class TemplateReviewController extends Controller
         });
 
         $messages = [
-            'approve' => "تم اعتماد {$affected} مراجعة.",
-       'reject'  => "تم رفض {$affected} مراجعة.",
-            'delete'  => "تم حذف {$affected} مراجعة.",
+            'approve' => strtr(t('dashboard.Review_Bulk_Approved', 'تم اعتماد :count مراجعة.'), [':count' => $affected]),
+            'reject'  => strtr(t('dashboard.Review_Bulk_Rejected', 'تم رفض :count مراجعة.'), [':count' => $affected]),
+            'delete'  => strtr(t('dashboard.Review_Bulk_Deleted', 'تم حذف :count مراجعة.'), [':count' => $affected]),
         ];
 
-        return back()->with('success', $messages[$action]);
+        return back()->with('ok', $messages[$action]);
     }
 }

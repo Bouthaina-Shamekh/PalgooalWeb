@@ -49,7 +49,7 @@ class UpdateSectionDefinitionRequest extends FormRequest
                     }
 
                     if (! SectionTemplateRegistry::isValidTemplateKey((string) $value)) {
-                        $fail(__('Template Key may only contain lowercase letters, numbers, underscores, and dashes.'));
+                        $fail(t('dashboard.Template_Key_Invalid', 'Template Key may only contain lowercase letters, numbers, underscores, and dashes.'));
                     }
                 },
             ],

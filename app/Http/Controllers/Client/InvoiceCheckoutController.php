@@ -67,7 +67,7 @@ class InvoiceCheckoutController extends Controller
             return redirect()->route('client.invoices.checkout', [
                 'invoice' => $invoice,
                 'state' => 'paid',
-            ])->with('success', 'Demo payment completed successfully.');
+            ])->with('ok', t('client.Demo_Payment_Completed', 'تمت عملية الدفع التجريبي بنجاح.'));
         }
 
         if ($data['scenario'] === 'failed') {

@@ -61,7 +61,7 @@ class AppearanceController extends Controller
 
         return redirect()
             ->route('dashboard.appearance.header')
-            ->with('success', __('Header layout activated successfully.'));
+            ->with('ok', t('dashboard.Header_Layout_Activated', 'Header layout activated successfully.'));
     }
 
     public function updateHeaderSettings(Request $request): RedirectResponse
@@ -202,7 +202,7 @@ class AppearanceController extends Controller
 
         return redirect()
             ->route('dashboard.appearance.header')
-            ->with('success', __('Header settings saved successfully.'));
+            ->with('ok', t('dashboard.Header_Settings_Saved', 'Header settings saved successfully.'));
     }
 
     public function footer(): View
@@ -251,7 +251,7 @@ class AppearanceController extends Controller
 
         return redirect()
             ->route('dashboard.appearance.footer')
-            ->with('success', __('Footer layout activated successfully.'));
+            ->with('ok', t('dashboard.Footer_Layout_Activated', 'Footer layout activated successfully.'));
     }
 
     public function updateFooterSettings(Request $request): RedirectResponse
@@ -445,7 +445,7 @@ class AppearanceController extends Controller
 
         return redirect()
             ->route('dashboard.appearance.footer')
-            ->with('success', __('Footer settings saved successfully.'));
+            ->with('ok', t('dashboard.Footer_Settings_Saved', 'Footer settings saved successfully.'));
     }
 
     protected function settings(): GeneralSetting
@@ -798,8 +798,11 @@ class AppearanceController extends Controller
         }
 
         $normalized = (int) $value;
-        if ($normalized < $min || $normalized > $max) {
-            return $fallback;
+        if ($normalized < $min) {
+            return $min;
+        }
+        if ($normalized > $max) {
+            return $max;
         }
 
         return $normalized;

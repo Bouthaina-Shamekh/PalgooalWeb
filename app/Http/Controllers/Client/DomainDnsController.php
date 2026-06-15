@@ -34,7 +34,7 @@ class DomainDnsController extends Controller
 
         return redirect()
             ->route('client.domains.dns.edit', $domain)
-            ->with('success', $result['message'] ?? 'Nameservers updated successfully.');
+            ->with('ok', $result['message'] ?? t('client.Nameservers_Updated', 'تم تحديث خوادم الأسماء بنجاح.'));
     }
 
     protected function ownedDomain(Domain $domain): Domain

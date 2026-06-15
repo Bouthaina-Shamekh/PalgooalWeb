@@ -69,7 +69,7 @@ class UserController extends Controller
             DB::rollBack();
             return redirect()->back()->with('danger', $e->getMessage());
         }
-        return redirect()->route('dashboard.users.index')->with('success', 'تم اضافة مستخدم جديد');
+        return redirect()->route('dashboard.users.index')->with('ok', t('dashboard.User_Created', 'تم إضافة مستخدم جديد بنجاح.'));
     }
 
 
@@ -92,7 +92,7 @@ class UserController extends Controller
     public function edit(Request $request, User $user)
     {
         $this->authorize('edit', User::class);
-        $btn_label = __('Edit');
+        $btn_label = t('dashboard.Edit', 'Edit');
         return view('dashboard.users.edit', compact('user', 'btn_label'));
     }
 
@@ -152,7 +152,7 @@ class UserController extends Controller
             DB::rollBack();
             return redirect()->back()->with('danger', $e->getMessage());
         }
-        return redirect()->back()->with('success', 'تم تعديل المستخدم');
+        return redirect()->back()->with('ok', t('dashboard.User_Updated', 'تم تعديل المستخدم بنجاح.'));
     }
 
     /**
@@ -162,7 +162,7 @@ class UserController extends Controller
     {
         $this->authorize('delete', User::class);
         $user->delete();
-        return redirect()->route('dashboard.users.index')->with('success', 'تم حذف المستخدم');
+        return redirect()->route('dashboard.users.index')->with('ok', t('dashboard.User_Deleted', 'تم حذف المستخدم بنجاح.'));
     }
 }
 

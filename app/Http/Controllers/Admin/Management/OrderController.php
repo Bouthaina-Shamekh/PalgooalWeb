@@ -86,7 +86,7 @@ class OrderController extends Controller
             }
         }
 
-        return redirect()->back()->with('ok', __(':count order(s) updated.', ['count' => $affected]));
+        return redirect()->back()->with('ok', strtr(t('dashboard.Orders_Updated', ':count order(s) updated.'), [':count' => $affected]));
     }
 
     /**
@@ -130,7 +130,7 @@ class OrderController extends Controller
 
         return redirect()
             ->route('dashboard.orders.show', $order->id)
-            ->with('success', __('Order status updated successfully.'));
+            ->with('ok', t('dashboard.Order_Status_Updated', 'Order status updated successfully.'));
     }
 }
 

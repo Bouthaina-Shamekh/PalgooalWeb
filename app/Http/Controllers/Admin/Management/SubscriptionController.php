@@ -196,7 +196,7 @@ class SubscriptionController extends Controller
         app(DomainVerificationService::class)->reset($subscription->fresh());
 
         return redirect()->route('dashboard.subscriptions.index')
-            ->with('ok', __('Subscription updated successfully.'));
+            ->with('ok', t('dashboard.Subscription_Updated', 'Subscription updated successfully.'));
     }
 
     public function destroy(Subscription $subscription)
@@ -207,7 +207,7 @@ class SubscriptionController extends Controller
         $subscription->delete();
 
         return redirect()->route('dashboard.subscriptions.index')
-            ->with('ok', __('Subscription deleted.'));
+            ->with('ok', t('dashboard.Subscription_Deleted', 'Subscription deleted.'));
     }
 
     // -------------------------------------------------------------------------
@@ -267,9 +267,9 @@ class SubscriptionController extends Controller
             }
         }
 
-        $message = __('Operation applied to selected subscriptions.');
+        $message = t('dashboard.Bulk_Operation_Applied', 'Operation applied to selected subscriptions.');
         if ($dispatchedCount > 0) {
-            $message .= ' ' . __(':count job(s) queued for background processing.', ['count' => $dispatchedCount]);
+            $message .= ' ' . strtr(t('dashboard.Jobs_Queued', ':count job(s) queued for background processing.'), [':count' => $dispatchedCount]);
         }
 
         return redirect()->route('dashboard.subscriptions.index')->with('ok', $message);
@@ -300,7 +300,7 @@ class SubscriptionController extends Controller
 
         ProvisionSubscription::dispatch($subscription->id, true);
 
-        return back()->with('toast_success', __('Subscription provisioning request has been queued.'));
+        return back()->with('ok', t('dashboard.Provisioning_Queued', 'Subscription provisioning request has been queued.'));
     }
 
     public function verifyDomain(Subscription $subscription, DomainVerificationService $verification)

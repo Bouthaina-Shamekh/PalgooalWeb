@@ -99,7 +99,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('dashboard.menus', ['menu' => $menu->id])
-            ->with('success', t('dashboard.Menu_Created_Success', 'Menu created successfully.'));
+            ->with('ok', t('dashboard.Menu_Created_Success', 'Menu created successfully.'));
     }
 
     public function update(Request $request, Header $menu): RedirectResponse
@@ -129,7 +129,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('dashboard.menus', ['menu' => $menu->id])
-            ->with('success', t('dashboard.Menu_Updated_Success', 'Menu settings updated successfully.'));
+            ->with('ok', t('dashboard.Menu_Updated_Success', 'Menu settings updated successfully.'));
     }
 
     public function destroy(Header $menu): RedirectResponse
@@ -151,7 +151,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('dashboard.menus', ['menu' => $fallback?->id])
-            ->with('success', t('dashboard.Menu_Deleted_Success', 'Menu deleted successfully.'));
+            ->with('ok', t('dashboard.Menu_Deleted_Success', 'Menu deleted successfully.'));
     }
 
     public function duplicate(Header $menu): RedirectResponse
@@ -192,7 +192,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('dashboard.menus', ['menu' => $copiedMenu->id])
-            ->with('success', t('dashboard.Menu_Duplicated_Success', 'Menu duplicated successfully.'));
+            ->with('ok', t('dashboard.Menu_Duplicated_Success', 'Menu duplicated successfully.'));
     }
 
     public function storeItem(Request $request, Header $menu): RedirectResponse
@@ -220,7 +220,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('dashboard.menus', ['menu' => $menu->id])
-            ->with('success', t('dashboard.Menu_Item_Created_Success', 'Menu item added successfully.'));
+            ->with('ok', t('dashboard.Menu_Item_Created_Success', 'Menu item added successfully.'));
     }
 
     public function updateItem(Request $request, Header $menu, HeaderItem $item): RedirectResponse
@@ -252,7 +252,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('dashboard.menus', ['menu' => $menu->id])
-            ->with('success', t('dashboard.Menu_Item_Updated_Success', 'Menu item updated successfully.'));
+            ->with('ok', t('dashboard.Menu_Item_Updated_Success', 'Menu item updated successfully.'));
     }
 
     public function destroyItem(Header $menu, HeaderItem $item): RedirectResponse
@@ -266,7 +266,7 @@ class MenuController extends Controller
 
         return redirect()
             ->route('dashboard.menus', ['menu' => $menu->id])
-            ->with('success', t('dashboard.Menu_Item_Deleted_Success', 'Menu item deleted successfully.'));
+            ->with('ok', t('dashboard.Menu_Item_Deleted_Success', 'Menu item deleted successfully.'));
     }
 
     public function reorderItems(Request $request, Header $menu): JsonResponse
