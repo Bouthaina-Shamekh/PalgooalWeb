@@ -1,38 +1,66 @@
-# دليل الوكيل في Palgoals
+# دليل الوكيل — Palgoals
 
-استخدم هذا الملف قبل أي تعديل غير بسيط.
+استخدم هذا الملف قبل أي تعديل على الكود.
 
-## اقرأ أولاً
+---
 
-اقرأ الملفات التالية بالترتيب:
+## اقرأ أولاً (بالترتيب)
 
-1. `NOTES.md`
-2. `docs/developer-guide.md`
-3. `docs/architecture.md`
-4. `docs/sections-system.md`
-5. `docs/editor-system.md`
-6. `docs/refactor-plan.md`
+```
+docs/README.md                  ← نقطة الدخول — اقرأه دائماً
+docs/00-project-overview.md     ← ما هو النظام؟
+docs/01-system-architecture.md  ← خريطة الوحدات، الـ guards، الـ middleware
+docs/22-coding-standards.md     ← t()، تسمية المفاتيح، أنماط UX، قواعد PR
+```
+
+ثم اقرأ الوثيقة المتخصصة حسب المهمة:
+
+| المهمة | الوثيقة |
+|--------|---------|
+| Section / Rendering | `docs/07-section-definitions.md` + `docs/09-rendering-flow.md` |
+| قاعدة البيانات / Migration | `docs/03-database-architecture.md` |
+| Auth / Permissions / Policies | `docs/24-security-notes.md` |
+| Billing / Invoices / Subscriptions | `docs/25-billing-system.md` |
+| Languages / t() / Translations | `docs/26-locale-system.md` |
+| إعداد بيئة / Onboarding | `docs/21-developer-guide.md` |
+
+---
 
 ## قواعد أساسية
 
-- اعتبر `Section` للبيانات الهيكلية و`SectionTranslation` للمحتوى المحلي.
-- لا تفترض وجود pipeline أصول واحد؛ تحقّق هل الشاشة تستخدم Vite أو Laravel Mix.
-- فضّل التحضير في controller أو support layer على Blade الثقيل.
-- إذا لمس العمل uploads أو queues أو storage أو tenancy أو مزوداً خارجياً، فتحقّق من الإعدادات أولاً.
-- قبل تعديل frontend rendering، حدّد هل الصفحة تعمل عبر published builder HTML أو builder JSON أو legacy sections.
+- **`t()` فقط** — `__()` و `trans()` محظوران في أي ملف Blade أو PHP.
+- **Flash keys**: `session('ok')` للنجاح، `session('error')` للخطأ. لا تستخدم `'success'`.
+- **Section content**: `$data` هو المتغير الصحيح في Blade views — ليس `$fields`.
+- **RTL**: الموقع عربي RTL بشكل أساسي — افترض RTL في أي تصميم UI جديد.
+- **Money**: كل المبالغ تُخزَّن كـ integer cents. لا floats.
+- إذا لمس العمل **tenancy أو provisioning أو WHM**: راجع `docs/25-billing-system.md` و `docs/24-security-notes.md` أولاً.
+- إذا لمس العمل **Sections أو rendering**: راجع `docs/07-section-definitions.md` أولاً.
 
-## التعليمات المتخصصة
+---
 
-استخدم ملف التعليمات المناسب داخل `.github/instructions/` حسب المسار الذي تعمل فيه.
+## لا تقرأ هذه الملفات — إنها مؤرشفة
 
-- `resources/views/dashboard/pages/sections/**`
-- `app/Http/Controllers/Admin/SectionController.php`
-- `app/Support/Sections/**`
-- `resources/views/front/pages/**`
-- `resources/views/components/template/sections/**`
-- `routes/client.php`
-- `app/Models/Tenancy/**`
-- `app/Services/Tenancy/**`
-- `app/Jobs/**`
+الملفات التالية في `docs/_archive/` قديمة وقد تحتوي معلومات خاطئة:
 
-نقطة الدخول الرئيسية لتعليمات workspace هي `.github/copilot-instructions.md`.
+```
+docs/_archive/legacy-docs/architecture.md
+docs/_archive/legacy-docs/developer-guide.md
+docs/_archive/legacy-docs/editor-system.md
+docs/_archive/legacy-docs/locale-system.md
+docs/_archive/legacy-docs/invoice-system.md
+docs/_archive/legacy-docs/order-system.md
+docs/_archive/legacy-docs/subscription-system.md
+docs/_archive/legacy-docs/sections-system.md
+docs/_archive/legacy-plans/refactor-plan.md
+```
+
+المرجع الصحيح دائماً هو الوثائق المرقّمة في `docs/`.
+
+---
+
+## الملاحظات السياقية
+
+- `CLAUDE.md` في جذر المشروع يحتوي السجل الكامل لتغييرات الجلسات — راجعه لفهم أي تعديل سابق.
+- المشروع يعمل على **Laravel 11** + Blade + Tailwind + Alpine.js + GSAP.
+- قاعدة البيانات: MySQL على `127.0.0.1:3306`، DB: `palgoalsnewtest1`.
+- PHP غير متوفر في sandbox — كل أوامر `artisan` تُشغَّل على جهاز المستخدم.

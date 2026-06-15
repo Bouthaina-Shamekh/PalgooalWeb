@@ -1,7 +1,6 @@
 # Section Definitions
 
-> **Last Updated:** 2026-06-15 · **Status:** Verified  
-> **Source files merged:** `section-definitions.md` + `section-definitions-system.md`  
+> **Last Updated:** 2026-06-15 · **Status:** Verified · **Source:** Code-first  
 > This document is the single source of truth for the Section Definitions system.
 
 ---
@@ -141,10 +140,10 @@ Every field has a `field_scope` that determines how its value is stored and retr
 | `shared` | `Section.settings` JSON | Field content is the same for all languages (background color, display order, boolean toggles) |
 
 ```php
-// In a Blade view, $fields is already resolved for the current locale.
-// shared and translatable fields are accessed identically:
-{{ $fields['title'] ?? '' }}           // translatable
-{{ $fields['background_color'] ?? '' }} // shared
+// In a Blade view, $data is the runtime variable containing all resolved field values.
+// Shared and translatable fields are accessed identically — both merged into $data:
+{{ $data['title'] ?? '' }}           // translatable field
+{{ $data['background_color'] ?? '' }} // shared field
 ```
 
 ---
@@ -213,8 +212,8 @@ SectionRenderer::render($section)
       │       │
       │       ├── SectionDefinitionFrontendViewDataFactory::build()
       │       │       resolves field values for current locale
-      │       │       builds $fields array (shared + translatable merged)
-      │       │       returns ['view' => '...', 'viewData' => ['fields' => ...]]
+      │       │       builds $data array (shared + translatable merged)
+      │       │       returns ['view' => '...', 'viewData' => ['data' => ...]]
       │       │
       │       └── view($view, $viewData)->render()  → HTML
       │
@@ -300,7 +299,7 @@ public function resolveLinkedDefinition(Section $section, ?string $editorMode = 
 
 ## 11. Blade File Writer
 
-The Blade Editor allows writing the definition's Blade template directly from the browser. See `docs/08-section-blade-editor.md` for the full workflow. Summary:
+The Blade Editor allows writing the definition's Blade template directly from the browser. Summary:
 
 ```
 Monaco Editor (browser)
@@ -383,11 +382,11 @@ Field 3:
 {{-- resources/views/front/sections/services/services_grid.blade.php --}}
 <section class="services-section py-16">
     <div class="container">
-        <h2>{{ $fields['title'] ?? '' }}</h2>
-        <p>{{ $fields['subtitle'] ?? '' }}</p>
+        <h2>{{ $data['title'] ?? '' }}</h2>
+        <p>{{ $data['subtitle'] ?? '' }}</p>
 
         <div class="grid grid-cols-3 gap-6">
-            @foreach ($fields['items'] ?? [] as $item)
+            @foreach (is_array($data['items'] ?? null) ? $data['items'] : [] as $item)
                 <div class="service-card">
                     <i class="{{ $item['icon'] ?? '' }}"></i>
                     <h3>{{ $item['title'] ?? '' }}</h3>
@@ -414,28 +413,63 @@ Admin fills in content per language. `SectionTranslation` records are saved on s
 
 ---
 
-## 13. Using `$fields` in Blade Views
+## 13. Blade View Contract
 
-Inside a definition-driven Blade view, the `$fields` variable contains resolved field values for the current locale. Shared and translatable fields are accessed identically.
+> **Current runtime contract:** The Blade variable is `$data`. Do not use `$fields`, `$sharedData`, or `$translatableData` — these are not defined at runtime.
+
+### Variable Reference
+
+| Variable | Value | Notes |
+|----------|-------|-------|
+| `$data` | Flat array of all resolved field values | **Primary variable. Use this.** |
+| `$content` | Alias — identical to `$data` | Passed for backward compatibility. Prefer `$data`. |
+| `$section` | The `Section` Eloquent model | ID, type, variant, order |
+| `$translation` | Current locale `SectionTranslation` | title, locale |
+| `$sectionDefinition` | The linked `SectionDefinition` model | section_key, category, label |
+| `$currentLocale` | String — current app locale | `'ar'`, `'en'`, etc. |
+| `$fields` | **Not defined** | Do not use. Reserved for a future ADR if contract changes. |
+
+### What `$data` Contains
+
+`$data` is a flat array built by `SectionDefinitionFrontendViewDataFactory::normalizeContent()` from three sources merged in this priority order:
+
+1. **Stored field values** from `section_translations.content` JSON (current locale for translatable fields, shared values for shared fields)
+2. **Default values** from `SectionDefinitionField.default_value` for any key not present in stored content
+3. **`SectionQueryResolver` injected data** — runtime DB lookups (e.g. fetching Testimonial records for a reviews section)
+
+Both shared and translatable fields appear at the same level. There is no sub-grouping by scope.
+
+### Canonical Usage Examples
 
 ```blade
-{{-- text / textarea / richtext / url --}}
-{{ $fields['title'] ?? '' }}
-{!! $fields['body_html'] ?? '' !!}   {{-- richtext: output raw HTML --}}
+{{-- text / url --}}
+@php $title = trim((string) ($data['title'] ?? '')); @endphp
+@if ($title)
+    <h2>{{ $title }}</h2>
+@endif
 
-{{-- media (returns the stored path string) --}}
-<img src="{{ $fields['hero_image'] ?? '' }}" alt="">
+{{-- richtext / html — unescaped, admin-controlled content only --}}
+@php $body = trim((string) ($data['body_html'] ?? '')); @endphp
+@if ($body)
+    <div>{!! $body !!}</div>
+@endif
+
+{{-- media --}}
+@php $image = \App\Support\Sections\SectionFrontendMediaResolver::resolve($data['image'] ?? null); @endphp
+@if ($image)
+    <img src="{{ $image }}" alt="{{ $data['image_alt'] ?? '' }}">
+@endif
 
 {{-- boolean --}}
-@if (!empty($fields['show_cta']))
-    <a href="{{ $fields['cta_url'] ?? '#' }}">{{ $fields['cta_label'] ?? '' }}</a>
+@if (!empty($data['show_cta']))
+    <a href="{{ $data['cta_url'] ?? '#' }}">{{ $data['cta_label'] ?? '' }}</a>
 @endif
 
 {{-- select --}}
-<div class="text-{{ $fields['alignment'] ?? 'center' }}">
+<div class="text-{{ $data['alignment'] ?? 'center' }}">
 
 {{-- repeater --}}
-@foreach ($fields['items'] ?? [] as $item)
+@foreach (is_array($data['items'] ?? null) ? $data['items'] : [] as $item)
     <div class="card">
         <h3>{{ $item['title'] ?? '' }}</h3>
         <p>{{ $item['desc'] ?? '' }}</p>
@@ -443,7 +477,22 @@ Inside a definition-driven Blade view, the `$fields` variable contains resolved 
 @endforeach
 ```
 
-**Always use `?? ''` or `?? []`** — a field may be absent from `$fields` if the section was saved before the field was added to the definition.
+**Always use `?? ''` or `?? []`** — a field may be absent from `$data` if the section was saved before the field was added to the definition.
+
+### Monaco Scaffold Output
+
+The "Scaffold من الحقول" button in the Monaco editor generates code that reads from `$data`:
+
+```blade
+@php
+    // Scaffold: hero_main — 2026-06-15
+    $title = trim((string)($data['title'] ?? ''));
+    $image = \App\Support\Sections\SectionFrontendMediaResolver::resolve($data['image'] ?? null);
+    $items = is_array($data['items'] ?? null) ? $data['items'] : [];
+@endphp
+```
+
+> **Note:** Code generated before June 2026 may incorrectly reference `$sharedData` or `$translatableData`. These variables are undefined at runtime. Replace them with `$data['field_key']`.
 
 ---
 
@@ -664,7 +713,7 @@ app/
 │   ├── SectionTemplateRegistry.php            Maps template_key → Blade view path
 │   ├── SectionTemplateFileWriter.php          Writes blade_source to disk
 │   ├── SectionDefinitionRuntimeResolver.php   Runtime checks (active? has template?)
-│   ├── SectionDefinitionFrontendViewDataFactory.php  Builds $fields for Blade views
+│   ├── SectionDefinitionFrontendViewDataFactory.php  Builds $data for Blade views
 │   ├── DynamicSectionEditorRenderer.php       Builds admin dynamic editor payload
 │   ├── SectionDefinitionFieldFormDataFactory.php     Form data + persistence normalization
 │   └── SectionDefinitionLocaleProvider.php    Active locale list for field forms
@@ -817,43 +866,4 @@ Phase 4 — Blade Editor  [April 2026]
   Monaco Editor in the admin panel
   base64 encoding to bypass ModSecurity WAF
 
-        ↓  (need for structured content editing per field)
-
-Phase 5A — Dynamic Editor (schema foundation)  [May 2026]
-  editor_mode = dynamic; all rows normalized, custom_preset removed
-  DynamicSectionEditorRenderer builds field-by-field editor payload
-  Repeater field type added at schema level (item_schema stored)
-
-  [Phase 5B — Repeater content editor UI — deferred]
-```
-
----
-
-## 26. Changelog
-
-| Date | Change |
-|------|--------|
-| 2026-06-15 | Merged `section-definitions.md` + `section-definitions-system.md` into this unified reference. Added `blade_source` / `blade_written_at` columns to data model table. |
-| 2026-05-09 | `'edit'` ability renamed to `'update'` throughout. `try/catch(LogicException)` added to field controller for repeater schema errors. `fields()->delete()` replaced with `each(fn($f) => $f->delete())` to preserve model events. `@can` directives added to all action elements. |
-| 2026-04-27 | All `editor_mode` rows normalized to `dynamic`. `custom_editor_key` retained for compatibility. |
-| 2026-04-18 | `preview_media_id` FK added to `section_definitions` with `nullOnDelete`. |
-| 2026-04-11 | Initial creation: `section_definitions`, `section_definition_fields`, `section_definition_template` tables. Repeater field type (Phase 5A schema foundation). |
-
----
-
-## 27. Quick Reference
-
-| Task | Location |
-|------|----------|
-| Create a new section type | `GET /admin/section-definitions/create` |
-| Add / edit fields | `GET /admin/section-definitions/{id}/fields` |
-| Write the Blade template | `GET /admin/section-definitions/{id}/edit` → Blade Editor tab |
-| Frontend render entry point | `App\Support\Sections\SectionRenderer::render()` |
-| Template → Blade view resolution | `App\Support\Sections\SectionTemplateRegistry` |
-| Write Blade to disk | `App\Support\Sections\SectionTemplateFileWriter` |
-| Runtime checks (active? has template?) | `App\Support\Sections\SectionDefinitionRuntimeResolver` |
-| Build $fields for Blade views | `App\Support\Sections\SectionDefinitionFrontendViewDataFactory` |
-| Admin dynamic editor payload | `App\Support\Sections\DynamicSectionEditorRenderer` |
-| Registered templates config | `config/sections.php` → `template_registry.templates` |
-| Further architecture details | `app/Support/Sections/DeveloperSectionManagementArchitecture.php` |
-| Blade Editor full workflow | `docs/08-section-blade-editor.md` |
+        ↓  (need for structured content e

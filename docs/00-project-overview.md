@@ -140,7 +140,7 @@ The written code is stored in `blade_source` in the database and simultaneously 
 resources/views/front/sections/{category}/{section_key}.blade.php
 ```
 
-This is handled by `SectionTemplateFileWriter`. See `docs/08-section-blade-editor.md` for the full workflow.
+This is handled by `SectionTemplateFileWriter`. The workflow is documented in `docs/07-section-definitions.md § Blade File Writer`.
 
 ### Dynamic Editor
 

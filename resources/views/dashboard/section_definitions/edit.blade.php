@@ -548,32 +548,37 @@
         }
 
         /* ── 4. CODE GENERATION ── */
+        // Runtime contract: $data is a flat array of all field values (shared + translatable merged).
+        // $content is an alias for $data in definition-driven sections.
+        // Do NOT generate $sharedData, $translatableData, or $fields — those are not defined at runtime.
         function generateSnippet(f) {
-            var k = f.field_key, type = f.field_type, scope = f.field_scope;
-            var src = scope === 'translatable'
-                ? "$translatableData['" + k + "'] ?? ''"
-                : "$sharedData['" + k + "'] ?? null";
+            var k = f.field_key, type = f.field_type;
             var lines;
             if (type === 'media' || type === 'image') {
                 lines = [
-                    '@php $' + k + ' = \\App\\Support\\Sections\\SectionFrontendMediaResolver::resolve($sharedData[\'' + k + '\'] ?? null); @endphp',
-                    '@if ($' + k + ')', '    <img src="{{ $' + k + ' }}" alt="">', '@endif'
+                    '@php $' + k + ' = \\App\\Support\\Sections\\SectionFrontendMediaResolver::resolve($data[\'' + k + '\'] ?? null); @endphp',
+                    '@if ($' + k + ')', '    <img src="{{ $' + k + ' }}" alt="{{ $data[\'' + k + '_alt\'] ?? \'\' }}">', '@endif'
                 ];
             } else if (type === 'boolean' || type === 'toggle') {
-                lines = ['@if (' + src + ')', '    {{-- ' + k + ' enabled --}}', '@endif'];
+                lines = [
+                    '@if (!empty($data[\'' + k + '\']))',
+                    '    {{-- ' + k + ' enabled --}}',
+                    '@endif'
+                ];
             } else if (type === 'repeater') {
                 lines = [
-                    '@php $' + k + ' = is_array($sharedData[\'' + k + '\'] ?? null) ? $sharedData[\'' + k + '\'] : []; @endphp',
-                    '@foreach ($' + k + ' as $' + k + 'Item)', '    {{-- render item --}}', '@endforeach'
+                    '@foreach (is_array($data[\'' + k + '\'] ?? null) ? $data[\'' + k + '\'] : [] as $' + k + 'Item)',
+                    '    {{-- render $' + k + 'Item --}}',
+                    '@endforeach'
                 ];
             } else if (type === 'textarea' || type === 'richtext' || type === 'html') {
                 lines = [
-                    '@php $' + k + ' = trim((string)(' + src + ')); @endphp',
+                    '@php $' + k + ' = trim((string)($data[\'' + k + '\'] ?? \'\')); @endphp',
                     '@if ($' + k + ')', '    <div>{!! $' + k + ' !!}</div>', '@endif'
                 ];
             } else {
                 lines = [
-                    '@php $' + k + ' = trim((string)(' + src + ')); @endphp',
+                    '@php $' + k + ' = trim((string)($data[\'' + k + '\'] ?? \'\')); @endphp',
                     '@if ($' + k + ')', '    <p>{{ $' + k + ' }}</p>', '@endif'
                 ];
             }
@@ -587,18 +592,17 @@
                 var k = f.field_key, type = f.field_type, scope = f.field_scope;
                 var comment = '    {{-- ' + k + ' / ' + type + ' / ' + scope + ' --}}';
                 if (type === 'media' || type === 'image') {
-                    phpLines.push('    $' + k + ' = \\App\\Support\\Sections\\SectionFrontendMediaResolver::resolve($sharedData[\'' + k + '\'] ?? null);');
-                    htmlParts.push(comment, '    @if ($' + k + ')', '        <img src="{{ $' + k + ' }}" alt="">', '    @endif');
+                    phpLines.push('    $' + k + ' = \\App\\Support\\Sections\\SectionFrontendMediaResolver::resolve($data[\'' + k + '\'] ?? null);');
+                    htmlParts.push(comment, '    @if ($' + k + ')', '        <img src="{{ $' + k + ' }}" alt="{{ $data[\'' + k + '_alt\'] ?? \'\' }}">', '    @endif');
                 } else if (type === 'boolean' || type === 'toggle') {
-                    phpLines.push('    $' + k + ' = (bool)($sharedData[\'' + k + '\'] ?? false);');
+                    phpLines.push('    $' + k + ' = !empty($data[\'' + k + '\']);');
                     htmlParts.push(comment, '    @if ($' + k + ')', '        {{-- ' + k + ' enabled --}}', '    @endif');
                 } else if (type === 'repeater') {
-                    phpLines.push('    $' + k + ' = is_array($sharedData[\'' + k + '\'] ?? null) ? $sharedData[\'' + k + '\'] : [];');
+                    phpLines.push('    $' + k + ' = is_array($data[\'' + k + '\'] ?? null) ? $data[\'' + k + '\'] : [];');
                     htmlParts.push(comment, '    @foreach ($' + k + ' as $' + k + 'Item)', '        {{-- render item --}}', '    @endforeach');
                 } else {
-                    var s = scope === 'translatable' ? "$translatableData['" + k + "'] ?? ''" : "$sharedData['" + k + "'] ?? ''";
                     var isHtml = (type === 'textarea' || type === 'richtext' || type === 'html');
-                    phpLines.push('    $' + k + ' = trim((string)(' + s + '));');
+                    phpLines.push('    $' + k + ' = trim((string)($data[\'' + k + '\'] ?? \'\'));');
                     htmlParts.push(comment, '    @if ($' + k + ')',
                         isHtml ? '        <div>{!! $' + k + ' !!}</div>' : '        <p>{{ $' + k + ' }}</p>',
                         '    @endif');
