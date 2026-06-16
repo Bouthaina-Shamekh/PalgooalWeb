@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\SectionDefinitionImportExportController;
 use App\Http\Controllers\Admin\AppearanceController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\ClientController as AdminClientController;
+use App\Http\Controllers\Admin\PaymentGatewayController;
 
 // -----------------------------------------------------------------------------
 // Management Controllers (Hosting / Billing / Domains / Plans)
@@ -523,6 +524,17 @@ Route::group([
     Route::post('/domain-tlds/apply-pricing', [DomainTldController::class, 'applyPricing'])->name('domain_tlds.apply-pricing');
     Route::delete('/domain-tlds/{domainTld}', [DomainTldController::class, 'destroy'])->name('domain_tlds.destroy');
     Route::post('/domain-tlds/bulk-destroy', [DomainTldController::class, 'bulk-destroy'])->name('domain_tlds.bulk-destroy');
+
+    // -------------------------------------------------------------------------
+    // Settings → Payments (ADR-007 Phase 5A)
+    // -------------------------------------------------------------------------
+    Route::prefix('settings/payments')->name('settings.payments.')->group(function () {
+        Route::get('/', [PaymentGatewayController::class, 'index'])->name('index');
+        Route::get('/{paymentGateway}/edit', [PaymentGatewayController::class, 'edit'])->name('edit');
+        Route::post('/{paymentGateway}', [PaymentGatewayController::class, 'update'])->name('update');
+        Route::post('/{paymentGateway}/activate', [PaymentGatewayController::class, 'activate'])->name('activate');
+        Route::post('/{paymentGateway}/deactivate', [PaymentGatewayController::class, 'deactivate'])->name('deactivate');
+    });
 
     // -------------------------------------------------------------------------
     // Plan Categories

@@ -365,6 +365,16 @@
                     </li>
                 @endcan
 
+                {{-- ADR-007 Phase 5A: Payment Gateway Settings --}}
+                <li class="pc-item">
+                    <a href="{{ route('dashboard.settings.payments.index') }}" class="pc-link">
+                        <span class="pc-micon">
+                            <i class="ti ti-credit-card"></i>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.Payment_Gateways', 'بوابات الدفع') }}</span>
+                    </a>
+                </li>
+
             </ul>
         </div>
     </div>
