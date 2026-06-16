@@ -399,6 +399,18 @@ current codebase.
 
 Architecture Decision Records introduced. All approved ADRs live in `docs/adr/`.
 
+### 2026-06-16 — ADR-005 Fully Implemented (Media Storage Format Unification)
+
+All three waves of ADR-005 completed in a single session. See `docs/ADR_005_CLOSEOUT_REPORT.md`.
+
+**Wave 1 — Simple FK Columns:** `clients.avatar_media_id`, `portfolios.default_image_media_id`, and seven `general_settings` logo/favicon `*_media_id` FK columns added. `MediaPathNormalizer` shared service created. `Section::image()` ghost relation removed. Dual-write and `resolved*Path()` model helpers in place across `Client`, `Portfolio`, and `GeneralSetting` models.
+
+**Wave 2 — Template Image:** `templates.image_media_id` FK column added. `TemplateController` direct-upload path now creates a `Media` record at write time, closing the pre-existing orphan gap that had blocked Wave 2.
+
+**Wave 3 — JSON Media Fields:** `portfolios.images` migrated from path-string arrays to integer ID arrays. `logo_override` and `payment_logos` JSON sub-keys in `general_settings` migrated to dual-write objects (`{"id", "path"}` and `{"ids", "paths"}` formats) enabling zero render overhead on every page request. Compatibility readers added to all consuming Blade views.
+
+**`services.icon` permanently excluded:** stores static SVG template asset paths, not user-uploaded media. Remains Pattern B indefinitely by architectural decision.
+
 ---
 
 ## ADR Timeline
@@ -408,7 +420,7 @@ Architecture Decision Records introduced. All approved ADRs live in `docs/adr/`.
 | [ADR-001](adr/001-page-section-as-source-of-truth.md) | Page + Section as Source of Truth | Accepted | Date Unknown |
 | [ADR-003](adr/003-integer-cents-as-canonical-money-storage.md) | Integer Cents as Canonical Money Storage | Proposed | 2026-06-15 |
 | [ADR-004](adr/004-session-based-vs-url-prefix-locale-strategy.md) | Session-Based vs URL-Prefix Locale Strategy | Accepted | 2026-06-15 |
-| [ADR-005](adr/005-media-storage-format-unification.md) | Media Storage Format Unification | Proposed | 2026-06-15 |
+| [ADR-005](adr/005-media-storage-format-unification.md) | Media Storage Format Unification | **Accepted — Implemented** | 2026-06-16 |
 | [ADR-006](adr/006-feedbacks-vs-testimonials-naming-strategy.md) | Feedbacks vs Testimonials Naming Strategy | **Accepted — Implemented** | 2026-06-16 |
 
 > ADR-002 is intentionally absent — the number was reserved and not used.
@@ -426,6 +438,7 @@ Architecture Decision Records introduced. All approved ADRs live in `docs/adr/`.
 | 2026-06-15 | `docs/section-definitions.md` extended (507-line developer reference) |
 | 2026-06-15 | `docs/CHANGELOG.md` created (this file) |
 | 2026-06-16 | **ADR-006 implemented** — `feedbacks` → `testimonials`, `feedback_translations` → `testimonial_translations`, `feedback_id` → `testimonial_id`, `feedback` column → `text`; 3 Livewire orphan files deleted; TD-1 and TD-2 resolved |
+| 2026-06-16 | **ADR-005 implemented** — Wave 1 (clients + portfolios + general_settings ×7 FK columns), Wave 2 (templates.image_media_id), Wave 3 (portfolios.images → ID arrays; logo_override + payment_logos → dual-write objects). `services.icon` permanently excluded. Closeout: `docs/ADR_005_CLOSEOUT_REPORT.md` |
 
 ---
 
@@ -512,7 +525,7 @@ April–May 2026 that assigned `section_definition_id` to existing sections.
 
 ## Current State
 
-As of **2026-06-15** the platform consists of:
+As of **2026-06-16** the platform consists of:
 
 **Active sub-systems:**
 
@@ -522,8 +535,12 @@ As of **2026-06-15** the platform consists of:
 - Tenant site (per-subscription domain, scoped by `tenant_id`)
 - Section Definitions engine (registry + field schema + dynamic Blade rendering)
 - Blade Editor (Monaco in admin panel → `blade_source` DB column → disk write)
-- Media Library (Pattern A — `media.id` FK — is the canonical pattern; Patterns B
-  and C are technical debt per **ADR-005**)
+- Media Library (Pattern A — `media.id` FK — is now the canonical and fully implemented
+  pattern across all tables. **ADR-005 closed 2026-06-16.** Legacy path columns
+  (`clients.avatar`, `portfolios.default_image/images`, `templates.image`,
+  `general_settings` logos ×7) remain dual-written during stability window; column
+  drops deferred per ADR-005 closeout plan. `services.icon` is a permanent Pattern B
+  exception by architectural decision.)
 - Billing (orders, invoices in integer cents; subscriptions and plans still in decimal
   — see **ADR-003**)
 - WHM/cPanel provisioning (server API, `listpkgs`, account create/suspend/terminate)
@@ -537,9 +554,10 @@ As of **2026-06-15** the platform consists of:
 | TD-2 | `plans.monthly_price` / `annual_price` — `decimal(8,2)` | ADR-003 |
 | TD-3 | `coupons.discount_amount` — `decimal(8,2)` | ADR-003 |
 | TD-4 | `domain_tld_prices.*_price` — `decimal` | ADR-003 |
-| TD-5 | `general_settings` logo/favicon — raw path strings, not `media.id` | ADR-005 |
-| TD-6 | `portfolios.default_image` / `images` — raw path strings, not `media.id` | ADR-005 |
+| ~~TD-5~~ ✅ | `general_settings` logos/favicon — **RESOLVED by ADR-005 Wave 1 (2026-06-16)** | ADR-005 |
+| ~~TD-6~~ ✅ | `portfolios.default_image` / `images` — **RESOLVED by ADR-005 Waves 1 & 3 (2026-06-16)** | ADR-005 |
 | ~~TD-7~~ ✅ | `Testimonial` / `TestimonialTranslation` — `$table = 'feedbacks'` — **RESOLVED by ADR-006 (2026-06-16)** | ADR-006 |
+| TD-8 | `clients.avatar`, `portfolios.default_image/images`, `templates.image`, `general_settings` ×7 logo/favicon — legacy path columns still present (dual-write period). Drop after stability window per `docs/ADR_005_CLOSEOUT_REPORT.md §6.1` | ADR-005 Phase 5 |
 
 ---
 
@@ -550,8 +568,9 @@ As of **2026-06-15** the platform consists of:
 | Metric | Count |
 |--------|-------|
 | Authoritative documents | 14 |
-| Accepted ADRs | 3 |
-| Proposed ADRs | 2 |
+| Accepted ADRs | 4 |
+| Accepted + Implemented ADRs | 2 (ADR-005, ADR-006) |
+| Proposed ADRs | 1 (ADR-003) |
 
 The platform's core architecture, billing, localisation, media, site identity,
 content showcase, rendering engine, and security model are now documented through

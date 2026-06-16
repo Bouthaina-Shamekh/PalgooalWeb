@@ -173,15 +173,22 @@ class TemplateController extends Controller
                 $imageMediaId = $mediaRecord?->id;
             }
 
+            // ADR-003 Phase 1 — dual-write: keep old decimal + populate new cents columns
+            $discountDecimal = $validated['discount_price'] ?? null;
+
             $template = Template::create([
-                'price'                => $validated['price'],
-                'discount_price'       => $validated['discount_price'] ?? null,
-                'discount_ends_at'     => $validated['discount_ends_at'] ?? null,
-                'rating'               => $validated['rating'] ?? 0,
-                'category_template_id' => $validated['category_template_id'],
-                'plan_id'              => $validated['plan_id'],
-                'image'                => $imagePath,
-                'image_media_id'       => $imageMediaId,
+                'price'                  => $validated['price'],
+                'price_cents'            => (int) round((float) $validated['price'] * 100),
+                'discount_price'         => $discountDecimal,
+                'discount_price_cents'   => $discountDecimal !== null
+                    ? (int) round((float) $discountDecimal * 100)
+                    : null,
+                'discount_ends_at'       => $validated['discount_ends_at'] ?? null,
+                'rating'                 => $validated['rating'] ?? 0,
+                'category_template_id'   => $validated['category_template_id'],
+                'plan_id'                => $validated['plan_id'],
+                'image'                  => $imagePath,
+                'image_media_id'         => $imageMediaId,
             ]);
 
             foreach ($validated['translations'] as $translation) {
@@ -301,15 +308,22 @@ class TemplateController extends Controller
                 }
             }
 
+            // ADR-003 Phase 1 — dual-write: keep old decimal + populate new cents columns
+            $discountDecimal = $validated['discount_price'] ?? null;
+
             $template->update([
-                'price'                => $validated['price'],
-                'discount_price'       => $validated['discount_price'] ?? null,
-                'discount_ends_at'     => $validated['discount_ends_at'] ?? null,
-                'rating'               => $validated['rating'] ?? $template->rating,
-                'category_template_id' => $validated['category_template_id'],
-                'plan_id'              => $validated['plan_id'],
-                'image'                => $template->image,
-                'image_media_id'       => $imageMediaId,
+                'price'                  => $validated['price'],
+                'price_cents'            => (int) round((float) $validated['price'] * 100),
+                'discount_price'         => $discountDecimal,
+                'discount_price_cents'   => $discountDecimal !== null
+                    ? (int) round((float) $discountDecimal * 100)
+                    : null,
+                'discount_ends_at'       => $validated['discount_ends_at'] ?? null,
+                'rating'                 => $validated['rating'] ?? $template->rating,
+                'category_template_id'   => $validated['category_template_id'],
+                'plan_id'                => $validated['plan_id'],
+                'image'                  => $template->image,
+                'image_media_id'         => $imageMediaId,
             ]);
 
             // updateOrCreate avoids the brief data-loss window of delete+recreate.

@@ -207,7 +207,9 @@ class OrderActivationService
                 'client_id'      => $order->client_id,
                 'plan_id'        => $template->plan_id,
                 'status'         => 'active',
-                'price'          => $template->price,
+                // ADR-003 Phase 1: read from cents helper (falls back to decimal if price_cents not yet set)
+                // Phase 2 will switch this to price_cents once subscriptions.price_cents exists.
+                'price'          => $template->resolvedPrice(),
                 'starts_at'      => $startsAt,
                 'ends_at'        => $endsAt,
                 'server_id'      => $serverId,

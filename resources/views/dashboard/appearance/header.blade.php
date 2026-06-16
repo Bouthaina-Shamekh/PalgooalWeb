@@ -147,7 +147,9 @@
             }
             $purpleCustomColorInputs[$colorKey] = strtoupper($candidate);
         }
-        $purpleLogoPath = old('pv_logo_override', $purpleTopbarSettings['logo_override'] ?? '');
+        // ADR-005 Wave 3 compatibility: logo_override may be a string (old) or {id, path} object (new)
+        $purpleLogoRaw  = old('pv_logo_override', null) ?? $purpleTopbarSettings['logo_override'] ?? null;
+        $purpleLogoPath = is_array($purpleLogoRaw) ? ($purpleLogoRaw['path'] ?? '') : (string) ($purpleLogoRaw ?? '');
         $purpleLogoPreview = '';
         if (!empty($purpleLogoPath)) {
             $purpleLogoPreview = \Illuminate\Support\Str::startsWith($purpleLogoPath, ['http://', 'https://', '//'])

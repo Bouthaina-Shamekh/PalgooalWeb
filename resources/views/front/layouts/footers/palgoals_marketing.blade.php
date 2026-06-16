@@ -101,7 +101,9 @@
     $activeThemeKey = array_key_exists($colorThemeKey, $resolvedThemes) ? $colorThemeKey : $defaultThemeKey;
     $theme = $resolvedThemes[$activeThemeKey] ?? $defaultThemeClasses;
 
-    $logoPath = $variantSettings['logo_override'] ?? null;
+    // ADR-005 Wave 3 compatibility: logo_override may be a string (old) or {id, path} object (new)
+    $logoOverrideRaw = $variantSettings['logo_override'] ?? null;
+    $logoPath = is_array($logoOverrideRaw) ? ($logoOverrideRaw['path'] ?? null) : $logoOverrideRaw;
     if (empty($logoPath)) {
         $logoPath = $settings?->logo;
     }
@@ -112,10 +114,19 @@
             : asset('storage/' . ltrim($logoPath, '/')))
         : asset('assets/tamplate/images/logo.svg');
 
-    $paymentLogoPaths = $variantSettings['payment_logos'] ?? [];
-    if (is_string($paymentLogoPaths)) {
-        $paymentLogoPaths = array_values(array_filter(array_map('trim', explode(',', $paymentLogoPaths))));
-    } elseif (!is_array($paymentLogoPaths)) {
+    // ADR-005 Wave 3 compatibility: payment_logos may be a flat path array (old)
+    // or {ids: [...], paths: [...]} object (new)
+    $paymentLogosRaw = $variantSettings['payment_logos'] ?? [];
+    if (is_array($paymentLogosRaw) && isset($paymentLogosRaw['paths'])) {
+        // New Wave 3 format: dual-write object
+        $paymentLogoPaths = array_values(array_filter($paymentLogosRaw['paths']));
+    } elseif (is_array($paymentLogosRaw)) {
+        // Old format: flat array of paths (or empty [])
+        $paymentLogoPaths = array_values(array_filter($paymentLogosRaw));
+    } elseif (is_string($paymentLogosRaw)) {
+        // Legacy string (edge case)
+        $paymentLogoPaths = array_values(array_filter(array_map('trim', explode(',', $paymentLogosRaw))));
+    } else {
         $paymentLogoPaths = [];
     }
 

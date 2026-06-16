@@ -12,11 +12,13 @@ class Template extends Model
 
     protected $fillable = [
         'price',
+        'price_cents',
         'image',
         'image_media_id',
         'rating',
         'category_template_id',
         'discount_price',
+        'discount_price_cents',
         'discount_ends_at',
         'plan_id',
     ];
@@ -41,11 +43,70 @@ class Template extends Model
     }
 
     protected $casts = [
-        'price' => 'float',
-        'discount_price' => 'float',
-        'rating' => 'float',
-        'discount_ends_at' => 'datetime',
+        'price'                  => 'float',
+        'price_cents'            => 'integer',
+        'discount_price'         => 'float',
+        'discount_price_cents'   => 'integer',
+        'rating'                 => 'float',
+        'discount_ends_at'       => 'datetime',
     ];
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // ADR-003 Phase 1 — Price helpers
+    //
+    // Prefer the new integer-cents columns; fall back to the legacy decimal
+    // columns during the dual-write / backfill period.
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Return the base price in integer cents.
+     * Falls back to (int) round(price * 100) when price_cents is not yet populated.
+     */
+    public function resolvedPriceCents(): int
+    {
+        $raw = $this->getRawOriginal('price_cents');
+        if ($raw !== null) {
+            return (int) $raw;
+        }
+
+        return (int) round((float) ($this->getRawOriginal('price') ?? 0) * 100);
+    }
+
+    /**
+     * Return the discount price in integer cents, or null when no discount exists.
+     * Falls back to (int) round(discount_price * 100) during the transition period.
+     */
+    public function resolvedDiscountPriceCents(): ?int
+    {
+        $rawCents = $this->getRawOriginal('discount_price_cents');
+        if ($rawCents !== null) {
+            return (int) $rawCents;
+        }
+
+        $rawDecimal = $this->getRawOriginal('discount_price');
+        if ($rawDecimal === null || (float) $rawDecimal <= 0) {
+            return null;
+        }
+
+        return (int) round((float) $rawDecimal * 100);
+    }
+
+    /**
+     * Return the base price as a float (for display / legacy decimal writes).
+     */
+    public function resolvedPrice(): float
+    {
+        return $this->resolvedPriceCents() / 100;
+    }
+
+    /**
+     * Return the discount price as a float, or null when no discount exists.
+     */
+    public function resolvedDiscountPrice(): ?float
+    {
+        $cents = $this->resolvedDiscountPriceCents();
+        return $cents !== null ? $cents / 100 : null;
+    }
 
     public function categoryTemplate()
     {

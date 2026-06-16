@@ -122,31 +122,15 @@
         <div class="mt-20">
             <h3 class="text-2xl font-bold text-primary dark:text-white mb-8 text-center">معرض صور المشروع</h3>
             @php
-                // تطبيع حقل الصور لقبول JSON أو CSV أو مصفوفة
-                $images = [];
-                $rawImages = $portfolio->images ?? null;
-                if (is_string($rawImages)) {
-                    $decoded = json_decode($rawImages, true);
-                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                        $images = $decoded;
-                    } else {
-                        $csv = array_filter(array_map('trim', explode(',', $rawImages)));
-                        $images = $csv ?: (strlen($rawImages) ? [$rawImages] : []);
-                    }
-                } elseif (is_array($rawImages)) {
-                    $images = $rawImages;
-                } elseif ($rawImages instanceof \Illuminate\Support\Collection) {
-                    $images = $rawImages->toArray();
-                }
-                // إزالة القيم الفارغة
-                $images = array_values(array_filter($images, fn($v) => !empty($v)));
+                // ADR-005 Wave 3: resolvedGalleryImages() handles both ID arrays (new) and path arrays (legacy)
+                $images = $portfolio->resolvedGalleryImages();
             @endphp
 
             @if (count($images))
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                    @foreach ($images as $i => $img)
-                        <a data-fancybox="gallery" href="{{ asset('storage/' . $img) }}">
-                            <img src="{{ asset('storage/' . $img) }}" alt="صورة للمشروع رقم {{ $i + 1 }}"
+                    @foreach ($images as $i => $imgUrl)
+                        <a data-fancybox="gallery" href="{{ $imgUrl }}">
+                            <img src="{{ $imgUrl }}" alt="صورة للمشروع رقم {{ $i + 1 }}"
                                 loading="lazy" decoding="async"
                                 class="w-full aspect-[4/3] object-contain rounded-xl shadow-md border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-[#23232a] transition-transform duration-300 hover:scale-105" />
                         </a>

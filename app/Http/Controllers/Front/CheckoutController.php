@@ -129,11 +129,13 @@ class CheckoutController extends Controller
         $translation = $template?->translations()->where('locale', app()->getLocale())->first();
         $template_name = $translation?->name ?? $template?->name ?? '';
 
-        $basePrice = (float) ($template->price ?? 0);
-        $discRaw   = $template->discount_price ?? null;
-        $discPrice = is_null($discRaw) ? null : (float) $discRaw;
-        $hasDiscount  = !is_null($discPrice) && $discPrice > 0 && $discPrice < $basePrice;
-        $showDiscount = $hasDiscount && (!$template?->discount_ends_at || now()->lt($template->discount_ends_at));
+        // ADR-003 Phase 1 — use cents helpers; fall back handled inside resolvedPriceCents()
+        $basePriceCents = $template ? $template->resolvedPriceCents() : 0;
+        $discPriceCents = $template ? $template->resolvedDiscountPriceCents() : null;
+        $basePrice      = $basePriceCents / 100;   // float — display only
+        $discPrice      = $discPriceCents !== null ? $discPriceCents / 100 : null;  // float — display only
+        $hasDiscount    = $discPriceCents !== null && $discPriceCents > 0 && $discPriceCents < $basePriceCents;
+        $showDiscount   = $hasDiscount && (!$template?->discount_ends_at || now()->lt($template->discount_ends_at));
 
         // معلومات الخطة (إن وجد)
         $plan = $isNotPlan ? null : \App\Models\Plan::find($plan_id);
@@ -269,7 +271,8 @@ class CheckoutController extends Controller
                     ]);
                     // بإمكانك لاحقًا إضافة invoice_items لكل دومين إن رغبت
                 } else {
-                    $unitCents = $showDiscount ? (int) ($discPrice * 100) : (int) ($basePrice * 100);
+                    // ADR-003 Phase 1 — use integer cents directly (no float * 100 rounding risk)
+                    $unitCents     = $showDiscount ? ($discPriceCents ?? $basePriceCents) : $basePriceCents;
                     $unitCentsPlan = $showDiscountPlan ? (int) ($discPricePlan * 100) : (int) ($basePricePlan * 100);
                     $subscriptionLineConfigs = [];
 
@@ -278,7 +281,7 @@ class CheckoutController extends Controller
                         $subscriptionLineConfigs[] = [
                             'description'   => $template_name ?: ($planTemplate?->name ?? ''),
                             'unit_cents'    => $unitCents,
-                            'base_cents'    => (int) (($basePrice ?? 0) * 100),
+                            'base_cents'    => $basePriceCents,
                             'plan'          => $planTemplate,
                             'billing_cycle' => $planTemplate?->billing_cycle ?? 'annually',
                         ];
@@ -467,9 +470,10 @@ class CheckoutController extends Controller
 
             // Template-specific override
             if (!$isNotTemplate) {
+                // ADR-003 Phase 1 — use integer cents directly
                 $totalCents = $isDomainOnly
                     ? $domainsTotalCents
-                    : ($showDiscount ? (int) ($discPrice * 100) : (int) ($basePrice * 100));
+                    : ($showDiscount ? ($discPriceCents ?? $basePriceCents) : $basePriceCents);
 
                 $responseData = array_merge($responseData, [
                     'total_cents'   => $totalCents,

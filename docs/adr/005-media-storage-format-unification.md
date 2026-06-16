@@ -1,6 +1,7 @@
 # ADR-005: Media Storage Format Unification
 
-**Status:** Proposed  
+**Status:** Accepted  
+**Implemented:** Yes — Waves 1, 2, and 3 complete (2026-06-16)  
 **Date:** 2026-06-16  
 **Author:** Engineering (documented from code audit)  
 **Related:** `docs/27-media-library.md`, `app/Models/Media.php`, `app/Support/Sections/SectionFrontendMediaResolver.php`

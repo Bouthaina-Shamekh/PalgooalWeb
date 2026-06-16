@@ -44,6 +44,51 @@ class Portfolio extends Model
         return $this->defaultImageMedia?->file_path ?? $this->getRawOriginal('default_image') ?? null;
     }
 
+    // ── ADR-005 Wave 3 Gallery Helper ────────────────────────────────────────
+
+    /**
+     * Return fully-resolved URLs for the gallery images.
+     *
+     * Handles both storage formats:
+     *   • New (Wave 3): JSON array of integer Media IDs  → [7, 12, 15]
+     *   • Old (pre-Wave 3): JSON array of path strings   → ["media/...", ...]
+     *
+     * Always returns an array of fully-qualified URLs (asset('storage/...')).
+     * Returns an empty array when no gallery images are set.
+     */
+    public function resolvedGalleryImages(): array
+    {
+        $raw = $this->images; // cast as 'array' by Eloquent
+        if (empty($raw) || ! is_array($raw)) {
+            return [];
+        }
+
+        $first = reset($raw);
+
+        // New format: array of integer Media IDs
+        if (is_int($first) || (is_string($first) && ctype_digit((string) $first))) {
+            $ids          = array_map('intval', $raw);
+            $mediaRecords = Media::whereIn('id', $ids)->get()->keyBy('id');
+            $urls         = [];
+            foreach ($ids as $id) {
+                $media = $mediaRecords->get($id);
+                if ($media && ! empty($media->file_path)) {
+                    $urls[] = asset('storage/' . ltrim((string) $media->file_path, '/'));
+                }
+            }
+            return $urls;
+        }
+
+        // Old format: array of path strings
+        $urls = [];
+        foreach ($raw as $path) {
+            if (! empty($path) && is_string($path)) {
+                $urls[] = asset('storage/' . ltrim($path, '/'));
+            }
+        }
+        return $urls;
+    }
+
     // ── Other Relations ─────────────────────────────────────────────────────
 
     public function translations()

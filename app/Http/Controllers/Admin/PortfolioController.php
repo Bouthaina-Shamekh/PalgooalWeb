@@ -115,7 +115,8 @@ class PortfolioController extends Controller
     }
 
     /**
-     * Convert a single Media ID or comma-separated Media IDs to stored path(s).
+     * Convert a single Media ID or comma-separated Media IDs to a stored path string.
+     * Used for the `default_image` (single-image) field only (ADR-005 Wave 1 dual-write).
      */
     private function resolveMediaIdsToPaths(mixed $input): ?string
     {
@@ -138,6 +139,26 @@ class PortfolioController extends Controller
                     ->values()
                     ->toArray();
                 return ! empty($paths) ? json_encode($paths) : null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Store gallery image IDs directly as a JSON array of integers.
+     * ADR-005 Wave 3: portfolios.images now stores IDs, not paths.
+     */
+    private function resolveImagesToIds(mixed $input): ?string
+    {
+        if (! $input) {
+            return null;
+        }
+
+        if (is_string($input)) {
+            $ids = array_values(array_filter(array_map('intval', explode(',', $input))));
+            if (! empty($ids)) {
+                return json_encode($ids);
             }
         }
 
@@ -225,7 +246,8 @@ class PortfolioController extends Controller
                 // ADR-005 Wave 1 dual-write: keep path for old column, save ID in new FK column
                 'default_image'              => $this->resolveMediaIdsToPaths($rawDefaultImageId),
                 'default_image_media_id'     => $rawDefaultImageId ? (int) $rawDefaultImageId : null,
-                'images'                     => $this->resolveMediaIdsToPaths($validated['images'] ?? null),
+                // ADR-005 Wave 3: store gallery IDs directly (no path conversion)
+                'images'                     => $this->resolveImagesToIds($validated['images'] ?? null),
             ];
 
             // P8 fix: retry on rare concurrent slug collision (SQLSTATE 23000)
@@ -338,7 +360,8 @@ class PortfolioController extends Controller
                 // ADR-005 Wave 1 dual-write: keep path for old column, save ID in new FK column
                 'default_image'              => $this->resolveMediaIdsToPaths($rawDefaultImageId),
                 'default_image_media_id'     => $rawDefaultImageId ? (int) $rawDefaultImageId : null,
-                'images'                     => $this->resolveMediaIdsToPaths($validated['images'] ?? null),
+                // ADR-005 Wave 3: store gallery IDs directly (no path conversion)
+                'images'                     => $this->resolveImagesToIds($validated['images'] ?? null),
             ];
 
             // P8 fix: retry on rare concurrent slug collision (SQLSTATE 23000)

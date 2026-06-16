@@ -187,7 +187,8 @@ class AppearanceController extends Controller
                     ? $contactButtonLabels
                     : trim((string) ($validated['pv_contact_button_label'] ?? '')),
                 'contact_button_url' => trim((string) ($validated['pv_contact_button_url'] ?? '')),
-                'logo_override' => $this->normalizeMediaPath($validated['pv_logo_override'] ?? null),
+                // ADR-005 Wave 3: dual-write id+path object for zero-cost header renders
+                'logo_override' => $this->normalizeMediaPathAsObject($validated['pv_logo_override'] ?? null),
                 'color_theme' => $selectedColorTheme,
                 'custom_colors' => $normalizedCustomColors,
             ]);
@@ -405,8 +406,9 @@ class AppearanceController extends Controller
                     ? $copyrightText
                     : trim((string) ($validated['fm_copyright_text'] ?? '')),
                 'show_social_icons' => $request->boolean('fm_show_social_icons'),
-                'logo_override' => $this->normalizeMediaPath($validated['fm_logo_override'] ?? null),
-                'payment_logos' => $this->normalizeMediaPathList($request->input('fm_payment_logos')),
+                // ADR-005 Wave 3: dual-write id+path objects for zero-cost footer renders
+                'logo_override' => $this->normalizeMediaPathAsObject($validated['fm_logo_override'] ?? null),
+                'payment_logos' => $this->normalizeMediaPathListAsObject($request->input('fm_payment_logos')),
                 'logo_width' => $this->normalizeDimensionValue(
                     $validated['fm_logo_width'] ?? null,
                     (int) ($defaults['logo_width'] ?? 220),
@@ -722,6 +724,63 @@ class AppearanceController extends Controller
         }
 
         return array_values(array_unique($normalized));
+    }
+
+    /**
+     * ADR-005 Wave 3 — Dual-write: resolve a single media path to an object.
+     * Stores both the ID (for logical FK) and the path (for zero-cost reads
+     * on high-traffic header/footer layouts).
+     * Returns null when the input resolves to no valid path.
+     *
+     * @return array{id: int|null, path: string}|null
+     */
+    protected function normalizeMediaPathAsObject($value): ?array
+    {
+        $path = $this->normalizeMediaPath($value);
+        if ($path === null || $path === '') {
+            return null;
+        }
+
+        // Resolve the media ID: numeric input = direct ID, otherwise look up by path
+        $mediaId  = null;
+        $normalized = trim((string) $value);
+        if (ctype_digit($normalized)) {
+            $mediaId = (int) $normalized;
+        } else {
+            $media   = Media::where('file_path', $path)->first();
+            $mediaId = $media?->id;
+        }
+
+        return [
+            'id'   => $mediaId,
+            'path' => $path,
+        ];
+    }
+
+    /**
+     * ADR-005 Wave 3 — Dual-write: resolve a list of media paths to an object.
+     * Stores both IDs and paths for zero-cost renders on high-traffic layouts.
+     * Returns an empty array when no valid paths are found.
+     *
+     * @return array{ids: list<int|null>, paths: list<string>}|array
+     */
+    protected function normalizeMediaPathListAsObject($value): array
+    {
+        $paths = $this->normalizeMediaPathList($value);
+        if (empty($paths)) {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($paths as $path) {
+            $media = Media::where('file_path', $path)->first();
+            $ids[] = $media?->id;
+        }
+
+        return [
+            'ids'   => $ids,
+            'paths' => $paths,
+        ];
     }
 
     protected function normalizeLocalizedTextField(

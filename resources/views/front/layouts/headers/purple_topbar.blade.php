@@ -124,7 +124,9 @@
         $theme['dropdown_item'],
     );
 
-    $logoPath = $variantSettings['logo_override'] ?? null;
+    // ADR-005 Wave 3 compatibility: logo_override may be a string (old) or {id, path} object (new)
+    $logoOverrideRaw = $variantSettings['logo_override'] ?? null;
+    $logoPath = is_array($logoOverrideRaw) ? ($logoOverrideRaw['path'] ?? null) : $logoOverrideRaw;
     if (empty($logoPath)) {
         $logoPath = $settings?->logo;
     }

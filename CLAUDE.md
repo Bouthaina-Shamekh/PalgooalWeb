@@ -932,6 +932,70 @@ GeneralSetting::with(['logoMedia', 'darkLogoMedia', 'stickyLogoMedia',
 
 ---
 
+### Session: ADR-005 Wave 3 — JSON Media Fields (portfolios + appearance settings)
+
+#### الملفات المُعدَّلة:
+
+**`app/Models/Portfolio.php`**:
+- إضافة `resolvedGalleryImages(): array` — يُرجع URLs كاملة للصور
+  - يكتشف التنسيق تلقائياً: IDs (جديد) أو paths (قديم)
+  - New format: `[7, 12]` → `Media::whereIn('id', $ids)` → URLs
+  - Old format: `["media/img.jpg"]` → `asset('storage/' . $path)` مباشرة
+
+**`app/Http/Controllers/Admin/PortfolioController.php`**:
+- إضافة `resolveImagesToIds(mixed $input): ?string` — يحفظ IDs مباشرة كـ JSON array
+- تحديث `store()` و `update()`: `resolveMediaIdsToPaths($validated['images'])` → `resolveImagesToIds(...)` (ADR-005 Wave 3)
+- `resolveMediaIdsToPaths()` تبقى لـ `default_image` (Wave 1 dual-write)
+
+**`app/Http/Controllers/Admin/AppearanceController.php`**:
+- إضافة `normalizeMediaPathAsObject($value): ?array` — يُرجع `['id' => X, 'path' => '...']`
+- إضافة `normalizeMediaPathListAsObject($value): array` — يُرجع `['ids' => [...], 'paths' => [...]]`
+- `updateHeaderSettings()`: `logo_override` → `normalizeMediaPathAsObject()`
+- `updateFooterSettings()`: `logo_override` + `payment_logos` → نفس الطريقة
+
+**Front-end Views** — Compatibility Readers:
+- `front/layouts/headers/purple_topbar.blade.php`: `$logoOverrideRaw = ...; $logoPath = is_array(...) ? $raw['path'] : $raw`
+- `front/layouts/footers/palgoals_marketing.blade.php`: نفس النمط لـ `logo_override` + `payment_logos`
+- `front/pages/portfolio.blade.php`: استبدال 20 سطراً يدوياً بـ `$portfolio->resolvedGalleryImages()`
+
+**Admin Views** — Pre-fill Compatibility:
+- `dashboard/appearance/header.blade.php`: `$purpleLogoPath` يستخرج `path` من الكائن الجديد
+- `dashboard/appearance/footer.blade.php`: نفسه + `$palgoalsPaymentLogoPaths` من `paths` key
+
+**Artisan**:
+- `routes/console.php`: إضافة `adr005:backfill-wave3 {--dry-run}` يغطي 3 targets
+
+**Docs**:
+- `docs/ADR_005_WAVE3_IMPLEMENTATION_REPORT.md` — تقرير التنفيذ الكامل
+- `public/__adr005_wave3_validate.php` — سكريبت التحقق (**احذفه بعد الاستخدام**)
+
+#### أوامر يجب تشغيلها بعد النشر:
+```bash
+php artisan adr005:backfill-wave3 --dry-run   # معاينة
+php artisan adr005:backfill-wave3             # تطبيق
+php artisan cache:clear                        # تحديث الـ cache
+# ثم افتح: https://palgoals.wpgoals.com/public/__adr005_wave3_validate.php
+# واحذف الملف بعد التحقق
+```
+
+#### استراتيجية التخزين الثلاثية:
+| الحقل | التنسيق الجديد | السبب |
+|-------|---------------|--------|
+| `portfolios.images` | `[7, 12, 15]` (IDs فقط) | صفحة تفصيلية — query واحد مقبول |
+| `*.logo_override` | `{id: 5, path: "..."}` | header/footer — كل طلب → zero DB lookup |
+| `*.payment_logos` | `{ids: [...], paths: [...]}` | نفس السبب |
+
+#### نمط Compatibility Reader (للاستخدام في أي view جديد):
+```php
+// قراءة logo_override آمنة من كلا التنسيقين:
+$logoOverrideRaw = $variantSettings['logo_override'] ?? null;
+$logoPath = is_array($logoOverrideRaw) ? ($logoOverrideRaw['path'] ?? null) : $logoOverrideRaw;
+
+// قراءة payment_logos آمنة من كلا التنسيقين:
+$raw = $variantSettings['payment_logos'] ?? [];
+$paths = (is_array($raw) && isset($raw['paths'])) ? $raw['paths'] : (is_array($raw) ? $raw : []);
+```
+
 ### ملاحظة: زر اللغات (Lang Switcher) — النمط الاحترافي
 CSS `.lang-switcher` + `.lang-tab-btn` يُستخدم في `pages/partials/form.blade.php`:
 ```css

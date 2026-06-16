@@ -160,7 +160,9 @@
             $palgoalsCustomColorInputs[$colorKey] = strtoupper($candidate);
         }
 
-        $palgoalsLogoPath = old('fm_logo_override', $palgoalsSettings['logo_override'] ?? '');
+        // ADR-005 Wave 3 compatibility: logo_override may be a string (old) or {id, path} object (new)
+        $palgoalsLogoRaw  = old('fm_logo_override', null) ?? $palgoalsSettings['logo_override'] ?? null;
+        $palgoalsLogoPath = is_array($palgoalsLogoRaw) ? ($palgoalsLogoRaw['path'] ?? '') : (string) ($palgoalsLogoRaw ?? '');
         $palgoalsLogoWidth = (int) old('fm_logo_width', $palgoalsSettings['logo_width'] ?? 220);
         $palgoalsLogoHeight = (int) old('fm_logo_height', $palgoalsSettings['logo_height'] ?? 72);
         $palgoalsPaymentLogoWidth = (int) old('fm_payment_logo_width', $palgoalsSettings['payment_logo_width'] ?? 64);
@@ -172,13 +174,23 @@
                 : asset('storage/' . ltrim($palgoalsLogoPath, '/'));
         }
 
+        // ADR-005 Wave 3 compatibility: payment_logos may be a flat path array (old)
+        // or {ids: [...], paths: [...]} object (new)
         $palgoalsPaymentLogoPaths = old('fm_payment_logos');
         if (is_string($palgoalsPaymentLogoPaths)) {
+            // old() returned a comma-separated string from form repopulation
             $palgoalsPaymentLogoPaths = array_values(array_filter(array_map('trim', explode(',', $palgoalsPaymentLogoPaths))));
-        } elseif (is_array($palgoalsSettings['payment_logos'] ?? null)) {
-            $palgoalsPaymentLogoPaths = array_values(array_filter($palgoalsSettings['payment_logos']));
         } else {
-            $palgoalsPaymentLogoPaths = [];
+            $paymentLogosRaw = $palgoalsSettings['payment_logos'] ?? [];
+            if (is_array($paymentLogosRaw) && isset($paymentLogosRaw['paths'])) {
+                // New Wave 3 format: dual-write object {ids: [...], paths: [...]}
+                $palgoalsPaymentLogoPaths = array_values(array_filter($paymentLogosRaw['paths']));
+            } elseif (is_array($paymentLogosRaw)) {
+                // Old format: flat array of paths (or empty [])
+                $palgoalsPaymentLogoPaths = array_values(array_filter($paymentLogosRaw));
+            } else {
+                $palgoalsPaymentLogoPaths = [];
+            }
         }
 
         $palgoalsPaymentLogoPreviewUrls = collect($palgoalsPaymentLogoPaths)
