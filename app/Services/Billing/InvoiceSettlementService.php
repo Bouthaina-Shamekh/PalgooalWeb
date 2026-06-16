@@ -76,7 +76,7 @@ class InvoiceSettlementService
             ->whereKey($domainItem->reference_id)
             ->update([
                 'status' => 'active',
-                'payment_method' => $paymentMethod ?: 'mock_gateway',
+                'payment_method' => $paymentMethod ?: app(\App\Payments\PaymentManager::class)->gateway()->name(),
             ]);
     }
 }

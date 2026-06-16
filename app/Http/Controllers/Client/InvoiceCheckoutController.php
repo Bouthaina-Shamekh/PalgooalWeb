@@ -53,6 +53,14 @@ class InvoiceCheckoutController extends Controller
         }
 
         if ($data['scenario'] === 'success') {
+            // ADR-007 Phase 1 — Payment gateway feature flag
+            if (!app(\App\Payments\PaymentManager::class)->isEnabled()) {
+                return redirect()->route('client.invoices.checkout', [
+                    'invoice' => $invoice,
+                    'state'   => 'disabled',
+                ])->with('error', t('site.Payment_Not_Available', 'خدمة الدفع غير متاحة حالياً. يرجى المحاولة لاحقاً.'));
+            }
+
             $this->validateDemoCardFields($data);
 
             try {
@@ -107,6 +115,6 @@ class InvoiceCheckoutController extends Controller
 
     protected function handleSuccessfulPayment(Invoice $invoice): void
     {
-        app(InvoiceSettlementService::class)->markPaid($invoice, 'mock_gateway');
+        app(InvoiceSettlementService::class)->markPaid($invoice, app(\App\Payments\PaymentManager::class)->gateway()->name());
     }
 }

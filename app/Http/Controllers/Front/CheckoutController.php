@@ -84,6 +84,17 @@ class CheckoutController extends Controller
      */
     public function process(Request $request, $template_id = null, $plan_id = null)
     {
+        // ADR-007 Phase 1 — Payment gateway feature flag
+        // Set PAYMENT_GATEWAY_ENABLED=false in .env to block public checkout
+        // without affecting admin bulk-mark-paid or auto-renewal jobs.
+        if (!app(\App\Payments\PaymentManager::class)->isEnabled()) {
+            $message = t('site.Payment_Not_Available', 'خدمة الدفع غير متاحة حالياً. يرجى المحاولة لاحقاً.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 503);
+            }
+            return redirect()->back()->with('error', $message);
+        }
+
         // إنشاء حساب للعميل في حال عدم التسجيل
         if (!auth('client')->check()) {
             $request->validate([
@@ -420,7 +431,7 @@ class CheckoutController extends Controller
             $subscriptionIds = array_values(array_filter($result['subscription_ids'] ?? []));
 
             if (!$isNotTemplate) {
-                app(InvoiceSettlementService::class)->markPaid($invoice, 'mock_gateway');
+                app(InvoiceSettlementService::class)->markPaid($invoice, app(\App\Payments\PaymentManager::class)->gateway()->name());
             } else {
                 foreach ($provisionQueue as $subscription) {
                     ProvisionSubscription::dispatch($subscription->id);

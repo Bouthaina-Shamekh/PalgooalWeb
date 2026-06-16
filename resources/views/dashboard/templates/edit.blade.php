@@ -150,14 +150,14 @@
 
                             <label class="block">
                                 <span class="mb-2 block text-sm font-semibold text-slate-700">{{ t('dashboard.templates.form.base_price', 'السعر الأساسي ($)') }}</span>
-                                <input type="number" name="price" step="0.01" required value="{{ old('price', $template->price) }}"
+                                <input type="number" name="price" step="0.01" required value="{{ old('price', number_format($template->resolvedPrice(), 2, '.', '')) }}"
                                     class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100"
                                     placeholder="99.00" />
                             </label>
 
                             <label class="block">
                                 <span class="mb-2 block text-sm font-semibold text-slate-700">{{ t('dashboard.templates.form.discount_price', 'سعر الخصم ($)') }}</span>
-                                <input type="number" name="discount_price" step="0.01" value="{{ old('discount_price', $template->discount_price) }}"
+                                <input type="number" name="discount_price" step="0.01" value="{{ old('discount_price', $template->resolvedDiscountPrice() !== null ? number_format($template->resolvedDiscountPrice(), 2, '.', '') : '') }}"
                                     class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-400 focus:bg-white focus:ring-4 focus:ring-violet-100"
                                     placeholder="{{ t('dashboard.templates.form.optional', 'اختياري') }}" />
                             </label>

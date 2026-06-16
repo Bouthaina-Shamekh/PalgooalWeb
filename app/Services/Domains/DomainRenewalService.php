@@ -140,7 +140,8 @@ class DomainRenewalService
                     continue;
                 }
 
-                if (strtolower((string) $domain->payment_method) !== 'mock_gateway') {
+                // ADR-007 Phase 1 — compare against DB-stored value using MockGateway constant
+                if (strtolower((string) $domain->payment_method) !== \App\Payments\Gateways\MockGateway::GATEWAY_NAME) {
                     $domain->forceFill([
                         'dns_last_note' => 'Auto-renew invoice #' . $invoice->number . ' is ready and awaiting payment.',
                     ])->save();
@@ -149,7 +150,7 @@ class DomainRenewalService
                     continue;
                 }
 
-                app(InvoiceSettlementService::class)->markPaid($invoice, 'mock_gateway');
+                app(InvoiceSettlementService::class)->markPaid($invoice, app(\App\Payments\PaymentManager::class)->gateway()->name());
 
                 $domain->refresh();
                 $domain->forceFill([

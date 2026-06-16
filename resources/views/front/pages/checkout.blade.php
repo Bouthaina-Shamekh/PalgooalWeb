@@ -15,18 +15,21 @@
 
     // safe access: template may be null when rendering cart-based checkout
     $shortDesc = Str::limit(strip_tags($translation?->description ?? ''), 160);
-    $basePrice = (float) ($template?->price ?? 0);
-    $discRaw = $template?->discount_price ?? null;
-    $discPrice = is_null($discRaw) ? null : (float) $discRaw;
-    $hasDiscount = !is_null($discPrice) && $discPrice > 0 && $discPrice < $basePrice;
+    // ADR-003 Read Switch (D1): use helpers instead of legacy decimal columns
+    $priceCents    = $template ? $template->resolvedPriceCents() : 0;
+    $discountCents = $template ? $template->resolvedDiscountPriceCents() : null;
+    $hasDiscount   = $discountCents !== null && $discountCents > 0 && $discountCents < $priceCents;
     $endsAt = $hasDiscount && !empty($template?->discount_ends_at) ? Carbon::parse($template->discount_ends_at) : null;
     $discountExpired = false;
     if ($hasDiscount && $endsAt) {
         $discountExpired = $endsAt->isPast();
     }
-    $showDiscount = $hasDiscount && !$discountExpired;
-    $finalPrice = $showDiscount ? $discPrice : $basePrice;
-    $discountPerc = $showDiscount && $basePrice > 0 ? (int) round((($basePrice - $discPrice) / $basePrice) * 100) : 0;
+    $showDiscount  = $hasDiscount && !$discountExpired;
+    $finalCents    = $showDiscount ? $discountCents : $priceCents;
+    $basePrice     = $priceCents / 100;
+    $discPrice     = $showDiscount ? $discountCents / 100 : null;
+    $finalPrice    = $finalCents / 100;
+    $discountPerc  = $showDiscount && $priceCents > 0 ? (int) round((($priceCents - $discountCents) / $priceCents) * 100) : 0;
 
     // safe access: plan may be null when rendering cart-based checkout
     $basePricePlan =
@@ -1042,7 +1045,7 @@
         const REVIEW_STEP_INDEX = REQUIRES_DOMAIN_SELECTION ? 1 : 0;
         const USE_AJAX_LOGIN = false; // رجوع للسلوك السابق: تحديث الصفحة عند تسجيل الدخول
         const HAS_CLIENT_AUTH = {{ auth('client')->check() ? 'true' : 'false' }};
-        const TEMPLATE_FINAL_CENTS = {{ (int) (($finalPrice ?? 0) * 100) }};
+        const TEMPLATE_FINAL_CENTS = {{ $finalCents }}; // ADR-003 D2: was (int)(($finalPrice??0)*100)
         let TEMPLATE_CENTS = TEMPLATE_FINAL_CENTS; // متغير قابل للتغيير عند إزالة القالب
 
         // سعر الخطة (بالسنت)
