@@ -216,12 +216,15 @@ class PortfolioController extends Controller
                 ?? (collect($translations)->firstWhere('title')['title'] ?? 'portfolio');
 
             // P11 fix: build from $validated (explicit fields only — not $request->except())
+            $rawDefaultImageId = $validated['default_image'] ?? null;
             $portfolioData = [
                 'order'                      => $validated['order'],
                 'delivery_date'              => $validated['delivery_date'],
                 'implementation_period_days' => $validated['implementation_period_days'] ?? null,
                 'client'                     => $validated['client'] ?? null,
-                'default_image'              => $this->resolveMediaIdsToPaths($validated['default_image'] ?? null),
+                // ADR-005 Wave 1 dual-write: keep path for old column, save ID in new FK column
+                'default_image'              => $this->resolveMediaIdsToPaths($rawDefaultImageId),
+                'default_image_media_id'     => $rawDefaultImageId ? (int) $rawDefaultImageId : null,
                 'images'                     => $this->resolveMediaIdsToPaths($validated['images'] ?? null),
             ];
 
@@ -326,12 +329,15 @@ class PortfolioController extends Controller
                 ?? (collect($translations)->firstWhere('title')['title'] ?? 'portfolio');
 
             // P11 fix: explicit field list from $validated
+            $rawDefaultImageId = $validated['default_image'] ?? null;
             $portfolioData = [
                 'order'                      => $validated['order'],
                 'delivery_date'              => $validated['delivery_date'],
                 'implementation_period_days' => $validated['implementation_period_days'] ?? null,
                 'client'                     => $validated['client'] ?? null,
-                'default_image'              => $this->resolveMediaIdsToPaths($validated['default_image'] ?? null),
+                // ADR-005 Wave 1 dual-write: keep path for old column, save ID in new FK column
+                'default_image'              => $this->resolveMediaIdsToPaths($rawDefaultImageId),
+                'default_image_media_id'     => $rawDefaultImageId ? (int) $rawDefaultImageId : null,
                 'images'                     => $this->resolveMediaIdsToPaths($validated['images'] ?? null),
             ];
 

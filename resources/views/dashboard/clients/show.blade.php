@@ -19,7 +19,9 @@
             <div class="card">
                 <div class="card-body text-center">
                     <div class="mb-4">
-                        <img src="{{ $client->avatar ? asset('storage/' . $client->avatar) : asset('assets/images/user/avatar-1.jpg') }}"
+                        {{-- ADR-005: prefer FK relation path, fall back to old column --}}
+                        @php $resolvedAvatar = $client->resolvedAvatarPath(); @endphp
+                        <img src="{{ $resolvedAvatar ? asset('storage/' . $resolvedAvatar) : asset('assets/images/user/avatar-1.jpg') }}"
                             class="w-24 h-24 mx-auto rounded-full object-cover border-4 border-gray-200 shadow-lg"
                             alt="Client avatar">
                     </div>

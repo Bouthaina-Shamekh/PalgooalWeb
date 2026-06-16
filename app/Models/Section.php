@@ -169,17 +169,6 @@ class Section extends Model
     }
 
     /**
-     * Optional relationship: associated image for this section.
-     *
-     * NOTE: This assumes there is an `image_id` column on the `sections` table
-     * and a `Media` model that stores uploaded media files.
-     */
-    public function image(): BelongsTo
-    {
-        return $this->belongsTo(Media::class, 'image_id');
-    }
-
-    /**
      * Scope: optionally filter sections by tenant ownership.
      *
      * Passing no tenant leaves the query unchanged, which keeps existing

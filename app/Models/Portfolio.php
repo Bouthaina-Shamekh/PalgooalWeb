@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Portfolio extends Model
@@ -13,6 +14,7 @@ class Portfolio extends Model
 
     protected $fillable = [
         'default_image',
+        'default_image_media_id',  // ADR-005 Wave 1
         'images',
         'delivery_date',
         'order',
@@ -25,6 +27,24 @@ class Portfolio extends Model
         'images' => 'array',
         'delivery_date' => 'date',
     ];
+
+    // ── ADR-005 Wave 1 Media Relations ─────────────────────────────────────
+
+    /** The portfolio's featured image as a Media record (Pattern A). */
+    public function defaultImageMedia(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'default_image_media_id');
+    }
+
+    // ── ADR-005 Wave 1 Read Helper ───────────────────────────────────────────
+
+    /** Best available path: FK relation first, old path column as fallback. */
+    public function resolvedDefaultImagePath(): ?string
+    {
+        return $this->defaultImageMedia?->file_path ?? $this->getRawOriginal('default_image') ?? null;
+    }
+
+    // ── Other Relations ─────────────────────────────────────────────────────
 
     public function translations()
     {

@@ -7,6 +7,7 @@ use App\Models\ActivityLog;
 use App\Models\Client;
 use App\Models\ClientContact;
 use App\Models\ClientNote;
+use App\Support\Media\MediaPathNormalizer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -372,7 +373,10 @@ class ClientController extends Controller
         }
 
         if ($request->filled('avatar')) {
-            $payload['avatar'] = $request->input('avatar');
+            $rawAvatar = $request->input('avatar');
+            $payload['avatar'] = $rawAvatar;  // keep old column (dual-write)
+            // ADR-005 Wave 1: also write the new FK column
+            $payload['avatar_media_id'] = MediaPathNormalizer::resolveToMediaId($rawAvatar);
         }
 
         return $payload;

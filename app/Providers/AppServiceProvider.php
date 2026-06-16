@@ -93,10 +93,20 @@ class AppServiceProvider extends ServiceProvider
                 fn () => Language::where('is_active', true)->get()
             );
 
+            // ADR-005 Wave 1: eager-load media relations so resolved*Path() helpers
+            // work without extra queries when called from any view.
             $settings = Cache::remember(
                 'general_settings',
                 3600,
-                fn () => GeneralSetting::first()
+                fn () => GeneralSetting::with([
+                    'logoMedia',
+                    'darkLogoMedia',
+                    'stickyLogoMedia',
+                    'darkStickyLogoMedia',
+                    'adminLogoMedia',
+                    'adminDarkLogoMedia',
+                    'faviconMedia',
+                ])->first()
             );
 
             $view->with([

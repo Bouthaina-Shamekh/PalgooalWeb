@@ -878,6 +878,60 @@ titleInput.addEventListener('input', () => {
   - FAQ: base64 encoding، فرق section_key و template_key، متى يُستخدم legacy render
   - جدول مراجع سريع لجميع الكلاسات والمسارات
 
+### Session: ADR-005 Wave 1 — Media FK Columns (توحيد تخزين الوسائط)
+
+#### الملفات الجديدة:
+- `app/Support/Media/MediaPathNormalizer.php` — **مُنشأ جديد**: normalizer موحّد يستبدل `normalizeMediaPath()` الخاصة في HomeController وAppearanceController
+- `database/migrations/2026_06_16_200001_add_media_id_columns_wave1.php` — **migration جديد**: 9 أعمدة FK nullable على 3 جداول
+- `docs/ADR_005_WAVE1_IMPLEMENTATION_REPORT.md` — تقرير التنفيذ الكامل
+- `docs/ADR_005_PHASE05_WAVE1_BACKFILL_AUDIT.md` — نتائج Audit ما قبل التنفيذ
+
+#### الملفات المعدّلة:
+- `app/Models/Section.php` — حذف Ghost Relation `image()` (الحقل `image_id` غير موجود في DB)
+- `app/Models/Client.php` — إضافة `avatar_media_id` لـ fillable + علاقة `avatarMedia()` + helper `resolvedAvatarPath()`
+- `app/Models/Portfolio.php` — إضافة `default_image_media_id` + علاقة `defaultImageMedia()` + helper `resolvedDefaultImagePath()`
+- `app/Models/GeneralSetting.php` — إضافة 7 أعمدة `*_media_id` + 7 علاقات + 7 helpers `resolved*Path()`
+- `app/Http/Controllers/Admin/ClientController.php` — Dual-write في `buildClientPayload()`
+- `app/Http/Controllers/Admin/PortfolioController.php` — Dual-write في `store()` + `update()`
+- `app/Http/Controllers/Admin/HomeController.php` — Dual-write في 3 مواضع: `importGeneralSettings()`, `updateGeneralSettings()`, `autoSaveGeneralSettings()`
+- `routes/console.php` — أمر Backfill: `php artisan adr005:backfill-wave1 [--dry-run]`
+- `app/Providers/AppServiceProvider.php` — Eager-load 7 media relations في `GeneralSetting::with([...])->first()`
+- `resources/views/dashboard/portfolios/index.blade.php` — تحديث لاستخدام `resolvedDefaultImagePath()`
+- `resources/views/dashboard/clients/show.blade.php` — تحديث لاستخدام `resolvedAvatarPath()`
+
+#### قواعد ADR-005 المستقاة:
+- **الأعمدة القديمة لا تُحذف في Wave 1** — فقط تُضاف الأعمدة الجديدة (no-drop policy)
+- **Dual-write**: كل write يكتب في العمود القديم (path) والجديد (media_id) معاً
+- **Backfill** يجب تشغيله بعد `migrate`: `php artisan adr005:backfill-wave1`
+- **`services.icon`** مُستثنى من Wave 1 — يحتوي على مسارات assets ثابتة
+- **helpers `resolved*Path()`** تُعطي الأولوية للـ FK relation ثم تسقط للعمود القديم
+
+#### نمط Read Switch المعتمد:
+```php
+// في الـ Model:
+public function resolvedDefaultImagePath(): ?string
+{
+    return $this->defaultImageMedia?->file_path ?? $this->getRawOriginal('default_image') ?? null;
+}
+```
+```blade
+{{-- في الـ View: --}}
+@php $imagePath = $portfolio->resolvedDefaultImagePath(); @endphp
+@if ($imagePath)
+    <img src="{{ asset('storage/' . $imagePath) }}" ...>
+@endif
+```
+
+#### ملاحظة: AppServiceProvider Cache
+`GeneralSetting` مُحمَّل مع all 7 media relations ليعمل `resolved*Path()` بدون N+1 queries:
+```php
+GeneralSetting::with(['logoMedia', 'darkLogoMedia', 'stickyLogoMedia',
+    'darkStickyLogoMedia', 'adminLogoMedia', 'adminDarkLogoMedia', 'faviconMedia'])->first()
+```
+عند تعديل أي setting يجب `php artisan cache:clear` لتحديث الـ cached object.
+
+---
+
 ### ملاحظة: زر اللغات (Lang Switcher) — النمط الاحترافي
 CSS `.lang-switcher` + `.lang-tab-btn` يُستخدم في `pages/partials/form.blade.php`:
 ```css

@@ -108,10 +108,11 @@
                                             {{ ($portfolios->firstItem() ?? 1) + $loop->index }}
                                         </td>
 
-                                        {{-- Image --}}
+                                        {{-- Image — ADR-005: prefer FK relation path, fall back to old column --}}
                                         <td>
-                                            @if ($portfolio->default_image)
-                                                <img src="{{ asset('storage/' . $portfolio->default_image) }}"
+                                            @php $portfolioImagePath = $portfolio->resolvedDefaultImagePath(); @endphp
+                                            @if ($portfolioImagePath)
+                                                <img src="{{ asset('storage/' . $portfolioImagePath) }}"
                                                      class="w-12 h-10 object-cover rounded-lg border border-gray-200"
                                                      alt="" />
                                             @else

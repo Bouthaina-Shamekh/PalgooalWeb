@@ -38,8 +38,8 @@ until payment reconciliation.
 
 | ADR | Readiness |
 |-----|-----------|
-| ADR-006 | **READY WITH MINOR ACTIONS** — 2 missing Blade views added to scope; column-rename gap in controllers clarified |
-| ADR-005 | **READY AFTER PHASE 0 MEDIA AUDIT AND SCOPE CLARIFICATIONS** — HomeController conversion method and 6th portfolio view added to scope; Phase 4 deletion constraint clarified |
+| ADR-006 | ✅ **COMPLETE** — Implemented 2026-06-16. All tables renamed, models/controllers/views updated, documentation closed. |
+| ADR-005 | **READY FOR WAVE 1 (partial)** — Phase 0 audit complete (2026-06-16); Phase 0.5 Wave 1 Backfill Audit complete (2026-06-16). `clients.avatar`, `portfolios.default_image`, and `general_settings ×7` can start now. **`services.icon` is BLOCKED** — 4/5 stored values are static template asset paths (`/assets/tamplate/images/icons/*.svg`) incompatible with Pattern A; excluded from Wave 1 pending architectural decision. See `docs/ADR_005_PHASE05_WAVE1_BACKFILL_AUDIT.md`. Wave 2 blocked until templates.image backfill is resolved. Wave 3 blocked until JSON storage architecture is decided. |
 | ADR-003 | **NOT READY UNTIL MONEY WRITE PATHS ARE FULLY SCOPED** — 3 undocumented subscription write paths found; CouponController does not exist in codebase |
 
 ---
@@ -184,63 +184,53 @@ the application work against the old table names.
 
 ---
 
-## Phase 0 (ADR-005) — Media Audit
+## Phase 0 (ADR-005) — Media Audit ✅ COMPLETE
 
-### Objective
+> **Completed:** 2026-06-16 — Full report: `docs/ADR_005_PHASE0_MEDIA_AUDIT.md`
 
-Verify data quality across all Pattern B and Pattern C columns before any schema
-change is made. This phase has no migration and no code change — it is a read-only
-diagnostic pass that must complete and pass its exit criterion before Phase 1 begins.
+### Pattern Inventory Results
 
-### Required Checks
+| Pattern | Description | Column Count | Notes |
+|---------|-------------|-------------|-------|
+| **Pattern A** — `media_id` FK | Integer FK → `media.id`; resolved at render time | **3** | testimonials.image_id, section_definitions.preview_media_id, section content JSON media fields |
+| **Pattern B** — Raw path string | Path stored as `string` or nested inside `json` column | **14** | Across 5 tables + 2 JSON sub-keys |
+| **Pattern C** — ID→Path at write | Media ID accepted at controller, path stored in DB | **5** controller sites | Covers all Pattern B writes |
 
-| Check | Scope |
-|-------|-------|
-| Match all `portfolios.default_image` paths against `media.file_path` | All non-NULL rows |
-| Match all `portfolios.images` path entries (JSON array) against `media.file_path` | All non-NULL entries |
-| Match all `general_settings.logo`, `dark_logo`, `sticky_logo`, `dark_sticky_logo`, `admin_logo`, `admin_dark_logo`, `favicon` paths against `media.file_path` | All non-NULL columns |
-| Detect duplicate paths (same path stored in multiple places) | Cross-table and within-table |
-| Detect orphaned paths (path stored, no matching `media` record exists) | Per column, per table |
-| Detect inconsistent path formats (leading slash, `storage/` prefix, full URL vs. relative path) | All path columns |
+**Ghost relation discovered:** `Section::image()` declares `belongsTo(Media::class, 'image_id')` in `app/Models/Section.php` but no migration has ever added `image_id` to the `sections` table. The relation silently returns `null`. It must be removed before any related migration work begins.
 
-**Path normalisation note:** Before matching, normalise both sides to a canonical
-relative format (strip leading `/`, strip `storage/` prefix, lowercase). A mismatch
-due to formatting is not a missing media record — it is a format inconsistency that
-the backfill command must handle, not remediate manually.
+### Pattern B Column Inventory (full)
 
-### Required Output Report
+| Table | Column(s) | Write path |
+|-------|-----------|-----------|
+| `general_settings` | `logo`, `dark_logo`, `sticky_logo`, `dark_sticky_logo`, `admin_logo`, `admin_dark_logo`, `favicon` (×7) | `HomeController::normalizeMediaPath()` |
+| `general_settings` | `header_variant_settings.*.logo_override` (JSON sub-key) | `AppearanceController::normalizeMediaPath()` |
+| `general_settings` | `header_variant_settings.*.payment_logos` (JSON array sub-key) | `AppearanceController::normalizeMediaPathList()` |
+| `portfolios` | `default_image` | `PortfolioController::resolveMediaIdsToPaths()` |
+| `portfolios` | `images` (JSON array) | `PortfolioController::resolveMediaIdsToPaths()` |
+| `templates` | `image` | `TemplateController` inline (two write paths) |
+| `clients` | `avatar` | `ClientController` direct store (path from media picker) |
+| `services` | `icon` | Direct store (file path, not CSS class) |
 
-Run the audit on a production-data Staging clone and produce the following table:
+### Critical Findings
 
-| Metric | Count |
-|--------|-------|
-| Matched Paths | |
-| Missing Paths (no `media` record found, after normalisation) | |
-| Duplicate Paths (same path in two or more rows) | |
-| Invalid Paths (empty string, null-like value, or external URL stored in path column) | |
+**Finding 1 — `templates.image` has two write paths with different media record behaviour:**
+- Path A (direct file upload): file stored on disk, **NO `media` record created** → orphaned path
+- Path B (media picker): `Media::whereKey()->value('file_path')` → media record exists
 
-For every row where **Missing Paths > 0**, document:
-- Which table and column
-- The stored path value
-- Whether the file exists on disk but has no `media` record (re-registerable)
-- Whether the file is missing entirely (re-upload required or accept NULL)
+Rows written via Path A cannot be migrated to Pattern A without a data backfill first.
+**Wave 2 is blocked until this is resolved.**
 
-### Transition Criterion
+**Finding 2 — Two divergent `normalizeMediaPath()` implementations:**
+- `HomeController` version: strips leading `/` only
+- `AppearanceController` version: strips leading `/` AND strips `storage/` prefix
 
-**ADR-005 Phase 1 does not begin until:**
+Path format inconsistency is possible across `general_settings` columns depending on
+which controller last wrote the value. The backfill command must normalize both sides.
 
-```
-Missing Paths = 0
-```
-
-OR every missing path is individually documented with one of:
-- "File re-registered in `media` table" ✅
-- "File re-uploaded and re-linked" ✅
-- "Accepted as NULL — fallback image in use" ✅ (with explicit approval)
-
-No exceptions. A missing path that reaches the backfill phase will produce a NULL
-`*_media_id` in a column that was previously non-NULL — a silent demotion from a
-stored image to no image.
+**Finding 3 — `portfolios.images` and `payment_logos` are JSON arrays:**
+Migrating these to Pattern A requires either a pivot table (`portfolio_media`) or
+storing IDs inside the JSON instead of paths. An architectural decision is required.
+**Wave 3 is blocked until this decision is made.**
 
 ---
 
@@ -249,9 +239,9 @@ stored image to no image.
 ### Why Second?
 
 ADR-005 is structurally more complex than ADR-006 but carries no financial risk.
-The migration targets image references in `portfolios` and `general_settings` — data
-that, if temporarily wrong, produces a broken image display rather than a financial
-error. This is recoverable and visible immediately.
+The migration targets image references in `portfolios`, `general_settings`, `templates`,
+`clients`, and `services` — data that, if temporarily wrong, produces a broken image
+display rather than a financial error. This is recoverable and visible immediately.
 
 Placing ADR-005 before ADR-003 means the media system is unified and consistent
 before financial data migration begins. This matters because `PortfolioController`
@@ -260,163 +250,314 @@ and `AppearanceController` currently contain conversion utilities
 with the billing migration period, creating unnecessary complexity in the codebase
 during an already careful migration window.
 
-### Tables Requiring Migration
+**No technical dependency exists between ADR-005 and ADR-003.** They operate on
+completely separate tables. ADR-003 can begin at any time after ADR-006 completes.
+However, financial migrations must not run in the same deploy window as media schema
+changes — the isolation rule below still applies (see Risk Isolation Principle 1).
 
-| Table | Columns | Change |
-|-------|---------|--------|
-| `portfolios` | `default_image` (string) | Replace with `default_image_media_id` FK |
-| `portfolios` | `images` (JSON array of paths) | Replace with `images_media_ids` (JSON array of IDs) |
-| `general_settings` | `logo`, `dark_logo`, `sticky_logo`, `dark_sticky_logo`, `admin_logo`, `admin_dark_logo`, `favicon` (7 string columns) | Replace each with `*_media_id` FK columns |
+### Pre-Migration Cleanup Required (Before Any Wave)
 
-**Already compliant — no migration needed:**
+**Cleanup 1 — Remove ghost `Section::image()` relation**
 
-| Table | Column | Pattern |
-|-------|--------|---------|
-| `feedbacks` (`testimonials` after Phase 1) | `image_id` | Pattern A ✅ |
-| `section_definitions` | `preview_media_id` | Pattern A ✅ |
-| `section_translations.content` (JSON) | media-type fields | App-layer ID reference ✅ |
+`app/Models/Section.php` declares `belongsTo(Media::class, 'image_id')` but no
+migration has ever created `image_id` on the `sections` table. The relation returns
+`null` silently. Remove it before any media migration work begins to avoid developer
+confusion during Wave 1.
 
-### Backfill Requirements
+**Cleanup 2 — Deduplicate `normalizeMediaPath()`**
 
-The backfill relies on reverse-lookup: find a `media` record whose `file_path` matches
-the stored path string.
+`HomeController` (line 874) and `AppearanceController` (line 676) both contain a
+private `normalizeMediaPath()` implementation with different behaviour:
+- `HomeController` version: strips leading `/` only
+- `AppearanceController` version: strips leading `/` AND strips `storage/` prefix
 
-**Pre-backfill audit (mandatory before Phase 1 of ADR-005):**
+Extract to a shared `MediaPathNormalizer` service or trait before Phase 1 of any
+wave, so that Wave 1 dual-write updates are made in one place, not two.
 
-Run the following counts before touching any schema:
+---
+
+### Already Compliant — No Migration Needed
+
+| Table | Column | Pattern | Notes |
+|-------|--------|---------|-------|
+| `testimonials` | `image_id` | Pattern A ✅ | FK to `media.id` |
+| `section_definitions` | `preview_media_id` | Pattern A ✅ | FK to `media.id` |
+| `sections.content` (JSON) | media-type fields | Pattern A ✅ | Integer IDs, resolved via `SectionFrontendMediaResolver` |
+
+---
+
+### Wave 1 — Simple FK Columns
+
+> **Status:** READY TO START (after Cleanup 1 and Cleanup 2 above)
+
+#### Scope
+
+| Table | Column | Current type | Target |
+|-------|--------|-------------|--------|
+| `clients` | `avatar` (string, nullable) | Path from media picker | `avatar_media_id` FK | 2 orphaned rows (old direct-upload `images/clients/1.png`) → NULL on backfill |
+| ~~`services`~~ | ~~`icon` (string, nullable)~~ | ~~File path~~ | ~~`icon_media_id` FK~~ | **EXCLUDED** — 4/5 values are `/assets/tamplate/images/icons/*.svg` (static theme assets, not media library items). Cannot be Pattern A. Mark as intentional Pattern B exception. |
+| `general_settings` | `logo`, `dark_logo`, `sticky_logo`, `dark_sticky_logo`, `admin_logo`, `admin_dark_logo`, `favicon` (×7) | Path via `normalizeMediaPath()` | `logo_media_id`, `dark_logo_media_id`, … (×7 FK columns) | All currently NULL — no backfill needed |
+| `portfolios` | `default_image` (string, nullable) | Path via `resolveMediaIdsToPaths()` | `default_image_media_id` FK | 1 orphaned row (portfolio #3, deleted media record) → NULL on backfill |
+
+#### Why Wave 1 First?
+
+All four targets share the same properties:
+- One-to-one (single path → single ID)
+- No JSON arrays, no pivot tables
+- No direct file upload complexity
+- Every stored path was written from a `media` record — match via `file_path` is reliable
+- Backfill is a straightforward reverse-lookup: `SELECT id FROM media WHERE file_path = ltrim($stored, '/')`
+
+#### Pre-Backfill Audit — RESULTS (2026-06-16, DB: palgoalsnewtest1)
+
+Phase 0.5 audit run against live local DB. Full report: `docs/ADR_005_PHASE05_WAVE1_BACKFILL_AUDIT.md`.
+
+| Column | Total | Non-null | Matched | Orphaned | Note |
+|---|---|---|---|---|---|
+| `clients.avatar` | 4 | 2 | 0 | **2** | Both: `images/clients/1.png` — old direct upload, no media record |
+| `services.icon` | 5 | 5 | 1 | **4** | 4 are `/assets/tamplate/images/icons/*.svg` — static theme assets (EXCLUDED) |
+| `portfolios.default_image` | 5 | 5 | 4 | **1** | Portfolio #3: `media/2026/04/69efa028da4677.81471412.png` — deleted media record |
+| `general_settings` logos ×7 | 1 | 0 | 0 | **0** | All NULL — no backfill needed |
+
+**Backfill normalization:** Use `AppearanceController::normalizeMediaPath()` logic (strips `storage/` prefix) NOT the `HomeController` version.
 
 ```sql
--- Portfolios with no matching media record for default_image
-SELECT COUNT(*) FROM portfolios
-WHERE default_image IS NOT NULL
-  AND default_image NOT IN (SELECT file_path FROM media);
+-- Verify on Staging clone before executing Wave 1 migration:
+-- clients.avatar — paths with no matching media record
+SELECT COUNT(*) FROM clients
+WHERE avatar IS NOT NULL
+  AND ltrim(avatar, '/') NOT IN (SELECT file_path FROM media);
 
--- general_settings rows with no matching media record for logo
+-- general_settings logo columns (repeat for each of the 7 columns)
 SELECT COUNT(*) FROM general_settings
 WHERE logo IS NOT NULL
-  AND logo NOT IN (SELECT file_path FROM media);
+  AND ltrim(logo, '/') NOT IN (SELECT file_path FROM media);
+
+-- portfolios.default_image
+SELECT COUNT(*) FROM portfolios
+WHERE default_image IS NOT NULL
+  AND ltrim(default_image, '/') NOT IN (SELECT file_path FROM media);
 ```
 
-**If the count is zero:** The backfill will succeed for all rows.  
-**If the count is non-zero:** Those rows have path strings with no matching `media`
-record. These must be manually remediated before Phase 3 (switch reads). Options:
-re-upload the file, or accept a `NULL` media ID and use a default fallback image.
+If any count is non-zero, document the orphaned path and decide:
+- Re-register in `media` table (file exists on disk) ✅
+- Re-upload and relink ✅
+- Accept NULL with fallback image ✅ (explicit decision required)
 
-The most common cause of unmatched paths is storage path format differences — paths
-stored with a `storage/` prefix vs. without, or with a leading slash vs. without.
-The backfill command must normalize paths before comparing.
+#### Path Normalisation Note
 
-### Data Verification Requirements
+Before matching, normalise the stored value:
+```
+ltrim($stored_value, '/')           → removes leading slash (HomeController writes with ltrim)
+```
+The `AppearanceController` version additionally strips `storage/` prefix. Check the
+actual stored values in `general_settings` against both formats before assuming a
+clean match.
 
-After the backfill (Phase 3 of ADR-005) and before switching reads (Phase 4):
+#### Wave 1 — Blast Radius
 
-1. Count rows where `default_image IS NOT NULL AND default_image_media_id IS NULL`.
-   This count must be zero (or reviewed and accepted as intentional NULLs).
-2. Spot-check 10 portfolio records: confirm that `Media::find($portfolio->default_image_media_id)->url`
-   returns the same URL that `asset('storage/' . $portfolio->default_image)` previously returned.
-3. Confirm the `general_settings` row has all 7 `*_media_id` columns populated.
-4. Load the admin general-settings page and confirm all logo/favicon images render.
-5. Load the public marketing page and confirm logos in header/footer render.
-6. Load a portfolio page and confirm images render.
+**Blade views to update (read-switch, Phase 4 equivalent):**
 
-### JSON Columns (Appearance Variant Settings)
+| File | Old read | New read |
+|------|----------|----------|
+| `resources/views/components/template/sections/home-works.blade.php` | `asset('storage/' . $work->default_image)` | `$work->defaultImageMedia?->url` |
+| `resources/views/components/template/sections/our_work_showcase.blade.php` | `$resolveImageUrl($portfolio->default_image)` | `SectionFrontendMediaResolver::resolve($portfolio->default_image_media_id)` |
+| `resources/views/components/template/sections/works.blade.php` | `asset('storage/' . $work->default_image)` | `$work->defaultImageMedia?->url` |
+| `resources/views/dashboard/portfolios/_form.blade.php` | `$portfolio->default_image` | `$portfolio->default_image_media_id` |
+| `resources/views/dashboard/portfolios/index.blade.php` | `asset('storage/' . $portfolio->default_image)` | `$portfolio->defaultImageMedia?->url` |
+| `resources/views/front/pages/portfolio.blade.php` | `asset('storage/' . $portfolio->default_image)` | `$portfolio->defaultImageMedia?->url` |
+| `app/Support/Sections/SectionQueryResolver.php:371` | `self::portfolioImageUrl()` (path-based) | `SectionFrontendMediaResolver::resolve($portfolio->default_image_media_id)` |
+| General settings layout files (front/layouts/headers/*, footers/*, dashboard/layouts/*) | `asset('storage/' . $settings->logo)` | `$settings->logoMedia?->url` |
+| `resources/views/dashboard/clients/*.blade.php` | `asset('storage/' . $client->avatar)` | `$client->avatarMedia?->url` |
 
-`header_variant_settings` and `footer_variant_settings` in `general_settings` store
-`logo_override` values inside JSON blobs. These are the most complex part of ADR-005.
+**Controllers / methods deletable after Wave 1 read-switch:**
 
-Two migration options:
+| Method | File | Delete after |
+|--------|------|-------------|
+| `resolveMediaIdsToPaths()` | `PortfolioController.php` | Wave 1 complete |
+| `normalizeMediaPath()` | `HomeController.php` | Wave 1 complete |
+| `avatarMedia()` path-based fallback in `ClientController` | `ClientController.php` | Wave 1 complete |
 
-**Option A (preferred):** Add dedicated `logo_override_media_id` columns alongside
-the JSON. Store the ID in the flat column; the JSON logo_override key becomes ignored
-or removed.
+#### Wave 1 — Rollback Complexity
 
-**Option B (deferred):** Treat the JSON logo_override values as part of the
-Appearance system's own internal state and migrate them in a dedicated Appearance
-migration, decoupled from the main ADR-005 migration. This allows Phase 1–4 of
-ADR-005 to proceed without touching the complex JSON structure.
+**Low for Phases 1–3 (add columns, dual-write, backfill).** New columns are additive. Old path columns remain intact. Drop the new FK columns to revert.
 
-**Recommendation:** Option B. Defer the JSON logo_override migration to a follow-up
-migration after ADR-005 Phases 1–5 are complete for the flat columns.
+**Medium for Phase 4 (read-switch).** Old path columns still present — a code-only revert restores reads to path columns.
 
-### Controllers / Code to Delete After Phase 4
+**Irreversible after Phase 5 (drop old columns).** Do not drop path columns until Phase 4 has been stable for a minimum of one week.
 
-The following methods support Pattern C→B and Pattern B conversion. Their deletion gates
-are **not uniform** — two of the three files still need their conversion methods for deferred
-JSON columns and cannot be fully cleaned until a follow-up migration.
-
-| Method | File | Can delete after Phase 4? |
-|--------|------|--------------------------|
-| `resolveMediaIdsToPaths()` | `PortfolioController.php` | ✅ Yes — all portfolio media migrated in ADR-005 |
-| `normalizeMediaPath()` | `HomeController.php` | ✅ Yes — all flat `general_settings` columns migrated in ADR-005 |
-| `normalizeMediaPath()` | `AppearanceController.php` | ❌ **No** — still required for `logo_override` in `header_variant_settings` and `footer_variant_settings` JSON (deferred scope) |
-| `normalizeMediaPathList()` | `AppearanceController.php` | ❌ **No** — still required for `payment_logos` in `footer_variant_settings` JSON (deferred scope) |
-
-`HomeController.php` has its own independent copy of `normalizeMediaPath()` at line 874.
-It is called 8 times (lines 309, 449–455, 558) to write the 7 logo/favicon path columns.
-This copy must be updated in Phase 2 (dual-write) and deleted in Phase 4 alongside the
-`PortfolioController` method. It is a separate method from the one in `AppearanceController`.
-
-`AppearanceController.normalizeMediaPath()` and `normalizeMediaPathList()` survive Phase 4
-and are deleted only after the follow-up JSON variant media migration is complete. Until then,
-they remain as the write path for `logo_override` and `payment_logos` inside the JSON blobs.
-
-Additionally, the inline `$resolveImageUrl` closure in
-`resources/views/components/template/sections/our_work_showcase.blade.php`
-must be replaced with `SectionFrontendMediaResolver::resolve()`.
-
-**Blast radius for Blade views (from code audit):** 6 views reference portfolio images
-and must be updated in Phase 4:
-
-| File | Read used |
-|------|-----------|
-| `resources/views/components/template/sections/home-works.blade.php` | `asset('storage/' . $work->default_image)` |
-| `resources/views/components/template/sections/our_work_showcase.blade.php` | `$resolveImageUrl($portfolio->default_image)` |
-| `resources/views/components/template/sections/works.blade.php` | `asset('storage/' . $work->default_image)` |
-| `resources/views/dashboard/portfolios/_form.blade.php` | `$portfolio->default_image` |
-| `resources/views/dashboard/portfolios/index.blade.php` | `asset('storage/' . $portfolio->default_image)` |
-| `resources/views/front/pages/portfolio.blade.php` | `asset('storage/' . $portfolio->default_image)` |
-
-**Additional PHP read path:** `app/Support/Sections/SectionQueryResolver.php:371` reads
-`$portfolio->default_image` via `self::portfolioImageUrl()`. This is a PHP support class,
-not a Blade view, but it must also be updated in Phase 4. It drives portfolio image rendering
-for all Section Engine-driven portfolio sections.
-
-**Blast radius for general_settings logo:** Referenced in `HomeController.php`
-(reads at lines 72–78, 141–147) and multiple layout Blade files (front/layouts/footers/*,
-front/layouts/headers/*, dashboard/layouts/partials/head.blade.php,
-dashboard/layouts/partials/nav.blade.php, dashboard/pages/sections/layouts/workspace.blade.php,
-etc.). All references must switch from `$setting->logo` to `$setting->logoMedia?->url`
-or equivalent after Phase 4.
-
-### Rollback Complexity
-
-**Low for Phases 1–3.** The new `*_media_id` columns are additive. If Phase 3
-(backfill) produces wrong data, truncating the new ID columns and re-running the
-backfill is straightforward. The old path columns remain intact as the read source
-throughout Phases 1–3.
-
-**Medium for Phase 4.** Once reads switch to ID columns, rolling back requires
-reinstating path-based reads in all controllers and views. The old path columns
-are still present at this point (not yet dropped), so a code-only rollback restores
-full functionality.
-
-**Irreversible after Phase 5.** Dropping the old path columns removes the only
-path-based fallback. Do not execute Phase 5 until Phase 4 has been stable for at
-least one release cycle (minimum 2 weeks in production).
-
-### Estimated Effort
+#### Wave 1 — Estimated Effort
 
 | Task | Effort |
 |------|--------|
-| Pre-backfill audit SQL and remediation (if needed) | 2–4 hours |
-| Phase 1 migration (add FK columns) | 2 hours |
-| Phase 2 dual-write controller updates | 3 hours |
-| Phase 3 backfill command + verification | 3 hours |
-| Phase 4 read-switch: controllers (PortfolioController + HomeController) + 6 Blade views + SectionQueryResolver + general_settings layouts | 7–9 hours |
-| Phase 4 delete PortfolioController::resolveMediaIdsToPaths() + HomeController::normalizeMediaPath() + simplify SectionMediaPreviewBuilder | 2 hours |
-| Phase 5 migration (drop old columns) | 1 hour |
-| Testing (logo render, portfolio images, admin media picker) | 3 hours |
-| **Total** | **~22–25 hours across multiple deploys** |
+| Pre-migration cleanups (ghost relation, deduplicate normalizeMediaPath) | 1 hour |
+| Pre-backfill audit SQL + remediation if needed | 1–2 hours |
+| Migration (add FK columns: 4 tables, 10 columns total) | 2 hours |
+| Dual-write: HomeController ×7, PortfolioController, ClientController, ServiceController | 3 hours |
+| Backfill command + verification | 2 hours |
+| Read-switch: controllers + 9 views/files listed above | 4–5 hours |
+| Delete conversion methods (resolveMediaIdsToPaths, normalizeMediaPath HomeController copy) | 1 hour |
+| Drop old columns migration | 1 hour |
+| Testing | 2 hours |
+| **Wave 1 total** | **~2–3 hours/day over 5–6 days** |
+
+---
+
+### Wave 2 — Template Image
+
+> **Status:** ⚠ BLOCKED — requires templates.image backfill pre-fix before starting
+
+#### Scope
+
+| Table | Column | Current type | Target |
+|-------|--------|-------------|--------|
+| `templates` | `image` (string) | Path (two write paths, one without media record) | `image_media_id` FK |
+
+#### Why Separate From Wave 1?
+
+`templates.image` has two write paths in `TemplateController`:
+
+**Path A — Direct file upload (CRITICAL):**
+```php
+$imagePath = $request->file('image')->store('templates', 'public');
+// ↑ writes file to disk, NO Media::create() called
+```
+Result: `templates.image` stores a path like `templates/abc123.jpg` but `media` table has **no row** for this file. A `SELECT id FROM media WHERE file_path = 'templates/abc123.jpg'` returns zero rows. Migration to Pattern A is impossible without creating the missing `media` record first.
+
+**Path B — Media picker:**
+```php
+$rawPath = Media::query()->whereKey($id)->value('file_path');
+$imagePath = ltrim((string) $rawPath, '/');
+```
+Result: stored path CAN be matched back to a `media.id`. No backfill blocker here.
+
+#### Required Pre-Wave 2 Fix
+
+Before any Wave 2 migration, run a backfill to create missing `media` records:
+
+```php
+// Pseudocode — implement as a seeder or one-time artisan command
+Template::whereNotNull('image')->each(function ($template) {
+    $normalizedPath = ltrim($template->image, '/');
+    $exists = Media::where('file_path', $normalizedPath)->exists();
+    if (! $exists && Storage::disk('public')->exists($normalizedPath)) {
+        Media::create([
+            'file_path'     => $normalizedPath,
+            'disk'          => 'public',
+            'mime_type'     => 'image/jpeg',   // or detect from file
+            'original_name' => basename($normalizedPath),
+        ]);
+        // Log for audit trail
+    } elseif (! $exists) {
+        // File missing from disk — log for manual review
+    }
+});
+```
+
+After this runs, re-run the pre-backfill audit SQL:
+```sql
+SELECT COUNT(*) FROM templates
+WHERE image IS NOT NULL
+  AND ltrim(image, '/') NOT IN (SELECT file_path FROM media);
+```
+This count must be zero before Wave 2 migration begins.
+
+Additionally, update `TemplateController` to always create a `media` record for new
+direct uploads, so the problem does not recur after migration.
+
+#### Wave 2 — Estimated Effort
+
+| Task | Effort |
+|------|--------|
+| Backfill script: create missing media records for existing rows | 1–2 hours |
+| Verify backfill: count orphaned paths = 0 | 30 minutes |
+| TemplateController fix: create Media record on direct upload | 1 hour |
+| Migration (add `image_media_id` FK) | 30 minutes |
+| Dual-write: TemplateController both paths | 1 hour |
+| Backfill command | 1 hour |
+| Read-switch: TemplateController + template Blade views | 2 hours |
+| Drop old column | 30 minutes |
+| **Wave 2 total** | **~3–4 hours** |
+
+---
+
+### Wave 3 — JSON Arrays and Complex Media
+
+> **Status:** ⛔ BLOCKED — requires JSON storage architecture decision before starting
+
+#### Scope
+
+| Table | Column / Key | Type | Blocker |
+|-------|-------------|------|---------|
+| `portfolios` | `images` (JSON array of path strings) | Array of paths | Pivot table vs JSON-of-IDs decision |
+| `general_settings` | `header_variant_settings.*.logo_override` (JSON sub-key) | Nested path inside JSON | Cannot add FK constraint to JSON key |
+| `general_settings` | `header_variant_settings.*.payment_logos` (JSON array sub-key) | Array of paths nested in JSON | Same as above |
+
+#### Architecture Decision Required
+
+Two options for `portfolios.images` and the `payment_logos` JSON array:
+
+**Option A — Pivot table (fully Pattern A):**
+- Create `portfolio_media` with `(portfolio_id, media_id, sort_order)`
+- Drop `portfolios.images` column
+- Admin JS (media picker for images array) must be updated to store IDs, not paths
+
+**Option B — JSON of IDs (half-way):**
+- Keep `portfolios.images` as JSON, but store integer IDs instead of path strings
+- `SectionFrontendMediaResolver::resolveMany()` already handles arrays of IDs
+- No new table, no join — simpler migration but not true Pattern A
+
+**Option C — Defer indefinitely (for JSON sub-keys only):**
+- `header_variant_settings` is an internal CMS JSON blob; true FK constraint is
+  architecturally impossible without a new table
+- Acceptable to store IDs inside the JSON (Option B style) and resolve at render time
+- `AppearanceController::normalizeMediaPath()` and `normalizeMediaPathList()` remain
+  until this is resolved
+
+**Decision must be made and documented before Wave 3 begins.**
+
+#### Wave 3 — Estimated Effort
+
+| Task | Effort |
+|------|--------|
+| Architecture decision + documentation | 1 hour |
+| Option A: `portfolio_media` pivot migration + model + admin JS updates | 4–6 hours |
+| Option B: JSON-of-IDs migration + backfill + read-switch | 3–4 hours |
+| `header_variant_settings` JSON keys migration (either option) | 2–3 hours |
+| Delete `AppearanceController::normalizeMediaPath()` + `normalizeMediaPathList()` | 1 hour |
+| Testing | 2 hours |
+| **Wave 3 total (Option A)** | **~10–12 hours** |
+| **Wave 3 total (Option B)** | **~7–9 hours** |
+
+---
+
+### ADR-005 Overall Effort Estimate (revised from Phase 0 audit)
+
+| Wave | Scope | Effort |
+|------|-------|--------|
+| Wave 1 — Simple FK columns | clients.avatar, general_settings ×7, portfolios.default_image (services.icon EXCLUDED) | **2–3 hours/day × 5–6 days** |
+| Wave 2 — Template image | templates.image (with backfill pre-fix) | **3–4 hours** |
+| Wave 3 — JSON arrays | portfolios.images, payment_logos, logo_override | **7–12 hours** (depends on decision) |
+| **Total** | | **~11–17 hours of engineering effort** |
+
+The increase from the original ~22–25 hour estimate reflects a rebalancing: the original
+estimate included work that turned out to be already done (Pattern A columns), and added
+Wave 2 backfill complexity and Wave 3 architectural work that was not previously scoped.
+The main sources of complexity are `templates.image` (direct upload gap) and the JSON
+array columns (no FK possible, architecture decision needed).
+
+---
+
+### Controllers / Code Deletion Gate (Revised)
+
+| Method | File | Deletable after |
+|--------|------|----------------|
+| `resolveMediaIdsToPaths()` | `PortfolioController.php` | Wave 1 complete |
+| `normalizeMediaPath()` | `HomeController.php` | Wave 1 complete |
+| `normalizeMediaPath()` | `AppearanceController.php` | Wave 3 complete |
+| `normalizeMediaPathList()` | `AppearanceController.php` | Wave 3 complete |
+| `SectionMediaPreviewBuilder` string branch | `SectionMediaPreviewBuilder.php` | Wave 3 complete |
+| `Section::image()` ghost relation | `app/Models/Section.php` | Pre-migration cleanup (before Wave 1) |
 
 ---
 
@@ -658,32 +799,40 @@ the `price` column from `price_cents`.
 ## Dependency Graph
 
 ```
-ADR-006 (Feedbacks Rename)
+ADR-006 (Feedbacks Rename) ✅ COMPLETE 2026-06-16
 │
-│  No technical dependency — recommended first by risk profile
-│  Cleanest rename; zero data transformation
-│  Eliminates DB/PHP naming mismatch before subsequent migrations
+│  No technical dependency — executed first by risk profile
+│  Pure rename; zero data transformation
+│  Eliminated DB/PHP naming mismatch
 │
-▼
-ADR-005 (Media Unification)
-│
-│  No technical dependency on ADR-006
-│  Recommended second: no financial risk; visible failures (broken images)
-│  Testimonials already Pattern A — confirmed stable before portfolio migration
-│
-▼
-ADR-003 (Integer Cents)
-   │
-   └── No technical dependency on ADR-005 or ADR-006
-       Recommended last: highest risk; requires billing cycle monitoring
-       Coupon application (currently $0) unlocks only after this is complete
+├──────────────────────────────────────────────────────────┐
+│                                                          │
+▼                                                          ▼
+ADR-005 (Media Unification)                    ADR-003 (Integer Cents)
+│                                              │
+│  No technical dependency on ADR-006          │  No technical dependency on ADR-005
+│  Phase 0 audit COMPLETE (2026-06-16)         │  Phase 0 Money Audit: NOT STARTED
+│                                              │  Blockers: 3 undocumented write paths;
+│  Wave 1: READY TO START                      │  CouponController does not exist
+│  Wave 2: blocked on templates.image backfill │
+│  Wave 3: blocked on JSON storage decision    │  Can start Phase 0 NOW — parallel
+│                                              │  with ADR-005 Wave 1 if needed
+│  No constraint from ADR-003 timing           │
+│                                              │  Migrations must NOT share a deploy
+└──────────────────────────────────────────────┘  window with ADR-005 migrations
 ```
 
+**Key change from original plan:** ADR-005 and ADR-003 are now shown as **parallel tracks**
+rather than a strict sequence. Phase 0 audit work for ADR-003 can begin while ADR-005 Wave 1
+is in progress — they touch entirely different tables. However, **migration deploys must
+remain isolated**: no ADR-005 migration and ADR-003 migration in the same deploy window.
+This is Principle 1 of the Risk Isolation Strategy (financial migrations isolated from
+schema cleanup) and remains unchanged.
+
 **Summary:** The three ADRs have no hard technical dependencies on each other.
-The order is determined entirely by risk escalation. If business priorities require
-a different order, ADR-003 can technically be executed before ADR-005 — but ADR-003
-should never be executed before ADR-006, because ADR-006 is so low-risk that there
-is no justification for deferring it.
+The order is determined entirely by risk escalation. ADR-003 Phase 0 (read-only audit)
+can run in parallel with ADR-005 Wave 1 if business urgency requires it. ADR-003
+migration Phases must still run after ADR-005 migrations are deployed and stable.
 
 ---
 
@@ -702,7 +851,7 @@ Before beginning any Phase 1 migration, confirm:
 
 **For ADR-006 specifically:**
 
-- [ ] `app/Livewire/Admin/Testimonials.php` is in the update scope (not just the 3 files in ADR-006)
+- [x] ADR-006 completed. Legacy Livewire testimonial files were deleted and are no longer in scope.
 - [ ] No raw SQL in the application references `feedbacks` or `feedback_translations` directly
   (confirmed: code audit found only Eloquent/ORM usage)
 - [ ] No stored procedures or DB views reference `feedbacks` (MySQL: `SHOW FULL TABLES WHERE TABLE_TYPE = 'VIEW'`)
@@ -710,10 +859,11 @@ Before beginning any Phase 1 migration, confirm:
 
 **For ADR-005 specifically:**
 
-- [ ] Pre-backfill audit SQL run:
-  `SELECT COUNT(*) FROM portfolios WHERE default_image IS NOT NULL AND default_image NOT IN (SELECT file_path FROM media)`
-- [ ] Count is zero OR orphaned paths are documented and a remediation plan is in place
-- [ ] Same audit run for `general_settings.logo` (and the other 6 columns)
+- [ ] Phase 0 audit complete ✅ (2026-06-16) — see `docs/ADR_005_PHASE0_MEDIA_AUDIT.md`
+- [ ] Pre-migration cleanups done: ghost `Section::image()` removed, `normalizeMediaPath()` deduplicated
+- [ ] Wave 1 pre-backfill audit SQL run on Staging clone: clients, services, portfolios, general_settings — count = 0 or remediated
+- [ ] Wave 2 blocker resolved: `templates.image` orphan backfill run, 0 missing media records confirmed
+- [ ] Wave 3 blocker resolved: JSON storage architecture decision made and documented
 - [ ] `SectionFrontendMediaResolver` is confirmed working on Staging with real media IDs
 
 **For ADR-003 specifically:**
@@ -736,33 +886,54 @@ Before beginning any Phase 1 migration, confirm:
 - [ ] Public testimonial submission form submits successfully
 - [ ] Testimonials appear correctly on the public marketing page
 - [ ] `SectionQueryResolver::testimonials()` returns data (section with testimonials renders)
-- [ ] Livewire admin testimonials component loads and updates without error
+- [x] Legacy Livewire testimonial component removed; no active route/include remains.
 - [ ] `docs/03-database-architecture.md` updated: `feedbacks` → `testimonials`
 - [ ] `docs/29-content-showcase.md` updated: critical finding removed
 
 ### ADR-005 Validation
 
-After Phase 3 (backfill), before switching reads:
+**Wave 1 — after backfill, before read-switch:**
 
 - [ ] `SELECT COUNT(*) FROM portfolios WHERE default_image IS NOT NULL AND default_image_media_id IS NULL` = 0
+- [ ] `SELECT COUNT(*) FROM clients WHERE avatar IS NOT NULL AND avatar_media_id IS NULL` = 0
+- [ ] `SELECT COUNT(*) FROM general_settings WHERE logo IS NOT NULL AND logo_media_id IS NULL` = 0
 - [ ] Spot-check: 10 random portfolio `default_image_media_id` values resolve to correct URLs
+- [ ] Ghost relation `Section::image()` removed from `app/Models/Section.php`
+- [ ] `normalizeMediaPath()` deduplicated into shared service
 
-After Phase 4 (read switch):
+**Wave 1 — after read-switch:**
 
 - [ ] Admin portfolio list renders all images correctly
 - [ ] Public portfolio section renders all images correctly
 - [ ] Admin general settings page shows all logo/favicon images correctly
 - [ ] Public site header/footer logos render correctly
 - [ ] Media picker in portfolio form correctly pre-selects the current image
-- [ ] `resolveMediaIdsToPaths()` has been deleted from `PortfolioController`
-- [ ] `normalizeMediaPath()` and `normalizeMediaPathList()` have been deleted from `AppearanceController`
-- [ ] `SectionMediaPreviewBuilder` string branch removed (only numeric ID branch remains)
+- [ ] Clients list/show renders avatars correctly
+- [ ] `resolveMediaIdsToPaths()` deleted from `PortfolioController`
+- [ ] `normalizeMediaPath()` deleted from `HomeController`
 
-After Phase 5 (drop old columns):
+**Wave 1 — after column drop:**
 
-- [ ] `DESCRIBE portfolios` shows no `default_image` or `images` columns
+- [ ] `DESCRIBE portfolios` shows no `default_image` column
+- [ ] `DESCRIBE clients` shows no `avatar` column
 - [ ] `DESCRIBE general_settings` shows no `logo`, `dark_logo`, `sticky_logo`,
   `dark_sticky_logo`, `admin_logo`, `admin_dark_logo`, or `favicon` columns
+
+**Wave 2 — after backfill, before migration:**
+
+- [ ] `SELECT COUNT(*) FROM templates WHERE image IS NOT NULL AND ltrim(image, '/') NOT IN (SELECT file_path FROM media)` = 0
+- [ ] New template direct-upload creates a `media` record
+
+**Wave 2 — after column drop:**
+
+- [ ] `DESCRIBE templates` shows no `image` column; `image_media_id` present
+
+**Wave 3 — after completion:**
+
+- [ ] `DESCRIBE portfolios` shows no `images` column (or: JSON stores IDs not paths)
+- [ ] `normalizeMediaPath()` deleted from `AppearanceController`
+- [ ] `normalizeMediaPathList()` deleted from `AppearanceController`
+- [ ] `SectionMediaPreviewBuilder` string branch removed (only numeric ID branch remains)
 
 ### ADR-003 Validation
 
@@ -802,65 +973,71 @@ longer exists.
 
 ---
 
-### Sprint 2 — ADR-005 Phase 0 + Phases 1–3 (1 week)
+### Sprint 2 — ADR-005 Wave 1 (Simple FK Columns) (~1 week)
+
+> **Pre-conditions:** ADR-006 complete ✅, ghost relation cleaned up, `normalizeMediaPath()` deduplicated.
 
 | Day | Task |
 |-----|------|
-| Day 1–2 | **Phase 0 — Media Audit:** run all checks on Staging clone; produce report table |
-| Day 2–3 | Remediate any Missing Paths (re-register or re-upload); re-run audit until `Missing Paths = 0` |
-| Day 4 | Phase 1 migration (add FK columns) on Staging |
-| Day 5 | Phase 2 dual-write controller updates |
-| Day 6 | Deploy Phase 1 + 2 to production |
-| Day 7 | Phase 3 backfill command run on Staging; backfill verification; deploy to production |
+| Day 1 | Pre-migration cleanups: remove ghost `Section::image()`, deduplicate `normalizeMediaPath()` |
+| Day 1–2 | Pre-backfill audit SQL on Staging clone — confirm counts match Phase 0.5 findings (2 orphan avatars, 1 orphan portfolio, 0 gs logos) ✅ already run on local DB |
+| Day 3 | Wave 1 migration: add FK columns (9 columns across 3 tables — services.icon excluded) on Staging |
+| Day 3–4 | Dual-write: HomeController ×7, PortfolioController, ClientController (ServiceController excluded) |
+| Day 5 | Backfill command on Staging; verify all `*_media_id` columns populated |
+| Day 6 | Deploy migration + dual-write to production; run backfill on production |
+| Day 7 | Read-switch: controllers + 9 Blade/PHP files listed in Wave 1 blast radius |
 
-**Exit criterion:** Phase 0 report shows `Missing Paths = 0`. All portfolio and
-`general_settings` FK columns populated and verified. Old path columns still in place
-(safe point to pause).
+**Exit criterion:** All Wave 1 FK columns populated and verified. Old path columns still
+in place (safe point to pause before read-switch). `resolveMediaIdsToPaths()` and
+`HomeController::normalizeMediaPath()` deleted.
 
 ---
 
-### Sprint 3 — ADR-005 Phase 4 (Read Switch) (3–4 days)
+### Sprint 3 — ADR-005 Wave 1 Drop + Wave 2 Prep (3–4 days)
 
 | Day | Task |
 |-----|------|
-| Day 1–2 | Phase 4: switch reads in controllers and 5 Blade views to use `*_media_id` columns |
-| Day 3 | Phase 4: delete `resolveMediaIdsToPaths()`, `normalizeMediaPath()`, `normalizeMediaPathList()` |
-| Day 3 | Phase 4: simplify `SectionMediaPreviewBuilder` (remove string branch) |
-| Day 4 | Full validation: admin portfolio, public portfolio, logos, favicon, media picker |
+| Day 1 | Full validation: admin portfolio, public portfolio, logos, favicon, media picker, clients avatars |
+| Day 2 | Wave 1 Phase 5: drop old path columns from clients, services, portfolios, general_settings |
+| Day 3 | Wave 2 prep: run templates.image orphan audit; write backfill script for missing media records |
+| Day 4 | Run backfill on Staging; re-run orphan audit; confirm 0 orphaned template image paths |
 
-**Exit criterion:** All Phase 4 validation checks passed. No path-based read code
-remains in controllers or Blade views. Conversion methods deleted.
-
----
-
-### Stability Window — 1–2 Weeks
-
-Monitor production after Phase 4. Confirm no broken images, no error logs related to
-media resolution. Do not proceed to Phase 5 until the system has been stable for a
-minimum of one full week.
-
-**Gate:** If any broken image is reported during this window, pause and investigate
-before Phase 5.
+**Exit criterion:** Wave 1 old columns dropped. Templates.image orphan audit shows 0
+missing media records on Staging. Wave 2 unblocked.
 
 ---
 
-### Sprint 4 — ADR-005 Phase 5 (Drop Old Columns) (1 day)
+### Stability Window — Wave 1 (1 week)
 
-| Task | When |
-|------|------|
-| Phase 5 migration: drop `default_image`, `images` from `portfolios` | Day 1 |
-| Phase 5 migration: drop 7 path columns from `general_settings` | Day 1 |
-| Post-drop validation: confirm `DESCRIBE` output, confirm no application errors | Day 1 |
+Monitor production after Wave 1 read-switch and column drop. Confirm no broken images,
+no error logs. Do not begin Wave 2 migration until stable for at least one week.
 
-**Exit criterion:** Old path columns dropped. ADR-005 fully closed. Media system
-is now exclusively ID-based for all flat columns.
+**Gate:** Any broken image during this window → pause and investigate before Wave 2.
+
+---
+
+### Sprint 4 — ADR-005 Wave 2 (Template Image) (2–3 days)
+
+| Day | Task |
+|-----|------|
+| Day 1 | Wave 2 migration: add `image_media_id` FK to `templates`; dual-write in `TemplateController` |
+| Day 2 | Backfill command; verify 0 templates with `image_media_id IS NULL`; fix `TemplateController` to create `Media` records for direct uploads |
+| Day 3 | Read-switch: `TemplateController` + template Blade views; drop `templates.image` |
+
+**Exit criterion:** `templates.image_media_id` populated. `TemplateController` creates
+`Media` record for all new uploads. Old `templates.image` column dropped.
 
 ---
 
 ### Sprint 5 — ADR-003 Phase 0 + Phases 1–2 (1 week)
 
-> **Note:** ADR-005 Phase 5 must be complete before this sprint begins. Financial
-> migrations must not run in parallel with schema-cleanup migrations.
+> **Note:** ADR-005 Wave 1 column drop must be deployed and stable before ADR-003
+> migration phases begin. Financial migrations must not run in parallel with
+> schema-cleanup migrations.
+>
+> **However:** ADR-003 Phase 0 (read-only money audit) can begin in parallel with
+> ADR-005 Wave 1 if business urgency requires it — it is a read-only discovery pass
+> with no schema changes.
 
 | Day | Task |
 |-----|------|
@@ -974,12 +1151,26 @@ is not a delay — it is the system working correctly.
 ### Final Recommended Order
 
 ```
-ADR-006
+ADR-006 ✅ COMPLETE (2026-06-16)
   ↓
-ADR-005 Phase 0 (Media Audit) → Phase 1–3 → Phase 4 → [Stability Window] → Phase 5
+ADR-005 Phase 0 (Media Audit) ✅ COMPLETE (2026-06-16)
   ↓
-ADR-003 Phase 0 (Money Audit) → Phase 1–2 → [30-day Monitoring] → Phase 3–4
+ADR-005 Wave 1 (Simple FK Columns)     ←── START HERE
+  ↓
+ADR-005 Wave 1 Drop + Wave 2 Prep
+  ↓                                        ←── ADR-003 Phase 0 (Money Audit) can
+ADR-005 Wave 2 (Template Image)              begin here in parallel (read-only)
+  ↓
+[Stability Window: 1 week]
+  ↓
+ADR-005 Wave 3 (JSON Arrays) — after architecture decision
+  ↓
+[Confirm ADR-005 Wave 1 columns dropped and stable]
+  ↓
+ADR-003 Phase 1–2 (Dual Write) → [30-day Monitoring] → Phase 3–4
 ```
+
+**ADR-005 Verdict:** `READY FOR WAVE 1` — `WAVE 2 REQUIRES TEMPLATE IMAGE BACKFILL` — `WAVE 3 REQUIRES JSON STORAGE DECISION`
 
 ### ADRs Executable Immediately (Without Staging Cycle)
 

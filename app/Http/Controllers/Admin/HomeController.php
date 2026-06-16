@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\GeneralSetting;
+use App\Support\Media\MediaPathNormalizer;
 use App\Models\Invoice;
 use App\Models\Language;
 use App\Models\Media;
@@ -303,10 +304,13 @@ class HomeController extends Controller
         // P2 fix: normalise logo/favicon paths through the same pipeline as updateGeneralSettings.
         // Without this, importing a file with a Media ID ("42") would store the literal string "42"
         // rather than the resolved file_path, and an arbitrary path string would bypass sanitisation.
+        // ADR-005 Wave 1: dual-write *_media_id alongside each path column.
         $logoFields = ['logo', 'dark_logo', 'sticky_logo', 'dark_sticky_logo', 'admin_logo', 'admin_dark_logo', 'favicon'];
         foreach ($logoFields as $field) {
             if (array_key_exists($field, $validated)) {
-                $validated[$field] = $this->normalizeMediaPath($validated[$field]);
+                $rawValue = $validated[$field];
+                $validated[$field] = $this->normalizeMediaPath($rawValue);
+                $validated[$field . '_media_id'] = MediaPathNormalizer::resolveToMediaId($rawValue);
             }
         }
 
@@ -446,13 +450,21 @@ class HomeController extends Controller
         $setting->active_header_variant = $validated['active_header_variant'];
         $setting->active_footer_variant = $validated['active_footer_variant'];
 
-        $setting->logo = $this->normalizeMediaPath($validated['logo_url'] ?? null);
-        $setting->dark_logo = $this->normalizeMediaPath($validated['dark_logo_url'] ?? null);
-        $setting->sticky_logo = $this->normalizeMediaPath($validated['sticky_logo_url'] ?? null);
-        $setting->dark_sticky_logo = $this->normalizeMediaPath($validated['dark_sticky_logo_url'] ?? null);
-        $setting->admin_logo = $this->normalizeMediaPath($validated['admin_logo_url'] ?? null);
-        $setting->admin_dark_logo = $this->normalizeMediaPath($validated['admin_dark_logo_url'] ?? null);
-        $setting->favicon = $this->normalizeMediaPath($validated['favicon_url'] ?? null);
+        // ADR-005 Wave 1: dual-write path column + *_media_id FK column for all 7 logo/favicon fields.
+        $setting->logo              = $this->normalizeMediaPath($validated['logo_url'] ?? null);
+        $setting->logo_media_id     = MediaPathNormalizer::resolveToMediaId($validated['logo_url'] ?? null);
+        $setting->dark_logo         = $this->normalizeMediaPath($validated['dark_logo_url'] ?? null);
+        $setting->dark_logo_media_id = MediaPathNormalizer::resolveToMediaId($validated['dark_logo_url'] ?? null);
+        $setting->sticky_logo       = $this->normalizeMediaPath($validated['sticky_logo_url'] ?? null);
+        $setting->sticky_logo_media_id = MediaPathNormalizer::resolveToMediaId($validated['sticky_logo_url'] ?? null);
+        $setting->dark_sticky_logo  = $this->normalizeMediaPath($validated['dark_sticky_logo_url'] ?? null);
+        $setting->dark_sticky_logo_media_id = MediaPathNormalizer::resolveToMediaId($validated['dark_sticky_logo_url'] ?? null);
+        $setting->admin_logo        = $this->normalizeMediaPath($validated['admin_logo_url'] ?? null);
+        $setting->admin_logo_media_id = MediaPathNormalizer::resolveToMediaId($validated['admin_logo_url'] ?? null);
+        $setting->admin_dark_logo   = $this->normalizeMediaPath($validated['admin_dark_logo_url'] ?? null);
+        $setting->admin_dark_logo_media_id = MediaPathNormalizer::resolveToMediaId($validated['admin_dark_logo_url'] ?? null);
+        $setting->favicon           = $this->normalizeMediaPath($validated['favicon_url'] ?? null);
+        $setting->favicon_media_id  = MediaPathNormalizer::resolveToMediaId($validated['favicon_url'] ?? null);
 
         $setting->contact_info = array_merge(
             $this->baseContactInfo(),
@@ -553,9 +565,12 @@ class HomeController extends Controller
             'favicon' => 'favicon_url',
         ];
 
+        // ADR-005 Wave 1: dual-write path column + *_media_id FK column.
         foreach ($assetMap as $modelField => $requestField) {
             if (array_key_exists($requestField, $validated)) {
-                $setting->{$modelField} = $this->normalizeMediaPath($validated[$requestField]);
+                $rawValue = $validated[$requestField];
+                $setting->{$modelField}              = $this->normalizeMediaPath($rawValue);
+                $setting->{$modelField . '_media_id'} = MediaPathNormalizer::resolveToMediaId($rawValue);
             }
         }
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class GeneralSetting extends Model
 {
@@ -12,12 +13,19 @@ class GeneralSetting extends Model
         'site_title',
         'site_discretion',
         'logo',
+        'logo_media_id',              // ADR-005 Wave 1
         'dark_logo',
+        'dark_logo_media_id',         // ADR-005 Wave 1
         'sticky_logo',
+        'sticky_logo_media_id',       // ADR-005 Wave 1
         'dark_sticky_logo',
+        'dark_sticky_logo_media_id',  // ADR-005 Wave 1
         'admin_logo',
+        'admin_logo_media_id',        // ADR-005 Wave 1
         'admin_dark_logo',
+        'admin_dark_logo_media_id',   // ADR-005 Wave 1
         'favicon',
+        'favicon_media_id',           // ADR-005 Wave 1
         'default_language',
         'active_header_variant',
         'active_footer_variant',
@@ -43,6 +51,84 @@ class GeneralSetting extends Model
         'social_links' => 'array',
         'localized_content' => 'array',
     ];
+
+    // ── ADR-005 Wave 1 Media Relations ─────────────────────────────────────
+
+    public function logoMedia(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'logo_media_id');
+    }
+
+    public function darkLogoMedia(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'dark_logo_media_id');
+    }
+
+    public function stickyLogoMedia(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'sticky_logo_media_id');
+    }
+
+    public function darkStickyLogoMedia(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'dark_sticky_logo_media_id');
+    }
+
+    public function adminLogoMedia(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'admin_logo_media_id');
+    }
+
+    public function adminDarkLogoMedia(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'admin_dark_logo_media_id');
+    }
+
+    public function faviconMedia(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'favicon_media_id');
+    }
+
+    // ── ADR-005 Wave 1 Read Helpers ─────────────────────────────────────────
+    // Use these when you want the best available path: FK relation first,
+    // old path column as fallback.  Wave 2 will replace the old columns.
+
+    public function resolvedLogoPath(): ?string
+    {
+        return $this->logoMedia?->file_path ?? $this->getRawOriginal('logo') ?? null;
+    }
+
+    public function resolvedDarkLogoPath(): ?string
+    {
+        return $this->darkLogoMedia?->file_path ?? $this->getRawOriginal('dark_logo') ?? null;
+    }
+
+    public function resolvedStickyLogoPath(): ?string
+    {
+        return $this->stickyLogoMedia?->file_path ?? $this->getRawOriginal('sticky_logo') ?? null;
+    }
+
+    public function resolvedDarkStickyLogoPath(): ?string
+    {
+        return $this->darkStickyLogoMedia?->file_path ?? $this->getRawOriginal('dark_sticky_logo') ?? null;
+    }
+
+    public function resolvedAdminLogoPath(): ?string
+    {
+        return $this->adminLogoMedia?->file_path ?? $this->getRawOriginal('admin_logo') ?? null;
+    }
+
+    public function resolvedAdminDarkLogoPath(): ?string
+    {
+        return $this->adminDarkLogoMedia?->file_path ?? $this->getRawOriginal('admin_dark_logo') ?? null;
+    }
+
+    public function resolvedFaviconPath(): ?string
+    {
+        return $this->faviconMedia?->file_path ?? $this->getRawOriginal('favicon') ?? null;
+    }
+
+    // ── Other Relations ─────────────────────────────────────────────────────
 
     public function language()
     {

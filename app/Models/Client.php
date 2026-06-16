@@ -4,8 +4,8 @@ namespace App\Models;
 
 use App\Models\Tenancy\Subscription;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Notifications\Notifiable;
 
@@ -24,10 +24,11 @@ class Client extends User
         'zip_code',
         'can_login',
         'avatar',
+        'avatar_media_id',  // ADR-005 Wave 1
         'status',
         'country',
         'city',
-        'address'
+        'address',
     ];
 
     protected $hidden = [
@@ -35,7 +36,24 @@ class Client extends User
         'remember_token',
     ];
 
-    // Relations
+    // ── ADR-005 Wave 1 Media Relations ─────────────────────────────────────
+
+    /** The client's avatar as a Media record (Pattern A). */
+    public function avatarMedia(): BelongsTo
+    {
+        return $this->belongsTo(Media::class, 'avatar_media_id');
+    }
+
+    // ── ADR-005 Wave 1 Read Helper ───────────────────────────────────────────
+
+    /** Best available path: FK relation first, old path column as fallback. */
+    public function resolvedAvatarPath(): ?string
+    {
+        return $this->avatarMedia?->file_path ?? $this->getRawOriginal('avatar') ?? null;
+    }
+
+    // ── Other Relations ─────────────────────────────────────────────────────
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
