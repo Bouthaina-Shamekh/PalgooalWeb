@@ -123,6 +123,25 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        /*
+        |--------------------------------------------------------------------------
+        | Payment Webhook Log — ADR-007 Phase 3
+        |--------------------------------------------------------------------------
+        |
+        | Dedicated daily log for all inbound payment gateway webhook events.
+        | Kept separate from the main application log for easier audit review.
+        |
+        | Contains: gateway name, transaction_id, verified flag, received_at.
+        | Retained for 90 days (longer than default — payment audit trail).
+        |
+        */
+        'payment-webhook' => [
+            'driver' => 'daily',
+            'path'   => storage_path('logs/payment-webhook.log'),
+            'level'  => 'debug',
+            'days'   => 90,
+        ],
+
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],

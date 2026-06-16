@@ -14,6 +14,7 @@ class Invoice extends Model
     protected $fillable = [
         'client_id',
         'order_id',
+        'payment_attempt_id',
         'number',
         'status',
         'subtotal_cents',
@@ -45,6 +46,27 @@ class Invoice extends Model
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
+    }
+
+    // ADR-007 Phase 2 — Payment attempt relationships
+
+    /**
+     * The winning PaymentAttempt that settled this invoice.
+     * Set by InvoiceSettlementService::markPaid() when a PaymentAttempt is provided.
+     * Null for invoices settled before Phase 2 or via admin bulk-mark-paid.
+     */
+    public function paymentAttempt(): BelongsTo
+    {
+        return $this->belongsTo(PaymentAttempt::class);
+    }
+
+    /**
+     * All PaymentAttempts that reference this invoice (includes failed/cancelled attempts).
+     * An invoice may have multiple attempts before one succeeds.
+     */
+    public function paymentAttempts(): HasMany
+    {
+        return $this->hasMany(PaymentAttempt::class);
     }
 
     // Scope: فواتير مدفوعة

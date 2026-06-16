@@ -13,6 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        // ADR-007 Phase 3 — Payment webhook routes (no CSRF, no session, no auth)
+        then: function () {
+            \Illuminate\Support\Facades\Route::middleware('throttle:60,1')
+                ->group(base_path('routes/payment.php'));
+        }
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->redirectGuestsTo(function ($request) {
