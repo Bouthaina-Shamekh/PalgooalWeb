@@ -34,7 +34,7 @@
         $selectedImageMedia = $selectedImageMediaId ? \App\Models\Media::find($selectedImageMediaId) : null;
         $selectedImagePreviewUrls = $selectedImageMedia?->url
             ? [$selectedImageMedia->url]
-            : ($template->image ? [asset('storage/' . ltrim($template->image, '/'))] : []);
+            : (($img = $template->resolvedImagePath()) ? [asset('storage/' . ltrim($img, '/'))] : []);
     @endphp
 
     <div class="min-h-screen bg-slate-50">

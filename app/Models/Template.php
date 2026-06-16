@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Template extends Model
 {
@@ -12,15 +13,31 @@ class Template extends Model
     protected $fillable = [
         'price',
         'image',
+        'image_media_id',
         'rating',
         'category_template_id',
         'discount_price',
         'discount_ends_at',
         'plan_id',
     ];
-    public function plan()
+    public function plan(): BelongsTo
     {
         return $this->belongsTo(\App\Models\Plan::class);
+    }
+
+    // ADR-005 Wave 2 — media FK relation
+    public function imageMedia(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Media::class, 'image_media_id');
+    }
+
+    /**
+     * Prefer the FK-linked Media path; fall back to the raw image path string.
+     * Returns null when no image is set at all.
+     */
+    public function resolvedImagePath(): ?string
+    {
+        return $this->imageMedia?->file_path ?? $this->getRawOriginal('image') ?? null;
     }
 
     protected $casts = [

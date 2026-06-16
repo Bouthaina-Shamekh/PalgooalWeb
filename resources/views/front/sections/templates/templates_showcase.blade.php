@@ -24,7 +24,7 @@
             $name = trim((string) ($translation?->name ?? 'Template'));
             $description = trim(strip_tags((string) ($translation?->description ?? '')));
 
-            $image = $template->image ? asset('storage/' . ltrim($template->image, '/')) : null;
+            $image = ($img = $template->resolvedImagePath()) ? asset('storage/' . ltrim($img, '/')) : null;
 
             return [
                 'name' => $name,

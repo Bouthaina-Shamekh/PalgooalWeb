@@ -33,7 +33,7 @@
                     <meta itemprop="price" content="{{ $template->discount_price ?? $template->price }}" />
                     <meta itemprop="availability" content="https://schema.org/InStock" />
                     <div class="relative">
-                        <img src="{{ asset('storage/' . $template->image) }}" alt="{{ $name }}"
+                        <img src="{{ ($img = $template->resolvedImagePath()) ? asset('storage/' . $img) : '' }}" alt="{{ $name }}"
                             class="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105 group-hover:brightness-95"
                             loading="lazy" />
                         @if ($template->discount_price)

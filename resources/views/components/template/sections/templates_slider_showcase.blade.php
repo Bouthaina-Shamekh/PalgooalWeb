@@ -70,7 +70,7 @@
                 $name = trim((string) ($translation?->name ?? __('Template')));
                 $description = trim(strip_tags((string) ($translation?->description ?? '')));
                 $previewSource = trim((string) ($translation?->preview_url ?? ''));
-                $imageValue = $template->image ?? null;
+                $imageValue = $template->resolvedImagePath() ?? null;
                 $id = $template->id ?? null;
             } else {
                 return null;

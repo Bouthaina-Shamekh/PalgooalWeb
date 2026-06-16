@@ -146,15 +146,31 @@ class TemplateController extends Controller
         DB::beginTransaction();
 
         try {
-            $imagePath = null;
+            $imagePath    = null;
+            $imageMediaId = null;
 
             if ($request->hasFile('image')) {
-                $imagePath = $request->file('image')->store('templates', 'public');
+                // Direct upload — store file and create a Media record so the FK can be set
+                $file      = $request->file('image');
+                $stored    = $file->store('templates', 'public');
+                $imagePath = $stored;
+
+                $mediaRecord = Media::create([
+                    'file_name'          => basename($stored),
+                    'file_original_name' => $file->getClientOriginalName(),
+                    'file_path'          => $stored,
+                    'file_extension'     => strtolower($file->getClientOriginalExtension()),
+                    'mime_type'          => $file->getMimeType() ?? 'image/jpeg',
+                    'size'               => $file->getSize(),
+                    'file_type'          => 'image',
+                    'disk'               => 'public',
+                ]);
+                $imageMediaId = $mediaRecord->id;
             } elseif (filled($validated['image_media_id'] ?? null)) {
-                $rawPath   = Media::query()
-                    ->whereKey((int) $validated['image_media_id'])
-                    ->value('file_path');
-                $imagePath = $rawPath ? ltrim((string) $rawPath, '/') : null;
+                // Media picker — ID already points to an existing Media record
+                $mediaRecord  = Media::query()->whereKey((int) $validated['image_media_id'])->first();
+                $imagePath    = $mediaRecord ? ltrim((string) $mediaRecord->file_path, '/') : null;
+                $imageMediaId = $mediaRecord?->id;
             }
 
             $template = Template::create([
@@ -165,6 +181,7 @@ class TemplateController extends Controller
                 'category_template_id' => $validated['category_template_id'],
                 'plan_id'              => $validated['plan_id'],
                 'image'                => $imagePath,
+                'image_media_id'       => $imageMediaId,
             ]);
 
             foreach ($validated['translations'] as $translation) {
@@ -251,18 +268,36 @@ class TemplateController extends Controller
         DB::beginTransaction();
 
         try {
+            $imageMediaId = $template->image_media_id; // keep existing FK unless changed
+
             if ($request->hasFile('image')) {
+                // Direct upload — delete old file, store new one, create Media record
                 if ($template->image && Storage::disk('public')->exists($template->image)) {
                     Storage::disk('public')->delete($template->image);
                 }
-                $template->image = $request->file('image')->store('templates', 'public');
-            } elseif (filled($validated['image_media_id'] ?? null)) {
-                $selectedImagePath = Media::query()
-                    ->whereKey((int) $validated['image_media_id'])
-                    ->value('file_path');
 
-                if (! empty($selectedImagePath)) {
-                    $template->image = ltrim((string) $selectedImagePath, '/');
+                $file    = $request->file('image');
+                $stored  = $file->store('templates', 'public');
+
+                $mediaRecord  = Media::create([
+                    'file_name'          => basename($stored),
+                    'file_original_name' => $file->getClientOriginalName(),
+                    'file_path'          => $stored,
+                    'file_extension'     => strtolower($file->getClientOriginalExtension()),
+                    'mime_type'          => $file->getMimeType() ?? 'image/jpeg',
+                    'size'               => $file->getSize(),
+                    'file_type'          => 'image',
+                    'disk'               => 'public',
+                ]);
+                $template->image = $stored;
+                $imageMediaId    = $mediaRecord->id;
+            } elseif (filled($validated['image_media_id'] ?? null)) {
+                // Media picker — update to newly selected media record
+                $mediaRecord = Media::query()->whereKey((int) $validated['image_media_id'])->first();
+
+                if ($mediaRecord) {
+                    $template->image = ltrim((string) $mediaRecord->file_path, '/');
+                    $imageMediaId    = $mediaRecord->id;
                 }
             }
 
@@ -274,6 +309,7 @@ class TemplateController extends Controller
                 'category_template_id' => $validated['category_template_id'],
                 'plan_id'              => $validated['plan_id'],
                 'image'                => $template->image,
+                'image_media_id'       => $imageMediaId,
             ]);
 
             // updateOrCreate avoids the brief data-loss window of delete+recreate.

@@ -3,6 +3,7 @@
 use App\Models\Client;
 use App\Models\GeneralSetting;
 use App\Models\Portfolio;
+use App\Models\Template;
 use App\Models\Tenancy\TenantRuntimeMetric;
 use App\Services\Domains\DomainRenewalService;
 use App\Support\Media\MediaPathNormalizer;
@@ -233,6 +234,55 @@ Artisan::command('adr005:backfill-wave1 {--dry-run : Preview changes without wri
         $this->info("Backfill complete. Total rows updated: {$rowsTotal}.");
     }
 })->purpose('ADR-005 Wave 1: populate *_media_id FK columns from existing path columns (clients, portfolios, general_settings).');
+
+// ---------------------------------------------------------------------------
+// ADR-005 Wave 2 — Backfill templates.image_media_id from templates.image
+// ---------------------------------------------------------------------------
+// Run once after `php artisan migrate`:
+//   php artisan adr005:backfill-wave2-templates
+//   php artisan adr005:backfill-wave2-templates --dry-run
+// ---------------------------------------------------------------------------
+Artisan::command('adr005:backfill-wave2-templates {--dry-run : Preview changes without writing to DB}', function () {
+    $isDry    = (bool) $this->option('dry-run');
+    $linked   = 0;
+    $orphaned = 0;
+    $skipped  = 0;
+
+    $this->info('ADR-005 Wave 2 — templates.image → image_media_id' . ($isDry ? ' (DRY RUN)' : '') . ' …');
+    $this->newLine();
+
+    Template::whereNotNull('image')
+        ->where('image', '!=', '')
+        ->whereNull('image_media_id')
+        ->orderBy('id')
+        ->each(function (Template $template) use ($isDry, &$linked, &$orphaned, &$skipped) {
+            $mediaId = MediaPathNormalizer::resolveToMediaId($template->image);
+
+            if ($mediaId === null) {
+                $this->warn("  Orphan template #{$template->id}: image='{$template->image}' — no media record, image_media_id stays NULL");
+                $orphaned++;
+            } else {
+                $this->line("  template #{$template->id}: image='{$template->image}' → image_media_id={$mediaId}");
+                if (! $isDry) {
+                    DB::table('templates')->where('id', $template->id)->update(['image_media_id' => $mediaId]);
+                }
+                $linked++;
+            }
+        });
+
+    // Report any rows that already have image_media_id set
+    $alreadySet = Template::whereNotNull('image_media_id')->count();
+    if ($alreadySet > 0) {
+        $this->line("  {$alreadySet} template(s) already had image_media_id set — skipped.");
+    }
+
+    $this->newLine();
+    if ($isDry) {
+        $this->comment("DRY RUN complete. Would link: {$linked}, orphans (stay NULL): {$orphaned}. Re-run without --dry-run to apply.");
+    } else {
+        $this->info("Backfill complete. Linked: {$linked}, orphans left NULL: {$orphaned}.");
+    }
+})->purpose('ADR-005 Wave 2: populate templates.image_media_id FK from templates.image path column.');
 
 Schedule::command('domains:process-auto-renewals')
     ->dailyAt('02:00')

@@ -73,8 +73,8 @@
                 ? route('template.preview', $slug, false)
                 : $redesignUrl;
 
-            $image = is_string($template->image ?? null) && $template->image !== ''
-                ? asset('storage/' . ltrim($template->image, '/'))
+            $image = ($img = $template->resolvedImagePath()) && $img !== ''
+                ? asset('storage/' . ltrim($img, '/'))
                 : null;
 
             $category = $template->categoryTemplate;

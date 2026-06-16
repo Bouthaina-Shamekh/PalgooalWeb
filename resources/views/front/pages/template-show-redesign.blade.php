@@ -63,7 +63,7 @@
     };
 
     $templateName = trim((string) ($translation?->name ?? t('Frontend.Template', 'Template')));
-    $templateImageUrl = $resolveMediaUrl($template->image, true);
+    $templateImageUrl = $resolveMediaUrl($template->resolvedImagePath(), true);
     $shortDesc = Str::limit(Str::of(strip_tags($translation?->description ?? ''))->squish()->toString(), 160);
 
     $payload = is_array($translation?->details)

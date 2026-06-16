@@ -266,7 +266,7 @@
                                     && $template->discount_price > 0
                                     && $template->discount_price < $template->price;
                                 $currentPrice = $hasDiscount ? $template->discount_price : $template->price;
-                                $imageUrl = $template->image ? asset('storage/' . $template->image) : null;
+                                $imageUrl = ($img = $template->resolvedImagePath()) ? asset('storage/' . $img) : null;
                                 $publicUrl = $templateSlug ? route('template.show.redesign', ['slug' => $templateSlug]) : null;
                                 $previewUrl = $templateSlug && $hasPreview ? route('template.preview', ['slug' => $templateSlug]) : null;
                                 $locales = $template->translations->pluck('locale')->filter()->unique()->values();

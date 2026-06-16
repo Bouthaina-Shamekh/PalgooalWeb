@@ -75,7 +75,7 @@
 <x-template.layouts.index-layouts
     title="{{ $translation?->name ?? t('Frontend.Template', 'Template') }} - {{ t('Frontend.Palgoals', 'Palgoals') }}"
     description="{{ $shortDesc }}" keywords="خدمات حجز دومين , افضل شركة برمجيات , استضافة مواقع , ..."
-    ogImage="{{ asset('storage/' . $template->image) }}">
+    ogImage="{{ ($img = $template->resolvedImagePath()) ? asset('storage/' . $img) : '' }}">
 
     <!-- Hero Section for Product Detail -->
     <section class="relative bg-primary py-20 px-4 sm:px-8 lg:px-24 shadow-md text-white overflow-hidden" dir="auto">
@@ -120,7 +120,7 @@
                     class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/50 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-black/20 overflow-hidden">
                     <div class="relative w-full aspect-[5/3] group">
                         <div class="absolute inset-x-[16%] bottom-3 z-0 h-10 rounded-full bg-slate-950/20 blur-2xl opacity-70"></div>
-                        <img loading="lazy" src="{{ asset('storage/' . $template->image) }}"
+                        <img loading="lazy" src="{{ ($img = $template->resolvedImagePath()) ? asset('storage/' . $img) : '' }}"
                             alt="{{ $translation?->name }}"
                             class="absolute inset-0 z-10 w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105">
                         <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent"></div>

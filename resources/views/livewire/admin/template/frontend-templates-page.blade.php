@@ -62,7 +62,7 @@
                                 <meta itemprop="price" content="{{ $template->discount_price ?? $template->price }}" />
                                 <meta itemprop="availability" content="https://schema.org/InStock" />
                                 <div class="relative">
-                                    <img itemprop="image" src="{{ asset('storage/'.$template->image) }}" alt="{{ $template->name }}" class="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105 group-hover:brightness-95" loading="lazy" decoding="async">
+                                    <img itemprop="image" src="{{ ($img = $template->resolvedImagePath()) ? asset('storage/'.$img) : '' }}" alt="{{ $template->name }}" class="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105 group-hover:brightness-95" loading="lazy" decoding="async">
                                     <div class="bg-gradient-to-tr from-secondary to-primary text-white flex items-end justify-center w-24 h-10 absolute -top-2 rtl:-left-10 ltr:-right-10 ltr:rotate-[40deg] rtl:rotate-[320deg] animate-bounce shadow-lg font-bold text-base tracking-wide">ط¬ط¯ظٹط¯</div>
                                     <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition duration-300"></div>
                                     <div class="absolute top-2 right-2 rtl:right-auto rtl:left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
