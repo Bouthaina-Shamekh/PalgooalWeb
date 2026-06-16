@@ -111,7 +111,7 @@
         $code = $language->code;
         $languageErrorMap[$code] =
             $errors->has("testimonialTranslations.$code.name") ||
-            $errors->has("testimonialTranslations.$code.feedback") ||
+            $errors->has("testimonialTranslations.$code.text") ||
             $errors->has("testimonialTranslations.$code.major") ||
             $errors->has("testimonialTranslations.$code.locale");
 
@@ -220,15 +220,15 @@
 
                         {{-- نص التقييم --}}
                         <div class="col-span-12">
-                            <label class="form-label" for="feedback_{{ $lang->code }}">
+                            <label class="form-label" for="text_{{ $lang->code }}">
                                 {{ t('dashboard.Testimonial_Text', 'Testimonial Text') }}
                             </label>
-                            <textarea id="feedback_{{ $lang->code }}"
-                                      name="testimonialTranslations[{{ $lang->code }}][feedback]"
+                            <textarea id="text_{{ $lang->code }}"
+                                      name="testimonialTranslations[{{ $lang->code }}][text]"
                                       rows="4"
-                                      class="form-control @error('testimonialTranslations.' . $lang->code . '.feedback') is-invalid @enderror"
-                                      placeholder="{{ t('dashboard.Testimonial_Text', 'Testimonial Text') }}">{{ old('testimonialTranslations.' . $lang->code . '.feedback', $translation['feedback'] ?? '') }}</textarea>
-                            @error('testimonialTranslations.' . $lang->code . '.feedback')
+                                      class="form-control @error('testimonialTranslations.' . $lang->code . '.text') is-invalid @enderror"
+                                      placeholder="{{ t('dashboard.Testimonial_Text', 'Testimonial Text') }}">{{ old('testimonialTranslations.' . $lang->code . '.text', $translation['text'] ?? '') }}</textarea>
+                            @error('testimonialTranslations.' . $lang->code . '.text')
                                 <span class="text-danger text-sm">{{ $message }}</span>
                             @enderror
                         </div>

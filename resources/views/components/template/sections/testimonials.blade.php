@@ -41,7 +41,7 @@
                 <path d="M7.17 15c.41-2.36 1.83-4.09 4.33-5.17V7.5A4.5 4.5 0 0 0 7 12v3H3v3h7v-3H7.17zm9 0c.41-2.36 1.83-4.09 4.33-5.17V7.5A4.5 4.5 0 0 0 16 12v3h-4v3h7v-3h-2.83z"/>
               </svg>
               <blockquote class="text-suptitle text-[#240B36] font-light mb-6">
-                {{ $translation?->feedback ?? '' }}
+                {{ $translation?->text ?? '' }}
               </blockquote>
               <figcaption class="flex items-center gap-3 mt-auto">
                 <img src="{{ $imageUrl }}" loading="lazy" alt="{{ $translation?->name ?? 'Customer' }} avatar" class="w-12 h-12 rounded-full border-2 border-primary" />

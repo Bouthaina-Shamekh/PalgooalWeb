@@ -46,7 +46,7 @@ All monetary amounts are stored as integer cents (`price_cents`, `monthly_price_
 | Media | `media` | Admin / System |
 | Tenancy | `clients`, `subscriptions`, `domains`, `domain_providers`, `domain_tlds`, `domain_tld_prices`, `servers`, `coupon_subscription`, `tenant_runtime_metrics` | System / Admin |
 | Billing | `orders`, `order_items`, `invoices`, `invoice_items`, `coupons` | System / Admin |
-| Catalog | `plans`, `plan_translations`, `plan_categories`, `plan_category_translations`, `templates`, `template_translations`, `category_templates`, `category_template_translations`, `template_reviews`, `portfolios`, `portfolio_translations`, `feedbacks`, `feedback_translations`, `services`, `service_translations` | Admin |
+| Catalog | `plans`, `plan_translations`, `plan_categories`, `plan_category_translations`, `templates`, `template_translations`, `category_templates`, `category_template_translations`, `template_reviews`, `portfolios`, `portfolio_translations`, `testimonials`, `testimonial_translations`, `services`, `service_translations` | Admin |
 | Translation | `translation_values`, `languages` | Admin |
 | System | `users`, `activity_logs`, `notifications`, `general_settings` | Admin / System |
 | Headers | `headers`, `header_items`, `header_item_translations` | Admin |
@@ -295,7 +295,7 @@ erDiagram
 **No soft deletes.**
 
 **References from other tables:**
-- `feedbacks.image_id` → `media.id`
+- `testimonials.image_id` → `media.id`
 - `section_definitions.preview_media_id` → `media.id` (added 2026_04_18)
 - `page_translations.og_image` → stores Media ID (numeric) or URL string
 - Any section field of type `media` → stores Media ID in `section_translations.content`
@@ -677,11 +677,12 @@ erDiagram
 
 ---
 
-### `feedbacks` + `feedback_translations`
+### `testimonials` + `testimonial_translations`
 
-> ⚠️ **Naming mismatch:** The table is named `feedbacks` / `feedback_translations`, but the Laravel models are named `Testimonial` / `TestimonialTranslation`.
+> **ADR-006 implemented 2026-06-16.** Tables renamed from `feedbacks` / `feedback_translations`. Models now match table names — no `$table` override needed.
 
-`feedbacks`: `image_id` (FK → media, nullOnDelete), `star`, `order`, `is_approved`.  
+`testimonials`: `image_id` (FK → media, nullOnDelete), `star`, `order`, `is_approved`.  
+`testimonial_translations`: `testimonial_id` (FK → testimonials.id, CASCADE), `locale`, `text`, `name`, `major`.  
 **SoftDeletes** added 2026_05_05.
 
 ---
@@ -725,7 +726,7 @@ Each translatable content model has its own translation table:
 | Template | `templates` | `template_translations` |
 | CategoryTemplate | `category_templates` | `category_template_translations` |
 | Portfolio | `portfolios` | `portfolio_translations` |
-| Testimonial | `feedbacks` | `feedback_translations` |
+| Testimonial | `testimonials` | `testimonial_translations` |
 | Service | `services` | `service_translations` |
 | Header Item | `header_items` | `header_item_translations` |
 
@@ -772,7 +773,7 @@ Each translatable content model has its own translation table:
 | `order_items` | 2026_05_04 | Audit trail |
 | `plan_categories` | 2025_05_03 | Recovery of deleted categories |
 | `portfolios` | 2026_05_05 | Content recovery |
-| `feedbacks` (Testimonials) | 2026_05_05 | Content recovery |
+| `testimonials` | 2026_05_05 | Content recovery |
 | `template_reviews` | 2026_05_15 | Moderation / recovery |
 | `headers` | 2026_05_08 | UI configuration recovery |
 | `header_items` | 2026_05_08 | UI configuration recovery |
@@ -924,7 +925,7 @@ DomainVerificationService runs
 | `subscription_sections` | **Dropped** | Same as above. |
 | `subscription_section_translations` | **Dropped** | Same as above. |
 | `page_builder_structures` | **Archived** | Created 2025_12_10 for GrapesJS visual builder. Pages with `builder_mode = visual` reference this. New pages always use `builder_mode = sections`. |
-| `feedbacks` | **Active but misnamed** | The table is `feedbacks`, the model is `Testimonial`. The naming mismatch is a historical artifact and is a Technical Debt item. |
+| `feedbacks` | **Renamed (ADR-006)** | Renamed to `testimonials` / `testimonial_translations` on 2026-06-16. `$table` overrides removed from models. No longer a technical debt item. |
 
 ---
 
@@ -954,6 +955,7 @@ DomainVerificationService runs
 | 2026-04-27 | normalize_section_definition_editor_mode_to_dynamic | Remove custom_preset mode |
 | 2026-05-04 | add_soft_deletes_to_invoices/orders | Billing audit trail |
 | 2026-05-05 | add_soft_deletes_to_subscriptions/portfolios/feedbacks | Content + tenancy recovery |
+| 2026-06-16 | rename_feedbacks_to_testimonials (ADR-006) | Align DB table names with PHP model names |
 | 2026-05-08 | add_soft_deletes_to_headers, add_unique_to_languages_code | UI + data integrity |
 | 2026-06-13 | add_blade_source_to_section_definitions | Monaco Blade editor |
 

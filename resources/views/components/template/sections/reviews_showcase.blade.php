@@ -37,7 +37,7 @@
 
             return [
                 'name' => $translation->name ?: __('Anonymous'),
-                'text' => $translation->feedback ?? '',
+                'text' => $translation->text ?? '',
                 'rating' => max(1, min(5, (int) ($testimonial->star ?? 5))),
                 'avatar_url' => $testimonial->image?->url,
             ];

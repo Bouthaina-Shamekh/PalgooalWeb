@@ -118,11 +118,11 @@ class TestimonialsController extends Controller
 
             foreach ($translations as $translation) {
                 TestimonialTranslation::create([
-                    'feedback_id' => $testimonial->id,
-                    'locale'      => $translation['locale'],
-                    'feedback'    => $translation['feedback'],
-                    'name'        => $translation['name'],
-                    'major'       => $translation['major'],
+                    'testimonial_id' => $testimonial->id,
+                    'locale'         => $translation['locale'],
+                    'text'           => $translation['text'],
+                    'name'           => $translation['name'],
+                    'major'          => $translation['major'],
                 ]);
             }
 
@@ -161,10 +161,10 @@ class TestimonialsController extends Controller
             $trans = $testimonial->translations->firstWhere('locale', $lang->code);
 
             $testimonialTranslations[$lang->code] = [
-                'locale'   => $lang->code,
-                'feedback' => $trans?->feedback ?? '',
-                'name'     => $trans?->name ?? '',
-                'major'    => $trans?->major ?? '',
+                'locale' => $lang->code,
+                'text'   => $trans?->text ?? '',
+                'name'   => $trans?->name ?? '',
+                'major'  => $trans?->major ?? '',
             ];
         }
 
@@ -217,13 +217,13 @@ class TestimonialsController extends Controller
             foreach ($translations as $translation) {
                 TestimonialTranslation::updateOrCreate(
                     [
-                        'feedback_id' => $testimonial->id,
-                        'locale'      => $translation['locale'],
+                        'testimonial_id' => $testimonial->id,
+                        'locale'         => $translation['locale'],
                     ],
                     [
-                        'feedback' => $translation['feedback'],
-                        'name'     => $translation['name'],
-                        'major'    => $translation['major'],
+                        'text'  => $translation['text'],
+                        'name'  => $translation['name'],
+                        'major' => $translation['major'],
                     ]
                 );
             }
@@ -300,7 +300,7 @@ class TestimonialsController extends Controller
 
             'testimonialTranslations'            => 'required|array',
             'testimonialTranslations.*.locale'   => $translationLocaleRules,
-            'testimonialTranslations.*.feedback' => 'nullable|string',
+            'testimonialTranslations.*.text'     => 'nullable|string',
             'testimonialTranslations.*.name'     => 'nullable|string',
             'testimonialTranslations.*.major'    => 'nullable|string',
         ];
@@ -319,13 +319,13 @@ class TestimonialsController extends Controller
             $hasCompleteLanguage = false;
 
             foreach ($translations as $code => $translation) {
-                $feedback = trim((string) ($translation['feedback'] ?? ''));
-                $name     = trim((string) ($translation['name'] ?? ''));
-                $major    = trim((string) ($translation['major'] ?? ''));
+                $text  = trim((string) ($translation['text'] ?? ''));
+                $name  = trim((string) ($translation['name'] ?? ''));
+                $major = trim((string) ($translation['major'] ?? ''));
 
-                $hasAny = $feedback !== '' || $name !== '' || $major !== '';
+                $hasAny = $text !== '' || $name !== '' || $major !== '';
 
-                if ($feedback !== '' && $name !== '' && $major !== '') {
+                if ($text !== '' && $name !== '' && $major !== '') {
                     $hasCompleteLanguage = true;
                     continue;
                 }
@@ -334,9 +334,9 @@ class TestimonialsController extends Controller
                     $label = $languageLabels[$translation['locale'] ?? $code]
                         ?? ($translation['locale'] ?? $code);
 
-                    if ($feedback === '') {
+                    if ($text === '') {
                         $validator->errors()->add(
-                            "testimonialTranslations.$code.feedback",
+                            "testimonialTranslations.$code.text",
                             strtr(t('dashboard.Field_Required_For_Lang', 'This field is required for :lang.'), [':lang' => $label])
                         );
                     }
@@ -367,24 +367,24 @@ class TestimonialsController extends Controller
     }
 
     /**
-     * إبقاء فقط الترجمات الكاملة (feedback + name + major).
+     * إبقاء فقط الترجمات الكاملة (text + name + major).
      */
     protected function extractCompleteTranslations(array $translations): array
     {
         $complete = [];
 
         foreach ($translations as $translation) {
-            $locale   = $translation['locale'] ?? null;
-            $feedback = trim((string) ($translation['feedback'] ?? ''));
-            $name     = trim((string) ($translation['name'] ?? ''));
-            $major    = trim((string) ($translation['major'] ?? ''));
+            $locale = $translation['locale'] ?? null;
+            $text   = trim((string) ($translation['text'] ?? ''));
+            $name   = trim((string) ($translation['name'] ?? ''));
+            $major  = trim((string) ($translation['major'] ?? ''));
 
-            if ($locale && $feedback !== '' && $name !== '' && $major !== '') {
+            if ($locale && $text !== '' && $name !== '' && $major !== '') {
                 $complete[] = [
-                    'locale'   => $locale,
-                    'feedback' => $feedback,
-                    'name'     => $name,
-                    'major'    => $major,
+                    'locale' => $locale,
+                    'text'   => $text,
+                    'name'   => $name,
+                    'major'  => $major,
                 ];
             }
         }

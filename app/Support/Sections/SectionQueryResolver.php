@@ -385,7 +385,7 @@ class SectionQueryResolver
 
         $name = trim((string) ($translation?->name ?? ''));
         $position = trim((string) ($translation?->major ?? ''));
-        $text = trim((string) ($translation?->feedback ?? ''));
+        $text = trim((string) ($translation?->text ?? ''));
 
         if ($name === '' && $text === '') {
             return null;

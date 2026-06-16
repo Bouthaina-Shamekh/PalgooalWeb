@@ -7,7 +7,7 @@
 
 ## Purpose
 
-This document is the authoritative reference for the Content Showcase domain — the three subsystems used to display social proof and project evidence to website visitors: **Portfolio** (completed project gallery), **Testimonials** (customer reviews, stored in the `feedbacks` table), and **Template Reviews** (per-template ratings, a separate domain).
+This document is the authoritative reference for the Content Showcase domain — the three subsystems used to display social proof and project evidence to website visitors: **Portfolio** (completed project gallery), **Testimonials** (customer reviews, stored in the `testimonials` table), and **Template Reviews** (per-template ratings, a separate domain).
 
 This document replaces the archived `portfolio-system.md` and `testimonial-system.md`.
 
@@ -28,8 +28,8 @@ graph TD
 
     Test["Testimonial
     model: Testimonial
-    table: feedbacks
-    + feedback_translations"]
+    table: testimonials
+    + testimonial_translations"]
 
     TR["TemplateReview
     table: template_reviews"]
@@ -82,7 +82,7 @@ graph TD
 | Content Type | Purpose | Public submission? | Approval required? | Translation support |
 |---|---|---|---|---|
 | **Portfolio** | Project gallery with images, details, links | ❌ Admin only | ❌ (no approval flag) | ✅ `portfolio_translations` |
-| **Testimonial** | Customer reviews with star rating and photo | ✅ Visitor form | ✅ `is_approved` boolean | ✅ `feedback_translations` |
+| **Testimonial** | Customer reviews with star rating and photo | ✅ Visitor form | ✅ `is_approved` boolean | ✅ `testimonial_translations` |
 | **Template Review** | Per-template ratings with comment | ✅ Visitor / Client / User | ✅ `approved` boolean | ❌ Single language |
 
 ---
@@ -209,13 +209,13 @@ foreach (json_decode($portfolio->images, true) as $path) {
 ### Testimonial Model
 
 **File:** `app/Models/Testimonial.php`  
-**Table:** `feedbacks` ⚠️ — see TD-1  
+**Table:** `testimonials` (renamed from `feedbacks` via ADR-006, 2026-06-16)  
 **Traits:** `SoftDeletes`
 
-#### Schema (`feedbacks` table)
+#### Schema (`testimonials` table)
 
 ```
-feedbacks
+testimonials
 ├── id
 ├── image_id      bigint nullable FK → media.id  nullOnDelete  ← actual FK constraint
 ├── star          integer nullable        -- rating 1-5
@@ -226,16 +226,16 @@ feedbacks
 └── updated_at
 ```
 
-#### Translation Schema (`feedback_translations`)
+#### Translation Schema (`testimonial_translations`)
 
 ```
-feedback_translations
+testimonial_translations
 ├── id
-├── feedback_id   bigint FK → feedbacks.id  CASCADE on delete
-├── locale        varchar(255)
-├── feedback      varchar(255)  -- the testimonial text ⚠️ named 'feedback', not 'text'
-├── name          varchar(255)  -- reviewer's name
-├── major         varchar(255)  -- reviewer's title / profession
+├── testimonial_id  bigint FK → testimonials.id  CASCADE on delete
+├── locale          varchar(255)
+├── text            varchar(255)  -- the testimonial text (renamed from 'feedback' via ADR-006)
+├── name            varchar(255)  -- reviewer's name
+├── major           varchar(255)  -- reviewer's title / profession
 ├── created_at
 └── updated_at
 ```
@@ -243,7 +243,7 @@ feedback_translations
 #### Key Relations and Accessors
 
 ```php
-$testimonial->translations   // HasMany TestimonialTranslation (FK: feedback_id)
+$testimonial->translations   // HasMany TestimonialTranslation (FK: testimonial_id)
 $testimonial->translation()  // helper: returns translation for current locale
 $testimonial->image          // BelongsTo Media (via image_id)
 $testimonial->image_url      // accessor: $this->image?->url (null-safe)
@@ -295,25 +295,16 @@ Redirect → index with session('ok')
 
 ### What is the "Feedback" system?
 
-**There is no separate `Feedback` model or `Feedbacks` domain.** The `feedbacks` table IS the testimonials table. The `Testimonial` model maps directly to `feedbacks`:
+**There is no separate `Feedback` model or `Feedbacks` domain.** Historically the table was named `feedbacks`, but ADR-006 (implemented 2026-06-16) renamed all tables and columns to align with the PHP model names:
 
-```php
-class Testimonial extends Model
-{
-    protected $table = 'feedbacks';  // ← the table is named 'feedbacks'
-    // ...
-}
-```
+- Table: `testimonials` (was `feedbacks`)
+- Translation table: `testimonial_translations` (was `feedback_translations`)
+- FK column in translations: `testimonial_id` (was `feedback_id`)
+- Translation text column: `text` (was `feedback`)
+- Model class: `Testimonial` (unchanged)
+- Controller: `TestimonialsController` (unchanged)
 
-This naming inconsistency permeates the codebase:
-- Table: `feedbacks`
-- Translation table: `feedback_translations`
-- FK column in translations: `feedback_id`
-- Translation text column: `feedback` (the review text itself)
-- Model class: `Testimonial`
-- Controller: `TestimonialsController`
-
-See TD-1 and TD-2 for full details.
+The `$table` overrides (`protected $table = 'feedbacks'`) have been removed from both `Testimonial` and `TestimonialTranslation`. TD-1 and TD-2 are resolved.
 
 ### Public Submission Flow
 
@@ -354,9 +345,9 @@ DB::beginTransaction()
     │   ])
     │
     └─ TestimonialTranslation::create([
-           feedback_id: $testimonial->id,
+           testimonial_id: $testimonial->id,
            locale: $validated['language'],  ← single language only
-           feedback: $validated['feedback'],
+           text: $validated['feedback'],    ← POST field 'feedback' maps to DB column 'text'
            name: $validated['name'],
            major: $validated['major'],
        ])
@@ -485,7 +476,7 @@ Validation enforces translations for **active** languages (required) and makes t
 
 ### Testimonial
 
-Full multilingual support via `feedback_translations`. Text fields: `feedback` (the review text), `name`, `major`. Admin can fill all active languages at once. Public submission accepts a **single language** chosen by the visitor.
+Full multilingual support via `testimonial_translations`. Text fields: `text` (the review text), `name`, `major`. Admin can fill all active languages at once. Public submission accepts a **single language** chosen by the visitor.
 
 ### Template Review
 
@@ -589,7 +580,7 @@ Server-side, via `PortfolioController::index()`:
 ### Admin Testimonial Search
 
 Server-side, via `TestimonialsController::index()`:
-- Search on `feedback_translations.name`, `feedback_translations.major`
+- Search on `testimonial_translations.name`, `testimonial_translations.major`
 - `per_page`: 10 / 25 / 50 (default 10)
 - Order: `order ASC, id ASC`
 
@@ -659,25 +650,13 @@ See `docs/24-security-notes.md` for the policy architecture.
 
 ## Technical Debt
 
-**TD-1 — `Testimonial` model maps to `feedbacks` table**
+**~~TD-1~~ ✅ RESOLVED (ADR-006, 2026-06-16) — `Testimonial` model mapped to `feedbacks` table**
 
-The `Testimonial` model uses `protected $table = 'feedbacks'`. This means the table, the translation table (`feedback_translations`), the FK column (`feedback_id`), and the migration files all say "feedback" while the model, controller, policy, and admin views all say "testimonial". This naming confusion is deeply embedded and any rename would require a migration + mass rename across the codebase.
+The tables have been renamed: `feedbacks` → `testimonials`, `feedback_translations` → `testimonial_translations`. The FK column `feedback_id` → `testimonial_id`. The `$table` overrides have been removed from both models. PHP model names now match DB table names.
 
-```php
-class Testimonial extends Model
-{
-    protected $table = 'feedbacks'; // ← hardcoded mismatch
-}
-class TestimonialTranslation extends Model
-{
-    protected $table = 'feedback_translations'; // ← same mismatch
-    protected $fillable = ['feedback_id', ...]; // ← FK named feedback_id
-}
-```
+**~~TD-2~~ ✅ RESOLVED (ADR-006, 2026-06-16) — `feedback_translations.feedback` column**
 
-**TD-2 — `feedback_translations.feedback` column stores testimonial text**
-
-The column that stores the actual testimonial text is named `feedback` (same as the table prefix). Reading the schema, `feedback_translations.feedback` is the review text, not a reference to the feedbacks table. Should have been named `text` or `body`.
+The text column has been renamed: `feedback` → `text`. The admin form fields and all Blade views now reference `$translation->text`. The public submission POST field is still named `feedback` (form UX), but maps to the `text` DB column in the controller.
 
 **TD-3 — Portfolio has no visibility control at the DB/query level**
 
@@ -702,22 +681,22 @@ $path = $file->store('testimonials', 'public');
 // → storage/app/public/testimonials/randomhash.jpg
 ```
 
-`MediaController::saveMediaFile()` uses `media/YYYY/MM/` with `uniqid()` naming. The paths stored in the `feedbacks` table via public submission (`testimonials/xxx.jpg`) do not follow the standard `media/YYYY/MM/` structure.
+`MediaController::saveMediaFile()` uses `media/YYYY/MM/` with `uniqid()` naming. The paths stored in the `testimonials` table via public submission (`testimonials/xxx.jpg`) do not follow the standard `media/YYYY/MM/` structure.
 
-**TD-6 — Testimonial soft-delete does not cascade to `feedback_translations`**
+**TD-6 — Testimonial soft-delete does not cascade to `testimonial_translations`**
 
-`$testimonial->delete()` soft-deletes the `feedbacks` row (`deleted_at`). The `feedback_translations` table has a FK with `ON DELETE CASCADE` — but that only fires on **hard delete**, not soft delete. After soft-delete, `feedback_translations` rows remain orphaned until the record is permanently deleted. A `deleting` model event could cascade the soft-delete to translations.
+`$testimonial->delete()` soft-deletes the `testimonials` row (`deleted_at`). The `testimonial_translations` table has a FK with `ON DELETE CASCADE` — but that only fires on **hard delete**, not soft delete. After soft-delete, `testimonial_translations` rows remain orphaned until the record is permanently deleted. A `deleting` model event could cascade the soft-delete to translations.
 
 ---
 
 ## Future Improvements
 
 1. **Portfolio visibility flag** — add `is_active` boolean to `portfolios` and use it in `SectionQueryResolver::portfolios()`.
-2. **Table rename** — `feedbacks` → `testimonials`, `feedback_translations` → `testimonial_translations`. Requires coordination with all FK references and migration.
+2. ~~**Table rename** — `feedbacks` → `testimonials`.~~ ✅ Done via ADR-006 (2026-06-16).
 3. **One-click testimonial approve** — add a dedicated `PATCH /admin/testimonials/{id}/approve` endpoint (matching the TemplateReview pattern) so moderators don't need to open the full edit form.
 4. **Public testimonial image path standardization** — route uploaded images through `MediaController::saveMediaFile()` or use the same `media/YYYY/MM/` convention.
 5. **Rate limiting** — apply `throttle` middleware to the public submission routes (`testimonials.submit.store`, `templates.reviews.store`).
-6. **Soft-delete cascade for testimonial translations** — add a `deleting` model event on `Testimonial` to soft-delete (or at minimum track) `feedback_translations`.
+6. **Soft-delete cascade for testimonial translations** — add a `deleting` model event on `Testimonial` to soft-delete (or at minimum track) `testimonial_translations`.
 
 ---
 

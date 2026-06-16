@@ -9,7 +9,7 @@ class Testimonial extends Model
 {
     use SoftDeletes;
 
-    protected $table = 'feedbacks';
+    // ADR-006: table renamed feedbacks → testimonials; $table override removed.
 
     // ✅ استخدم image_id بدلاً من image
     protected $fillable = [
@@ -29,7 +29,7 @@ class Testimonial extends Model
     // الترجمات
     public function translations()
     {
-        return $this->hasMany(TestimonialTranslation::class, 'feedback_id', 'id');
+        return $this->hasMany(TestimonialTranslation::class, 'testimonial_id', 'id');
     }
 
     public function translation($locale = null)

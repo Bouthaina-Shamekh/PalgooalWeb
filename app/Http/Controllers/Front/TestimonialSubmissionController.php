@@ -47,7 +47,7 @@ class TestimonialSubmissionController extends Controller
 
         try {
             // P3 fix: store the uploaded file as a Media record and use image_id FK.
-            // Previously the code wrote 'image' => path which is not a column on feedbacks.
+            // Previously the code wrote 'image' => path which is not a column on testimonials.
             $imageId = null;
 
             if ($request->hasFile('image')) {
@@ -77,11 +77,11 @@ class TestimonialSubmissionController extends Controller
             ]);
 
             TestimonialTranslation::create([
-                'feedback_id' => $testimonial->id,
-                'locale'      => $validated['language'],
-                'feedback'    => $validated['feedback'],
-                'name'        => $validated['name'],
-                'major'       => $validated['major'],
+                'testimonial_id' => $testimonial->id,
+                'locale'         => $validated['language'],
+                'text'           => $validated['feedback'], // 'feedback' is the public form field name; maps to DB column 'text'
+                'name'           => $validated['name'],
+                'major'          => $validated['major'],
             ]);
 
             DB::commit();
