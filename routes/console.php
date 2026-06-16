@@ -639,6 +639,105 @@ Artisan::command('adr003:backfill-template-prices {--dry-run : Preview changes w
     }
 })->purpose('ADR-003 Phase 1: backfill templates.price_cents and discount_price_cents from the decimal price columns.');
 
+// ADR-003 Phase 2 — Backfill subscriptions.price_cents
+// ---------------------------------------------------------------------------
+// Run once after `php artisan migrate`:
+//   php artisan adr003:backfill-subscription-prices --dry-run
+//   php artisan adr003:backfill-subscription-prices
+// ---------------------------------------------------------------------------
+Artisan::command('adr003:backfill-subscription-prices {--dry-run : Preview changes without writing to DB}', function () {
+    $dryRun = (bool) $this->option('dry-run');
+
+    if ($dryRun) {
+        $this->warn('--- DRY RUN: no changes will be written ---');
+    }
+
+    $processed  = 0;
+    $updated    = 0;
+    $skipped    = 0;
+    $mismatches = 0;
+
+    \App\Models\Tenancy\Subscription::withTrashed()
+        ->select(['id', 'price', 'price_cents'])
+        ->orderBy('id')
+        ->chunk(200, function ($rows) use (
+            $dryRun,
+            &$processed,
+            &$updated,
+            &$skipped,
+            &$mismatches
+        ) {
+            foreach ($rows as $row) {
+                $processed++;
+
+                $currentCents  = $row->getRawOriginal('price_cents');
+                $rawDecimal    = $row->getRawOriginal('price');
+                $expectedCents = (int) round((float) ($rawDecimal ?? 0) * 100);
+
+                if ($currentCents !== null && (int) $currentCents !== $expectedCents) {
+                    $mismatches++;
+                    $this->warn(sprintf(
+                        '  ⚠ subscription #%d: stored price_cents=%d but expected %d (price=%s)',
+                        $row->id,
+                        (int) $currentCents,
+                        $expectedCents,
+                        $rawDecimal ?? 'NULL'
+                    ));
+                }
+
+                if ($currentCents !== null && (int) $currentCents === $expectedCents) {
+                    $skipped++;
+                    continue;
+                }
+
+                if ($dryRun) {
+                    $this->line(sprintf(
+                        '  [dry-run] subscription #%d: price_cents %s → %d (price=%s)',
+                        $row->id,
+                        $currentCents ?? 'NULL',
+                        $expectedCents,
+                        $rawDecimal ?? 'NULL'
+                    ));
+                } else {
+                    DB::table('subscriptions')->where('id', $row->id)->update([
+                        'price_cents' => $expectedCents,
+                    ]);
+                    $this->line(sprintf(
+                        '  subscription #%d: price_cents=%d ✓',
+                        $row->id,
+                        $expectedCents
+                    ));
+                }
+
+                $updated++;
+            }
+        });
+
+    $this->newLine();
+    $this->info('ADR-003 Phase 2 — subscriptions.price_cents backfill');
+    $this->table(
+        ['processed', 'updated', 'skipped', 'mismatches', 'dry_run'],
+        [[
+            $processed,
+            $updated,
+            $skipped,
+            $mismatches,
+            $dryRun ? 'YES' : 'NO',
+        ]]
+    );
+
+    if ($mismatches > 0) {
+        $this->warn("⚠ {$mismatches} mismatch(es) found — review rows before switching reads to price_cents.");
+    }
+    if ($dryRun && $updated > 0) {
+        $this->comment("Run without --dry-run to apply {$updated} update(s).");
+    } elseif (! $dryRun && $updated > 0) {
+        $this->info("✓ {$updated} subscription(s) backfilled successfully.");
+    } elseif ($updated === 0) {
+        $this->info('All rows already up to date — nothing to do.');
+    }
+})->purpose('ADR-003 Phase 2: backfill subscriptions.price_cents from the decimal price column.');
+
 Schedule::command('domains:process-auto-renewals')
     ->dailyAt('02:00')
     ->withoutOverlapping();

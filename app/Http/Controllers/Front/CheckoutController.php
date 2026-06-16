@@ -353,6 +353,8 @@ class CheckoutController extends Controller
                                 'status'        => 'pending',
                                 'provisioning_status' => \App\Models\Tenancy\Subscription::PROVISIONING_PENDING,
                                 'price'         => $config['unit_cents'] / 100,
+                                // ADR-003 Phase 2 — dual-write: unit_cents is already an integer, no conversion needed
+                                'price_cents'   => (int) $config['unit_cents'],
                                 'server_id'     => $planModel->server_id ?? null,
                                 'domain_option' => $normalizedOption ?? 'subdomain',
                                 'domain_name'   => $firstDomainItem->domain ?? $request->input('domain'),

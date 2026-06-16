@@ -30,13 +30,13 @@
                     <meta itemprop="category" content="{{ $template->categoryTemplate->translation?->name }}">
                     <meta itemprop="brand" content="Palgoals">
                     <meta itemprop="priceCurrency" content="USD" />
-                    <meta itemprop="price" content="{{ $template->discount_price ?? $template->price }}" />
+                    <meta itemprop="price" content="{{ number_format($template->resolvedDiscountPrice() ?? $template->resolvedPrice(), 2) }}" />
                     <meta itemprop="availability" content="https://schema.org/InStock" />
                     <div class="relative">
                         <img src="{{ ($img = $template->resolvedImagePath()) ? asset('storage/' . $img) : '' }}" alt="{{ $name }}"
                             class="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105 group-hover:brightness-95"
                             loading="lazy" />
-                        @if ($template->discount_price)
+                        @if ($template->resolvedDiscountPriceCents() !== null && $template->resolvedDiscountPriceCents() > 0)
                             <div
                                 class="bg-gradient-to-tr from-secondary to-primary text-white flex items-end justify-center w-24 h-10 absolute -top-2 rtl:-left-10 ltr:-right-10 ltr:rotate-[40deg] rtl:rotate-[320deg] animate-bounce shadow-lg font-bold text-base tracking-wide">
                                 خصم
@@ -81,15 +81,20 @@
                         </div>
                         <div class="mt-4 flex justify-between items-center text-sm font-bold">
 
+                            @php
+                                $tPriceCents  = $template->resolvedPriceCents();
+                                $tDiscCents   = $template->resolvedDiscountPriceCents();
+                                $tHasDiscount = $tDiscCents !== null && $tDiscCents > 0 && $tDiscCents < $tPriceCents;
+                            @endphp
                             <div class="flex items-center gap-2">
-                                @if ($template->discount_price)
+                                @if ($tHasDiscount)
                                     <span
-                                        class="line-through text-suptitle text-primary/40 dark:text-gray-400">${{ $template->price }}</span>
+                                        class="line-through text-suptitle text-primary/40 dark:text-gray-400">${{ number_format($tPriceCents / 100, 2) }}</span>
                                     <span
-                                        class="text-title-h3 text-secondary dark:text-yellow-400">${{ $template->discount_price }}</span>
+                                        class="text-title-h3 text-secondary dark:text-yellow-400">${{ number_format($tDiscCents / 100, 2) }}</span>
                                 @else
                                     <span
-                                        class="text-title-h3 text-secondary dark:text-yellow-400">${{ $template->price }}</span>
+                                        class="text-title-h3 text-secondary dark:text-yellow-400">${{ number_format($tPriceCents / 100, 2) }}</span>
                                 @endif
                             </div>
                             <div>

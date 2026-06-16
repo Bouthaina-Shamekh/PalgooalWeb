@@ -197,8 +197,8 @@
                                         </td>
                                         <td>
                                             <p class="text-gray-700 text-sm mb-0">{{ $sub->plan?->name ?? '—' }}</p>
-                                            @if($sub->price)
-                                                <p class="text-gray-400 text-xs mb-0">${{ number_format($sub->price, 2) }}</p>
+                                            @if($sub->resolvedPriceCents() > 0)
+                                                <p class="text-gray-400 text-xs mb-0">${{ number_format($sub->resolvedPrice(), 2) }}</p>
                                             @endif
                                         </td>
                                         <td>

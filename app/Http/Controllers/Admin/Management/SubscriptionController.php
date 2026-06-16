@@ -151,6 +151,9 @@ class SubscriptionController extends Controller
         $plan = Plan::find($data['plan_id']);
         $data['server_package'] = $plan ? ($plan->server_package ?? $plan->name ?? null) : null;
 
+        // ADR-003 Phase 2 — dual-write: price (decimal) kept, price_cents added
+        $data['price_cents'] = (int) round((float) $data['price'] * 100);
+
         $subscription = Subscription::create($data);
         app(DomainVerificationService::class)->reset($subscription);
 
@@ -191,6 +194,9 @@ class SubscriptionController extends Controller
         // Ensure server_package remains derived from the plan selection
         $plan = Plan::find($data['plan_id']);
         $data['server_package'] = $plan ? ($plan->server_package ?? $plan->name ?? null) : null;
+
+        // ADR-003 Phase 2 — dual-write: price (decimal) kept, price_cents added
+        $data['price_cents'] = (int) round((float) $data['price'] * 100);
 
         $subscription->update($data);
         app(DomainVerificationService::class)->reset($subscription->fresh());

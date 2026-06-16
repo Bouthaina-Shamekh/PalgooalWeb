@@ -91,7 +91,7 @@
                             <div class="mb-3">
                                 <label class="form-label">السعر ($)</label>
                                 <input type="number" name="price" class="form-control" min="0" step="0.01"
-                                    required value="{{ old('price', $subscription->price) }}">
+                                    required value="{{ old('price', $subscription->resolvedPrice()) }}">
                                 <small class="text-muted">أدخل السعر بالدولار (مثال: 15.00)</small>
                                 @error('price')
                                     <span class="text-red-600">{{ $message }}</span>

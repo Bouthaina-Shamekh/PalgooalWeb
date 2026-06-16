@@ -2,18 +2,17 @@
     use Illuminate\Support\Str;
     use Carbon\Carbon;
 
-    $basePrice = (float) ($template->price ?? 0);
-    $discRaw = $template->discount_price; // قد تكون null أو 0 أو "0.00"
-    $discPrice = is_null($discRaw) ? null : (float) $discRaw;
+    // ADR-003 Read Switch: use helpers instead of decimal columns
+    $priceCents    = $template->resolvedPriceCents();
+    $discountCents = $template->resolvedDiscountPriceCents();
+    $hasDiscount   = $discountCents !== null && $discountCents > 0 && $discountCents < $priceCents;
+    $finalCents    = $hasDiscount ? $discountCents : $priceCents;
+    $basePrice     = $priceCents / 100;
+    $discPrice     = $hasDiscount ? $discountCents / 100 : null;
+    $finalPrice    = $finalCents / 100;
 
-    // يوجد خصم فقط إذا كان discount_price رقمًا > 0 وأقل من السعر الأصلي
-    $hasDiscount = !is_null($discPrice) && $discPrice > 0 && $discPrice < $basePrice;
-
-    // السعر النهائي
-    $finalPrice = $hasDiscount ? $discPrice : $basePrice;
-
-    // نسبة الخصم (بدون max(1,...))
-    $discountPerc = $hasDiscount && $basePrice > 0 ? (int) round((($basePrice - $discPrice) / $basePrice) * 100) : 0;
+    // نسبة الخصم
+    $discountPerc = $hasDiscount && $priceCents > 0 ? (int) round((($priceCents - $discountCents) / $priceCents) * 100) : 0;
 
     // أظهر العدّاد فقط إذا فيه خصم فعلي وتاريخ انتهاء
     $endsAt = $hasDiscount && !empty($template->discount_ends_at) ? Carbon::parse($template->discount_ends_at) : null;
@@ -620,7 +619,7 @@
                             <span x-show="open">{{ t('Frontend.Hide_specs', 'Hide specs') }}</span>
                         </button>
                     @endif
-                    @php $finalPriceCents = (int) round($finalPrice * 100); @endphp
+                    @php $finalPriceCents = $finalCents; @endphp
                     <a id="subscribeNow"
                         href="{{ route('checkout', ['template_id' => $template->id, 'review' => 1, 'domain' => request('domain')]) }}"
                         data-template-id="{{ $template->id }}"

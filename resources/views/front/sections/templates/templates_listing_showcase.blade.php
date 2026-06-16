@@ -84,7 +84,8 @@
             $categoryLabel = trim((string) ($categoryTranslation?->name ?? __('Other')));
             $categoryKey = trim((string) ($categoryTranslation?->slug ?? $category?->translated_slug ?? 'uncategorized'));
             $categoryKey = $categoryKey !== '' ? \Illuminate\Support\Str::lower($categoryKey) : 'uncategorized';
-            $price = (float) ($template->discount_price ?? $template->price ?? 0);
+            // ADR-003 Read Switch: use effective price via helpers
+            $price = $template->resolvedDiscountPrice() ?? $template->resolvedPrice();
             $rating = is_numeric($template->rating ?? null) ? (float) $template->rating : 0.0;
 
             if ($name === '') {

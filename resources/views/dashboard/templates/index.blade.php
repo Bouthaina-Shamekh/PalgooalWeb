@@ -262,10 +262,11 @@
                                     ?? t('dashboard.Uncategorized', 'غير مصنف');
                                 $planTitle = $template->plan?->title ?? t('dashboard.No_Plan', 'بدون خطة');
                                 $hasPreview = filled($translation?->preview_url);
-                                $hasDiscount = !is_null($template->discount_price)
-                                    && $template->discount_price > 0
-                                    && $template->discount_price < $template->price;
-                                $currentPrice = $hasDiscount ? $template->discount_price : $template->price;
+                                // ADR-003 Read Switch: use helpers
+                                $tPriceCents  = $template->resolvedPriceCents();
+                                $tDiscCents   = $template->resolvedDiscountPriceCents();
+                                $hasDiscount  = $tDiscCents !== null && $tDiscCents > 0 && $tDiscCents < $tPriceCents;
+                                $currentPrice = ($hasDiscount ? $tDiscCents : $tPriceCents) / 100;
                                 $imageUrl = ($img = $template->resolvedImagePath()) ? asset('storage/' . $img) : null;
                                 $publicUrl = $templateSlug ? route('template.show.redesign', ['slug' => $templateSlug]) : null;
                                 $previewUrl = $templateSlug && $hasPreview ? route('template.preview', ['slug' => $templateSlug]) : null;
@@ -346,7 +347,7 @@
                                         <div class="mt-2 flex flex-wrap items-end gap-2">
                                             <span class="text-2xl font-black text-slate-900">${{ number_format((float) $currentPrice, 2) }}</span>
                                             @if ($hasDiscount)
-                                                <span class="text-sm font-semibold text-slate-400 line-through">${{ number_format((float) $template->price, 2) }}</span>
+                                                <span class="text-sm font-semibold text-slate-400 line-through">${{ number_format($tPriceCents / 100, 2) }}</span>
                                             @endif
                                         </div>
 
@@ -356,7 +357,7 @@
                                             </p>
                                         @else
                                             <p class="mt-2 text-xs font-medium text-slate-500">
-                                                {{ t('dashboard.Base_Price', 'السعر الأساسي') }}: ${{ number_format((float) $template->price, 2) }}
+                                                {{ t('dashboard.Base_Price', 'السعر الأساسي') }}: ${{ number_format($tPriceCents / 100, 2) }}
                                             </p>
                                         @endif
                                     </div>

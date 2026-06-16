@@ -125,6 +125,7 @@ class ServerController extends Controller
             'status'          => 'active',
             'billing_cycle'   => $request->billing_cycle,
             'price'           => 0,
+            'price_cents'     => 0, // ADR-003 Phase 2 — dual-write
             'username'        => $request->cpanel_username,
             'cpanel_username' => $request->cpanel_username,
             'domain_name'     => $request->domain_name,

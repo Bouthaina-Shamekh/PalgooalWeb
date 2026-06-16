@@ -59,7 +59,7 @@
                                 <meta itemprop="category" content="ظ‚ظˆط§ظ„ط¨ ظ…ظˆط§ظ‚ط¹">
                                 <meta itemprop="brand" content="Palgoals">
                                 <meta itemprop="priceCurrency" content="USD" />
-                                <meta itemprop="price" content="{{ $template->discount_price ?? $template->price }}" />
+                                <meta itemprop="price" content="{{ number_format($template->resolvedDiscountPrice() ?? $template->resolvedPrice(), 2) }}" />
                                 <meta itemprop="availability" content="https://schema.org/InStock" />
                                 <div class="relative">
                                     <img itemprop="image" src="{{ ($img = $template->resolvedImagePath()) ? asset('storage/'.$img) : '' }}" alt="{{ $template->name }}" class="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105 group-hover:brightness-95" loading="lazy" decoding="async">
@@ -82,8 +82,8 @@
                                             <span class="text-yellow-400 text-base">âک…âک…âک…âک…âک†</span>
                                         </div>
                                         <div class="flex items-center gap-2 rtl:flex-row-reverse ltr:flex-row">
-                                            <span class="line-through text-suptitle text-primary/40 dark:text-gray-400">{{ $template->discount_price ? '$' . $template->price : '' }}</span>
-                                            <span itemprop="price" class="text-title-h3 text-secondary dark:text-yellow-400">${{ $template->discount_price ?? $template->price }}</span>
+                                            <span class="line-through text-suptitle text-primary/40 dark:text-gray-400">{{ $template->resolvedDiscountPriceCents() ? '$' . number_format($template->resolvedPrice(), 2) : '' }}</span>
+                                            <span itemprop="price" class="text-title-h3 text-secondary dark:text-yellow-400">${{ number_format($template->resolvedDiscountPrice() ?? $template->resolvedPrice(), 2) }}</span>
                                         </div>
                                     </div>
                                 </div>

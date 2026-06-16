@@ -200,11 +200,17 @@
                                         <strong class="text-gray-800">{{ $template->getTranslation()?->name ?? $template->getTranslation('en')?->name }}</strong>
                                         <p class="text-sm text-gray-600">{{ $template->categoryTemplate?->getTranslation()?->name ?? $template->categoryTemplate?->getTranslation('en')?->name ?? 'Uncategorized' }}</p>
                                         <div class="flex items-baseline gap-2 mt-1">
-                                            @if($template->discount_price && ($template->discount_ends_at ? $template->discount_ends_at->isFuture() : true))
-                                                <p class="text-sm font-bold text-red-600">${{ number_format($template->discount_price, 2) }}</p>
-                                                <p class="text-xs text-gray-500 line-through">${{ number_format($template->price, 2) }}</p>
+                                            @php
+                                                $lwPriceCents  = $template->resolvedPriceCents();
+                                                $lwDiscCents   = $template->resolvedDiscountPriceCents();
+                                                $lwHasDiscount = $lwDiscCents !== null && $lwDiscCents > 0 && $lwDiscCents < $lwPriceCents
+                                                    && ($template->discount_ends_at ? $template->discount_ends_at->isFuture() : true);
+                                            @endphp
+                                            @if($lwHasDiscount)
+                                                <p class="text-sm font-bold text-red-600">${{ number_format($lwDiscCents / 100, 2) }}</p>
+                                                <p class="text-xs text-gray-500 line-through">${{ number_format($lwPriceCents / 100, 2) }}</p>
                                             @else
-                                                <p class="text-sm font-bold text-blue-600">${{ number_format($template->price, 2) }}</p>
+                                                <p class="text-sm font-bold text-blue-600">${{ number_format($lwPriceCents / 100, 2) }}</p>
                                             @endif
                                         </div>
                                     </div>

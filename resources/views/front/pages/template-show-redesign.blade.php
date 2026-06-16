@@ -3,12 +3,14 @@
     use Carbon\Carbon;
     use Illuminate\Support\Str;
 
-    $basePrice = (float) ($template->price ?? 0);
-    $discRaw = $template->discount_price;
-    $discPrice = is_null($discRaw) ? null : (float) $discRaw;
-    $hasDiscount = ! is_null($discPrice) && $discPrice > 0 && $discPrice < $basePrice;
-    $finalPrice = $hasDiscount ? $discPrice : $basePrice;
-    $endsAt = $hasDiscount && ! empty($template->discount_ends_at) ? Carbon::parse($template->discount_ends_at) : null;
+    // ADR-003 Read Switch: use helpers instead of decimal columns
+    $priceCents    = $template->resolvedPriceCents();
+    $discountCents = $template->resolvedDiscountPriceCents();
+    $hasDiscount   = $discountCents !== null && $discountCents > 0 && $discountCents < $priceCents;
+    $basePrice     = $priceCents / 100;
+    $discPrice     = $hasDiscount ? $discountCents / 100 : null;
+    $finalPrice    = $hasDiscount ? $discPrice : $basePrice;
+    $endsAt        = $hasDiscount && ! empty($template->discount_ends_at) ? Carbon::parse($template->discount_ends_at) : null;
 
     $resolveMediaUrl = static function (?string $value, bool $storage = false): ?string {
         $value = trim((string) $value);

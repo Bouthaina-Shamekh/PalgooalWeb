@@ -15,13 +15,13 @@
 
     <!-- Custom CSS for minor adjustments -->
     @php
-        // نفس منطق السعر الموجود في template-show.blade
-        $basePrice = (float) ($template->price ?? 0);
-        $discRaw = $template->discount_price;
-        $discPrice = is_null($discRaw) ? null : (float) $discRaw;
-        $hasDiscount = !is_null($discPrice) && $discPrice > 0 && $discPrice < $basePrice;
-        $finalPrice = $hasDiscount ? $discPrice : $basePrice;
-        $finalPriceCents = (int) round($finalPrice * 100);
+        // ADR-003 Read Switch: use helpers instead of decimal columns
+        $priceCents      = $template->resolvedPriceCents();
+        $discountCents   = $template->resolvedDiscountPriceCents();
+        $hasDiscount     = $discountCents !== null && $discountCents > 0 && $discountCents < $priceCents;
+        $finalCents      = $hasDiscount ? $discountCents : $priceCents;
+        $finalPrice      = $finalCents / 100;
+        $finalPriceCents = $finalCents;
     @endphp
 
     <style>
