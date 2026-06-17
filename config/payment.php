@@ -56,10 +56,10 @@ return [
     |
     */
     'gateways' => [
-        'mock'   => \App\Payments\Gateways\MockGateway::class,
-        // 'lahza'         => \App\Payments\Gateways\LahzaGateway::class,   // Phase 5
-        // 'stripe'        => \App\Payments\Gateways\StripeGateway::class,  // Phase 5
-        // 'bank_transfer' => \App\Payments\Gateways\BankTransferGateway::class, // Phase 5
+        'mock'  => \App\Payments\Gateways\MockGateway::class,
+        'lahza' => \App\Payments\Gateways\LahzaGateway::class,   // ADR-007 Phase 5B
+        // 'stripe'        => \App\Payments\Gateways\StripeGateway::class,  // Future
+        // 'bank_transfer' => \App\Payments\Gateways\BankTransferGateway::class, // Future
     ],
 
 ];

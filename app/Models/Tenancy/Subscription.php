@@ -40,7 +40,6 @@ class Subscription extends Model
         'provisioning_status',
         'provisioned_at',
         'last_sync_message',
-        'price',
         'price_cents',
         'billing_cycle',
         'engine',
@@ -67,7 +66,6 @@ class Subscription extends Model
     ];
 
     protected $casts = [
-        'price'       => 'float',
         'price_cents' => 'integer',
         'next_due_date' => 'date',
         'starts_at' => 'date',
@@ -80,32 +78,25 @@ class Subscription extends Model
         'theme_settings' => 'array',
     ];
 
-    // ── ADR-003 Phase 2 helpers ────────────────────────────────────────────────
+    // ── ADR-003 Phase 3 — Price helpers (cents-only, legacy column dropped) ───
 
     /**
      * Return the subscription price in integer cents.
-     * Reads price_cents if set; falls back to rounding the legacy decimal column.
-     * Uses getRawOriginal() to bypass the 'float' cast and avoid double-rounding.
      */
     public function resolvedPriceCents(): int
     {
-        $raw = $this->getRawOriginal('price_cents');
-        if ($raw !== null) {
-            return (int) $raw;
-        }
-        return (int) round((float) ($this->getRawOriginal('price') ?? 0) * 100);
+        return (int) ($this->getRawOriginal('price_cents') ?? 0);
     }
 
     /**
      * Return the subscription price as a float (dollars).
-     * Always derived from resolvedPriceCents() — never reads the decimal column directly.
      */
     public function resolvedPrice(): float
     {
         return $this->resolvedPriceCents() / 100;
     }
 
-    // ── End ADR-003 helpers ───────────────────────────────────────────────────
+    // ── End price helpers ─────────────────────────────────────────────────────
 
     public function client(): BelongsTo
     {

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\Management\DomainSearchController;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Front\CartController;
 use App\Http\Controllers\Front\CheckoutController;
+use App\Http\Controllers\Front\CouponValidationController;
 use App\Http\Controllers\Front\PageController as FrontPageController;
 use App\Http\Controllers\Front\TemplateController as FrontTemplateController;
 use App\Http\Controllers\Front\TemplateReviewController;
@@ -92,6 +93,11 @@ Route::middleware(['setLocale'])->group(function () {
     // Allow processing without a template by making template_id optional
     Route::post('/checkout/client/{template_id?}/process/{plan_id?}', [CheckoutController::class, 'process'])
         ->name('checkout.process');
+
+    // ADR-008 Phase 2 — Server-side coupon validation (read-only, no state change)
+    Route::post('/checkout/coupon/validate', CouponValidationController::class)
+        ->middleware('throttle:30,1')
+        ->name('checkout.coupon.validate');
 
     // Store client-side cart into server session (AJAX)
     Route::post('/cart/store', [CartController::class, 'store'])

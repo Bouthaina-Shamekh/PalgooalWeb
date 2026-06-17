@@ -686,6 +686,8 @@
                     <input type="hidden" name="domain" id="orderDomainInput" value="">
                     <input type="hidden" name="total" id="orderTotalInput" value="">
                     <input type="hidden" name="total_cents" id="orderTotalCents" value="">
+                    {{-- ADR-008 Phase 3: coupon code — validated server-side on submit --}}
+                    <input type="hidden" name="coupon_code" id="couponCodeHidden" value="">
                     <!-- حقول التسجيل ستنسخ هنا عند اختيار إنشاء حساب جديد -->
                     <div id="registerFieldsBox"></div>
                     <div class="flex items-center justify-end gap-3 mt-6">
@@ -2268,29 +2270,119 @@
                     });
             });
 
-            // كوبونات (تجريبيًا)
+            // ADR-008 Phase 3 — Server-side coupon validation
+            // Replaces hardcoded PROMO10/WELCOME20/FREE client-side logic.
+            // The server re-validates on submit; this is UI feedback only.
             (function() {
-                const applyBtn = document.getElementById('applyCoupon');
+                const applyBtn    = document.getElementById('applyCoupon');
                 const couponInput = document.getElementById('couponInput');
-                const couponMsg = document.getElementById('couponMsg');
+                const couponMsg   = document.getElementById('couponMsg');
+                const couponHidden = document.getElementById('couponCodeHidden');
 
-                function computeDiscount(code, base) {
-                    const c = (code || '').trim().toUpperCase();
-                    if (!c) return 0;
-                    if (c === 'PROMO10') return Math.round(base * 0.10);
-                    if (c === 'WELCOME20') return 2000;
-                    if (c === 'FREE') return base;
-                    return 0;
+                const validateUrl = @json(route('checkout.coupon.validate'));
+                const csrfToken   = document.querySelector('meta[name="csrf-token"]')?.content
+                                  || document.querySelector('input[name="_token"]')?.value
+                                  || '';
+
+                // Compute current subtotal in cents from what updateTotals() knows
+                function currentSubtotalCents() {
+                    const subText = document.getElementById('sumSub')?.textContent || '0';
+                    return Math.round(parseFloat(subText.replace(/[^0-9.]/g, '')) * 100) || 0;
                 }
-                applyBtn?.addEventListener('click', () => {
-                    const baseCents = Math.round(parseFloat((reviewDomainPrice?.textContent || '0')
-                        .replace(/[^0-9.]/g, '')) * 100) || 0;
-                    const d = computeDiscount(couponInput?.value, baseCents);
-                    window.__couponDiscountCents = Math.min(d, baseCents);
-                    if (couponMsg) couponMsg.textContent = d > 0 ? 'تم تطبيق الخصم بنجاح ✅' :
-                        'الكود غير صالح أو منتهي ❌';
-                    updateTotals(baseCents);
-                });
+
+                function setDiscount(cents) {
+                    window.__couponDiscountCents = Math.max(0, cents | 0);
+                    // Re-trigger totals with current domain cents
+                    const domainCents = Math.round(
+                        parseFloat((reviewDomainPrice?.textContent || '0').replace(/[^0-9.]/g, '')) * 100
+                    ) || 0;
+                    updateTotals(domainCents);
+                }
+
+                function clearCoupon(message) {
+                    if (couponHidden) couponHidden.value = '';
+                    setDiscount(0);
+                    if (couponMsg) {
+                        couponMsg.textContent = message || '';
+                        couponMsg.className = 'text-xs text-red-500';
+                    }
+                }
+
+                function applyCouponSuccess(code, discountCents, message) {
+                    if (couponHidden) couponHidden.value = code;
+                    setDiscount(discountCents);
+                    if (couponMsg) {
+                        couponMsg.textContent = '✅ ' + message;
+                        couponMsg.className = 'text-xs text-green-600';
+                    }
+                }
+
+                if (applyBtn) {
+                    applyBtn.addEventListener('click', async () => {
+                        const code = (couponInput?.value || '').trim();
+                        if (!code) {
+                            clearCoupon('الرجاء إدخال كود الخصم.');
+                            return;
+                        }
+
+                        applyBtn.disabled = true;
+                        applyBtn.textContent = '...';
+                        if (couponMsg) {
+                            couponMsg.textContent = 'جاري التحقق...';
+                            couponMsg.className = 'text-xs text-gray-400';
+                        }
+
+                        try {
+                            const response = await fetch(validateUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': csrfToken,
+                                },
+                                body: JSON.stringify({
+                                    code: code,
+                                    subtotal_cents: currentSubtotalCents(),
+                                }),
+                            });
+
+                            const data = await response.json();
+
+                            if (data.valid) {
+                                applyCouponSuccess(data.code, data.discount_cents, data.message);
+                            } else {
+                                clearCoupon('❌ ' + (data.message || 'الكود غير صالح.'));
+                            }
+                        } catch (err) {
+                            clearCoupon('تعذّر التحقق من الكوبون. يرجى المحاولة مرة أخرى.');
+                        } finally {
+                            applyBtn.disabled = false;
+                            applyBtn.textContent = 'تطبيق';
+                        }
+                    });
+                }
+
+                // Also allow pressing Enter in the coupon input
+                if (couponInput) {
+                    couponInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            applyBtn?.click();
+                        }
+                    });
+
+                    // Clear coupon state if the user erases the code
+                    couponInput.addEventListener('input', () => {
+                        if (!couponInput.value.trim()) {
+                            if (couponHidden) couponHidden.value = '';
+                            setDiscount(0);
+                            if (couponMsg) {
+                                couponMsg.textContent = '';
+                                couponMsg.className = 'text-xs text-gray-500';
+                            }
+                        }
+                    });
+                }
             })();
 
             // تبديل بوابة الدفع (عرض فقط)

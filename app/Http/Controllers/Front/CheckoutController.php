@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Front;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\ProvisionSubscription;
+use App\Models\Coupon;
 use App\Models\Invoice;
 use App\Models\Tenancy\Subscription;
 use App\Services\Billing\InvoiceSettlementService;
@@ -203,6 +204,16 @@ class CheckoutController extends Controller
             ]);
         }
 
+        // ADR-008 Phase 3 — Coupon resolution (server-side; never trust frontend discount)
+        // The frontend only sends the code; we re-validate and re-compute here.
+        $couponCode = strtoupper(trim((string) $request->input('coupon_code', '')));
+        $coupon     = null;
+        if ($couponCode !== '') {
+            $coupon = Coupon::usable()->where('code', $couponCode)->first();
+            // If the code is invalid/expired/exhausted, we silently proceed with no discount
+            // (the frontend already showed the user an error via the validation API).
+        }
+
         try {
             $provisionQueue = [];
             $createdSubscriptionIds = [];
@@ -227,6 +238,7 @@ class CheckoutController extends Controller
                 $discPricePlan,
                 $showDiscountPlan,
                 $normalizedOption,
+                $coupon,
                 $request
             ) {
                 // 1) إنشاء الطلب
@@ -268,17 +280,24 @@ class CheckoutController extends Controller
                 // 3) إنشاء الفاتورة
                 if ($isDomainOnly) {
                     $subtotalCents = (int) array_reduce($items, fn($c, $it) => $c + ((int) ($it['price_cents'] ?? 0)), 0);
+
+                    // ADR-008 Phase 3 — coupon discount (server-side, re-validated above)
+                    $couponDiscount = ($coupon && $coupon->isUsableForSubtotal($subtotalCents))
+                        ? $coupon->computeDiscountCents($subtotalCents)
+                        : 0;
+
                     $invoice = \App\Models\Invoice::create([
                         'client_id'      => $order->client_id,
                         'number'         => 'INV-' . $order->order_number,
                         'status'         => 'draft',
                         'subtotal_cents' => $subtotalCents,
-                        'discount_cents' => 0,
+                        'discount_cents' => $couponDiscount,
                         'tax_cents'      => 0,
-                        'total_cents'    => $subtotalCents,
+                        'total_cents'    => max(0, $subtotalCents - $couponDiscount),
                         'currency'       => 'USD',
                         'due_date'       => now()->addDays(3),
                         'order_id'       => $order->id,
+                        'coupon_id'      => $coupon?->id,
                     ]);
                     // بإمكانك لاحقًا إضافة invoice_items لكل دومين إن رغبت
                 } else {
@@ -322,8 +341,19 @@ class CheckoutController extends Controller
                         0
                     );
                     $baseSubtotal = $subscriptionBaseSum + $domainLineTotal;
-                    $lineTotals = $subscriptionTotalSum + $domainLineTotal;
-                    $discountCentsTotal = max(0, $baseSubtotal - $lineTotals);
+
+                    // Template/plan discount (price vs discount_price from DB)
+                    $templatePlanDiscount = max(0, $baseSubtotal - ($subscriptionTotalSum + $domainLineTotal));
+
+                    // ADR-008 Phase 3 — coupon discount applied on top of plan discounts
+                    // Subtotal for coupon purposes = what the customer actually pays before coupon
+                    $preCouponTotal = $subscriptionTotalSum + $domainLineTotal;
+                    $couponDiscount = ($coupon && $coupon->isUsableForSubtotal($preCouponTotal))
+                        ? $coupon->computeDiscountCents($preCouponTotal)
+                        : 0;
+
+                    $discountCentsTotal = $templatePlanDiscount + $couponDiscount;
+                    $invoiceTotal       = max(0, $baseSubtotal - $discountCentsTotal);
 
                     $invoice = \App\Models\Invoice::create([
                         'client_id'      => $order->client_id,
@@ -332,10 +362,11 @@ class CheckoutController extends Controller
                         'subtotal_cents' => $baseSubtotal,
                         'discount_cents' => $discountCentsTotal,
                         'tax_cents'      => 0,
-                        'total_cents'    => $lineTotals,
+                        'total_cents'    => $invoiceTotal,
                         'currency'       => 'USD',
                         'due_date'       => now()->addDays(3),
                         'order_id'       => $order->id,
+                        'coupon_id'      => $coupon?->id,
                     ]);
 
                     $firstDomainItem = $order->items()
@@ -429,6 +460,10 @@ class CheckoutController extends Controller
             $order = \App\Models\Order::findOrFail($result['order_id']);
             $invoice = Invoice::query()->findOrFail($result['invoice_id']);
             $subscriptionIds = array_values(array_filter($result['subscription_ids'] ?? []));
+
+            // ADR-008 Phase 3 — Coupon usage tracking is intentionally deferred to
+            // InvoiceSettlementService::markPaid(), which fires only after real payment.
+            // Tracking here would consume the coupon even if the customer never pays.
 
             if (!$isNotTemplate) {
                 app(InvoiceSettlementService::class)->markPaid($invoice, app(\App\Payments\PaymentManager::class)->gateway()->name());

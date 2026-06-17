@@ -173,15 +173,12 @@ class TemplateController extends Controller
                 $imageMediaId = $mediaRecord?->id;
             }
 
-            // ADR-003 Phase 1 — dual-write: keep old decimal + populate new cents columns
-            $discountDecimal = $validated['discount_price'] ?? null;
+            $discountPriceDollars = $validated['discount_price'] ?? null;
 
             $template = Template::create([
-                'price'                  => $validated['price'],
                 'price_cents'            => (int) round((float) $validated['price'] * 100),
-                'discount_price'         => $discountDecimal,
-                'discount_price_cents'   => $discountDecimal !== null
-                    ? (int) round((float) $discountDecimal * 100)
+                'discount_price_cents'   => $discountPriceDollars !== null
+                    ? (int) round((float) $discountPriceDollars * 100)
                     : null,
                 'discount_ends_at'       => $validated['discount_ends_at'] ?? null,
                 'rating'                 => $validated['rating'] ?? 0,
@@ -308,15 +305,12 @@ class TemplateController extends Controller
                 }
             }
 
-            // ADR-003 Phase 1 — dual-write: keep old decimal + populate new cents columns
-            $discountDecimal = $validated['discount_price'] ?? null;
+            $discountPriceDollars = $validated['discount_price'] ?? null;
 
             $template->update([
-                'price'                  => $validated['price'],
                 'price_cents'            => (int) round((float) $validated['price'] * 100),
-                'discount_price'         => $discountDecimal,
-                'discount_price_cents'   => $discountDecimal !== null
-                    ? (int) round((float) $discountDecimal * 100)
+                'discount_price_cents'   => $discountPriceDollars !== null
+                    ? (int) round((float) $discountPriceDollars * 100)
                     : null,
                 'discount_ends_at'       => $validated['discount_ends_at'] ?? null,
                 'rating'                 => $validated['rating'] ?? $template->rating,

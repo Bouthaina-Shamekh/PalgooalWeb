@@ -2,6 +2,7 @@
 
 namespace App\Services\Billing;
 
+use App\Models\Coupon;
 use App\Models\Domain;
 use App\Models\Invoice;
 use App\Models\Order;
@@ -44,11 +45,13 @@ class InvoiceSettlementService
                     'items',
                     'order.items',
                     'order.invoices.items',
+                    'coupon',      // ADR-008 Phase 3 — eager-load for settlement tracking
                 ])
                 ->lockForUpdate()
                 ->findOrFail($invoice->id);
 
             if ($lockedInvoice->status === 'paid') {
+                // Already settled — idempotency guard prevents double-increment of used_count.
                 return;
             }
 
@@ -71,6 +74,40 @@ class InvoiceSettlementService
                     'status'     => PaymentAttempt::STATUS_SUCCEEDED,
                     'settled_at' => now(),
                 ]);
+            }
+
+            // ADR-008 Phase 3 — Coupon usage tracking at settlement time.
+            //
+            // Design decisions:
+            //   1. Tracking happens HERE (after real payment) not in CheckoutController
+            //      (which fires before payment), to avoid consuming the coupon on
+            //      abandoned invoices.
+            //   2. lockForUpdate() on the coupon row prevents race conditions when
+            //      two payments settle concurrently (e.g. double-click, webhook retry).
+            //   3. We do NOT re-validate max_uses here — once coupon_id is attached to
+            //      the invoice, the discount is honored. The lock only prevents the
+            //      increment itself from racing; it does not reject payment.
+            //   4. Idempotency is guaranteed by the early-return on status==='paid' above.
+            if ($lockedInvoice->coupon_id) {
+                $coupon = Coupon::query()
+                    ->lockForUpdate()
+                    ->find($lockedInvoice->coupon_id);
+
+                if ($coupon) {
+                    $coupon->increment('used_count');
+
+                    // Attach subscription(s) from invoice items to the coupon pivot.
+                    $subscriptionIds = $lockedInvoice->items
+                        ->where('item_type', 'subscription')
+                        ->pluck('reference_id')
+                        ->filter()
+                        ->values()
+                        ->all();
+
+                    if (!empty($subscriptionIds)) {
+                        $coupon->subscriptions()->syncWithoutDetaching($subscriptionIds);
+                    }
+                }
             }
 
             // ── Activate the order / provision the subscription ───────────

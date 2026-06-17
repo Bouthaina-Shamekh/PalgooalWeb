@@ -207,8 +207,6 @@ class OrderActivationService
                 'client_id'      => $order->client_id,
                 'plan_id'        => $template->plan_id,
                 'status'         => 'active',
-                // ADR-003 Phase 2 — dual-write: price (decimal) kept for compatibility
-                'price'          => $template->resolvedPrice(),
                 'price_cents'    => $template->resolvedPriceCents(),
                 'starts_at'      => $startsAt,
                 'ends_at'        => $endsAt,

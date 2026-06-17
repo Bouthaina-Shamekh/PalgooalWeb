@@ -151,8 +151,9 @@ class SubscriptionController extends Controller
         $plan = Plan::find($data['plan_id']);
         $data['server_package'] = $plan ? ($plan->server_package ?? $plan->name ?? null) : null;
 
-        // ADR-003 Phase 2 — dual-write: price (decimal) kept, price_cents added
+        // Convert dollar input to cents; unset legacy column (dropped in ADR-003 Phase 3)
         $data['price_cents'] = (int) round((float) $data['price'] * 100);
+        unset($data['price']);
 
         $subscription = Subscription::create($data);
         app(DomainVerificationService::class)->reset($subscription);
@@ -195,8 +196,9 @@ class SubscriptionController extends Controller
         $plan = Plan::find($data['plan_id']);
         $data['server_package'] = $plan ? ($plan->server_package ?? $plan->name ?? null) : null;
 
-        // ADR-003 Phase 2 — dual-write: price (decimal) kept, price_cents added
+        // Convert dollar input to cents; unset legacy column (dropped in ADR-003 Phase 3)
         $data['price_cents'] = (int) round((float) $data['price'] * 100);
+        unset($data['price']);
 
         $subscription->update($data);
         app(DomainVerificationService::class)->reset($subscription->fresh());

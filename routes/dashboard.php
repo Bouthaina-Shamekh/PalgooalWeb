@@ -38,6 +38,7 @@ use App\Http\Controllers\Admin\Management\SubscriptionThemeController;
 use App\Http\Controllers\Admin\Management\DomainProviderController;
 use App\Http\Controllers\Admin\Management\DomainTldController;
 use App\Http\Controllers\Admin\Management\PlanCategoryController;
+use App\Http\Controllers\Admin\Management\CouponController;
 
 // -----------------------------------------------------------------------------
 // Redirect /admin → dashboard.home
@@ -556,4 +557,9 @@ Route::group([
         '/plan-categories/{plan_category}/translation/{lang}',
         [PlanCategoryController::class, 'updateTranslation']
     )->name('plan_categories.translation.update');
+
+    // -------------------------------------------------------------------------
+    // Coupons (ADR-008 Phase 4)
+    // -------------------------------------------------------------------------
+    Route::resource('coupons', CouponController::class)->names('coupons');
 });

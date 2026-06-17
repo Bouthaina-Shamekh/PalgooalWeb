@@ -218,6 +218,18 @@
                         </a>
                     </li>
                 @endcan
+                @can('viewAny', 'App\\Models\\Coupon')
+                    <li class="pc-item">
+                        <a href="{{ route('dashboard.coupons.index') }}" class="pc-link">
+                            <span class="pc-micon">
+                                <span class="pc-micon">
+                                    <i class="fas fa-ticket-alt"></i>
+                                </span>
+                            </span>
+                            <span class="pc-mtext">{{ t('dashboard.Coupons', 'الكوبونات') }}</span>
+                        </a>
+                    </li>
+                @endcan
                 @can('view', 'App\\Models\\Invoice')
                     <li class="pc-item">
                         <a href="{{ route('dashboard.invoices.index') }}" class="pc-link">

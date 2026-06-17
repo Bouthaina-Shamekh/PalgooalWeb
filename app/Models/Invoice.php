@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Coupon;
 
 class Invoice extends Model
 {
@@ -15,6 +16,7 @@ class Invoice extends Model
         'client_id',
         'order_id',
         'payment_attempt_id',
+        'coupon_id',          // ADR-008 Phase 1
         'number',
         'status',
         'subtotal_cents',
@@ -67,6 +69,12 @@ class Invoice extends Model
     public function paymentAttempts(): HasMany
     {
         return $this->hasMany(PaymentAttempt::class);
+    }
+
+    // ADR-008 Phase 1 — Coupon relationship
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     // Scope: فواتير مدفوعة

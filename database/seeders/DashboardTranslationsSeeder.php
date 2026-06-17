@@ -1005,6 +1005,89 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Payment_Gateway_Activated'    => 'تم تفعيل بوابة الدفع.',
             'dashboard.Payment_Gateway_Deactivated'  => 'تم إيقاف جميع بوابات الدفع.',
 
+            // ----------------------------------------------------------------
+            // ADR-008 Phase 2 — Coupon Validation Messages
+            // ----------------------------------------------------------------
+            'dashboard.Coupon_Not_Found'         => 'رمز الكوبون غير موجود.',
+            'dashboard.Coupon_Invalid'           => 'هذا الكوبون غير صالح.',
+            'dashboard.Coupon_Inactive'          => 'هذا الكوبون غير مفعّل.',
+            'dashboard.Coupon_Expired'           => 'انتهت صلاحية هذا الكوبون.',
+            'dashboard.Coupon_Exhausted'         => 'تجاوز هذا الكوبون الحد الأقصى للاستخدام.',
+            'dashboard.Coupon_Minimum_Amount'    => 'يتطلب هذا الكوبون حداً أدنى للطلب.',
+            'dashboard.Coupon_Applied'           => 'تم تطبيق الكوبون بنجاح.',
+
+            // ----------------------------------------------------------------
+            // ADR-008 Phase 4 — Admin Coupon CRUD
+            // ----------------------------------------------------------------
+
+            // Index page
+            'dashboard.Coupons_List'            => 'قائمة الكوبونات',
+            'dashboard.Coupons'                 => 'الكوبونات',
+            'dashboard.Add_Coupon'              => 'إضافة كوبون',
+            'dashboard.Search_Coupons'          => 'بحث عن كوبون…',
+            'dashboard.No_Coupons'              => 'لا توجد كوبونات بعد.',
+            'dashboard.No_Coupons_Desc'         => 'أضف أول كوبون خصم لتشجيع العملاء على الشراء.',
+            'dashboard.No_Coupons_Search'       => 'لا توجد نتائج مطابقة لبحثك.',
+            'dashboard.Confirm_Delete_Coupon'   => 'هل أنت متأكد من حذف هذا الكوبون؟ لا يمكن التراجع عن هذه العملية.',
+            'dashboard.Coupon_Code_Col'         => 'الكود',
+            'dashboard.Coupon_Type_Col'         => 'النوع',
+            'dashboard.Coupon_Value_Col'        => 'القيمة',
+            'dashboard.Coupon_Used_Col'         => 'مرات الاستخدام',
+            'dashboard.Coupon_Max_Uses_Col'     => 'الحد الأقصى',
+            'dashboard.Coupon_Expires_Col'      => 'تاريخ الانتهاء',
+            'dashboard.Coupon_Status_Col'       => 'الحالة',
+            'dashboard.Coupon_Unlimited'        => 'بلا حدود',
+            'dashboard.Coupon_No_Expiry'        => 'لا تاريخ انتهاء',
+
+            // Discount types
+            'dashboard.Coupon_Type_Fixed'       => 'مبلغ ثابت',
+            'dashboard.Coupon_Type_Percent'     => 'نسبة مئوية',
+
+            // Create / Edit pages
+            'dashboard.Add_New_Coupon'          => 'إضافة كوبون جديد',
+            'dashboard.Edit_Coupon'             => 'تعديل الكوبون',
+            'dashboard.Create_Coupon'           => 'إنشاء الكوبون',
+            'dashboard.Update_Coupon'           => 'حفظ التعديلات',
+
+            // Form fields
+            'dashboard.Coupon_Code'             => 'كود الكوبون',
+            'dashboard.Coupon_Code_Hint'        => 'حروف كبيرة وأرقام فقط. سيتم تحويله إلى أحرف كبيرة تلقائياً.',
+            'dashboard.Coupon_Code_Placeholder' => 'مثال: SUMMER20',
+            'dashboard.Coupon_Discount_Type'    => 'نوع الخصم',
+            'dashboard.Coupon_Discount_Value'   => 'قيمة الخصم',
+            'dashboard.Coupon_Value_Fixed_Hint' => 'المبلغ بالعملة الأساسية (مثال: 10 = خصم ١٠ دولار). يُخزَّن بالسنتات داخلياً.',
+            'dashboard.Coupon_Value_Percent_Hint' => 'نسبة من 0 إلى 100 (مثال: 20 = خصم ٢٠٪).',
+            'dashboard.Coupon_Max_Uses'         => 'الحد الأقصى للاستخدام',
+            'dashboard.Coupon_Max_Uses_Hint'    => 'اتركه فارغاً للسماح باستخدام غير محدود.',
+            'dashboard.Coupon_Min_Amount'       => 'الحد الأدنى للطلب (دولار)',
+            'dashboard.Coupon_Min_Amount_Hint'  => 'اتركه فارغاً إذا لم يكن هناك حد أدنى.',
+            'dashboard.Coupon_Expires_At'       => 'تاريخ الانتهاء',
+            'dashboard.Coupon_Expires_Hint'     => 'اتركه فارغاً إذا لم يكن للكوبون تاريخ انتهاء.',
+            'dashboard.Coupon_Is_Active'        => 'حالة الكوبون',
+            'dashboard.Coupon_Active_Label'     => 'نشط — يمكن استخدامه في الدفع',
+            'dashboard.Coupon_Inactive_Label'   => 'معطّل — لا يُقبل في الدفع',
+            'dashboard.Coupon_Used_Count'       => 'مرات الاستخدام الحالية',
+            'dashboard.Coupon_Used_Count_Hint'  => 'هذه القيمة تُحدَّث تلقائياً عند كل عملية دفع ناجحة. لا يمكن تعديلها يدوياً.',
+
+            // Sections / help sidebar
+            'dashboard.Coupon_Basic_Info'       => 'معلومات الكوبون',
+            'dashboard.Coupon_Restrictions'     => 'القيود والشروط',
+            'dashboard.Coupon_Help_Title'       => 'كيف تعمل الكوبونات؟',
+            'dashboard.Coupon_Help_1'           => 'الكوبون يُطبَّق على إجمالي الطلب قبل الضرائب.',
+            'dashboard.Coupon_Help_2'           => 'الخصم الثابت يُمثَّل بالعملة الأساسية (دولار).',
+            'dashboard.Coupon_Help_3'           => 'الخصم المئوي يُحسَّب على السعر بعد الخصومات الأخرى.',
+            'dashboard.Coupon_Help_4'           => 'يُسجَّل استخدام الكوبون فقط بعد إتمام الدفع الفعلي.',
+            'dashboard.Coupon_Delete_Warning'   => 'لا يمكن حذف كوبون مرتبط بفاتورة مدفوعة. عطّله بدلاً من ذلك.',
+
+            // Flash messages
+            'dashboard.Coupon_Created'          => 'تم إنشاء الكوبون بنجاح.',
+            'dashboard.Coupon_Updated'          => 'تم تحديث الكوبون بنجاح.',
+            'dashboard.Coupon_Deleted'          => 'تم حذف الكوبون بنجاح.',
+            'dashboard.Coupon_Deactivated'      => 'تم تعطيل الكوبون بدلاً من حذفه لأنه مرتبط بفواتير.',
+            'dashboard.Coupon_Delete_Error'     => 'تعذّر حذف الكوبون.',
+            'dashboard.Coupon_Toggle_Active'    => 'تم تفعيل الكوبون.',
+            'dashboard.Coupon_Toggle_Inactive'  => 'تم تعطيل الكوبون.',
+
         ];
 
         $locale = 'ar';
