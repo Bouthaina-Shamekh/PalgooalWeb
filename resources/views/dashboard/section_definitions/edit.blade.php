@@ -276,10 +276,28 @@
                                 <i class="ti ti-arrow-right me-1"></i>{{ t('dashboard.Cancel', 'رجوع') }}
                             </a>
                         </div>
+                        {{-- QW5: Blade Safety Tips — runtime contract reminder --}}
+                        <div class="card-body border-top py-3">
+                            <h6 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                                <i class="ti ti-shield-check me-1 text-green-500"></i>{{ t('dashboard.Blade_Safety_Tips', 'نمط الاستخدام الصحيح') }}
+                            </h6>
+                            <div class="rounded border border-green-200 bg-green-50 px-2.5 py-2 mb-2">
+                                <code class="font-mono font-semibold text-green-700 block mb-0.5" dir="ltr" style="font-size:11px;">$data['key'] ?? ''</code>
+                                <div class="text-green-600" style="font-size:10px;">{{ t('dashboard.Blade_Safety_Contract', 'كل الحقول في $data — shared + translatable مدمجان') }}</div>
+                            </div>
+                            <div class="rounded border border-red-100 bg-red-50 px-2.5 py-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1" style="font-size:10px;">
+                                <span class="text-red-500 font-semibold flex-shrink-0"><i class="ti ti-ban me-0.5"></i>{{ t('dashboard.Blade_Safety_Forbidden', 'لا تستخدم:') }}</span>
+                                <code class="font-mono text-red-600 bg-red-100 rounded px-1" dir="ltr">$fields</code>
+                                <code class="font-mono text-red-600 bg-red-100 rounded px-1" dir="ltr">$sharedData</code>
+                                <code class="font-mono text-red-600 bg-red-100 rounded px-1" dir="ltr">$translatableData</code>
+                            </div>
+                        </div>
+
                         <div class="card-body border-top" style="padding-bottom:0;">
                             <div class="flex items-center justify-between mb-2">
                                 <h6 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-0">
                                     <i class="ti ti-list-details me-1"></i>{{ t('dashboard.Fields', 'الحقول') }}
+                                    <span class="font-mono font-normal normal-case text-slate-400 ms-1" style="font-size:9px;">($data[…])</span>
                                 </h6>
                                 <div class="flex items-center gap-2 text-xs text-slate-400">
                                     <span class="flex items-center gap-1">
@@ -302,8 +320,23 @@
                                 </div>
                             </div>
                         @else
+                            {{-- QW5: Field Search — client-side filter, no Monaco touch --}}
+                            @if ($fieldsCount > 3)
+                            <div class="px-3 pb-2 pt-1 border-top" style="background:#f8fafc;">
+                                <div class="relative">
+                                    <input type="text" id="field-search-input"
+                                           class="form-control form-control-sm pe-2"
+                                           placeholder="{{ t('dashboard.Search_Fields', 'بحث في الحقول...') }}"
+                                           autocomplete="off"
+                                           style="font-size:11px;padding-inline-start:1.75rem;border-radius:6px;">
+                                    <i class="ti ti-search" style="position:absolute;inset-inline-start:0.5rem;top:50%;transform:translateY(-50%);font-size:11px;color:#94a3b8;pointer-events:none;"></i>
+                                </div>
+                            </div>
+                            @endif
                             <div class="card-body border-top p-0">
-                                <div class="flex flex-col" id="fields-reference-list">
+                                <div class="flex flex-col" id="fields-reference-list" style="max-height:380px;overflow-y:auto;"
+                                     aria-label="{{ t('dashboard.Fields', 'الحقول') }}"
+                                >
                                     @foreach ($bladeFields as $f)
                                         @php
                                             // QW2 — resolve validation rules defensively (cast may be array or string)
@@ -484,6 +517,29 @@
         var saved = null;
         try { saved = localStorage.getItem(SD_KEY); } catch(e) {}
         sdSetTab(saved === 'blade' || saved === 'info' ? saved : defaultTab);
+    })();
+
+    // ── QW5: Field Search — مستقل تماماً عن Monaco ──
+    (function () {
+        var searchInput = document.getElementById('field-search-input');
+        if (!searchInput) return;
+
+        function filterFields(q) {
+            q = q.trim().toLowerCase();
+            var noMatch = 0;
+            document.querySelectorAll('#fields-reference-list > div').forEach(function (row) {
+                var keyEl = row.querySelector('code');
+                var key   = keyEl ? keyEl.textContent.toLowerCase() : '';
+                var show  = !q || key.includes(q);
+                row.style.display = show ? '' : 'none';
+                if (!show) noMatch++;
+            });
+        }
+
+        searchInput.addEventListener('input', function () { filterFields(this.value); });
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { this.value = ''; filterFields(''); this.blur(); }
+        });
     })();
     </script>
     @endpush
