@@ -81,9 +81,9 @@ class TemplateController extends Controller
             'total'        => Template::count(),
             'visible'      => $templates->total(),
             'discounted'   => Template::query()
-                ->whereNotNull('discount_price')
-                ->where('discount_price', '>', 0)
-                ->whereColumn('discount_price', '<', 'price')
+                ->whereNotNull('discount_price_cents')
+                ->where('discount_price_cents', '>', 0)
+                ->whereColumn('discount_price_cents', '<', 'price_cents')
                 ->count(),
             'with_preview' => Template::query()
                 ->whereHas('translations', function ($query) {

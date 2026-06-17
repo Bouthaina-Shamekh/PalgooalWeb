@@ -141,7 +141,6 @@ class CheckoutController extends Controller
         $translation = $template?->translations()->where('locale', app()->getLocale())->first();
         $template_name = $translation?->name ?? $template?->name ?? '';
 
-        // ADR-003 Phase 1 — use cents helpers; fall back handled inside resolvedPriceCents()
         $basePriceCents = $template ? $template->resolvedPriceCents() : 0;
         $discPriceCents = $template ? $template->resolvedDiscountPriceCents() : null;
         $basePrice      = $basePriceCents / 100;   // float — display only
@@ -394,8 +393,6 @@ class CheckoutController extends Controller
                                     : null,
                                 'status'        => 'pending',
                                 'provisioning_status' => \App\Models\Tenancy\Subscription::PROVISIONING_PENDING,
-                                'price'         => $config['unit_cents'] / 100,
-                                // ADR-003 Phase 2 — dual-write: unit_cents is already an integer, no conversion needed
                                 'price_cents'   => (int) $config['unit_cents'],
                                 'server_id'     => $planModel->server_id ?? null,
                                 'domain_option' => $normalizedOption ?? 'subdomain',
