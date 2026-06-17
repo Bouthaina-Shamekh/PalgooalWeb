@@ -42,7 +42,7 @@
     @php
         $bladeFields  = $sectionDefinition->fields()
             ->orderBy('sort_order')->orderBy('id')
-            ->get(['field_key','field_type','field_scope']);
+            ->get(['field_key', 'field_type', 'field_scope', 'is_required', 'validation_rules', 'default_value']);
         $fieldsCount  = $bladeFields->count();
     @endphp
     <div class="card mb-4" style="border-right: 4px solid #4f46e5;">
@@ -305,26 +305,91 @@
                             <div class="card-body border-top p-0">
                                 <div class="flex flex-col" id="fields-reference-list">
                                     @foreach ($bladeFields as $f)
-                                        <div class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 transition"
-                                             style="border-bottom: 0.5px solid #f1f5f9;">
-                                            <span id="field-dot-{{ $f->field_key }}"
-                                                  style="width:7px;height:7px;border-radius:50%;background:#d97706;flex-shrink:0;transition:background .2s;"></span>
-                                            @if ($f->field_scope === 'translatable')
-                                                <span class="inline-flex items-center justify-center w-4 h-4 rounded text-xs font-bold bg-blue-100 text-blue-600 flex-shrink-0">ت</span>
-                                            @else
-                                                <span class="inline-flex items-center justify-center w-4 h-4 rounded text-xs font-bold bg-gray-100 text-gray-500 flex-shrink-0">م</span>
+                                        @php
+                                            // QW2 — resolve validation rules defensively (cast may be array or string)
+                                            $fValRules = $f->validation_rules ?? null;
+                                            if (is_array($fValRules) && count($fValRules)) {
+                                                $fValDisplay = implode(' | ', $fValRules);
+                                                $fIsRequired = in_array('required', $fValRules);
+                                            } elseif (is_string($fValRules) && strlen($fValRules)) {
+                                                $fValDisplay = $fValRules;
+                                                $fIsRequired = str_contains($fValRules, 'required');
+                                            } else {
+                                                $fValDisplay = null;
+                                                $fIsRequired = false;
+                                            }
+                                            // Also respect the dedicated is_required column
+                                            $fIsRequired = $fIsRequired || (bool) ($f->is_required ?? false);
+
+                                            // QW2 — resolve default value (cast may be array/null/empty)
+                                            $fDefault = $f->default_value ?? null;
+                                            if ($fDefault !== null && $fDefault !== [] && $fDefault !== '') {
+                                                $fDefaultStr = is_array($fDefault)
+                                                    ? json_encode($fDefault, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                                                    : (string) $fDefault;
+                                                $fDefaultStr = mb_strlen($fDefaultStr) > 45
+                                                    ? mb_substr($fDefaultStr, 0, 45) . '…'
+                                                    : $fDefaultStr;
+                                            } else {
+                                                $fDefaultStr = null;
+                                            }
+                                        @endphp
+                                        <div style="border-bottom: 0.5px solid #f1f5f9;">
+                                            {{-- Main row (field key + type + scope + required + insert) --}}
+                                            <div class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 transition">
+                                                <span id="field-dot-{{ $f->field_key }}"
+                                                      style="width:7px;height:7px;border-radius:50%;background:#d97706;flex-shrink:0;transition:background .2s;"></span>
+                                                @if ($f->field_scope === 'translatable')
+                                                    <span class="inline-flex items-center justify-center w-4 h-4 rounded text-xs font-bold bg-blue-100 text-blue-600 flex-shrink-0"
+                                                          title="{{ t('dashboard.Translatable', 'قابل للترجمة') }}">ت</span>
+                                                @else
+                                                    <span class="inline-flex items-center justify-center w-4 h-4 rounded text-xs font-bold bg-gray-100 text-gray-500 flex-shrink-0"
+                                                          title="{{ t('dashboard.Shared', 'مشترك') }}">م</span>
+                                                @endif
+                                                <code class="text-xs font-mono text-indigo-700 flex-1 min-w-0 truncate" dir="ltr">{{ $f->field_key }}</code>
+                                                <span class="text-xs text-slate-400 flex-shrink-0">{{ $f->field_type }}</span>
+                                                @if ($fIsRequired)
+                                                    <span class="flex-shrink-0 font-semibold"
+                                                          style="background:#fee2e2;color:#b91c1c;border-radius:4px;padding:1px 5px;font-size:10px;line-height:1.5;">
+                                                        {{ t('dashboard.Required', 'مطلوب') }}
+                                                    </span>
+                                                @endif
+                                                <button type="button"
+                                                        id="field-insert-{{ $f->field_key }}"
+                                                        class="field-insert-btn flex-shrink-0 text-xs px-2 py-0.5 rounded-md border border-slate-200 bg-white hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition"
+                                                        data-key="{{ $f->field_key }}"
+                                                        data-type="{{ $f->field_type }}"
+                                                        data-scope="{{ $f->field_scope }}"
+                                                        style="font-size:11px;line-height:1.4;">
+                                                    <i class="ti ti-plus" style="font-size:10px;"></i>
+                                                </button>
+                                            </div>
+                                            {{-- QW2: Details sub-row — validation rules + default value --}}
+                                            @if ($fValDisplay || $fDefaultStr)
+                                                <div class="px-3 pb-2">
+                                                    @if ($fValDisplay)
+                                                        <div class="flex items-baseline gap-1 mb-0.5">
+                                                            <span class="text-slate-400 flex-shrink-0" style="font-size:10px;">{{ t('dashboard.Validation', 'تحقق') }}:</span>
+                                                            <code class="font-mono text-slate-500 truncate block" dir="ltr" style="font-size:10px;">{{ $fValDisplay }}</code>
+                                                        </div>
+                                                    @endif
+                                                    @if ($fDefaultStr)
+                                                        <div class="flex items-baseline gap-1">
+                                                            <span class="text-slate-400 flex-shrink-0" style="font-size:10px;">{{ t('dashboard.Default_Value', 'الافتراضي') }}:</span>
+                                                            <code class="font-mono text-slate-500 truncate block" dir="ltr" style="font-size:10px;">{{ $fDefaultStr }}</code>
+                                                        </div>
+                                                    @endif
+                                                </div>
                                             @endif
-                                            <code class="text-xs font-mono text-indigo-700 flex-1 min-w-0 truncate" dir="ltr">{{ $f->field_key }}</code>
-                                            <span class="text-xs text-slate-400 flex-shrink-0">{{ $f->field_type }}</span>
-                                            <button type="button"
-                                                    id="field-insert-{{ $f->field_key }}"
-                                                    class="field-insert-btn flex-shrink-0 text-xs px-2 py-0.5 rounded-md border border-slate-200 bg-white hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition"
-                                                    data-key="{{ $f->field_key }}"
-                                                    data-type="{{ $f->field_type }}"
-                                                    data-scope="{{ $f->field_scope }}"
-                                                    style="font-size:11px;line-height:1.4;">
-                                                <i class="ti ti-plus" style="font-size:10px;"></i>
-                                            </button>
+                                            {{-- QW3: Repeater Phase 5B warning --}}
+                                            @if ($f->isRepeater())
+                                                <div class="mx-3 mb-2 flex items-start gap-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1.5">
+                                                    <i class="ti ti-alert-triangle text-amber-600 flex-shrink-0" style="font-size:11px;margin-top:1px;"></i>
+                                                    <span class="text-amber-700" style="font-size:10px;line-height:1.4;">
+                                                        {{ t('dashboard.Repeater_Editor_Not_Available', 'محرر حقول Repeater غير متاح بعد. التوليد في Blade مدعوم، لكن التحرير من لوحة التحكم محدود.') }}
+                                                    </span>
+                                                </div>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </div>

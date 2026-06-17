@@ -164,28 +164,30 @@
         @enderror
     </div>
 
-    {{-- وضع المحرر --}}
+    {{-- وضع المحرر — QW1: استبدل select وهمي بـ badge ثابت --}}
     <div class="col-span-12 md:col-span-6">
-        <label for="editor_mode" class="form-label">{{ t('dashboard.Editor_Mode', 'وضع المحرر') }}</label>
-        <select id="editor_mode" name="editor_mode" class="form-control" required>
-            @foreach ($editorModeOptions as $editorModeValue => $editorModeLabel)
-                <option value="{{ $editorModeValue }}" @selected($selectedEditorMode === $editorModeValue)>
-                    {{ $editorModeLabel }}
-                </option>
-            @endforeach
-        </select>
-        <div class="mt-1 text-xs text-slate-500">
-            {{ t('dashboard.Def_Editor_Mode_Hint', 'Dynamic يستخدم مفتاح القالب مع تعريفات الحقول.') }}
+        <label class="form-label">{{ t('dashboard.Editor_Mode', 'وضع المحرر') }}</label>
+
+        {{-- Hidden input يُرسل القيمة للـ Controller بدون تغيير --}}
+        <input type="hidden" name="editor_mode" value="{{ \App\Models\Sections\SectionDefinition::EDITOR_MODE_DYNAMIC }}">
+
+        {{-- Badge ثابت بدلاً من select --}}
+        <div class="rounded border border-blue-200 bg-blue-50 px-3 py-2.5">
+            <span class="inline-flex items-center gap-1.5 font-semibold text-blue-700 text-sm">
+                <i class="ti ti-bolt"></i>
+                {{ t('dashboard.Dynamic', 'ديناميكي') }}
+            </span>
+            <p class="mt-1 mb-0 text-xs text-blue-600">
+                {{ t('dashboard.Def_Editor_Mode_Hint', 'هذا التعريف يستخدم المحرر الديناميكي فقط. لا توجد أوضاع تحرير أخرى حالياً.') }}
+            </p>
         </div>
+
         <div class="mt-3 rounded border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
             <div class="font-medium text-slate-900">{{ t('dashboard.Def_Dynamic_Workflow_Title', 'مسار Dynamic') }}</div>
             <div class="mt-1">
                 {{ t('dashboard.Def_Dynamic_Workflow_Desc', 'المسار المعتاد للأقسام: أدخل مفتاح القالب، احفظ، ثم أضف تعريفات الحقول.') }}
             </div>
         </div>
-        @error('editor_mode')
-            <div class="mt-1 text-sm text-red-600">{{ $message }}</div>
-        @enderror
     </div>
 
     {{-- الحالة والرؤية --}}
@@ -218,6 +220,53 @@
             <div class="mt-1 text-sm text-red-600">{{ $message }}</div>
         @enderror
     </div>
+
+    {{-- QW4: قائمة الحقول read-only — تعيد استخدام $bladeFields المُحمَّل مسبقاً في edit.blade.php --}}
+    @if($sectionDefinition->exists && ($bladeFields ?? collect())->isNotEmpty())
+        <div class="col-span-12">
+            <div class="rounded border border-slate-200 bg-slate-50 px-4 py-3">
+                <div class="flex items-center justify-between mb-2">
+                    <h6 class="mb-0 text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                        <i class="ti ti-layout-list me-1 text-slate-400"></i>
+                        {{ t('dashboard.Fields', 'الحقول') }}
+                        <span class="ms-1 font-normal normal-case text-slate-400">({{ $fieldsCount ?? ($bladeFields ?? collect())->count() }})</span>
+                    </h6>
+                    <a href="{{ route('dashboard.section_definitions.fields.index', $sectionDefinition) }}"
+                       class="text-xs text-indigo-600 hover:text-indigo-800 hover:underline transition">
+                        {{ t('dashboard.Manage_Fields', 'إدارة الحقول') }} ←
+                    </a>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                    @foreach(($bladeFields ?? collect()) as $qw4Field)
+                        @php
+                            $qw4IsRequired = (bool) ($qw4Field->is_required ?? false)
+                                || (is_array($qw4Field->validation_rules ?? null) && in_array('required', $qw4Field->validation_rules))
+                                || (is_string($qw4Field->validation_rules ?? '') && str_contains($qw4Field->validation_rules ?? '', 'required'));
+                        @endphp
+                        <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs shadow-sm">
+                            @if(($qw4Field->field_scope ?? '') === 'translatable')
+                                <span class="inline-flex items-center justify-center rounded bg-blue-100 font-bold text-blue-600 flex-shrink-0"
+                                      style="width:13px;height:13px;font-size:8px;"
+                                      title="{{ t('dashboard.Translatable', 'قابل للترجمة') }}">ت</span>
+                            @else
+                                <span class="inline-flex items-center justify-center rounded bg-gray-100 font-bold text-gray-500 flex-shrink-0"
+                                      style="width:13px;height:13px;font-size:8px;"
+                                      title="{{ t('dashboard.Shared', 'مشترك') }}">م</span>
+                            @endif
+                            <span class="font-mono text-slate-700">{{ $qw4Field->field_key }}</span>
+                            <span class="text-slate-400">{{ $qw4Field->field_type }}</span>
+                            @if($qw4IsRequired)
+                                <span class="font-semibold"
+                                      style="background:#fee2e2;color:#b91c1c;border-radius:3px;padding:0 4px;font-size:9px;">
+                                    {{ t('dashboard.Required', 'مطلوب') }}
+                                </span>
+                            @endif
+                        </span>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    @endif
 
 </div>
 
