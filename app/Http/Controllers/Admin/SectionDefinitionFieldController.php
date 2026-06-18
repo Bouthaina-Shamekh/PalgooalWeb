@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreSectionDefinitionFieldRequest;
 use App\Http\Requests\Admin\UpdateSectionDefinitionFieldRequest;
 use App\Models\Sections\SectionDefinition;
 use App\Models\Sections\SectionDefinitionField;
+use App\Support\Sections\FieldPresetLibrary;
 use App\Support\Sections\SectionDefinitionFieldFormDataFactory;
 use App\Support\Sections\SectionDefinitionLocaleProvider;
 use Illuminate\Contracts\View\View;
@@ -165,6 +166,77 @@ class SectionDefinitionFieldController extends Controller
         return redirect()
             ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
             ->with('ok', t('dashboard.Field_Reordered', 'تم حفظ ترتيب الحقول بنجاح.'));
+    }
+
+    /**
+     * Apply a field preset — bulk-create a group of pre-defined fields.
+     *
+     * Existing field keys are skipped to avoid duplicates.
+     * sort_order starts after the current max to preserve existing ordering.
+     */
+    public function applyPreset(Request $request, SectionDefinition $sectionDefinition): RedirectResponse
+    {
+        $this->authorize('create', SectionDefinitionField::class);
+
+        $validated = $request->validate([
+            'preset_key' => ['required', 'string', 'in:' . implode(',', FieldPresetLibrary::keys())],
+        ]);
+
+        $preset = FieldPresetLibrary::get($validated['preset_key']);
+
+        if (! $preset) {
+            return back()->with('error', t('dashboard.Preset_Invalid', 'مجموعة الحقول غير موجودة.'));
+        }
+
+        // Collect existing field_key values so we can skip duplicates.
+        $existingKeys = $sectionDefinition->fields()
+            ->pluck('field_key')
+            ->flip(); // key → index for O(1) lookup
+
+        $nextSortOrder = ((int) $sectionDefinition->fields()->max('sort_order')) + 1;
+
+        $addedCount = 0;
+
+        DB::transaction(function () use ($sectionDefinition, $preset, $existingKeys, &$nextSortOrder, &$addedCount) {
+            foreach ($preset['fields'] as $fieldDef) {
+                $fieldKey = (string) ($fieldDef['field_key'] ?? '');
+
+                // Skip if this key already exists in the definition.
+                if ($fieldKey === '' || $existingKeys->has($fieldKey)) {
+                    continue;
+                }
+
+                $attributes = [
+                    'field_key'   => $fieldKey,
+                    'label'       => $fieldDef['label'] ?? $fieldKey,
+                    'field_type'  => $fieldDef['field_type'] ?? SectionDefinitionField::FIELD_TYPE_TEXT,
+                    'field_scope' => $fieldDef['field_scope'] ?? SectionDefinitionField::FIELD_SCOPE_TRANSLATABLE,
+                    'is_required' => (bool) ($fieldDef['is_required'] ?? false),
+                    'is_active'   => (bool) ($fieldDef['is_active'] ?? true),
+                    'sort_order'  => $nextSortOrder++,
+                    'schema'      => $fieldDef['schema'] ?? null,
+                    'options'     => $fieldDef['options'] ?? null,
+                ];
+
+                $sectionDefinition->fields()->create($attributes);
+                $addedCount++;
+            }
+        });
+
+        if ($addedCount === 0) {
+            return redirect()
+                ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
+                ->with('ok', t('dashboard.Preset_None_Added', 'جميع حقول هذه المجموعة موجودة بالفعل.'));
+        }
+
+        $message = strtr(
+            t('dashboard.Preset_Applied', 'تمت إضافة :count حقل بنجاح.'),
+            [':count' => $addedCount]
+        );
+
+        return redirect()
+            ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
+            ->with('ok', $message);
     }
 
     /**

@@ -2753,6 +2753,9 @@
       border-color: color-mix(in oklab, currentcolor 15%, transparent);
     }
   }
+  .border-cyan-200 {
+    border-color: var(--color-cyan-200);
+  }
   .border-cyan-700 {
     border-color: var(--color-cyan-700);
   }
@@ -3199,6 +3202,9 @@
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, currentcolor 5%, transparent);
     }
+  }
+  .bg-cyan-50 {
+    background-color: var(--color-cyan-50);
   }
   .bg-cyan-500\/10 {
     background-color: color-mix(in srgb, oklch(71.5% 0.143 215.221) 10%, transparent);
@@ -4896,6 +4902,12 @@
   }
   .text-purple-brand {
     color: var(--color-purple-brand);
+  }
+  .text-purple-brand\/80 {
+    color: color-mix(in srgb, #240a37 80%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      color: color-mix(in oklab, var(--color-purple-brand) 80%, transparent);
+    }
   }
   .text-red-400 {
     color: var(--color-red-400);
@@ -6664,6 +6676,13 @@
       }
     }
   }
+  .hover\:bg-cyan-100 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-cyan-100);
+      }
+    }
+  }
   .hover\:bg-cyan-700 {
     &:hover {
       @media (hover: hover) {
@@ -6786,6 +6805,13 @@
         @supports (color: color-mix(in lab, red, red)) {
           background-color: color-mix(in oklab, var(--color-indigo-50) 30%, transparent);
         }
+      }
+    }
+  }
+  .hover\:bg-indigo-100 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-indigo-100);
       }
     }
   }
@@ -7071,6 +7097,13 @@
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-violet-50);
+      }
+    }
+  }
+  .hover\:bg-violet-100 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-violet-100);
       }
     }
   }
@@ -8343,6 +8376,11 @@
   .sm\:hidden {
     @media (width >= 40rem) {
       display: none;
+    }
+  }
+  .sm\:inline {
+    @media (width >= 40rem) {
+      display: inline;
     }
   }
   .sm\:h-28 {

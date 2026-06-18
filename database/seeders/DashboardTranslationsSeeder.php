@@ -730,6 +730,15 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Field_Updated'           => 'تم تحديث الحقل بنجاح.',
             'dashboard.Field_Reordered'         => 'تم حفظ ترتيب الحقول.',
             'dashboard.Field_Deleted'           => 'تم حذف الحقل بنجاح.',
+
+            // ── Field Presets ─────────────────────────────────────────────
+            'dashboard.Field_Presets'           => 'مجموعات جاهزة',
+            'dashboard.Field_Presets_Desc'      => 'اختر مجموعة لإضافة حقولها دفعة واحدة. الحقول الموجودة مسبقاً تُتجاهل تلقائياً.',
+            'dashboard.Apply_Preset'            => 'تطبيق مجموعة',
+            'dashboard.Preset_Applied'          => 'تمت إضافة :count حقل بنجاح.',
+            'dashboard.Preset_None_Added'       => 'جميع حقول هذه المجموعة موجودة بالفعل.',
+            'dashboard.Preset_Invalid'          => 'مجموعة الحقول غير موجودة.',
+
             'dashboard.Section_Def_Save_Fields' => 'تم حفظ تعريف القسم. تابع بإدارة الحقول.',
             'dashboard.Section_Def_Updated'     => 'تم تحديث تعريف القسم بنجاح.',
             'dashboard.Section_Def_Create_Error' => 'تعذّر إنشاء تعريف القسم.',

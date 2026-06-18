@@ -2,6 +2,22 @@
     @php
         $primaryTemplateKey = $sectionDefinition->primaryTemplateKey();
         $isDynamicDefinition = $sectionDefinition->editor_mode === \App\Models\Sections\SectionDefinition::EDITOR_MODE_DYNAMIC;
+        $allPresets = \App\Support\Sections\FieldPresetLibrary::all();
+
+        // Quick preset keys shown as direct buttons in toolbar
+        $quickPresets = ['section_intro', 'cta_button', 'features_list', 'image_block'];
+
+        // Color map: preset color → Tailwind classes
+        $presetColors = [
+            'indigo' => ['bg' => 'bg-indigo-50', 'text' => 'text-indigo-700', 'border' => 'border-indigo-200', 'hover' => 'hover:bg-indigo-100'],
+            'slate'  => ['bg' => 'bg-slate-50',  'text' => 'text-slate-700',  'border' => 'border-slate-200',  'hover' => 'hover:bg-slate-100'],
+            'emerald'=> ['bg' => 'bg-emerald-50', 'text' => 'text-emerald-700','border' => 'border-emerald-200','hover' => 'hover:bg-emerald-100'],
+            'violet' => ['bg' => 'bg-violet-50',  'text' => 'text-violet-700', 'border' => 'border-violet-200', 'hover' => 'hover:bg-violet-100'],
+            'cyan'   => ['bg' => 'bg-cyan-50',    'text' => 'text-cyan-700',   'border' => 'border-cyan-200',   'hover' => 'hover:bg-cyan-100'],
+            'amber'  => ['bg' => 'bg-amber-50',   'text' => 'text-amber-700',  'border' => 'border-amber-200',  'hover' => 'hover:bg-amber-100'],
+            'blue'   => ['bg' => 'bg-blue-50',    'text' => 'text-blue-700',   'border' => 'border-blue-200',   'hover' => 'hover:bg-blue-100'],
+            'rose'   => ['bg' => 'bg-rose-50',    'text' => 'text-rose-700',   'border' => 'border-rose-200',   'hover' => 'hover:bg-rose-100'],
+        ];
     @endphp
 
     {{-- Page Header --}}
@@ -81,6 +97,26 @@
                                 {{ t('dashboard.Back_To_Definition', 'العودة للتعريف') }}
                             </a>
                             @can('create', \App\Models\Sections\SectionDefinitionField::class)
+                                {{-- Quick Preset Buttons --}}
+                                @foreach ($quickPresets as $qKey)
+                                    @php $qp = $allPresets[$qKey]; $qc = $presetColors[$qp['color']] ?? $presetColors['slate']; @endphp
+                                    <button type="button"
+                                            class="preset-quick-btn btn btn-sm flex items-center gap-1 border {{ $qc['bg'] }} {{ $qc['text'] }} {{ $qc['border'] }} {{ $qc['hover'] }}"
+                                            data-preset-key="{{ $qKey }}"
+                                            title="{{ t('dashboard.Apply_Preset', 'تطبيق مجموعة') }}: {{ $qp['label'] }}">
+                                        <i class="ti {{ $qp['icon'] }} text-base"></i>
+                                        <span class="hidden sm:inline text-xs font-medium">{{ $qp['label'] }}</span>
+                                    </button>
+                                @endforeach
+
+                                {{-- All Presets Modal Trigger --}}
+                                <button type="button"
+                                        class="btn btn-light btn-sm flex items-center gap-1"
+                                        data-bs-toggle="modal" data-bs-target="#presets-modal">
+                                    <i class="ti ti-layout-grid text-base"></i>
+                                    {{ t('dashboard.Field_Presets', 'مجموعات جاهزة') }}
+                                </button>
+
                                 <a href="{{ route('dashboard.section_definitions.fields.create', $sectionDefinition) }}"
                                    class="btn btn-primary btn-sm flex items-center gap-1">
                                     <i class="ti ti-plus text-base"></i>
@@ -105,11 +141,19 @@
                         <p class="text-base font-semibold text-gray-700 mb-1">{{ t('dashboard.No_Fields_Yet', 'لا توجد حقول بعد') }}</p>
                         <p class="text-sm text-gray-400 mb-5">{{ t('dashboard.No_Fields_Desc', 'أضف أول حقل لبدء تعريف مخطط هذا القسم') }}</p>
                         @can('create', \App\Models\Sections\SectionDefinitionField::class)
-                            <a href="{{ route('dashboard.section_definitions.fields.create', $sectionDefinition) }}"
-                               class="btn btn-primary btn-sm">
-                                <i class="ti ti-plus me-1"></i>
-                                {{ t('dashboard.Create_First_Field', 'إنشاء أول حقل') }}
-                            </a>
+                            <div class="flex flex-wrap items-center justify-center gap-2">
+                                <button type="button"
+                                        class="btn btn-light btn-sm"
+                                        data-bs-toggle="modal" data-bs-target="#presets-modal">
+                                    <i class="ti ti-layout-grid me-1"></i>
+                                    {{ t('dashboard.Field_Presets', 'مجموعات جاهزة') }}
+                                </button>
+                                <a href="{{ route('dashboard.section_definitions.fields.create', $sectionDefinition) }}"
+                                   class="btn btn-primary btn-sm">
+                                    <i class="ti ti-plus me-1"></i>
+                                    {{ t('dashboard.Create_First_Field', 'إنشاء أول حقل') }}
+                                </a>
+                            </div>
                         @endcan
                     </div>
                 </div>
@@ -232,18 +276,80 @@
         </div>
     </div>
 
-    {{--
-        Shared delete form placed OUTSIDE the reorder form.
-        JS sets the action URL before submitting.
-    --}}
+    {{-- Shared delete form — placed OUTSIDE the reorder form --}}
     <form action="" method="POST" id="field-delete-form" style="display:none;">
         @csrf
         @method('DELETE')
     </form>
 
+    {{-- Shared preset form — single form, JS sets preset_key before submit --}}
+    @can('create', \App\Models\Sections\SectionDefinitionField::class)
+    <form action="{{ route('dashboard.section_definitions.fields.apply_preset', $sectionDefinition) }}"
+          method="POST" id="preset-apply-form" style="display:none;">
+        @csrf
+        <input type="hidden" name="preset_key" id="preset-key-input" value="">
+    </form>
+    @endcan
+
+    {{-- ─────────────────────────────────────────────────────────────────────
+         Field Presets Modal
+    ───────────────────────────────────────────────────────────────────────── --}}
+    @can('create', \App\Models\Sections\SectionDefinitionField::class)
+    <div class="modal fade" id="presets-modal" tabindex="-1" aria-labelledby="presets-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="presets-modal-label">
+                        <i class="ti ti-layout-grid me-2 text-primary"></i>
+                        {{ t('dashboard.Field_Presets', 'مجموعات الحقول الجاهزة') }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-sm text-slate-500 mb-4">
+                        {{ t('dashboard.Field_Presets_Desc', 'اختر مجموعة لإضافة حقولها دفعة واحدة. الحقول الموجودة مسبقاً تُتجاهل تلقائياً.') }}
+                    </p>
+                    <div class="grid grid-cols-1 gap-3" style="grid-template-columns: repeat(auto-fill, minmax(280px,1fr));">
+                        @foreach ($allPresets as $presetKey => $preset)
+                            @php $pc = $presetColors[$preset['color']] ?? $presetColors['slate']; @endphp
+                            <div class="rounded-xl border p-4 cursor-pointer preset-card {{ $pc['bg'] }} {{ $pc['border'] }} {{ $pc['hover'] }} transition"
+                                 data-preset-key="{{ $presetKey }}">
+                                <div class="flex items-start gap-3">
+                                    <div class="flex items-center justify-center rounded-lg {{ $pc['bg'] }} {{ $pc['text'] }}"
+                                         style="width:40px;height:40px;min-width:40px;border:1.5px solid currentColor;opacity:.85;">
+                                        <i class="ti {{ $preset['icon'] }}" style="font-size:20px;"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-semibold {{ $pc['text'] }} text-sm mb-1">{{ $preset['label'] }}</div>
+                                        <div class="flex flex-wrap gap-1 mt-1">
+                                            @foreach ($preset['fields'] as $fDef)
+                                                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-mono
+                                                    {{ $pc['bg'] }} {{ $pc['text'] }} border {{ $pc['border'] }}">
+                                                    {{ $fDef['field_key'] }}
+                                                    <span class="opacity-60 ms-1 text-xs">{{ $fDef['field_type'] }}</span>
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                        {{ t('dashboard.Cancel', 'إلغاء') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endcan
+
     @push('scripts')
     <script>
     (function () {
+        // ── Delete field ──────────────────────────────────────────
         var deleteForm = document.getElementById('field-delete-form');
         document.querySelectorAll('.field-delete-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -251,6 +357,35 @@
                 if (!window.confirm('{{ t('dashboard.Confirm_Delete_Field', 'حذف هذا الحقل نهائياً؟') }}' + (name ? '\n' + name : ''))) return;
                 deleteForm.action = btn.dataset.url;
                 deleteForm.submit();
+            });
+        });
+
+        // ── Apply preset ──────────────────────────────────────────
+        var presetForm  = document.getElementById('preset-apply-form');
+        var presetInput = document.getElementById('preset-key-input');
+        if (!presetForm || !presetInput) return;
+
+        function applyPreset(key) {
+            presetInput.value = key;
+            presetForm.submit();
+        }
+
+        // Quick preset buttons in toolbar
+        document.querySelectorAll('.preset-quick-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                applyPreset(btn.dataset.presetKey);
+            });
+        });
+
+        // Cards inside the modal
+        document.querySelectorAll('.preset-card').forEach(function (card) {
+            card.addEventListener('click', function () {
+                // Close modal first, then submit
+                var modal = document.getElementById('presets-modal');
+                if (modal && window.bootstrap) {
+                    bootstrap.Modal.getInstance(modal)?.hide();
+                }
+                applyPreset(card.dataset.presetKey);
             });
         });
     })();
