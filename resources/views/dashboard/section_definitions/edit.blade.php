@@ -42,7 +42,7 @@
     @php
         $bladeFields  = $sectionDefinition->fields()
             ->orderBy('sort_order')->orderBy('id')
-            ->get(['field_key', 'field_type', 'field_scope', 'is_required', 'validation_rules', 'default_value']);
+            ->get(['field_key', 'field_type', 'field_scope', 'is_required', 'validation_rules', 'default_value', 'schema']);
         $fieldsCount  = $bladeFields->count();
     @endphp
     <div class="card mb-4" style="border-right: 4px solid #4f46e5;">
@@ -687,11 +687,49 @@
                     '@endif'
                 ];
             } else if (type === 'repeater') {
-                lines = [
-                    '@foreach (is_array($data[\'' + k + '\'] ?? null) ? $data[\'' + k + '\'] : [] as $' + k + 'Item)',
-                    '    {{-- render $' + k + 'Item --}}',
-                    '@endforeach'
-                ];
+                // Smart repeater: build from item_schema when available
+                var itemSchema = (f.schema && Array.isArray(f.schema.item_schema)) ? f.schema.item_schema : [];
+                // Clean item variable: strip trailing 's' (features→$feature, services→$service)
+                var itemVar = (k.length > 2 && k.slice(-1) === 's') ? '$' + k.slice(0, -1) : '$' + k + 'Item';
+                if (itemSchema.length > 0) {
+                    lines = [
+                        '@foreach (is_array($data[\'' + k + '\'] ?? null) ? $data[\'' + k + '\'] : [] as ' + itemVar + ')',
+                        '    <div>',
+                    ];
+                    itemSchema.forEach(function (sub) {
+                        var sk = sub.key, stype = sub.type;
+                        var isIconField = (sk === 'icon' || sk === 'icon_class' || sk.slice(-5) === '_icon' || sk.slice(-11) === '_icon_class');
+                        if (stype === 'media') {
+                            lines.push('        @if(!empty(' + itemVar + '[\'' + sk + '\']))');
+                            lines.push('            <img src="{{ ' + itemVar + '[\'' + sk + '\'] ?? \'\' }}" alt="">');
+                            lines.push('        @endif');
+                        } else if (stype === 'boolean') {
+                            lines.push('        @if(!empty(' + itemVar + '[\'' + sk + '\']))');
+                            lines.push('            {{-- ' + sk + ' enabled --}}');
+                            lines.push('        @endif');
+                        } else if (stype === 'url') {
+                            lines.push('        @if(!empty(' + itemVar + '[\'' + sk + '\']))');
+                            lines.push('            <a href="{{ ' + itemVar + '[\'' + sk + '\'] ?? \'\' }}">{{ ' + itemVar + '[\'' + sk + '\'] ?? \'\' }}</a>');
+                            lines.push('        @endif');
+                        } else if (isIconField) {
+                            lines.push('        @if(!empty(' + itemVar + '[\'' + sk + '\']))');
+                            lines.push('            <i class="{{ ' + itemVar + '[\'' + sk + '\'] ?? \'\' }}"></i>');
+                            lines.push('        @endif');
+                        } else {
+                            // text, textarea, select — simple output
+                            lines.push('        {{ ' + itemVar + '[\'' + sk + '\'] ?? \'\' }}');
+                        }
+                    });
+                    lines.push('    </div>');
+                    lines.push('@endforeach');
+                } else {
+                    // Fallback: no item_schema defined yet
+                    lines = [
+                        '@foreach (is_array($data[\'' + k + '\'] ?? null) ? $data[\'' + k + '\'] : [] as ' + itemVar + ')',
+                        '    {{-- render ' + itemVar + ' --}}',
+                        '@endforeach'
+                    ];
+                }
             } else if (type === 'textarea' || type === 'richtext' || type === 'html') {
                 lines = [
                     '@php $' + k + ' = trim((string)($data[\'' + k + '\'] ?? \'\')); @endphp',
@@ -720,7 +758,41 @@
                     htmlParts.push(comment, '    @if ($' + k + ')', '        {{-- ' + k + ' enabled --}}', '    @endif');
                 } else if (type === 'repeater') {
                     phpLines.push('    $' + k + ' = is_array($data[\'' + k + '\'] ?? null) ? $data[\'' + k + '\'] : [];');
-                    htmlParts.push(comment, '    @foreach ($' + k + ' as $' + k + 'Item)', '        {{-- render item --}}', '    @endforeach');
+                    // Smart scaffold: use item_schema for meaningful body content
+                    var scaffItemSchema = (f.schema && Array.isArray(f.schema.item_schema)) ? f.schema.item_schema : [];
+                    var scaffItemVar = (k.length > 2 && k.slice(-1) === 's') ? '$' + k.slice(0, -1) : '$' + k + 'Item';
+                    var scaffBody;
+                    if (scaffItemSchema.length > 0) {
+                        scaffBody = ['    @foreach ($' + k + ' as ' + scaffItemVar + ')', '        <div>'];
+                        scaffItemSchema.forEach(function (sub) {
+                            var sk = sub.key, stype = sub.type;
+                            var isIconField = (sk === 'icon' || sk === 'icon_class' || sk.slice(-5) === '_icon' || sk.slice(-11) === '_icon_class');
+                            if (stype === 'media') {
+                                scaffBody.push('            @if(!empty(' + scaffItemVar + '[\'' + sk + '\']))');
+                                scaffBody.push('                <img src="{{ ' + scaffItemVar + '[\'' + sk + '\'] ?? \'\' }}" alt="">');
+                                scaffBody.push('            @endif');
+                            } else if (stype === 'boolean') {
+                                scaffBody.push('            @if(!empty(' + scaffItemVar + '[\'' + sk + '\']))');
+                                scaffBody.push('                {{-- ' + sk + ' enabled --}}');
+                                scaffBody.push('            @endif');
+                            } else if (stype === 'url') {
+                                scaffBody.push('            @if(!empty(' + scaffItemVar + '[\'' + sk + '\']))');
+                                scaffBody.push('                <a href="{{ ' + scaffItemVar + '[\'' + sk + '\'] ?? \'\' }}">{{ ' + scaffItemVar + '[\'' + sk + '\'] ?? \'\' }}</a>');
+                                scaffBody.push('            @endif');
+                            } else if (isIconField) {
+                                scaffBody.push('            @if(!empty(' + scaffItemVar + '[\'' + sk + '\']))');
+                                scaffBody.push('                <i class="{{ ' + scaffItemVar + '[\'' + sk + '\'] ?? \'\' }}"></i>');
+                                scaffBody.push('            @endif');
+                            } else {
+                                scaffBody.push('            {{ ' + scaffItemVar + '[\'' + sk + '\'] ?? \'\' }}');
+                            }
+                        });
+                        scaffBody.push('        </div>', '    @endforeach');
+                    } else {
+                        scaffBody = ['    @foreach ($' + k + ' as ' + scaffItemVar + ')', '        {{-- render ' + scaffItemVar + ' --}}', '    @endforeach'];
+                    }
+                    htmlParts.push(comment);
+                    scaffBody.forEach(function (l) { htmlParts.push(l); });
                 } else {
                     var isHtml = (type === 'textarea' || type === 'richtext' || type === 'html');
                     phpLines.push('    $' + k + ' = trim((string)($data[\'' + k + '\'] ?? \'\'));');
