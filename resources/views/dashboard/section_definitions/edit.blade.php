@@ -414,12 +414,12 @@
                                                     @endif
                                                 </div>
                                             @endif
-                                            {{-- QW3: Repeater Phase 5B warning --}}
+                                            {{-- QW3: Repeater info — editor available via Pages → Sections (Phase 5C) --}}
                                             @if ($f->isRepeater())
-                                                <div class="mx-3 mb-2 flex items-start gap-1.5 rounded border border-amber-200 bg-amber-50 px-2 py-1.5">
-                                                    <i class="ti ti-alert-triangle text-amber-600 flex-shrink-0" style="font-size:11px;margin-top:1px;"></i>
-                                                    <span class="text-amber-700" style="font-size:10px;line-height:1.4;">
-                                                        {{ t('dashboard.Repeater_Editor_Not_Available', 'محرر حقول Repeater غير متاح بعد. التوليد في Blade مدعوم، لكن التحرير من لوحة التحكم محدود.') }}
+                                                <div class="mx-3 mb-2 flex items-start gap-1.5 rounded border border-blue-200 bg-blue-50 px-2 py-1.5">
+                                                    <i class="ti ti-info-circle text-blue-500 flex-shrink-0" style="font-size:11px;margin-top:1px;"></i>
+                                                    <span class="text-blue-700" style="font-size:10px;line-height:1.4;">
+                                                        {{ t('dashboard.Repeater_Editor_Available', 'محرر حقول Repeater متاح عند تحرير محتوى الصفحة (الصفحات ← الأقسام).') }}
                                                     </span>
                                                 </div>
                                             @endif
@@ -440,6 +440,75 @@
         </div>
 
     </div>{{-- end JS tabs wrapper --}}
+
+    {{-- ════════════════════════════════════════════════════════════════
+         Blade Scaffold Preview Modal (BladeGenerator — Phase 6)
+         ════════════════════════════════════════════════════════════════ --}}
+    <div id="blade-scaffold-modal" dir="rtl"
+         style="display:none;position:fixed;inset:0;z-index:99990;background:rgba(15,23,42,.6);align-items:center;justify-content:center;padding:16px;">
+        <div style="background:#fff;border-radius:16px;width:100%;max-width:860px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.25);overflow:hidden;">
+
+            {{-- Header --}}
+            <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #e2e8f0;flex-shrink:0;">
+                <div style="width:36px;height:36px;border-radius:10px;background:#ede9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="ti ti-wand" style="font-size:18px;color:#7c3aed;"></i>
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:15px;font-weight:700;color:#1e293b;">{{ t('dashboard.Blade_Generator_Title', 'Auto Blade Generator') }}</div>
+                    <div style="font-size:12px;color:#64748b;">{{ t('dashboard.Blade_Generator_Subtitle', 'Scaffold محسوب من تعريفات الحقول + Component Library') }}</div>
+                </div>
+                <button id="bsm-close-x" type="button"
+                        style="width:32px;height:32px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748b;flex-shrink:0;"
+                        title="{{ t('dashboard.Close', 'إغلاق') }}">
+                    <i class="ti ti-x" style="font-size:14px;"></i>
+                </button>
+            </div>
+
+            {{-- Loader --}}
+            <div id="bsm-loader" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:48px;min-height:200px;">
+                <div style="width:36px;height:36px;border-radius:50%;border:3px solid #ede9fe;border-top-color:#7c3aed;animation:bsm-spin .8s linear infinite;"></div>
+                <div style="font-size:13px;color:#64748b;">{{ t('dashboard.Blade_Generator_Loading', 'جاري توليد الـ scaffold…') }}</div>
+            </div>
+
+            {{-- Body --}}
+            <div id="bsm-body" style="display:none;flex:1;min-height:0;flex-direction:column;overflow:hidden;">
+                {{-- Stats bar --}}
+                <div id="bsm-stats" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:12px;color:#475569;flex-shrink:0;">
+                    {{-- filled by JS --}}
+                </div>
+
+                {{-- Code block --}}
+                <div style="flex:1;min-height:0;overflow:auto;background:#1e1e2e;">
+                    <pre id="bsm-code" dir="ltr"
+                         style="margin:0;padding:20px 24px;font-family:'Fira Code','Cascadia Code',Consolas,monospace;font-size:13px;line-height:1.7;color:#cdd6f4;white-space:pre;tab-size:4;overflow:visible;"></pre>
+                </div>
+            </div>
+
+            {{-- Footer --}}
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid #e2e8f0;flex-shrink:0;background:#f8fafc;">
+                <button id="bsm-insert" type="button" class="btn btn-primary btn-sm">
+                    <i class="ti ti-arrow-bar-to-down me-1"></i>{{ t('dashboard.Blade_Generator_Insert', 'إدراج في المحرر') }}
+                </button>
+                <button id="bsm-copy" type="button" class="btn btn-light btn-sm">
+                    <i class="ti ti-copy me-1"></i>{{ t('dashboard.Blade_Generator_Copy', 'نسخ الكود') }}
+                </button>
+                <span style="flex:1;"></span>
+                <button id="bsm-close" type="button" class="btn btn-light btn-sm">
+                    {{ t('dashboard.Close', 'إغلاق') }}
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <style>
+    @keyframes bsm-spin { to { transform: rotate(360deg); } }
+    .bsm-stat { display:inline-flex; align-items:center; gap:4px; }
+    .bsm-stat i { font-size:13px; color:#7c3aed; }
+    .bsm-chips { display:inline-flex; gap:4px; flex-wrap:wrap; }
+    .bsm-chip  { background:#ede9fe; color:#6d28d9; border-radius:20px; padding:1px 9px; font-size:11px; font-weight:600; }
+    #bsm-body  { display:flex; }
+    </style>
 
     <style>
     /* ── Monaco Fullscreen ── */
@@ -577,7 +646,8 @@
         sectionKey:     @json($sectionDefinition->section_key),
         editId:         {{ $sectionDefinition->id }},
         scaffoldDate:   '{{ now()->toDateString() }}',
-        initialContent: @json(old('blade_source', $sectionDefinition->blade_source) ?? '')
+        initialContent: @json(old('blade_source', $sectionDefinition->blade_source) ?? ''),
+        scaffoldUrl:    '{{ route('dashboard.section_definitions.blade_scaffold', $sectionDefinition) }}'
     };
     </script>
     @verbatim
@@ -1071,28 +1141,113 @@
                 updateFieldIndicators();
             });
 
-            // Scaffold button
+            // ── Scaffold button → server-side BladeGenerator preview ──────────
             if (scaffoldBtn) {
                 scaffoldBtn.addEventListener('click', function () {
-                    var code    = getCode().trim();
-                    var missing = getMissingFields(getCode());
-                    if (!code) {
-                        setCode(fieldsData.length ? generateFullScaffold()
-                            : '{{-- لا حقول بعد --}}\n<section class="section-' + sectionKey + '">\n</section>');
-                        return;
-                    }
-                    if (missing.length > 0) {
-                        var names = missing.map(function (f) { return '+ ' + f.field_key; }).join('\n');
-                        if (!window.confirm('سيتم إضافة ' + missing.length + ' حقل ناقص:\n\n' + names + '\n\nمتابعة؟')) return;
-                        var snippets = missing.map(function (f) { return generateSnippet(f); }).join('\n\n');
-                        setCode(getCode().trimEnd() + '\n\n' + snippets);
-                        return;
-                    }
-                    if (window.confirm('كل الحقول موجودة.\n\nاستبدال الكود كاملاً بـ scaffold جديد؟')) {
-                        setCode(generateFullScaffold());
-                    }
+                    openScaffoldPreview();
                 });
             }
+
+            function openScaffoldPreview() {
+                var modal    = document.getElementById('blade-scaffold-modal');
+                var codeEl   = document.getElementById('bsm-code');
+                var statsEl2 = document.getElementById('bsm-stats');
+                var loader   = document.getElementById('bsm-loader');
+                var body     = document.getElementById('bsm-body');
+                if (!modal) return;
+
+                // Show modal in loading state
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                if (loader) loader.style.display = '';
+                if (body)   body.style.display   = 'none';
+
+                // Fetch from server
+                var url = data.scaffoldUrl;
+                fetch(url, {
+                    method:  'GET',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (json) {
+                    if (codeEl)   codeEl.textContent = json.scaffold || '';
+                    if (statsEl2 && json.stats) {
+                        var s = json.stats;
+                        statsEl2.innerHTML =
+                            '<span class="bsm-stat"><i class="ti ti-layout-list"></i> ' + s.fields     + ' حقل</span>' +
+                            '<span class="bsm-stat"><i class="ti ti-repeat"></i> '       + s.repeaters  + ' repeater</span>' +
+                            '<span class="bsm-stat"><i class="ti ti-puzzle"></i> '       + s.components + ' component</span>';
+                        if (s.component_names && s.component_names.length) {
+                            statsEl2.innerHTML += '<span class="bsm-chips">' +
+                                s.component_names.map(function(c){ return '<span class="bsm-chip">' + c + '</span>'; }).join('') +
+                            '</span>';
+                        }
+                    }
+                    if (loader) loader.style.display = 'none';
+                    if (body)   body.style.display   = '';
+                })
+                .catch(function (err) {
+                    if (codeEl)   codeEl.textContent = '{{-- خطأ أثناء التوليد: ' + err + ' --}}';
+                    if (loader) loader.style.display = 'none';
+                    if (body)   body.style.display   = '';
+                });
+            }
+
+            // Modal controls
+            (function () {
+                var modal       = document.getElementById('blade-scaffold-modal');
+                var insertBtn   = document.getElementById('bsm-insert');
+                var copyBtn     = document.getElementById('bsm-copy');
+                var closeBtn    = document.getElementById('bsm-close');
+                var closeXBtn   = document.getElementById('bsm-close-x');
+                if (!modal) return;
+
+                function closeModal() {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = '';
+                }
+
+                if (closeBtn)  closeBtn.addEventListener('click',  closeModal);
+                if (closeXBtn) closeXBtn.addEventListener('click', closeModal);
+
+                // Close on backdrop click
+                modal.addEventListener('click', function (e) {
+                    if (e.target === modal) closeModal();
+                });
+                // Close on Escape
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
+                });
+
+                // Insert into Monaco
+                if (insertBtn) {
+                    insertBtn.addEventListener('click', function () {
+                        var code = document.getElementById('bsm-code');
+                        if (code && monacoInstance) {
+                            var currentCode = getCode().trim();
+                            if (currentCode && !window.confirm('استبدال الكود الحالي في المحرر؟')) return;
+                            setCode(code.textContent);
+                            updateFieldIndicators();
+                            updateStats();
+                        }
+                        closeModal();
+                    });
+                }
+
+                // Copy code
+                if (copyBtn) {
+                    copyBtn.addEventListener('click', function () {
+                        var code = document.getElementById('bsm-code');
+                        if (!code) return;
+                        navigator.clipboard.writeText(code.textContent).then(function () {
+                            copyBtn.innerHTML = '<i class="ti ti-check me-1"></i>نُسخ!';
+                            setTimeout(function () {
+                                copyBtn.innerHTML = '<i class="ti ti-copy me-1"></i>نسخ الكود';
+                            }, 1800);
+                        });
+                    });
+                }
+            })();
 
             // Field insert buttons
             document.querySelectorAll('.field-insert-btn').forEach(function (ibtn) {

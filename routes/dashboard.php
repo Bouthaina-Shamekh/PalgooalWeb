@@ -282,6 +282,8 @@ Route::group([
             Route::post('/import/preview', [SectionDefinitionImportExportController::class, 'preview'])->name('import.preview');
             Route::post('/import/apply', [SectionDefinitionImportExportController::class, 'apply'])->name('import.apply');
             Route::get('/create', [SectionDefinitionController::class, 'create'])->name('create');
+            Route::get('/from-template', [SectionDefinitionController::class, 'createFromTemplate'])->name('from_template');
+            Route::post('/from-template', [SectionDefinitionController::class, 'storeFromTemplate'])->name('store_from_template');
             Route::post('/', [SectionDefinitionController::class, 'store'])->name('store');
             Route::get('/{sectionDefinition}/edit', [SectionDefinitionController::class, 'edit'])
                 ->whereNumber('sectionDefinition')
@@ -295,6 +297,9 @@ Route::group([
             Route::post('/{sectionDefinition}/write-blade', [SectionDefinitionController::class, 'writeBladeFile'])
                 ->whereNumber('sectionDefinition')
                 ->name('write_blade');
+            Route::get('/{sectionDefinition}/blade-scaffold', [SectionDefinitionController::class, 'bladeScaffold'])
+                ->whereNumber('sectionDefinition')
+                ->name('blade_scaffold');
 
             Route::prefix('/{sectionDefinition}/fields')
                 ->whereNumber('sectionDefinition')

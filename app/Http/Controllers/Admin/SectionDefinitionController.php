@@ -9,8 +9,12 @@ use App\Models\SectionTranslation;
 use App\Models\Sections\SectionDefinition;
 use App\Models\Sections\SectionDefinitionField;
 use App\Models\Sections\Template as SectionTemplate;
+use App\Support\Sections\BladeGenerator;
+use App\Support\Sections\ComponentLibrary;
+use App\Support\Sections\FieldPresetLibrary;
 use App\Support\Sections\SectionMediaPreviewBuilder;
 use App\Support\Sections\SectionTemplateFileWriter;
+use App\Support\Sections\SectionTemplateLibrary;
 use App\Support\Sections\SectionTemplateRegistry;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -67,6 +71,139 @@ class SectionDefinitionController extends Controller
         ]);
 
         return view('dashboard.section_definitions.create', $this->formViewData($sectionDefinition));
+    }
+
+    /**
+     * Show the "Create From Template" picker.
+     *
+     * GET /admin/section-definitions/from-template
+     */
+    public function createFromTemplate(): View
+    {
+        $this->authorize('create', SectionDefinition::class);
+
+        $templates = SectionTemplateLibrary::all();
+
+        // Gather existing section_keys so the view can flag already-created templates
+        $existingKeys = SectionDefinition::pluck('section_key')->flip();
+
+        return view('dashboard.section_definitions.from-template', compact('templates', 'existingKeys'));
+    }
+
+    /**
+     * Instantiate a full Section Definition from a library template.
+     *
+     * POST /admin/section-definitions/from-template
+     *
+     * Creates:
+     *   1. SectionDefinition record (key, label, category, blade_source)
+     *   2. All SectionDefinitionField records (type, scope, schema, options)
+     *
+     * Phase 2 (future): auto-write Blade file to disk.
+     */
+    public function storeFromTemplate(Request $request): RedirectResponse
+    {
+        $this->authorize('create', SectionDefinition::class);
+
+        $validated = $request->validate([
+            'template_key' => ['required', 'string', 'in:' . implode(',', SectionTemplateLibrary::keys())],
+        ]);
+
+        $template = SectionTemplateLibrary::get($validated['template_key']);
+
+        if (! $template) {
+            return back()->with('error', t('dashboard.Section_Tpl_Invalid', 'القالب المحدد غير موجود.'));
+        }
+
+        $defConfig = $template['definition'];
+        $sectionKey = (string) ($defConfig['section_key'] ?? '');
+
+        // Guard: prevent duplicate section_key
+        if (SectionDefinition::where('section_key', $sectionKey)->exists()) {
+            return back()->with('error',
+                strtr(
+                    t('dashboard.Section_Tpl_Key_Exists', 'مفتاح السكشن ":key" موجود بالفعل. عدّل الـ key أو احذف التعريف القديم أولاً.'),
+                    [':key' => $sectionKey]
+                )
+            );
+        }
+
+        $sectionDefinition = null;
+        $fieldCount = 0;
+
+        try {
+            DB::transaction(function () use ($defConfig, $template, &$sectionDefinition, &$fieldCount) {
+                // 1. Create SectionDefinition
+                $sectionDefinition = SectionDefinition::create([
+                    'section_key'  => $defConfig['section_key'],
+                    'label'        => $defConfig['label'],
+                    'description'  => $defConfig['description'] ?? null,
+                    'category'     => $defConfig['category'] ?? null,
+                    'editor_mode'  => SectionDefinition::EDITOR_MODE_DYNAMIC,
+                    'blade_source' => $template['blade_stub'] ?? null,
+                    'is_active'    => (bool) ($defConfig['is_active'] ?? true),
+                    'is_visible'   => (bool) ($defConfig['is_visible'] ?? true),
+                    'sort_order'   => (int) ($defConfig['sort_order'] ?? 0),
+                ]);
+
+                // 2. Resolve fields — v2: components, v1: inline fields (backward-compat)
+                $resolvedFields = SectionTemplateLibrary::resolveTemplateFields(
+                    $validated['template_key'] ?? ''
+                );
+
+                foreach ($resolvedFields as $fieldDef) {
+                    $fieldKey = (string) ($fieldDef['field_key'] ?? '');
+                    if ($fieldKey === '') {
+                        continue;
+                    }
+
+                    // Normalize options: array of {value,label} → pipe-delimited string
+                    $options = null;
+                    if (! empty($fieldDef['options'])) {
+                        $rawOptions = $fieldDef['options'];
+                        if (is_array($rawOptions)) {
+                            $options = implode('|', array_map(
+                                fn($o) => ($o['value'] ?? '') . '|' . ($o['label'] ?? ''),
+                                $rawOptions
+                            ));
+                        } else {
+                            $options = (string) $rawOptions;
+                        }
+                    }
+
+                    $sectionDefinition->fields()->create([
+                        'field_key'   => $fieldKey,
+                        'label'       => $fieldDef['label'] ?? $fieldKey,
+                        'field_type'  => $fieldDef['field_type'] ?? SectionDefinitionField::FIELD_TYPE_TEXT,
+                        'field_scope' => $fieldDef['field_scope'] ?? SectionDefinitionField::FIELD_SCOPE_TRANSLATABLE,
+                        'is_required' => (bool) ($fieldDef['is_required'] ?? false),
+                        'is_active'   => true,
+                        'sort_order'  => (int) ($fieldDef['sort_order'] ?? 0),
+                        'schema'      => $fieldDef['schema'] ?? null,
+                        'options'     => $options,
+                    ]);
+
+                    $fieldCount++;
+                }
+            });
+        } catch (Throwable $e) {
+            report($e);
+
+            return back()->with('error', t('dashboard.Section_Tpl_Create_Error', 'حدث خطأ أثناء إنشاء السكشن. راجع السجلات.'));
+        }
+
+        if (! $sectionDefinition instanceof SectionDefinition) {
+            return back()->with('error', t('dashboard.Section_Tpl_Create_Error', 'حدث خطأ أثناء إنشاء السكشن. راجع السجلات.'));
+        }
+
+        $message = strtr(
+            t('dashboard.Section_Tpl_Created', 'تم إنشاء سكشن ":name" بنجاح مع :count حقل. يمكنك تعديل الحقول أو كتابة ملف Blade الآن.'),
+            [':name' => $sectionDefinition->label, ':count' => $fieldCount]
+        );
+
+        return redirect()
+            ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
+            ->with('ok', $message);
     }
 
     /**
@@ -210,6 +347,24 @@ class SectionDefinitionController extends Controller
         return redirect()
             ->route('dashboard.section_definitions.index')
             ->with('ok', $message);
+    }
+
+    /**
+     * Generate a Blade scaffold from the section's active field definitions.
+     *
+     * GET /admin/section-definitions/{id}/blade-scaffold
+     * Returns JSON: { scaffold: string, stats: { fields, repeaters, components, component_names } }
+     */
+    public function bladeScaffold(SectionDefinition $sectionDefinition)
+    {
+        $this->authorize('update', $sectionDefinition);
+
+        $generator = new BladeGenerator();
+
+        return response()->json([
+            'scaffold' => $generator->generate($sectionDefinition),
+            'stats'    => $generator->stats($sectionDefinition),
+        ]);
     }
 
     /**

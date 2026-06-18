@@ -117,6 +117,8 @@
                                     data-i18n="Menus">{{ t('dashboard.Categories', 'Categories') }}</a></li>
                             <li class="pc-item"><a class="pc-link" href="{{ route('dashboard.reviews.index') }}"
                                     data-i18n="Menus">{{ t('dashboard.reviews', 'reviews') }}</a></li>
+                            <li class="pc-item"><a class="pc-link" href="{{ route('dashboard.section_definitions.index') }}">
+                                {{ t('dashboard.Section_Definitions', 'تعريفات الأقسام') }}</a></li>
                         </ul>
                     </li>
                 @endcan

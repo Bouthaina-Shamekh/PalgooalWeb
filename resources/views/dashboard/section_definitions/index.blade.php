@@ -92,6 +92,10 @@
                         {{ t('dashboard.Import_JSON', 'استيراد JSON') }}
                     </a>
                     @can('create', \App\Models\Sections\SectionDefinition::class)
+                        <a href="{{ route('dashboard.section_definitions.from_template') }}" class="btn btn-light btn-sm">
+                            <i class="ti ti-bolt me-1"></i>
+                            {{ t('dashboard.Create_From_Template', 'من قالب') }}
+                        </a>
                         <a href="{{ route('dashboard.section_definitions.create') }}" class="btn btn-primary btn-sm">
                             <i class="ti ti-plus me-1"></i>
                             {{ t('dashboard.Add_Definition', 'إضافة تعريف') }}
@@ -259,6 +263,10 @@
                                                 {{ t('dashboard.No_Section_Definitions_Desc', 'أضف تعريفاً جديداً للبدء') }}
                                             </p>
                                             @can('create', \App\Models\Sections\SectionDefinition::class)
+                                                <a href="{{ route('dashboard.section_definitions.from_template') }}" class="btn btn-light btn-sm me-2">
+                                                    <i class="ti ti-bolt me-1"></i>
+                                                    {{ t('dashboard.Create_From_Template', 'من قالب') }}
+                                                </a>
                                                 <a href="{{ route('dashboard.section_definitions.create') }}" class="btn btn-primary btn-sm">
                                                     <i class="ti ti-plus me-1"></i>
                                                     {{ t('dashboard.Add_Definition', 'إضافة تعريف') }}

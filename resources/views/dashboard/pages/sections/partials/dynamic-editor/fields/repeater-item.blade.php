@@ -28,9 +28,9 @@
                 aria-hidden="true"></i>
             <span data-dynamic-repeater-item-label class="text-sm font-medium text-slate-700">
                 @if (! $isTemplate)
-                    {{ __('Item') }} {{ is_int($itemIndex) ? $itemIndex + 1 : $itemIndex }}
+                    {{ t('dashboard.Repeater_Item', 'Item') }} {{ is_int($itemIndex) ? $itemIndex + 1 : $itemIndex }}
                 @else
-                    {{ __('New Item') }}
+                    {{ t('dashboard.Repeater_New_Item', 'New Item') }}
                 @endif
             </span>
         </button>
@@ -38,13 +38,13 @@
         <div class="flex shrink-0 items-center gap-1.5">
             <button type="button" data-duplicate-dynamic-repeater-item
                 class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:border-slate-300 hover:text-slate-700"
-                title="{{ __('Duplicate item') }}" aria-label="{{ __('Duplicate item') }}">
+                title="{{ t('dashboard.Repeater_Duplicate_Item', 'Duplicate item') }}" aria-label="{{ t('dashboard.Repeater_Duplicate_Item', 'Duplicate item') }}">
                 <i class="ti ti-copy text-sm leading-none" aria-hidden="true"></i>
             </button>
 
             <button type="button" data-remove-dynamic-repeater-item
                 class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 transition hover:bg-rose-100"
-                title="{{ __('Remove item') }}" aria-label="{{ __('Remove item') }}">
+                title="{{ t('dashboard.Repeater_Remove_Item', 'Remove item') }}" aria-label="{{ t('dashboard.Repeater_Remove_Item', 'Remove item') }}">
                 <i class="ti ti-trash text-sm leading-none" aria-hidden="true"></i>
             </button>
         </div>
@@ -212,7 +212,7 @@
                         data-target-preview="{{ $previewDomId }}" data-multiple="false" data-store-value="id"
                         class="btn-open-media-picker mt-2 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white">
                         <i class="ti ti-photo text-base leading-none" aria-hidden="true"></i>
-                        <span>{{ __('Choose From Media Library') }}</span>
+                        <span>{{ t('dashboard.Choose_From_Media', 'Choose From Media Library') }}</span>
                     </button>
 
                     <div id="{{ $previewDomId }}" data-dynamic-repeater-media-preview
@@ -226,7 +226,7 @@
                     </div>
 
                     <p class="mt-1.5 text-xs text-slate-500">
-                        {{ __('Choose a file from the media library for this field.') }}
+                        {{ t('dashboard.Repeater_Media_Hint', 'Choose a file from the media library for this field.') }}
                     </p>
                 </div>
             @elseif ($isIconSourceField)
@@ -236,10 +236,10 @@
                     <select id="{{ $fieldDomId }}" name="{{ $inputName }}" data-name-template="{{ $nameTpl }}"
                         data-dynamic-repeater-field="{{ $subKey }}" @if ($subRequired) required @endif
                         class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                        <option value="class" @selected($normalizedIconSource === 'class')>{{ __('Tabler Icon') }}</option>
-                        <option value="media" @selected($normalizedIconSource === 'media')>{{ __('SVG From Media') }}</option>
+                        <option value="class" @selected($normalizedIconSource === 'class')>{{ t('dashboard.Repeater_Icon_Tabler', 'Tabler Icon') }}</option>
+                        <option value="media" @selected($normalizedIconSource === 'media')>{{ t('dashboard.Repeater_Icon_SVG_Media', 'SVG From Media') }}</option>
                         @if ($hasIconSvgField)
-                            <option value="svg" @selected($normalizedIconSource === 'svg')>{{ __('Inline SVG') }}</option>
+                            <option value="svg" @selected($normalizedIconSource === 'svg')>{{ t('dashboard.Repeater_Icon_Inline_SVG', 'Inline SVG') }}</option>
                         @endif
                     </select>
                 </div>
@@ -258,7 +258,7 @@
                         data-dynamic-repeater-field="{{ $subKey }}"
                         @if ($subRequired) required @endif
                         class="mt-2 block w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900">
-                        <option value="">{{ __('Select an option') }}</option>
+                        <option value="">{{ t('dashboard.Repeater_Select_Option', 'Select an option') }}</option>
                         @foreach ($selectOptions as $option)
                             <option value="{{ $option['value'] }}" @selected(! $isTemplate && (string) $subValue === (string) $option['value'])>
                                 {{ $option['label'] }}
@@ -281,11 +281,11 @@
                                 data-icon-input-selector='[data-dynamic-repeater-field="{{ $subKey }}"]'
                                 class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white">
                                 <i class="ti ti-icons text-base leading-none" aria-hidden="true"></i>
-                                <span>{{ __('Choose From Icon Library') }}</span>
+                                <span>{{ t('dashboard.Repeater_Choose_Icon', 'Choose From Icon Library') }}</span>
                             </button>
                         </div>
                         <p class="mt-1.5 text-xs text-slate-500">
-                            {{ __('Use the icon library or type a Tabler class manually.') }}
+                            {{ t('dashboard.Repeater_Icon_Hint', 'Use the icon library or type a Tabler class manually.') }}
                         </p>
                     @endif
                 </div>
@@ -329,7 +329,7 @@
                             data-icon-input-selector="[data-dynamic-repeater-icon-class-field]"
                             class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
                             <i class="ti ti-icons text-base leading-none" aria-hidden="true"></i>
-                            {{ __('Icon Library') }}
+                            {{ t('dashboard.Repeater_Icon_Library', 'Icon Library') }}
                         </button>
 
                         {{--
@@ -347,7 +347,7 @@
                             data-multiple="false"
                             data-store-value="id">
                             <i class="ti ti-photo-up text-base leading-none" aria-hidden="true"></i>
-                            {{ __('Upload SVG') }}
+                            {{ t('dashboard.Repeater_Upload_SVG', 'Upload SVG') }}
                         </button>
 
                     </div>
@@ -355,7 +355,7 @@
                     {{-- Clear — secondary, visually recessive --}}
                     <button type="button" data-icon-card-clear
                         class="text-xs text-slate-400 transition hover:text-rose-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-rose-300 focus-visible:ring-offset-1">
-                        {{ __('Clear') }}
+                        {{ t('dashboard.Clear', 'Clear') }}
                     </button>
 
                 </div>

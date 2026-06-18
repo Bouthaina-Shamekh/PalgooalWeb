@@ -34,7 +34,8 @@ class SectionDefinitionField extends Model
      * the key "item_schema". Sub-field types are limited to the V1 allowlist
      * returned by repeaterSubFieldTypes(). Nested repeaters are not supported.
      *
-     * Editor rendering and save/load pipeline are deferred to Phase 5B.
+     * Editor rendering and save/load pipeline implemented in Phase 5C
+     * (dynamic-editor/fields/repeater.blade.php + repeater-item.blade.php).
      */
     public const FIELD_TYPE_REPEATER = 'repeater';
 

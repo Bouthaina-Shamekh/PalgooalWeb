@@ -46,7 +46,7 @@
                 </span>
                 @if (!$field['isTranslatable'])
                     <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
-                        {{ __('Shared') }}
+                        {{ t('dashboard.Shared', 'Shared') }}
                     </span>
                 @endif
             </div>
@@ -55,7 +55,7 @@
             @endif
             @if (!$field['isTranslatable'])
                 <p class="mt-1 text-xs text-slate-500">
-                    {{ __('This repeater is edited once on the default locale tab and reused across locales in V1.') }}
+                    {{ t('dashboard.Repeater_Shared_Note', 'This repeater is edited once on the default locale tab and reused across locales.') }}
                 </p>
             @endif
         </div>
@@ -64,7 +64,7 @@
             <button type="button" data-add-dynamic-repeater-item
                 class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
                 <span class="text-base leading-none" aria-hidden="true">+</span>
-                <span>{{ __('Add Item') }}</span>
+                <span>{{ t('dashboard.Repeater_Add_Item', 'Add Item') }}</span>
             </button>
         @endif
     </div>
@@ -73,7 +73,7 @@
         {{-- No sub-fields defined yet — developer needs to configure item_schema --}}
         <div
             class="mt-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
-            {{ __('No sub-fields are defined yet. Return to the field definition and add at least one sub-field to enable this repeater.') }}
+            {{ t('dashboard.Repeater_No_Schema', 'No sub-fields are defined yet. Return to the field definition and add at least one sub-field to enable this repeater.') }}
         </div>
     @else
         {{-- ── Item list ────────────────────────────────────────────────────── --}}
@@ -93,7 +93,7 @@
         {{-- ── Empty state (hidden when items exist) ───────────────────────── --}}
         <div data-dynamic-repeater-empty
             class="{{ $hasItems ? 'hidden ' : '' }}mt-3 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center text-sm text-slate-500">
-            {{ __('No items yet. Click "Add Item" to create the first entry.') }}
+            {{ t('dashboard.Repeater_Empty', 'No items yet. Click "Add Item" to create the first entry.') }}
         </div>
 
         {{-- ── Template for JS-created new items ───────────────────────────── --}}
@@ -118,7 +118,7 @@
             <button type="button" data-add-dynamic-repeater-item
                 class="inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800">
                 <span class="text-base leading-none" aria-hidden="true">+</span>
-                <span>{{ __('Add Item') }}</span>
+                <span>{{ t('dashboard.Repeater_Add_Item', 'Add Item') }}</span>
             </button>
         </div>
     @endif

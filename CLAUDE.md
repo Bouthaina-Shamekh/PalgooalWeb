@@ -62,6 +62,29 @@ php artisan cache:clear
 
 ---
 
+## ٢أ. قاعدة Field Scope — Multi-Tenant Platform
+
+هذه المنصة تخدم آلاف القوالب والمشتركين والمواقع متعددة اللغات. **لا يتم تحديد scope بناءً على احتياجات Palgoals.com فقط.**
+
+### السؤال الفاصل:
+> "في قالب يخدم موقعاً بالعربية والإنجليزية والفرنسية، هل يمكن أن تختلف قيمة هذا الحقل بين اللغات؟"
+> - **نعم → Translatable**
+> - **لا → Shared**
+
+### Translatable دائماً:
+`eyebrow`, `title`, `subtitle`, `description`, `highlight_text`, `button_label`, **`button_url`**, `image_alt`, `meta_title`, `meta_description`, أي نص يُقرأ من المستخدم
+
+### Shared دائماً:
+`image`, `icon`, `icon_media`, `icon_source`, `image_position`, `button_target`, `layout_style`, `theme_variant`, `background_color`, أي قرار تصميمي/بصري
+
+### لماذا `button_url` هو Translatable:
+الروابط تختلف بين اللغات — locale prefixes (`/ar/contact` vs `/en/contact`)، أرقام WhatsApp، landing pages محلية، UTM parameters مترجمة.
+
+**المرجع الكامل:** `docs/FIELD_SCOPE_ARCHITECTURE.md`  
+**التطبيق:** `app/Support/Sections/FieldPresetLibrary.php` (تعليق عند كل حقل)
+
+---
+
 ## ٣. بنية الملفات الهامة
 
 ```
@@ -1006,3 +1029,178 @@ CSS `.lang-switcher` + `.lang-tab-btn` يُستخدم في `pages/partials/form.
 ```
 كل زر يعرض: flag emoji + lang name + lang code uppercase
 يُفعَّل بـ JS `makeSwitcher('data-lang-tab', 'data-lang-panel')` — helper قابل لإعادة الاستخدام
+
+### Session: Section Templates Library (أتمتة إنشاء الأقسام)
+
+- `app/Support/Sections/SectionTemplateLibrary.php` — **إنشاء**: static library بـ 6 templates جاهزة
+  - Hero / Features Grid / Content Showcase / CTA Banner / FAQ / Testimonials
+  - كل template: `definition` + `fields[]` + `blade_stub`
+  - Field scopes: مُصنَّفة وفق قاعدة Multi-Tenant Field Scope Architecture
+- `app/Http/Controllers/Admin/SectionDefinitionController.php` — إضافة:
+  - `createFromTemplate()`: عرض صفحة الاختيار مع duplicate detection
+  - `storeFromTemplate()`: إنشاء SectionDefinition + جميع الحقول في Transaction واحدة + حفظ `blade_stub` في `blade_source`
+- `routes/dashboard.php` — إضافة:
+  - `GET /section-definitions/from-template` → `from_template`
+  - `POST /section-definitions/from-template` → `store_from_template`
+- `resources/views/dashboard/section_definitions/from-template.blade.php` — **إنشاء**: صفحة template picker
+  - Grid of colored cards (indigo/violet/emerald/rose/amber/cyan)
+  - Badge عند وجود section_key مسبقاً (تمنع إعادة الإنشاء)
+  - Field badges + repeater sub-fields preview
+  - Confirm dialog قبل الإرسال
+- `resources/views/dashboard/section_definitions/index.blade.php` — إضافة زر "⚡ من قالب" في toolbar + empty state
+- `database/seeders/DashboardTranslationsSeeder.php` — إضافة 17 ترجمة (`dashboard.Section_Tpl_*`, `dashboard.Field_Type_*`)
+- `docs/SECTION_TEMPLATE_LIBRARY_REPORT.md` — **إنشاء**: تقرير التنفيذ الكامل
+
+#### الهدف المحقق:
+وقت إنشاء سكشن جديد: **15–23 دقيقة → أقل من 30 ثانية**
+
+#### إضافة Template جديد:
+فقط أضف entry لـ `ALL_TEMPLATES` في `SectionTemplateLibrary` — لا ملف آخر يحتاج تغيير.
+
+#### Phase 2 (مستقبلاً): كتابة ملف Blade إلى disk تلقائياً عبر `SectionTemplateFileWriter`.
+
+### Session: Component Library System (لوحة الإدارة)
+
+- `app/Support/Sections/ComponentLibrary.php` — **إنشاء**: 8 components قابلة لإعادة الاستخدام
+  - `intro` (eyebrow, title, subtitle), `description`, `cta` (button_label, button_url, button_target)
+  - `image` (image, image_alt, image_position), `features` (repeater), `highlight` (highlight_text)
+  - `faq` (faqs repeater), `testimonials` (testimonials repeater), `seo` (meta_title, meta_description)
+  - Methods: `all()`, `get(key)`, `keys()`, `resolveFields(componentKeys[], extraFields[])`
+  - `resolveFields()`: يدمج الحقول بالترتيب، يُزيل التكرار بـ first-occurrence-wins، يُعيّن sort_order تسلسلياً
+
+- `app/Support/Sections/SectionTemplateLibrary.php` — **إعادة هيكلة v2** (Component Architecture):
+  - Templates تستخدم `components[]` + `extra_fields[]` بدلاً من `fields[]` المتكرر
+  - إضافة `resolveTemplateFields(key)`: يتحقق من `components` أولاً (v2)، يسقط لـ `fields` (v1 backward-compat)
+  - `cta-banner` مثال: `components: ['intro','cta']` + `extra_fields: [background_image]`
+  - لا تغيير في `blade_stubs` — محفوظة كما هي
+
+- `app/Http/Controllers/Admin/SectionDefinitionController.php` — تحديث `storeFromTemplate()`:
+  - إضافة `use App\Support\Sections\ComponentLibrary`
+  - استبدال `foreach $template['fields']` بـ `SectionTemplateLibrary::resolveTemplateFields($key)`
+  - التوافق الكامل: القديم (v1 inline fields) والجديد (v2 components) يعملان بنفس المنطق
+
+- `resources/views/dashboard/section_definitions/from-template.blade.php` — **إعادة كتابة**:
+  - عرض **component chips** ملونة بدلاً من raw field badges
+  - كل chip: أيقونة + اسم الـ component + عدد حقوله
+  - `Extra Fields` indicator عند وجود `extra_fields` خاصة بالـ template
+  - عدد الحقول الإجمالي مع نص "مُدمجة تلقائياً، بدون تكرار"
+  - Repeater sub-fields preview محفوظ كما هو
+
+- `database/seeders/DashboardTranslationsSeeder.php` — إضافة 14 ترجمة جديدة:
+  - `dashboard.Components`، `dashboard.Extra_Fields`، `dashboard.Extra_Fields_Short`
+  - `dashboard.Auto_Merged`، `dashboard.Total_Fields`
+  - `dashboard.Comp_Intro/Description/Cta/Image/Features/Highlight/Faq/Testimonials/Seo`
+
+- `docs/COMPONENT_LIBRARY_ARCHITECTURE.md` — **إنشاء**: توثيق شامل:
+  - الفرق الجوهري بين الطبقات الثلاث: Field Presets / Components / Section Templates
+  - منطق `resolveFields()` مع مثال كامل (intro+cta+image → 9 حقول مُرقَّمة)
+  - جدول الـ components + الـ templates مع عدد الحقول
+  - Field Scope compliance لكل حقل مع السبب
+  - كيفية إضافة Component جديد (خطوة واحدة فقط)
+  - كيفية إضافة Template جديد مع مثال كامل
+  - Backward compatibility flow
+
+#### قاعدة جديدة: Component Architecture
+عند إضافة template جديد → استخدم `components[]` دائماً. لا تُعيد تعريف `eyebrow/title/subtitle/button_*` يدوياً.
+```php
+'my-section' => [
+    'components'   => ['intro', 'cta'],      // ← يجلب 6 حقول تلقائياً
+    'extra_fields' => [/* حقول خاصة فقط */],
+    'definition'   => [...],
+    'blade_stub'   => '...',
+]
+```
+
+### Session: UI/UX from-template + Task #130 Repeater Partials
+
+#### from-template.blade.php — تحسينات UX
+- **إصلاح حساب `$existingCount`**: كان يحسب جميع SectionDefinitions في DB → أصبح يحسب فقط القوالب التي section_key-ها موجود (مطابقة فعلية)
+- **إصلاح البانر الإحصائي**: استبدال `d-flex gap-3` بـ `inline-flex` حاوية واحدة مع `flex-direction:row` و `align-self:stretch` للفواصل — يمنع التكديس العمودي في RTL
+- **تحسين Card Header**: استبدال الـ flex المنفصل بـ colored header zone (خلفية ملونة خفيفة حسب لون القالب) مع الأيقونة داخل صندوق أبيض + العنوان والوصف بجانبها
+- الإصلاح يعني: القوالب التي تم إنشاؤها بالفعل تُظهر العدد الصحيح (2 مُنشأ / 4 متاح / 6 إجمالي)
+
+#### Task #130 — QW3 Warning + __() → t() في Repeater Partials
+
+**`app/Models/Sections/SectionDefinitionField.php`**:
+- تعليق FIELD_TYPE_REPEATER: `"deferred to Phase 5B"` → `"implemented in Phase 5C (dynamic-editor/fields/repeater.blade.php + repeater-item.blade.php)"`
+
+**`resources/views/dashboard/section_definitions/edit.blade.php`** — QW3 تحديث:
+- تحويل من `amber` (تحذير) → `blue` (معلومات)
+- النص: "غير متاح بعد" → "محرر حقول Repeater متاح عند تحرير محتوى الصفحة (الصفحات ← الأقسام)."
+- المفتاح: `dashboard.Repeater_Editor_Available`
+
+**`resources/views/dashboard/pages/sections/partials/dynamic-editor/fields/repeater.blade.php`** — 5 استبدالات:
+- `__('Shared')` → `t('dashboard.Shared', ...)`
+- `__('This repeater is edited once...')` → `t('dashboard.Repeater_Shared_Note', ...)`
+- `__('Add Item')` × 2 → `t('dashboard.Repeater_Add_Item', ...)`
+- `__('No sub-fields are defined yet...')` → `t('dashboard.Repeater_No_Schema', ...)`
+- `__('No items yet...')` → `t('dashboard.Repeater_Empty', ...)`
+
+**`resources/views/dashboard/pages/sections/partials/dynamic-editor/fields/repeater-item.blade.php`** — 15 استبدالاً:
+- Item / New Item / Duplicate item / Remove item
+- Choose From Media Library / Choose a file from the media library...
+- Tabler Icon / SVG From Media / Inline SVG
+- Select an option / Choose From Icon Library / Use the icon library...
+- Icon Library / Upload SVG / Clear
+
+**`database/seeders/DashboardTranslationsSeeder.php`** — إضافة 21 ترجمة جديدة:
+- `dashboard.Repeater_Editor_Available/Not_Available`
+- `dashboard.Repeater_Shared_Note/Add_Item/No_Schema/Empty`
+- `dashboard.Repeater_Item/New_Item/Duplicate_Item/Remove_Item`
+- `dashboard.Choose_From_Media/Repeater_Media_Hint`
+- `dashboard.Repeater_Icon_Tabler/SVG_Media/Inline_SVG/Select_Option/Choose_Icon/Icon_Hint/Icon_Library/Upload_SVG`
+
+### Session: Auto Blade Generator — Phase 6 (لوحة الإدارة)
+
+#### الملفات الجديدة:
+- `app/Support/Sections/BladeGenerator.php` — **إنشاء**: كلاس PHP للتوليد الذكي
+  - `generate(SectionDefinition $def): string` — يُنتج @php block + HTML section
+  - `stats(SectionDefinition $def): array` — يُرجع `{fields, repeaters, components, component_names}`
+  - `COMPONENT_FIELD_GROUPS` — maps field_key → component (intro/cta/image/description/highlight/seo)
+  - `detectComponentGroups()` — يُجمّع الحقول بترتيب canonical حسب Component
+  - Repeater يقرأ `item_schema` عبر `repeaterItemSchema()` ويُولّد @foreach مع sub-fields
+  - `TAG_BY_KEY` + `CLASS_BY_KEY` — HTML دلالي لـ eyebrow/title/subtitle/description
+- `docs/AUTO_BLADE_GENERATOR_ARCHITECTURE.md` — توثيق كامل (Roadmap + Field Types + Component Awareness)
+
+#### الملفات المُعدَّلة:
+- `routes/dashboard.php` — إضافة `GET /{sectionDefinition}/blade-scaffold` → `blade_scaffold`
+- `app/Http/Controllers/Admin/SectionDefinitionController.php`:
+  - إضافة `use BladeGenerator`
+  - إضافة `bladeScaffold()` → يرجع JSON: `{scaffold, stats}`
+- `resources/views/dashboard/section_definitions/edit.blade.php`:
+  - إضافة `scaffoldUrl` لـ `window.__sdEditorData`
+  - استبدال scaffold button handler بـ `openScaffoldPreview()` يُنادي السيرفر
+  - إضافة Preview Modal: header + loader + stats bar + code `<pre>` + footer buttons
+  - Modal controls: Insert into Editor / Copy / Close / Escape / Backdrop click
+- `database/seeders/DashboardTranslationsSeeder.php` — إضافة 6 ترجمات:
+  - `dashboard.Blade_Generator_Title/Subtitle/Loading/Insert/Copy`
+  - `dashboard.Close`
+
+#### معمارية الـ Scaffold المُولَّد:
+```
+@php block: كل حقل → سطر واحد مُناسب لنوعه
+  - media    → SectionFrontendMediaResolver::resolve(...)
+  - boolean  → !empty($data['key'])
+  - repeater → is_array(...) ? ... : []
+  - text/url → trim((string) ($data['key'] ?? ''))
+
+HTML section: حقول مُجمَّعة بـ component sections
+  {{-- Intro (eyebrow / title / subtitle) --}}
+  {{-- CTA (button) --}}
+  {{-- Image --}}
+  {{-- ungrouped: repeaters + unrecognized keys --}}
+```
+
+#### UI Flow:
+1. المطور يفتح صفحة edit لـ SectionDefinition (تبويب Blade)
+2. يضغط "⚡ Scaffold من الحقول"
+3. JS يُنادي `GET /admin/section-definitions/{id}/blade-scaffold`
+4. Modal يظهر مع: Stats Bar (X حقل · Y repeater · Z component) + Code Preview
+5. زر "إدراج في المحرر" يضع الـ scaffold في Monaco
+6. زر "نسخ الكود" للنسخ المباشر
+
+#### Roadmap:
+- **Phase 1** ✅ Preview Only (هذه الجلسة)
+- **Phase 2** (مستقبلاً) كتابة الملف مباشرة إلى disk
+- **Phase 3** توليد Snippets منفصلة
+- **Phase 4** توليد Section Package كامل
