@@ -756,6 +756,14 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Section_Tpl_Key_Exists'        => 'مفتاح السكشن ":key" موجود بالفعل. عدّل الـ key أو احذف التعريف القديم أولاً.',
             'dashboard.Section_Tpl_Create_Error'      => 'حدث خطأ أثناء إنشاء السكشن. راجع السجلات.',
             'dashboard.Section_Tpl_Confirm'           => 'هل تريد إنشاء سكشن',
+
+            // ── Session: Section Package Generator Phase 7 ────────────────
+            'dashboard.Create_Section_Package'     => 'إنشاء حزمة السكشن',
+            'dashboard.Create_Definition_Only'     => 'تعريف + حقول فقط',
+            'dashboard.Template_Already_Created'   => 'موجود بالفعل',
+            'dashboard.Package_Create_Error'       => 'حدث خطأ أثناء إنشاء الحزمة. راجع السجلات.',
+            'dashboard.Package_Created'            => 'تم إنشاء الحزمة ":name" بنجاح! :fields حقل · :components component · View: :view · الملف: :path',
+            'dashboard.Package_Definition_Only'    => 'تم إنشاء السكشن ":name" مع :fields حقل، لكن لم يتم كتابة ملف Blade (:path). :reason',
             'dashboard.Section_Tpl_Confirm_2'         => 'سيتم إنشاء جميع الحقول تلقائياً.',
             'dashboard.Section_Key_Label'             => 'key',
             'dashboard.Field_Type_Text'               => 'نص',

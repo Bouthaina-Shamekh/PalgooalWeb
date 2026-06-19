@@ -284,6 +284,7 @@ Route::group([
             Route::get('/create', [SectionDefinitionController::class, 'create'])->name('create');
             Route::get('/from-template', [SectionDefinitionController::class, 'createFromTemplate'])->name('from_template');
             Route::post('/from-template', [SectionDefinitionController::class, 'storeFromTemplate'])->name('store_from_template');
+            Route::post('/from-template/package', [SectionDefinitionController::class, 'createPackageFromTemplate'])->name('package');
             Route::post('/', [SectionDefinitionController::class, 'store'])->name('store');
             Route::get('/{sectionDefinition}/edit', [SectionDefinitionController::class, 'edit'])
                 ->whereNumber('sectionDefinition')

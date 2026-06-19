@@ -416,7 +416,7 @@ class BladeGenerator
         }
 
         $lines   = [];
-        $lines[] = "{$indent}@if (!\$" . "empty(\${$key}))";
+        $lines[] = "{$indent}@if (!empty(\${$key}))";
         $lines[] = "{$indent}    <div class=\"{$key}-list\">";
         $lines[] = "{$indent}        @foreach (\${$key} as {$itemVar})";
         $lines[] = "{$indent}            <div class=\"{$key}-item\">";

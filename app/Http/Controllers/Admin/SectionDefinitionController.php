@@ -11,6 +11,7 @@ use App\Models\Sections\SectionDefinitionField;
 use App\Models\Sections\Template as SectionTemplate;
 use App\Support\Sections\BladeGenerator;
 use App\Support\Sections\ComponentLibrary;
+use App\Support\Sections\SectionPackageGenerator;
 use App\Support\Sections\FieldPresetLibrary;
 use App\Support\Sections\FileStatusResolver;
 use App\Support\Sections\SectionMediaPreviewBuilder;
@@ -186,6 +187,23 @@ class SectionDefinitionController extends Controller
 
                     $fieldCount++;
                 }
+
+                // Bind the SectionTemplate (template_key = section_key by convention).
+                // primaryTemplateKey() reads this via the pivot; without it the section
+                // definition will never render on the frontend.
+                $sectionTemplate = SectionTemplate::firstOrCreate(
+                    ['template_key' => $sectionDefinition->section_key],
+                    [
+                        'label'      => $sectionDefinition->label,
+                        'category'   => $sectionDefinition->category,
+                        'is_active'  => true,
+                        'is_visible' => true,
+                        'sort_order' => 0,
+                    ],
+                );
+                $sectionDefinition->templates()->sync([
+                    $sectionTemplate->id => ['sort_order' => 0],
+                ]);
             });
         } catch (Throwable $e) {
             report($e);
@@ -204,6 +222,91 @@ class SectionDefinitionController extends Controller
 
         return redirect()
             ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
+            ->with('ok', $message);
+    }
+
+    /**
+     * Create a full Section Package from a library template in one click.
+     *
+     * POST /admin/section-definitions/from-template/package
+     *
+     * One-click flow:
+     *   Choose Template → Create Section Package → Ready To Use (Edit Page)
+     *
+     * Delegates entirely to SectionPackageGenerator:
+     *   1. Validate template_key
+     *   2. Guard section_key uniqueness
+     *   3. Guard resolvable Blade path
+     *   4. DB Transaction: Create Definition + Fields
+     *   5. BladeGenerator::generate() → scaffold content
+     *   6. Fallback to blade_stub if empty
+     *   7. Persist blade_source
+     *   8. Write to disk
+     *   9. Resolve final file status
+     *   10. Redirect to Edit with rich Flash message
+     *
+     * Status outcomes:
+     *   'ready'           → Redirect to Edit with success flash
+     *   'definition_only' → Redirect to Edit with warning flash (Blade not written)
+     *   'failed'          → Redirect back with error flash (nothing created)
+     */
+    public function createPackageFromTemplate(Request $request): RedirectResponse
+    {
+        $this->authorize('create', SectionDefinition::class);
+
+        $validated = $request->validate([
+            'template_key' => ['required', 'string', 'in:' . implode(',', SectionTemplateLibrary::keys())],
+        ]);
+
+        $generator = app(SectionPackageGenerator::class);
+        $result    = $generator->generate($validated['template_key']);
+
+        // ── FAILED: nothing was created ──────────────────────────────────
+        if ($result['status'] === 'failed') {
+            $firstError = $result['errors'][0] ?? t('dashboard.Package_Create_Error', 'حدث خطأ أثناء إنشاء الحزمة.');
+
+            return back()->with('error', $firstError);
+        }
+
+        $definition = SectionDefinition::find($result['definition_id']);
+
+        if (! $definition instanceof SectionDefinition) {
+            return back()->with('error', t('dashboard.Package_Create_Error', 'حدث خطأ أثناء إنشاء الحزمة.'));
+        }
+
+        // ── DEFINITION ONLY: Definition created, Blade not written ───────
+        if ($result['status'] === 'definition_only') {
+            $warning = strtr(
+                t('dashboard.Package_Definition_Only',
+                    'تم إنشاء السكشن ":name" مع :fields حقل، لكن لم يتم كتابة ملف Blade (:path). :reason'),
+                [
+                    ':name'   => $definition->label,
+                    ':fields' => $result['fields_count'],
+                    ':path'   => $result['blade_path'],
+                    ':reason' => $result['warnings'][0] ?? $result['errors'][0] ?? '',
+                ],
+            );
+
+            return redirect()
+                ->route('dashboard.section_definitions.edit', $definition)
+                ->with('warning', $warning);
+        }
+
+        // ── READY: Full package created ───────────────────────────────────
+        $message = strtr(
+            t('dashboard.Package_Created',
+                'تم إنشاء الحزمة ":name" بنجاح! :fields حقل · :components component · View: :view · الملف: :path'),
+            [
+                ':name'       => $definition->label,
+                ':fields'     => $result['fields_count'],
+                ':components' => $result['components_count'],
+                ':view'       => $result['view_name'] ?? '—',
+                ':path'       => $result['blade_path'],
+            ],
+        );
+
+        return redirect()
+            ->route('dashboard.section_definitions.edit', $definition)
             ->with('ok', $message);
     }
 

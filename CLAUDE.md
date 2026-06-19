@@ -1204,3 +1204,52 @@ HTML section: حقول مُجمَّعة بـ component sections
 - **Phase 2** (مستقبلاً) كتابة الملف مباشرة إلى disk
 - **Phase 3** توليد Snippets منفصلة
 - **Phase 4** توليد Section Package كامل
+
+### Session: Section Package Generator — إصلاح Template Binding Bug
+
+**المشكلة**: بعد إنشاء Section Package (مثل `features_grid`) ظهر `template_key` فارغاً في صفحة edit. والأهم: `SectionDefinitionRuntimeResolver::resolveRenderableDefinition()` تُعيد `null` لأن `hasPrimaryTemplate()` تُعيد `false`، مما يجعل الـ section **غير قابل للرندر** حتى لو كان ملف Blade موجوداً على disk.
+
+**السبب الجذري**: `SectionPackageGenerator` (و `storeFromTemplate()` في الـ controller) كانا يُنشئان `SectionDefinition` + `SectionDefinitionField` فقط — بدون إنشاء record في `section_templates` أو ربطه بالـ pivot `section_definition_template`.
+
+`SectionDefinition::primaryTemplateKey()` ← `primaryTemplate()` ← pivot ← `section_templates`. بدون الربط = `null`.
+
+**الإصلاح**:
+- `app/Support/Sections/SectionPackageGenerator.php` — إضافة Steps 4c+4d داخل `DB::transaction()` بعد حلقة الحقول:
+  - `SectionTemplate::firstOrCreate(['template_key' => $sectionKey], [...])`
+  - `$definition->templates()->sync([$sectionTemplate->id => ['sort_order' => 0]])`
+- `app/Http/Controllers/Admin/SectionDefinitionController.php` — نفس الإصلاح في `storeFromTemplate()`
+- `docs/SECTION_PACKAGE_GENERATOR_REPORT.md` + `docs/SECTION_PACKAGE_GENERATOR_ARCHITECTURE.md` — توثيق الإصلاح + Step 4
+
+**القاعدة**: `template_key = section_key` للـ library-generated definitions بالاتفاقية. يضمن:
+1. `primaryTemplateKey()` تُعيد `'features_grid'` (ليس null)
+2. `SectionTemplateRegistry::resolve('features_grid', 'features')` → `front.sections.features.features_grid`
+3. `FileStatusResolver::conventionViewName()` → نفس الـ view (من `section_key`)
+
+**ملاحظة معمارية مهمة**: `section_templates` (جدول) هو قاموس مفاتيح الـ templates المُسجَّلة للرندر — منفصل تماماً عن `templates` (كتالوج قوالب الموقع للعملاء). الـ Model هو `App\Models\Sections\Template` مع `$table = 'section_templates'`.
+
+### Session: BladeGenerator — إصلاح Bug في شرط Repeater
+
+**المشكلة**: الـ scaffold المُولَّد يحتوي على:
+```blade
+@if (!$empty($features))
+```
+وهذا كود PHP غير صالح — `$empty` ليست دالة.
+
+**السبب**: في `renderRepeater()` سطر 419، كان الكود:
+```php
+$lines[] = "{$indent}@if (!\$" . "empty(\${$key}))";
+// النتيجة: @if (!$empty($features))  ❌
+```
+التسلسل `"\$"` + `"empty(..."` يُنتج `$empty(...)` وليس `empty(...)`.
+
+**الإصلاح** — `app/Support/Sections/BladeGenerator.php`:
+```php
+$lines[] = "{$indent}@if (!empty(\${$key}))";
+// النتيجة: @if (!empty($features))  ✓
+```
+
+**ملاحظة Technical Debt**: `renderRepeaterSubField()` لحقول media داخل repeater يُولّد:
+```blade
+<img src="{{ $feature['icon_media'] ?? '' }}" alt="">
+```
+إذا كانت `icon_media` تخزّن Media ID (رقم) فالـ `src` سيكون خاطئاً. يجب مستقبلاً استخدام `SectionFrontendMediaResolver::resolve()` لحقول media داخل الـ repeaters.

@@ -19,6 +19,18 @@
 </div>
 
 {{-- Flash messages --}}
+@if(session('ok'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="ti ti-circle-check me-1"></i> {{ session('ok') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
+@if(session('warning'))
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="ti ti-alert-triangle me-1"></i> {{ session('warning') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+@endif
 @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         <i class="ti ti-alert-circle me-1"></i> {{ session('error') }}
@@ -26,10 +38,16 @@
     </div>
 @endif
 
-{{-- Hidden submit form --}}
+{{-- Hidden submit form — Definition Only (Fields → Edit Fields) --}}
 <form id="tpl-form" method="POST" action="{{ route('dashboard.section_definitions.store_from_template') }}">
     @csrf
     <input type="hidden" name="template_key" id="tpl-key-input">
+</form>
+
+{{-- Hidden submit form — Section Package (Definition + Fields + Blade → Edit Page) --}}
+<form id="pkg-form" method="POST" action="{{ route('dashboard.section_definitions.package') }}">
+    @csrf
+    <input type="hidden" name="template_key" id="pkg-key-input">
 </form>
 
 @php
@@ -225,22 +243,32 @@
                 </div>
             </div>
 
-            {{-- ── Footer: Action ─────────────────────────────── --}}
-            <div class="px-3 pb-3 pt-2">
+            {{-- ── Footer: Actions ─────────────────────────────── --}}
+            <div class="px-3 pb-3 pt-2 d-flex flex-column gap-2">
                 @if($isUsed)
                     <button type="button" class="btn w-100" disabled
                             style="background:#f8fafc;color:#94a3b8;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;padding:9px;">
-                        <i class="ti ti-check me-1"></i>موجود بالفعل
+                        <i class="ti ti-check me-1"></i>{{ t('dashboard.Template_Already_Created', 'موجود بالفعل') }}
                     </button>
                 @else
+                    {{-- Primary: Create Package (Definition + Fields + Blade File) --}}
+                    <button type="button"
+                            class="btn w-100 pkg-btn"
+                            style="background:{{ $cm['hex'] }};color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;padding:9px;transition:opacity .15s;"
+                            onmouseenter="this.style.opacity='.88'"
+                            onmouseleave="this.style.opacity='1'"
+                            onclick="createPackage('{{ $tplKey }}', '{{ addslashes($tpl['label']) }}', {{ $fieldCount }})">
+                        🚀 {{ t('dashboard.Create_Section_Package', 'إنشاء حزمة السكشن') }}
+                    </button>
+                    {{-- Secondary: Definition + Fields only (old behaviour) --}}
                     <button type="button"
                             class="btn w-100 tpl-btn"
-                            style="background:{{ $cm['hex'] }};color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;padding:9px;transition:opacity .15s;"
-                            onmouseenter="this.style.opacity='.88'"
+                            style="background:transparent;color:{{ $cm['hex'] }};border:1.5px solid {{ $cm['mid'] }};border-radius:10px;font-size:12px;font-weight:600;padding:7px;transition:opacity .15s;"
+                            onmouseenter="this.style.opacity='.75'"
                             onmouseleave="this.style.opacity='1'"
                             onclick="applyTemplate('{{ $tplKey }}', '{{ addslashes($tpl['label']) }}', {{ $fieldCount }})">
                         <i class="ti ti-bolt me-1"></i>
-                        إنشاء هذا السكشن
+                        {{ t('dashboard.Create_Definition_Only', 'تعريف + حقول فقط') }}
                     </button>
                 @endif
             </div>
@@ -264,10 +292,33 @@
 
 @push('scripts')
 <script>
+/**
+ * Definition + Fields only (old behaviour).
+ * Redirects to Fields management page after creation.
+ */
 function applyTemplate(key, label, fieldCount) {
-    if (!confirm('إنشاء "' + label + '"؟\nسيتم إنشاء ' + fieldCount + ' حقل تلقائياً.')) return;
+    if (!confirm('إنشاء "' + label + '"؟\nسيتم إنشاء ' + fieldCount + ' حقل تلقائياً.\n\nسيتم توجيهك إلى صفحة إدارة الحقول.')) return;
     document.getElementById('tpl-key-input').value = key;
     document.getElementById('tpl-form').submit();
+}
+
+/**
+ * Full Section Package (Definition + Fields + Generated Blade + Written File).
+ * Redirects to the Edit page (Blade tab ready) after creation.
+ */
+function createPackage(key, label, fieldCount) {
+    if (!confirm(
+        '🚀 إنشاء حزمة سكشن كاملة: "' + label + '"؟\n\n' +
+        'سيتم تلقائياً:\n' +
+        '  ✓ إنشاء تعريف السكشن\n' +
+        '  ✓ إنشاء ' + fieldCount + ' حقل\n' +
+        '  ✓ توليد كود Blade من الحقول\n' +
+        '  ✓ كتابة الملف على الـ disk\n\n' +
+        'سيتم توجيهك إلى صفحة التعديل مباشرةً.'
+    )) return;
+
+    document.getElementById('pkg-key-input').value = key;
+    document.getElementById('pkg-form').submit();
 }
 </script>
 @endpush
