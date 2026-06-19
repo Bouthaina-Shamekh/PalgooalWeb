@@ -247,18 +247,50 @@ class SectionDefinitionController extends Controller
         $bladeFileStatus   = $fileStatus['status'];   // 'missing'|'published'|'external'|'invalid'
         $bladeExpectedPath = $writer->displayPath($sectionDefinition);
 
-        // If blade_source is empty but the file exists on disk, pre-populate from file.
-        // Triggers for both 'published' (system-written) and 'external' (externally written).
-        if (empty($sectionDefinition->blade_source) && in_array($bladeFileStatus, ['published', 'external'])) {
-            $diskPath = $writer->resolvedPath($sectionDefinition);
-            if ($diskPath && file_exists($diskPath)) {
-                $sectionDefinition->blade_source = file_get_contents($diskPath);
+        // ── Disk Read-back ──────────────────────────────────────────────────────
+        // If blade_source is empty but a Blade file exists on disk, pre-populate
+        // Monaco from the disk file (in-memory only — zero DB writes).
+        //
+        // Triggers for:
+        //   'published' — file was written by the admin system (blade_written_at set)
+        //   'external'  — file exists but was written outside the admin panel
+        //
+        // Safety rules:
+        //   • Path comes from resolvedPath() only — never from request input
+        //   • file_exists() + is_readable() guards before any I/O
+        //   • file_get_contents() return value checked for false (I/O error / permissions)
+        //   • On failure: blade_source stays empty, Monaco stays blank (no partial data)
+        //
+        // NOT changed: blade_written_at, blade_hash, disk_hash (read is never a "write")
+        // See: docs/BLADE_SOURCE_OF_TRUTH_ADR.md § Disk Read-back
+        // ────────────────────────────────────────────────────────────────────────
+        // ── Disk Read-back — populate Monaco when blade_source is empty ─────────
+        // Pass disk content as a SEPARATE variable ($bladeInitialContent) rather
+        // than mutating blade_source on the model, to avoid any cast / attribute
+        // setter interference when the model object is accessed in the view.
+        //
+        // $bladeInitialContent takes priority in the view over blade_source (DB).
+        // ────────────────────────────────────────────────────────────────────────
+        $bladeInitialContent = null;
+
+        // Use trim() not empty() — empty() misses "\n" / " " which look blank in Monaco
+        $bladeSourceBlank = trim((string) ($sectionDefinition->blade_source ?? '')) === '';
+
+        if ($bladeSourceBlank && in_array($bladeFileStatus, ['published', 'external'])) {
+            $diskPath = $writer->resolvedPath($sectionDefinition); // security: internal path only
+            if ($diskPath !== null && file_exists($diskPath) && is_readable($diskPath)) {
+                $diskContent = file_get_contents($diskPath);
+                if ($diskContent !== false) {
+                    $bladeInitialContent = $diskContent;
+                    // NOT assigned to blade_source on the model — in-memory or DB side-effects avoided
+                    // NOT changing: blade_hash / disk_hash / blade_written_at
+                }
             }
         }
 
         return view('dashboard.section_definitions.edit', array_merge(
             $this->formViewData($sectionDefinition),
-            compact('fileStatus', 'bladeFileStatus', 'bladeExpectedPath'),
+            compact('fileStatus', 'bladeFileStatus', 'bladeExpectedPath', 'bladeInitialContent'),
         ));
     }
 

@@ -827,10 +827,14 @@
         sectionKey:     @json($sectionDefinition->section_key),
         editId:         {{ $sectionDefinition->id }},
         scaffoldDate:   '{{ now()->toDateString() }}',
-        initialContent: @json(old('blade_source', $sectionDefinition->blade_source) ?? ''),
+        initialContent: @json((string) (old('blade_source') ?? $bladeInitialContent ?? $sectionDefinition->blade_source ?? '')),
         scaffoldUrl:       '{{ route('dashboard.section_definitions.blade_scaffold', $sectionDefinition) }}',
         generateWriteUrl:  '{{ route('dashboard.section_definitions.generate_write_blade', $sectionDefinition) }}',
-        compareUrl:        '{{ route('dashboard.section_definitions.compare_blade', $sectionDefinition) }}'
+        compareUrl:        '{{ route('dashboard.section_definitions.compare_blade', $sectionDefinition) }}',
+        copyDiskConfirmTitle: @json(t('dashboard.Copy_Disk_Confirm_Title', 'Copy Disk Content To Draft?')),
+        copyDiskConfirmBody:  @json(t('dashboard.Copy_Disk_Confirm_Body', 'سيتم استبدال محتوى Monaco الحالي.\nلن يتم حفظ أي شيء أو نشره تلقائياً.')),
+        copyDiskSuccessTitle: @json(t('dashboard.Copy_Disk_Success_Title', 'تم نسخ Disk إلى Draft')),
+        copyDiskSuccessMsg:   @json(t('dashboard.Copy_Disk_Success_Msg', 'تذكر الحفظ أو النشر إذا أردت الاحتفاظ بالتغييرات.'))
     };
     </script>
     @verbatim
@@ -1746,8 +1750,8 @@
                         if (!_cachedDiskContent && _cachedDiskContent !== '') return;
 
                         var confirmed = window.confirm(
-                            '{{ t('dashboard.Copy_Disk_Confirm_Title', 'Copy Disk Content To Draft?') }}' + '\n\n' +
-                            '{{ t('dashboard.Copy_Disk_Confirm_Body', 'سيتم استبدال محتوى Monaco الحالي.\nلن يتم حفظ أي شيء أو نشره تلقائياً.') }}'
+                            data.copyDiskConfirmTitle + '\n\n' +
+                            data.copyDiskConfirmBody
                         );
                         if (!confirmed) return;
 
@@ -1760,8 +1764,8 @@
 
                         showWriteToast(
                             'success',
-                            '{{ t('dashboard.Copy_Disk_Success_Title', 'تم نسخ Disk إلى Draft') }}',
-                            '{{ t('dashboard.Copy_Disk_Success_Msg', 'تذكر الحفظ أو النشر إذا أردت الاحتفاظ بالتغييرات.') }}'
+                            data.copyDiskSuccessTitle,
+                            data.copyDiskSuccessMsg
                         );
                     });
                 }

@@ -3,8 +3,9 @@
 
 **النوع:** Architecture Decision Record (ADR)  
 **التاريخ:** 2026-06-19  
-**الحالة:** Proposed — بانتظار الاعتماد  
-**المرحلة:** Pre-Phase 3 (قبل File Status Indicator)  
+**آخر تحديث:** 2026-06-19 — توثيق Disk Read-back safety guards + السيناريوهات الأربعة  
+**الحالة:** Accepted  
+**المرحلة:** Phase 5C+ (بعد File Status Indicator + Sync Hashes)  
 **القرار يؤثر على:** BladeGenerator, SectionTemplateFileWriter, Generate & Write flow, Phase 3-5
 
 ---
@@ -50,18 +51,36 @@ HTML Response
 
 **النتيجة الحاسمة:** `blade_source` في DB **لا يُستخدم أبداً** في الـ rendering. Laravel يقرأ من disk فقط عبر `view()`.
 
-#### آلية الـ Read-back الموجودة (جزئية)
+#### آلية الـ Disk Read-back (المُطبَّقة حالياً)
 
-في `SectionDefinitionController::edit()` يوجد sync أحادي الاتجاه:
+في `SectionDefinitionController::edit()` يوجد sync أحادي الاتجاه — **يقرأ من disk إلى Monaco فقط عند فتح صفحة التعديل**:
 
 ```php
-// إذا blade_source فارغ لكن الملف موجود على disk:
-if (empty($sectionDefinition->blade_source) && in_array($bladeFileStatus, ['exists', 'external'])) {
-    $sectionDefinition->blade_source = file_get_contents($diskPath);
+// Disk Read-back: if blade_source empty + file on disk → pre-populate Monaco
+// 'published' = blade_written_at set (admin panel wrote it)
+// 'external'  = file exists but blade_written_at is null (external write)
+if (empty($sectionDefinition->blade_source) && in_array($bladeFileStatus, ['published', 'external'])) {
+    $diskPath = $writer->resolvedPath($sectionDefinition); // security: internal path only
+    if ($diskPath !== null && file_exists($diskPath) && is_readable($diskPath)) {
+        $diskContent = file_get_contents($diskPath);
+        if ($diskContent !== false) {
+            $sectionDefinition->blade_source = $diskContent;
+            // in-memory only — blade_hash / disk_hash / blade_written_at NOT updated
+        }
+    }
 }
 ```
 
-هذا يقرأ الملف من disk إلى Monaco **عند فتح صفحة التعديل فقط** — ليس sync تلقائياً دائم.
+**الضمانات الأمنية المطبَّقة:**
+- `resolvedPath()` — يُنتج مساراً داخلياً محسوباً من `category + section_key` في DB — لا input من الطلب
+- `file_exists()` — تحقق من الوجود الفعلي
+- `is_readable()` — تحقق من صلاحيات القراءة قبل أي I/O
+- `$diskContent !== false` — حماية من إرجاع `false` في حالة فشل I/O (مثل shared hosting permissions)
+- **لا DB writes**: `blade_hash`, `disk_hash`, `blade_written_at` لا تُعدَّل — القراءة ليست "كتابة"
+
+> **ملاحظة تاريخية:** الكود القديم استخدم `['exists', 'external']` (صيغة `SectionTemplateFileWriter::fileStatus()`).  
+> بعد إضافة `FileStatusResolver` في Phase 3 أصبح الـ status `'published'` بدلاً من `'exists'`.  
+> الكود الحالي يستخدم `['published', 'external']` — وهو ما يعكس هذا التوثيق.
 
 ### 1.3 متى يتباعدان؟
 
@@ -413,5 +432,98 @@ blade_written_at = "Sync Marker" (مؤشر التزامن)
 
 ---
 
-*مُراجَع مع: SectionTemplateFileWriter, SectionDefinitionController (edit + writeBladeFile + generateAndWriteBladeFile), SectionRenderer, SectionTemplateRegistry, SectionDefinitionFrontendViewDataFactory*  
-*الكود المرجعي الحاسم: `edit()` سطر 247-252 (read-back من disk)، `SectionRenderer::renderDefinitionDriven()` (view() من disk)، `SectionTemplateRegistry::resolve()` (`View::exists()` على disk)*
+---
+
+## 11. Disk Read-back — السيناريوهات الأربعة
+
+السيناريوهات التالية تُوثّق السلوك الكامل لـ `edit()` عند فتح صفحة التعديل:
+
+### السيناريو أ — ملف موجود + `blade_source` فارغ (الحالة التي تم إصلاحها)
+
+```
+SectionDefinition #18 (content_showcase)
+  blade_source = null
+  blade_written_at = "2026-06-15 10:30:00"  → status = 'published'
+  blade_hash = null                           → sync_status = 'unknown'
+  disk: resources/views/front/sections/showcase/content_showcase.blade.php ✅
+
+في edit():
+  1. bladeFileStatus = 'published'
+  2. empty(null) = true → enters read-back block
+  3. resolvedPath() = ".../showcase/content_showcase.blade.php"
+  4. file_exists() = true ✅
+  5. is_readable() = true ✅
+  6. file_get_contents() = "<section>...</section>" (non-false) ✅
+  7. blade_source ← disk content (in-memory only)
+
+Monaco: يعرض محتوى الملف ✅
+blade_written_at: لم تُعدَّل ✅
+blade_hash / disk_hash: لم تُعدَّلا ✅
+```
+
+### السيناريو ب — لا ملف + `blade_source` فارغ
+
+```
+SectionDefinition (جديد)
+  blade_source = null
+  blade_written_at = null  → status = 'missing'
+  disk: لا يوجد ملف
+
+في edit():
+  1. bladeFileStatus = 'missing'
+  2. in_array('missing', ['published', 'external']) = false → لا يدخل الـ block
+
+Monaco: فارغ (سلوك صحيح — لا يوجد محتوى لعرضه) ✅
+```
+
+### السيناريو ج — `blade_source` غير فارغ (الحالة الطبيعية)
+
+```
+SectionDefinition (محرَّر عبر Monaco سابقاً)
+  blade_source = "<section>...</section>"
+  blade_written_at = "2026-06-15"  → status = 'published' / 'out_of_sync'
+
+في edit():
+  1. empty("<section>...</section>") = false → لا يدخل الـ block
+
+Monaco: يعرض blade_source من DB مباشرةً ✅
+```
+
+### السيناريو د — ملف خارجي + `blade_source` فارغ (External)
+
+```
+SectionDefinition
+  blade_source = null
+  blade_written_at = null  → status = 'external' (ملف موجود من git pull أو مطور)
+  disk: resources/views/front/sections/{cat}/{key}.blade.php ✅
+
+في edit():
+  1. bladeFileStatus = 'external'
+  2. empty(null) = true → enters read-back block
+  3. resolvedPath() = valid path ✅
+  4. file_exists() = true ✅
+  5. is_readable() = true ✅
+  6. file_get_contents() = disk content ✅
+  7. blade_source ← disk content (in-memory only)
+
+Monaco: يعرض محتوى الملف كـ Draft (للمشاهدة والتعديل) ✅
+ملاحظة: هذا لا يُعني أن الـ blade_source أصبح "مُزامَناً" مع disk —
+المطور يجب أن يضغط "Write to Disk" بعد أي تعديل لتحديث الملف الفعلي.
+```
+
+---
+
+### قائمة الـ Technical Debt المُحدَّثة (ما بعد الإصلاح)
+
+| الدَّيْن | الحالة |
+|---------|-------|
+| لا Status Indicator في UI | ✅ **تمّ**: Phase 3 أضافت File Status Card |
+| Read-back في `edit()` يفتقر لـ `is_readable()` وفحص `false` | ✅ **تمّ في هذه الجلسة** |
+| لا توثيق رسمي لدور `blade_source` | ✅ **تمّ**: هذا ADR |
+| الـ Read-back يحدث فقط إذا `blade_source` فارغ (لا عند divergence) | ⚠ **مفتوح** — Compare Versions (Phase 5C) يغطي هذا عبر UI |
+
+---
+
+*مُراجَع مع: SectionTemplateFileWriter, SectionDefinitionController (edit + writeBladeFile + generateAndWriteBladeFile), SectionRenderer, SectionTemplateRegistry, SectionDefinitionFrontendViewDataFactory, FileStatusResolver*  
+*الكود المرجعي الحاسم: `edit()` (read-back block)، `SectionRenderer::renderDefinitionDriven()` (view() من disk)، `SectionTemplateRegistry::resolve()` (`View::exists()` على disk)*  
+*آخر تحديث: 2026-06-19 — إصلاح Disk Read-back safety guards*
