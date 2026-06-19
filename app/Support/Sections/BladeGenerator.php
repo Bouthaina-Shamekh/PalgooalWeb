@@ -21,10 +21,13 @@ use Illuminate\Support\Collection;
  * Component Awareness
  * ───────────────────
  * Fields are grouped by component membership (intro / cta / image / …)
- * using COMPONENT_FIELD_GROUPS, which mirrors ComponentLibrary's field_key
- * assignments. Grouped fields get a {{-- Component Name --}} section comment.
- * Repeater fields and unrecognized fields fall into the "ungrouped" bucket
- * after component sections.
+ * using ComponentLibrary as the single source of truth. The canonical
+ * component order and field-key assignments are derived at runtime from
+ * ComponentLibrary::all(), so adding a new component there is the only
+ * change required — no update to this file is needed.
+ *
+ * Repeater fields always go to the "ungrouped" bucket regardless of which
+ * component they belong to, because they require their own @foreach block.
  *
  * Adding a new field type
  * ───────────────────────
@@ -32,30 +35,12 @@ use Illuminate\Support\Collection;
  */
 class BladeGenerator
 {
-    // ── Component → canonical field-key groups ──────────────────────────────
-    // Mirrors ComponentLibrary field_key assignments for intelligent grouping.
-    // Keys are sorted by typical output order within a section.
-    private const COMPONENT_FIELD_GROUPS = [
-        'intro' => ['eyebrow', 'title', 'subtitle'],
-        'description' => ['description'],
-        'highlight' => ['highlight_text'],
-        'cta' => ['button_label', 'button_url', 'button_target'],
-        'image' => ['image', 'image_alt', 'image_position'],
-        'seo' => ['meta_title', 'meta_description'],
-    ];
-
-    // ── Arabic component labels for section comments ────────────────────────
-    private const COMPONENT_LABELS = [
-        'intro'       => 'Intro (eyebrow / title / subtitle)',
-        'description' => 'Description',
-        'highlight'   => 'Highlight',
-        'cta'         => 'CTA (button)',
-        'image'       => 'Image',
-        'seo'         => 'SEO Meta',
-    ];
 
     // ── Tag per known field_key ─────────────────────────────────────────────
     // Determines which HTML element wraps the value.
+    // These are presentation hints specific to BladeGenerator — they describe
+    // *how* to render a field_key in an HTML context, which is outside the
+    // scope of ComponentLibrary (which only defines field structure/scope).
     private const TAG_BY_KEY = [
         'eyebrow'        => 'span',
         'title'          => 'h2',
@@ -182,7 +167,7 @@ class BladeGenerator
         $usedKeys   = [];
 
         foreach ($groupedMap as $component => $componentFields) {
-            $label   = self::COMPONENT_LABELS[$component] ?? ucfirst($component);
+            $label   = ComponentLibrary::get($component)['name'] ?? ucfirst($component);
             $lines[] = '';
             $lines[] = "        {{-- {$label} --}}";
 
@@ -222,17 +207,17 @@ class BladeGenerator
      * Group active fields by detected component.
      * Returns only components that have at least one matching field.
      *
+     * Component membership and canonical order are derived from
+     * ComponentLibrary::all() — the single source of truth.
+     * Repeater fields are always excluded here (they go to ungrouped).
+     *
      * @return array<string, Collection<int, SectionDefinitionField>>
      */
     private function detectComponentGroups(Collection $fields): array
     {
-        // Build reverse map: field_key → component name
-        $keyToComponent = [];
-        foreach (self::COMPONENT_FIELD_GROUPS as $component => $keys) {
-            foreach ($keys as $key) {
-                $keyToComponent[$key] = $component;
-            }
-        }
+        // Build reverse map: field_key → component name, derived from ComponentLibrary.
+        // Repeater-typed component fields are excluded — they always go to ungrouped.
+        $keyToComponent = $this->buildKeyToComponentMap();
 
         // Group fields (non-repeaters only) by component
         $groups = [];
@@ -246,15 +231,51 @@ class BladeGenerator
             }
         }
 
-        // Preserve canonical component order
+        // Preserve canonical component order from ComponentLibrary
         $ordered = [];
-        foreach (array_keys(self::COMPONENT_FIELD_GROUPS) as $component) {
+        foreach (ComponentLibrary::keys() as $component) {
             if (isset($groups[$component])) {
                 $ordered[$component] = collect($groups[$component]);
             }
         }
 
         return $ordered;
+    }
+
+    /**
+     * Build a reverse map of field_key → component name from ComponentLibrary.
+     *
+     * Only non-repeater fields are included. Repeater fields belong to the
+     * "ungrouped" bucket and are handled separately in buildHtmlBlock().
+     *
+     * This is the single integration point between BladeGenerator and
+     * ComponentLibrary. Adding a new component to ComponentLibrary
+     * automatically makes it detectable here — no other change needed.
+     *
+     * @return array<string, string>  field_key → component key
+     */
+    private function buildKeyToComponentMap(): array
+    {
+        $map = [];
+
+        foreach (ComponentLibrary::all() as $componentKey => $component) {
+            foreach ($component['fields'] ?? [] as $fieldDef) {
+                $fieldKey  = (string) ($fieldDef['field_key'] ?? '');
+                $fieldType = (string) ($fieldDef['field_type'] ?? '');
+
+                // Skip empty keys and repeater fields — they go to ungrouped
+                if ($fieldKey === '' || $fieldType === SectionDefinitionField::FIELD_TYPE_REPEATER) {
+                    continue;
+                }
+
+                // First occurrence wins (same dedup rule as ComponentLibrary::resolveFields)
+                if (! isset($map[$fieldKey])) {
+                    $map[$fieldKey] = $componentKey;
+                }
+            }
+        }
+
+        return $map;
     }
 
     // ── Field renderers ─────────────────────────────────────────────────────

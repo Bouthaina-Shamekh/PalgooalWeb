@@ -34,6 +34,10 @@ return [
         ['label' => 'Seo', 'value' => 'ti ti-chart-arrows-vertical', 'keywords' => 'seo rank growth analytics'],
     ],
 
+    'template_file_writer' => [
+        'base_path' => resource_path('views/front/sections'),
+    ],
+
     'template_registry' => [
         'fallback_view' => 'front.sections._missing-template',
         'templates' => [

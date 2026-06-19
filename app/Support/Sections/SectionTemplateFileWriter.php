@@ -19,7 +19,10 @@ class SectionTemplateFileWriter
 
     public function __construct()
     {
-        $this->baseDir = resource_path('views/front/sections');
+        $this->baseDir = config(
+            'sections.template_file_writer.base_path',
+            resource_path('views/front/sections')
+        );
     }
 
     /**

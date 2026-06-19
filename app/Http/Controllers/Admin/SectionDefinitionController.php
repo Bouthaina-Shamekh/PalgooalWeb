@@ -423,6 +423,89 @@ class SectionDefinitionController extends Controller
     }
 
     /**
+     * Generate a Blade scaffold from the section's fields and write it directly to disk.
+     *
+     * POST /admin/section-definitions/{id}/generate-and-write-blade
+     *
+     * Flow: BladeGenerator::generate() → save as blade_source → SectionTemplateFileWriter::write()
+     *
+     * Overwrite Guard:
+     *  - File exists AND blade_written_at is null (external/manual file) → 409 unless force=1
+     *  - File exists AND blade_written_at is set (system-generated) → safe regeneration, allowed
+     *  - File does not exist → create directly
+     *
+     * Returns JSON: { ok, message, path, view, written_at, stats }
+     */
+    public function generateAndWriteBladeFile(Request $request, SectionDefinition $sectionDefinition)
+    {
+        $this->authorize('update', $sectionDefinition);
+
+        $writer = app(SectionTemplateFileWriter::class);
+
+        // Validate path first (invalid category/key → bail early)
+        $resolvedPath = $writer->resolvedPath($sectionDefinition);
+
+        if ($resolvedPath === null) {
+            return response()->json([
+                'ok'    => false,
+                'error' => t('dashboard.Generate_Write_Invalid_Path', 'مفتاح السكشن أو التصنيف غير صالح — تعذّر تحديد مسار الملف.'),
+            ], 422);
+        }
+
+        // Overwrite guard: external file (exists on disk but never written by system)
+        $fileExistsOnDisk   = file_exists($resolvedPath);
+        $wasSystemGenerated = $sectionDefinition->blade_written_at !== null;
+        $forceOverwrite     = $request->boolean('force');
+
+        if ($fileExistsOnDisk && ! $wasSystemGenerated && ! $forceOverwrite) {
+            return response()->json([
+                'ok'                    => false,
+                'requires_confirmation' => true,
+                'warning'               => t(
+                    'dashboard.Generate_Write_File_Exists',
+                    'الملف موجود مسبقاً وتم إنشاؤه خارج النظام. هل تريد الكتابة فوقه؟'
+                ),
+                'path'                  => $writer->displayPath($sectionDefinition),
+            ], 409);
+        }
+
+        // 1. Generate scaffold from field definitions
+        $generator = new BladeGenerator();
+        $scaffold  = $generator->generate($sectionDefinition);
+        $stats     = $generator->stats($sectionDefinition);
+
+        // 2. Persist scaffold as blade_source in DB
+        $sectionDefinition->blade_source = $scaffold;
+        $sectionDefinition->saveQuietly();
+
+        // 3. Write to disk via SectionTemplateFileWriter
+        $result = $writer->write($sectionDefinition);
+
+        if (! $result['ok']) {
+            return response()->json([
+                'ok'    => false,
+                'error' => t('dashboard.Generate_Write_Failed', 'فشل توليد وكتابة ملف Blade.') . ': ' . $result['error'],
+            ], 500);
+        }
+
+        // 4. Build convention view name (for UI feedback)
+        $conventionView = SectionTemplateRegistry::conventionView(
+            $sectionDefinition->section_key,
+            $sectionDefinition->category
+        );
+
+        return response()->json([
+            'ok'         => true,
+            'message'    => t('dashboard.Generate_Write_Success', 'تم توليد وكتابة ملف Blade بنجاح.'),
+            'path'       => $writer->displayPath($sectionDefinition),
+            'view'       => $conventionView,
+            'written_at' => $sectionDefinition->blade_written_at?->toDateTimeString(),
+            'stats'      => $stats,
+            'scaffold'   => $scaffold,
+        ]);
+    }
+
+    /**
      * Build shared view data for create/edit forms.
      *
      * The UI uses developer-friendly names such as "name" and

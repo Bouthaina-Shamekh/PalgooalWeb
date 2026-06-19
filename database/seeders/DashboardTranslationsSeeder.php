@@ -813,6 +813,14 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Blade_Generator_Copy'     => 'نسخ الكود',
             'dashboard.Close'                    => 'إغلاق',
 
+            // ── Session: Generate & Write Blade File (Phase 2) ───────────────
+            'dashboard.Generate_Write_Blade'        => 'توليد وكتابة مباشرة',
+            'dashboard.Generate_Write_Success'      => 'تم توليد وكتابة ملف Blade بنجاح.',
+            'dashboard.Generate_Write_Failed'       => 'فشل توليد وكتابة ملف Blade.',
+            'dashboard.Generate_Write_File_Exists'  => 'الملف موجود مسبقاً وتم إنشاؤه خارج النظام. هل تريد الكتابة فوقه؟',
+            'dashboard.Generate_Write_Confirm'      => 'تأكيد الكتابة فوق الملف',
+            'dashboard.Generate_Write_Invalid_Path' => 'مفتاح السكشن أو التصنيف غير صالح — تعذّر تحديد مسار الملف.',
+
             // ── Session: Admin Section Definition Fields Create/Edit
             'dashboard.Create_Field'            => 'إنشاء حقل',
             'dashboard.Create_Field_Definition' => 'إنشاء تعريف حقل',

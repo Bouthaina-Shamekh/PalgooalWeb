@@ -300,6 +300,9 @@ Route::group([
             Route::get('/{sectionDefinition}/blade-scaffold', [SectionDefinitionController::class, 'bladeScaffold'])
                 ->whereNumber('sectionDefinition')
                 ->name('blade_scaffold');
+            Route::post('/{sectionDefinition}/generate-and-write-blade', [SectionDefinitionController::class, 'generateAndWriteBladeFile'])
+                ->whereNumber('sectionDefinition')
+                ->name('generate_write_blade');
 
             Route::prefix('/{sectionDefinition}/fields')
                 ->whereNumber('sectionDefinition')

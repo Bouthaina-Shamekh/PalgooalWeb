@@ -485,9 +485,12 @@
             </div>
 
             {{-- Footer --}}
-            <div style="display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid #e2e8f0;flex-shrink:0;background:#f8fafc;">
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid #e2e8f0;flex-shrink:0;background:#f8fafc;flex-wrap:wrap;">
                 <button id="bsm-insert" type="button" class="btn btn-primary btn-sm">
                     <i class="ti ti-arrow-bar-to-down me-1"></i>{{ t('dashboard.Blade_Generator_Insert', 'إدراج في المحرر') }}
+                </button>
+                <button id="bsm-generate-write" type="button" class="btn btn-success btn-sm">
+                    <i class="ti ti-file-download me-1"></i>{{ t('dashboard.Generate_Write_Blade', 'توليد وكتابة مباشرة') }}
                 </button>
                 <button id="bsm-copy" type="button" class="btn btn-light btn-sm">
                     <i class="ti ti-copy me-1"></i>{{ t('dashboard.Blade_Generator_Copy', 'نسخ الكود') }}
@@ -647,7 +650,8 @@
         editId:         {{ $sectionDefinition->id }},
         scaffoldDate:   '{{ now()->toDateString() }}',
         initialContent: @json(old('blade_source', $sectionDefinition->blade_source) ?? ''),
-        scaffoldUrl:    '{{ route('dashboard.section_definitions.blade_scaffold', $sectionDefinition) }}'
+        scaffoldUrl:       '{{ route('dashboard.section_definitions.blade_scaffold', $sectionDefinition) }}',
+        generateWriteUrl:  '{{ route('dashboard.section_definitions.generate_write_blade', $sectionDefinition) }}'
     };
     </script>
     @verbatim
@@ -1218,6 +1222,103 @@
                 document.addEventListener('keydown', function (e) {
                     if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
                 });
+
+                // ── Generate & Write directly ──────────────────────────────────
+                var genWriteBtn = document.getElementById('bsm-generate-write');
+                if (genWriteBtn) {
+                    genWriteBtn.addEventListener('click', function () {
+                        doGenerateAndWrite(false);
+                    });
+                }
+
+                function doGenerateAndWrite(force) {
+                    var url = data.generateWriteUrl;
+                    if (!url) return;
+
+                    var btn = document.getElementById('bsm-generate-write');
+                    var xsrfCookie = document.cookie.split(';')
+                        .map(function (c) { return c.trim(); })
+                        .find(function (c) { return c.startsWith('XSRF-TOKEN='); });
+                    var xsrfToken = xsrfCookie
+                        ? decodeURIComponent(xsrfCookie.split('=').slice(1).join('='))
+                        : '';
+                    var formToken = document.querySelector('[name=_token]')
+                        ? document.querySelector('[name=_token]').value
+                        : '';
+
+                    var body = new URLSearchParams({ _token: formToken });
+                    if (force) { body.append('force', '1'); }
+
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerHTML = '<i class="ti ti-loader-2 me-1" style="display:inline-block;animation:bsm-spin .8s linear infinite;"></i>جاري الكتابة…';
+                    }
+
+                    fetch(url, {
+                        method:   'POST',
+                        headers:  {
+                            'Accept':            'application/json',
+                            'X-Requested-With':  'XMLHttpRequest',
+                            'X-XSRF-TOKEN':      xsrfToken,
+                        },
+                        body:     body,
+                        redirect: 'manual',
+                    })
+                    .then(function (res) {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="ti ti-file-download me-1"></i>توليد وكتابة مباشرة';
+                        }
+
+                        if (res.type === 'opaqueredirect' || res.status === 0) {
+                            showWriteToast('error', 'خطأ في الإرسال', 'الطلب تحوّل لـ GET — تحقق من إعدادات Apache.');
+                            return;
+                        }
+
+                        return res.text().then(function (text) {
+                            var json;
+                            try { json = JSON.parse(text); } catch (e) {
+                                var snippet = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 300);
+                                showWriteToast('error', 'خطأ في السيرفر (HTTP ' + res.status + ')', snippet);
+                                return;
+                            }
+
+                            if (json.ok) {
+                                // Put generated scaffold into Monaco so editor reflects disk state
+                                if (json.scaffold && monacoInstance) {
+                                    setCode(json.scaffold);
+                                    updateFieldIndicators();
+                                    updateStats();
+                                }
+                                var detail = json.path || '';
+                                if (json.view) { detail += (detail ? '\n' : '') + 'View: ' + json.view; }
+                                showWriteToast('success', json.message || 'تم توليد وكتابة الملف بنجاح', detail);
+                                closeModal();
+
+                            } else if (json.requires_confirmation) {
+                                // External file detected — ask user
+                                var confirmed = window.confirm(
+                                    (json.warning || 'الملف موجود مسبقاً.') +
+                                    (json.path ? '\n\nالمسار: ' + json.path : '') +
+                                    '\n\nهل تريد الكتابة فوقه؟'
+                                );
+                                if (confirmed) {
+                                    doGenerateAndWrite(true);
+                                }
+
+                            } else {
+                                showWriteToast('error', 'فشل التوليد', json.error || 'حدث خطأ غير معروف.');
+                            }
+                        });
+                    })
+                    .catch(function (err) {
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="ti ti-file-download me-1"></i>توليد وكتابة مباشرة';
+                        }
+                        showWriteToast('error', 'خطأ في الاتصال', err.message);
+                    });
+                }
 
                 // Insert into Monaco
                 if (insertBtn) {
