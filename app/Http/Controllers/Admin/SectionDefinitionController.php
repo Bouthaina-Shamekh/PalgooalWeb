@@ -12,6 +12,7 @@ use App\Models\Sections\Template as SectionTemplate;
 use App\Support\Sections\BladeGenerator;
 use App\Support\Sections\ComponentLibrary;
 use App\Support\Sections\FieldPresetLibrary;
+use App\Support\Sections\FileStatusResolver;
 use App\Support\Sections\SectionMediaPreviewBuilder;
 use App\Support\Sections\SectionTemplateFileWriter;
 use App\Support\Sections\SectionTemplateLibrary;
@@ -240,13 +241,15 @@ class SectionDefinitionController extends Controller
 
         $sectionDefinition->load(['templates' => fn($query) => $query->orderByPivot('sort_order')->orderBy('id')]);
 
-        $writer          = app(SectionTemplateFileWriter::class);
-        $bladeFileStatus = $writer->fileStatus($sectionDefinition);
+        $writer            = app(SectionTemplateFileWriter::class);
+        $resolver          = app(FileStatusResolver::class);
+        $fileStatus        = $resolver->resolve($sectionDefinition);
+        $bladeFileStatus   = $fileStatus['status'];   // 'missing'|'published'|'external'|'invalid'
         $bladeExpectedPath = $writer->displayPath($sectionDefinition);
 
-        // If blade_source is empty but the file exists on disk, pre-populate from file
-        // (happens when the file was created externally — status is 'external')
-        if (empty($sectionDefinition->blade_source) && in_array($bladeFileStatus, ['exists', 'external'])) {
+        // If blade_source is empty but the file exists on disk, pre-populate from file.
+        // Triggers for both 'published' (system-written) and 'external' (externally written).
+        if (empty($sectionDefinition->blade_source) && in_array($bladeFileStatus, ['published', 'external'])) {
             $diskPath = $writer->resolvedPath($sectionDefinition);
             if ($diskPath && file_exists($diskPath)) {
                 $sectionDefinition->blade_source = file_get_contents($diskPath);
@@ -255,7 +258,7 @@ class SectionDefinitionController extends Controller
 
         return view('dashboard.section_definitions.edit', array_merge(
             $this->formViewData($sectionDefinition),
-            compact('bladeFileStatus', 'bladeExpectedPath'),
+            compact('fileStatus', 'bladeFileStatus', 'bladeExpectedPath'),
         ));
     }
 
@@ -502,6 +505,65 @@ class SectionDefinitionController extends Controller
             'written_at' => $sectionDefinition->blade_written_at?->toDateTimeString(),
             'stats'      => $stats,
             'scaffold'   => $scaffold,
+        ]);
+    }
+
+    /**
+     * Phase 5 — Compare Versions
+     *
+     * Returns JSON with both the Draft (blade_source) and the Disk file content
+     * for display in Monaco Diff Editor.
+     *
+     * This is the ONLY place where file_get_contents() is allowed for this feature —
+     * it is on-demand (lazy loaded) and never called during page load.
+     *
+     * Security: path is always resolved via SectionTemplateFileWriter::resolvedPath().
+     * No user-supplied path is ever accepted.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function compareBlade(SectionDefinition $sectionDefinition)
+    {
+        $this->authorize('update', $sectionDefinition);
+
+        $writer   = app(SectionTemplateFileWriter::class);
+        $resolver = app(FileStatusResolver::class);
+
+        $resolvedPath = $writer->resolvedPath($sectionDefinition);
+        $displayPath  = $writer->displayPath($sectionDefinition);
+        $fileStatus   = $resolver->resolve($sectionDefinition);
+        $viewName     = $fileStatus['view_name'];
+        $syncStatus   = $fileStatus['sync_status'];
+
+        // Invalid key/category — cannot resolve path
+        if ($resolvedPath === null) {
+            return response()->json([
+                'ok'      => false,
+                'message' => t('dashboard.Compare_Invalid_Path', 'مفتاح السكشن أو التصنيف غير صالح — لا يمكن تحديد مسار الملف.'),
+            ], 422);
+        }
+
+        // File not on disk — nothing to compare
+        if (! file_exists($resolvedPath)) {
+            return response()->json([
+                'ok'      => false,
+                'message' => t('dashboard.Compare_File_Missing', 'الملف غير موجود على disk — اضغط Write لإنشائه أولاً.'),
+                'status'  => 'missing',
+            ], 404);
+        }
+
+        // Read disk content — only here, on-demand, never during page load
+        $diskContent  = file_get_contents($resolvedPath);
+        $draftContent = $sectionDefinition->blade_source ?? '';
+
+        return response()->json([
+            'ok'        => true,
+            'draft'     => $draftContent,
+            'disk'      => $diskContent,
+            'status'    => $fileStatus['status'],
+            'sync'      => $syncStatus,
+            'view_name' => $viewName,
+            'path'      => $displayPath,
         ]);
     }
 

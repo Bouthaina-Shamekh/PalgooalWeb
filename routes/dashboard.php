@@ -303,6 +303,9 @@ Route::group([
             Route::post('/{sectionDefinition}/generate-and-write-blade', [SectionDefinitionController::class, 'generateAndWriteBladeFile'])
                 ->whereNumber('sectionDefinition')
                 ->name('generate_write_blade');
+            Route::get('/{sectionDefinition}/compare-blade', [SectionDefinitionController::class, 'compareBlade'])
+                ->whereNumber('sectionDefinition')
+                ->name('compare_blade');
 
             Route::prefix('/{sectionDefinition}/fields')
                 ->whereNumber('sectionDefinition')

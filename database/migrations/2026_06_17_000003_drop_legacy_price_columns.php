@@ -23,11 +23,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('templates', function (Blueprint $table) {
-            $table->dropColumn(['price', 'discount_price']);
+            $columns = array_filter(
+                ['price', 'discount_price'],
+                fn($col) => Schema::hasColumn('templates', $col)
+            );
+            if ($columns) {
+                $table->dropColumn(array_values($columns));
+            }
         });
 
         Schema::table('subscriptions', function (Blueprint $table) {
-            $table->dropColumn('price');
+            if (Schema::hasColumn('subscriptions', 'price')) {
+                $table->dropColumn('price');
+            }
         });
     }
 

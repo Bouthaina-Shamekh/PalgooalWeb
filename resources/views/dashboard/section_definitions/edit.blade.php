@@ -60,7 +60,7 @@
                 <div style="width:1px;height:32px;background:#e2e8f0;flex-shrink:0;"></div>
                 <div>
                     <div class="text-xs text-slate-400 mb-0.5">{{ t('dashboard.Blade_Template', 'قالب Blade') }}</div>
-                    @if ($bladeFileStatus === 'exists')
+                    @if ($bladeFileStatus === 'published')
                         <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold bg-green-100 text-green-700">
                             <i class="ti ti-check me-1"></i>{{ t('dashboard.Blade_File_Exists', 'ملف موجود') }}
                         </span>
@@ -114,7 +114,7 @@
                             class="sd-tab-btn flex items-center gap-2 px-5 py-3.5 text-sm transition-all rounded-t-lg border-b-2 border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50">
                         <i class="ti ti-code text-base"></i>
                         {{ t('dashboard.Blade_Template', 'قالب Blade') }}
-                        @if ($bladeFileStatus === 'exists')
+                        @if ($bladeFileStatus === 'published')
                             <span class="w-4 h-4 rounded-full inline-flex items-center justify-center bg-green-500 text-white" style="font-size:9px;">&#10003;</span>
                         @elseif ($bladeFileStatus === 'missing')
                             <span class="w-4 h-4 rounded-full inline-flex items-center justify-center bg-red-500 text-white" style="font-size:9px;">!</span>
@@ -182,9 +182,103 @@
         <div id="sd-pane-blade" class="sd-tab-pane">
             <div class="grid grid-cols-12 gap-6">
                 <div class="col-span-12 xl:col-span-8">
-                    <div class="card mb-4">
+                    {{-- ── File Status Card (Phase 3 + Phase 4) ── --}}
+                    <div class="card mb-4" id="blade-file-status-card">
                         <div class="card-body py-3">
-                            <div class="flex flex-wrap items-center gap-4">
+
+                            {{-- Row 1: File Status Badge + Message --}}
+                            <div class="flex flex-wrap items-center gap-3 mb-2">
+                                @if ($fileStatus['status'] === 'published')
+                                    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold bg-green-100 text-green-700">
+                                        <i class="ti ti-circle-check-filled"></i>
+                                        {{ t('dashboard.File_Status_Published', 'Published') }}
+                                    </span>
+                                    <span class="text-sm text-slate-500">{{ t('dashboard.File_Published_Msg', 'تم نشر الملف بواسطة النظام') }}</span>
+                                @elseif ($fileStatus['status'] === 'external')
+                                    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold bg-orange-100 text-orange-700">
+                                        <i class="ti ti-alert-triangle-filled"></i>
+                                        {{ t('dashboard.File_Status_External', 'External') }}
+                                    </span>
+                                    <span class="text-sm text-slate-500">{{ t('dashboard.File_External_Msg', 'الملف موجود لكنه كُتب خارج النظام — blade_written_at غير مضبوط') }}</span>
+                                @elseif ($fileStatus['status'] === 'invalid')
+                                    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold bg-red-100 text-red-600">
+                                        <i class="ti ti-ban"></i>
+                                        {{ t('dashboard.File_Status_Invalid', 'Invalid') }}
+                                    </span>
+                                    <span class="text-sm text-slate-500">{{ t('dashboard.File_Invalid_Msg', 'المفتاح أو الفئة غير صالح — لا يمكن تحديد المسار') }}</span>
+                                @else {{-- missing --}}
+                                    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold bg-gray-100 text-gray-500">
+                                        <i class="ti ti-circle-dashed"></i>
+                                        {{ t('dashboard.File_Status_Missing', 'Missing') }}
+                                    </span>
+                                    <span class="text-sm text-slate-500">{{ t('dashboard.File_Missing_Msg', 'لم يتم إنشاء الملف بعد — اضغط Generate & Write للنشر') }}</span>
+                                @endif
+                            </div>
+
+                            {{-- Row 2: Sync Status (Phase 4 — only for files that exist on disk) --}}
+                            @if (in_array($fileStatus['status'], ['published', 'external']))
+                                @php $sync = $fileStatus['sync_status']; @endphp
+                                <div class="flex flex-wrap items-center gap-3 pt-2 mb-2" style="border-top:1px solid #f8fafc;">
+                                    <span class="text-xs text-slate-400 font-medium">{{ t('dashboard.Sync_Status', 'Sync:') }}</span>
+
+                                    @if ($sync === 'in_sync')
+                                        <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-green-50 text-green-600 border border-green-200">
+                                            <i class="ti ti-circle-check"></i>
+                                            {{ t('dashboard.Sync_In_Sync', 'In Sync') }}
+                                        </span>
+                                        <span class="text-xs text-slate-400">{{ t('dashboard.Sync_In_Sync_Msg', 'Monaco و disk متطابقان') }}</span>
+                                    @elseif ($sync === 'out_of_sync')
+                                        <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-yellow-50 text-yellow-700 border border-yellow-200">
+                                            <i class="ti ti-alert-circle-filled"></i>
+                                            {{ t('dashboard.Sync_Out_Of_Sync', 'Out Of Sync') }}
+                                        </span>
+                                        <span class="text-xs text-slate-500">{{ t('dashboard.Sync_Out_Of_Sync_Msg', 'Monaco يحتوي تغييرات لم تُنشر بعد') }}</span>
+                                        {{-- Phase 5: Compare Versions — enabled --}}
+                                        <button type="button" id="compare-versions-btn"
+                                                class="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium border border-indigo-300 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer"
+                                                title="{{ t('dashboard.Compare_Versions', 'Compare Versions') }}">
+                                            <i class="ti ti-git-diff"></i>
+                                            {{ t('dashboard.Compare_Versions', 'Compare Versions') }}
+                                        </button>
+                                    @elseif ($sync === 'external_change')
+                                        <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-orange-50 text-orange-700 border border-orange-200">
+                                            <i class="ti ti-refresh-alert"></i>
+                                            {{ t('dashboard.Sync_External_Change', 'External Change') }}
+                                        </span>
+                                        <span class="text-xs text-slate-500">{{ t('dashboard.Sync_External_Change_Msg', 'تم تعديل الملف على disk منذ آخر Publish') }}</span>
+                                        {{-- Phase 5: Compare Versions — enabled for external_change too --}}
+                                        <button type="button" id="compare-versions-btn"
+                                                class="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium border border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100 transition cursor-pointer"
+                                                title="{{ t('dashboard.Compare_Versions', 'Compare Versions') }}">
+                                            <i class="ti ti-git-diff"></i>
+                                            {{ t('dashboard.Compare_Versions', 'Compare Versions') }}
+                                        </button>
+                                    @else {{-- unknown --}}
+                                        <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold bg-gray-50 text-gray-400 border border-gray-200">
+                                            <i class="ti ti-circle-dashed"></i>
+                                            {{ t('dashboard.Sync_Unknown', 'Unknown') }}
+                                        </span>
+                                        <span class="text-xs text-slate-400">{{ t('dashboard.Sync_Unknown_Msg', 'لا يوجد بصمة محفوظة — اضغط Write لتفعيل التتبع') }}</span>
+                                    @endif
+                                </div>
+                            @endif
+
+                            {{-- Row 3: View Name | Disk Path | Last Published | Copy --}}
+                            <div class="flex flex-wrap items-center gap-4 pt-2" style="border-top:1px solid #f1f5f9;">
+
+                                {{-- View Name --}}
+                                @if ($fileStatus['view_name'])
+                                    <div class="flex items-center gap-2 flex-shrink-0">
+                                        <i class="ti ti-eye text-slate-400 flex-shrink-0"></i>
+                                        <div>
+                                            <div class="text-xs text-slate-400 mb-0.5">{{ t('dashboard.Blade_View_Name', 'View:') }}</div>
+                                            <code class="text-xs font-mono text-indigo-600" dir="ltr">{{ $fileStatus['view_name'] }}</code>
+                                        </div>
+                                    </div>
+                                    <div style="width:1px;height:28px;background:#e2e8f0;flex-shrink:0;"></div>
+                                @endif
+
+                                {{-- Disk Path --}}
                                 <div class="flex items-center gap-2 min-w-0 flex-1">
                                     <i class="ti ti-file-code text-slate-400 text-xl flex-shrink-0"></i>
                                     <div class="min-w-0">
@@ -192,12 +286,19 @@
                                         <code class="text-sm font-mono text-slate-700 block truncate" dir="ltr" title="{{ $bladeExpectedPath }}">{{ $bladeExpectedPath }}</code>
                                     </div>
                                 </div>
+
+                                {{-- Last Published --}}
                                 @if ($sectionDefinition->blade_written_at)
-                                    <div class="flex-shrink-0 text-xs text-slate-400 border-r border-slate-200 pe-4">
-                                        <i class="ti ti-clock me-1"></i>{{ t('dashboard.Blade_File_Last_Written', 'آخر كتابة:') }}
-                                        {{ $sectionDefinition->blade_written_at->diffForHumans() }}
+                                    <div style="width:1px;height:28px;background:#e2e8f0;flex-shrink:0;"></div>
+                                    <div class="flex-shrink-0">
+                                        <div class="text-xs text-slate-400 mb-0.5">{{ t('dashboard.Last_Published', 'آخر نشر:') }}</div>
+                                        <div class="text-xs text-slate-600 font-medium">
+                                            <i class="ti ti-clock me-1 text-slate-400"></i>{{ $sectionDefinition->blade_written_at->diffForHumans() }}
+                                        </div>
                                     </div>
                                 @endif
+
+                                {{-- Copy Path --}}
                                 <button type="button" id="copy-path-btn"
                                         class="flex-shrink-0 w-8 h-8 rounded-lg inline-flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
                                         data-path="{{ $bladeExpectedPath }}"
@@ -205,6 +306,7 @@
                                     <i class="ti ti-copy text-base"></i>
                                 </button>
                             </div>
+
                         </div>
                     </div>
 
@@ -249,7 +351,7 @@
                         <div class="card-footer d-flex align-items-center gap-3" style="background:#f8fafc;">
                             <span class="text-sm text-slate-400 me-auto font-mono" id="blade-editor-stats"></span>
                             <button type="button" class="btn btn-primary" id="blade-write-btn"
-                                    @if ($bladeFileStatus === 'exists') data-confirm="{{ t('dashboard.Blade_Confirm_Overwrite', 'الملف موجود على الـ disk. هل تريد استبداله؟') }}" @endif>
+                                    @if ($bladeFileStatus === 'published') data-confirm="{{ t('dashboard.Blade_Confirm_Overwrite', 'الملف موجود على الـ disk. هل تريد استبداله؟') }}" @endif>
                                 <i class="ti ti-device-floppy me-1"></i>{{ t('dashboard.Blade_Write_File', 'كتابة الملف على الـ disk') }}
                             </button>
                         </div>
@@ -263,7 +365,7 @@
                         </div>
                         <div class="card-footer d-grid gap-2">
                             <button type="button" class="btn btn-primary" id="blade-write-btn-sidebar"
-                                    @if ($bladeFileStatus === 'exists') data-confirm="{{ t('dashboard.Blade_Confirm_Overwrite', 'الملف موجود. هل تريد الاستبدال؟') }}" @endif>
+                                    @if ($bladeFileStatus === 'published') data-confirm="{{ t('dashboard.Blade_Confirm_Overwrite', 'الملف موجود. هل تريد الاستبدال؟') }}" @endif>
                                 <i class="ti ti-device-floppy me-1"></i>{{ t('dashboard.Blade_Write_File', 'كتابة الملف على الـ disk') }}
                             </button>
                             <a href="{{ route('dashboard.section_definitions.fields.index', $sectionDefinition) }}" class="btn btn-light">
@@ -513,6 +615,82 @@
     #bsm-body  { display:flex; }
     </style>
 
+    {{-- ════════════════════════════════════════════════════════════════
+         Compare Versions Modal (Monaco Diff Editor — Phase 5)
+         ════════════════════════════════════════════════════════════════ --}}
+    <div id="compare-modal" dir="rtl"
+         style="display:none;position:fixed;inset:0;z-index:99995;background:rgba(15,23,42,.65);align-items:center;justify-content:center;padding:16px;">
+        <div style="background:#fff;border-radius:16px;width:100%;max-width:1100px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.3);overflow:hidden;">
+
+            {{-- Header --}}
+            <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #e2e8f0;flex-shrink:0;">
+                <div style="width:36px;height:36px;border-radius:10px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                    <i class="ti ti-git-diff" style="font-size:18px;color:#d97706;"></i>
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:15px;font-weight:700;color:#1e293b;">{{ t('dashboard.Compare_Modal_Title', 'Compare Versions') }}</div>
+                    <div id="cvm-subtitle" style="font-size:12px;color:#64748b;">{{ t('dashboard.Compare_Modal_Subtitle', 'مقارنة Draft (Monaco) مع الملف على disk') }}</div>
+                </div>
+                <button id="cvm-close-x" type="button"
+                        style="width:32px;height:32px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#64748b;flex-shrink:0;"
+                        title="{{ t('dashboard.Close', 'إغلاق') }}">
+                    <i class="ti ti-x" style="font-size:14px;"></i>
+                </button>
+            </div>
+
+            {{-- Column labels --}}
+            <div id="cvm-labels" style="display:none;flex-shrink:0;background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+                    <div style="padding:8px 20px;font-size:12px;font-weight:600;color:#4f46e5;border-right:1px solid #e2e8f0;display:flex;align-items:center;gap:6px;">
+                        <i class="ti ti-edit" style="font-size:13px;"></i>
+                        {{ t('dashboard.Compare_Draft_Label', 'Draft Version') }}
+                        <span style="font-size:11px;font-weight:400;color:#94a3b8;margin-inline-start:4px;">{{ t('dashboard.Compare_Draft_Hint', '(blade_source — Monaco)') }}</span>
+                    </div>
+                    <div style="padding:8px 20px;font-size:12px;font-weight:600;color:#d97706;display:flex;align-items:center;gap:6px;">
+                        <i class="ti ti-file-code" style="font-size:13px;"></i>
+                        {{ t('dashboard.Compare_Disk_Label', 'Disk Version') }}
+                        <span id="cvm-disk-path" style="font-size:11px;font-weight:400;color:#94a3b8;margin-inline-start:4px;" dir="ltr"></span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Loader --}}
+            <div id="cvm-loader" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:48px;min-height:300px;">
+                <div style="width:36px;height:36px;border-radius:50%;border:3px solid #fef3c7;border-top-color:#d97706;animation:bsm-spin .8s linear infinite;"></div>
+                <div style="font-size:13px;color:#64748b;">{{ t('dashboard.Compare_Loading', 'جاري تحميل المقارنة…') }}</div>
+            </div>
+
+            {{-- Error state --}}
+            <div id="cvm-error" style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:48px;text-align:center;">
+                <i class="ti ti-alert-circle" style="font-size:40px;color:#ef4444;"></i>
+                <div id="cvm-error-msg" style="font-size:14px;color:#64748b;"></div>
+            </div>
+
+            {{-- Monaco Diff container --}}
+            <div id="cvm-diff-container" style="display:none;flex:1;min-height:0;" dir="ltr">
+                <div id="cvm-diff-editor" style="width:100%;height:100%;min-height:400px;"></div>
+            </div>
+
+            {{-- Footer --}}
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 20px;border-top:1px solid #e2e8f0;flex-shrink:0;background:#f8fafc;flex-wrap:wrap;">
+                {{-- Publish Draft button: shown when out_of_sync --}}
+                <button id="cvm-publish-btn" type="button" class="btn btn-primary btn-sm" style="display:none;">
+                    <i class="ti ti-cloud-upload me-1"></i>{{ t('dashboard.Compare_Publish_Draft', 'Publish Draft') }}
+                </button>
+                {{-- Copy Disk To Draft (Phase 6) — hidden+disabled until fetch resolves --}}
+                <button id="cvm-copy-disk-btn" type="button" class="btn btn-warning btn-sm" disabled style="display:none;"
+                        title="{{ t('dashboard.Copy_Disk_Btn_Title', 'استيراد محتوى disk إلى Monaco — بدون حفظ تلقائي') }}">
+                    <i class="ti ti-arrow-bar-to-right me-1"></i>{{ t('dashboard.Compare_Copy_Disk', 'Copy Disk To Draft') }}
+                </button>
+                <span style="flex:1;"></span>
+                <button id="cvm-close" type="button" class="btn btn-light btn-sm">
+                    {{ t('dashboard.Close', 'إغلاق') }}
+                </button>
+            </div>
+
+        </div>
+    </div>
+
     <style>
     /* ── Monaco Fullscreen ── */
     #blade-editor-card.blade-fullscreen {
@@ -651,7 +829,8 @@
         scaffoldDate:   '{{ now()->toDateString() }}',
         initialContent: @json(old('blade_source', $sectionDefinition->blade_source) ?? ''),
         scaffoldUrl:       '{{ route('dashboard.section_definitions.blade_scaffold', $sectionDefinition) }}',
-        generateWriteUrl:  '{{ route('dashboard.section_definitions.generate_write_blade', $sectionDefinition) }}'
+        generateWriteUrl:  '{{ route('dashboard.section_definitions.generate_write_blade', $sectionDefinition) }}',
+        compareUrl:        '{{ route('dashboard.section_definitions.compare_blade', $sectionDefinition) }}'
     };
     </script>
     @verbatim
@@ -1348,6 +1527,255 @@
                         });
                     });
                 }
+            })();
+
+            // ── Compare Versions (Phase 5) + Copy Disk To Draft (Phase 6) ──────
+            (function () {
+                var modal        = document.getElementById('compare-modal');
+                var loader       = document.getElementById('cvm-loader');
+                var errorDiv     = document.getElementById('cvm-error');
+                var errorMsg     = document.getElementById('cvm-error-msg');
+                var diffCont     = document.getElementById('cvm-diff-container');
+                var diffEdEl     = document.getElementById('cvm-diff-editor');
+                var labels       = document.getElementById('cvm-labels');
+                var diskPathEl   = document.getElementById('cvm-disk-path');
+                var subtitleEl   = document.getElementById('cvm-subtitle');
+                var publishBtn   = document.getElementById('cvm-publish-btn');
+                var copyDiskBtn  = document.getElementById('cvm-copy-disk-btn');
+                var closeBtn     = document.getElementById('cvm-close');
+                var closeXBtn    = document.getElementById('cvm-close-x');
+                var compareUrl   = (typeof data !== 'undefined') ? data.compareUrl : null;
+
+                var triggerBtns = document.querySelectorAll('#compare-versions-btn');
+
+                if (!modal || !compareUrl || !triggerBtns.length) return;
+
+                var diffEditorInstance = null;
+                var _diffOriginalModel = null;
+                var _diffModifiedModel = null;
+
+                // ── Phase 6: closure cache for disk content ──────────────────────
+                var _cachedDiskContent = null;
+
+                function resetModal() {
+                    if (loader)    loader.style.display    = 'flex';
+                    if (errorDiv)  errorDiv.style.display  = 'none';
+                    if (diffCont)  diffCont.style.display  = 'none';
+                    if (labels)    labels.style.display    = 'none';
+                    if (publishBtn)  publishBtn.style.display  = 'none';
+                    // Reset Copy Disk btn to hidden + disabled
+                    if (copyDiskBtn) {
+                        copyDiskBtn.style.display = 'none';
+                        copyDiskBtn.disabled      = true;
+                    }
+                    _cachedDiskContent = null;
+                }
+
+                function showError(msg) {
+                    if (loader)   loader.style.display   = 'none';
+                    if (errorMsg) errorMsg.textContent   = msg;
+                    if (errorDiv) errorDiv.style.display = 'flex';
+                }
+
+                function openCompareVersions() {
+                    resetModal();
+                    modal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+
+                    var xsrfCookie = document.cookie.split(';')
+                        .map(function (c) { return c.trim(); })
+                        .find(function (c) { return c.startsWith('XSRF-TOKEN='); });
+                    var xsrfToken = xsrfCookie
+                        ? decodeURIComponent(xsrfCookie.split('=').slice(1).join('='))
+                        : '';
+
+                    fetch(compareUrl, {
+                        method:  'GET',
+                        headers: {
+                            'Accept':           'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-XSRF-TOKEN':     xsrfToken,
+                        },
+                    })
+                    .then(function (res) {
+                        if (!res.ok) {
+                            return res.text().then(function (t) {
+                                var msg = t;
+                                try { msg = JSON.parse(t).message || t; } catch (e2) {}
+                                throw new Error('HTTP ' + res.status + ': ' + msg);
+                            });
+                        }
+                        return res.json();
+                    })
+                    .then(function (json) {
+                        if (!json.ok) {
+                            showError(json.message || 'حدث خطأ غير معروف.');
+                            return;
+                        }
+
+                        var draftContent = json.draft || '';
+                        var diskContent  = json.disk  || '';
+                        var syncStatus   = json.sync  || 'unknown';
+
+                        // Cache disk content for Copy Disk To Draft action
+                        _cachedDiskContent = diskContent;
+
+                        if (subtitleEl && json.view_name) {
+                            subtitleEl.textContent = 'View: ' + json.view_name;
+                        }
+                        if (diskPathEl && json.path) {
+                            diskPathEl.textContent = json.path;
+                        }
+
+                        // Publish Draft: only meaningful when Monaco is ahead of disk
+                        if (publishBtn && syncStatus === 'out_of_sync') {
+                            publishBtn.style.display = '';
+                        }
+
+                        // Copy Disk To Draft: show + enable for out_of_sync & external_change
+                        // (in_sync = no point; unknown/missing = no file to copy from)
+                        if (copyDiskBtn && (syncStatus === 'out_of_sync' || syncStatus === 'external_change')) {
+                            copyDiskBtn.style.display = '';
+                            copyDiskBtn.disabled      = false;
+                        }
+
+                        if (labels)   labels.style.display   = '';
+                        if (loader)   loader.style.display   = 'none';
+                        if (diffCont) diffCont.style.display = '';
+
+                        buildDiffEditor(draftContent, diskContent);
+                    })
+                    .catch(function (err) {
+                        showError('خطأ في الاتصال: ' + err.message);
+                    });
+                }
+
+                function buildDiffEditor(draftContent, diskContent) {
+                    if (!diffEdEl) return;
+
+                    if (diffEditorInstance) {
+                        try { diffEditorInstance.dispose(); } catch (e) {}
+                        diffEditorInstance = null;
+                    }
+                    if (_diffOriginalModel) {
+                        try { _diffOriginalModel.dispose(); } catch (e) {}
+                        _diffOriginalModel = null;
+                    }
+                    if (_diffModifiedModel) {
+                        try { _diffModifiedModel.dispose(); } catch (e) {}
+                        _diffModifiedModel = null;
+                    }
+
+                    var monacoRequireFn = window.__monacoRequire || null;
+
+                    if (!monacoRequireFn) {
+                        var script = document.createElement('script');
+                        script.src = 'https://cdn.jsdelivr.net/npm/monaco-editor@0.46.0/min/vs/loader.js';
+                        script.onload = function () {
+                            window.__monacoRequire = window.require;
+                            try { window.define.amd = false; } catch (e) {}
+                            window.__monacoRequire.config({
+                                paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.46.0/min/vs' }
+                            });
+                            try { window.define.amd = {}; } catch (e) {}
+                            window.__monacoRequire(['vs/editor/editor.main'], function (monacoLib) {
+                                createDiff(monacoLib || window.monaco, draftContent, diskContent);
+                            });
+                        };
+                        document.head.appendChild(script);
+                        return;
+                    }
+
+                    if (window.monaco && window.monaco.editor) {
+                        createDiff(window.monaco, draftContent, diskContent);
+                        return;
+                    }
+
+                    monacoRequireFn(['vs/editor/editor.main'], function (monacoLib) {
+                        createDiff(monacoLib || window.monaco, draftContent, diskContent);
+                    });
+                }
+
+                function createDiff(m, draftContent, diskContent) {
+                    if (!m || !diffEdEl) return;
+
+                    _diffOriginalModel = m.editor.createModel(draftContent, 'html');
+                    _diffModifiedModel = m.editor.createModel(diskContent,  'html');
+
+                    diffEditorInstance = m.editor.createDiffEditor(diffEdEl, {
+                        theme:                'vs-dark',
+                        readOnly:             true,
+                        renderSideBySide:     true,
+                        originalEditable:     false,
+                        automaticLayout:      true,
+                        minimap:              { enabled: false },
+                        fontSize:             13,
+                        lineHeight:           21,
+                        fontFamily:           "'Fira Code', 'Cascadia Code', Consolas, monospace",
+                        scrollBeyondLastLine: false,
+                    });
+
+                    diffEditorInstance.setModel({
+                        original: _diffOriginalModel,
+                        modified: _diffModifiedModel,
+                    });
+                }
+
+                function closeModal() {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = '';
+                }
+
+                // Wire trigger buttons
+                triggerBtns.forEach(function (btn) {
+                    btn.addEventListener('click', openCompareVersions);
+                });
+
+                // Publish Draft: delegate to existing Write button
+                if (publishBtn) {
+                    publishBtn.addEventListener('click', function () {
+                        closeModal();
+                        var writeBtn = document.getElementById('blade-write-btn');
+                        if (writeBtn) writeBtn.click();
+                    });
+                }
+
+                // ── Phase 6: Copy Disk To Draft ──────────────────────────────────
+                if (copyDiskBtn) {
+                    copyDiskBtn.addEventListener('click', function () {
+                        if (!_cachedDiskContent && _cachedDiskContent !== '') return;
+
+                        var confirmed = window.confirm(
+                            '{{ t('dashboard.Copy_Disk_Confirm_Title', 'Copy Disk Content To Draft?') }}' + '\n\n' +
+                            '{{ t('dashboard.Copy_Disk_Confirm_Body', 'سيتم استبدال محتوى Monaco الحالي.\nلن يتم حفظ أي شيء أو نشره تلقائياً.') }}'
+                        );
+                        if (!confirmed) return;
+
+                        // Replace Monaco content — no save/write/publish
+                        setCode(_cachedDiskContent);
+                        updateFieldIndicators();
+                        updateStats();
+
+                        closeModal();
+
+                        showWriteToast(
+                            'success',
+                            '{{ t('dashboard.Copy_Disk_Success_Title', 'تم نسخ Disk إلى Draft') }}',
+                            '{{ t('dashboard.Copy_Disk_Success_Msg', 'تذكر الحفظ أو النشر إذا أردت الاحتفاظ بالتغييرات.') }}'
+                        );
+                    });
+                }
+
+                if (closeBtn)  closeBtn.addEventListener('click',  closeModal);
+                if (closeXBtn) closeXBtn.addEventListener('click', closeModal);
+
+                modal.addEventListener('click', function (e) {
+                    if (e.target === modal) closeModal();
+                });
+
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
+                });
             })();
 
             // Field insert buttons

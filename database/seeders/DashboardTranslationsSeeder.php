@@ -911,11 +911,64 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Blade_Confirm_Overwrite' => 'الملف موجود مسبقاً. هل تريد استبداله؟',
             'dashboard.Blade_File_Deleted'      => 'تم حذف ملف Blade من الـ disk.',
 
+            // ── Phase 3: File Status Indicator ──────────────────────
+            // Status labels (English badges — intentional, developer-facing)
+            'dashboard.File_Status_Missing'     => 'Missing',
+            'dashboard.File_Status_Published'   => 'Published',
+            'dashboard.File_Status_External'    => 'External',
+            'dashboard.File_Status_Invalid'     => 'Invalid',
+            // Status messages (Arabic — user-facing)
+            'dashboard.File_Missing_Msg'        => 'لم يتم إنشاء الملف بعد — اضغط Generate & Write للنشر',
+            'dashboard.File_Published_Msg'      => 'تم نشر الملف بواسطة النظام',
+            'dashboard.File_External_Msg'       => 'الملف موجود لكنه كُتب خارج النظام — blade_written_at غير مضبوط',
+            'dashboard.File_Invalid_Msg'        => 'المفتاح أو الفئة غير صالح — لا يمكن تحديد المسار',
+            // Card metadata
+            'dashboard.Blade_View_Name'         => 'View:',
+            'dashboard.Last_Published'          => 'آخر نشر:',
+
+            // ── Phase 4: Out Of Sync Detection ──────────────────────
+            // Sync status label prefix
+            'dashboard.Sync_Status'             => 'Sync:',
+            // In Sync
+            'dashboard.Sync_In_Sync'            => 'In Sync',
+            'dashboard.Sync_In_Sync_Msg'        => 'Monaco و disk متطابقان',
+            // Out Of Sync
+            'dashboard.Sync_Out_Of_Sync'        => 'Out Of Sync',
+            'dashboard.Sync_Out_Of_Sync_Msg'    => 'Monaco يحتوي تغييرات لم تُنشر بعد',
+            // External Change
+            'dashboard.Sync_External_Change'     => 'External Change',
+            'dashboard.Sync_External_Change_Msg' => 'تم تعديل الملف على disk منذ آخر Publish',
+            // Unknown
+            'dashboard.Sync_Unknown'            => 'Unknown',
+            'dashboard.Sync_Unknown_Msg'        => 'لا يوجد بصمة محفوظة — اضغط Write لتفعيل التتبع',
+            // Compare Versions placeholder (Phase 5)
+            'dashboard.Compare_Versions'        => 'Compare Versions',
+            'dashboard.Compare_Versions_Soon'   => 'Compare Versions — قريباً',
+
+            // ── Phase 5: Compare Versions (Monaco Diff Editor) ───────
+            'dashboard.Compare_Modal_Title'     => 'Compare Versions',
+            'dashboard.Compare_Modal_Subtitle'  => 'مقارنة Draft (Monaco) مع الملف على disk',
+            'dashboard.Compare_Draft_Label'     => 'Draft Version',
+            'dashboard.Compare_Draft_Hint'      => '(blade_source — Monaco)',
+            'dashboard.Compare_Disk_Label'      => 'Disk Version',
+            'dashboard.Compare_Loading'         => 'جاري تحميل المقارنة…',
+            'dashboard.Compare_Error'           => 'تعذّر تحميل المقارنة',
+            'dashboard.Compare_Publish_Draft'   => 'Publish Draft',
+            'dashboard.Compare_Copy_Disk'       => 'Copy Disk To Draft',
+            'dashboard.Compare_Copy_Disk_Soon'  => 'Copy Disk → Draft — قريباً',
+
+            // ── Phase 6: Copy Disk To Draft ──────────────────────────
+            'dashboard.Copy_Disk_Btn_Title'         => 'استيراد محتوى disk إلى Monaco — بدون حفظ تلقائي',
+            'dashboard.Copy_Disk_Confirm_Title'     => 'Copy Disk Content To Draft?',
+            'dashboard.Copy_Disk_Confirm_Body'      => "سيتم استبدال محتوى Monaco الحالي.\nلن يتم حفظ أي شيء أو نشره تلقائياً.",
+            'dashboard.Copy_Disk_Success_Title'     => 'تم نسخ Disk إلى Draft',
+            'dashboard.Copy_Disk_Success_Msg'       => 'تذكر الحفظ أو النشر إذا أردت الاحتفاظ بالتغييرات.',
+
             // Edit page UX improvements
             'dashboard.Last_Updated'            => 'آخر تحديث',
             'dashboard.For_Reference'           => 'للمرجعية',
             'dashboard.Shortcut_Save'           => 'اضغط Ctrl+S للحفظ السريع',
-            
+
             'dashboard.Copy'                    => 'نسخ',
 
             // ── Session: Pages UX (create/edit/form) ──────────────

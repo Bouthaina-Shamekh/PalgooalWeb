@@ -143,7 +143,13 @@ class SectionTemplateFileWriter
             return ['ok' => false, 'error' => "Failed to write file: {$path}"];
         }
 
-        // Update timestamp
+        // Compute content fingerprint for Out-of-Sync detection (Phase 4).
+        // Both hashes are identical immediately after Write since blade_source → disk verbatim.
+        // They diverge only when Monaco is edited (blade_hash stale) or disk is externally modified.
+        $contentHash = hash('sha256', $definition->blade_source);
+
+        $definition->blade_hash      = $contentHash;
+        $definition->disk_hash       = $contentHash;
         $definition->blade_written_at = now();
         $definition->saveQuietly();
 
