@@ -42,24 +42,50 @@
 
     $image = SectionFrontendMediaResolver::resolve($data['image'] ?? null);
     $image_alt = trim((string) ($data['image_alt'] ?? $title));
+    $image_position = trim((string) ($data['image_position'] ?? 'right'));
+
+    $contentOrder = $image_position === 'left' ? 'order-2 lg:order-2' : 'order-2 lg:order-1';
+
+    $imageOrder = $image_position === 'left' ? 'order-1 lg:order-1' : 'order-1 lg:order-2';
+
+    $background_token = trim((string) ($data['background_token'] ?? 'muted'));
+
+    $backgroundClass = match ($background_token) {
+        'primary' => 'bg-theme-primary',
+        'secondary' => 'bg-theme-secondary',
+        'surface' => 'bg-theme-surface',
+        'muted' => 'bg-theme-muted',
+        default => '',
+    };
+
+    $text_token = trim((string) ($data['text_token'] ?? 'heading'));
+
+    $textClass = match ($text_token) {
+        'body' => 'text-theme-body',
+        'primary' => 'text-theme-primary',
+        'secondary' => 'text-theme-secondary',
+        'white' => 'text-white',
+        default => 'text-theme-heading',
+    };
+
 @endphp
 
-<section id="{{ $section_id }}" class="bg-[#F8F8F8] py-16 md:py-24 px-4 sm:px-6 lg:px-12">
+<section id="{{ $section_id }}" class="{{ $backgroundClass }} py-16 md:py-24 px-4 sm:px-6 lg:px-12">
     <div class="container mx-auto">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div class="animate-from-left order-2 lg:order-1">
+            <div class="animate-from-left {{ $contentOrder }}">
                 @if ($eyebrow)
-                    <p class="text-red-brand font-bold text-lg md:text-xl uppercase mb-4">
+                    <p class="{{ $textClass }} font-bold text-lg md:text-xl uppercase mb-4">
                         {{ $eyebrow }}
                     </p>
                 @endif
                 @if ($title)
-                    <h2 class="text-purple-brand font-extrabold text-2xl md:text-[40px] leading-tight uppercase mb-6">
+                    <h2 class="{{ $textClass }} font-extrabold text-2xl md:text-[40px] leading-tight uppercase mb-6">
                         {{ $title }}
                     </h2>
                 @endif
                 @if ($subtitle)
-                    <p class="text-purple-brand/80 text-base md:text-lg leading-relaxed mb-6">
+                    <p class="{{ $textClass }}/80 text-base md:text-lg leading-relaxed mb-6">
                         {{ $subtitle }}
                     </p>
                 @endif
@@ -72,12 +98,12 @@
                                     <img src="{{ $feature['icon_media_url'] }}" alt=""
                                         class="w-5 h-5 object-contain flex-shrink-0">
                                 @elseif ($feature['icon'])
-                                    <i class="{{ $feature['icon'] }} text-red-brand flex-shrink-0"></i>
+                                    <i class="{{ $feature['icon'] }} {{ $textClass }} flex-shrink-0"></i>
                                 @else
                                     <span class="w-3 h-[4px] rounded-2xl bg-red-brand flex-shrink-0"></span>
                                 @endif
 
-                                <span class="text-purple-brand text-base md:text-lg">
+                                <span class="{{ $textClass }} text-base md:text-lg">
                                     {{ $feature['title'] }}
                                 </span>
 
@@ -86,7 +112,7 @@
                     </ul>
                 @endif
                 @if ($highlight_text)
-                    <p class="text-red-brand font-extrabold text-2xl md:text-3xl mb-6">
+                    <p class="{{ $textClass }} font-extrabold text-2xl md:text-3xl mb-6">
                         {{ $highlight_text }}
                     </p>
                 @endif
@@ -98,7 +124,7 @@
                 @endif
             </div>
             @if ($image)
-                <div class="animate-from-right order-1 lg:order-2 h-full">
+                <div class="animate-from-right {{ $imageOrder }} h-full">
                     <img src="{{ $image }}" loading="lazy" alt="{{ $image_alt }}"
                         class="aspect-[3/2] w-full h-full rounded-[36px] object-cover hover:-translate-y-0.5 transition-all duration-300">
                 </div>

@@ -1234,6 +1234,34 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Coupon_Toggle_Active'    => 'تم تفعيل الكوبون.',
             'dashboard.Coupon_Toggle_Inactive'  => 'تم تعطيل الكوبون.',
 
+            // Page Builder — Content / Design Tab Switcher (renderer.blade.php)
+            'dashboard.Content_Tab'               => 'المحتوى',
+            'dashboard.Design_Tab'                => 'التنسيق',
+            'dashboard.No_Design_Fields'          => 'لا توجد إعدادات تنسيق لهذا السكشن حالياً.',
+            'dashboard.No_Design_Fields_Hint'     => 'أضف حقول تنسيق (layout_style، image_position…) لتظهر هنا.',
+            'dashboard.No_Content_Fields'         => 'لا توجد حقول محتوى لهذا السكشن.',
+            'dashboard.No_Dynamic_Fields'         => 'لا توجد حقول ديناميكية مسجلة لهذه اللغة بعد.',
+            // 'dashboard.Section_Editor_Fields_Desc' => 'حقول مدفوعة من تعريف القسم.',
+
+            // ── Section Group Labels — FieldGroupRegistry v2 ──────────────
+            // Translation key format: section_groups.{group_key}
+            // English fallbacks are defined in FieldGroupRegistry::KNOWN_GROUPS.
+            // To add French: INSERT into translation_values for locale 'fr' — no PHP change needed.
+            'section_groups.background'   => 'الخلفية',
+            'section_groups.content'      => 'المحتوى',
+            'section_groups.cta'          => 'الدعوة للعمل',
+            'section_groups.description'  => 'الوصف',
+            'section_groups.design'       => 'التنسيق',
+            'section_groups.faq'          => 'الأسئلة الشائعة',
+            'section_groups.features'     => 'المميزات',
+            'section_groups.general'      => 'عام',
+            'section_groups.highlight'    => 'النص المميَّز',
+            'section_groups.image'        => 'الصورة',
+            'section_groups.intro'        => 'المقدمة',
+            'section_groups.media'        => 'الوسائط',
+            'section_groups.seo'          => 'تحسين البحث',
+            'section_groups.testimonials' => 'التقييمات',
+
         ];
 
         $locale = 'ar';

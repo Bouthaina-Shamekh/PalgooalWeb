@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreSectionDefinitionFieldRequest;
 use App\Http\Requests\Admin\UpdateSectionDefinitionFieldRequest;
 use App\Models\Sections\SectionDefinition;
 use App\Models\Sections\SectionDefinitionField;
+use App\Support\Sections\FieldGroupRegistry;
 use App\Support\Sections\FieldPresetLibrary;
 use App\Support\Sections\SectionDefinitionFieldFormDataFactory;
 use App\Support\Sections\SectionDefinitionLocaleProvider;
@@ -264,7 +265,10 @@ class SectionDefinitionFieldController extends Controller
     protected function formViewData(SectionDefinition $sectionDefinition, SectionDefinitionField $field): array
     {
         $locales = $this->localeProvider->all();
-        $groupSuggestions = $sectionDefinition->fields()
+        // Merge canonical Registry keys with any custom group_names already in use
+        // on sibling fields of this definition. Registry keys come first so
+        // developers see the canonical slugs prominently in the datalist.
+        $siblingGroups = $sectionDefinition->fields()
             ->whereNotNull('group_name')
             ->where('group_name', '!=', '')
             ->orderBy('group_name')
@@ -272,6 +276,10 @@ class SectionDefinitionFieldController extends Controller
             ->unique()
             ->values()
             ->all();
+
+        $groupSuggestions = array_values(array_unique(
+            array_merge(FieldGroupRegistry::keys(), $siblingGroups)
+        ));
 
         return [
             'sectionDefinition' => $sectionDefinition,

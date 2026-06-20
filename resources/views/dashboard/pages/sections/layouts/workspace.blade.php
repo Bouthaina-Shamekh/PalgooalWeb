@@ -62,6 +62,15 @@
     <link rel="stylesheet" href="{{ asset('assets/dashboard/fonts/tabler-icons.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/dashboard/css/sections-workspace.css') }}">
 
+    {{-- ── Collapsible Field Groups — Phase 3 ─────────────────────────────── --}}
+    <style>
+        /* Remove native disclosure triangle in all browsers */
+        details[data-group-key] > summary { list-style: none; }
+        details[data-group-key] > summary::-webkit-details-marker { display: none; }
+        /* Rotate chevron SVG when group is open */
+        details[data-group-key][open] .group-chevron { transform: rotate(180deg); }
+    </style>
+
     @stack('styles')
 </head>
 
@@ -463,6 +472,8 @@
             });
 
             window.initSectionEditorTabs?.(document);
+            window.initFieldTabs?.(document);
+            window.initGroupAccordion?.(document);
             window.initSectionIconLibrary?.();
             window.initSectionFeatureRepeaters?.(document);
             window.initSectionOutputRepeaters?.(document);
@@ -690,6 +701,140 @@
 
                 activateTab(hasDefaultButton ? defaultTab : (buttons[0].dataset.tab || ''));
                 form.dataset.editorTabsBound = '1';
+            });
+        };
+
+        // ── Content / Design Field Tab Switcher ─────────────────────────────
+        // Registered as a global initializer so it works when the editor is
+        // loaded via AJAX (innerHTML does not execute <script> tags).
+        // Called by bindSectionEditor() in index.blade.php after fetch.
+        window.initFieldTabs = function(scope) {
+            const root = scope instanceof Element || scope instanceof Document ? scope : document;
+
+            // Resolve section ID for localStorage key
+            const form = root.matches?.('[data-section-editor-form]')
+                ? root
+                : root.querySelector('[data-section-editor-form]');
+            const sectionId = form?.dataset?.sectionId || '0';
+            const STORAGE_KEY = 'section-editor-tab-' + sectionId;
+
+            // Find all unique TAB_IDs (one per locale, e.g. "field-tab-ar", "field-tab-en")
+            const allBtns = Array.from(root.querySelectorAll('[data-field-tab-btn]'));
+            const tabIds  = [...new Set(allBtns.map(function(b) { return b.dataset.fieldTabBtn; }).filter(Boolean))];
+
+            if (tabIds.length === 0) {
+                return;
+            }
+
+            const ACTIVE_BTN   = ['bg-white', 'shadow-sm', 'text-slate-900', 'font-semibold'];
+            const INACTIVE_BTN = ['text-slate-500', 'font-medium'];
+            const ACTIVE_BADGE   = ['bg-indigo-100', 'text-indigo-700'];
+            const INACTIVE_BADGE = ['bg-slate-200', 'text-slate-500'];
+
+            tabIds.forEach(function(tabId) {
+                const btns   = Array.from(root.querySelectorAll('[data-field-tab-btn="'   + tabId + '"]'));
+                const panels = Array.from(root.querySelectorAll('[data-field-tab-panel="' + tabId + '"]'));
+
+                if (btns.length === 0) {
+                    return;
+                }
+
+                function activateTab(target) {
+                    btns.forEach(function(btn) {
+                        const isActive = btn.dataset.fieldTab === target;
+                        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                        if (isActive) {
+                            ACTIVE_BTN.forEach(function(c)   { btn.classList.add(c); });
+                            INACTIVE_BTN.forEach(function(c) { btn.classList.remove(c); });
+                        } else {
+                            INACTIVE_BTN.forEach(function(c) { btn.classList.add(c); });
+                            ACTIVE_BTN.forEach(function(c)   { btn.classList.remove(c); });
+                        }
+                        // Phase B: badge colour
+                        const badge = btn.querySelector('[data-field-tab-count]');
+                        if (badge) {
+                            if (isActive) {
+                                ACTIVE_BADGE.forEach(function(c)   { badge.classList.add(c); });
+                                INACTIVE_BADGE.forEach(function(c) { badge.classList.remove(c); });
+                            } else {
+                                INACTIVE_BADGE.forEach(function(c) { badge.classList.add(c); });
+                                ACTIVE_BADGE.forEach(function(c)   { badge.classList.remove(c); });
+                            }
+                        }
+                    });
+                    // Toggle panel visibility (both stay in DOM — inputs still submit)
+                    panels.forEach(function(panel) {
+                        panel.classList.toggle('hidden', panel.dataset.fieldTab !== target);
+                    });
+                }
+
+                // Phase A: restore last-used tab from localStorage
+                var saved = null;
+                try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+                if (saved === 'design' || saved === 'content') {
+                    activateTab(saved);
+                }
+
+                // Attach click handlers
+                btns.forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var target = btn.dataset.fieldTab;
+                        activateTab(target);
+                        try { localStorage.setItem(STORAGE_KEY, target); } catch (e) {}
+                    });
+                });
+            });
+        };
+
+        // ── Collapsible Field Groups Accordion ──────────────────────────────
+        // Groups rendered as <details data-group-key="…"> in renderer.blade.php.
+        // State stored per-section in localStorage so collapse preference
+        // survives Save → Refresh cycles.
+        //
+        // localStorage key format:  section-group-state-{sectionId}
+        // Value format:             { "intro": true, "cta": false, ... }
+        //
+        // Default (no saved state): first group open, all others closed.
+        // Registered as a global so it works after AJAX innerHTML injection.
+        // Called by bindSectionEditor() in index.blade.php after fetch.
+        window.initGroupAccordion = function(scope) {
+            const root = scope instanceof Element || scope instanceof Document ? scope : document;
+
+            // Resolve section ID for the localStorage key
+            const form = root.matches?.('[data-section-editor-form]')
+                ? root
+                : root.querySelector('[data-section-editor-form]');
+            const sectionId = form?.dataset?.sectionId || '0';
+            const STORAGE_KEY = 'section-group-state-' + sectionId;
+
+            const allDetails = Array.from(root.querySelectorAll('details[data-group-key]'));
+            if (allDetails.length === 0) { return; }
+
+            // Load saved state
+            var savedState = {};
+            var hasSavedState = false;
+            try {
+                var raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    savedState = JSON.parse(raw);
+                    hasSavedState = Object.keys(savedState).length > 0;
+                }
+            } catch (e) {}
+
+            // Apply initial open/closed states
+            allDetails.forEach(function(detail, index) {
+                var key = detail.dataset.groupKey;
+                // Saved state: use exact value.  New groups not yet in state: close them.
+                // No saved state at all: open only the first group.
+                detail.open = hasSavedState ? (savedState[key] === true) : (index === 0);
+            });
+
+            // Persist every toggle immediately
+            allDetails.forEach(function(detail) {
+                detail.addEventListener('toggle', function() {
+                    savedState[detail.dataset.groupKey] = detail.open;
+                    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(savedState)); } catch (e) {}
+                });
             });
         };
 

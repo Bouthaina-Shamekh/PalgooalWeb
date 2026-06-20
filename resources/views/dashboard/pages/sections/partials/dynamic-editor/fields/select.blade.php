@@ -4,7 +4,7 @@
             {{ $field['label'] }}
         </label>
         @if (! $field['isTranslatable'])
-            <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+            <span class="rounded-full bg-slate-100 px-4 py-0.5 text-[11px] font-medium text-slate-600">
                 {{ __('Shared') }}
             </span>
         @endif

@@ -36,6 +36,8 @@ class SectionFieldClassifier
         'animation',
         'background_color',
         'background_image',
+        'background_token',
+        'text_token',
         'button_size',
         'button_style',
         'columns',

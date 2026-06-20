@@ -148,11 +148,11 @@ class ComponentLibrary
             'description' => 'Section heading: eyebrow label, main title, and subtitle.',
             'fields' => [
                 // eyebrow — translatable: short label above the title, always differs by locale
-                ['field_key' => 'eyebrow',  'label' => 'Eyebrow',  'field_type' => self::TEXT,     'field_scope' => self::T, 'is_required' => false],
+                ['field_key' => 'eyebrow',  'label' => 'Eyebrow',  'field_type' => self::TEXT,     'field_scope' => self::T, 'is_required' => false, 'group_name' => 'intro'],
                 // title — translatable: primary heading, always differs by locale
-                ['field_key' => 'title',    'label' => 'Title',    'field_type' => self::TEXT,     'field_scope' => self::T, 'is_required' => true],
+                ['field_key' => 'title',    'label' => 'Title',    'field_type' => self::TEXT,     'field_scope' => self::T, 'is_required' => true,  'group_name' => 'intro'],
                 // subtitle — translatable: supporting text under the heading
-                ['field_key' => 'subtitle', 'label' => 'Subtitle', 'field_type' => self::TEXTAREA, 'field_scope' => self::T, 'is_required' => false],
+                ['field_key' => 'subtitle', 'label' => 'Subtitle', 'field_type' => self::TEXTAREA, 'field_scope' => self::T, 'is_required' => false, 'group_name' => 'intro'],
             ],
         ],
 
@@ -166,7 +166,7 @@ class ComponentLibrary
             'description' => 'Long-form description or body text field.',
             'fields' => [
                 // description — translatable: body copy always differs by locale
-                ['field_key' => 'description', 'label' => 'Description', 'field_type' => self::TEXTAREA, 'field_scope' => self::T, 'is_required' => false],
+                ['field_key' => 'description', 'label' => 'Description', 'field_type' => self::TEXTAREA, 'field_scope' => self::T, 'is_required' => false, 'group_name' => 'description'],
             ],
         ],
 
@@ -184,11 +184,11 @@ class ComponentLibrary
             'description' => 'Primary call-to-action: button label, URL, and target.',
             'fields' => [
                 // button_label — translatable: button text differs by locale
-                ['field_key' => 'button_label',  'label' => 'Button Label',  'field_type' => self::TEXT,   'field_scope' => self::T, 'is_required' => false],
+                ['field_key' => 'button_label',  'label' => 'Button Label',  'field_type' => self::TEXT,   'field_scope' => self::T, 'is_required' => false, 'group_name' => 'cta'],
                 // button_url — translatable: URL differs by locale (prefixes, WhatsApp, UTM)
-                ['field_key' => 'button_url',    'label' => 'Button URL',    'field_type' => self::URL,    'field_scope' => self::T, 'is_required' => false],
+                ['field_key' => 'button_url',    'label' => 'Button URL',    'field_type' => self::URL,    'field_scope' => self::T, 'is_required' => false, 'group_name' => 'cta'],
                 // button_target — shared: _self/_blank is a browser behaviour, not localized
-                ['field_key' => 'button_target', 'label' => 'Button Target', 'field_type' => self::SELECT, 'field_scope' => self::S, 'is_required' => false,
+                ['field_key' => 'button_target', 'label' => 'Button Target', 'field_type' => self::SELECT, 'field_scope' => self::S, 'is_required' => false, 'group_name' => 'cta',
                  'options' => [['value' => '_self', 'label' => 'Same window'], ['value' => '_blank', 'label' => 'New window']]],
             ],
         ],
@@ -206,11 +206,11 @@ class ComponentLibrary
             'description' => 'Section image with alt text and layout position.',
             'fields' => [
                 // image — shared: the same visual asset for all locales
-                ['field_key' => 'image',          'label' => 'Image',          'field_type' => self::MEDIA,  'field_scope' => self::S, 'is_required' => false],
+                ['field_key' => 'image',          'label' => 'Image',          'field_type' => self::MEDIA,  'field_scope' => self::S, 'is_required' => false, 'group_name' => 'image'],
                 // image_alt — translatable: SEO/accessibility text, differs by locale
-                ['field_key' => 'image_alt',      'label' => 'Image Alt',      'field_type' => self::TEXT,   'field_scope' => self::T, 'is_required' => false],
+                ['field_key' => 'image_alt',      'label' => 'Image Alt',      'field_type' => self::TEXT,   'field_scope' => self::T, 'is_required' => false, 'group_name' => 'image'],
                 // image_position — shared: left/right is a layout decision, not localized
-                ['field_key' => 'image_position', 'label' => 'Image Position', 'field_type' => self::SELECT, 'field_scope' => self::S, 'is_required' => false,
+                ['field_key' => 'image_position', 'label' => 'Image Position', 'field_type' => self::SELECT, 'field_scope' => self::S, 'is_required' => false, 'group_name' => 'image',
                  'options' => [['value' => 'left', 'label' => 'Left'], ['value' => 'right', 'label' => 'Right'], ['value' => 'center', 'label' => 'Center']]],
             ],
         ],
@@ -232,6 +232,7 @@ class ComponentLibrary
                     'field_type'  => self::REPEATER,
                     'field_scope' => self::T,   // repeater holds translated text items
                     'is_required' => false,
+                    'group_name'  => 'features',
                     'schema'      => [
                         'item_schema' => [
                             // title — translatable: feature headline
@@ -261,7 +262,7 @@ class ComponentLibrary
             'description' => 'Short callout or badge text (e.g. "Most Popular", "New").',
             'fields' => [
                 // highlight_text — translatable: badge copy differs by locale
-                ['field_key' => 'highlight_text', 'label' => 'Highlight Text', 'field_type' => self::TEXT, 'field_scope' => self::T, 'is_required' => false],
+                ['field_key' => 'highlight_text', 'label' => 'Highlight Text', 'field_type' => self::TEXT, 'field_scope' => self::T, 'is_required' => false, 'group_name' => 'highlight'],
             ],
         ],
 
@@ -280,6 +281,7 @@ class ComponentLibrary
                     'field_type'  => self::REPEATER,
                     'field_scope' => self::T,
                     'is_required' => false,
+                    'group_name'  => 'faq',
                     'schema'      => [
                         'item_schema' => [
                             ['key' => 'question', 'label' => 'Question', 'type' => 'text',     'required' => true,  'translatable' => true],
@@ -307,6 +309,7 @@ class ComponentLibrary
                     'field_type'  => self::REPEATER,
                     'field_scope' => self::T,
                     'is_required' => false,
+                    'group_name'  => 'testimonials',
                     'schema'      => [
                         'item_schema' => [
                             // name — translatable: display name may be transliterated
@@ -335,9 +338,9 @@ class ComponentLibrary
             'description' => 'Search engine meta: meta title and meta description.',
             'fields' => [
                 // meta_title — translatable: SEO title differs by locale
-                ['field_key' => 'meta_title',       'label' => 'Meta Title',       'field_type' => self::TEXT,     'field_scope' => self::T, 'is_required' => false],
+                ['field_key' => 'meta_title',       'label' => 'Meta Title',       'field_type' => self::TEXT,     'field_scope' => self::T, 'is_required' => false, 'group_name' => 'seo'],
                 // meta_description — translatable: SEO description differs by locale
-                ['field_key' => 'meta_description', 'label' => 'Meta Description', 'field_type' => self::TEXTAREA, 'field_scope' => self::T, 'is_required' => false],
+                ['field_key' => 'meta_description', 'label' => 'Meta Description', 'field_type' => self::TEXTAREA, 'field_scope' => self::T, 'is_required' => false, 'group_name' => 'seo'],
             ],
         ],
 

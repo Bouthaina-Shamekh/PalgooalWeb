@@ -1253,3 +1253,68 @@ $lines[] = "{$indent}@if (!empty(\${$key}))";
 <img src="{{ $feature['icon_media'] ?? '' }}" alt="">
 ```
 إذا كانت `icon_media` تخزّن Media ID (رقم) فالـ `src` سيكون خاطئاً. يجب مستقبلاً استخدام `SectionFrontendMediaResolver::resolve()` لحقول media داخل الـ repeaters.
+
+### Session: Page Builder Section Editor — Content / Design Tabs
+
+- `app/Support/Sections/SectionFieldClassifier.php` — **إنشاء**: تصنيف `field_key` → `'content'` أو `'design'`
+  - `const DESIGN_FIELD_KEYS` — 19 مفتاح تصميمي (مرتبة أبجدياً)
+  - `classify(string $fieldKey): string` — fallback → `'content'` لأي مفتاح غير معروف
+  - `splitFields(array $fields): array` — يُقسّم flat fields array
+  - `splitGroups(array $groups): array` — يُقسّم groups من `DynamicSectionEditorRenderer`؛ groups بدون fields في bucket معين تُحذف
+- `resources/views/dashboard/pages/sections/partials/dynamic-editor/renderer.blade.php` — **إعادة كتابة**:
+  - إضافة `use App\Support\Sections\SectionFieldClassifier` في `@php`
+  - استدعاء `SectionFieldClassifier::splitGroups($dynamicGroups)` لتوليد `$contentGroups` و`$designGroups`
+  - `$fieldTabId = 'field-tab-' . $code` — unique ID لكل locale panel
+  - **Tab Switcher**: زران `<button role="tab">` بـ `aria-selected` + Tailwind classes
+  - **Content Panel**: `data-field-tab-panel="field-tab-{code}" data-field-tab="content"` — ظاهر افتراضياً
+  - **Design Panel**: نفس البنية + `hidden` — يظهر عند الضغط على "التنسيق"
+  - **Empty Design State**: SVG icon + نص `t('dashboard.No_Design_Fields', ...)` عند غياب design fields
+  - **Inline IIFE script**: `initFieldTabs()` scoped إلى `$fieldTabId` — لا تداخل بين locale panels
+  - كل `__()` استُبدلت بـ `t()` (قاعدة المشروع)
+  - **ضمان الحفظ**: كلا الـ panels موجودان في الـ DOM دائماً — `display:none` لا يمنع إرسال الـ inputs
+- `database/seeders/DashboardTranslationsSeeder.php` — إضافة 7 ترجمات:
+  - `dashboard.Content_Tab` → المحتوى
+  - `dashboard.Design_Tab` → التنسيق
+  - `dashboard.No_Design_Fields` → لا توجد إعدادات تنسيق لهذا السكشن حالياً.
+  - `dashboard.No_Design_Fields_Hint` → أضف حقول تنسيق...
+  - `dashboard.No_Content_Fields` → لا توجد حقول محتوى لهذا السكشن.
+  - `dashboard.No_Dynamic_Fields` → لا توجد حقول ديناميكية مسجلة لهذه اللغة بعد.
+  - `dashboard.Section_Editor_Fields_Desc` → حقول مدفوعة من تعريف القسم.
+- `docs/PAGE_BUILDER_SECTION_EDITOR_TABS_REPORT.md` — **إنشاء**: تقرير كامل
+
+#### قاعدة التصنيف:
+```
+"ماذا يظهر للمستخدم؟"  →  Content  (eyebrow/title/image/button_label/features…)
+"كيف يظهر للمستخدم؟"   →  Design   (layout_style/image_position/background_color…)
+أي مفتاح غير معروف     →  Content  (safe fallback)
+```
+
+#### ما لم يتغير:
+- قاعدة البيانات، `SectionDefinitionField` schema، `DynamicSectionEditorRenderer`
+- `sidebar-editor.blade.php`، `dynamic-editor-form.blade.php`
+- Frontend Blade renderer، `SectionRenderer`
+- طريقة الحفظ أو الـ payload
+
+### Session: Page Builder UX — Remember Tab + Badge Counts
+
+- `resources/views/dashboard/pages/sections/partials/dynamic-editor/renderer.blade.php` — **Phase A + B**:
+  - **Phase A (Remember Active Tab)**: إضافة `$storageKey = 'section-editor-tab-' . $section->id` في `@php`
+    - عند التحميل: `localStorage.getItem(storageKey)` → إذا `'design'` افتح Design مباشرة
+    - عند النقر: `localStorage.setItem(storageKey, target)` لحفظ الاختيار
+    - `try/catch` حول كل عمليات localStorage (private browsing safe)
+    - مفتاح واحد لكل section يشمل كل اللغات
+  - **Phase B (Badge Counts)**: إظهار عدد الحقول في كل تبويب
+    - `$contentFieldCount` و`$designFieldCount` تُحسب في PHP من `splitGroups()` — لا إعادة حساب في JS
+    - Badge HTML: `<span data-field-tab-count>{{ $contentFieldCount }}</span>`
+    - ألوان ديناميكية: Active → `bg-indigo-100 text-indigo-700` / Inactive → `bg-slate-200 text-slate-500`
+    - `activateTab()` تُحدّث ألوان الـ badges عند التبديل
+  - مثال النتيجة: **المحتوى (9)** · **التنسيق (1)** لـ Content Showcase
+- `docs/PAGE_BUILDER_SECTION_EDITOR_TABS_REPORT.md` — تحديث بقسمي Phase A و Phase B
+
+#### قاعدة مهمة — localStorage Key:
+```javascript
+// مفتاح خاص بكل section، مشترك بين اللغات:
+var STORAGE_KEY = 'section-editor-tab-' + sectionId;
+// مثال: 'section-editor-tab-83'
+```
+`$section` متاح في renderer.blade.php عبر Blade's shared `@include` scope من `dynamic-editor-form.blade.php`.

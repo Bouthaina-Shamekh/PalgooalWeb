@@ -1272,6 +1272,8 @@
                 };
 
                 runEditorInitializer(window.initSectionEditorTabs);
+                runEditorInitializer(window.initFieldTabs);
+                runEditorInitializer(window.initGroupAccordion);
                 runEditorInitializer(window.initSectionFeatureRepeaters);
                 runEditorInitializer(window.initSectionOutputRepeaters);
                 runEditorInitializer(window.initSectionServiceRepeaters);

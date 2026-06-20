@@ -6,7 +6,6 @@ use App\Models\Section;
 use App\Models\Sections\SectionDefinition;
 use App\Models\Sections\SectionDefinitionField;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 
 /**
  * Build a normalized dynamic-editor payload for definition-driven sections.
@@ -119,7 +118,7 @@ class DynamicSectionEditorRenderer
             ->map(function (Collection $groupFields, string $groupKey) use ($section, $locale, $defaultLocale, $localeCodes) {
                 return [
                     'key' => $groupKey,
-                    'label' => Str::headline(str_replace(['_', '-'], ' ', $groupKey)),
+                    'label' => FieldGroupRegistry::label($groupKey),
                     'fields' => $groupFields
                         ->map(fn(SectionDefinitionField $field) => $this->buildFieldPayload(
                             $section,

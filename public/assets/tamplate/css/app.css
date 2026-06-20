@@ -1411,6 +1411,9 @@
   .h-\[5px\] {
     height: 5px;
   }
+  .h-\[14px\] {
+    height: 14px;
+  }
   .h-\[17\.563px\] {
     height: 17.563px;
   }
@@ -2385,6 +2388,13 @@
       margin-block-end: calc(10px * calc(1 - var(--tw-space-y-reverse)));
     }
   }
+  .space-y-\[14px\] {
+    :where(& > :not(:last-child)) {
+      --tw-space-y-reverse: 0;
+      margin-block-start: calc(14px * var(--tw-space-y-reverse));
+      margin-block-end: calc(14px * calc(1 - var(--tw-space-y-reverse)));
+    }
+  }
   .gap-x-1 {
     -moz-column-gap: calc(var(--spacing) * 1);
          column-gap: calc(var(--spacing) * 1);
@@ -3245,9 +3255,6 @@
   }
   .bg-cyan-50 {
     background-color: var(--color-cyan-50);
-  }
-  .bg-cyan-100 {
-    background-color: var(--color-cyan-100);
   }
   .bg-cyan-500\/10 {
     background-color: color-mix(in srgb, oklch(71.5% 0.143 215.221) 10%, transparent);
@@ -4315,8 +4322,8 @@
   .py-28 {
     padding-block: calc(var(--spacing) * 28);
   }
-  .ps-2 {
-    padding-inline-start: calc(var(--spacing) * 2);
+  .py-\[15px\] {
+    padding-block: 15px;
   }
   .ps-3 {
     padding-inline-start: calc(var(--spacing) * 3);
@@ -4404,9 +4411,6 @@
   }
   .pr-11 {
     padding-right: calc(var(--spacing) * 11);
-  }
-  .pb-0 {
-    padding-bottom: calc(var(--spacing) * 0);
   }
   .pb-1 {
     padding-bottom: calc(var(--spacing) * 1);
@@ -9057,6 +9061,20 @@
       translate: var(--tw-translate-x) var(--tw-translate-y);
     }
   }
+  .md\:-translate-y-6 {
+    @media (width >= 48rem) {
+      --tw-translate-y: calc(var(--spacing) * -6);
+      translate: var(--tw-translate-x) var(--tw-translate-y);
+    }
+  }
+  .md\:\!scale-110 {
+    @media (width >= 48rem) {
+      --tw-scale-x: 110% !important;
+      --tw-scale-y: 110% !important;
+      --tw-scale-z: 110% !important;
+      scale: var(--tw-scale-x) var(--tw-scale-y) !important;
+    }
+  }
   .md\:grid-cols-1 {
     @media (width >= 48rem) {
       grid-template-columns: repeat(1, minmax(0, 1fr));
@@ -9355,6 +9373,11 @@
   .md\:text-\[29px\] {
     @media (width >= 48rem) {
       font-size: 29px;
+    }
+  }
+  .md\:text-\[30px\] {
+    @media (width >= 48rem) {
+      font-size: 30px;
     }
   }
   .md\:text-\[40px\] {
