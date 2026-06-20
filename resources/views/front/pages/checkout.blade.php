@@ -65,654 +65,558 @@
         })();
     </script>
 
-    <!-- ===== شريط الخطوات (خطوتان) ===== -->
-    <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-4 mt-6">
-        <div class="bg-white border border-gray-200 rounded-xl shadow p-4">
-            <div id="globalStepper" class="flex items-center justify-between gap-2">
-                @if ($requires_domain_selection)
-                    <div class="flex items-center gap-3 step" data-index="0">
-                        <div
-                            class="h-9 w-9 rounded-full grid place-items-center border-2 border-[#240B36] text-[#240B36] font-extrabold step-circle">
-                            1</div>
-                        <div class="text-sm">حجز الدومين</div>
-                    </div>
-                    <div class="relative h-0.5 flex-1 bg-gray-200 rounded-full overflow-hidden">
-                        <div id="stepperProgress"
-                            class="absolute inset-y-0 right-0 bg-[#240B36] transition-all duration-300" style="width:0%">
+    <!-- ===== Checkout: خطوة واحدة ===== -->
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- العمود الرئيسي -->
+            <div class="lg:col-span-2 space-y-6">
+
+                {{-- بطاقة: نوع الاشتراك --}}
+                @if ($plan && !$template)
+                    @php
+                        $monthlyUrl = request()->fullUrlWithQuery(['plan_sub_type' => 'monthly']);
+                        $annualUrl  = request()->fullUrlWithQuery(['plan_sub_type' => 'annual']);
+                        $monthlyPricePlan = ($plan->monthly_price_cents ?? 0) / 100;
+                        $annualPricePlan  = ($plan->annual_price_cents  ?? 0) / 100;
+                        $annualMonthlyEquiv = $annualPricePlan ? number_format($annualPricePlan / 12, 2) : null;
+                        $annualSaving = ($monthlyPricePlan && $annualPricePlan)
+                            ? (int) round(($monthlyPricePlan * 12) - $annualPricePlan)
+                            : null;
+                    @endphp
+                    <div class="bg-white border border-gray-200 rounded-xl shadow p-6">
+                        <p class="text-sm font-semibold text-gray-700 mb-3">نوع الاشتراك</p>
+                        <div class="flex gap-3 flex-wrap">
+                            <a href="{{ $monthlyUrl }}"
+                                class="flex-1 min-w-[140px] rounded-xl border-2 px-4 py-3 text-center transition
+                                    {{ $plan_sub_type === 'monthly'
+                                        ? 'border-[#240B36] bg-white shadow-sm'
+                                        : 'border-gray-200 bg-white/60 hover:border-gray-300' }}">
+                                <div class="font-bold text-[#240B36]">شهري</div>
+                                @if ($monthlyPricePlan)
+                                    <div class="text-sm text-gray-600 mt-0.5">${{ number_format($monthlyPricePlan, 2) }}/شهر</div>
+                                @endif
+                            </a>
+                            @if ($annualPricePlan)
+                                <a href="{{ $annualUrl }}"
+                                    class="flex-1 min-w-[140px] rounded-xl border-2 px-4 py-3 text-center transition relative
+                                        {{ $plan_sub_type === 'annual'
+                                            ? 'border-[#240B36] bg-white shadow-sm'
+                                            : 'border-gray-200 bg-white/60 hover:border-gray-300' }}">
+                                    @if ($annualSaving)
+                                        <span class="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                            وفّر ${{ $annualSaving }}
+                                        </span>
+                                    @endif
+                                    <div class="font-bold text-[#240B36]">سنوي</div>
+                                    <div class="text-sm text-gray-600 mt-0.5">
+                                        @if ($annualMonthlyEquiv)
+                                            ${{ $annualMonthlyEquiv }}/شهر — مدفوع سنوياً
+                                        @else
+                                            ${{ number_format($annualPricePlan, 2) }}/سنة
+                                        @endif
+                                    </div>
+                                </a>
+                            @endif
                         </div>
-                    </div>
-                    <div class="flex items-center gap-3 step" data-index="1">
-                        <div
-                            class="h-9 w-9 rounded-full grid place-items-center border-2 border-gray-200 text-gray-500 font-extrabold step-circle">
-                            2</div>
-                        <div class="text-sm">المراجعة والدفع</div>
-                    </div>
-                @else
-                    <div class="flex items-center gap-3 step" data-index="0">
-                        <div
-                            class="h-9 w-9 rounded-full grid place-items-center border-2 border-[#240B36] text-[#240B36] font-extrabold step-circle">
-                            1</div>
-                        <div class="text-sm">المراجعة والدفع</div>
                     </div>
                 @endif
-            </div>
-        </div>
-    </section>
 
-    <!-- ===== الصفحة 1: الدومين ===== -->
-    <main id="view-domain"
-        class="{{ $requires_domain_selection ? '' : 'hidden ' }}max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- العمود الرئيسي -->
-            <div
-                class="lg:col-span-2 bg-white border border-gray-200 rounded-xl shadow p-6">
-                <h1 class="text-2xl font-extrabold mb-1">احجز اسم النطاق</h1>
-                <p class="text-gray-600 mb-6">ابدأ باختيار طريقة ربط اسم النطاق بموقعك الجديد.</p>
+                {{-- بطاقة: الدومين --}}
+                @if ($requires_domain_selection)
+                    <div id="domain-card" class="bg-white border border-gray-200 rounded-xl shadow p-6">
+                        {{-- شارة تأكيد الدومين (مخفية حتى يختار المستخدم) --}}
+                        <div id="domainConfirmedBadge" class="hidden mb-4 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                            <span class="text-emerald-500 text-xl font-bold">✓</span>
+                            <span class="text-sm font-semibold text-emerald-800">النطاق المختار: <span id="confirmedDomainName" class="font-bold text-[#240B36]"></span></span>
+                            <button type="button" id="changeDomain" class="ms-auto text-xs text-gray-500 underline hover:text-gray-800">تغيير</button>
+                        </div>
+                        {{-- منطقة اختيار الدومين --}}
+                        <div id="domainSelectionArea">
+                            <h2 class="text-xl font-extrabold mb-1">حجز النطاق</h2>
+                            <p class="text-gray-600 mb-6">اختر طريقة ربط اسم النطاق بموقعك الجديد.</p>
+                            <!-- Tabs -->
+                            <div role="tablist" aria-label="طرق الدومين" class="flex gap-2 mb-6">
+                                <button data-tab="register" role="tab" aria-controls="tab-register" aria-selected="true"
+                                    class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-primary/80 hover:text-white hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
+                                    تسجيل جديد
+                                </button>
+                                <button data-tab="transfer" role="tab" aria-controls="tab-transfer" aria-selected="false"
+                                    class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-primary/80 hover:text-white hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
+                                    نقل نطاق
+                                </button>
+                                <button data-tab="owndomain" role="tab" aria-controls="tab-owndomain" aria-selected="false"
+                                    class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-primary/80 hover:text-white hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
+                                    أمتلك نطاقاً
+                                </button>
+                                <button data-tab="subdomain" role="tab" aria-controls="tab-subdomain" aria-selected="false"
+                                    class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-primary/80 hover:text-white hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
+                                    Subdomain مجاني
+                                </button>
+                            </div>
+                            <!-- Register -->
+                            <form id="tab-register" class="space-y-4" role="tabpanel" method="POST" action="{{ $processActionUrl }}">
+                                @csrf
+                                <div class="flex gap-2">
+                                    <input aria-label="اسم النطاق" placeholder="example"
+                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
+                                    <select aria-label="الامتداد"
+                                        class="w-40 rounded-xl border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                        <option>.com</option>
+                                        <option>.net</option>
+                                        <option>.org</option>
+                                    </select>
+                                    <button type="button" id="btnCheck"
+                                        class="inline-flex items-center justify-center rounded-xl px-4 py-2 font-semibold border border-gray-300 text-gray-800 bg-white hover:bg-gray-50 active:scale-95 transition">
+                                        تحقق
+                                    </button>
+                                </div>
+                                <div id="checkResult" class="min-h-6 text-sm"></div>
+                                <div class="flex items-center justify-between pt-2">
+                                    <div class="text-xs text-gray-500">سعر التسجيل السنوي: <span id="tldPrice" class="font-semibold">—</span></div>
+                                    <button type="button" id="goConfigR"
+                                        class="inline-flex items-center justify-center rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">
+                                        تأكيد النطاق ↓
+                                    </button>
+                                </div>
+                                <p id="hintR" class="mt-2 text-xs text-amber-600 hidden">يرجى إدخال اسم النطاق أولاً قبل المتابعة.</p>
+                            </form>
+                            <!-- Transfer -->
+                            <form id="tab-transfer" class="space-y-4 hidden" role="tabpanel" method="POST" action="{{ $processActionUrl }}">
+                                @csrf
+                                <div class="flex gap-2">
+                                    <input aria-label="اسم النطاق" placeholder="example.com"
+                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
+                                    <input aria-label="رمز النقل" placeholder="Auth Code"
+                                        class="w-48 rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
+                                </div>
+                                <div class="flex items-center justify-end pt-2">
+                                    <button type="button" id="goConfigT"
+                                        class="rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">تأكيد النطاق ↓</button>
+                                </div>
+                                <p id="hintT" class="mt-2 text-xs text-amber-600 hidden">يرجى إدخال اسم النطاق المراد نقله قبل المتابعة.</p>
+                            </form>
+                            <!-- Own Domain -->
+                            <form id="tab-owndomain" class="space-y-4 hidden" role="tabpanel" method="POST" action="{{ $processActionUrl }}">
+                                @csrf
+                                <div class="flex gap-2">
+                                    <input aria-label="اسم النطاق" placeholder="example.com"
+                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
+                                </div>
+                                <p class="text-xs text-gray-500">سنوفر لك سجلات DNS لتوجيه نطاقك إلى خوادمنا بعد الدفع.</p>
+                                <div class="flex items-center justify-end pt-2">
+                                    <button type="button" id="goConfigO"
+                                        class="rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">تأكيد النطاق ↓</button>
+                                </div>
+                                <p id="hintO" class="mt-2 text-xs text-amber-600 hidden">يرجى إدخال اسم النطاق الذي تملكه قبل المتابعة.</p>
+                            </form>
+                            <!-- Subdomain -->
+                            <form id="tab-subdomain" class="space-y-4 hidden" role="tabpanel" method="POST" action="{{ $processActionUrl }}">
+                                @csrf
+                                <div class="flex gap-2 items-stretch">
+                                    <input aria-label="اسم الساب-دومين" placeholder="myshop"
+                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
+                                    <div class="flex items-center text-gray-500 px-2">.</div>
+                                    <select aria-label="الدومين الأساسي"
+                                        class="w-56 rounded-xl border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                        <option>{{ $tenantBaseDomain }}</option>
+                                    </select>
+                                </div>
+                                <p class="text-xs text-gray-500">سنوفر لك Subdomain مجاني لبدء مشروعك بسرعة (يمكن الترقيه لاحقاً لدومين مستقل).</p>
+                                <div class="flex items-center justify-between pt-2">
+                                    <div class="text-xs text-gray-500">التكلفة: <span class="font-semibold">$0.00</span></div>
+                                    <button type="button" id="goConfigS"
+                                        class="rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">تأكيد النطاق ↓</button>
+                                </div>
+                                <p id="hintS" class="mt-2 text-xs text-amber-600 hidden">يرجى إدخال اسم الساب-دومين قبل المتابعة.</p>
+                            </form>
+                        </div>
+                    </div>
+                @endif
 
-                <!-- Tabs -->
-                <div role="tablist" aria-label="طرق الدومين" class="flex gap-2 mb-6">
-                    <button data-tab="register" role="tab" aria-controls="tab-register" aria-selected="true"
-                        class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-primary/80 hover:text-white hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
-                        تسجيل جديد
-                    </button>
-                    <button data-tab="transfer" role="tab" aria-controls="tab-transfer" aria-selected="false"
-                        class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-primary/80 hover:text-white hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
-                        نقل نطاق
-                    </button>
-                    <button data-tab="owndomain" role="tab" aria-controls="tab-owndomain" aria-selected="false"
-                        class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-primary/80 hover:text-white hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
-                        أمتلك نطاقاً
-                    </button>
-                    <button data-tab="subdomain" role="tab" aria-controls="tab-subdomain" aria-selected="false"
-                        class="px-4 py-2 rounded-xl border border-gray-300 text-gray-700 bg-white hover:bg-primary/80 hover:text-white hover:border-[#240B36]/40 transition-colors aria-selected:bg-primary/80 aria-selected:text-white aria-selected:border-[#240B36]/40 aria-selected:ring-2 aria-selected:ring-[#240B36]/30 aria-selected:shadow-sm">
-                        Subdomain مجاني
-                    </button>
+                {{-- بطاقة: تفاصيل الطلب --}}
+                <div class="bg-white border border-gray-200 rounded-xl shadow p-6">
+                    <h2 class="text-xl font-extrabold mb-4">تفاصيل الطلب</h2>
+                    @if (! $requires_domain_selection)
+                        <div class="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                            سيتم توليد Subdomain تلقائياً بعد الدفع إذا لم تضف دوميناً مع الطلب.
+                        </div>
+                    @endif
+                    <div class="overflow-hidden rounded-xl border border-gray-200 mb-4">
+                        <div class="flex items-center justify-between p-3">
+                            <div class="text-sm text-gray-500">يمكنك إزالة عنصر أو إفراغ السلة قبل الدفع.</div>
+                            <button type="button" id="btnClearCart"
+                                class="px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-300 bg-white hover:bg-gray-50">إفراغ السلة</button>
+                        </div>
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-100 text-gray-700">
+                                <tr>
+                                    <th class="text-right p-3">البند</th>
+                                    <th class="text-right p-3">المدة</th>
+                                    <th class="text-right p-3">السعر</th>
+                                    <th class="text-right p-3">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reviewDomainsBody">
+                                <tr class="border-t border-gray-200 hidden rv-domain-row" id="reviewDomainProto">
+                                    <td class="p-3">تسجيل نطاق <span class="rv-domain">—</span></td>
+                                    <td class="p-3">12 شهر</td>
+                                    <td class="p-3 rv-price">0</td>
+                                    <td class="p-3">
+                                        <button type="button"
+                                            class="rv-remove px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200"
+                                            data-domain="">حذف</button>
+                                    </td>
+                                </tr>
+                                @if ($template)
+                                    <tr class="border-t border-gray-200 rv-template-row">
+                                        <td class="p-3">القالب: <span class="font-semibold">{{ $translation && $translation->name ? $translation->name : ($template && $template->name ? $template->name : '—') }}</span></td>
+                                        <td class="p-3">12 شهر</td>
+                                        <td class="p-3">
+                                            @if ($showDiscount)
+                                                <span class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
+                                                <span class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
+                                            @else
+                                                ${{ number_format($basePrice, 2) }}
+                                            @endif
+                                        </td>
+                                        <td class="p-3">
+                                            <button type="button" id="btnRemoveTemplate"
+                                                class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200">حذف القالب</button>
+                                        </td>
+                                    </tr>
+                                @endif
+                                @if ($plan)
+                                    <tr class="border-t border-gray-200 rv-template-row">
+                                        <td class="p-3">الخطة: <span class="font-semibold">{{ $plan_translation && $plan_translation->name ? $plan_translation->name : ($plan && $plan->name ? $plan->name : '—') }}</span></td>
+                                        <td class="p-3">{{ $plan_sub_type === 'monthly' ? 'شهري' : 'سنوي' }}</td>
+                                        <td class="p-3">
+                                            @if ($plan_sub_type === 'annual' && $plan->annual_price_cents)
+                                                ${{ number_format($plan->annual_price_cents / 100, 2) }}/سنة
+                                            @elseif ($plan->monthly_price_cents)
+                                                ${{ number_format($plan->monthly_price_cents / 100, 2) }}/شهر
+                                            @else
+                                                —
+                                            @endif
+                                        </td>
+                                        <td class="p-3">
+                                            <button type="button" id="btnRemovePlan"
+                                                class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200">حذف الخطة</button>
+                                        </td>
+                                    </tr>
+                                @endif
+                            </tbody>
+                        </table>
+                    </div>
+                    @if (!$template && !$plan)
+                        <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 mb-4">
+                            <div class="font-bold text-amber-800 mb-1">تحجز دومين فقط؟</div>
+                            <p class="text-sm text-amber-700">يمكنك إتمام الحجز الآن أو اختيار قالب لبدء موقعك بسرعة. او خطة</p>
+                            <div class="mt-3 flex gap-2">
+                                <a id="chooseTemplateLink" href="/templates"
+                                    class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار قالب</a>
+                                <button type="button"
+                                    class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 bg-white">إكمال بدون قالب</button>
+                                <button type="button" id="btnChoosePlan"
+                                    class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 bg-white">إكمال بدون خطة</button>
+                            </div>
+                        </div>
+                    @endif
+                    <div id="chooseTemplateAfterRemove" class="hidden rounded-xl border border-amber-300 bg-amber-50 p-4">
+                        <div class="font-bold text-amber-800 mb-1">تم حذف القالب والخطة.</div>
+                        <p class="text-sm text-amber-700">هل تريد اختيار قالب او خطة للموقع قبل الدفع؟</p>
+                        <div class="mt-3 flex gap-2">
+                            <a id="chooseTemplateLink2" href="/templates"
+                                class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار قالب</a>
+                            <a href="/plans"
+                                class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار خطة</a>
+                            <button type="button"
+                                class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 bg-white">إكمال بدون قالب</button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Register -->
-                <form id="tab-register" class="space-y-4" role="tabpanel" method="POST"
-                    action="{{ $processActionUrl }}">
-                    @csrf
-                    <div class="flex gap-2">
-                        <input aria-label="اسم النطاق" placeholder="example"
-                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
-                        <select aria-label="الامتداد"
-                            class="w-40 rounded-xl border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
-                            <option>.com</option>
-                            <option>.net</option>
-                            <option>.org</option>
-                        </select>
-                        <button type="button" id="btnCheck"
-                            class="inline-flex items-center justify-center rounded-xl px-4 py-2 font-semibold border border-gray-300 text-gray-800 bg-white hover:bg-gray-50 active:scale-95 transition">
-                            تحقق
-                        </button>
-                    </div>
-                    <div id="checkResult" class="min-h-6 text-sm"></div>
-                    <div class="flex items-center justify-between pt-2">
-                        <div class="text-xs text-gray-500">سعر التسجيل السنوي: <span id="tldPrice"
-                                class="font-semibold">—</span>
+                {{-- بطاقة: بيانات الحساب --}}
+                <div class="bg-white border border-gray-200 rounded-xl shadow p-6">
+                    <h3 class="text-lg font-bold mb-4">بيانات الحساب</h3>
+                    @if (session('success') && !request()->ajax() && !request()->wantsJson())
+                        <div class="mb-4 p-3 rounded-xl bg-green-100 border border-green-300 text-green-800 font-bold text-center">
+                            {{ session('success') }}
                         </div>
-                        <button type="button" id="goConfigR"
-                            class="inline-flex items-center justify-center rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">
-                            متابعة
-                        </button>
-                    </div>
-                    <p id="hintR" class="mt-2 text-xs text-amber-600 hidden">يرجى إدخال اسم النطاق أولاً قبل
-                        المتابعة.</p>
-                </form>
+                    @endif
+                    @if ($errors->any())
+                        <div class="mb-4 p-3 rounded-xl bg-red-100 border border-red-300 text-red-800">
+                            <ul class="list-disc ps-5">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+                    @if (auth('client')->check())
+                        <div class="p-4 rounded-xl bg-green-50 border border-green-200 text-green-900">
+                            <div class="font-bold mb-1">مرحباً، {{ auth('client')->user()->first_name }} {{ auth('client')->user()->last_name }}</div>
+                            <div class="text-sm mb-2">البريد: {{ auth('client')->user()->email }}</div>
+                            <button type="button" id="toggleLogout" class="text-xs text-gray-700 underline hover:text-gray-900">تبديل الحساب</button>
+                            <form id="logoutInline" class="hidden" method="POST" action="{{ route('client.logout') }}" style="display:inline">
+                                @csrf
+                                <input type="hidden" name="redirect_to" value="{{ request()->fullUrl() }}">
+                                <button type="submit" class="text-sm text-red-700 underline hover:text-red-900 font-bold bg-transparent border-0 p-0 cursor-pointer">تسجيل بحساب آخر</button>
+                            </form>
+                        </div>
+                    @else
+                        <div role="tablist" aria-label="حساب العميل"
+                            class="inline-flex rounded-xl bg-gray-50 p-1 mb-6 shadow border border-gray-200 gap-2">
+                            <button id="btn-login" type="button" role="tab" aria-controls="login-form"
+                                aria-selected="true" data-auth-tab="login"
+                                class="px-5 py-1.5 rounded-xl text-sm font-bold bg-white text-[#240B36] border border-transparent hover:bg-[#240B36] hover:text-white focus:outline-none aria-selected:bg-[#240B36] aria-selected:text-white aria-selected:shadow-sm aria-selected:ring-2 aria-selected:ring-[#240B36]/30">
+                                دخول العميل
+                            </button>
+                            <button id="btn-register" type="button" role="tab" aria-controls="register-form"
+                                aria-selected="false" data-auth-tab="register"
+                                class="px-5 py-1.5 rounded-xl text-sm font-bold bg-white text-[#240B36] border border-transparent hover:bg-[#240B36] hover:text-white focus:outline-none aria-selected:bg-[#240B36] aria-selected:text-white aria-selected:shadow-sm aria-selected:ring-2 aria-selected:ring-[#240B36]/30">
+                                إنشاء حساب جديد
+                            </button>
+                        </div>
+                        <form id="login-form" class="mb-2" role="tabpanel" method="POST" action="{{ route('client.login.store') }}">
+                            @csrf
+                            <input type="hidden" name="redirect_to" value="{{ request()->fullUrl() }}">
+                            <div class="grid md:grid-cols-3 gap-4 items-end">
+                                <div>
+                                    <label class="text-sm font-medium mb-1 block">البريد الإلكتروني *</label>
+                                    <input type="email" name="email"
+                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 h-12 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                        placeholder="example@domain.com" required />
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium mb-1 block">كلمة المرور *</label>
+                                    <input type="password" name="password"
+                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 h-12 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                        placeholder="••••••" required />
+                                </div>
+                                <div class="pt-6">
+                                    <button type="submit"
+                                        class="rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm h-12">تسجيل الدخول</button>
+                                </div>
+                            </div>
+                            <p id="loginMsg" class="mt-2 text-xs text-amber-600"></p>
+                        </form>
+                        <div id="clientInfoAjax" class="hidden mb-6 p-4 rounded-xl bg-green-50 border border-green-200 text-green-900">
+                            <div class="font-bold mb-1">مرحباً، <span id="clientFirst"></span> <span id="clientLast"></span></div>
+                            <div class="text-sm mb-2">البريد: <span id="clientEmail"></span></div>
+                        </div>
+                        <form id="register-form" class="space-y-6 mb-6 hidden" role="tabpanel" onsubmit="return false;">
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">الاسم الأول *</label>
+                                    <input name="first_name" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" placeholder="محمد" required />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">الاسم الأخير *</label>
+                                    <input name="last_name" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" placeholder="أحمد" required />
+                                </div>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">رقم الجوال *</label>
+                                    <div class="flex gap-2">
+                                        <select id="registerPhoneCountryCode" class="w-32 rounded-xl border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" aria-label="Country calling code">
+                                            <option value="+970" selected>PS +970</option>
+                                            <option value="+962">JO +962</option>
+                                            <option value="+966">SA +966</option>
+                                            <option value="+971">AE +971</option>
+                                            <option value="+20">EG +20</option>
+                                            <option value="+965">KW +965</option>
+                                            <option value="+974">QA +974</option>
+                                            <option value="+973">BH +973</option>
+                                            <option value="+968">OM +968</option>
+                                            <option value="+90">TR +90</option>
+                                            <option value="+1">US +1</option>
+                                        </select>
+                                        <input id="registerPhoneLocal" type="tel" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" placeholder="590000000" inputmode="tel" autocomplete="tel-national" required />
+                                    </div>
+                                    <input type="hidden" name="phone" id="registerPhoneFull" value="">
+                                    <p class="mt-1 text-xs text-gray-500">سيتم حفظ الرقم مع مفتاح الدولة المختار.</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">البريد الإلكتروني *</label>
+                                    <input type="email" name="email" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" placeholder="you@example.com" required />
+                                </div>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">كلمة المرور *</label>
+                                    <input type="password" name="password" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" placeholder="••••••" required />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">تأكيد كلمة المرور *</label>
+                                    <input type="password" name="password_confirmation" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" placeholder="••••••" required />
+                                </div>
+                            </div>
+                        </form>
+                    @endif
+                </div>
 
-                <!-- Transfer -->
-                <form id="tab-transfer" class="space-y-4 hidden" role="tabpanel" method="POST"
-                    action="{{ $processActionUrl }}">
-                    @csrf
-                    <div class="flex gap-2">
-                        <input aria-label="اسم النطاق" placeholder="example.com"
-                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
-                        <input aria-label="رمز النقل" placeholder="Auth Code"
-                            class="w-48 rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
+                {{-- بطاقة: الدفع --}}
+                <div id="payment-card" class="bg-white border border-gray-200 rounded-xl shadow p-6">
+                    <div class="border border-gray-200 rounded-xl p-4" id="paymentBox">
+                        <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <h3 class="font-bold">طريقة الدفع</h3>
+                                <p class="mt-1 text-sm text-gray-500">
+                                    أدخل بيانات الدفع لإكمال الطلب. سنجري تحققاً فورياً من صحة الحقول قبل الإرسال.
+                                </p>
+                            </div>
+                            <span class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                                اتصال آمن
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                            <label data-gateway-option="card"
+                                class="border border-gray-200 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition hover:border-[#240B36]/30 hover:bg-[#240B36]/[0.03]">
+                                <input type="radio" name="gateway" value="card" class="scale-110" checked>
+                                <span>بطاقة ائتمانية</span>
+                                <span id="gatewayCardMeta" class="ms-auto text-xs text-gray-500">Visa / MasterCard</span>
+                            </label>
+                            <label data-gateway-option="bank"
+                                class="border border-gray-200 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition hover:border-[#240B36]/30 hover:bg-[#240B36]/[0.03]">
+                                <input type="radio" name="gateway" value="bank" class="scale-110">
+                                <span>تحويل بنكي</span>
+                                <span class="ms-auto text-xs text-gray-500">تأكيد يدوي</span>
+                            </label>
+                        </div>
+                        <!-- نموذج بطاقة ائتمانية -->
+                        <form id="cardForm" class="space-y-4">
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">رقم البطاقة *</label>
+                                    <div class="relative">
+                                        <input id="ccNumber" inputmode="numeric" autocomplete="cc-number"
+                                            placeholder="4242 4242 4242 4242" maxlength="23"
+                                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 ltr:pr-24 rtl:pl-24 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                        <span id="ccBrandBadge"
+                                            class="pointer-events-none absolute inset-y-0 my-auto flex h-8 items-center rounded-full bg-gray-100 px-3 text-xs font-semibold text-gray-500 ltr:right-3 rtl:left-3">
+                                            Card
+                                        </span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">اسم حامل البطاقة *</label>
+                                    <input id="ccName" autocomplete="cc-name" placeholder="Mohammed A."
+                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                </div>
+                            </div>
+                            <div class="grid md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">تاريخ الانتهاء *</label>
+                                    <input id="ccExp" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY"
+                                        maxlength="5"
+                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">CVV *</label>
+                                    <input id="ccCvv" inputmode="numeric" autocomplete="cc-csc" placeholder="123"
+                                        maxlength="4"
+                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                </div>
+                                <div class="flex items-end">
+                                    <div id="ccHint" class="text-xs text-gray-500">
+                                        أدخل بطاقة صالحة وسنوضح لك نوع البطاقة وحالة التحقق فوراً.
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        <!-- نموذج تحويل بنكي -->
+                        <form id="bankForm" class="space-y-4 hidden">
+                            <div class="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-800">
+                                سيتم وضع الطلب بانتظار المراجعة حتى يتم تأكيد التحويل البنكي يدوياً.
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">البنك المحوَّل إليه</label>
+                                    <input value="Bank of Palestine - IBAN: PS00 PALS 0000 0000 0000 0000" readonly
+                                        class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">رقم المعاملة *</label>
+                                    <input id="bankRef" placeholder="TRX-123456" maxlength="40"
+                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">ملاحظة (اختياري)</label>
+                                <textarea id="bankNote" rows="3"
+                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
+                                    placeholder="ارفق أي تفاصيل مهمة عن التحويل..."></textarea>
+                            </div>
+                            <p id="bankHint" class="text-xs text-gray-500">
+                                أدخل المرجع البنكي كما يظهر في إيصال التحويل لتمكين المراجعة السريعة.
+                            </p>
+                        </form>
+                        <div class="mt-4 flex items-start gap-2">
+                            <input id="agreeTos" type="checkbox" class="mt-1">
+                            <label for="agreeTos" class="text-sm text-gray-700">أوافق على <a href="#" class="underline">الشروط والأحكام</a> وسياسة الخصوصية.</label>
+                        </div>
                     </div>
-                    <div class="flex items-center justify-end pt-2">
-                        <button type="button" id="goConfigT"
-                            class="rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">متابعة</button>
-                    </div>
-                    <p id="hintT" class="mt-2 text-xs text-amber-600 hidden">يرجى إدخال اسم النطاق المراد نقله قبل
-                        المتابعة.</p>
-                </form>
 
-                <!-- Own Domain -->
-                <form id="tab-owndomain" class="space-y-4 hidden" role="tabpanel" method="POST"
-                    action="{{ $processActionUrl }}">
-                    @csrf
-                    <div class="flex gap-2">
-                        <input aria-label="اسم النطاق" placeholder="example.com"
-                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
-                    </div>
-                    <p class="text-xs text-gray-500">سنوفر لك سجلات DNS لتوجيه نطاقك إلى خوادمنا بعد الدفع.</p>
-                    <div class="flex items-center justify-end pt-2">
-                        <button type="button" id="goConfigO"
-                            class="rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">متابعة</button>
-                    </div>
-                    <p id="hintO" class="mt-2 text-xs text-amber-600 hidden">يرجى إدخال اسم النطاق الذي تملكه قبل
-                        المتابعة.</p>
-                </form>
+                    <form id="checkoutForm" method="POST" action="{{ $processActionUrl }}">
+                        @csrf
+                        <input type="hidden" name="gateway" id="selectedGateway" value="card">
+                        <input type="hidden" name="bank_reference" id="selectedBankReference" value="">
+                        <input type="hidden" name="domain" id="orderDomainInput" value="">
+                        <input type="hidden" name="total" id="orderTotalInput" value="">
+                        <input type="hidden" name="total_cents" id="orderTotalCents" value="">
+                        {{-- ADR-008 Phase 3: coupon code — validated server-side on submit --}}
+                        <input type="hidden" name="coupon_code" id="couponCodeHidden" value="">
+                        <div id="registerFieldsBox"></div>
+                        <div class="flex items-center justify-end gap-3 mt-6">
+                            <button id="placeOrderReal" type="submit" disabled
+                                class="inline-flex items-center justify-center rounded-xl px-6 py-3 font-semibold text-white bg-[#240B36] opacity-50 cursor-not-allowed transition shadow-sm">إتمام الطلب</button>
+                        </div>
+                    </form>
+                </div>
 
-                <!-- Subdomain (مجاني) -->
-                <form id="tab-subdomain" class="space-y-4 hidden" role="tabpanel" method="POST"
-                    action="{{ $processActionUrl }}">
-                    @csrf
-                    <div class="flex gap-2 items-stretch">
-                        <input aria-label="اسم الساب-دومين" placeholder="myshop"
-                            class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20" />
-                        <div class="flex items-center text-gray-500 px-2">.</div>
-                        <select aria-label="الدومين الأساسي"
-                            class="w-56 rounded-xl border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
-                            <option>{{ $tenantBaseDomain }}</option>
-                        </select>
-                    </div>
-                    <p class="text-xs text-gray-500">سنوفر لك Subdomain مجاني لبدء مشروعك بسرعة (يمكن الترقيه لاحقاً
-                        لدومين
-                        مستقل).</p>
-                    <div class="flex items-center justify-between pt-2">
-                        <div class="text-xs text-gray-500">التكلفة: <span class="font-semibold">$0.00</span></div>
-                        <button type="button" id="goConfigS"
-                            class="rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm">متابعة</button>
-                    </div>
-                    <p id="hintS" class="mt-2 text-xs text-amber-600 hidden">يرجى إدخال اسم الساب-دومين قبل
-                        المتابعة.</p>
-                </form>
             </div>
 
-            <!-- ملخص جانبي -->
-            <aside
-                class="bg-white border border-gray-200 rounded-xl shadow p-6 h-max">
-                <h3 class="font-bold mb-3">ملخص سريع</h3>
+            <!-- الملخص الجانبي -->
+            <aside class="bg-white border border-gray-200 rounded-xl shadow p-6 lg:sticky lg:top-6 h-max">
+                <h3 class="font-bold mb-3 text-lg">ملخص الطلب</h3>
                 <ul class="space-y-2 text-sm">
                     @if ($template)
-                        <li class="flex justify-between rv-template-info"><span>القالب</span><span
-                                class="font-semibold">{{ $translation && $translation->name ? $translation->name : ($template && $template->name ? $template->name : '—') }}</span>
-                        </li>
-                        <li class="flex justify-between rv-template-info"><span>مدة الاشتراك</span><span
-                                class="font-semibold">12
-                                شهر</span></li>
-                        <li class="flex justify-between rv-template-info"><span>سعر القالب</span><span
-                                class="font-semibold">
-                                @if ($showDiscount)
-                                    <span class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
-                                    <span
-                                        class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
-                                @else
-                                    ${{ number_format($basePrice, 2) }}
-                                @endif
-                            </span></li>
-                    @endif
-                    @if ($plan)
-                        <li class="flex justify-between rv-template-info"><span>الخطة</span><span
-                                class="font-semibold">{{ $plan && $plan->name ? $plan->name : '—' }}</span>
-                        </li>
-                        <li class="flex justify-between rv-template-info">
-                            <span>مدة الاشتراك</span>
-                            <span class="font-semibold">{{ $plan_sub_type === 'monthly' ? 'شهري' : 'سنوي' }}</span>
-                        </li>
-                        <li class="flex justify-between rv-template-info"><span>سعر الخطة</span><span
-                                class="font-semibold">
-                                ${{ number_format($basePricePlan, 2) }}
-                            </span></li>
-                    @endif
-                    <li class="flex justify-between"><span>الدومين</span><span id="summaryDomain"
-                            class="font-semibold">—</span>
-                    </li>
-                </ul>
-                <hr class="my-4 border-gray-200" />
-                <div class="flex justify-between font-bold"><span>الإجمالي التقديري</span><span id="summaryTotal">
-                        @if ($template)
+                        <li class="flex justify-between rv-template-info"><span>القالب</span><span class="font-semibold">{{ $translation && $translation->name ? $translation->name : ($template && $template->name ? $template->name : '—') }}</span></li>
+                        <li class="flex justify-between rv-template-info"><span>مدة الاشتراك</span><span class="font-semibold">12 شهر</span></li>
+                        <li class="flex justify-between rv-template-info"><span>سعر القالب</span><span class="font-semibold">
                             @if ($showDiscount)
                                 <span class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
                                 <span class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
                             @else
                                 ${{ number_format($basePrice, 2) }}
                             @endif
-                        @elseif ($plan)
-                            ${{ number_format($basePricePlan, 2) }}
-                        @else
-                            $0.00
-                        @endif
-
-                    </span></div>
-            </aside>
-        </div>
-    </main>
-
-    <!-- ===== الصفحة 2: المراجعة والدفع ===== -->
-    <section id="view-review"
-        class="{{ $requires_domain_selection ? 'hidden ' : '' }}max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-8">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div
-                class="lg:col-span-2 bg-white border border-gray-200 rounded-xl shadow p-6">
-                <h2 class="text-2xl font-extrabold mb-1">المراجعة والدفع</h2>
-                <p class="text-gray-600 mb-6">راجع التفاصيل واكمل إنشاء الحساب/الدخول ثم اختر طريقة
-                    الدفع.
-                </p>
-                @if (! $requires_domain_selection)
-                    <div
-                        class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                        سيتم توليد Subdomain تلقائياً بعد الدفع إذا لم تضف دوميناً مع الطلب.
-                    </div>
-                @endif
-
-                <div class="overflow-hidden rounded-xl border border-gray-200 mb-6">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="text-sm text-gray-500">يمكنك إزالة عنصر أو إفراغ السلة قبل الدفع.</div>
-                        <button type="button" id="btnClearCart"
-                            class="px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-300 bg-white hover:bg-gray-50">إفراغ
-                            السلة</button>
-                    </div>
-                    <table class="w-full text-sm">
-                        <thead class="bg-gray-100 text-gray-700">
-                            <tr>
-                                <th class="text-right p-3">البند</th>
-                                <th class="text-right p-3">المدة</th>
-                                <th class="text-right p-3">السعر</th>
-                                <th class="text-right p-3">إجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody id="reviewDomainsBody">
-                            <!-- يُملأ ديناميكياً من العناصر المتعددة -->
-                            <tr class="border-t border-gray-200 hidden rv-domain-row"
-                                id="reviewDomainProto">
-                                <td class="p-3">تسجيل نطاق <span class="rv-domain">—</span></td>
-                                <td class="p-3">12 شهر</td>
-                                <td class="p-3 rv-price">0</td>
-                                <td class="p-3">
-                                    <button type="button"
-                                        class="rv-remove px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200"
-                                        data-domain="">حذف</button>
-                                </td>
-                            </tr>
-                            @if ($template)
-                                <tr class="border-t border-gray-200 rv-template-row">
-                                    <td class="p-3">القالب: <span
-                                            class="font-semibold">{{ $translation && $translation->name ? $translation->name : ($template && $template->name ? $template->name : '—') }}</span>
-                                    </td>
-                                    <td class="p-3">12 شهر</td>
-                                    <td class="p-3">
-                                        @if ($showDiscount)
-                                            <span
-                                                class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
-                                            <span
-                                                class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
-                                        @else
-                                            ${{ number_format($basePrice, 2) }}
-                                        @endif
-                                    </td>
-                                    <td class="p-3">
-                                        <button type="button" id="btnRemoveTemplate"
-                                            class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200">حذف
-                                            القالب</button>
-                                    </td>
-                                </tr>
+                        </span></li>
+                    @endif
+                    @if ($plan)
+                        <li class="flex justify-between rv-template-info"><span>الخطة</span><span class="font-semibold">{{ $plan && $plan->name ? $plan->name : '—' }}</span></li>
+                        <li class="flex justify-between rv-template-info"><span>مدة الاشتراك</span><span class="font-semibold">{{ $plan_sub_type === 'monthly' ? 'شهري' : 'سنوي' }}</span></li>
+                        <li class="flex justify-between rv-template-info"><span>سعر الخطة</span><span class="font-semibold">
+                            @if ($plan_sub_type === 'annual' && $plan->annual_price_cents)
+                                ${{ number_format($plan->annual_price_cents / 100, 2) }}/سنة
+                            @elseif ($plan->monthly_price_cents)
+                                ${{ number_format($plan->monthly_price_cents / 100, 2) }}/شهر
+                            @else
+                                —
                             @endif
-                            @if ($plan)
-                                <tr class="border-t border-gray-200 rv-template-row">
-                                    <td class="p-3">الخطة: <span
-                                            class="font-semibold">{{ $plan_translation && $plan_translation->name ? $plan_translation->name : ($plan && $plan->name ? $plan->name : '—') }}</span>
-                                    </td>
-                                    <td class="p-3">
-                                        {{ $plan_sub_type === 'monthly' ? 'شهري' : 'سنوي' }}
-                                    </td>
-                                    <td class="p-3">
-                                        ${{ number_format($basePricePlan, 2) }}
-                                    </td>
-                                    <td class="p-3">
-                                        <button type="button" id="btnRemovePlan"
-                                            class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200">حذف
-                                            الخطة</button>
-                                    </td>
-                                </tr>
-                            @endif
-                        </tbody>
-                    </table>
-                </div>
-
-                @if (!$template && !$plan)
-                    <div
-                        class="rounded-xl border border-amber-300 bg-amber-50 p-4 mb-6">
-                        <div class="font-bold text-amber-800 mb-1">تحجز دومين فقط؟</div>
-                        <p class="text-sm text-amber-700">يمكنك إتمام الحجز الآن أو اختيار قالب
-                            لبدء موقعك بسرعة. او خطة</p>
-                        <div class="mt-3 flex gap-2">
-                            <a id="chooseTemplateLink" href="/templates"
-                                class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار
-                                قالب</a>
-                            <button type="button"
-                                class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 bg-white">إكمال
-                                بدون قالب</button>
-                            <button type="button" id="btnChoosePlan"
-                                class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 bg-white">إكمال
-                                بدون خطة</button>
-                        </div>
-                    </div>
-                @endif
-
-                <!-- يظهر بعد حذف القالب أثناء الجلسة الحالية -->
-                <div id="chooseTemplateAfterRemove"
-                    class="hidden rounded-xl border border-amber-300 bg-amber-50 p-4 mb-6">
-                    <div class="font-bold text-amber-800 mb-1">تم حذف القالب والخطة.</div>
-                    <p class="text-sm text-amber-700">هل تريد اختيار قالب او خطة للموقع قبل الدفع؟
-                    </p>
-                    <div class="mt-3 flex gap-2">
-                        <a id="chooseTemplateLink2" href="/templates"
-                            class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار
-                            قالب</a>
-                        <a id="chooseTemplateLink2" href="/plans"
-                            class="px-4 py-2 rounded-xl text-sm font-semibold bg-[#240B36] text-white hover:opacity-95">اختيار
-                            خطة</a>
-                        <button type="button"
-                            class="px-4 py-2 rounded-xl text-sm font-semibold border border-gray-300 bg-white">إكمال
-                            بدون قالب</button>
-                    </div>
-                </div>
-
-                @if (!auth('client')->check())
-                    <!-- تبديل الدخول/التسجيل (Tabs) -->
-                    <div role="tablist" aria-label="حساب العميل"
-                        class="inline-flex rounded-xl bg-gray-50 p-1 mb-6 shadow border border-gray-200 gap-2">
-                        <button id="btn-login" type="button" role="tab" aria-controls="login-form"
-                            aria-selected="true" data-auth-tab="login"
-                            class="px-5 py-1.5 rounded-xl text-sm font-bold bg-white text-[#240B36] border border-transparent hover:bg-[#240B36] hover:text-white focus:outline-none aria-selected:bg-[#240B36] aria-selected:text-white aria-selected:shadow-sm aria-selected:ring-2 aria-selected:ring-[#240B36]/30">
-                            دخول العميل
-                        </button>
-                        <button id="btn-register" type="button" role="tab" aria-controls="register-form"
-                            aria-selected="false" data-auth-tab="register"
-                            class="px-5 py-1.5 rounded-xl text-sm font-bold bg-white text-[#240B36] border border-transparent hover:bg-[#240B36] hover:text-white focus:outline-none aria-selected:bg-[#240B36] aria-selected:text-white aria-selected:shadow-sm aria-selected:ring-2 aria-selected:ring-[#240B36]/30">
-                            إنشاء حساب جديد
-                        </button>
-                    </div>
-                @endif
-
-                <!-- رسائل الخطأ والنجاح -->
-                {{-- لا تظهر رسالة النجاح إذا كان الطلب عبر AJAX (شاشة النجاح ستظهر تلقائياً) --}}
-                @if (session('success') && !request()->ajax() && !request()->wantsJson())
-                    <div
-                        class="mb-4 p-3 rounded-xl bg-green-100 border border-green-300 text-green-800 font-bold text-center">
-                        {{ session('success') }}
-                    </div>
-                @endif
-                @if ($errors->any())
-                    <div class="mb-4 p-3 rounded-xl bg-red-100 border border-red-300 text-red-800">
-                        <ul class="list-disc ps-5">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-                @if (auth('client')->check())
-                    <!-- بيانات العميل بعد تسجيل الدخول -->
-                    <div class="mb-6 p-4 rounded-xl bg-green-50 border border-green-200 text-green-900">
-                        <div class="font-bold mb-1">مرحباً، {{ auth('client')->user()->first_name }}
-                            {{ auth('client')->user()->last_name }}</div>
-                        <div class="text-sm mb-2">البريد: {{ auth('client')->user()->email }}</div>
-                        <button type="button" id="toggleLogout"
-                            class="text-xs text-gray-700 underline hover:text-gray-900">تبديل الحساب</button>
-                        <form id="logoutInline" class="hidden" method="POST" action="{{ route('client.logout') }}"
-                            style="display:inline">
-                            @csrf
-                            <input type="hidden" name="redirect_to"
-                                value="{{ request()->fullUrlWithQuery(['review' => 1]) }}">
-                            <button type="submit"
-                                class="text-sm text-red-700 underline hover:text-red-900 font-bold bg-transparent border-0 p-0 cursor-pointer">تسجيل
-                                بحساب آخر</button>
-                        </form>
-                    </div>
-                @else
-                    <!-- نموذج الدخول -->
-
-                    <form id="login-form" class="mb-2" role="tabpanel" method="POST"
-                        action="{{ route('client.login.store') }}">
-                        @csrf
-                        <input type="hidden" name="redirect_to"
-                            value="{{ request()->fullUrlWithQuery(['review' => 1]) }}">
-                        <div class="grid md:grid-cols-3 gap-4 items-end">
-                            <div>
-                                <label class="text-sm font-medium mb-1 block">البريد الإلكتروني *</label>
-                                <input type="email" name="email"
-                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 h-12 outline-none focus:ring-4 focus:ring-[#240B36]/20"
-                                    placeholder="example@domain.com" required />
-                            </div>
-                            <div>
-                                <label class="text-sm font-medium mb-1 block">كلمة المرور *</label>
-                                <input type="password" name="password"
-                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 h-12 outline-none focus:ring-4 focus:ring-[#240B36]/20"
-                                    placeholder="••••••" required />
-                            </div>
-                            <div class="pt-6">
-                                <button type="submit"
-                                    class="rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] hover:opacity-95 active:scale-95 transition shadow-sm h-12">تسجيل
-                                    الدخول
-                                </button>
-                            </div>
-                        </div>
-                        <p id="loginMsg" class="mt-2 text-xs text-amber-600"></p>
-                    </form>
-                    <!-- يظهر بعد نجاح تسجيل الدخول عبر AJAX -->
-                    <div id="clientInfoAjax"
-                        class="hidden mb-6 p-4 rounded-xl bg-green-50 border border-green-200 text-green-900">
-                        <div class="font-bold mb-1">مرحباً، <span id="clientFirst"></span> <span
-                                id="clientLast"></span></div>
-                        <div class="text-sm mb-2">البريد: <span id="clientEmail"></span></div>
-                    </div>
-                    <!-- نموذج التسجيل -->
-                    <form id="register-form" class="space-y-6 mb-6 hidden" role="tabpanel" onsubmit="return false;">
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">الاسم الأول *</label>
-                                <input name="first_name"
-                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
-                                    placeholder="محمد" required />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">الاسم الأخير *</label>
-                                <input name="last_name"
-                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
-                                    placeholder="أحمد" required />
-                            </div>
-                        </div>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">رقم الجوال *</label>
-                                <div class="flex gap-2">
-                                    <select id="registerPhoneCountryCode"
-                                        class="w-32 rounded-xl border border-gray-300 bg-white px-3 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
-                                        aria-label="Country calling code">
-                                        <option value="+970" selected>PS +970</option>
-                                        <option value="+962">JO +962</option>
-                                        <option value="+966">SA +966</option>
-                                        <option value="+971">AE +971</option>
-                                        <option value="+20">EG +20</option>
-                                        <option value="+965">KW +965</option>
-                                        <option value="+974">QA +974</option>
-                                        <option value="+973">BH +973</option>
-                                        <option value="+968">OM +968</option>
-                                        <option value="+90">TR +90</option>
-                                        <option value="+1">US +1</option>
-                                    </select>
-                                    <input id="registerPhoneLocal" type="tel"
-                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
-                                        placeholder="590000000" inputmode="tel" autocomplete="tel-national" required />
-                                </div>
-                                <input type="hidden" name="phone" id="registerPhoneFull" value="">
-                                <p class="mt-1 text-xs text-gray-500">سيتم حفظ الرقم مع مفتاح الدولة المختار.</p>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">البريد الإلكتروني *</label>
-                                <input type="email" name="email"
-                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
-                                    placeholder="you@example.com" required />
-                            </div>
-                        </div>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">كلمة المرور *</label>
-                                <input type="password" name="password"
-                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
-                                    placeholder="••••••" required />
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">تأكيد كلمة المرور *</label>
-                                <input type="password" name="password_confirmation"
-                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
-                                    placeholder="••••••" required />
-                            </div>
-                        </div>
-                    </form>
-                @endif
-
-                <!-- الدفع (مُحسَّن) -->
-                <div class="border border-gray-200 rounded-xl p-4" id="paymentBox">
-                    <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            <h3 class="font-bold">طريقة الدفع</h3>
-                            <p class="mt-1 text-sm text-gray-500">
-                                أدخل بيانات الدفع لإكمال الطلب. سنجري تحققاً فورياً من صحة الحقول قبل الإرسال.
-                            </p>
-                        </div>
-                        <span
-                            class="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                            اتصال آمن
-                        </span>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                        <label
-                            data-gateway-option="card"
-                            class="border border-gray-200 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition hover:border-[#240B36]/30 hover:bg-[#240B36]/[0.03]">
-                            <input type="radio" name="gateway" value="card" class="scale-110" checked>
-                            <span>بطاقة ائتمانية</span>
-                            <span id="gatewayCardMeta" class="ms-auto text-xs text-gray-500">Visa / MasterCard</span>
-                        </label>
-                        <label
-                            data-gateway-option="bank"
-                            class="border border-gray-200 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition hover:border-[#240B36]/30 hover:bg-[#240B36]/[0.03]">
-                            <input type="radio" name="gateway" value="bank" class="scale-110">
-                            <span>تحويل بنكي</span>
-                            <span class="ms-auto text-xs text-gray-500">تأكيد يدوي</span>
-                        </label>
-                    </div>
-
-                    <!-- نموذج بطاقة ائتمانية -->
-                    <form id="cardForm" class="space-y-4">
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">رقم البطاقة *</label>
-                                <div class="relative">
-                                    <input id="ccNumber" inputmode="numeric" autocomplete="cc-number"
-                                        placeholder="4242 4242 4242 4242" maxlength="23"
-                                        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 ltr:pr-24 rtl:pl-24 outline-none focus:ring-4 focus:ring-[#240B36]/20">
-                                    <span id="ccBrandBadge"
-                                        class="pointer-events-none absolute inset-y-0 my-auto flex h-8 items-center rounded-full bg-gray-100 px-3 text-xs font-semibold text-gray-500 ltr:right-3 rtl:left-3">
-                                        Card
-                                    </span>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">اسم حامل البطاقة *</label>
-                                <input id="ccName" autocomplete="cc-name" placeholder="Mohammed A."
-                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
-                            </div>
-                        </div>
-                        <div class="grid md:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">تاريخ الانتهاء *</label>
-                                <input id="ccExp" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY"
-                                    maxlength="5"
-                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">CVV *</label>
-                                <input id="ccCvv" inputmode="numeric" autocomplete="cc-csc" placeholder="123"
-                                    maxlength="4"
-                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
-                            </div>
-                            <div class="flex items-end">
-                                <div id="ccHint" class="text-xs text-gray-500">
-                                    أدخل بطاقة صالحة وسنوضح لك نوع البطاقة وحالة التحقق فوراً.
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-
-                    <!-- نموذج تحويل بنكي -->
-                    <form id="bankForm" class="space-y-4 hidden">
-                        <div
-                            class="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-800">
-                            سيتم وضع الطلب بانتظار المراجعة حتى يتم تأكيد التحويل البنكي يدوياً.
-                        </div>
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">البنك المحوَّل إليه</label>
-                                <input value="Bank of Palestine - IBAN: PS00 PALS 0000 0000 0000 0000" readonly
-                                    class="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-2">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">رقم المعاملة *</label>
-                                <input id="bankRef" placeholder="TRX-123456" maxlength="40"
-                                    class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20">
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium mb-1">ملاحظة (اختياري)</label>
-                            <textarea id="bankNote" rows="3"
-                                class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
-                                placeholder="ارفق أي تفاصيل مهمة عن التحويل..."></textarea>
-                        </div>
-                        <p id="bankHint" class="text-xs text-gray-500">
-                            أدخل المرجع البنكي كما يظهر في إيصال التحويل لتمكين المراجعة السريعة.
-                        </p>
-                    </form>
-
-                    <div class="mt-4 flex items-start gap-2">
-                        <input id="agreeTos" type="checkbox" class="mt-1">
-                        <label for="agreeTos" class="text-sm text-gray-700">أوافق على <a
-                                href="#" class="underline">الشروط والأحكام</a> وسياسة الخصوصية.</label>
-                    </div>
-                </div>
-
-                <form id="checkoutForm" method="POST" action="{{ $processActionUrl }}">
-                    {{-- action="{{ $template_id ? route('checkout.process', ['template_id' => $template_id]) : route('checkout.cart.process') }}"> --}}
-                    @csrf
-                    <input type="hidden" name="gateway" id="selectedGateway" value="card">
-                    <input type="hidden" name="bank_reference" id="selectedBankReference" value="">
-                    <input type="hidden" name="domain" id="orderDomainInput" value="">
-                    <input type="hidden" name="total" id="orderTotalInput" value="">
-                    <input type="hidden" name="total_cents" id="orderTotalCents" value="">
-                    {{-- ADR-008 Phase 3: coupon code — validated server-side on submit --}}
-                    <input type="hidden" name="coupon_code" id="couponCodeHidden" value="">
-                    <!-- حقول التسجيل ستنسخ هنا عند اختيار إنشاء حساب جديد -->
-                    <div id="registerFieldsBox"></div>
-                    <div class="flex items-center justify-end gap-3 mt-6">
-                        @if ($requires_domain_selection)
-                            <button id="backToDomain2" type="button"
-                                class="rounded-xl px-4 py-2 font-semibold border border-gray-300 bg-white hover:bg-gray-50 active:scale-95 transition">رجوع</button>
-                        @endif
-                        <button id="placeOrderReal" type="submit" disabled
-                            class="inline-flex items-center justify-center rounded-xl px-4 py-2 font-semibold text-white bg-[#240B36] opacity-50 cursor-not-allowed transition shadow-sm">إتمام
-                            الطلب</button>
-                    </div>
-                </form>
-
-            </div>
-
-            <aside
-                class="bg-white border border-gray-200 rounded-xl shadow p-6 h-max">
-                <h3 class="font-bold mb-3">الإجمالي</h3>
+                        </span></li>
+                    @endif
+                    <li class="flex justify-between"><span>الدومين</span><span id="summaryDomain" class="font-semibold">—</span></li>
+                </ul>
+                <hr class="my-4 border-gray-200" />
                 <div class="space-y-2 text-sm">
-                    <div class="flex justify-between"><span>المجموع</span><span id="sumSub">0.00</span></div>
+                    <div class="flex justify-between"><span>المجموع</span><span id="sumSub">—</span></div>
                     <div class="flex justify-between"><span>الخصم</span><span id="sumDiscount">$0.00</span></div>
                     <div class="flex justify-between"><span>الضريبة</span><span id="sumTax">$0.00</span></div>
                 </div>
                 <hr class="my-4 border-gray-200" />
-                <div class="space-y-3">
+                <div class="space-y-3 mb-4">
                     <div class="flex gap-2">
                         <input id="couponInput"
                             class="w-full rounded-xl border border-gray-300 bg-white px-4 py-2 outline-none focus:ring-4 focus:ring-[#240B36]/20"
@@ -724,20 +628,24 @@
                 </div>
                 <hr class="my-4 border-gray-200" />
                 <div class="flex justify-between font-bold text-lg"><span>الإجمالي المستحق</span><span id="sumTotal2">
-                        @if ($template)
-                            @if ($showDiscount)
-                                <span class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
-                                <span class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
-                            @else
-                                ${{ number_format($basePrice, 2) }}
-                            @endif
+                    @if ($template)
+                        @if ($showDiscount)
+                            <span class="line-through text-gray-400">${{ number_format($basePrice, 2) }}</span>
+                            <span class="text-red-600 font-bold ms-2">${{ number_format($discPrice, 2) }}</span>
                         @else
-                            ${{ number_format($basePricePlan, 2) }}
+                            ${{ number_format($basePrice, 2) }}
                         @endif
-                    </span></div>
+                    @elseif ($plan)
+                        ${{ number_format($basePricePlan, 2) }}
+                    @else
+                        $0.00
+                    @endif
+                </span></div>
             </aside>
+
         </div>
-    </section>
+    </div>
+
     <!-- ===== الصفحة 3: نجاح الطلب ===== -->
     <section id="view-success" class="hidden max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 py-16">
 
@@ -1231,56 +1139,63 @@
             });
         }
 
-        // Stepper
-        const views = REQUIRES_DOMAIN_SELECTION ? ['view-domain', 'view-review'] : ['view-review'];
-        const stepper = document.getElementById('globalStepper');
+        // Single-page checkout helpers
 
+        /**
+         * يُظهر شارة "تم تأكيد الدومين" ويخفي منطقة الاختيار.
+         * @param {string} domainName - الدومين الذي اختاره المستخدم
+         */
+        function showDomainConfirmed(domainName) {
+            const badge = document.getElementById('domainConfirmedBadge');
+            const area  = document.getElementById('domainSelectionArea');
+            const nameEl = document.getElementById('confirmedDomainName');
+            if (nameEl && domainName) nameEl.textContent = domainName;
+            badge?.classList.remove('hidden');
+            area?.classList.add('hidden');
+        }
+
+        /**
+         * يُخفي شارة التأكيد ويُظهر منطقة اختيار الدومين مجدداً.
+         */
+        function showDomainSelection() {
+            document.getElementById('domainConfirmedBadge')?.classList.add('hidden');
+            document.getElementById('domainSelectionArea')?.classList.remove('hidden');
+            document.getElementById('domain-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // زر "تغيير الدومين"
+        document.getElementById('changeDomain')?.addEventListener('click', showDomainSelection);
+
+        /**
+         * goto() — متوافق مع الكود القديم.
+         * الآن الصفحة واحدة — goto() يُظهر الشارة بدلاً من تبديل الشاشات.
+         * stepIndex > 0 → تأكيد الدومين + Scroll للدفع
+         * stepIndex === 0 → عودة لاختيار الدومين
+         */
         function goto(stepIndex) {
-            const normalizedStep = REQUIRES_DOMAIN_SELECTION ? stepIndex : 0;
-            // تبديل الشاشات
-            views.forEach((id, i) => document.getElementById(id)?.classList.toggle('hidden', i !== normalizedStep));
-            const circles = stepper?.querySelectorAll('.step-circle') || [];
-            circles.forEach((c, i) => {
-                // نظّف جميع الحالات قبل التفعيل
-                c.classList.remove(
-                    'border-[#240B36]', 'text-[#240B36]', 'bg-[#240B36]', 'text-white',
-                    'border-gray-200', 'text-gray-500'
-                );
-                if (i < normalizedStep) {
-                    // مكتملة
-                    c.classList.add('bg-[#240B36]', 'text-white', 'border-[#240B36]');
-                } else if (i === normalizedStep) {
-                    // الحالية
-                    c.classList.add('border-[#240B36]', 'text-[#240B36]');
-                } else {
-                    // القادمة
-                    c.classList.add('border-gray-200', 'text-gray-500');
-                }
-            });
-            // تقدّم الخط بين الخطوتين (RTL: من اليمين لليسار)
-            const bar = document.getElementById('stepperProgress');
-            if (bar) bar.style.width = normalizedStep === 0 ? '0%' : '100%';
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
+            if (!REQUIRES_DOMAIN_SELECTION) {
+                // لا دومين مطلوب — لا شيء يُغيَّر
+                return;
+            }
+            if (stepIndex > 0) {
+                const sel = readPrimarySelection();
+                if (sel?.domain) showDomainConfirmed(sel.domain);
+                // Scroll للدفع بعد تأخير بسيط للـ render
+                setTimeout(() => {
+                    document.getElementById('payment-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 80);
+            } else {
+                showDomainSelection();
+            }
         }
 
         // شاشة النجاح
         function showSuccess() {
-            ['view-domain', 'view-review'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+            // أخفِ الـ checkout الرئيسي وأظهر شاشة النجاح
+            const checkoutMain = document.querySelector('.max-w-6xl.mx-auto.px-4');
+            if (checkoutMain) checkoutMain.classList.add('hidden');
             document.getElementById('view-success')?.classList.remove('hidden');
-            const circles = document.querySelectorAll('#globalStepper .step-circle');
-            circles.forEach(c => {
-                c.classList.remove('border-[#240B36]', 'text-[#240B36]');
-                c.classList.add('bg-[#240B36]', 'text-white', 'border-[#240B36]');
-            });
-            const bar = document.getElementById('stepperProgress');
-            if (bar) bar.style.width = '100%';
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         // تعبئة فاتورة النجاح
@@ -1476,7 +1391,7 @@
                 }
             });
 
-            // منع الانتقال قبل اختيار دومين للقالب: تعطيل أزرار المتابعة حتى إدخال صالح
+            // منع الانتقال قبل اختيار دومين — يعمل في كل أوضاع checkout (template + plan)
             function setBtnDisabled(btn, disabled) {
                 if (!btn) return;
                 btn.disabled = !!disabled;
@@ -1484,7 +1399,7 @@
                 btn.classList.toggle('cursor-not-allowed', !!disabled);
             }
 
-            if (HAS_TEMPLATE) {
+            if (REQUIRES_DOMAIN_SELECTION) {
                 const btns = {
                     register: document.getElementById('goConfigR'),
                     transfer: document.getElementById('goConfigT'),
@@ -1524,7 +1439,7 @@
                 ownDomainInp?.addEventListener('input', refreshGuards);
                 subNameInp?.addEventListener('input', refreshGuards);
 
-                // تفعيل أولي
+                // تفعيل أولي — يُعطّل جميع أزرار المتابعة عند تحميل الصفحة
                 refreshGuards();
             }
 
@@ -1579,25 +1494,42 @@
                 }
                 const fqdn = `${sld}${tld}`;
 
+                // loading state
+                const origBtnText = btnR.textContent.trim();
+                btnR.disabled = true;
+                btnR.textContent = '...';
+                if (checkResult) checkResult.textContent = '';
+
                 // تأكّد من التوافر واجلب السعر الصحيح
                 let cents = await fetchServerPriceCents(fqdn, 'register');
+                let domainAvailable = false;
                 try {
                     const res = await fetch(routeCheckSingle(fqdn), {
-                        headers: {
-                            'Accept': 'application/json'
-                        }
+                        headers: { 'Accept': 'application/json' }
                     });
                     const data = await res.json().catch(() => null);
-                    const r = (data?.results || []).find(x => (x.domain || '').toLowerCase() === fqdn
-                        .toLowerCase());
-                    if (r?.available !== true) {
-                        if (checkResult) checkResult.textContent = '❌ محجوز — اختر اسمًا/امتدادًا آخر';
-                        return;
+                    const r = (data?.results || []).find(x => (x.domain || '').toLowerCase() === fqdn.toLowerCase());
+                    if (r?.available === true) {
+                        domainAvailable = true;
+                        // لو كان عنده سعر أدق داخل الرد استخدمه
+                        const fromRow = extractPriceCents(r, 'register');
+                        if (fromRow != null) cents = fromRow;
                     }
-                    // لو كان عنده سعر أدق داخل الرد استخدمه
-                    const fromRow = extractPriceCents(r, 'register');
-                    if (fromRow != null) cents = fromRow;
-                } catch {}
+                } catch {
+                    if (checkResult) checkResult.textContent = 'خطأ في الاتصال — تحقق من الإنترنت ❌';
+                } finally {
+                    // استعادة حالة الزر
+                    btnR.textContent = origBtnText;
+                    if (sld) btnR.disabled = false;
+                }
+
+                // لا تنتقل إلا إذا تحقق التوافر صراحةً
+                if (!domainAvailable) {
+                    if (checkResult && !checkResult.textContent.includes('خطأ')) {
+                        checkResult.textContent = '❌ محجوز أو غير متاح — جرّب اسمًا/امتدادًا آخر';
+                    }
+                    return;
+                }
 
                 // أضف للسلة
                 writeUnifiedCart(upsertDomain(readUnifiedCart(), {
@@ -1619,7 +1551,8 @@
                     setCartDomains([sel]);
                 } catch {}
                 savePrimarySelection(sel);
-                goto(REVIEW_STEP_INDEX);
+                if (REQUIRES_DOMAIN_SELECTION) showDomainConfirmed(fqdn);
+                setTimeout(() => document.getElementById('payment-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
             });
 
             // نقل نطاق — يفضّل transfer_price_cents من الخادم
@@ -1648,7 +1581,8 @@
                     setCartDomains([sel]);
                 } catch {}
                 savePrimarySelection(sel);
-                goto(REVIEW_STEP_INDEX);
+                if (REQUIRES_DOMAIN_SELECTION) showDomainConfirmed(domain);
+                setTimeout(() => document.getElementById('payment-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
             });
 
             // أمتلك نطاقًا — 0$
@@ -1676,7 +1610,8 @@
                     setCartDomains([sel]);
                 } catch {}
                 savePrimarySelection(sel);
-                goto(REVIEW_STEP_INDEX);
+                if (REQUIRES_DOMAIN_SELECTION) showDomainConfirmed(domain);
+                setTimeout(() => document.getElementById('payment-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
             });
 
             // Subdomain مجاني — 0$
@@ -1707,7 +1642,8 @@
                     setCartDomains([sel]);
                 } catch {}
                 savePrimarySelection(sel);
-                goto(REVIEW_STEP_INDEX);
+                if (REQUIRES_DOMAIN_SELECTION) showDomainConfirmed(fqdn);
+                setTimeout(() => document.getElementById('payment-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
             });
 
             // تبديل التبويبات (اعتمادًا على aria-selected + Tailwind aria-variant)
@@ -1944,15 +1880,12 @@
                 });
             }
 
-            // اضبط الشريط على الخطوة الأولى افتراضيًا
-            goto(REVIEW_STEP_INDEX);
-
-            // إذا تم تمرير domain عبر الاستعلام أو محفوظ محلياً (لتجربة تسجيل الدخول)، فعّل المراجعة مباشرة
+            // إذا تم تمرير domain عبر الاستعلام أو محفوظ محلياً، فعّل الشارة وحدّث الأسعار
             (async () => {
                 const qp = new URLSearchParams(window.location.search);
                 const qDomain = (qp.get('domain') || '').trim().toLowerCase();
                 const qOpt = (qp.get('domain_option') || 'register').toLowerCase();
-                const saved = HAS_TEMPLATE ? readPrimarySelection() : null;
+                const saved = (HAS_TEMPLATE || REQUIRES_DOMAIN_SELECTION) ? readPrimarySelection() : null;
                 if (qDomain) {
                     try {
                         const cents = await fetchServerPriceCents(qDomain, qOpt);
@@ -1971,7 +1904,7 @@
                             item_option: qOpt,
                             price_cents: cents
                         });
-                        goto(REVIEW_STEP_INDEX);
+                        if (REQUIRES_DOMAIN_SELECTION) showDomainConfirmed(qDomain);
                     } catch {}
                 } else if (saved) {
                     // استعادة الاختيار بعد تسجيل الدخول أو تحديث الصفحة
@@ -1981,9 +1914,7 @@
                     try {
                         setCartDomains([saved]);
                     } catch {}
-                    goto(REVIEW_STEP_INDEX);
-                } else if (!HAS_TEMPLATE && window.location.search.includes('review=1')) {
-                    goto(REVIEW_STEP_INDEX);
+                    if (REQUIRES_DOMAIN_SELECTION) showDomainConfirmed(saved.domain);
                 }
             })();
 
@@ -2004,7 +1935,7 @@
                     const first = merged[0];
                     activateTab(mapOptionToTab(first.item_option));
                     setCartDomains(merged);
-                    goto(REVIEW_STEP_INDEX);
+                    if (REQUIRES_DOMAIN_SELECTION && first.domain) showDomainConfirmed(first.domain);
                 }
             } catch {}
 
@@ -2594,7 +2525,7 @@
                 function setGateway(v) {
                     if (gatewayInput) {
                         gatewayInput.value = v;
-                    }
+                                    }
 
                     if (v === 'card') {
                         cardForm?.classList.remove('hidden');

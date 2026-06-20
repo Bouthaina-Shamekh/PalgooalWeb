@@ -23,6 +23,7 @@ class Plan extends Model
         'plan_category_id',
         'is_active',
         'is_featured',
+        'requires_domain',
         'featured_label',
         'created_by',
         'updated_by',
@@ -31,6 +32,7 @@ class Plan extends Model
     protected $casts = [
         'is_active' => 'bool',
         'is_featured' => 'bool',
+        'requires_domain' => 'bool',
         'monthly_price_cents' => 'integer',
         'annual_price_cents' => 'integer',
     ];

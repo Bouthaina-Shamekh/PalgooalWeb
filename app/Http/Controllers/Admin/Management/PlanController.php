@@ -158,8 +158,9 @@ class PlanController extends Controller
         $this->authorize('create', Plan::class);
         // normalize booleans
         $r->merge([
-            'is_active' => $r->boolean('is_active'),
-            'is_featured' => $r->boolean('is_featured'),
+            'is_active'        => $r->boolean('is_active'),
+            'is_featured'      => $r->boolean('is_featured'),
+            'requires_domain'  => $r->boolean('requires_domain', true),
         ]);
 
         // parse prices (will read either *_cents or *_ui)
@@ -179,8 +180,9 @@ class PlanController extends Controller
             'server_package' => ['nullable', 'string', 'max:255'],
             'plan_category_id' => ['nullable', 'integer', 'exists:plan_categories,id'],
             'plan_type' => ['required', Rule::in([Plan::TYPE_MULTI_TENANT, Plan::TYPE_HOSTING])],
-            'is_active' => 'boolean',
-            'is_featured' => 'boolean',
+            'is_active'       => 'boolean',
+            'is_featured'     => 'boolean',
+            'requires_domain' => 'boolean',
         ]);
 
         if ($monthly === null && $annual === null) {
@@ -235,8 +237,9 @@ class PlanController extends Controller
     {
         $this->authorize('update', $plan);
         $r->merge([
-            'is_active' => $r->boolean('is_active'),
-            'is_featured' => $r->boolean('is_featured'),
+            'is_active'       => $r->boolean('is_active'),
+            'is_featured'     => $r->boolean('is_featured'),
+            'requires_domain' => $r->boolean('requires_domain', true),
         ]);
 
         $monthly = $this->parsePrice($r, 'monthly_price');
@@ -250,13 +253,14 @@ class PlanController extends Controller
         $data = $r->validate([
             'slug' => ['nullable', 'string', 'max:140', Rule::unique('plans', 'slug')->ignore($plan->id)],
             'monthly_price_cents' => 'nullable|integer|min:0',
-            'annual_price_cents' => 'nullable|integer|min:0',
-            'server_id' => ['nullable', 'integer', 'exists:servers,id'],
-            'server_package' => ['nullable', 'string', 'max:255'],
-            'plan_category_id' => ['nullable', 'integer', 'exists:plan_categories,id'],
-            'plan_type' => ['required', Rule::in([Plan::TYPE_MULTI_TENANT, Plan::TYPE_HOSTING])],
-            'is_active' => 'boolean',
-            'is_featured' => 'boolean',
+            'annual_price_cents'  => 'nullable|integer|min:0',
+            'server_id'           => ['nullable', 'integer', 'exists:servers,id'],
+            'server_package'      => ['nullable', 'string', 'max:255'],
+            'plan_category_id'    => ['nullable', 'integer', 'exists:plan_categories,id'],
+            'plan_type'           => ['required', Rule::in([Plan::TYPE_MULTI_TENANT, Plan::TYPE_HOSTING])],
+            'is_active'           => 'boolean',
+            'is_featured'         => 'boolean',
+            'requires_domain'     => 'boolean',
         ]);
 
         if ($monthly === null && $annual === null) {

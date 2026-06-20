@@ -56,7 +56,9 @@ class CheckoutController extends Controller
             $translation = $template?->translations()->where('locale', app()->getLocale())->first();
         }
         $plan_id = $request->query('plan_id');
-        $plan_sub_type = $request->query('plan_sub_type');
+        $plan_sub_type = in_array($request->query('plan_sub_type'), ['monthly', 'annual'])
+            ? $request->query('plan_sub_type')
+            : 'monthly'; // default to monthly when not specified
         $plan = null;
         $plan_translation = null;
         if (!empty($plan_id)) {
@@ -64,7 +66,11 @@ class CheckoutController extends Controller
             $plan_translation = $plan?->translations()->where('locale', app()->getLocale())->first();
         }
         $checkout_mode = !empty($template_id) ? 'template' : 'hosting';
-        $requires_domain_selection = $checkout_mode === 'hosting';
+        // Hosting: require domain only if the selected plan has requires_domain = true.
+        // Template checkout never needs domain selection here (handled upstream).
+        $requires_domain_selection = $checkout_mode === 'hosting'
+            ? (bool) ($plan?->requires_domain ?? true)
+            : false;
 
         return view('front.pages.checkout', compact(
             'template_id',

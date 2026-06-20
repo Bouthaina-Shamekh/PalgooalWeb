@@ -269,6 +269,29 @@
                                 @enderror
                             </div>
 
+                            {{-- Requires Domain --}}
+                            <div>
+                                <label class="form-label">{{ t('dashboard.Requires_Domain', 'Domain registration required') }}</label>
+                                <div class="flex flex-col gap-2 mt-1">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="requires_domain" value="1"
+                                               {{ old('requires_domain', '1') === '1' ? 'checked' : '' }}
+                                               class="w-4 h-4 accent-primary" />
+                                        <span class="text-sm">{{ t('dashboard.Requires_Domain_Yes', 'Yes — show domain selection step at checkout') }}</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="requires_domain" value="0"
+                                               {{ old('requires_domain') === '0' ? 'checked' : '' }}
+                                               class="w-4 h-4 accent-primary" />
+                                        <span class="text-sm">{{ t('dashboard.Requires_Domain_No', 'No — go directly to review & payment') }}</span>
+                                    </label>
+                                </div>
+                                <p class="text-xs text-gray-400 mt-1">{{ t('dashboard.Requires_Domain_Hint', 'Hosting plans typically require a domain. SaaS / subdomain-only plans do not.') }}</p>
+                                @error('requires_domain')
+                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                                @enderror
+                            </div>
+
                             {{-- Featured Badge Labels (one per locale) --}}
                             @foreach ($locales as $locale => $label)
                                 <div>

@@ -1,3 +1,6 @@
+<!-- Alpine.js — must load before deferred scripts that define Alpine components -->
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
 <!-- Local scripts — deferred so they never block rendering -->
 <script src="{{ asset('assets/tamplate/js/header.js') }}" defer></script>
 <script src="{{ asset('assets/tamplate/js/custoum-script.js') }}" defer></script>
