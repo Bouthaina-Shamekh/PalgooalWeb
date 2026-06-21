@@ -7,15 +7,27 @@
                     <a href="{{ route('dashboard.home') }}">{{ t('dashboard.Home', 'Home') }}</a>
                 </li>
                 <li class="breadcrumb-item">
-                    <a href="{{ route('dashboard.plans.index') }}">{{ t('dashboard.plans', 'Plans') }}</a>
+                    <a href="{{ route('dashboard.plans.index') }}">{{ t('dashboard.Plans', 'Plans') }}</a>
                 </li>
-                <li class="breadcrumb-item" aria-current="page">{{ t('dashboard.Add_Plan', 'Add plan') }}</li>
+                <li class="breadcrumb-item" aria-current="page">{{ t('dashboard.Add_Plan', 'Add Plan') }}</li>
             </ul>
             <div class="page-header-title">
                 <h2 class="mb-0">{{ t('dashboard.Add_Hosting_Plan', 'Add Hosting Plan') }}</h2>
             </div>
         </div>
     </div>
+
+    {{-- Flash / Validation --}}
+    @if ($errors->any())
+        <div class="alert alert-danger alert-dismissible mb-4" role="alert">
+            <ul class="mb-0 list-unstyled">
+                @foreach ($errors->all() as $error)
+                    <li><i class="ti ti-alert-circle me-1"></i>{{ $error }}</li>
+                @endforeach
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
 
     @php
         $localesCollection = $languages?->pluck('name', 'code');
@@ -24,717 +36,697 @@
             $locales = config('app.locales', ['ar' => 'العربية', 'en' => 'English']);
         }
         $activeLocale = old('active_locale', app()->getLocale());
+        $selectedType = old('plan_type', \App\Models\Plan::TYPE_MULTI_TENANT);
     @endphp
 
+    <form id="planForm" action="{{ route('dashboard.plans.store') }}" method="POST">
+        @csrf
+        <input type="hidden" name="active_locale" id="active_locale" value="{{ $activeLocale }}">
+
     <div class="grid grid-cols-12 gap-6">
+
+        {{-- ═══ FORM (col-span-8) ════════════════════════════════════════════ --}}
         <div class="col-span-12 xl:col-span-8">
 
-            {{-- Validation errors --}}
-            @if($errors->any())
-                <div class="alert alert-danger mb-4">
-                    <div class="flex items-start gap-3">
-                        <i class="ti ti-alert-circle text-xl mt-0.5 shrink-0"></i>
-                        <ul class="mb-0 space-y-1">
-                            @foreach($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
+            {{-- ── القسم ١: معلومات أساسية ──────────────────────────────── --}}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="flex items-center gap-2">
+                        <span class="badge bg-primary rounded-circle flex items-center justify-center"
+                              style="width:28px;height:28px;font-size:14px;">١</span>
+                        <h5 class="mb-0">{{ t('dashboard.Basic_Info', 'Basic Information') }}</h5>
                     </div>
                 </div>
-            @endif
+                <div class="card-body">
+                    <div class="grid grid-cols-12 gap-5">
 
-            <form id="planForm" action="{{ route('dashboard.plans.store') }}" method="POST">
-                @csrf
-                <input type="hidden" name="active_locale" id="active_locale" value="{{ $activeLocale }}">
-
-                {{-- ── Section 1: Basic Information ─────────────────── --}}
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <div class="flex items-center gap-2">
-                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 text-primary text-sm font-bold">١</span>
-                            <h5 class="mb-0">{{ t('dashboard.Basic_Info', 'Basic information') }}</h5>
+                        {{-- Category --}}
+                        <div class="col-span-12 md:col-span-6">
+                            <label class="form-label" for="plan-category">
+                                {{ t('dashboard.Category', 'Category') }}
+                            </label>
+                            <select id="plan-category" name="plan_category_id" class="form-select">
+                                <option value="">-- {{ t('dashboard.None', 'None') }} --</option>
+                                @foreach ($categories as $cat)
+                                    @php
+                                        $catLabel = $cat->translations->firstWhere('locale', app()->getLocale())?->title
+                                                 ?? $cat->translations->first()?->title
+                                                 ?? '#' . $cat->id;
+                                    @endphp
+                                    <option value="{{ $cat->id }}"
+                                        {{ old('plan_category_id') == $cat->id ? 'selected' : '' }}>
+                                        {{ $catLabel }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('plan_category_id')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
                         </div>
-                    </div>
-                    <div class="card-body">
 
-                        {{-- Language tabs --}}
-                        <div class="flex gap-2 mb-4 flex-wrap">
+                        {{-- Slug --}}
+                        <div class="col-span-12 md:col-span-6">
+                            <label class="form-label" for="plan-slug">
+                                {{ t('dashboard.Plan_Slug', 'Plan Slug') }}
+                                <span class="text-muted small">({{ t('dashboard.Optional', 'optional') }})</span>
+                            </label>
+                            <input type="text" id="plan-slug" name="slug"
+                                   class="form-control font-mono @error('slug') is-invalid @enderror"
+                                   dir="ltr"
+                                   value="{{ old('slug') }}"
+                                   placeholder="{{ t('dashboard.Auto_Generated', 'auto-generated if empty') }}">
+                            @error('slug')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        {{-- Plan Type --}}
+                        <div class="col-span-12">
+                            <label class="form-label" for="plan-type">
+                                {{ t('dashboard.Plan_Type', 'Plan Type') }}
+                            </label>
+                            <select id="plan-type" name="plan_type" class="form-select">
+                                <option value="{{ \App\Models\Plan::TYPE_MULTI_TENANT }}"
+                                    {{ $selectedType === \App\Models\Plan::TYPE_MULTI_TENANT ? 'selected' : '' }}>
+                                    {{ t('dashboard.Plan_Type_Multi', 'Multi-Tenant (بدون cPanel)') }}
+                                </option>
+                                <option value="{{ \App\Models\Plan::TYPE_HOSTING }}"
+                                    {{ $selectedType === \App\Models\Plan::TYPE_HOSTING ? 'selected' : '' }}>
+                                    {{ t('dashboard.Plan_Type_Hosting', 'Hosting / WordPress (يتضمن cPanel)') }}
+                                </option>
+                            </select>
+                            <div class="text-muted small mt-1">
+                                {{ t('dashboard.Plan_Type_Hint', 'يحدد إن كان الاشتراك يحتاج تفعيل استضافة أم يكتفي بمنصة Palgoals.') }}
+                            </div>
+                            @error('plan_type')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        {{-- Status (radio buttons — إصلاح PHP loose comparison) --}}
+                        <div class="col-span-12 md:col-span-6">
+                            <label class="form-label">{{ t('dashboard.Status', 'Status') }}</label>
+                            <div class="flex items-center gap-6 mt-1">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="is_active" value="1"
+                                           {{ old('is_active', '1') === '1' ? 'checked' : '' }}
+                                           class="accent-primary w-4 h-4">
+                                    <span class="text-sm text-emerald-600 font-medium">
+                                        {{ t('dashboard.Active_Available', 'نشط (متاح للبيع)') }}
+                                    </span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="is_active" value="0"
+                                           {{ old('is_active') === '0' ? 'checked' : '' }}
+                                           class="accent-primary w-4 h-4">
+                                    <span class="text-sm text-gray-500 font-medium">
+                                        {{ t('dashboard.Inactive_Hidden', 'غير نشط (مخفي)') }}
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {{-- Featured (radio buttons) --}}
+                        <div class="col-span-12 md:col-span-6">
+                            <label class="form-label">{{ t('dashboard.Featured_Plan', 'Featured Plan') }}</label>
+                            <div class="flex items-center gap-6 mt-1">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="is_featured" value="1"
+                                           {{ old('is_featured', '0') === '1' ? 'checked' : '' }}
+                                           class="accent-primary w-4 h-4">
+                                    <span class="text-sm text-amber-600 font-medium">
+                                        {{ t('dashboard.Featured_Badge_Label', 'مميزة (تظهر بشارة)') }}
+                                    </span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="is_featured" value="0"
+                                           {{ old('is_featured', '0') === '0' ? 'checked' : '' }}
+                                           class="accent-primary w-4 h-4">
+                                    <span class="text-sm text-gray-500 font-medium">
+                                        {{ t('dashboard.Normal', 'عادية') }}
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {{-- Requires Domain --}}
+                    <div class="mt-5 pt-5 border-t border-gray-100">
+                        <label class="form-label">{{ t('dashboard.Requires_Domain', 'Domain registration required') }}</label>
+                        <div class="flex flex-col gap-2 mt-1">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="requires_domain" value="1"
+                                       {{ old('requires_domain', '1') === '1' ? 'checked' : '' }}
+                                       class="accent-primary w-4 h-4">
+                                <span class="text-sm">{{ t('dashboard.Requires_Domain_Yes', 'Yes — show domain selection step at checkout') }}</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="requires_domain" value="0"
+                                       {{ old('requires_domain') === '0' ? 'checked' : '' }}
+                                       class="accent-primary w-4 h-4">
+                                <span class="text-sm">{{ t('dashboard.Requires_Domain_No', 'No — go directly to review & payment') }}</span>
+                            </label>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">{{ t('dashboard.Requires_Domain_Hint', 'Hosting plans typically require a domain. SaaS / subdomain-only plans do not.') }}</p>
+                        @error('requires_domain')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                </div>
+            </div>
+
+            {{-- ── القسم ٢: التسعير ─────────────────────────────────────── --}}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="flex items-center gap-2">
+                        <span class="badge bg-primary rounded-circle flex items-center justify-center"
+                              style="width:28px;height:28px;font-size:14px;">٢</span>
+                        <h5 class="mb-0">{{ t('dashboard.Pricing', 'Pricing') }}</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-12 gap-5">
+
+                        {{-- Monthly Price --}}
+                        <div class="col-span-12 md:col-span-6">
+                            <label class="form-label" for="monthly_price_ui">
+                                {{ t('dashboard.Monthly_Price_USD', 'Monthly Price (USD)') }}
+                            </label>
+                            <div class="input-group" dir="ltr">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" min="0" id="monthly_price_ui"
+                                       name="monthly_price_ui"
+                                       class="form-control @error('monthly_price_cents') is-invalid @enderror"
+                                       value="{{ old('monthly_price_ui') }}"
+                                       placeholder="0.00">
+                            </div>
+                            <input type="hidden" name="monthly_price_cents" id="monthly_price_cents"
+                                   value="{{ old('monthly_price_cents') }}">
+                            @error('monthly_price_cents')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        {{-- Annual Price --}}
+                        <div class="col-span-12 md:col-span-6">
+                            <label class="form-label" for="annual_price_ui">
+                                {{ t('dashboard.Annual_Price_USD', 'Annual Price (USD)') }}
+                            </label>
+                            <div class="input-group" dir="ltr">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" min="0" id="annual_price_ui"
+                                       name="annual_price_ui"
+                                       class="form-control @error('annual_price_cents') is-invalid @enderror"
+                                       value="{{ old('annual_price_ui') }}"
+                                       placeholder="0.00">
+                            </div>
+                            <input type="hidden" name="annual_price_cents" id="annual_price_cents"
+                                   value="{{ old('annual_price_cents') }}">
+                            @error('annual_price_cents')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            {{-- ── القسم ٣: حزمة السيرفر ──────────────────────────────── --}}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="flex items-center gap-2">
+                        <span class="badge bg-primary rounded-circle flex items-center justify-center"
+                              style="width:28px;height:28px;font-size:14px;">٣</span>
+                        <h5 class="mb-0">{{ t('dashboard.Server_Package', 'Server Package') }}</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-12 gap-5">
+
+                        {{-- Server --}}
+                        <div class="col-span-12 md:col-span-6">
+                            <label class="form-label" for="server_select">
+                                {{ t('dashboard.Server', 'Server') }}
+                            </label>
+                            <select id="server_select" name="server_id" class="form-select">
+                                <option value="">-- {{ t('dashboard.None', 'None') }} --</option>
+                                @foreach ($servers as $server)
+                                    <option value="{{ $server->id }}"
+                                        {{ old('server_id') == $server->id ? 'selected' : '' }}>
+                                        {{ $server->name }} ({{ $server->ip ?? $server->hostname }})
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('server_id')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        {{-- Server Package --}}
+                        <div class="col-span-12 md:col-span-6">
+                            <label class="form-label" for="server_package_select">
+                                {{ t('dashboard.Server_Package', 'Server Package') }}
+                            </label>
+                            <select id="server_package_select" name="server_package" class="form-select">
+                                <option value="">-- {{ t('dashboard.Select_Server_First', 'اختر السيرفر أولاً') }} --</option>
+                            </select>
+                            <div id="pkg_warning" class="text-warning small mt-1 hidden"></div>
+                            @error('server_package')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            {{-- ── القسم ٤: ترجمات الباقة ──────────────────────────────── --}}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="flex items-center gap-2">
+                        <span class="badge bg-primary rounded-circle flex items-center justify-center"
+                              style="width:28px;height:28px;font-size:14px;">٤</span>
+                        <h5 class="mb-0">{{ t('dashboard.Plan_Translations', 'Plan Translations') }}</h5>
+                    </div>
+                </div>
+                <div class="card-body">
+
+                    {{-- تبويبات اللغات --}}
+                    <div class="border-b border-gray-200 mb-4" role="tablist">
+                        <div class="flex gap-0 overflow-x-auto">
                             @foreach ($locales as $locale => $label)
-                                <button type="button" onclick="showLangTab('{{ $locale }}')"
-                                    class="px-4 py-2 rounded-t-lg focus:outline-none transition-all {{ $activeLocale == $locale ? 'bg-white border border-b-0 font-bold' : 'bg-gray-200 text-gray-600' }}"
-                                    id="tab-{{ $locale }}">
-                                    {{ $label }}
+                                <button type="button"
+                                    id="plan-lang-tab-{{ $locale }}"
+                                    onclick="showLangTab('{{ $locale }}')"
+                                    role="tab"
+                                    aria-selected="{{ $activeLocale == $locale ? 'true' : 'false' }}"
+                                    class="plan-lang-tab px-4 py-2 text-sm font-medium whitespace-nowrap transition-colors border-b-2
+                                           {{ $activeLocale == $locale ? 'border-primary text-primary' : 'border-transparent text-muted' }}">
+                                    {{ strtoupper(substr($locale, 0, 2)) }} — {{ $label }}
                                 </button>
                             @endforeach
                         </div>
-
-                        @foreach ($locales as $locale => $label)
-                            <div id="pane-{{ $locale }}" class="lang-pane {{ $activeLocale == $locale ? 'block' : 'hidden' }}">
-                                <div class="grid grid-cols-1 gap-5">
-                                    {{-- Plan Name --}}
-                                    <div>
-                                        <label class="block mb-1 font-medium text-sm">
-                                            {{ t('dashboard.Plan_Name_Label', 'Plan name') }}
-                                            ({{ $label }})
-                                            <span class="text-red-500 mr-0.5">*</span>
-                                        </label>
-                                        <input type="text"
-                                            name="name[{{ $locale }}]"
-                                            class="form-control @error('name.' . $locale) is-invalid @enderror"
-                                            value="{{ old('name.' . $locale) }}"
-                                            @if($activeLocale == $locale) required @endif>
-                                        @error('name.' . $locale)
-                                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-
-                                    {{-- Description --}}
-                                    <div>
-                                        <label class="block mb-1 font-medium text-sm">
-                                            {{ t('dashboard.Description', 'Description') }}
-                                            ({{ $label }})
-                                        </label>
-                                        <textarea name="description[{{ $locale }}]" rows="3"
-                                            class="form-control @error('description.' . $locale) is-invalid @enderror">{{ old('description.' . $locale) }}</textarea>
-                                        @error('description.' . $locale)
-                                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                        @enderror
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-
-                        {{-- Slug & Category (locale-independent) --}}
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5 pt-5 border-t border-slate-100">
-                            <div>
-                                <label class="block mb-1 font-medium text-sm">
-                                    {{ t('dashboard.Plan_Slug', 'Plan slug') }}
-                                    <span class="text-gray-400 text-xs font-normal mr-1">({{ t('dashboard.Optional', 'optional') }})</span>
-                                </label>
-                                <input type="text"
-                                    name="slug"
-                                    class="form-control font-mono @error('slug') is-invalid @enderror"
-                                    value="{{ old('slug') }}"
-                                    placeholder="{{ t('dashboard.Slug_Auto_Generated', 'auto-generated if empty') }}"
-                                    dir="ltr">
-                                @error('slug')
-                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            <div>
-                                <label class="block mb-1 font-medium text-sm">{{ t('dashboard.Plan_Category', 'Category') }}</label>
-                                <select name="plan_category_id"
-                                    class="form-control @error('plan_category_id') is-invalid @enderror">
-                                    <option value="">— {{ t('dashboard.None', 'None') }} —</option>
-                                    @foreach ($categories as $cat)
-                                        @php
-                                            $catLabel = $cat->translation()?->title
-                                                ?? ($cat->translations->first()?->title ?? '#' . $cat->id);
-                                        @endphp
-                                        <option value="{{ $cat->id }}"
-                                            {{ old('plan_category_id') == $cat->id ? 'selected' : '' }}>
-                                            {{ $catLabel }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('plan_category_id')
-                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-                        </div>
-
                     </div>
-                </div>
 
-                {{-- ── Section 2: Pricing ───────────────────────────── --}}
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <div class="flex items-center gap-2">
-                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 text-primary text-sm font-bold">٢</span>
-                            <h5 class="mb-0">{{ t('dashboard.Pricing_And_Category', 'Pricing') }}</h5>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {{-- لوحات اللغات --}}
+                    @foreach ($locales as $locale => $label)
+                        @php
+                            $billingOptions = [
+                                'monthly' => t('dashboard.Monthly', 'شهري'),
+                                'annual'  => t('dashboard.Annual', 'سنوي'),
+                            ];
+                            $rawFeatures = old('features.' . $locale, []);
+                            $rawFeatures = is_array($rawFeatures) ? $rawFeatures : [];
+                            $hasBillingSplit = array_intersect(array_keys($rawFeatures), array_keys($billingOptions)) !== [];
+                            $normalizeFeature = function ($item) {
+                                if (is_array($item)) {
+                                    $text      = isset($item['text']) ? trim((string) $item['text']) : '';
+                                    $available = array_key_exists('available', $item)
+                                        ? filter_var($item['available'], FILTER_VALIDATE_BOOLEAN) : true;
+                                } else {
+                                    $text      = trim((string) $item);
+                                    $available = true;
+                                }
+                                return ['text' => $text, 'available' => (bool) $available];
+                            };
+                            $featureBuckets = [];
+                            foreach ($billingOptions as $billingKey => $billingLabel) {
+                                $bucketSource = $hasBillingSplit
+                                    ? ($rawFeatures[$billingKey] ?? [])
+                                    : ($billingKey === 'monthly' ? $rawFeatures : []);
+                                $featureBuckets[$billingKey] = collect(is_array($bucketSource) ? $bucketSource : [])
+                                    ->map($normalizeFeature)
+                                    ->filter(fn($f) => $f['text'] !== '')
+                                    ->values();
+                            }
+                        @endphp
+                        <div id="pane-{{ $locale }}"
+                             class="lang-pane {{ $activeLocale == $locale ? '' : 'hidden' }}">
+                            <div class="grid grid-cols-12 gap-5">
 
-                            {{-- Plan Type --}}
-                            <div class="md:col-span-2">
-                                <label class="block mb-1 font-medium text-sm">
-                                    {{ t('dashboard.Plan_Type', 'Plan type') }}
-                                    <span class="text-red-500 mr-0.5">*</span>
-                                </label>
-                                @php
-                                    $selectedType = old('plan_type', \App\Models\Plan::TYPE_MULTI_TENANT);
-                                @endphp
-                                <select name="plan_type"
-                                    class="form-control @error('plan_type') is-invalid @enderror"
-                                    required>
-                                    <option value="{{ \App\Models\Plan::TYPE_MULTI_TENANT }}"
-                                        {{ $selectedType === \App\Models\Plan::TYPE_MULTI_TENANT ? 'selected' : '' }}>
-                                        {{ t('dashboard.Plan_Type_Multi_Tenant', 'Multi-Tenant (without cPanel)') }}
-                                    </option>
-                                    <option value="{{ \App\Models\Plan::TYPE_HOSTING }}"
-                                        {{ $selectedType === \App\Models\Plan::TYPE_HOSTING ? 'selected' : '' }}>
-                                        {{ t('dashboard.Plan_Type_Hosting', 'Hosting / WordPress (includes cPanel)') }}
-                                    </option>
-                                </select>
-                                <p class="text-xs text-gray-400 mt-1">{{ t('dashboard.Plan_Type_Hint', 'Determines whether the subscription runs within Palgoals or needs a dedicated hosting space.') }}</p>
-                                @error('plan_type')
-                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            {{-- Monthly Price --}}
-                            <div>
-                                <label class="block mb-1 font-medium text-sm">{{ t('dashboard.Monthly_Price_USD', 'Monthly price (USD)') }}</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" step="0.01" min="0"
-                                        id="monthly_price_ui" name="monthly_price_ui"
-                                        class="form-control @error('monthly_price_cents') is-invalid @enderror"
-                                        value="{{ old('monthly_price_ui') }}"
-                                        dir="ltr">
-                                </div>
-                                <input type="hidden" name="monthly_price_cents" id="monthly_price_cents"
-                                    value="{{ old('monthly_price_cents') }}">
-                                @error('monthly_price_cents')
-                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            {{-- Annual Price --}}
-                            <div>
-                                <label class="block mb-1 font-medium text-sm">{{ t('dashboard.Annual_Price_USD', 'Annual price (USD)') }}</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" step="0.01" min="0"
-                                        id="annual_price_ui" name="annual_price_ui"
-                                        class="form-control @error('annual_price_cents') is-invalid @enderror"
-                                        value="{{ old('annual_price_ui') }}"
-                                        dir="ltr">
-                                </div>
-                                <input type="hidden" name="annual_price_cents" id="annual_price_cents"
-                                    value="{{ old('annual_price_cents') }}">
-                                @error('annual_price_cents')
-                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-
-                {{-- ── Section 3: Settings ──────────────────────────── --}}
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <div class="flex items-center gap-2">
-                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 text-primary text-sm font-bold">٣</span>
-                            <h5 class="mb-0">{{ t('dashboard.Plan_Settings', 'Plan settings') }}</h5>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-
-                            {{-- Status — radio buttons (avoids PHP null == 0 loose-comparison bug) --}}
-                            <div>
-                                <label class="block mb-1 font-medium text-sm">{{ t('dashboard.Status', 'Status') }}</label>
-                                <div class="flex items-center gap-6 mt-2">
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="radio" name="is_active" value="1"
-                                               {{ old('is_active', '1') === '1' ? 'checked' : '' }}
-                                               class="accent-primary w-4 h-4" />
-                                        <span class="text-sm text-emerald-600 font-medium">{{ t('dashboard.Active_Available', 'Active (available to sell)') }}</span>
+                                {{-- Plan Name --}}
+                                <div class="col-span-12 md:col-span-6">
+                                    <label class="form-label" for="plan-name-{{ $locale }}">
+                                        {{ t('dashboard.Plan_Name', 'Plan Name') }}
+                                        ({{ $label }})
+                                        @if ($loop->first) <span class="text-danger">*</span> @endif
                                     </label>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="radio" name="is_active" value="0"
-                                               {{ old('is_active') === '0' ? 'checked' : '' }}
-                                               class="accent-primary w-4 h-4" />
-                                        <span class="text-sm text-gray-500 font-medium">{{ t('dashboard.Inactive_Hidden', 'Inactive (hidden)') }}</span>
-                                    </label>
+                                    <input type="text"
+                                           id="plan-name-{{ $locale }}"
+                                           name="name[{{ $locale }}]"
+                                           class="form-control @error('name.' . $locale) is-invalid @enderror"
+                                           value="{{ old('name.' . $locale) }}"
+                                           @if ($activeLocale == $locale) required @endif>
+                                    @error('name.' . $locale)
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
                                 </div>
-                            </div>
 
-                            {{-- Featured Plan --}}
-                            <div>
-                                <label class="block mb-1 font-medium text-sm">{{ t('dashboard.Featured_Plan', 'Featured plan') }}</label>
-                                <label class="flex items-center gap-2 cursor-pointer mt-2">
-                                    <input type="checkbox" name="is_featured" value="1"
-                                        @checked(old('is_featured', false))
-                                        class="w-4 h-4 accent-primary" />
-                                    <span class="text-sm">{{ t('dashboard.Featured_Plan_Hint', 'Show a special badge on this plan card') }}</span>
-                                </label>
-                                @error('is_featured')
-                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            {{-- Requires Domain --}}
-                            <div>
-                                <label class="form-label">{{ t('dashboard.Requires_Domain', 'Domain registration required') }}</label>
-                                <div class="flex flex-col gap-2 mt-1">
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="radio" name="requires_domain" value="1"
-                                               {{ old('requires_domain', '1') === '1' ? 'checked' : '' }}
-                                               class="w-4 h-4 accent-primary" />
-                                        <span class="text-sm">{{ t('dashboard.Requires_Domain_Yes', 'Yes — show domain selection step at checkout') }}</span>
-                                    </label>
-                                    <label class="flex items-center gap-2 cursor-pointer">
-                                        <input type="radio" name="requires_domain" value="0"
-                                               {{ old('requires_domain') === '0' ? 'checked' : '' }}
-                                               class="w-4 h-4 accent-primary" />
-                                        <span class="text-sm">{{ t('dashboard.Requires_Domain_No', 'No — go directly to review & payment') }}</span>
-                                    </label>
-                                </div>
-                                <p class="text-xs text-gray-400 mt-1">{{ t('dashboard.Requires_Domain_Hint', 'Hosting plans typically require a domain. SaaS / subdomain-only plans do not.') }}</p>
-                                @error('requires_domain')
-                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            {{-- Featured Badge Labels (one per locale) --}}
-                            @foreach ($locales as $locale => $label)
-                                <div>
-                                    <label class="block mb-1 font-medium text-sm">
-                                        {{ t('dashboard.Featured_Badge_Label', 'Featured badge label') }}
+                                {{-- Featured Badge Label --}}
+                                <div class="col-span-12 md:col-span-6">
+                                    <label class="form-label" for="plan-badge-{{ $locale }}">
+                                        {{ t('dashboard.Featured_Badge_Label', 'Featured Badge Label') }}
                                         ({{ $label }})
                                     </label>
                                     <input type="text"
-                                        name="featured_label[{{ $locale }}]"
-                                        class="form-control @error('featured_label.' . $locale) is-invalid @enderror"
-                                        value="{{ old('featured_label.' . $locale) }}"
-                                        placeholder="{{ t('dashboard.Most_Popular', 'Most Popular') }}">
-                                    <p class="text-xs text-gray-400 mt-1">{{ t('dashboard.Featured_Badge_Label_Hint', 'Leave empty to use the default text.') }}</p>
-                                    @error('featured_label.' . $locale)
-                                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                    @enderror
-                                </div>
-                            @endforeach
-
-                            {{-- Server --}}
-                            <div>
-                                <label class="block mb-1 font-medium text-sm">{{ t('dashboard.Plan_Server', 'Server') }}</label>
-                                <select id="server_select" name="server_id"
-                                    class="form-control @error('server_id') is-invalid @enderror">
-                                    <option value="">— {{ t('dashboard.None', 'None') }} —</option>
-                                    @foreach ($servers as $server)
-                                        <option value="{{ $server->id }}"
-                                            {{ old('server_id') == $server->id ? 'selected' : '' }}>
-                                            {{ $server->name }} ({{ $server->ip ?? $server->hostname }})
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('server_id')
-                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                            {{-- Server Package --}}
-                            <div>
-                                <label class="block mb-1 font-medium text-sm">{{ t('dashboard.Server_Package', 'Server package') }}</label>
-                                <select name="server_package" id="server_package_select"
-                                    class="form-control @error('server_package') is-invalid @enderror">
-                                    <option value="">— {{ t('dashboard.Select_Server_First', 'Select a server first') }} —</option>
-                                </select>
-                                @error('server_package')
-                                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-
-                {{-- ── Section 4: Features ──────────────────────────── --}}
-                <div class="card mb-6">
-                    <div class="card-header">
-                        <div class="flex items-center gap-2">
-                            <span class="flex items-center justify-center w-7 h-7 rounded-lg bg-primary/10 text-primary text-sm font-bold">٤</span>
-                            <h5 class="mb-0">{{ t('dashboard.Plan_Features', 'Plan features') }}</h5>
-                        </div>
-                    </div>
-                    <div class="card-body">
-
-                        {{-- Language tabs (synced with Section 1) --}}
-                        <div class="flex gap-2 mb-4 flex-wrap">
-                            @foreach ($locales as $locale => $label)
-                                <button type="button" onclick="showLangTab('{{ $locale }}')"
-                                    class="px-4 py-2 rounded-t-lg focus:outline-none transition-all {{ $activeLocale == $locale ? 'bg-white border border-b-0 font-bold' : 'bg-gray-200 text-gray-600' }}"
-                                    id="feat-tab-{{ $locale }}">
-                                    {{ $label }}
-                                </button>
-                            @endforeach
-                        </div>
-
-                        @foreach ($locales as $locale => $label)
-                            @php
-                                $rawFeatures = old('features.' . $locale);
-                                if ($rawFeatures === null) {
-                                    $rawFeatures = [];
-                                }
-                                $billingOptions = [
-                                    'monthly' => t('dashboard.Monthly', 'Monthly'),
-                                    'annual'  => t('dashboard.Annual', 'Annual'),
-                                ];
-                                $rawFeatures = is_array($rawFeatures) ? $rawFeatures : [];
-                                $hasBillingSplit = array_intersect(array_keys($rawFeatures), array_keys($billingOptions)) !== [];
-
-                                $normalizeFeature = function ($item) {
-                                    if (is_array($item)) {
-                                        $text = isset($item['text']) ? trim((string) $item['text']) : '';
-                                        $available = array_key_exists('available', $item)
-                                            ? filter_var($item['available'], FILTER_VALIDATE_BOOLEAN)
-                                            : true;
-                                    } else {
-                                        $text = trim((string) $item);
-                                        $available = true;
-                                    }
-                                    return ['text' => $text, 'available' => (bool) $available];
-                                };
-
-                                $featureBuckets = [];
-                                foreach ($billingOptions as $billingKey => $billingLabel) {
-                                    $bucketSource = $hasBillingSplit
-                                        ? ($rawFeatures[$billingKey] ?? [])
-                                        : ($billingKey === 'monthly' ? $rawFeatures : []);
-                                    $featureBuckets[$billingKey] = collect(
-                                        is_array($bucketSource) ? $bucketSource : []
-                                    )
-                                        ->map($normalizeFeature)
-                                        ->filter(fn($feature) => $feature['text'] !== '')
-                                        ->values();
-                                }
-                            @endphp
-
-                            <div id="feat-pane-{{ $locale }}"
-                                class="feat-lang-pane {{ $activeLocale == $locale ? 'block' : 'hidden' }}">
-
-                                <div class="flex flex-wrap items-center gap-2 mb-3">
-                                    @foreach ($billingOptions as $billingKey => $billingLabel)
-                                        <button type="button"
-                                            class="feature-cycle-tab px-3 py-1 rounded-md border transition text-sm {{ $loop->first ? 'bg-white border-gray-300 text-gray-800 font-semibold shadow-sm' : 'bg-gray-100 border-transparent text-gray-500' }}"
-                                            data-feature-tab
-                                            data-locale="{{ $locale }}"
-                                            data-billing="{{ $billingKey }}">
-                                            {{ $billingLabel }}
-                                        </button>
-                                    @endforeach
+                                           id="plan-badge-{{ $locale }}"
+                                           name="featured_label[{{ $locale }}]"
+                                           class="form-control"
+                                           value="{{ old('featured_label.' . $locale) }}"
+                                           placeholder="{{ t('dashboard.Most_Popular', 'الأكثر شيوعاً') }}">
+                                    <div class="text-muted small mt-1">
+                                        {{ t('dashboard.Featured_Badge_Hint', 'يظهر عند تفعيل الخيار المميز. اتركه فارغاً للنص الافتراضي.') }}
+                                    </div>
                                 </div>
 
-                                @foreach ($billingOptions as $billingKey => $billingLabel)
-                                    @php
-                                        /** @var \Illuminate\Support\Collection $featureItems */
-                                        $featureItems = $featureBuckets[$billingKey] ?? collect();
-                                    @endphp
-                                    <div class="{{ $loop->first ? 'block' : 'hidden' }}"
-                                        data-feature-panel
-                                        data-locale="{{ $locale }}"
-                                        data-billing="{{ $billingKey }}">
-                                        <div class="space-y-2"
-                                            data-feature-wrapper
-                                            data-locale="{{ $locale }}"
-                                            data-billing="{{ $billingKey }}"
-                                            data-next-index="{{ $featureItems->count() }}"
-                                            data-available-label="{{ t('dashboard.Available', 'Available') }}"
-                                            data-remove-label="{{ t('dashboard.Remove_Feature', 'Remove') }}">
-                                            @foreach ($featureItems as $index => $feature)
-                                                <div class="flex flex-col sm:flex-row sm:items-center gap-3" data-feature-row>
-                                                    <div class="flex-1 w-full">
-                                                        <input type="text"
-                                                            name="features[{{ $locale }}][{{ $billingKey }}][{{ $index }}][text]"
-                                                            class="form-control"
-                                                            value="{{ $feature['text'] }}"
-                                                            placeholder="e.g. Domain">
-                                                    </div>
-                                                    <label class="inline-flex items-center gap-2 text-sm shrink-0">
-                                                        <input type="hidden"
-                                                            name="features[{{ $locale }}][{{ $billingKey }}][{{ $index }}][available]"
-                                                            value="0">
-                                                        <input type="checkbox"
-                                                            name="features[{{ $locale }}][{{ $billingKey }}][{{ $index }}][available]"
-                                                            value="1"
-                                                            class="h-4 w-4 accent-primary"
-                                                            @checked($feature['available'])>
-                                                        <span>{{ t('dashboard.Available', 'Available') }}</span>
-                                                    </label>
-                                                    <button type="button"
-                                                        class="text-red-500 hover:text-red-700 shrink-0 w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center transition"
-                                                        data-remove-feature>
-                                                        <i class="ti ti-x text-base leading-none"></i>
-                                                        <span class="sr-only">{{ t('dashboard.Remove_Feature', 'Remove') }}</span>
-                                                    </button>
-                                                </div>
-                                            @endforeach
-                                        </div>
+                                {{-- Description --}}
+                                <div class="col-span-12">
+                                    <label class="form-label" for="plan-desc-{{ $locale }}">
+                                        {{ t('dashboard.Description', 'Description') }}
+                                        ({{ $label }})
+                                    </label>
+                                    <textarea id="plan-desc-{{ $locale }}"
+                                              name="description[{{ $locale }}]"
+                                              class="form-control"
+                                              rows="3">{{ old('description.' . $locale) }}</textarea>
+                                </div>
 
-                                        <div class="mt-3 flex items-center gap-3">
+                                {{-- Features --}}
+                                <div class="col-span-12">
+                                    <label class="form-label">
+                                        {{ t('dashboard.Plan_Features', 'Plan Features') }}
+                                        ({{ $label }})
+                                    </label>
+
+                                    {{-- تبويبات شهري / سنوي --}}
+                                    <div class="flex gap-2 mb-3" data-feature-tabs>
+                                        @foreach ($billingOptions as $billingKey => $billingLabel)
                                             <button type="button"
-                                                class="btn btn-light btn-sm flex items-center gap-1"
-                                                data-add-feature
+                                                class="feature-cycle-tab px-3 py-1 rounded-md border transition text-sm
+                                                       {{ $loop->first ? 'bg-white border-gray-300 text-gray-800 font-semibold shadow-sm' : 'bg-gray-100 border-transparent text-gray-500' }}"
+                                                data-feature-tab
                                                 data-locale="{{ $locale }}"
                                                 data-billing="{{ $billingKey }}">
-                                                <i class="ti ti-plus text-sm"></i>
-                                                {{ t('dashboard.Add_Feature', 'Add feature') }}
+                                                {{ $billingLabel }}
                                             </button>
-                                            <span class="text-xs text-gray-400">
-                                                {{ t('dashboard.Feature_Toggle_Hint', 'Use the toggle to indicate whether the feature is included.') }}
-                                            </span>
-                                        </div>
-
-                                        @if ($errors->has("features.$locale.$billingKey"))
-                                            <p class="text-red-500 text-xs mt-1">{{ $errors->first("features.$locale.$billingKey") }}</p>
-                                        @endif
-                                        @if ($errors->has("features.$locale.$billingKey.*.text"))
-                                            <p class="text-red-500 text-xs mt-1">{{ $errors->first("features.$locale.$billingKey.*.text") }}</p>
-                                        @endif
+                                        @endforeach
                                     </div>
-                                @endforeach
+
+                                    @foreach ($billingOptions as $billingKey => $billingLabel)
+                                        @php $featureItems = $featureBuckets[$billingKey] ?? collect(); @endphp
+                                        <div class="{{ $loop->first ? 'block' : 'hidden' }}"
+                                             data-feature-panel
+                                             data-locale="{{ $locale }}"
+                                             data-billing="{{ $billingKey }}">
+                                            <div class="space-y-2"
+                                                 data-feature-wrapper
+                                                 data-locale="{{ $locale }}"
+                                                 data-billing="{{ $billingKey }}"
+                                                 data-next-index="{{ $featureItems->count() }}"
+                                                 data-available-label="{{ t('dashboard.Available', 'متاح') }}"
+                                                 data-remove-label="{{ t('dashboard.Remove_Feature', 'حذف') }}">
+                                                @foreach ($featureItems as $index => $feature)
+                                                    <div class="flex flex-col sm:flex-row sm:items-center gap-3" data-feature-row>
+                                                        <div class="flex-1">
+                                                            <input type="text"
+                                                                name="features[{{ $locale }}][{{ $billingKey }}][{{ $index }}][text]"
+                                                                class="form-control"
+                                                                value="{{ $feature['text'] }}"
+                                                                placeholder="{{ t('dashboard.Feature_Placeholder', 'e.g. Domain') }}">
+                                                        </div>
+                                                        <label class="inline-flex items-center gap-2 text-sm shrink-0">
+                                                            <input type="hidden"
+                                                                name="features[{{ $locale }}][{{ $billingKey }}][{{ $index }}][available]"
+                                                                value="0">
+                                                            <input type="checkbox"
+                                                                name="features[{{ $locale }}][{{ $billingKey }}][{{ $index }}][available]"
+                                                                value="1"
+                                                                class="h-4 w-4 accent-primary"
+                                                                @checked($feature['available'])>
+                                                            <span>{{ t('dashboard.Available', 'متاح') }}</span>
+                                                        </label>
+                                                        <button type="button"
+                                                                class="text-danger p-1 border-0 bg-transparent shrink-0"
+                                                                data-remove-feature
+                                                                title="{{ t('dashboard.Remove_Feature', 'حذف') }}">
+                                                            <i class="ti ti-trash" style="font-size:1.1rem;"></i>
+                                                        </button>
+                                                    </div>
+                                                @endforeach
+                                            </div>
+
+                                            <div class="mt-2">
+                                                <button type="button"
+                                                    class="btn btn-light btn-sm flex items-center gap-1"
+                                                    data-add-feature
+                                                    data-locale="{{ $locale }}"
+                                                    data-billing="{{ $billingKey }}">
+                                                    <i class="ti ti-plus"></i>
+                                                    {{ t('dashboard.Add_Feature', 'Add Feature') }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
 
                             </div>
-                        @endforeach
+                        </div>
+                    @endforeach
 
-                    </div>
                 </div>
+            </div>
 
-                {{-- Form actions --}}
-                <div class="flex items-center gap-3">
-                    <button type="submit" class="btn btn-primary flex items-center gap-2">
-                        <i class="ti ti-device-floppy text-base"></i>
-                        {{ t('dashboard.Create_Plan', 'Create plan') }}
-                    </button>
-                    <a href="{{ route('dashboard.plans.index') }}" class="btn btn-light">
-                        {{ t('dashboard.Cancel', 'Cancel') }}
-                    </a>
-                </div>
+            {{-- أزرار الحفظ --}}
+            <div class="flex items-center gap-3 mb-6">
+                <button type="submit" class="btn btn-primary flex items-center gap-2">
+                    <i class="ti ti-device-floppy"></i>
+                    {{ t('dashboard.Create_Plan', 'Create Plan') }}
+                </button>
+                <a href="{{ route('dashboard.plans.index') }}" class="btn btn-light">
+                    {{ t('dashboard.Cancel', 'Cancel') }}
+                </a>
+            </div>
 
-            </form>
         </div>
 
-        {{-- ── Help Sidebar ─────────────────────────────────── --}}
+        {{-- ═══ HELP SIDEBAR (col-span-4) ══════════════════════════════════ --}}
         <div class="col-span-12 xl:col-span-4">
             <div class="card sticky top-6">
                 <div class="card-header">
-                    <div class="flex items-center gap-2">
-                        <i class="ti ti-help-circle text-primary text-lg"></i>
-                        <h5 class="mb-0">{{ t('dashboard.Help', 'Help') }}</h5>
-                    </div>
+                    <h5 class="mb-0 flex items-center gap-2">
+                        <i class="ti ti-info-circle text-primary"></i>
+                        {{ t('dashboard.Help', 'Help') }}
+                    </h5>
                 </div>
-                <div class="card-body space-y-4 text-sm text-gray-600">
+                <div class="card-body space-y-5 text-sm">
+
                     <div>
-                        <p class="font-semibold text-gray-800 mb-1">{{ t('dashboard.Help_Plan_Type', 'Plan type') }}</p>
-                        <p>{{ t('dashboard.Help_Plan_Type_Desc', 'Multi-Tenant: runs within the shared Palgoals platform. Hosting: creates a dedicated cPanel account on one of your servers.') }}</p>
+                        <p class="font-semibold text-gray-800 mb-1">
+                            {{ t('dashboard.Help_Plan_Type', 'نوع الباقة') }}
+                        </p>
+                        <p class="text-muted">
+                            {{ t('dashboard.Help_Plan_Type_Desc', 'Multi-Tenant: فقط منصة Palgoals بدون استضافة. Hosting: تفعيل استضافة cPanel تلقائياً عند الاشتراك.') }}
+                        </p>
                     </div>
-                    <hr class="border-slate-100">
-                    <div>
-                        <p class="font-semibold text-gray-800 mb-1">{{ t('dashboard.Help_Featured', 'Featured plan') }}</p>
-                        <p>{{ t('dashboard.Help_Featured_Desc', 'Featured plans show a prominent badge on their card. You can customize the badge text per language.') }}</p>
+
+                    <div class="border-t pt-4">
+                        <p class="font-semibold text-gray-800 mb-1">
+                            {{ t('dashboard.Help_Featured', 'الباقة المميزة') }}
+                        </p>
+                        <p class="text-muted">
+                            {{ t('dashboard.Help_Featured_Desc', 'تُعرض بشارة مميزة على صفحة الأسعار لجذب الانتباه. يمكن تخصيص نص الشارة لكل لغة.') }}
+                        </p>
                     </div>
-                    <hr class="border-slate-100">
-                    <div>
-                        <p class="font-semibold text-gray-800 mb-1">{{ t('dashboard.Help_Server_Package', 'Server package') }}</p>
-                        <p>{{ t('dashboard.Help_Server_Package_Desc', 'Used when auto-provisioning hosting accounts. Select a server first to load available WHM packages.') }}</p>
+
+                    <div class="border-t pt-4">
+                        <p class="font-semibold text-gray-800 mb-1">
+                            {{ t('dashboard.Help_Server_Package', 'حزمة السيرفر') }}
+                        </p>
+                        <p class="text-muted">
+                            {{ t('dashboard.Help_Server_Package_Desc', 'اختر الباقة من السيرفر التي ستُطبَّق تلقائياً عند تفعيل الاشتراك. تأكد من إنشاء الباقات في WHM أولاً.') }}
+                        </p>
                     </div>
+
+                    <div class="border-t pt-4">
+                        <p class="font-semibold text-gray-800 mb-1">
+                            {{ t('dashboard.Help_Features', 'المميزات') }}
+                        </p>
+                        <p class="text-muted">
+                            {{ t('dashboard.Help_Features_Desc', 'يمكن إضافة مميزات منفصلة للخطة الشهرية والسنوية، أو استخدام نفس القائمة للاثنتين.') }}
+                        </p>
+                    </div>
+
                 </div>
             </div>
         </div>
 
     </div>
+    </form>
 
-    {{-- Scripts --}}
+    @push('scripts')
     <script>
+    (() => {
+        // ── تبديل تبويبات اللغات ──────────────────────────────────────
         function showLangTab(locale) {
-            // Switch both pane sets (Section 1 + Section 4)
             document.querySelectorAll('.lang-pane').forEach(p => p.classList.add('hidden'));
-            document.querySelectorAll('.feat-lang-pane').forEach(p => p.classList.add('hidden'));
             const pane = document.getElementById('pane-' + locale);
             if (pane) pane.classList.remove('hidden');
-            const featPane = document.getElementById('feat-pane-' + locale);
-            if (featPane) featPane.classList.remove('hidden');
 
             document.getElementById('active_locale').value = locale;
 
-            // Reset all language tab buttons
-            document.querySelectorAll('[id^="tab-"],[id^="feat-tab-"]').forEach(btn => {
-                btn.classList.remove('bg-white', 'border', 'border-b-0', 'font-bold');
-                btn.classList.add('bg-gray-200', 'text-gray-600');
-            });
-            // Activate clicked tab (both the Section 1 tab and the Section 4 tab)
-            ['tab-' + locale, 'feat-tab-' + locale].forEach(id => {
-                const btn = document.getElementById(id);
-                if (btn) {
-                    btn.classList.remove('bg-gray-200', 'text-gray-600');
-                    btn.classList.add('bg-white', 'border', 'border-b-0', 'font-bold');
-                }
+            document.querySelectorAll('.plan-lang-tab').forEach(btn => {
+                const isActive = btn.id === 'plan-lang-tab-' + locale;
+                btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+                btn.classList.remove('border-primary', 'text-primary', 'border-transparent', 'text-muted');
+                btn.classList.add(isActive ? 'border-primary' : 'border-transparent');
+                btn.classList.add(isActive ? 'text-primary' : 'text-muted');
             });
         }
+        window.showLangTab = showLangTab;
 
-        // Sync cents on submit
-        const monthlyUI     = document.getElementById('monthly_price_ui');
-        const monthlyCents  = document.getElementById('monthly_price_cents');
-        const annualUI      = document.getElementById('annual_price_ui');
-        const annualCents   = document.getElementById('annual_price_cents');
+        // ── sync cents ────────────────────────────────────────────────
+        const monthlyUI    = document.getElementById('monthly_price_ui');
+        const monthlyCents = document.getElementById('monthly_price_cents');
+        const annualUI     = document.getElementById('annual_price_ui');
+        const annualCents  = document.getElementById('annual_price_cents');
 
         function syncCents() {
-            if (monthlyCents) monthlyCents.value = monthlyUI?.value ? Math.round(parseFloat(monthlyUI.value) * 100) : '';
-            if (annualCents)  annualCents.value  = annualUI?.value  ? Math.round(parseFloat(annualUI.value)  * 100) : '';
+            if (monthlyCents && monthlyUI?.value !== undefined)
+                monthlyCents.value = monthlyUI.value ? Math.round(parseFloat(monthlyUI.value) * 100) : '';
+            if (annualCents && annualUI?.value !== undefined)
+                annualCents.value = annualUI.value ? Math.round(parseFloat(annualUI.value) * 100) : '';
         }
-
         monthlyUI?.addEventListener('input', syncCents);
         annualUI?.addEventListener('input', syncCents);
         document.getElementById('planForm')?.addEventListener('submit', syncCents);
 
-        // Server package fetch
-        const selectServerFirstLabel = {{ Js::from(t('dashboard.Select_Server_First', 'Select a server first')) }};
-        const loadingLabel = {{ Js::from(t('dashboard.Loading', 'Loading…')) }};
-
-        async function fetchPackagesForServer(serverId, selected = '') {
-            const select = document.getElementById('server_package_select');
+        // ── تحميل باقات السيرفر ──────────────────────────────────────
+        async function fetchPackagesForServer(serverId, selected) {
+            const select  = document.getElementById('server_package_select');
+            const warning = document.getElementById('pkg_warning');
             if (!select) return;
-            select.innerHTML = '<option value="">' + loadingLabel + '</option>';
+
             if (!serverId) {
-                select.innerHTML = '<option value="">— ' + selectServerFirstLabel + ' —</option>';
+                select.innerHTML = '<option value="">-- {{ t('dashboard.Select_Server_First', 'اختر السيرفر أولاً') }} --</option>';
+                if (warning) warning.classList.add('hidden');
                 return;
             }
+
+            select.innerHTML = '<option value="">{{ t('dashboard.Loading', 'جارٍ التحميل...') }}</option>';
+            if (warning) warning.classList.add('hidden');
+
             try {
-                const res = await fetch(`{{ url('admin/servers') }}/${serverId}/packages`, {
+                const res = await fetch('{{ url('admin/servers') }}/' + serverId + '/packages', {
                     credentials: 'same-origin',
                     headers: { 'Accept': 'application/json' }
                 });
-                if (!res.ok) {
-                    const text = await res.text();
-                    let msg = 'HTTP ' + res.status;
-                    try { const j = JSON.parse(text); if (j.message) msg = j.message; else if (j.error) msg = j.error; }
-                    catch (err) { if (text) msg = text.substring(0, 200); }
-                    select.innerHTML = '<option value="">-- Error: ' + msg + ' --</option>';
-                    console.error('Package fetch failed', res.status, text);
+                const data = await res.json();
+
+                if (!res.ok || data.error) {
+                    select.innerHTML = '<option value="">-- {{ t('dashboard.Error_Loading', 'خطأ في التحميل') }} --</option>';
+                    if (warning) { warning.textContent = data.error || 'خطأ HTTP ' + res.status; warning.classList.remove('hidden'); }
                     return;
                 }
-                const data = await res.json();
-                select.innerHTML = '<option value="">— ' + selectServerFirstLabel + ' —</option>';
-                const packages = data?.packages || data?.pkg || data?.data || [];
-                if (Array.isArray(packages) && packages.length) {
-                    packages.forEach(pkg => {
-                        const opt = document.createElement('option');
-                        opt.value = typeof pkg === 'string' ? pkg : (pkg.name || pkg.package || pkg.pkg || JSON.stringify(pkg));
-                        opt.textContent = opt.value;
-                        if (opt.value === selected) opt.selected = true;
-                        select.appendChild(opt);
-                    });
-                } else if (packages && typeof packages === 'object' && !Array.isArray(packages)) {
-                    Object.keys(packages).forEach(k => {
-                        const opt = document.createElement('option');
-                        opt.value = k; opt.textContent = k;
-                        if (k === selected) opt.selected = true;
-                        select.appendChild(opt);
-                    });
+
+                if (data.warning && warning) {
+                    warning.innerHTML = '<i class="ti ti-alert-triangle me-1"></i>' + data.warning;
+                    warning.classList.remove('hidden');
                 }
+
+                const packages = data.packages || [];
+                select.innerHTML = '<option value="">-- {{ t('dashboard.None', 'None') }} --</option>';
+                packages.forEach(pkg => {
+                    const val  = typeof pkg === 'string' ? pkg : (pkg.name || pkg.pkg || pkg.package || '');
+                    if (!val) return;
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = val;
+                    if (val === selected) opt.selected = true;
+                    select.appendChild(opt);
+                });
+
             } catch (e) {
-                select.innerHTML = '<option value="">-- Error: ' + (e?.message || e) + ' --</option>';
-                console.error('Exception while fetching packages', e);
+                select.innerHTML = '<option value="">-- {{ t('dashboard.Error_Loading', 'خطأ في التحميل') }} --</option>';
+                if (warning) { warning.textContent = e.message; warning.classList.remove('hidden'); }
             }
         }
 
-        function escapeFeatureValue(value) {
-            return String(value || '')
-                .replace(/&/g, '&amp;')
-                .replace(/"/g, '&quot;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
+        // ── Features logic ────────────────────────────────────────────
+        function escapeVal(v) {
+            return String(v || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         }
 
-        function appendFeatureRow(wrapper, locale, billing, textValue = '', available = true) {
-            const bucket    = billing || wrapper.dataset.billing || 'monthly';
-            const nextIndex = parseInt(wrapper.dataset.nextIndex || '0', 10);
-            const namePrefix = 'features[' + locale + '][' + bucket + '][' + nextIndex + ']';
+        function appendFeatureRow(wrapper, locale, billing, text, available) {
+            const idx    = parseInt(wrapper.dataset.nextIndex || '0', 10);
+            const prefix = 'features[' + locale + '][' + billing + '][' + idx + ']';
+            const chk    = available ? ' checked' : '';
+            const avLbl  = wrapper.dataset.availableLabel || '{{ t('dashboard.Available', 'متاح') }}';
             const row = document.createElement('div');
             row.className = 'flex flex-col sm:flex-row sm:items-center gap-3';
             row.setAttribute('data-feature-row', '');
-
-            const availableLabel = wrapper.dataset.availableLabel || 'Available';
-            const removeLabel    = wrapper.dataset.removeLabel    || 'Remove';
-            const escapedValue   = escapeFeatureValue(textValue);
-            const checkedAttr    = available ? ' checked' : '';
-
             row.innerHTML =
-                '<div class="flex-1 w-full">' +
-                '<input type="text" name="' + namePrefix + '[text]" class="form-control" placeholder="e.g. Domain" value="' + escapedValue + '">' +
+                '<div class="flex-1">' +
+                '<input type="text" name="' + prefix + '[text]" class="form-control" value="' + escapeVal(text) + '" placeholder="{{ t('dashboard.Feature_Placeholder', 'e.g. Domain') }}">' +
                 '</div>' +
                 '<label class="inline-flex items-center gap-2 text-sm shrink-0">' +
-                '<input type="hidden" name="' + namePrefix + '[available]" value="0">' +
-                '<input type="checkbox" name="' + namePrefix + '[available]" value="1" class="h-4 w-4 accent-primary"' + checkedAttr + '>' +
-                '<span>' + availableLabel + '</span>' +
+                '<input type="hidden" name="' + prefix + '[available]" value="0">' +
+                '<input type="checkbox" name="' + prefix + '[available]" value="1" class="h-4 w-4 accent-primary"' + chk + '>' +
+                '<span>' + avLbl + '</span>' +
                 '</label>' +
-                '<button type="button" class="text-red-500 hover:text-red-700 shrink-0 w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center transition" data-remove-feature>' +
-                '<i class="ti ti-x text-base leading-none"></i>' +
-                '<span class="sr-only">' + removeLabel + '</span>' +
-                '</button>';
-
+                '<button type="button" class="text-danger p-1 border-0 bg-transparent shrink-0" data-remove-feature title="{{ t('dashboard.Remove_Feature', 'حذف') }}">' +
+                '<i class="ti ti-trash" style="font-size:1.1rem;"></i></button>';
             wrapper.appendChild(row);
-            wrapper.dataset.nextIndex = nextIndex + 1;
-            const textInput = row.querySelector('input[type="text"]');
-            if (textInput) textInput.focus();
+            wrapper.dataset.nextIndex = idx + 1;
+            row.querySelector('input[type=text]')?.focus();
         }
 
+        // ── DOMContentLoaded ──────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', () => {
             syncCents();
 
-            const serverSelect     = document.getElementById('server_select');
-            const serverPackageOld = @json(old('server_package'));
-            if (serverSelect && serverSelect.value) {
-                fetchPackagesForServer(serverSelect.value, serverPackageOld ?? '');
-            }
-            serverSelect?.addEventListener('change', (e) => fetchPackagesForServer(e.target.value, ''));
+            const serverSel = document.getElementById('server_select');
+            const pkgOld    = @json(old('server_package'));
+            if (serverSel?.value) fetchPackagesForServer(serverSel.value, pkgOld ?? '');
+            serverSel?.addEventListener('change', e => fetchPackagesForServer(e.target.value, ''));
 
+            // Remove feature
             document.querySelectorAll('[data-feature-wrapper]').forEach(wrapper => {
-                if (!wrapper.dataset.nextIndex) {
-                    wrapper.dataset.nextIndex = wrapper.querySelectorAll('[data-feature-row]').length;
-                }
-                wrapper.addEventListener('click', (event) => {
-                    const removeBtn = event.target.closest('[data-remove-feature]');
-                    if (removeBtn) {
-                        const row = removeBtn.closest('[data-feature-row]');
-                        if (row) row.remove();
-                    }
+                wrapper.addEventListener('click', e => {
+                    const btn = e.target.closest('[data-remove-feature]');
+                    if (btn) btn.closest('[data-feature-row]')?.remove();
                 });
             });
 
-            document.querySelectorAll('[data-add-feature]').forEach(button => {
-                button.addEventListener('click', () => {
-                    const locale  = button.dataset.locale;
-                    const billing = button.dataset.billing;
-                    const wrapper = document.querySelector(
-                        '[data-feature-wrapper][data-locale="' + locale + '"][data-billing="' + billing + '"]'
-                    );
-                    if (wrapper) appendFeatureRow(wrapper, locale, billing, '', true);
+            // Add feature
+            document.querySelectorAll('[data-add-feature]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const w = document.querySelector('[data-feature-wrapper][data-locale="' + btn.dataset.locale + '"][data-billing="' + btn.dataset.billing + '"]');
+                    if (w) appendFeatureRow(w, btn.dataset.locale, btn.dataset.billing, '', true);
                 });
             });
 
-            const ACTIVE_TAB   = ['bg-white', 'border-gray-300', 'text-gray-800', 'font-semibold', 'shadow-sm'];
-            const INACTIVE_TAB = ['bg-gray-100', 'border-transparent', 'text-gray-500'];
-
+            // Feature tabs
+            const ACT = ['bg-white','border-gray-300','text-gray-800','font-semibold','shadow-sm'];
+            const INA = ['bg-gray-100','border-transparent','text-gray-500'];
             document.querySelectorAll('[data-feature-tab]').forEach(tab => {
                 tab.addEventListener('click', () => {
                     const locale  = tab.dataset.locale;
                     const billing = tab.dataset.billing;
-
-                    document.querySelectorAll('[data-feature-tab][data-locale="' + locale + '"]').forEach(btn => {
-                        btn.classList.remove(...ACTIVE_TAB);
-                        btn.classList.add(...INACTIVE_TAB);
+                    document.querySelectorAll('[data-feature-tab][data-locale="' + locale + '"]').forEach(t => {
+                        t.classList.remove(...ACT); t.classList.add(...INA);
                     });
-                    tab.classList.remove(...INACTIVE_TAB);
-                    tab.classList.add(...ACTIVE_TAB);
-
-                    document.querySelectorAll('[data-feature-panel][data-locale="' + locale + '"]').forEach(panel => {
-                        if (panel.dataset.billing === billing) {
-                            panel.classList.remove('hidden');
-                            panel.classList.add('block');
-                        } else {
-                            panel.classList.add('hidden');
-                            panel.classList.remove('block');
-                        }
+                    tab.classList.remove(...INA); tab.classList.add(...ACT);
+                    document.querySelectorAll('[data-feature-panel][data-locale="' + locale + '"]').forEach(p => {
+                        p.classList.toggle('hidden', p.dataset.billing !== billing);
+                        p.classList.toggle('block',  p.dataset.billing === billing);
                     });
                 });
             });
         });
+    })();
     </script>
+    @endpush
+
 </x-dashboard-layout>

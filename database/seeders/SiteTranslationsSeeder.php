@@ -136,6 +136,39 @@ class SiteTranslationsSeeder extends Seeder
             'common.Something_Went_Wrong' => 'حدث خطأ ما، يرجى المحاولة مرة أخرى.',
             'common.Success'              => 'تمّ بنجاح',
 
+            // ── Pricing Plans — Billing Toggle & Discount ─────────────────
+            // Toggle button labels
+            'site.Monthly'               => 'شهري',
+            'site.Annual'                => 'سنوي',
+
+            // Toggle area — savings hint line
+            // Usage: t('site.You_Save_Up_To') . ' $XX/year ' . t('site.With_Annual_Billing')
+            'site.You_Save_Up_To'        => 'توفّر ما يصل إلى',
+            'site.With_Annual_Billing'   => 'مع الاشتراك السنوي',
+
+            // Per-plan discount badge (x-show="annual")
+            // Usage: strtr(t('site.Save_Percent'), [':percent' => $discountPercent])
+            'site.Save_Percent'          => 'وفّر :percent%',
+
+            // Price label "/mo" suffix
+            'site.Per_Month'             => '/شهر',
+
+            // Annual billing sub-line inside plan header
+            // Usage: strtr(t('site.Billed_Per_Year'), [':amount' => '$191.88'])
+            'site.Billed_Per_Year'       => 'يُحسب $:amount / سنة',
+
+            // Saving emphasis inside annual sub-line
+            // Usage: strtr(t('site.Save_Per_Year'), [':amount' => $yearlySaving])
+            'site.Save_Per_Year'         => 'توفير $:amount',
+
+            // Empty & error states
+            'site.No_Plans_Available'    => 'لا توجد خطط متاحة حالياً.',
+            'site.No_Features_Listed'    => 'لا توجد مميزات محددة.',
+
+            // CTA and featured label
+            'site.Choose_Now'            => 'اشترك الآن',
+            'site.Most_Popular'          => 'الأكثر طلباً',
+
         ];
 
         $locale = 'ar';
