@@ -23,6 +23,24 @@ class SectionDefinition extends Model
 
     public const EDITOR_MODE_DYNAMIC = 'dynamic';
 
+    // ── Visibility Scope — allowed values ────────────────────────────────────
+    // Controls which builder picker surfaces this definition to the user.
+    // DEFAULT in DB is 'both' so existing rows require no backfill.
+
+    /** Visible in both Admin Builder and Client Builder (default). */
+    public const SCOPE_BOTH = 'both';
+
+    /** Visible in Admin Builder only — e.g. pricing_plans_dynamic. */
+    public const SCOPE_ADMIN_ONLY = 'admin_only';
+
+    /** Visible in Client Builder only — reserved for future client-specific sections. */
+    public const SCOPE_CLIENT_ONLY = 'client_only';
+
+    /** Hidden from all builder pickers — draft / internal / deprecated. */
+    public const SCOPE_HIDDEN = 'hidden';
+
+    // ─────────────────────────────────────────────────────────────────────────
+
     protected $fillable = [
         'section_key',
         'label',
@@ -38,6 +56,7 @@ class SectionDefinition extends Model
         'disk_hash',
         'is_active',
         'is_visible',
+        'visibility_scope',
         'sort_order',
     ];
 
@@ -48,10 +67,51 @@ class SectionDefinition extends Model
         'blade_written_at' => 'datetime',
         'blade_hash'       => 'string',
         'disk_hash'        => 'string',
-        'is_active' => 'boolean',
-        'is_visible' => 'boolean',
-        'sort_order' => 'integer',
+        'is_active'        => 'boolean',
+        'is_visible'       => 'boolean',
+        'visibility_scope' => 'string',
+        'sort_order'       => 'integer',
     ];
+
+    // ── Scope Helpers ────────────────────────────────────────────────────────
+
+    /**
+     * Scope values that should appear in the Admin Page Builder picker.
+     *
+     * @return string[]
+     */
+    public static function adminVisibleScopes(): array
+    {
+        return [self::SCOPE_BOTH, self::SCOPE_ADMIN_ONLY];
+    }
+
+    /**
+     * Scope values that should appear in the Client Site Builder picker.
+     *
+     * @return string[]
+     */
+    public static function clientVisibleScopes(): array
+    {
+        return [self::SCOPE_BOTH, self::SCOPE_CLIENT_ONLY];
+    }
+
+    /**
+     * Whether this definition should appear in the Admin Builder picker.
+     */
+    public function isVisibleForAdmin(): bool
+    {
+        return in_array($this->visibility_scope ?? self::SCOPE_BOTH, self::adminVisibleScopes(), true);
+    }
+
+    /**
+     * Whether this definition should appear in the Client Builder picker.
+     */
+    public function isVisibleForClient(): bool
+    {
+        return in_array($this->visibility_scope ?? self::SCOPE_BOTH, self::clientVisibleScopes(), true);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     /**
      * Field definitions attached to this section blueprint.

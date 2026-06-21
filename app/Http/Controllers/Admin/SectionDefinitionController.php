@@ -792,6 +792,7 @@ class SectionDefinitionController extends Controller
             'is_active' => (bool) ($validated['is_active'] ?? false),
             'is_visible' => (bool) ($validated['is_visible_in_library'] ?? false),
             'sort_order' => (int) ($validated['sort_order'] ?? 0),
+            'visibility_scope' => $validated['visibility_scope'] ?? SectionDefinition::SCOPE_BOTH,
         ];
     }
 

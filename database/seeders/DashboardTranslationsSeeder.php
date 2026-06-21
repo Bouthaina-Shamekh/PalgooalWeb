@@ -897,6 +897,21 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Def_Dynamic_Workflow_Desc'       => 'المسار المعتاد للأقسام: أدخل مفتاح القالب، احفظ، ثم أضف تعريفات الحقول.',
             'dashboard.Def_Active_Hint'                 => 'التعريفات غير النشطة تبقى محفوظة لكن لا تُعرض في الأدوات.',
             'dashboard.Def_Visible_Hint'                => 'فعّله مع Active لظهور التعريف في مكتبة الأقسام.',
+
+            // ── Visibility Scope (Phase 5 + UX Cleanup)
+            'dashboard.Visibility_Scope'                => 'مكان ظهور السكشن',
+            'dashboard.Scope_Both'                      => 'الأدمن والعميل',
+            'dashboard.Scope_Admin_Only'                => 'الأدمن فقط',
+            'dashboard.Scope_Client_Only'               => 'العميل فقط',
+            'dashboard.Scope_Hidden'                    => 'مخفي من الجميع',
+            'dashboard.Visibility_Scope_Help'           => 'يحدد هل يظهر هذا السكشن في بلدر الأدمن، بلدر العميل، أو كليهما.',
+
+            // ── UX Cleanup — تسميات حقول الحالة والإتاحة
+            'dashboard.Enable_Section'                  => 'تفعيل السكشن',
+            'dashboard.Enable_Section_Help'             => 'عند تعطيل هذا الخيار يتوقف استخدام السكشن بالكامل ولا يظهر في أدوات البناء.',
+            'dashboard.Show_In_Add_Section'             => 'إظهاره في قائمة الإضافة',
+            'dashboard.Show_In_Add_Section_Help'        => 'عند إيقافه لن يظهر السكشن ضمن قائمة Add Section، لكن النسخ المضافة مسبقاً ستبقى كما هي.',
+
             'dashboard.Update_Definition'               => 'حفظ التعديلات',
             'dashboard.Update_And_Manage_Fields'        => 'حفظ وإدارة الحقول',
             'dashboard.Create_Definition_Continue'      => 'إنشاء التعريف ومتابعة',

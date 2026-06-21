@@ -938,6 +938,7 @@ class SectionController extends Controller
             ->with('previewMedia')
             ->where('is_active', true)
             ->where('is_visible', true)
+            ->whereIn('visibility_scope', $this->builderAudienceScopes())
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
@@ -1369,6 +1370,28 @@ class SectionController extends Controller
     protected function workspaceSectionTypes(): array
     {
         return $this->sectionLibraryTypes();
+    }
+
+    /**
+     * Scope values used to filter SectionDefinition records in sectionLibraryTypes().
+     *
+     * Override in client-facing subclasses to return clientVisibleScopes() instead,
+     * so that admin-only sections are excluded from the client builder picker while
+     * the base query logic stays in one place (sectionLibraryTypes).
+     *
+     * Default: admin scopes — used by the Admin Page Builder.
+     * Override: client scopes — used by SubscriptionPageEditorController
+     *           and SubscriptionHomepageEditorController.
+     *
+     * Shell editor controllers (SubscriptionSiteShellEditorController) are unaffected
+     * because they override workspaceSectionTypes() entirely via ShellSectionEditorSupport
+     * and never surface sectionLibraryTypes() in their picker.
+     *
+     * @return string[]
+     */
+    protected function builderAudienceScopes(): array
+    {
+        return SectionDefinition::adminVisibleScopes();
     }
 
     protected function sectionTypesForSection(Section $section): array

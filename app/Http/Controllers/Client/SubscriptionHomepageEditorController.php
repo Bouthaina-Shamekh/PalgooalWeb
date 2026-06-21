@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Admin\SectionController;
 use App\Models\Page;
 use App\Models\Section;
+use App\Models\Sections\SectionDefinition;
 use App\Models\Tenancy\Subscription;
 use App\Support\Tenancy\TenantThemeSettings;
 use Illuminate\Http\Request;
@@ -81,6 +82,21 @@ class SubscriptionHomepageEditorController extends SectionController
         $page = $this->resolveOwnedHomepage($request, $subscription);
 
         return parent::destroy($page, $section);
+    }
+
+    /**
+     * Filter the Add Section picker to client-visible scopes only.
+     *
+     * Overrides SectionController::builderAudienceScopes() so that 'admin_only'
+     * sections (e.g. pricing_plans_dynamic) are excluded from the client homepage
+     * builder picker. Sections already placed on pages continue to render normally —
+     * this filter only affects the Add Section catalog, not the render path.
+     *
+     * @return string[]
+     */
+    protected function builderAudienceScopes(): array
+    {
+        return SectionDefinition::clientVisibleScopes();
     }
 
     protected function workspaceRoutePrefix(): string

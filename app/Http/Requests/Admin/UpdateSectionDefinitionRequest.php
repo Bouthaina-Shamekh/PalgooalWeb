@@ -61,6 +61,16 @@ class UpdateSectionDefinitionRequest extends FormRequest
             'is_active' => ['sometimes', 'boolean'],
             'is_visible_in_library' => ['sometimes', 'boolean'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
+            'visibility_scope' => [
+                'sometimes',
+                'string',
+                Rule::in([
+                    SectionDefinition::SCOPE_BOTH,
+                    SectionDefinition::SCOPE_ADMIN_ONLY,
+                    SectionDefinition::SCOPE_CLIENT_ONLY,
+                    SectionDefinition::SCOPE_HIDDEN,
+                ]),
+            ],
         ];
     }
 
@@ -80,6 +90,7 @@ class UpdateSectionDefinitionRequest extends FormRequest
             'is_active' => $this->boolean('is_active'),
             'is_visible_in_library' => $this->boolean('is_visible_in_library'),
             'sort_order' => $this->filled('sort_order') ? (int) $this->input('sort_order') : 0,
+            'visibility_scope' => $this->input('visibility_scope', SectionDefinition::SCOPE_BOTH),
         ]);
     }
 

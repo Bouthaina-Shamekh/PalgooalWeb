@@ -190,33 +190,67 @@
         </div>
     </div>
 
-    {{-- الحالة والرؤية --}}
+    {{-- حالة السكشن والإتاحة --}}
     <div class="col-span-12">
         <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+
+            {{-- ① حالة السكشن --}}
             <label class="flex cursor-pointer items-center gap-3 rounded border border-slate-200 px-4 py-3">
                 <input type="hidden" name="is_active" value="0">
                 <input type="checkbox" name="is_active" value="1" class="form-checkbox"
                     @checked(old('is_active', $sectionDefinition->is_active))>
                 <span>
-                    <span class="block font-medium text-slate-900">{{ t('dashboard.Active', 'مفعّل') }}</span>
-                    <span class="block text-sm text-slate-500">{{ t('dashboard.Def_Active_Hint', 'التعريفات غير النشطة تبقى محفوظة لكن لا تُعرض في الأدوات.') }}</span>
+                    <span class="block font-medium text-slate-900">{{ t('dashboard.Enable_Section', 'تفعيل السكشن') }}</span>
+                    <span class="block text-sm text-slate-500">{{ t('dashboard.Enable_Section_Help', 'عند تعطيل هذا الخيار يتوقف استخدام السكشن بالكامل ولا يظهر في أدوات البناء.') }}</span>
                 </span>
             </label>
 
+            {{-- ② الإتاحة --}}
             <label class="flex cursor-pointer items-center gap-3 rounded border border-slate-200 px-4 py-3">
                 <input type="hidden" name="is_visible_in_library" value="0">
                 <input type="checkbox" name="is_visible_in_library" value="1" class="form-checkbox"
                     @checked(old('is_visible_in_library', $sectionDefinition->is_visible))>
                 <span>
-                    <span class="block font-medium text-slate-900">{{ t('dashboard.Visible_In_Library', 'ظاهر في المكتبة') }}</span>
-                    <span class="block text-sm text-slate-500">{{ t('dashboard.Def_Visible_Hint', 'فعّله مع Active لظهور التعريف في مكتبة الأقسام.') }}</span>
+                    <span class="block font-medium text-slate-900">{{ t('dashboard.Show_In_Add_Section', 'إظهاره في قائمة الإضافة') }}</span>
+                    <span class="block text-sm text-slate-500">{{ t('dashboard.Show_In_Add_Section_Help', 'عند إيقافه لن يظهر السكشن ضمن قائمة Add Section، لكن النسخ المضافة مسبقاً ستبقى كما هي.') }}</span>
                 </span>
             </label>
+
         </div>
         @error('is_active')
             <div class="mt-1 text-sm text-red-600">{{ $message }}</div>
         @enderror
         @error('is_visible_in_library')
+            <div class="mt-1 text-sm text-red-600">{{ $message }}</div>
+        @enderror
+    </div>
+
+    {{-- ③ الجمهور المستهدف (visibility_scope) --}}
+    <div class="col-span-12">
+        <label class="form-label" for="visibility_scope">
+            {{ t('dashboard.Visibility_Scope', 'مكان ظهور السكشن') }}
+        </label>
+        <select name="visibility_scope" id="visibility_scope" class="form-control">
+            @php
+                $currentScope = old('visibility_scope', $sectionDefinition->visibility_scope ?? 'both');
+            @endphp
+            <option value="both"        @selected($currentScope === 'both')>
+                {{ t('dashboard.Scope_Both', 'الأدمن والعميل') }}
+            </option>
+            <option value="admin_only"  @selected($currentScope === 'admin_only')>
+                {{ t('dashboard.Scope_Admin_Only', 'الأدمن فقط') }}
+            </option>
+            <option value="client_only" @selected($currentScope === 'client_only')>
+                {{ t('dashboard.Scope_Client_Only', 'العميل فقط') }}
+            </option>
+            <option value="hidden"      @selected($currentScope === 'hidden')>
+                {{ t('dashboard.Scope_Hidden', 'مخفي من الجميع') }}
+            </option>
+        </select>
+        <div class="mt-1 text-sm text-slate-500">
+            {{ t('dashboard.Visibility_Scope_Help', 'يحدد هل يظهر هذا السكشن في بلدر الأدمن، بلدر العميل، أو كليهما.') }}
+        </div>
+        @error('visibility_scope')
             <div class="mt-1 text-sm text-red-600">{{ $message }}</div>
         @enderror
     </div>

@@ -129,6 +129,7 @@
                             <th>{{ t('dashboard.Fields', 'الحقول') }}</th>
                             <th>{{ t('dashboard.Status', 'الحالة') }}</th>
                             <th>{{ t('dashboard.Library', 'المكتبة') }}</th>
+                            <th>{{ t('dashboard.Visibility_Scope', 'نطاق الظهور') }}</th>
                             <th>{{ t('dashboard.Sort_Order', 'الترتيب') }}</th>
                             <th>{{ t('dashboard.Actions', 'إجراءات') }}</th>
                         </tr>
@@ -202,6 +203,26 @@
                                         </span>
                                     @endif
                                 </td>
+                                <td>
+                                    @php $scope = $def->visibility_scope ?? 'both'; @endphp
+                                    @if($scope === 'admin_only')
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700">
+                                            {{ t('dashboard.Scope_Admin_Only', 'الأدمن فقط') }}
+                                        </span>
+                                    @elseif($scope === 'client_only')
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">
+                                            {{ t('dashboard.Scope_Client_Only', 'العميل فقط') }}
+                                        </span>
+                                    @elseif($scope === 'hidden')
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700">
+                                            {{ t('dashboard.Scope_Hidden', 'مخفي من الجميع') }}
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-gray-100 text-gray-500">
+                                            {{ t('dashboard.Scope_Both', 'الأدمن والعميل') }}
+                                        </span>
+                                    @endif
+                                </td>
                                 <td class="text-sm text-gray-500">{{ $def->sort_order }}</td>
                                 <td class="whitespace-nowrap">
                                     <div class="flex items-center gap-0.5">
@@ -239,7 +260,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="11">
+                                <td colspan="12">
                                     <div class="flex flex-col items-center justify-center py-16 text-center">
                                         <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
