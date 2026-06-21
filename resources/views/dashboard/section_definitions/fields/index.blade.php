@@ -3,6 +3,7 @@
         $primaryTemplateKey = $sectionDefinition->primaryTemplateKey();
         $isDynamicDefinition = $sectionDefinition->editor_mode === \App\Models\Sections\SectionDefinition::EDITOR_MODE_DYNAMIC;
         $allPresets = \App\Support\Sections\FieldPresetLibrary::all();
+        $allDesignPresets = \App\Support\Sections\DesignTokenPresetService::all();
 
         // Quick preset keys shown as direct buttons in toolbar
         $quickPresets = ['section_intro', 'cta_button', 'features_list', 'image_block'];
@@ -128,6 +129,52 @@
                 </div>
             </div>
         </div>
+
+        {{-- Design Token Presets Toolbar --}}
+        @can('create', \App\Models\Sections\SectionDefinitionField::class)
+        <div class="col-span-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="flex items-center gap-2 shrink-0">
+                            <div class="flex items-center justify-center rounded-xl text-amber-600"
+                                 style="width:36px;height:36px;background:#fef3c7;">
+                                <i class="ti ti-color-swatch" style="font-size:18px;"></i>
+                            </div>
+                            <div>
+                                <p class="mb-0 text-sm font-semibold text-gray-800">{{ t('dashboard.Design_Token_Presets', 'إضافة إعدادات تصميم جاهزة') }}</p>
+                                <p class="mb-0 text-xs text-slate-400">{{ t('dashboard.Design_Token_Presets_Desc', 'الحقول الموجودة مسبقاً تُتجاهل تلقائياً') }}</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 ms-auto">
+                            @foreach ($allDesignPresets as $dpKey => $dp)
+                                @php
+                                    $dpColor = $dp['color'] ?? 'slate';
+                                    $dpColors = $presetColors[$dpColor] ?? $presetColors['slate'];
+                                @endphp
+                                <button type="button"
+                                        class="design-preset-btn btn btn-sm flex items-center gap-1.5 border font-medium
+                                               {{ $dpColors['bg'] }} {{ $dpColors['text'] }} {{ $dpColors['border'] }} {{ $dpColors['hover'] }}"
+                                        data-design-preset-key="{{ $dpKey }}"
+                                        data-label="{{ $dp['label'] }}"
+                                        style="min-height:34px;">
+                                    <i class="ti {{ $dp['icon'] }}" style="font-size:15px;"></i>
+                                    <span class="text-xs">{{ $dp['label'] }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Shared design preset form — JS sets design_preset_key before submit --}}
+        <form action="{{ route('dashboard.section_definitions.fields.apply_design_preset', $sectionDefinition) }}"
+              method="POST" id="design-preset-apply-form" style="display:none;">
+            @csrf
+            <input type="hidden" name="design_preset_key" id="design-preset-key-input" value="">
+        </form>
+        @endcan
 
         {{-- Fields Content --}}
         <div class="col-span-12">
@@ -388,6 +435,23 @@
                 applyPreset(card.dataset.presetKey);
             });
         });
+
+        // ── Apply design token preset ─────────────────────────────────────────
+        var designPresetForm  = document.getElementById('design-preset-apply-form');
+        var designPresetInput = document.getElementById('design-preset-key-input');
+
+        if (designPresetForm && designPresetInput) {
+            document.querySelectorAll('.design-preset-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var label = btn.dataset.label || '';
+                    var confirmMsg = '{{ t('dashboard.Design_Preset_Confirm', 'إضافة إعدادات التصميم؟') }}';
+                    if (label) confirmMsg += '\n' + label;
+                    if (!window.confirm(confirmMsg)) return;
+                    designPresetInput.value = btn.dataset.designPresetKey;
+                    designPresetForm.submit();
+                });
+            });
+        }
     })();
     </script>
     @endpush

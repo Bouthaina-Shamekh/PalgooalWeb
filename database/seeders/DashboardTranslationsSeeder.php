@@ -1268,7 +1268,7 @@ class DashboardTranslationsSeeder extends Seeder
             // To add French: INSERT into translation_values for locale 'fr' — no PHP change needed.
             'section_groups.background'   => 'الخلفية',
             'section_groups.content'      => 'المحتوى',
-            'section_groups.cta'          => 'الدعوة للعمل',
+               'section_groups.cta'          => 'الدعوة للعمل',
             'section_groups.description'  => 'الوصف',
             'section_groups.design'       => 'التنسيق',
             'section_groups.faq'          => 'الأسئلة الشائعة',
@@ -1280,6 +1280,14 @@ class DashboardTranslationsSeeder extends Seeder
             'section_groups.media'        => 'الوسائط',
             'section_groups.seo'          => 'تحسين البحث',
             'section_groups.testimonials' => 'التقييمات',
+
+            // ── Design Token Presets (fields/index.blade.php toolbar) ─────────
+            'dashboard.Design_Token_Presets'      => 'إضافة إعدادات تصميم جاهزة',
+            'dashboard.Design_Token_Presets_Desc' => 'الحقول الموجودة مسبقاً تُتجاهل تلقائياً',
+            'dashboard.Design_Preset_Confirm'     => 'إضافة إعدادات التصميم؟',
+            'dashboard.Design_Preset_Applied'     => 'تمت إضافة :count حقل تصميم بنجاح.',
+            'dashboard.Design_Preset_None_Added'  => 'جميع حقول التصميم هذه موجودة بالفعل.',
+            'dashboard.Design_Preset_Invalid'     => 'مجموعة التصميم غير موجودة.',
 
         ];
 
@@ -1301,6 +1309,6 @@ class DashboardTranslationsSeeder extends Seeder
             }
         }
 
-        $this->command->info("✅ Arabic dashboard translations: {$created} created, {$updated} updated.");
+        $this->command->info("DashboardTranslationsSeeder: {$created} created, {$updated} updated.");
     }
 }

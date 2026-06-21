@@ -53,9 +53,20 @@
             return trim((string) $item);
         }, $items), fn($v) => $v !== null && $v !== ''));
     };
+
+
+$background_token = trim((string)($data['background_token'] ?? ''));
+
+        $backgroundClass = match ($background_token) {
+        'primary' => 'bg-theme-primary',
+        'secondary' => 'bg-theme-secondary',
+        'surface' => 'bg-theme-surface',
+        'muted' => 'bg-theme-muted',
+        default => 'bg-[#F2F2F2]',
+    };
 @endphp
 
-<section id="{{ $section_id }}" class="bg-[#F2F2F2] py-16 md:py-24 px-4 sm:px-6 lg:px-12" x-data="{ annual: false }">
+<section id="{{ $section_id }}" class="{{ $backgroundClass }}  py-16 md:py-24 px-4 sm:px-6 lg:px-12" x-data="{ annual: false }">
     <div class="container mx-auto">
 
         @if ($title)

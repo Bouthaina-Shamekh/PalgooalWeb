@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreSectionDefinitionFieldRequest;
 use App\Http\Requests\Admin\UpdateSectionDefinitionFieldRequest;
 use App\Models\Sections\SectionDefinition;
 use App\Models\Sections\SectionDefinitionField;
+use App\Support\Sections\DesignTokenPresetService;
 use App\Support\Sections\FieldGroupRegistry;
 use App\Support\Sections\FieldPresetLibrary;
 use App\Support\Sections\SectionDefinitionFieldFormDataFactory;
@@ -232,6 +233,52 @@ class SectionDefinitionFieldController extends Controller
 
         $message = strtr(
             t('dashboard.Preset_Applied', 'تمت إضافة :count حقل بنجاح.'),
+            [':count' => $addedCount]
+        );
+
+        return redirect()
+            ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
+            ->with('ok', $message);
+    }
+
+    /**
+     * Apply a design token preset — bulk-create token fields from DesignTokenRegistry.
+     *
+     * Token keys, field_type, field_scope, options, and default_value are all
+     * sourced from DesignTokenRegistry via DesignTokenPresetService. No field
+     * attributes are hardcoded in this method.
+     *
+     * Existing field keys are skipped (duplicate protection handled by Service).
+     */
+    public function applyDesignPreset(Request $request, SectionDefinition $sectionDefinition): RedirectResponse
+    {
+        $this->authorize('create', SectionDefinitionField::class);
+
+        $validated = $request->validate([
+            'design_preset_key' => [
+                'required',
+                'string',
+                'in:' . implode(',', DesignTokenPresetService::keys()),
+            ],
+        ]);
+
+        $presetKey = $validated['design_preset_key'];
+        $preset    = DesignTokenPresetService::get($presetKey);
+
+        if (! $preset) {
+            return back()->with('error', t('dashboard.Design_Preset_Invalid', 'مجموعة التصميم غير موجودة.'));
+        }
+
+        $addedCount = DesignTokenPresetService::apply($presetKey, $sectionDefinition);
+
+        if ($addedCount === 0) {
+            return redirect()
+                ->route('dashboard.section_definitions.fields.index', $sectionDefinition)
+                ->with('ok', t('dashboard.Design_Preset_None_Added', 'جميع حقول التصميم هذه موجودة بالفعل.'));
+        }
+
+        $message = strtr(
+            t('dashboard.Design_Preset_Applied', 'تمت إضافة :count حقل تصميم بنجاح.'),
             [':count' => $addedCount]
         );
 

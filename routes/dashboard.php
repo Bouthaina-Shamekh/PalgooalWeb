@@ -317,6 +317,7 @@ Route::group([
                     Route::post('/', [SectionDefinitionFieldController::class, 'store'])->name('store');
                     Route::post('/reorder', [SectionDefinitionFieldController::class, 'reorder'])->name('reorder');
                     Route::post('/apply-preset', [SectionDefinitionFieldController::class, 'applyPreset'])->name('apply_preset');
+                    Route::post('/apply-design-preset', [SectionDefinitionFieldController::class, 'applyDesignPreset'])->name('apply_design_preset');
                     Route::get('/{field}/edit', [SectionDefinitionFieldController::class, 'edit'])
                         ->whereNumber('field')
                         ->name('edit');
