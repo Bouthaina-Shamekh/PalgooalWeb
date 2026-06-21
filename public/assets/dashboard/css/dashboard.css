@@ -4225,6 +4225,9 @@
   .py-28 {
     padding-block: calc(var(--spacing) * 28);
   }
+  .py-32 {
+    padding-block: calc(var(--spacing) * 32);
+  }
   .py-\[15px\] {
     padding-block: 15px;
   }
@@ -8969,9 +8972,24 @@
       padding-block: calc(var(--spacing) * 10);
     }
   }
+  .md\:py-12 {
+    @media (width >= 48rem) {
+      padding-block: calc(var(--spacing) * 12);
+    }
+  }
   .md\:py-24 {
     @media (width >= 48rem) {
       padding-block: calc(var(--spacing) * 24);
+    }
+  }
+  .md\:py-32 {
+    @media (width >= 48rem) {
+      padding-block: calc(var(--spacing) * 32);
+    }
+  }
+  .md\:py-40 {
+    @media (width >= 48rem) {
+      padding-block: calc(var(--spacing) * 40);
     }
   }
   .md\:pt-6 {
