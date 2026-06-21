@@ -869,6 +869,12 @@
   .order-2 {
     order: 2;
   }
+  .order-first {
+    order: -9999;
+  }
+  .order-last {
+    order: 9999;
+  }
   .col-1 {
     grid-column: 1;
   }
@@ -9544,6 +9550,16 @@
   .lg\:order-2 {
     @media (width >= 64rem) {
       order: 2;
+    }
+  }
+  .lg\:order-first {
+    @media (width >= 64rem) {
+      order: -9999;
+    }
+  }
+  .lg\:order-last {
+    @media (width >= 64rem) {
+      order: 9999;
     }
   }
   .lg\:col-span-2 {

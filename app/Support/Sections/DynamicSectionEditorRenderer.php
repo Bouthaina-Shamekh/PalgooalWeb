@@ -2,6 +2,7 @@
 
 namespace App\Support\Sections;
 
+use App\Models\PlanCategory;
 use App\Models\Section;
 use App\Models\Sections\SectionDefinition;
 use App\Models\Sections\SectionDefinitionField;
@@ -396,6 +397,16 @@ class DynamicSectionEditorRenderer
      */
     protected function fieldOptions(SectionDefinitionField $field): array
     {
+        // Dynamic source — query DB instead of reading static JSON.
+        $settings = is_array($field->settings) ? $field->settings : [];
+        if (isset($settings['options_source'])) {
+            return match ($settings['options_source']) {
+                'plan_categories' => $this->planCategoryOptions(),
+                default           => [],
+            };
+        }
+
+        // Static JSON options stored in field->options column.
         $options = is_array($field->options) ? $field->options : [];
 
         return Collection::make($options)
@@ -419,6 +430,30 @@ class DynamicSectionEditorRenderer
             ->filter()
             ->values()
             ->all();
+    }
+
+    /**
+     * Build options list from active PlanCategory records.
+     * Prepends an "All Categories" catch-all with value = ''.
+     *
+     * @return array<int, array{value: string, label: string}>
+     */
+    protected function planCategoryOptions(): array
+    {
+        $categories = PlanCategory::active()
+            ->ordered()
+            ->with(['translations'])
+            ->get()
+            ->map(fn (PlanCategory $cat): array => [
+                'value' => (string) $cat->id,
+                'label' => $cat->title ?? "Category #{$cat->id}",
+            ])
+            ->all();
+
+        return array_merge(
+            [['value' => '', 'label' => t('site.All_Categories', 'All Categories')]],
+            $categories,
+        );
     }
 
     protected function fieldRows(string $fieldType, array $settings): int

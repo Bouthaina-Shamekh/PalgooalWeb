@@ -169,6 +169,9 @@ class SiteTranslationsSeeder extends Seeder
             'site.Choose_Now'            => 'اشترك الآن',
             'site.Most_Popular'          => 'الأكثر طلباً',
 
+            // Category filter — plan_category_id field (select option: no filter)
+            'site.All_Categories'        => 'كل التصنيفات',
+
         ];
 
         $locale = 'ar';
