@@ -16,10 +16,10 @@
     --color-secondary: #AE1028;
     --color-tertiary: #5F4A72;
     --color-background: #F9F6FB;
-    --color-purple-brand: #240a37;
-    --color-red-brand: #ba112c;
-    --color-gray-light: #f2f2f2;
-    --color-gray-dark: #626262;
+    --color-purple-brand: var(--admin-color-primary, #240a37);
+    --color-red-brand: var(--admin-color-secondary, #ba112c);
+    --color-gray-light: var(--admin-color-muted, #f2f2f2);
+    --color-gray-dark: var(--admin-color-body, #626262);
     --color-theme-primary: var(--theme-color-primary);
     --color-theme-secondary: var(--theme-color-secondary);
     --color-theme-surface: var(--theme-color-surface);

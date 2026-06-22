@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\GeneralSetting;
 use App\Models\Language;
 use App\Models\Media;
+use App\Support\AdminBrand\AdminBrandCssGenerator;
+use App\Support\AdminBrand\AdminBrandThemeSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -448,6 +450,77 @@ class AppearanceController extends Controller
         return redirect()
             ->route('dashboard.appearance.footer')
             ->with('ok', t('dashboard.Footer_Settings_Saved', 'Footer settings saved successfully.'));
+    }
+
+    // ── Admin Brand Colors ────────────────────────────────────────────────────
+
+    public function brandColors(): View
+    {
+        $this->authorize('view', GeneralSetting::class);
+        $settings = $this->settings();
+
+        $stored = is_array($settings->admin_brand_settings ?? null)
+            ? $settings->admin_brand_settings
+            : [];
+
+        $brandSettings = AdminBrandThemeSettings::fromArray($stored);
+
+        return view('dashboard.appearance.brand', [
+            'settings'      => $settings,
+            'brandSettings' => $brandSettings,
+        ]);
+    }
+
+    public function updateBrandColors(Request $request): RedirectResponse
+    {
+        $this->authorize('update', GeneralSetting::class);
+
+        $hexColorRule = ['nullable', 'string', 'regex:/^#(?:[A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/'];
+
+        $validator = Validator::make($request->all(), [
+            'primary'   => array_merge(['required'], $hexColorRule),
+            'secondary' => array_merge(['required'], $hexColorRule),
+            'muted'     => array_merge(['required'], $hexColorRule),
+            'body'      => array_merge(['required'], $hexColorRule),
+            'custom_1'  => $hexColorRule,
+            'custom_2'  => $hexColorRule,
+            'custom_3'  => $hexColorRule,
+            'custom_4'  => $hexColorRule,
+            'custom_5'  => $hexColorRule,
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()
+                ->route('dashboard.appearance.brand')
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $validated = $validator->validated();
+
+        $brandSettings = AdminBrandThemeSettings::fromArray([
+            'primary'   => $validated['primary']   ?? '',
+            'secondary' => $validated['secondary'] ?? '',
+            'muted'     => $validated['muted']     ?? '',
+            'body'      => $validated['body']      ?? '',
+            'custom_1'  => $validated['custom_1']  ?? '',
+            'custom_2'  => $validated['custom_2']  ?? '',
+            'custom_3'  => $validated['custom_3']  ?? '',
+            'custom_4'  => $validated['custom_4']  ?? '',
+            'custom_5'  => $validated['custom_5']  ?? '',
+        ]);
+
+        $this->settings()->update([
+            'admin_brand_settings' => $brandSettings->toArray(),
+        ]);
+        Cache::forget('general_settings');
+
+        // Regenerate the CSS file immediately.
+        (new AdminBrandCssGenerator())->generate($brandSettings);
+
+        return redirect()
+            ->route('dashboard.appearance.brand')
+            ->with('ok', t('dashboard.Brand_Colors_Saved', 'Brand colors saved and CSS regenerated.'));
     }
 
     protected function settings(): GeneralSetting

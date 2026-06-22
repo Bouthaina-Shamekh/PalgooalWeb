@@ -85,6 +85,10 @@ Route::group([
     Route::post('/appearance/footer/settings', [AppearanceController::class, 'updateFooterSettings'])
         ->name('appearance.footer.settings');
 
+    Route::get('/appearance/brand', [AppearanceController::class, 'brandColors'])->name('appearance.brand');
+    Route::post('/appearance/brand/settings', [AppearanceController::class, 'updateBrandColors'])
+        ->name('appearance.brand.settings');
+
     // -------------------------------------------------------------------------
     // Users Management
     // -------------------------------------------------------------------------

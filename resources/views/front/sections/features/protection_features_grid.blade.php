@@ -1,5 +1,6 @@
 @php
 use App\Support\Sections\SectionFrontendMediaResolver;
+use App\Support\Sections\DesignTokenRegistry;
     $section_id = trim((string) ($data['section_id'] ?? '')); // text / trans
     $eyebrow = trim((string) ($data['eyebrow'] ?? '')); // text / trans
     $title = trim((string) ($data['title'] ?? '')); // text / trans
@@ -47,12 +48,12 @@ use App\Support\Sections\SectionFrontendMediaResolver;
         @endif
         @if ($title)
             <h2
-                class="text-purple-brand font-extrabold text-3xl md:text-4xl lg:text-[40px] text-center uppercase mb-0 animate-from-up mb-4">
+                class="{{ $textClass }} font-extrabold text-3xl md:text-4xl lg:text-[40px] text-center uppercase mb-0 animate-from-up mb-4">
                 {{ $title }}
             </h2>
         @endif
         @if ($subtitle)
-            <p class="text-[#555] text-base md:text-lg text-center max-w-[800px] mx-auto mb-12 animate-from-up">
+            <p class="{{ $textClass }} text-base md:text-lg text-center max-w-[800px] mx-auto mb-12 animate-from-up">
                 {{ $subtitle }}
             </p>
         @endif

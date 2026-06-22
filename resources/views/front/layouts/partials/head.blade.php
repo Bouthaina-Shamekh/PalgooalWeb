@@ -75,6 +75,13 @@
     {{-- Preload hint: tells browser to start fetching CSS before it processes the stylesheet link --}}
     <link rel="preload" href="{{ mix('assets/tamplate/css/app.css') }}" as="style">
     <link rel="stylesheet" href="{{ mix('assets/tamplate/css/app.css') }}">
+    {{-- Admin Brand Theme — defines --admin-color-* variables that override the                --}}
+    {{-- var(--admin-color-*, fallback) aliases set in app.css @theme block (Phase 0).           --}}
+    {{-- If file is absent the var() fallbacks in app.css keep colours at their defaults.        --}}
+    @php $_adminBrandCssUrl = \App\Support\AdminBrand\AdminBrandCssGenerator::publicUrl(); @endphp
+    @if ($_adminBrandCssUrl)
+        <link rel="stylesheet" href="{{ $_adminBrandCssUrl }}">
+    @endif
     {{-- <link rel="stylesheet" href="{{ mix('assets/tamplate/css/tailwind.css') }}"> --}}
     <link rel="stylesheet" href="{{ route('frontend.assets.purple_topbar_css') }}">
     <link rel="stylesheet" href="{{ route('frontend.assets.palgoals_marketing_footer_css') }}">

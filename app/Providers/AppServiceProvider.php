@@ -10,6 +10,7 @@ use App\Models\Sections\SectionDefinition;
 use App\Models\Sections\SectionDefinitionField;
 use App\Policies\SectionDefinitionFieldPolicy;
 use App\Policies\SectionDefinitionPolicy;
+use App\Support\AdminBrand\AdminBrandCssGenerator;
 use App\Support\Blocks\HeroBlock;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
@@ -121,6 +122,14 @@ class AppServiceProvider extends ServiceProvider
                 $page = $view->getData()['page'];
                 $view->with('currentPage', $page);
             }
+        });
+
+        // Admin Brand Theme — generate CSS file on first boot if absent.
+        // If the file already exists this is a near-zero-cost exists() check.
+        // Wrapped in booted() so the DB is available; errors are suppressed
+        // because var() fallbacks in app.css handle a missing file gracefully.
+        $this->app->booted(function () {
+            AdminBrandCssGenerator::generateIfMissing();
         });
     }
 }

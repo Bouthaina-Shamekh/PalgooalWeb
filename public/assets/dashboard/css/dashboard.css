@@ -2997,6 +2997,9 @@
   .\!bg-primary {
     background-color: var(--color-primary) !important;
   }
+  .bg-\[\#\.\.\.\] {
+    background-color: #...;
+  }
   .bg-\[\#1b1b18\] {
     background-color: #1b1b18;
   }
@@ -4650,6 +4653,9 @@
   }
   .\!text-white {
     color: var(--color-white) !important;
+  }
+  .text-\[\#\.\.\.\] {
+    color: #...;
   }
   .text-\[\#1b1b18\] {
     color: #1b1b18;

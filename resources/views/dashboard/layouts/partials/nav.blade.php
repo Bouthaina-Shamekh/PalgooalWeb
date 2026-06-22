@@ -330,6 +330,8 @@
                                     data-i18n="Header Layout">{{ t('dashboard.Header_Layout', 'Header Layout') }}</a></li>
                             <li class="pc-item"><a class="pc-link" href="{{ route('dashboard.appearance.footer') }}"
                                     data-i18n="Footer Layout">{{ t('dashboard.Footer_Layout', 'Footer Layout') }}</a></li>
+                            <li class="pc-item"><a class="pc-link" href="{{ route('dashboard.appearance.brand') }}"
+                                    data-i18n="Brand Colors">{{ t('dashboard.Brand_Colors', 'ألوان البراند') }}</a></li>
                             <li class="pc-item"><a class="pc-link" href="{{ route('dashboard.menus') }}"
                                     data-i18n="Menus">{{ t('dashboard.Menus', 'Menus') }}</a></li>
                             <li class="pc-item"><a class="pc-link" href="{{ route('dashboard.languages.index') }}"

@@ -1289,6 +1289,38 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Design_Preset_None_Added'  => 'جميع حقول التصميم هذه موجودة بالفعل.',
             'dashboard.Design_Preset_Invalid'     => 'مجموعة التصميم غير موجودة.',
 
+            // ── Admin Brand Theme (Phase 1) ────────────────────────
+            'dashboard.Brand_Colors'                  => 'ألوان البراند',
+            'dashboard.Brand_Colors_Desc'             => 'تحكم في ألوان الواجهة التسويقية الرئيسية للمنصة.',
+            'dashboard.Brand_Colors_Saved'            => 'تم حفظ ألوان البراند وإعادة توليد ملف CSS بنجاح.',
+            'dashboard.Core_Brand_Colors'             => 'ألوان البراند الأساسية',
+            'dashboard.Core_Brand_Colors_Hint'        => 'هذه الألوان الأربعة تُشغّل كل utility classes في الواجهة التسويقية مثل bg-purple-brand و text-red-brand.',
+            'dashboard.Brand_Primary_Color'           => 'اللون الرئيسي',
+            'dashboard.Brand_Primary_Color_Hint'      => 'اللون الرئيسي للبراند — يُستخدم في العناوين والخلفيات والعناصر الأساسية.',
+            'dashboard.Brand_Secondary_Color'         => 'اللون الثانوي',
+            'dashboard.Brand_Secondary_Color_Hint'    => 'لون التمييز — يُستخدم في الأزرار والإبراز وعناصر الدعوة للتفاعل.',
+            'dashboard.Brand_Muted_Color'             => 'اللون الخافت',
+            'dashboard.Brand_Muted_Color_Hint'        => 'تدرج خلفية خفيف — يُستخدم في خلفيات الأقسام والبطاقات.',
+            'dashboard.Brand_Body_Color'              => 'لون النص',
+            'dashboard.Brand_Body_Color_Hint'         => 'اللون الافتراضي لنص المحتوى والمحتوى الثانوي.',
+            'dashboard.Custom_Color_Slots'            => 'مساحات الألوان المخصصة',
+            'dashboard.Brand_Custom_Color_1'          => 'لون مخصص ١',
+            'dashboard.Brand_Custom_Color_2'          => 'لون مخصص ٢',
+            'dashboard.Brand_Custom_Color_3'          => 'لون مخصص ٣',
+            'dashboard.Brand_Custom_Color_4'          => 'لون مخصص ٤',
+            'dashboard.Brand_Custom_Color_5'          => 'لون مخصص ٥',
+            'dashboard.Custom_Colors_Reserved_Hint'   => 'هذه المساحات محجوزة للاستخدام المستقبلي مع DesignTokenRegistry في Phase 2. يمكنك تعريف الألوان الآن وستُفعَّل تلقائياً عند دعمها في القوالب.',
+            'dashboard.Save_Brand_Colors'             => 'حفظ ألوان البراند',
+            'dashboard.CSS_File_Status'               => 'حالة ملف CSS',
+            'dashboard.CSS_File_Active'               => 'الملف نشط',
+            'dashboard.CSS_File_Missing'              => 'الملف غير موجود',
+            'dashboard.CSS_File_Missing_Hint'         => 'سيُنشأ الملف عند الحفظ أو تلقائياً عند تشغيل التطبيق.',
+            'dashboard.How_It_Works'                  => 'كيف يعمل النظام؟',
+            'dashboard.Brand_Help_1'                  => 'ألوانك تُحفظ في قاعدة البيانات',
+            'dashboard.Brand_Help_2'                  => 'يُولَّد ملف admin-brand.css بـ CSS variables على :root',
+            'dashboard.Brand_Help_3'                  => 'جميع classes مثل bg-purple-brand و text-red-brand تتغير تلقائياً',
+            'dashboard.Brand_Help_4'                  => 'إذا حُذف الملف، الموقع يعود للألوان الافتراضية تلقائياً',
+
         ];
 
         $locale = 'ar';

@@ -38,6 +38,7 @@ class GeneralSetting extends Model
         'contact_info',
         'social_links',
         'localized_content',
+        'admin_brand_settings',   // Phase 1 — Admin Brand Theme
     ];
 
     protected $casts = [
@@ -50,6 +51,7 @@ class GeneralSetting extends Model
         'contact_info' => 'array',
         'social_links' => 'array',
         'localized_content' => 'array',
+        'admin_brand_settings' => 'array',  // Phase 1 — Admin Brand Theme
     ];
 
     // ── ADR-005 Wave 1 Media Relations ─────────────────────────────────────
