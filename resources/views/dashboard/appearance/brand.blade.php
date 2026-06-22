@@ -160,7 +160,7 @@
                         <div class="alert alert-info d-flex gap-2 py-2 px-3 mb-4" role="alert">
                             <i class="ti ti-info-circle flex-shrink-0 mt-1"></i>
                             <div class="small">
-                                {{ t('dashboard.Custom_Colors_Reserved_Hint', 'هذه المساحات محجوزة للاستخدام المستقبلي مع DesignTokenRegistry في Phase 2. يمكنك تعريف الألوان الآن وستُفعَّل تلقائياً عند دعمها في القوالب.') }}
+                                {{ t('dashboard.Custom_Colors_Reserved_Hint', 'هذه الألوان متاحة في Page Builder كخيارات background_token و text_token. بعد الحفظ، ستظهر تلقائياً في قوائم ألوان السكشنات.') }}
                             </div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

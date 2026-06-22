@@ -738,6 +738,80 @@ Artisan::command('adr003:backfill-subscription-prices {--dry-run : Preview chang
     }
 })->purpose('ADR-003 Phase 2: backfill subscriptions.price_cents from the decimal price column.');
 
+// ---------------------------------------------------------------------------
+// Admin Brand Phase 2 — Sync design token options in existing fields
+// ---------------------------------------------------------------------------
+// Updates the `options` JSON column on all SectionDefinitionField rows where
+// field_key is 'background_token' or 'text_token' to include the custom_1..5
+// options added to DesignTokenRegistry in Phase 2.
+//
+// SAFE:
+//   - Only updates SectionDefinitionField.options (the dropdown choices list)
+//   - Does NOT touch section content / Section model values (separate table)
+//   - Idempotent: rows already up-to-date are skipped (no unnecessary writes)
+//
+// Run once after deploying Phase 2 code:
+//   php artisan admin-brand:sync-token-options
+//   php artisan admin-brand:sync-token-options --dry-run
+// ---------------------------------------------------------------------------
+Artisan::command('admin-brand:sync-token-options {--dry-run : Preview changes without writing to DB}', function () {
+    $isDry   = (bool) $this->option('dry-run');
+    $updated = 0;
+    $skipped = 0;
+
+    $this->info('Admin Brand Phase 2 — syncing design token options' . ($isDry ? ' (DRY RUN)' : '') . ' …');
+    $this->newLine();
+
+    $tokenKeys = ['background_token', 'text_token'];
+
+    foreach ($tokenKeys as $tokenKey) {
+        $canonicalOptions = \App\Support\Sections\DesignTokenRegistry::options($tokenKey);
+
+        if (empty($canonicalOptions)) {
+            $this->warn("  {$tokenKey}: not found in DesignTokenRegistry — skipping");
+            continue;
+        }
+
+        $rows = DB::table('section_definition_fields')
+            ->where('field_key', $tokenKey)
+            ->get(['id', 'options']);
+
+        $this->info("  {$tokenKey}: {$rows->count()} row(s) found");
+
+        foreach ($rows as $row) {
+            $currentOptions = is_string($row->options) ? json_decode($row->options, true) : $row->options;
+            $currentValues  = array_column((array) $currentOptions, 'value');
+            $canonicalValues = array_column($canonicalOptions, 'value');
+
+            // Already up-to-date: same values in same order
+            if ($currentValues === $canonicalValues) {
+                $this->line("    field #{$row->id}: already up-to-date — skipped");
+                $skipped++;
+                continue;
+            }
+
+            if ($isDry) {
+                $added = array_diff($canonicalValues, $currentValues);
+                $this->line("    field #{$row->id} [dry-run]: would add " . implode(', ', $added));
+            } else {
+                DB::table('section_definition_fields')
+                    ->where('id', $row->id)
+                    ->update(['options' => json_encode($canonicalOptions)]);
+                $this->line("    field #{$row->id}: updated ✓");
+            }
+
+            $updated++;
+        }
+    }
+
+    $this->newLine();
+    if ($isDry) {
+        $this->comment("DRY RUN complete. Would update: {$updated} field(s). Already up-to-date: {$skipped}.");
+    } else {
+        $this->info("Sync complete. Updated: {$updated} field(s). Skipped (already current): {$skipped}.");
+    }
+})->purpose('Admin Brand Phase 2: sync background_token/text_token field options with DesignTokenRegistry (idempotent).');
+
 Schedule::command('domains:process-auto-renewals')
     ->dailyAt('02:00')
     ->withoutOverlapping();

@@ -77,6 +77,13 @@ class DesignTokenRegistry
                 ['value' => 'secondary', 'label' => 'Secondary background'],
                 ['value' => 'surface',   'label' => 'Surface background'],
                 ['value' => 'muted',     'label' => 'Muted background'],
+                // ── Admin Brand custom color slots (Phase 2) ───────
+                // CSS class → admin-brand.css → --admin-color-custom-N
+                ['value' => 'custom_1',  'label' => 'Custom Color 1'],
+                ['value' => 'custom_2',  'label' => 'Custom Color 2'],
+                ['value' => 'custom_3',  'label' => 'Custom Color 3'],
+                ['value' => 'custom_4',  'label' => 'Custom Color 4'],
+                ['value' => 'custom_5',  'label' => 'Custom Color 5'],
             ],
             'css_map' => [
                 'none'      => '',
@@ -85,6 +92,12 @@ class DesignTokenRegistry
                 'surface'   => 'bg-theme-surface',
                 'muted'     => 'bg-theme-muted',
                 'light'     => 'bg-gray-light',
+                // ── Admin Brand custom color slots (Phase 2) ───────
+                'custom_1'  => 'bg-admin-custom-1',
+                'custom_2'  => 'bg-admin-custom-2',
+                'custom_3'  => 'bg-admin-custom-3',
+                'custom_4'  => 'bg-admin-custom-4',
+                'custom_5'  => 'bg-admin-custom-5',
             ],
         ],
 
@@ -101,6 +114,13 @@ class DesignTokenRegistry
                 ['value' => 'primary',   'label' => 'Primary colour'],
                 ['value' => 'secondary', 'label' => 'Secondary colour'],
                 ['value' => 'white',     'label' => 'White'],
+                // ── Admin Brand custom color slots (Phase 2) ───────
+                // CSS class → admin-brand.css → --admin-color-custom-N
+                ['value' => 'custom_1',  'label' => 'Custom Color 1'],
+                ['value' => 'custom_2',  'label' => 'Custom Color 2'],
+                ['value' => 'custom_3',  'label' => 'Custom Color 3'],
+                ['value' => 'custom_4',  'label' => 'Custom Color 4'],
+                ['value' => 'custom_5',  'label' => 'Custom Color 5'],
             ],
             'css_map' => [
                 'heading'   => 'text-theme-heading',
@@ -108,6 +128,12 @@ class DesignTokenRegistry
                 'primary'   => 'text-theme-primary',
                 'secondary' => 'text-theme-secondary',
                 'white'     => 'text-white',
+                // ── Admin Brand custom color slots (Phase 2) ───────
+                'custom_1'  => 'text-admin-custom-1',
+                'custom_2'  => 'text-admin-custom-2',
+                'custom_3'  => 'text-admin-custom-3',
+                'custom_4'  => 'text-admin-custom-4',
+                'custom_5'  => 'text-admin-custom-5',
             ],
         ],
 
