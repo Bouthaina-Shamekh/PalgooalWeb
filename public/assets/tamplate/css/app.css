@@ -626,9 +626,6 @@
   .end-0 {
     inset-inline-end: calc(var(--spacing) * 0);
   }
-  .end-3 {
-    inset-inline-end: calc(var(--spacing) * 3);
-  }
   .-top-1 {
     top: calc(var(--spacing) * -1);
   }
@@ -2739,10 +2736,6 @@
   .border-b {
     border-bottom-style: var(--tw-border-style);
     border-bottom-width: 1px;
-  }
-  .border-b-0 {
-    border-bottom-style: var(--tw-border-style);
-    border-bottom-width: 0px;
   }
   .border-b-2 {
     border-bottom-style: var(--tw-border-style);

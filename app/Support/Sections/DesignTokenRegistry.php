@@ -84,6 +84,7 @@ class DesignTokenRegistry
                 'secondary' => 'bg-theme-secondary',
                 'surface'   => 'bg-theme-surface',
                 'muted'     => 'bg-theme-muted',
+                'light'     => 'bg-gray-light',
             ],
         ],
 
