@@ -59,8 +59,10 @@ class HeaderItem extends Model
     {
         // إذا كان مربوط بصفحة، أحضر رابط الصفحة
         if ($this->page_id && $this->relationLoaded('page') && $this->page) {
-            $pageTranslation = $this->page->translation();
-            return $pageTranslation ? '/' . $pageTranslation->slug : '#';
+            $pageTranslation = $this->resolvePageTranslation($this->page);
+            $slug = trim((string) ($pageTranslation?->slug ?? ''));
+
+            return $slug !== '' ? '/' . ltrim($slug, '/') : '#';
         }
 
         // أو أحضر الرابط من الترجمات
@@ -101,11 +103,12 @@ class HeaderItem extends Model
             if (($child['type'] ?? 'link') === 'page' && !empty($child['page_id'])) {
                 $page = Page::with('translations')->find($child['page_id']);
                 if ($page) {
-                    $locale = app()->getLocale();
-                    $pageTranslation = $page->translations->where('locale', $locale)->first();
-                    if ($pageTranslation) {
-                        $childData['current_label'] = $pageTranslation->title;
-                        $childData['current_url'] = '/' . $pageTranslation->slug;
+                    $pageTranslation = $this->resolvePageTranslation($page);
+                    $slug = trim((string) ($pageTranslation?->slug ?? ''));
+                    if ($slug !== '') {
+                        $title = trim((string) ($pageTranslation?->title ?? ''));
+                        $childData['current_label'] = $title !== '' ? $title : '-';
+                        $childData['current_url'] = '/' . ltrim($slug, '/');
                     }
                 }
             } else {
@@ -163,5 +166,42 @@ class HeaderItem extends Model
         }
 
         return $processedChildren;
+    }
+
+    protected function resolvePageTranslation(Page $page, ?string $locale = null): ?PageTranslation
+    {
+        $locale = strtolower((string) ($locale ?? app()->getLocale()));
+        $fallbackLocale = strtolower((string) config('app.fallback_locale', 'en'));
+
+        if ($page->relationLoaded('translations')) {
+            return $this->firstUsablePageTranslation($page->translations, $locale)
+                ?? $this->firstUsablePageTranslation($page->translations, $fallbackLocale)
+                ?? $page->translations->first(fn ($translation) => trim((string) ($translation->slug ?? '')) !== '')
+                ?? $page->translations->first();
+        }
+
+        return $page->translations()
+            ->where('locale', $locale)
+            ->whereNotNull('slug')
+            ->where('slug', '!=', '')
+            ->first()
+            ?? $page->translations()
+                ->where('locale', $fallbackLocale)
+                ->whereNotNull('slug')
+                ->where('slug', '!=', '')
+                ->first()
+            ?? $page->translations()
+                ->whereNotNull('slug')
+                ->where('slug', '!=', '')
+                ->first()
+            ?? $page->translations()->first();
+    }
+
+    protected function firstUsablePageTranslation($translations, string $locale): ?PageTranslation
+    {
+        return $translations->first(
+            fn ($translation) => strtolower((string) ($translation->locale ?? '')) === $locale
+                && trim((string) ($translation->slug ?? '')) !== ''
+        );
     }
 }

@@ -284,3 +284,53 @@ test('update item aborts when item does not belong to selected menu', function (
 
     $response->assertNotFound();
 });
+
+test('dropdown page children fall back from current locale to fallback translation', function (): void {
+    config(['app.fallback_locale' => 'en']);
+    app()->setLocale('ar');
+
+    $menu = Header::query()->create([
+        'name' => 'Primary',
+        'slug' => 'primary',
+        'location_key' => 'header_primary',
+        'is_active' => true,
+    ]);
+
+    $page = Page::query()->create([
+        'context' => 'marketing',
+        'is_active' => true,
+        'is_home' => false,
+    ]);
+
+    PageTranslation::query()->create([
+        'page_id' => $page->id,
+        'locale' => 'en',
+        'slug' => 'hosting',
+        'title' => 'Hosting',
+    ]);
+
+    PageTranslation::query()->create([
+        'page_id' => $page->id,
+        'locale' => 'fr',
+        'slug' => 'hebergement',
+        'title' => 'Hebergement',
+    ]);
+
+    $item = HeaderItem::query()->create([
+        'header_id' => $menu->id,
+        'type' => 'dropdown',
+        'order' => 0,
+        'children' => [
+            [
+                'type' => 'page',
+                'page_id' => $page->id,
+                'labels' => [],
+            ],
+        ],
+    ]);
+
+    $child = $item->processedChildren[0] ?? [];
+
+    expect($child['current_label'] ?? null)->toBe('Hosting');
+    expect($child['current_url'] ?? null)->toBe('/hosting');
+});

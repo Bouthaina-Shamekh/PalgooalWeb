@@ -89,32 +89,109 @@ langSwitch?.addEventListener('click', () => {
     menu.classList.toggle('hidden');
   };
 
+  document.querySelectorAll('[data-header-dropdown-toggle]').forEach((button) => {
+    const dropdownId = button.getAttribute('aria-controls');
+    const dropdown = dropdownId ? document.getElementById(dropdownId) : null;
+    const group = button.closest('.group');
+
+    function setExpanded(expanded) {
+      button.setAttribute('aria-expanded', String(expanded));
+    }
+
+    function closeIfFocusLeft() {
+      setTimeout(() => {
+        if (!group?.matches(':hover') && !group?.contains(document.activeElement)) {
+          setExpanded(false);
+        }
+      }, 0);
+    }
+
+    group?.addEventListener('mouseenter', () => setExpanded(true));
+    group?.addEventListener('mouseleave', closeIfFocusLeft);
+    group?.addEventListener('focusin', () => setExpanded(true));
+    group?.addEventListener('focusout', closeIfFocusLeft);
+
+    button.addEventListener('click', () => {
+      setExpanded(true);
+    });
+
+    button.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        setExpanded(false);
+        button.blur();
+        return;
+      }
+
+      if ((event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') && dropdown) {
+        setExpanded(true);
+        dropdown.querySelector('a[href]')?.focus();
+      }
+    });
+  });
+
   // Purple topbar header variant mobile drawer
   const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
   const mobileMenu = document.getElementById('mobile-menu');
   const mobileMenuContainer = document.getElementById('mobile-menu-container');
+  let mobileMenuCloseTimer = null;
+
+  function isMobileMenuOpen() {
+    return !!mobileMenu && !mobileMenu.classList.contains('invisible');
+  }
+
+  function clearMobileMenuCloseTimer() {
+    if (!mobileMenuCloseTimer) return;
+
+    clearTimeout(mobileMenuCloseTimer);
+    mobileMenuCloseTimer = null;
+  }
+
+  function focusMobileMenu() {
+    if (!mobileMenuContainer) return;
+
+    const focusTarget = mobileMenuContainer.querySelector('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      || mobileMenuContainer;
+
+    if (typeof focusTarget.focus === 'function') {
+      focusTarget.focus({ preventScroll: true });
+    }
+  }
 
   function openMobileMenu() {
     if (!mobileMenu || !mobileMenuContainer) return;
 
+    clearMobileMenuCloseTimer();
     mobileMenu.classList.remove('invisible', 'opacity-0');
     mobileMenu.classList.add('opacity-100');
 
     mobileMenuContainer.classList.remove('ltr:translate-x-full', 'rtl:-translate-x-full');
     mobileMenuContainer.classList.add('translate-x-0');
+    mobileMenuContainer.setAttribute('aria-hidden', 'false');
+    mobileMenuToggle?.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('overflow-hidden');
+    setTimeout(focusMobileMenu, 0);
   }
 
-  function closeMobileMenu() {
+  function closeMobileMenu(returnFocus = true) {
     if (!mobileMenu || !mobileMenuContainer) return;
 
+    clearMobileMenuCloseTimer();
     mobileMenu.classList.remove('opacity-100');
     mobileMenu.classList.add('opacity-0');
 
     mobileMenuContainer.classList.remove('translate-x-0');
     mobileMenuContainer.classList.add('ltr:translate-x-full', 'rtl:-translate-x-full');
+    mobileMenuContainer.setAttribute('aria-hidden', 'true');
+    mobileMenuToggle?.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('overflow-hidden');
 
-    setTimeout(() => {
+    if (returnFocus && mobileMenuToggle && document.contains(mobileMenuToggle)) {
+      mobileMenuToggle.focus({ preventScroll: true });
+    }
+
+    mobileMenuCloseTimer = setTimeout(() => {
       mobileMenu.classList.add('invisible');
+      mobileMenuCloseTimer = null;
     }, 500);
   }
 
@@ -133,6 +210,12 @@ langSwitch?.addEventListener('click', () => {
     }
   });
 
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && isMobileMenuOpen()) {
+      closeMobileMenu();
+    }
+  });
+
   mobileMenuContainer?.querySelectorAll('a[href]').forEach((link) => {
-    link.addEventListener('click', closeMobileMenu);
+    link.addEventListener('click', () => closeMobileMenu());
   });
