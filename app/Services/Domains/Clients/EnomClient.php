@@ -260,6 +260,147 @@ class EnomClient
         return $third; // fallback ?ث?«?è??
     }
 
+    /**
+     * فحص توفر دومين واحد عبر أمر Enom "Check".
+     * لا تنفّذ Retry أو Batching هنا؛ التكرار على عدة دومينات مسؤولية المستدعي (DomainSearchController::enomCheck()).
+     */
+    public function checkAvailability(DomainProvider $provider, string $sld, string $tld): array
+    {
+        try {
+            $sld = trim($sld);
+            $tld = ltrim(trim($tld), '.');
+
+            if ($sld === '' || $tld === '' || str_contains($sld, '.')) {
+                return [
+                    'ok' => false,
+                    'available' => null,
+                    'reason' => 'invalid_input',
+                    'message' => 'Invalid domain name.',
+                ];
+            }
+
+            $r = $this->request($provider, [
+                'command' => 'Check',
+                'SLD' => $sld,
+                'TLD' => $tld,
+            ]);
+
+            if (!($r['ok'] ?? false)) {
+                return [
+                    'ok' => false,
+                    'available' => null,
+                    'reason' => $r['reason'] ?? 'provider_error',
+                    'message' => $r['message'] ?? 'eNom rejected the request.',
+                ];
+            }
+
+            $available = $this->parseAvailability($r['xml'] ?? null);
+
+            if ($available === null) {
+                return [
+                    'ok' => false,
+                    'available' => null,
+                    'reason' => 'unexpected_response',
+                    'message' => 'Unable to determine domain availability.',
+                ];
+            }
+
+            return [
+                'ok' => true,
+                'available' => $available,
+                'reason' => 'ok',
+                'message' => $available ? 'Domain is available.' : 'Domain is not available.',
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'ok' => false,
+                'available' => null,
+                'reason' => 'exception',
+                'message' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * يحدد التوفر من استجابة XML: أولاً حقل صريح "Available" (أي حالة أحرف/أي موضع)،
+     * ثم fallback على RRPText إن لم يوجد حقل صريح. يعيد null إن تعذّر الاستنتاج بثقة.
+     */
+    protected function parseAvailability(?\SimpleXMLElement $xml): ?bool
+    {
+        if ($xml === null) {
+            return null;
+        }
+
+        $explicit = $this->findFieldValue($xml, 'Available');
+        if ($explicit !== null) {
+            return $this->interpretAvailableText($explicit);
+        }
+
+        $rrpText = $this->findFieldValue($xml, 'RRPText');
+        if ($rrpText !== null) {
+            $low = strtolower($rrpText);
+            if (str_contains($low, 'not available') || str_contains($low, 'unavailable')) {
+                return false;
+            }
+            if (str_contains($low, 'available')) {
+                return true;
+            }
+        }
+
+        return null;
+    }
+
+    /** يفسّر نص/قيمة حقل Available الصريح إلى true/false، أو null إن كانت القيمة غامضة */
+    protected function interpretAvailableText(string $value): ?bool
+    {
+        $v = strtolower(trim($value));
+
+        $trueValues  = ['true', '1', 'yes', 'available'];
+        $falseValues = ['false', '0', 'no', 'not available', 'unavailable'];
+
+        if (in_array($v, $trueValues, true)) {
+            return true;
+        }
+        if (in_array($v, $falseValues, true)) {
+            return false;
+        }
+
+        // نص أطول قد يتضمن العبارة داخل جملة كاملة: تحقّق من "not available" أولاً لتفادي تطابق خاطئ
+        if (str_contains($v, 'not available') || str_contains($v, 'unavailable')) {
+            return false;
+        }
+        if (str_contains($v, 'available')) {
+            return true;
+        }
+
+        return null;
+    }
+
+    /** بحث متكرر (case-insensitive) عن عنصر أو خاصية باسم معيّن داخل شجرة XML، بأي عمق/موضع */
+    protected function findFieldValue(\SimpleXMLElement $node, string $fieldName): ?string
+    {
+        foreach ($node->attributes() as $attrName => $attrVal) {
+            if (strcasecmp((string) $attrName, $fieldName) === 0) {
+                $val = trim((string) $attrVal);
+                if ($val !== '') return $val;
+            }
+        }
+
+        foreach ($node->children() as $childName => $child) {
+            if (strcasecmp((string) $childName, $fieldName) === 0) {
+                $val = trim((string) $child);
+                if ($val !== '') return $val;
+            }
+        }
+
+        foreach ($node->children() as $child) {
+            $found = $this->findFieldValue($child, $fieldName);
+            if ($found !== null) return $found;
+        }
+
+        return null;
+    }
+
     public function purchaseDomain(DomainProvider $p, array $params): array
     {
         $payload = array_merge([
