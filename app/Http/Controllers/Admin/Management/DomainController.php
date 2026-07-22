@@ -20,7 +20,7 @@ use Illuminate\Http\Request;
 
 class DomainController extends Controller
 {
-    /** ظ‚ط§ط¦ظ…ط© ط§ظ„ظ†ط·ط§ظ‚ط§طھ */
+    /** قائمة النطاقات */
     public function index()
     {
         $this->authorize('viewAny', Domain::class);
@@ -28,7 +28,7 @@ class DomainController extends Controller
         return view('dashboard.management.domains.index', compact('domains'));
     }
 
-    /** ظپظˆط±ظ… ط¥ظ†ط´ط§ط، */
+    /** فورم إنشاء */
     public function create()
     {
         $this->authorize('create', Domain::class);
@@ -37,13 +37,13 @@ class DomainController extends Controller
         return view('dashboard.management.domains.create', compact('clients', 'domain'));
     }
 
-    /** ط­ظپط¸ ط¥ظ†ط´ط§ط، */
+    /** حفظ إنشاء */
     public function store(StoreDomainRequest $request)
     {
         $this->authorize('create', Domain::class);
         $data = $request->validated();
 
-        // طھط·ط¨ظٹط¹ ط§ط³ظ… ط§ظ„ظ†ط·ط§ظ‚
+        // تطبيع اسم النطاق
         $data['domain_name'] = $this->normalizeDomain($data['domain_name']);
 
         $price_cents = 0;
@@ -51,7 +51,7 @@ class DomainController extends Controller
         DB::transaction(function () use ($data, $price_cents) {
             $domain = Domain::create($data);
 
-            // ط§ظ…ظ†ط¹ ط¥ظ†ط´ط§ط، ظپط§طھظˆط±ط© ظ…ط²ط¯ظˆط¬ط© ط؛ظٹط± ظ…ط¯ظپظˆط¹ط© ظ„ظ†ظپط³ ط§ظ„ظ†ط·ط§ظ‚
+            // امنع إنشاء فاتورة مزدوجة غير مدفوعة لنفس النطاق
             $existingUnpaid = Invoice::where('client_id', $data['client_id'])
                 ->where('status', 'unpaid')
                 ->whereHas('items', fn($q) => $q->where('item_type', 'domain')->where('reference_id', $domain->id))
@@ -76,7 +76,7 @@ class DomainController extends Controller
                 $invoice->items()->create([
                     'item_type' => 'domain',
                     'reference_id' => $domain->id,
-                    'description' => 'طھط³ط¬ظٹظ„ ط§ظ„ظ†ط·ط§ظ‚: ' . $domain->domain_name,
+                    'description' => 'تسجيل النطاق: ' . $domain->domain_name,
                     'qty' => 1,
                     'unit_price_cents' => $price_cents,
                     'total_cents' => $price_cents,
@@ -84,10 +84,10 @@ class DomainController extends Controller
             }
         });
 
-        return redirect()->route('dashboard.domains.index')->with('success', 'طھظ… ط¥ظ†ط´ط§ط، ط§ظ„ط¯ظˆظ…ظٹظ† ط¨ظ†ط¬ط§ط­');
+        return redirect()->route('dashboard.domains.index')->with('success', 'تم إنشاء الدومين بنجاح');
     }
 
-    /** ظپظˆط±ظ… طھط¹ط¯ظٹظ„ */
+    /** فورم تعديل */
     public function edit(Domain $domain)
     {
         $this->authorize('update', $domain);
@@ -95,7 +95,7 @@ class DomainController extends Controller
         return view('dashboard.management.domains.edit', compact('domain', 'clients'));
     }
 
-    /** ط­ظپط¸ طھط¹ط¯ظٹظ„ */
+    /** حفظ تعديل */
     public function update(UpdateDomainRequest $request, Domain $domain)
     {
         $this->authorize('update', $domain);
@@ -105,27 +105,27 @@ class DomainController extends Controller
         DB::transaction(function () use ($domain, $data) {
             $domain->update($data);
 
-            // طھط­ط¯ظٹط« ظˆطµظپ ط£ظˆظ„ ط¨ظ†ط¯ ظپط§طھظˆط±ط© ظ…ط±طھط¨ط·
+            // تحديث وصف أول بند فاتورة مرتبط
             $invoiceItem = $domain->invoiceItems()->first();
             if ($invoiceItem) {
                 $invoiceItem->update([
-                    'description' => 'طھط­ط¯ظٹط« ط§ظ„ظ†ط·ط§ظ‚: ' . $domain->domain_name,
+                    'description' => 'تحديث النطاق: ' . $domain->domain_name,
                 ]);
             }
         });
 
-        return redirect()->route('dashboard.domains.index')->with('success', 'طھظ… طھط­ط¯ظٹط« ط§ظ„ط¯ظˆظ…ظٹظ† ط¨ظ†ط¬ط§ط­');
+        return redirect()->route('dashboard.domains.index')->with('success', 'تم تحديث الدومين بنجاح');
     }
 
-    /** ط­ط°ظپ */
+    /** حذف */
     public function destroy(Domain $domain)
     {
         $this->authorize('delete', $domain);
         $domain->delete();
-        return redirect()->route('dashboard.domains.index')->with('success', 'طھظ… ط­ط°ظپ ط§ظ„ط¯ظˆظ…ظٹظ† ط¨ظ†ط¬ط§ط­');
+        return redirect()->route('dashboard.domains.index')->with('success', 'تم حذف الدومين بنجاح');
     }
 
-    /** ظپظˆط±ظ… ط¥ط¬ط±ط§ط،ط§طھ ط§ظ„طھط³ط¬ظٹظ„ */
+    /** فورم إجراءات التسجيل */
     public function editRegister(Domain $domain)
     {
         $this->authorize('update', $domain);
@@ -140,7 +140,7 @@ class DomainController extends Controller
         ]);
     }
 
-    /** طھظ†ظپظٹط° ط§ظ„طھط³ط¬ظٹظ„ ظ…ط¹ ط§ظ„ظ…ط²ظˆط¯ */
+    /** تنفيذ التسجيل مع المزود */
     public function updateRegister(Request $request, Domain $domain)
     {
         $this->authorize('update', $domain);
@@ -152,7 +152,7 @@ class DomainController extends Controller
             'notes' => ['nullable', 'string', 'max:500'],
         ]);
 
-        // طھط·ط¨ظٹط¹ ط§ط³ظ… ط§ظ„ظ†ط·ط§ظ‚ ظ‚ط¨ظ„ ط§ظ„طھط¹ط§ظ…ظ„ ظ…ط¹ ط§ظ„ظ…ط²ظˆط¯
+        // تطبيع اسم النطاق قبل التعامل مع المزود
         $domain->domain_name = $this->normalizeDomain($domain->domain_name);
 
         $client = $domain->client;
@@ -209,7 +209,7 @@ class DomainController extends Controller
             ->with('success', __('Domain registered successfully via :provider.', ['provider' => Str::title($provider->type)]));
     }
 
-    /** ظپظˆط±ظ… ط§ظ„طھط¬ط¯ظٹط¯ */
+    /** فورم التجديد */
     public function editRenew(Domain $domain)
     {
         $this->authorize('update', $domain);
@@ -231,7 +231,7 @@ class DomainController extends Controller
         ]);
     }
 
-    /** ط­ظپط¸ ط§ظ„طھط¬ط¯ظٹط¯ (Placeholder) */
+    /** حفظ التجديد (Placeholder) */
     public function updateRenew(Request $request, Domain $domain)
     {
         $this->authorize('update', $domain);
@@ -252,14 +252,14 @@ class DomainController extends Controller
             'payment_method' => $validated['payment_method'] ?? $domain->payment_method,
         ]);
 
-        // @todo: ط¥ظ†ط´ط§ط، ظپط§طھظˆط±ط©/ط¹ظ…ظ„ظٹط© ط¯ظپط¹ ظ„ظ„طھط¬ط¯ظٹط¯
+        // @todo: إنشاء فاتورة/عملية دفع للتجديد
 
         return redirect()
             ->route('dashboard.domains.index')
             ->with('success', __('Domain renewal saved. Automation with registrar pending.'));
     }
 
-    /** DNS: ظپظˆط±ظ… */
+    /** DNS: فورم */
     public function editDns(Domain $domain)
     {
         $this->authorize('update', $domain);
@@ -354,7 +354,7 @@ class DomainController extends Controller
         ]);
     }
 
-    /** DNS: ط­ظپط¸ + ط¯ظپط¹ ظ„ظ„ظ…ط³ط¬ظ„ */
+    /** DNS: حفظ + دفع للمسجل */
     public function updateDns(UpdateDomainDnsRequest $request, Domain $domain)
     {
         $this->authorize('update', $domain);
@@ -438,7 +438,7 @@ class DomainController extends Controller
         ]));
     }
 
-    /** â€”â€”â€”â€”â€” Helpers â€”â€”â€”â€”â€” */
+    /** ————— Helpers ————— */
 
     protected function normalizeDomain(string $fqdn): string
     {
@@ -668,5 +668,3 @@ class DomainController extends Controller
         }
     }
 }
-
-

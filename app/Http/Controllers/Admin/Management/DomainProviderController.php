@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Log;
 class DomainProviderController extends Controller
 {
     /**
-     * ط¹ط±ط¶ ط¬ظ…ظٹط¹ ط§ظ„ظ…ط²ظˆط¯ظٹظ†
+     * عرض جميع المزودين
      */
     public function index()
     {
@@ -23,7 +23,7 @@ class DomainProviderController extends Controller
     }
 
     /**
-     * ط¹ط±ط¶ ظ†ظ…ظˆط°ط¬ ط¥ط¶ط§ظپط© ظ…ط²ظˆط¯ ط¬ط¯ظٹط¯
+     * عرض نموذج إضافة مزود جديد
      */
     public function create()
     {
@@ -32,20 +32,20 @@ class DomainProviderController extends Controller
     }
 
     /**
-     * ط­ظپط¸ ظ…ط²ظˆط¯ ط¬ط¯ظٹط¯
+     * حفظ مزود جديد
      */
     public function store(DomainProviderRequest $request)
     {
         $this->authorize('create', DomainProvider::class);
         $data = $request->validated();
 
-        // ط¥ظ† ظ„ظ… ظٹظڈط±ط³ظ„ mode ط£ظˆ ظƒط§ظ† ظپط§ط¶ظٹظ‹ط§طŒ ظ†ط³طھظ†طھط¬ظ‡ ظ…ظ† endpoint
+        // إن لم يُرسل mode أو كان فاضيًا، نستنتجه من endpoint
         if (!isset($data['mode']) || blank($data['mode'])) {
             $ep = $data['endpoint'] ?? '';
             $data['mode'] = (str_contains($ep, 'sandbox') || str_contains($ep, 'resellertest')) ? 'test' : 'live';
         }
 
-        // طھط·ط¨ظٹط¹ ط¨ط³ظٹط·
+        // تطبيع بسيط
         $data['name']      = trim($data['name']);
         $data['username']  = $data['username'] ?? null;
         $data['endpoint']  = $data['endpoint'] ?? null;
@@ -55,11 +55,11 @@ class DomainProviderController extends Controller
 
         return redirect()
             ->route('dashboard.domain_providers.index')
-            ->with('ok', 'طھظ… ط¥ط¶ط§ظپط© ط§ظ„ظ…ط²ظˆط¯ ط¨ظ†ط¬ط§ط­');
+            ->with('ok', 'تم إضافة المزود بنجاح');
     }
 
     /**
-     * ط¹ط±ط¶ ظ†ظ…ظˆط°ط¬ طھط¹ط¯ظٹظ„ ظ…ط²ظˆط¯
+     * عرض نموذج تعديل مزود
      */
     public function edit(DomainProvider $domainProvider)
     {
@@ -68,27 +68,27 @@ class DomainProviderController extends Controller
     }
 
     /**
-     * طھط­ط¯ظٹط« ط¨ظٹط§ظ†ط§طھ ظ…ط²ظˆط¯
+     * تحديث بيانات مزود
      */
     public function update(DomainProviderRequest $request, DomainProvider $domainProvider)
     {
         $this->authorize('update', $domainProvider);
         $data = $request->validated();
 
-        // ظ„ط§ طھط³طھط¨ط¯ظ„ ط§ظ„ط­ظ‚ظˆظ„ ط§ظ„ط­ط³ظ‘ط§ط³ط© ط¥ظ† ظƒط§ظ†طھ ظپط§ط±ط؛ط©
+        // لا تستبدل الحقول الحسّاسة إن كانت فارغة
         foreach (['password', 'api_token', 'api_key'] as $secret) {
             if (array_key_exists($secret, $data) && blank($data[$secret])) {
                 unset($data[$secret]);
             }
         }
 
-        // ط¥ظ† ظ„ظ… ظٹظڈط±ط³ظ„ mode ط£ظˆ ظƒط§ظ† ظپط§ط¶ظٹظ‹ط§طŒ ظ†ط³طھظ†طھط¬ظ‡ ظ…ظ† endpoint ط§ظ„ط­ط§ظ„ظٹ/ط§ظ„ط¬ط¯ظٹط¯
+        // إن لم يُرسل mode أو كان فاضيًا، نستنتجه من endpoint الحالي/الجديد
         if (!isset($data['mode']) || blank($data['mode'])) {
             $ep = $data['endpoint'] ?? $domainProvider->endpoint ?? '';
             $data['mode'] = (str_contains($ep, 'sandbox') || str_contains($ep, 'resellertest')) ? 'test' : 'live';
         }
 
-        // طھط·ط¨ظٹط¹ ط¨ط³ظٹط·
+        // تطبيع بسيط
         if (isset($data['name']))      $data['name']      = trim($data['name']);
         if (isset($data['username']))  $data['username']  = trim((string) $data['username']);
         if (isset($data['endpoint']))  $data['endpoint']  = trim((string) $data['endpoint']);
@@ -98,11 +98,11 @@ class DomainProviderController extends Controller
 
         return redirect()
             ->route('dashboard.domain_providers.index')
-            ->with('ok', 'طھظ… طھط­ط¯ظٹط« ط§ظ„ظ…ط²ظˆط¯ ط¨ظ†ط¬ط§ط­');
+            ->with('ok', 'تم تحديث المزود بنجاح');
     }
 
     /**
-     * ط­ط°ظپ ظ…ط²ظˆط¯
+     * حذف مزود
      */
     public function destroy(DomainProvider $domainProvider)
     {
@@ -110,11 +110,11 @@ class DomainProviderController extends Controller
         $domainProvider->delete();
         return redirect()
             ->route('dashboard.domain_providers.index')
-            ->with('ok', 'طھظ… ط­ط°ظپ ط§ظ„ظ…ط²ظˆط¯ ط¨ظ†ط¬ط§ط­');
+            ->with('ok', 'تم حذف المزود بنجاح');
     }
 
     /**
-     * ط§ط®طھط¨ط§ط± ط§ظ„ط§طھطµط§ظ„ ط¨ط§ظ„ظ…ط²ظˆط¯
+     * اختبار الاتصال بالمزود
      */
     public function testConnection(DomainProvider $domainProvider)
     {
@@ -123,11 +123,11 @@ class DomainProviderController extends Controller
             if (!$domainProvider->is_active) {
                 return response()->json([
                     'ok'      => false,
-                    'message' => 'ط§ظ„ظ…ط²ظˆظ‘ط¯ ط؛ظٹط± ظ…ظپط¹ظ‘ظ„. ظپط¹ظ‘ظ„ ط«ظ… ط¬ط±ظ‘ط¨ ظ…ط¬ط¯ط¯ظ‹ط§.',
+                    'message' => 'المزوّد غير مفعّل. فعّل ثم جرّب مجددًا.',
                 ], 422);
             }
 
-            // âœ… ظپط­طµ ط­ظ‚ظˆظ„ ظ…ط·ظ„ظˆط¨ط© ط­ط³ط¨ ط§ظ„ظ†ظˆط¹
+            // ✅ فحص حقول مطلوبة حسب النوع
             $missing = [];
             if (blank($domainProvider->username)) {
                 $missing[] = 'username';
@@ -145,32 +145,32 @@ class DomainProviderController extends Controller
                         && blank($domainProvider->api_token)
                         && blank($domainProvider->api_key)
                     ) {
-                        $missing[] = 'password/api_token/api_key (ظˆط§ط­ط¯ ط¹ظ„ظ‰ ط§ظ„ط£ظ‚ظ„)';
+                        $missing[] = 'password/api_token/api_key (واحد على الأقل)';
                     }
                     break;
 
                 default:
                     return response()->json([
                         'ok'      => false,
-                        'message' => 'ظ†ظˆط¹ ط§ظ„ظ…ط²ظˆط¯ ط؛ظٹط± ظ…ط¯ط¹ظˆظ… ظ„ظ„ط§ط®طھط¨ط§ط± ط§ظ„ط¢ظ„ظٹ ط­ط§ظ„ظٹظ‹ط§.',
+                        'message' => 'نوع المزود غير مدعوم للاختبار الآلي حاليًا.',
                     ], 422);
             }
 
             if (!empty($missing)) {
                 return response()->json([
                     'ok'      => false,
-                    'message' => 'ط­ظ‚ظˆظ„ ظ†ط§ظ‚طµط©: ' . implode(', ', $missing),
+                    'message' => 'حقول ناقصة: ' . implode(', ', $missing),
                 ], 422);
             }
 
-            // âœ… ظƒط§ط´ ط§ط®طھظٹط§ط±ظٹ + ط¯ط¹ظ… fresh=1
+            // ✅ كاش اختياري + دعم fresh=1
             $forceFresh = request()->boolean('fresh') || request()->boolean('bypass_cache');
             $cacheKey   = "dp:balance:{$domainProvider->id}";
-            $ttlSeconds = 60; // ط؛ظٹظ‘ط±ظ‡ط§ ط­ط³ط¨ ط±ط؛ط¨طھظƒ
+            $ttlSeconds = 60; // غيّرها حسب رغبتك
 
             if (!$forceFresh) {
                 if ($cached = cache()->get($cacheKey)) {
-                    // cached payload ظٹط­طھظˆظٹ ط¹ظ„ظ‰ cache => 'hit'
+                    // cached payload يحتوي على cache => 'hit'
                     return response()
                         ->json($cached, (!empty($cached['ok'])) ? 200 : 422)
                         ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
@@ -197,7 +197,7 @@ class DomainProviderController extends Controller
                                 ?? \Illuminate\Support\Arr::get($r, 'errors.0.text')
                                 ?? \Illuminate\Support\Arr::get($r, 'errors.0.message')
                                 ?? \Illuminate\Support\Arr::get($r, 'Errors.0');
-                            $msg = $ok ? 'طھظ… ط§ظ„ط§طھطµط§ظ„ ط¨ظ†ط¬ط§ط­.' : ($fallbackErr ?: 'طھط¹ط°ظ‘ط± ط§ظ„ط§طھطµط§ظ„ ط£ظˆ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط§ط¹طھظ…ط§ط¯ ط؛ظٹط± طµط­ظٹط­ط©.');
+                            $msg = $ok ? 'تم الاتصال بنجاح.' : ($fallbackErr ?: 'تعذّر الاتصال أو بيانات الاعتماد غير صحيحة.');
                         }
 
                         $durationMs = $r['duration_ms'] ?? (int) round((microtime(true) - $started) * 1000);
@@ -212,7 +212,7 @@ class DomainProviderController extends Controller
                             'cache'      => 'miss',
                         ];
 
-                        // ط®ط²ظ‘ظ† ظ†ط³ط®ط© ظ„ظ„ظƒط§ط´ (ظ†ط¹ظ„ظ‘ظ…ظ‡ط§ hit ظ„ط§ط³طھط®ط¯ط§ظ…ظ‡ط§ ظ„ط§ط­ظ‚ظ‹ط§ ظƒظ‚ط±ط§ط،ط© ط³ط±ظٹط¹ط©)
+                        // خزّن نسخة للكاش (نعلّمها hit لاستخدامها لاحقًا كقراءة سريعة)
                         cache()->put($cacheKey, array_merge($payload, ['cache' => 'hit']), $ttlSeconds);
 
                         Log::info('Enom provider test summary', [
@@ -245,7 +245,7 @@ class DomainProviderController extends Controller
                                 ?? \Illuminate\Support\Arr::get($r, 'errors.0.text')
                                 ?? \Illuminate\Support\Arr::get($r, 'errors.0.message')
                                 ?? \Illuminate\Support\Arr::get($r, 'Errors.0');
-                            $msg = $ok ? 'طھظ… ط§ظ„ط§طھطµط§ظ„ ط¨ظ†ط¬ط§ط­.' : ($fallbackErr ?: 'طھط¹ط°ظ‘ط± ط§ظ„ط§طھطµط§ظ„ ط£ظˆ ط¨ظٹط§ظ†ط§طھ ط§ظ„ط§ط¹طھظ…ط§ط¯ ط؛ظٹط± طµط­ظٹط­ط©.');
+                            $msg = $ok ? 'تم الاتصال بنجاح.' : ($fallbackErr ?: 'تعذّر الاتصال أو بيانات الاعتماد غير صحيحة.');
                         }
 
                         $durationMs = $r['duration_ms'] ?? (int) round((microtime(true) - $started) * 1000);
@@ -286,10 +286,8 @@ class DomainProviderController extends Controller
             ]);
             return response()->json([
                 'ok'      => false,
-                'message' => 'ط­ط¯ط« ط®ط·ط£ ط£ط«ظ†ط§ط، ط§ظ„ط§ط®طھط¨ط§ط±. ط±ط§ط¬ط¹ ط§ظ„ط³ط¬ظ„ط§طھ.',
+                'message' => 'حدث خطأ أثناء الاختبار. راجع السجلات.',
             ], 500);
         }
     }
 }
-
-
