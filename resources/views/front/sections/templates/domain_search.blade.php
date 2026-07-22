@@ -78,7 +78,9 @@
     if (!form || !input || !statusEl || !resultsEl) return;
 
     var CHECK_URL = @json(route('domains.check'));
-    var BOOK_URL = @json(route('client.domains.buy'));
+    var CART_STORE_URL = @json(route('cart.store'));
+    var CHECKOUT_CART_URL = @json(route('checkout.cart'));
+    var CSRF_TOKEN = @json(csrf_token());
     var DEFAULT_TLDS = @json($default_tlds);
 
     var MSG_EMPTY = @json(t('site.Domain_Search_Empty_Input', 'يرجى إدخال اسم دومين.'));
@@ -91,6 +93,8 @@
     var LABEL_PREMIUM = @json(t('site.Domain_Search_Premium', 'بريميوم'));
     var LABEL_BOOK_NOW = @json(t('site.Domain_Search_Book_Now', 'احجز الآن'));
     var LABEL_BOOK_NOW_ARIA_TPL = @json(t('site.Domain_Search_Book_Now_Aria', 'احجز الدومين :domain'));
+    var MSG_BOOK_ADDING = @json(t('site.Domain_Search_Booking_Adding', 'جارٍ الإضافة...'));
+    var MSG_BOOK_ERROR = @json(t('site.Domain_Search_Booking_Error', 'تعذّر إضافة الدومين للسلة. حاول مرة أخرى.'));
 
     var originalButtonText = button ? button.textContent : '';
     var inFlight = false;
@@ -179,17 +183,66 @@
         }
 
         if (available && domain) {
-            var bookLink = document.createElement('a');
-            var bookUrl = new URL(BOOK_URL, window.location.origin);
-            bookUrl.searchParams.set('domain', domain);
-            bookLink.href = bookUrl.toString();
-            bookLink.className = 'mt-3 inline-flex items-center justify-center w-full bg-red-brand text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-opacity-90 transition';
-            bookLink.textContent = LABEL_BOOK_NOW;
-            bookLink.setAttribute('aria-label', LABEL_BOOK_NOW_ARIA_TPL.replace(':domain', domain));
-            card.appendChild(bookLink);
+            var bookBtn = document.createElement('button');
+            bookBtn.type = 'button';
+            bookBtn.className = 'mt-3 inline-flex items-center justify-center w-full bg-red-brand text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-opacity-90 transition disabled:opacity-60 disabled:cursor-not-allowed';
+            bookBtn.textContent = LABEL_BOOK_NOW;
+            bookBtn.setAttribute('aria-label', LABEL_BOOK_NOW_ARIA_TPL.replace(':domain', domain));
+
+            var priceCents = (price !== null && price !== undefined && price !== '' && !isNaN(Number(price)))
+                ? Math.round(Number(price) * 100)
+                : 0;
+
+            bookBtn.addEventListener('click', function () {
+                addDomainToCart(domain, priceCents, bookBtn);
+            });
+
+            card.appendChild(bookBtn);
         }
 
         return card;
+    }
+
+    async function addDomainToCart(domain, priceCents, btn) {
+        var originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = MSG_BOOK_ADDING;
+
+        try {
+            var res = await fetch(CART_STORE_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': CSRF_TOKEN
+                },
+                body: JSON.stringify({
+                    items: [{
+                        domain: domain,
+                        item_option: 'register',
+                        price_cents: priceCents,
+                        meta: null
+                    }]
+                })
+            });
+
+            var text = await res.text();
+            var data = null;
+            try { data = JSON.parse(text); } catch (e) { data = null; }
+
+            if (!res.ok || !data || !data.ok) {
+                setStatus((data && data.message) || MSG_BOOK_ERROR, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
+                return;
+            }
+
+            window.location.href = CHECKOUT_CART_URL;
+        } catch (err) {
+            setStatus(MSG_BOOK_ERROR, 'error');
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
     }
 
     function renderResults(results) {
