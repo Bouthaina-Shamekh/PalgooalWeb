@@ -78,6 +78,7 @@
     if (!form || !input || !statusEl || !resultsEl) return;
 
     var CHECK_URL = @json(route('domains.check'));
+    var BOOK_URL = @json(route('client.domains.buy'));
     var DEFAULT_TLDS = @json($default_tlds);
 
     var MSG_EMPTY = @json(t('site.Domain_Search_Empty_Input', 'يرجى إدخال اسم دومين.'));
@@ -88,6 +89,8 @@
     var LABEL_AVAILABLE = @json(t('site.Domain_Search_Available', 'متاح'));
     var LABEL_UNAVAILABLE = @json(t('site.Domain_Search_Unavailable', 'غير متاح'));
     var LABEL_PREMIUM = @json(t('site.Domain_Search_Premium', 'بريميوم'));
+    var LABEL_BOOK_NOW = @json(t('site.Domain_Search_Book_Now', 'احجز الآن'));
+    var LABEL_BOOK_NOW_ARIA_TPL = @json(t('site.Domain_Search_Book_Now_Aria', 'احجز الدومين :domain'));
 
     var originalButtonText = button ? button.textContent : '';
     var inFlight = false;
@@ -173,6 +176,17 @@
             }
 
             card.appendChild(metaRow);
+        }
+
+        if (available && domain) {
+            var bookLink = document.createElement('a');
+            var bookUrl = new URL(BOOK_URL, window.location.origin);
+            bookUrl.searchParams.set('domain', domain);
+            bookLink.href = bookUrl.toString();
+            bookLink.className = 'mt-3 inline-flex items-center justify-center w-full bg-red-brand text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-opacity-90 transition';
+            bookLink.textContent = LABEL_BOOK_NOW;
+            bookLink.setAttribute('aria-label', LABEL_BOOK_NOW_ARIA_TPL.replace(':domain', domain));
+            card.appendChild(bookLink);
         }
 
         return card;

@@ -34,6 +34,11 @@
 
                     <form action="{{ route('client.login.store') }}" class="mt-4 space-y-3" method="post">
                         @csrf
+                        <input
+                            type="hidden"
+                            name="redirect_to"
+                            value="{{ old('redirect_to', session('url.intended', '')) }}"
+                        >
                         @if ($errors->any())
                         <div class="mb-3 rounded-[12px] bg-red-100 px-4 py-3 text-sm text-red-700 font-almarai">
                             {{ $errors->first() }}
