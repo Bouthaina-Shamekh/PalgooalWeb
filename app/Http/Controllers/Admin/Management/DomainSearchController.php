@@ -255,18 +255,60 @@ class DomainSearchController extends Controller
 
     /* ====================== Helpers ====================== */
 
+    /** يعيد قيمة معامل query كنص فقط؛ أي نوع آخر (مصفوفة مثلاً عبر q[]/domains[]) يُعامَل كسلسلة فارغة لمنع Array to string conversion */
+    protected function queryScalar(Request $req, string $key): string
+    {
+        $v = $req->query($key, '');
+        return is_string($v) ? $v : '';
+    }
+
+    /**
+     * يطبّع معامل tlds سواء أُرسل كنص CSV (?tlds=com,net) أو كمصفوفة (?tlds[]=com&tlds[]=net).
+     * يتجاهل العناصر غير النصية والفارغة، ويطبّق strtolower/trim فقط؛ التحقق النهائي (isValidTld) يبقى في المستدعي.
+     */
+    protected function queryTlds(Request $req): array
+    {
+        $raw = $req->query('tlds', '');
+
+        if (is_string($raw)) {
+            if (trim($raw) === '') {
+                return [];
+            }
+            return array_values(array_filter(array_map(
+                fn($t) => strtolower(trim($t)),
+                explode(',', $raw)
+            ), fn($t) => $t !== ''));
+        }
+
+        if (is_array($raw)) {
+            $out = [];
+            foreach ($raw as $item) {
+                if (!is_string($item)) {
+                    continue;
+                }
+                $item = strtolower(trim($item));
+                if ($item !== '') {
+                    $out[] = $item;
+                }
+            }
+            return $out;
+        }
+
+        return [];
+    }
+
     protected function normalizeDomains(Request $req): array
     {
-        $q            = trim((string) $req->query('q', ''));
-        $tldsIn       = trim((string) $req->query('tlds', ''));
-        $domainsParam = trim((string) $req->query('domains', ''));
+        $q            = trim($this->queryScalar($req, 'q'));
+        $tldsList     = $this->queryTlds($req);
+        $domainsParam = trim($this->queryScalar($req, 'domains'));
 
         $domains = [];
         if ($domainsParam !== '') {
             $domains = array_filter(array_map('trim', explode(',', $domainsParam)));
         } elseif ($q !== '') {
             $sld  = strtolower($this->toAsciiLabel($q));
-            $tlds = $tldsIn !== '' ? array_filter(array_map('trim', explode(',', strtolower($tldsIn)))) : ['com', 'net', 'org'];
+            $tlds = !empty($tldsList) ? $tldsList : ['com', 'net', 'org'];
             foreach ($tlds as $tld) {
                 if ($this->isValidLabel($sld) && $this->isValidTld($tld)) {
                     $domains[] = $sld . '.' . $tld;
