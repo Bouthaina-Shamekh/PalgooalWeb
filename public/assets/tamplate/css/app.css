@@ -803,9 +803,6 @@
   .z-50 {
     z-index: 50;
   }
-  .z-\[55\] {
-    z-index: 55;
-  }
   .z-\[60\] {
     z-index: 60;
   }
@@ -8460,6 +8457,22 @@
       --tw-ring-offset-color: var(--color-white);
     }
   }
+  .focus-visible\:outline-2 {
+    &:focus-visible {
+      outline-style: var(--tw-outline-style);
+      outline-width: 2px;
+    }
+  }
+  .focus-visible\:outline-offset-4 {
+    &:focus-visible {
+      outline-offset: 4px;
+    }
+  }
+  .focus-visible\:outline-white {
+    &:focus-visible {
+      outline-color: var(--color-white);
+    }
+  }
   .focus-visible\:outline-none {
     &:focus-visible {
       --tw-outline-style: none;
@@ -9606,11 +9619,6 @@
   .lg\:top-24 {
     @media (width >= 64rem) {
       top: calc(var(--spacing) * 24);
-    }
-  }
-  .lg\:z-30 {
-    @media (width >= 64rem) {
-      z-index: 30;
     }
   }
   .lg\:z-50 {
