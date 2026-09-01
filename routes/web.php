@@ -107,18 +107,6 @@ Route::middleware(['setLocale'])->group(function () {
     Route::post('/cart/clear', [CartController::class, 'clear'])
         ->name('cart.clear');
 
-    // Domain-only checkout (no template binding)
-    Route::get('/checkout/domains', function () {
-        return view('front.pages.checkout-domains');
-    })->name('checkout.domains');
-
-    Route::post('/checkout/domains/process', [CartController::class, 'processDomains'])
-        ->name('checkout.domains.process');
-
-    Route::get('/checkout/domains/success', function () {
-        return view('front.pages.checkout-domains-success');
-    })->name('checkout.domains.success');
-
     /*
     |--------------------------------------------------------------------------
     | Templates (blueprints / legacy frontend)

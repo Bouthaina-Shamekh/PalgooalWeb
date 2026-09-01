@@ -18,7 +18,8 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Artisan::command('domains:process-auto-renewals {--dry-run}', function () {
-    $summary = app(DomainRenewalService::class)->processDueAutoRenewals((bool) $this->option('dry-run'));
+    $dryRun = (bool) $this->option('dry-run');
+    $summary = app(DomainRenewalService::class)->processDueAutoRenewals($dryRun);
 
     $this->table(
         ['scanned', 'due', 'created', 'existing', 'renewed', 'awaiting_payment', 'failed'],
@@ -32,7 +33,22 @@ Artisan::command('domains:process-auto-renewals {--dry-run}', function () {
             $summary['failed'],
         ]]
     );
-})->purpose('Create and process due domain auto-renewals before their renewal date.');
+
+    if ($dryRun && !empty($summary['details'])) {
+        $this->newLine();
+        $this->table(
+            ['domain', 'renewal_date', 'provider', 'estimated_price', 'pending_invoice', 'action'],
+            array_map(fn (array $detail) => [
+                $detail['domain'],
+                $detail['renewal_date'],
+                $detail['provider'],
+                number_format($detail['estimated_price_cents'] / 100, 2) . ' ' . $detail['currency'],
+                $detail['pending_invoice'] ? 'yes' : 'no',
+                $detail['action'],
+            ], $summary['details'])
+        );
+    }
+})->purpose('Create unpaid invoices for due domain auto-renewals; --dry-run previews without writes.');
 
 Artisan::command('tenancy:runtime-usage {--tenant_id=} {--source=} {--limit=25}', function () {
     if (! Schema::hasTable('tenant_runtime_metrics')) {

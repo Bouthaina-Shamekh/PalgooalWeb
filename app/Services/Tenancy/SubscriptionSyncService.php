@@ -3,213 +3,301 @@
 namespace App\Services\Tenancy;
 
 use App\Models\Tenancy\Subscription;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 class SubscriptionSyncService
 {
-    /**
-     * Sync a subscription to its provider and return human message
-     * @param Subscription $subscription
-     * @return string
-     */
+    public const RESULT_SUCCESS = 'success';
+    public const RESULT_FAILED = 'failed';
+    public const RESULT_UNKNOWN = 'unknown';
+    public const RESULT_SKIPPED = 'skipped';
+
+    /** Backwards-compatible message API used by existing controllers/jobs. */
     public function sync(Subscription $subscription, bool $dryRun = false): string
     {
-        $server = $subscription->server;
-        if (!$server) {
-            return 'لا يوجد سيرفر مرتبط بهذا الاشتراك.';
-        }
-        $host = (!empty($server->hostname) && trim($server->hostname) !== '') ? $server->hostname : $server->ip;
-        $port = 2087;
-        $username = $server->username;
-        $apiToken = $server->api_token;
-        $error = null;
-        $result = null;
-        if ($host && $username && $apiToken) {
-            // Determine the package to send to WHM. Prefer subscription.server_package (persisted),
-            // then plan.server_package. Do NOT fall back to slug automatically — we require an explicit
-            // server package to avoid accidental mismatches.
-            $package = null;
-            try {
-                $package = $subscription->server_package ?? $subscription->plan->server_package ?? null;
-            } catch (\Exception $e) {
-                $package = null;
-            }
-
-            if (empty($package)) {
-                $error = 'لا توجد قيمة "server_package" مهيأة للخطة أو الاشتراك. الرجاء تعيين حزمة السيرفر على الخطة قبل محاولة المزامنة.';
-                Log::warning('Subscription sync aborted - missing server_package for subscription ' . $subscription->id);
-                return $error;
-            }
-            Log::debug('Subscription ' . $subscription->id . ' will use server_package: ' . $package);
-
-            // Build base params (username will be set per attempt).
-            // P4: never fall back to a hard-coded password; generate a random one instead.
-            $accountPassword = $subscription->password
-                ?? \Illuminate\Support\Str::random(14) . '!A9';
-
-            $baseParams = [
-                'domain'       => $subscription->domain_name,
-                'plan'         => (string) $package,
-                'contactemail' => $subscription->client->email ?? '',
-                'password'     => $accountPassword,
-            ];
-
-            // If dry run requested, show the URL/params for the first candidate only
-            if ($dryRun) {
-                $firstUsername = $subscription->username ?? $this->generateDefaultUsername($subscription);
-                $firstUsername = $this->sanitizeUsername($firstUsername);
-                $params = array_merge(['username' => $firstUsername], $baseParams);
-                $apiUrl = "https://{$host}:{$port}/json-api/createacct?api.version=1&" . http_build_query($params);
-                $info = 'DRY RUN - createacct URL: ' . $apiUrl . "\n" . 'params: ' . json_encode($params, JSON_UNESCAPED_UNICODE);
-                Log::info('Subscription dry-run sync for subscription ' . $subscription->id . ': ' . $info);
-                return $info;
-            }
-
-            // Prepare username candidates and attempt createacct up to N times
-            $candidates = $this->generateUsernameCandidates($subscription, 5);
-            Log::debug('Subscription ' . $subscription->id . ' username candidates: ' . json_encode($candidates, JSON_UNESCAPED_UNICODE));
-            $attempt = 0;
-            $success = false;
-            $lastResponse = null;
-            $header = [
-                'Authorization: whm ' . $username . ':' . $apiToken,
-            ];
-
-            foreach ($candidates as $candidate) {
-                $attempt++;
-                $candidate = $this->sanitizeUsername($candidate);
-                $params = array_merge(['username' => $candidate], $baseParams);
-                $apiUrl = "https://{$host}:{$port}/json-api/createacct?api.version=1&" . http_build_query($params);
-                Log::info("Subscription sync attempt {$attempt} for subscription {$subscription->id} - username={$candidate}");
-                Log::debug('Createacct request for subscription ' . $subscription->id . ' attempt ' . $attempt . ': url=' . $apiUrl . ' params=' . json_encode($params, JSON_UNESCAPED_UNICODE) . ' headers=' . json_encode($header));
-                try {
-                    // P7: SSL verification is configurable; default ON.
-                    $sslVerify = config('services.whm.ssl_verify', true);
-                    $ch = curl_init();
-                    curl_setopt($ch, CURLOPT_URL, $apiUrl);
-                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $sslVerify);
-                    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $sslVerify ? 2 : 0);
-                    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
-                    $response = curl_exec($ch);
-                    if (curl_errno($ch)) {
-                        $error = 'curl error: ' . curl_error($ch);
-                        Log::warning('Curl error during createacct for subscription ' . $subscription->id . ': ' . $error);
-                        $lastResponse = $error;
-                        curl_close($ch);
-                        continue; // try next candidate
-                    }
-                    curl_close($ch);
-                    $lastResponse = $response;
-                    Log::debug('Raw WHM response for subscription ' . $subscription->id . ' attempt ' . $attempt . ': ' . (is_string($response) ? $response : print_r($response, true)));
-                    $data = json_decode($response, true);
-                    if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
-                        Log::debug('WHM response for subscription ' . $subscription->id . ' attempt ' . $attempt . ' is not valid JSON: ' . json_last_error_msg());
-                    }
-                    if (isset($data['metadata']['result']) && $data['metadata']['result'] == 1) {
-                        $result = 'تم إنشاء الحساب بنجاح على المزود.';
-                        $success = true;
-                        // update subscription username if we used a different candidate
-                        try {
-                            if ($subscription->username !== $candidate) {
-                                $subscription->update(['username' => $candidate]);
-                                Log::info('Subscription ' . $subscription->id . ' username updated to ' . $candidate . ' after successful provisioning.');
-                            }
-                        } catch (\Exception $e) {
-                            Log::warning('Failed to persist updated username for subscription ' . $subscription->id . ': ' . $e->getMessage());
-                        }
-                        Log::debug('WHM createacct success metadata for subscription ' . $subscription->id . ': ' . json_encode($data['metadata'], JSON_UNESCAPED_UNICODE));
-                        break;
-                    } else {
-                        // log reason and try next candidate if available
-                        $msg = $data['metadata']['reason'] ?? $data['reason'] ?? 'فشل إنشاء الحساب.';
-                        $raw = is_string($response) ? $response : print_r($response, true);
-                        $error = $msg . "\nResponse: " . $raw;
-                        Log::warning('WHM createacct attempt ' . $attempt . ' failed for subscription ' . $subscription->id . ': ' . $error);
-                        Log::debug('Parsed WHM response for subscription ' . $subscription->id . ' attempt ' . $attempt . ': ' . print_r($data, true));
-                        // if the reason explicitly says reserved username, try next candidate
-                        // else continue to next candidate as well (to be robust)
-                        continue;
-                    }
-                } catch (\Exception $e) {
-                    $lastResponse = $e->getMessage();
-                    Log::error('Exception during createacct for subscription ' . $subscription->id . ' attempt ' . $attempt . ': ' . $e->getMessage());
-                    continue;
-                }
-            }
-
-            if (!$success) {
-                $error = 'فشل إنشاء الحساب بعد محاولات متعددة. آخر استجابة: ' . ($lastResponse ?? 'لا توجد استجابة');
-                Log::error('WHM createacct failed for subscription ' . $subscription->id . ': ' . $error);
-            }
-        } else {
-            $error = 'بيانات السيرفر غير مكتملة.';
-        }
-        $message = $result ?: $error;
-        Log::info('Subscription sync result for subscription ' . $subscription->id . ': ' . $message);
-        return $message;
+        return $this->provisionAccount($subscription, $dryRun)['message'];
     }
 
     /**
-     * Generate a small list of username candidates. First candidate is current username if exists.
-     * Then fallback generators using subscription id and client slug.
-     * @param Subscription $subscription
-     * @param int $limit
-     * @return array
+     * Atomically claim a subscription and issue at most one WHM createacct call.
+     *
+     * @return array{result: string, state: string, message: string, username: string|null}
      */
-    private function generateUsernameCandidates(Subscription $subscription, int $limit = 5): array
+    public function provisionAccount(Subscription $subscription, bool $dryRun = false): array
     {
-        $list = [];
-        if (!empty($subscription->username)) {
-            $list[] = $subscription->username;
+        if ($dryRun) {
+            return $this->dryRunResult($subscription);
         }
-        // client slug or name
-        $clientSlug = null;
+
+        $claim = DB::transaction(function () use ($subscription): array {
+            $locked = Subscription::query()
+                ->with(['client', 'plan', 'server'])
+                ->lockForUpdate()
+                ->findOrFail($subscription->id);
+
+            $state = $locked->provisioning_status ?: Subscription::PROVISIONING_PENDING;
+
+            if (in_array($state, [
+                Subscription::PROVISIONING_ACTIVE,
+                Subscription::PROVISIONING_IN_PROGRESS,
+                Subscription::PROVISIONING_UNKNOWN,
+            ], true)) {
+                return $this->skippedResult($locked, $state);
+            }
+
+            $validationError = $this->configurationError($locked);
+            if ($validationError !== null) {
+                $locked->forceFill([
+                    'provisioning_status' => Subscription::PROVISIONING_FAILED,
+                    'last_sync_message' => $validationError,
+                ])->save();
+
+                return $this->result(self::RESULT_FAILED, Subscription::PROVISIONING_FAILED, $validationError, $locked->username);
+            }
+
+            $accountUsername = $this->sanitizeUsername(
+                (string) ($locked->username ?: $this->generateDefaultUsername($locked))
+            );
+
+            if ($accountUsername === '') {
+                $message = 'WHM provisioning cannot start without a valid account username.';
+                $locked->forceFill([
+                    'provisioning_status' => Subscription::PROVISIONING_FAILED,
+                    'last_sync_message' => $message,
+                ])->save();
+
+                return $this->result(self::RESULT_FAILED, Subscription::PROVISIONING_FAILED, $message, null);
+            }
+
+            $locked->forceFill([
+                'username' => $accountUsername,
+                'cpanel_username' => $accountUsername,
+                'cpanel_password' => $locked->cpanel_password ?: Str::random(14) . '!A9',
+                'provisioning_status' => Subscription::PROVISIONING_IN_PROGRESS,
+                'last_sync_message' => 'WHM account creation claimed and in progress.',
+            ])->save();
+
+            return [
+                'result' => null,
+                'subscription' => $locked->fresh(['client', 'plan', 'server']),
+            ];
+        });
+
+        if ($claim['result'] !== null) {
+            return $claim;
+        }
+
+        /** @var Subscription $claimed */
+        $claimed = $claim['subscription'];
+
         try {
-            $clientSlug = $subscription->client->slug ?? null;
-        } catch (\Exception $e) {
-            $clientSlug = null;
+            $response = $this->sendCreateAccountRequest($claimed);
+        } catch (Throwable $exception) {
+            return $this->finalizeUnknown(
+                $claimed,
+                'WHM createacct outcome is unknown: ' . $exception->getMessage(),
+            );
         }
-        if ($clientSlug) {
-            $list[] = $clientSlug . $subscription->id;
+
+        if ($response->serverError() || in_array($response->status(), [408, 425, 429], true)) {
+            return $this->finalizeUnknown(
+                $claimed,
+                'WHM createacct returned a transient HTTP status; reconciliation is required.',
+            );
         }
-        // default palgoal{subscription_id}
-        $list[] = 'palgoal' . $subscription->id;
-        // add numerical suffixes if still more needed
-        $i = 1;
-        while (count($list) < $limit) {
-            $list[] = 'palgoal' . $subscription->id . $i;
-            $i++;
+
+        $data = $response->json();
+        if (! is_array($data)) {
+            return $this->finalizeUnknown(
+                $claimed,
+                'WHM createacct returned an empty or malformed response; reconciliation is required.',
+            );
         }
-        return array_slice($list, 0, $limit);
+
+        if (($data['metadata']['result'] ?? null) == 1) {
+            return $this->finalizeResult(
+                $claimed,
+                Subscription::PROVISIONING_ACTIVE,
+                self::RESULT_SUCCESS,
+                'WHM account created successfully.',
+            );
+        }
+
+        $reason = trim((string) ($data['metadata']['reason'] ?? $data['reason'] ?? ''));
+        if ($reason === '' || $this->reasonIsAmbiguous($reason)) {
+            return $this->finalizeUnknown(
+                $claimed,
+                $reason !== ''
+                    ? 'WHM createacct outcome requires reconciliation: ' . $reason
+                    : 'WHM createacct returned no conclusive result; reconciliation is required.',
+            );
+        }
+
+        return $this->finalizeResult(
+            $claimed,
+            Subscription::PROVISIONING_FAILED,
+            self::RESULT_FAILED,
+            'WHM rejected account creation: ' . $reason,
+        );
     }
 
-    /**
-     * Generate a default username when none exists
-     */
+    protected function sendCreateAccountRequest(Subscription $subscription): Response
+    {
+        $server = $subscription->server;
+        $host = filled($server?->hostname) ? trim((string) $server->hostname) : $server?->ip;
+
+        return Http::withHeaders([
+            'Authorization' => 'whm ' . $server->username . ':' . $server->api_token,
+        ])->withOptions([
+            'verify' => config('services.whm.ssl_verify', true),
+        ])->connectTimeout(10)->timeout(20)->get(
+            "https://{$host}:2087/json-api/createacct",
+            [
+                'api.version' => 1,
+                'username' => $subscription->username,
+                'domain' => $subscription->domain_name,
+                'plan' => (string) ($subscription->server_package ?: $subscription->plan?->server_package),
+                'contactemail' => $subscription->client?->email ?? '',
+                'password' => $subscription->cpanel_password,
+            ],
+        );
+    }
+
+    protected function finalizeUnknown(Subscription $subscription, string $message): array
+    {
+        return $this->finalizeResult(
+            $subscription,
+            Subscription::PROVISIONING_UNKNOWN,
+            self::RESULT_UNKNOWN,
+            $message,
+        );
+    }
+
+    protected function finalizeResult(
+        Subscription $subscription,
+        string $state,
+        string $result,
+        string $message,
+    ): array {
+        return DB::transaction(function () use ($subscription, $state, $result, $message): array {
+            $locked = Subscription::query()->lockForUpdate()->findOrFail($subscription->id);
+
+            if ($locked->provisioning_status !== Subscription::PROVISIONING_IN_PROGRESS) {
+                return $this->skippedResult($locked, (string) $locked->provisioning_status);
+            }
+
+            $updates = [
+                'provisioning_status' => $state,
+                'last_sync_message' => $message,
+                'last_synced_at' => now(),
+            ];
+
+            if ($state === Subscription::PROVISIONING_ACTIVE) {
+                $updates['provisioned_at'] = now();
+                $updates['cpanel_username'] = $locked->username;
+            }
+
+            $locked->forceFill($updates)->save();
+
+            Log::info('Subscription WHM provisioning result.', [
+                'subscription_id' => $locked->id,
+                'result' => $result,
+                'provisioning_status' => $state,
+            ]);
+
+            return $this->result($result, $state, $message, $locked->username);
+        });
+    }
+
+    protected function configurationError(Subscription $subscription): ?string
+    {
+        $server = $subscription->server;
+        $host = filled($server?->hostname) ? trim((string) $server->hostname) : $server?->ip;
+
+        if (! $server || ! $host || ! $server->username || ! $server->api_token) {
+            return 'WHM server credentials are incomplete.';
+        }
+
+        if (! ($subscription->server_package ?: $subscription->plan?->server_package)) {
+            return 'WHM server_package is not configured for this subscription or plan.';
+        }
+
+        if (! filled($subscription->domain_name)) {
+            return 'WHM account domain is missing.';
+        }
+
+        return null;
+    }
+
+    protected function reasonIsAmbiguous(string $reason): bool
+    {
+        $reason = Str::lower($reason);
+
+        return str_contains($reason, 'already exists')
+            || str_contains($reason, 'already owned')
+            || str_contains($reason, 'already has an account')
+            || str_contains($reason, 'duplicate')
+            || str_contains($reason, 'timeout')
+            || str_contains($reason, 'timed out')
+            || str_contains($reason, 'connection reset')
+            || str_contains($reason, 'temporarily unavailable')
+            || str_contains($reason, 'try again');
+    }
+
+    protected function skippedResult(Subscription $subscription, string $state): array
+    {
+        $message = match ($state) {
+            Subscription::PROVISIONING_ACTIVE => 'WHM provisioning already completed; createacct skipped.',
+            Subscription::PROVISIONING_IN_PROGRESS => 'WHM provisioning is already in progress; createacct skipped.',
+            Subscription::PROVISIONING_UNKNOWN => 'WHM provisioning outcome is unknown; reconciliation is required before retry.',
+            default => 'WHM provisioning state changed before completion; createacct skipped.',
+        };
+
+        return $this->result(self::RESULT_SKIPPED, $state, $message, $subscription->username);
+    }
+
+    protected function result(string $result, string $state, string $message, ?string $username): array
+    {
+        return compact('result', 'state', 'message', 'username');
+    }
+
+    protected function dryRunResult(Subscription $subscription): array
+    {
+        $subscription->loadMissing(['client', 'plan', 'server']);
+        $error = $this->configurationError($subscription);
+        if ($error !== null) {
+            return $this->result(self::RESULT_FAILED, (string) $subscription->provisioning_status, $error, $subscription->username);
+        }
+
+        $username = $this->sanitizeUsername(
+            (string) ($subscription->username ?: $this->generateDefaultUsername($subscription))
+        );
+        $host = filled($subscription->server?->hostname)
+            ? trim((string) $subscription->server->hostname)
+            : $subscription->server?->ip;
+        $message = "DRY RUN - createacct URL: https://{$host}:2087/json-api/createacct username={$username}";
+
+        return $this->result(self::RESULT_SKIPPED, (string) $subscription->provisioning_status, $message, $username);
+    }
+
     private function generateDefaultUsername(Subscription $subscription): string
     {
         return 'palgoal' . $subscription->id;
     }
 
-    /**
-     * Sanitize username to WHM-friendly format: lowercase, alphanumeric, max 16 chars.
-     */
     private function sanitizeUsername(string $username): string
     {
-        $s = mb_strtolower($username);
-        // keep only a-z0-9
-        $s = preg_replace('/[^a-z0-9]/', '', $s);
-        // limit length (cPanel typically allows up to 16)
-        return substr($s, 0, 16);
+        $sanitized = mb_strtolower($username);
+        $sanitized = preg_replace('/[^a-z0-9]/', '', $sanitized);
+
+        return substr((string) $sanitized, 0, 16);
     }
 
-    /**
-     * Terminate subscription on provider (remove account)
-     * returns human message
-     */
     public function terminate(Subscription $subscription): string
     {
         $server = $subscription->server;

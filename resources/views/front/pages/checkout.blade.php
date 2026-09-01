@@ -2160,6 +2160,23 @@
                     .then(r => r.json())
                     .then(response => {
                         if (response.success) {
+                            const checkoutUrl = typeof response.checkout_url === 'string'
+                                ? response.checkout_url.trim()
+                                : '';
+
+                            if (checkoutUrl) {
+                                try {
+                                    const target = new URL(checkoutUrl);
+                                    if (target.protocol === 'https:' || target.protocol === 'http:') {
+                                        window.location.assign(target.href);
+                                        return;
+                                    }
+                                } catch {}
+
+                                alert('تعذر فتح رابط بوابة الدفع الآمن.');
+                                return;
+                            }
+
                             // تنظيف سلة الدومينات فقط
                             try {
                                 const unified = readUnifiedCart();
@@ -2186,6 +2203,8 @@
                                 if (m) m.textContent = 'تم إنشاء الطلب بنجاح يا ' + response
                                     .client_name;
                             }
+                        } else if (response.message) {
+                            alert(response.message);
                         } else if (response.errors) {
                             alert('حدث خطأ: ' + (Array.isArray(response.errors) ? response.errors.join(
                                 '\n') : response.errors));

@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\Front;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\ProvisionSubscription;
 use App\Models\Coupon;
+use App\Models\DomainProvider;
 use App\Models\Invoice;
 use App\Models\Tenancy\Subscription;
-use App\Services\Billing\InvoiceSettlementService;
+use App\Services\Billing\DomainInvoiceItemBuilder;
+use App\Services\Domains\DomainAvailabilityService;
+use App\Services\Domains\DomainPricingService;
+use App\Services\Payments\PaymentSessionStarter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class CheckoutController extends Controller
 {
@@ -91,6 +95,37 @@ class CheckoutController extends Controller
      */
     public function process(Request $request, $template_id = null, $plan_id = null)
     {
+        // Defense in depth for the public domain cart: reject forged/stale session or
+        // request values before registration pricing, availability checks, or writes.
+        $rawItems = $request->input('items', session('palgoals_cart_domains', []));
+        $items = array_map(function ($it) {
+            return [
+                'domain'      => isset($it['domain']) ? strtolower(trim($it['domain'])) : null,
+                'item_option' => $it['item_option'] ?? $it['option'] ?? null,
+                'price_cents' => isset($it['price_cents']) ? (int) $it['price_cents'] : 0,
+                'meta'        => $it['meta'] ?? null,
+            ];
+        }, is_array($rawItems) ? $rawItems : []);
+
+        if (collect($items)->contains(
+            fn (array $item) => ($item['item_option'] ?? null) !== 'register'
+        )) {
+            $message = t(
+                'site.Domain_Item_Option_Unsupported',
+                'نوع عملية الدومين غير مدعوم في هذا المسار.'
+            );
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+
+            return response($message, 422);
+        }
+
+        foreach ($items as $index => $item) {
+            $items[$index]['item_option'] = 'register';
+        }
+
         // ADR-007 Phase 1 — Payment gateway feature flag
         // Set PAYMENT_GATEWAY_ENABLED=false in .env to block public checkout
         // without affecting admin bulk-mark-paid or auto-renewal jobs.
@@ -102,45 +137,226 @@ class CheckoutController extends Controller
             return redirect()->back()->with('error', $message);
         }
 
-        // إنشاء حساب للعميل في حال عدم التسجيل
-        if (!auth('client')->check()) {
-            $request->validate([
-                'first_name' => 'required|string|max:100',
-                'last_name'  => 'required|string|max:100',
-                'email'      => 'required|email|max:255|unique:clients,email',
-                'phone'      => 'required|string|max:30',
-                'password'   => 'required|string|min:6|confirmed',
-            ]);
-
-            $client = new \App\Models\Client();
-            $client->first_name  = $request->first_name;
-            $client->last_name   = $request->last_name;
-            $client->email       = $request->email;
-            $client->phone       = $request->phone;
-            $client->company_name = $request->company_name ?? '-';
-            $client->can_login   = true;
-            $client->password    = bcrypt($request->password);
-            $client->save();
-
-            auth('client')->login($client);
-        }
-
         $isDomainOnly = empty($template_id) && empty($plan_id);
         $isNotTemplate = empty($template_id);
         $isNotPlan = empty($plan_id);
         $isTemplateCheckout = !$isNotTemplate;
         $requiresDomainSelection = !$isTemplateCheckout;
 
-        // لو في عناصر قادمة من الطلب استخدمها؛ وإلا خذها من السيشن (لسيناريو الدومين فقط)
-        $rawItems = $request->input('items', session('palgoals_cart_domains', []));
-        $items = array_map(function ($it) {
-            return [
-                'domain'      => isset($it['domain']) ? strtolower(trim($it['domain'])) : null,
-                'item_option' => $it['item_option'] ?? $it['option'] ?? null, // تطبيع
-                'price_cents' => isset($it['price_cents']) ? (int) $it['price_cents'] : 0,
-                'meta'        => $it['meta'] ?? null,
-            ];
-        }, is_array($rawItems) ? $rawItems : []);
+        // ADR — لا يُنشأ حساب العميل الضيف ولا يُسجَّل دخوله هنا. سابقًا كان الإنشاء/الدخول
+        // يحدثان فوراً قبل أي تحقق من السعر أو التوفر أو نجاح المعاملة، ما يترك حساب Client
+        // حقيقي ومسجَّل الدخول بلا أي Order/Invoice إذا فشلت خطوة لاحقة. الآن: نتحقق فقط من
+        // صحة بيانات التسجيل (فشل التحقق هنا لا ينشئ أي شيء، كما كان تمامًا)، ونؤجّل إنشاء
+        // Client الفعلي إلى داخل نفس DB::transaction التي تُنشئ Order/OrderItems/Invoice/
+        // InvoiceItems أدناه، ونؤجّل auth('client')->login() إلى ما بعد نجاح الـ commit فقط.
+        $isGuestCheckout = !auth('client')->check();
+        $guestClientData = null;
+
+        if ($isGuestCheckout) {
+            $guestClientData = $request->validate([
+                'first_name' => 'required|string|max:100',
+                'last_name'  => 'required|string|max:100',
+                'email'      => 'required|email|max:255|unique:clients,email',
+                'phone'      => 'required|string|max:30',
+                'password'   => 'required|string|min:6|confirmed',
+            ]);
+        }
+
+        // ADR — إعادة تحقق نهائية موثوقة قبل إنشاء أي سجل: لا نعتمد على price_cents القادم من
+        // Request أو Session بأي شكل. كل دومين يُعاد تسعيره الآن من DomainPricingService
+        // (domain_tld_prices)؛ فشل أي عنصر أو تغيّر سعره يوقف العملية كاملة قبل أي كتابة لقاعدة البيانات.
+        $quoteCurrencies = [];
+
+        if (!empty($items)) {
+            $pricing = app(DomainPricingService::class);
+            $priceChangedDomains = [];
+
+            foreach ($items as $idx => $it) {
+                $domain = $it['domain'] ?? null;
+
+                if (!$domain) {
+                    $msg = 'تعذر تحديد سعر أحد عناصر الدومين في السلة.';
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json(['success' => false, 'message' => $msg], 422);
+                    }
+                    return redirect()->back()->with('error', $msg);
+                }
+
+                $quote = $pricing->registrationQuoteForDomain($domain);
+
+                if ($quote === null) {
+                    Log::warning('Checkout process: no trusted registration price for domain', ['domain' => $domain]);
+                    $msg = 'تعذر تحديد سعر الدومين "' . $domain . '" حالياً. تعذّر إتمام الطلب.';
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json(['success' => false, 'message' => $msg], 422);
+                    }
+                    return redirect()->back()->with('error', $msg);
+                }
+
+                if ((int) ($it['price_cents'] ?? 0) !== $quote['price_cents']) {
+                    $priceChangedDomains[] = $domain;
+                }
+
+                // اعتماد دائم على السعر الجديد القادم من الخدمة نفسها (وليس القيمة المخزَّنة) في بناء البنود لاحقاً
+                $items[$idx]['price_cents'] = $quote['price_cents'];
+                $items[$idx]['price']       = $quote['price'];
+                $items[$idx]['currency']    = $quote['currency'];
+                $items[$idx]['provider_id']   = $quote['provider_id'];
+                $items[$idx]['provider_type'] = $quote['provider_type'];
+                $items[$idx]['provider_mode'] = $quote['provider_mode'];
+                $items[$idx]['domain_tld_id'] = $quote['domain_tld_id'];
+                $items[$idx]['meta'] = array_merge(
+                    is_array($it['meta'] ?? null) ? $it['meta'] : [],
+                    [
+                        'provider_id' => $quote['provider_id'],
+                        'provider_type' => $quote['provider_type'],
+                        'provider_mode' => $quote['provider_mode'],
+                        'domain_tld_id' => $quote['domain_tld_id'],
+                        'currency' => $quote['currency'],
+                        'years' => 1,
+                    ]
+                );
+            }
+
+            $quoteCurrencies = array_values(array_unique(array_map(
+                fn (array $item) => strtoupper((string) ($item['currency'] ?? '')),
+                $items
+            )));
+
+            if (count($quoteCurrencies) > 1) {
+                $msg = t('site.Domain_Cart_Mixed_Currencies', 'لا يمكن جمع دومينات بعملات مختلفة في فاتورة واحدة.');
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $msg], 422);
+                }
+                return redirect()->back()->with('error', $msg);
+            }
+
+            if (!empty($priceChangedDomains)) {
+                // حدّث الجلسة بالسعر الجديد للمراجعة، ولا تُكمل الطلب دون إعادة تأكيد صريحة من العميل
+                session(['palgoals_cart_domains' => $items]);
+
+                Log::info('Checkout process: domain price changed since added to cart', ['domains' => $priceChangedDomains]);
+
+                $msg = 'تغير سعر الدومين منذ إضافته إلى السلة. راجع السعر الجديد ثم أعد تأكيد الطلب.';
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $msg, 'price_changed' => true], 409);
+                }
+                return redirect()->route('checkout.cart')->with('error', $msg);
+            }
+
+            // ADR — إعادة تحقق فعلية للتوفر لدى المزوّد قبل إنشاء أي Order/Invoice؛ لا يُعتمَد available
+            // القادم من Request/Session أو من نتيجة بحث سابقة. يُطبَّق فقط على عمليات التسجيل الجديد
+            // (register/new) — عمليات transfer/renew/subdomain/existing/own لا تخضع لهذا الفحص.
+            $availabilityService = app(DomainAvailabilityService::class);
+            $registerDomainsByProvider = [];
+            foreach ($items as $it) {
+                if ($availabilityService->isNewRegistrationOption($it['item_option'] ?? null)) {
+                    $registerDomainsByProvider[(int) $it['provider_id']][] = $it['domain'];
+                }
+            }
+
+            foreach ($registerDomainsByProvider as $providerId => $registerDomains) {
+                $provider = DomainProvider::query()->active()->find($providerId);
+
+                if (!$provider instanceof DomainProvider) {
+                    Log::error('Checkout process: trusted quote provider is no longer active', [
+                        'provider_id' => $providerId,
+                        'domains' => $registerDomains,
+                    ]);
+                    $msg = 'تعذر استخدام مزوّد الدومين المحدد حاليًا. حاول مرة أخرى لاحقًا.';
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json(['success' => false, 'message' => $msg], 503);
+                    }
+                    return redirect()->back()->with('error', $msg);
+                }
+
+                $availMap = $availabilityService->verifyRegistrationAvailabilityBatch($registerDomains, $provider);
+
+                if ($availMap === null) {
+                    Log::error('Checkout process: provider availability check failed', ['domains' => $registerDomains]);
+                    $msg = 'تعذر التحقق من توفر الدومين حاليًا. حاول مرة أخرى لاحقًا.';
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json(['success' => false, 'message' => $msg], 503);
+                    }
+                    return redirect()->back()->with('error', $msg);
+                }
+
+                foreach ($registerDomains as $d) {
+                    if (!($availMap[$d] ?? false)) {
+                        $msg = 'الدومين ' . $d . ' لم يعد متاحًا للتسجيل.';
+                        if ($request->ajax() || $request->wantsJson()) {
+                            return response()->json(['success' => false, 'message' => $msg], 422);
+                        }
+                        return redirect()->back()->with('error', $msg);
+                    }
+                }
+            }
+        }
+
+        // ADR — Idempotency Phase 1 (orders.checkout_fingerprint، بدون جدول محاولات مستقل):
+        // تُبنى البصمة هنا فقط — بعد إعادة التسعير الموثوقة وفحص التوفر أعلاه مباشرة، وليس
+        // قبلهما — من بيانات $items النهائية الموثوقة (domain/item_option/years/price_cents/
+        // currency/provider_id/domain_tld_id، كل القيم المالية منها قادمة حصرًا من
+        // DomainPricingService عبر الحلقة أعلاه، وليس من Request/المتصفح بأي شكل). تُحسب فقط
+        // لمسار سلة الدومينات (isDomainOnly دائمًا true عبر checkout.cart.process →
+        // processCart() → هنا).
+        $checkoutFingerprint = $isDomainOnly
+            ? $this->buildCheckoutFingerprint($request, $items)
+            : null;
+
+        $duplicateResult = null;
+
+        if ($checkoutFingerprint !== null) {
+            $duplicateOrder = \App\Models\Order::where('checkout_fingerprint', $checkoutFingerprint)->first();
+
+            if ($duplicateOrder) {
+                if (!$this->checkoutFingerprintOrderBelongsToCurrentIdentity($duplicateOrder)) {
+                    // نظريًا لا يجب أن يحدث هذا (البصمة مبنية أصلاً من هوية مقدّم الطلب)، لكن
+                    // احتياطًا: لا نعرض هذا الـ Order ولا فاتورته ولا نسجّل دخول أي حساب — نتابع
+                    // كأن لا تكرار موجود إطلاقًا (المسار الطبيعي أدناه سيُنشئ طلبًا جديدًا).
+                    Log::warning('Checkout process: checkout_fingerprint matched an order owned by a different identity', [
+                        'fingerprint'       => $checkoutFingerprint,
+                        'order_id'          => $duplicateOrder->id,
+                        'order_client_id'   => $duplicateOrder->client_id,
+                        'current_client_id' => auth('client')->id(),
+                    ]);
+                } else {
+                    $duplicateInvoice = $this->completedCheckoutInvoiceFor($duplicateOrder);
+
+                    if ($duplicateInvoice === null) {
+                        // ADR — لا نُخفي المشكلة: سجل بنفس البصمة موجود لكنه غير مكتمل (بلا فاتورة،
+                        // أو بلا OrderItems، أو بلا InvoiceItems) — لا يمثّل عملية ناجحة مكتملة، فلا
+                        // نعتبره تكرارًا آمنًا، ولا نُنشئ طلبًا جديدًا (سيتصادم مع نفس القيد الفريد
+                        // على أي حال) — نوقف الطلب بخطأ صريح بدل التظاهر بالنجاح.
+                        Log::error('Checkout process: checkout_fingerprint matched an incomplete order', [
+                            'fingerprint' => $checkoutFingerprint,
+                            'order_id'    => $duplicateOrder->id,
+                        ]);
+
+                        $msg = 'تعذر إتمام الطلب. يرجى التواصل مع الدعم الفني.';
+                        if ($request->ajax() || $request->wantsJson()) {
+                            return response()->json(['success' => false, 'message' => $msg], 500);
+                        }
+                        return redirect()->back()->with('error', $msg);
+                    }
+
+                    // نفس الجلسة/العميل حاول هذا الطلب من قبل ونجح فعليًا واكتمل بالكامل — لا
+                    // تُنشئ أي شيء جديد، فقط سجّل دخول صاحب الطلب لو لم يكن مسجَّلاً بالفعل،
+                    // وأعد نفس نتيجة النجاح دون بدء DB::transaction إطلاقًا.
+                    if ($duplicateOrder->client_id && !auth('client')->check()) {
+                        auth('client')->login($duplicateOrder->client);
+                    }
+
+                    $duplicateResult = [
+                        'order_id'         => $duplicateOrder->id,
+                        'invoice_id'       => $duplicateInvoice->id,
+                        'subscription_ids' => [],
+                        'client'           => $duplicateOrder->client,
+                        'subtotal_cents'   => (int) $duplicateInvoice->subtotal_cents,
+                    ];
+                }
+            }
+        }
 
         // معلومات القالب (إن وجد)
         $template    = $isNotTemplate ? null : \App\Models\Template::find($template_id);
@@ -220,16 +436,19 @@ class CheckoutController extends Controller
         }
 
         try {
-            $provisionQueue = [];
             $createdSubscriptionIds = [];
 
-            $result = DB::transaction(function () use (
-                &$provisionQueue,
+            // ADR — Idempotency Phase 1: لو اكتُشف طلب مكرر أعلاه (نفس checkout_fingerprint)،
+            // لا تُنفَّذ أي DB::transaction جديدة إطلاقًا — أعد استخدام نفس نتيجة النجاح السابقة.
+            $result = $duplicateResult ?? DB::transaction(function () use (
                 &$createdSubscriptionIds,
+                $isGuestCheckout,
+                $guestClientData,
                 $isDomainOnly,
                 $isNotTemplate,
                 $isNotPlan,
                 $items,
+                $quoteCurrencies,
                 $template,
                 $template_id,
                 $template_name,
@@ -246,14 +465,39 @@ class CheckoutController extends Controller
                 $showDiscountPlan,
                 $normalizedOption,
                 $coupon,
+                $checkoutFingerprint,
                 $request
             ) {
+                // ADR — إنشاء Client الضيف يحدث هنا فقط، داخل نفس المعاملة التي تُنشئ
+                // Order/Invoice — لا خارجها. لو فشلت أي خطوة لاحقة (order_items/InvoiceItems/
+                // التحققات)، يتراجع إنشاء هذا الـ Client أيضًا تلقائيًا (rollback كامل)، فلا يبقى
+                // حساب عميل حقيقي بلا Order. لا تسجيل دخول هنا إطلاقًا — يحدث فقط بعد نجاح الـ
+                // commit بالكامل خارج هذه الدالة.
+                if ($isGuestCheckout) {
+                    $client = new \App\Models\Client();
+                    $client->first_name   = $guestClientData['first_name'];
+                    $client->last_name    = $guestClientData['last_name'];
+                    $client->email        = $guestClientData['email'];
+                    $client->phone        = $guestClientData['phone'];
+                    $client->company_name = $request->company_name ?? '-';
+                    $client->can_login    = true;
+                    $client->password     = bcrypt($guestClientData['password']);
+                    $client->save();
+                } else {
+                    // مستخدم مسجَّل مسبقًا: استخدم هويته الحالية دون إنشاء أي حساب جديد.
+                    $client = auth('client')->user();
+                }
+
                 // 1) إنشاء الطلب
+                // ADR — Idempotency Phase 1: تمرير checkout_fingerprint هنا هو ما يجعل القيد
+                // الفريد على orders.checkout_fingerprint يمنع تصادميًا أي إنشاء مزدوج فعلي في
+                // قاعدة البيانات، حتى لو نجح فحصان متزامنان في تجاوز الفحص المسبق أعلاه معًا.
                 $order = \App\Models\Order::create([
-                    'client_id' => auth('client')->check() ? auth('client')->id() : null,
+                    'client_id' => $client?->id,
                     'status'    => 'pending',
                     'type'      => $isDomainOnly ? 'domains' : 'subscription',
                     'notes'     => $isDomainOnly ? 'حجز دومينات من سلة الدومينات' : 'طلب عبر صفحة checkout',
+                    'checkout_fingerprint' => $checkoutFingerprint,
                 ]);
 
                 // 2) إنشاء بنود الطلب
@@ -264,12 +508,12 @@ class CheckoutController extends Controller
                     $payload = array_map(function ($it) {
                         return [
                             'domain'      => $it['domain'],
-                            'item_option' => $it['item_option'],
+                            'item_option' => 'register',
                             'price_cents' => (int) ($it['price_cents'] ?? 0),
                             'meta'        => $it['meta'],
                         ];
                     }, $items);
-                    $order->items()->createMany($payload);
+                    $createdDomainOrderItems = $order->items()->createMany($payload);
                 } else {
                     // لو وصل دومين مع شراء القالب، خزّنه كبند واحد (اختياري لكنه مفيد للمراجعة/التتبع)
                     $domainFromRequest = $request->input('domain');
@@ -286,12 +530,31 @@ class CheckoutController extends Controller
 
                 // 3) إنشاء الفاتورة
                 if ($isDomainOnly) {
-                    $subtotalCents = (int) array_reduce($items, fn($c, $it) => $c + ((int) ($it['price_cents'] ?? 0)), 0);
+                    $invoiceItemBuilder = app(DomainInvoiceItemBuilder::class);
+
+                    // ADR — إغلاق المرحلة الأولى: مصدر الحقيقة المحاسبي النهائي هو بنود
+                    // الفاتورة نفسها، وليس مصفوفة السلة/الـ Request. نبني خصائص InvoiceItems
+                    // أولاً (بلا كتابة لقاعدة البيانات) من order_items الفعلية التي أُنشئت
+                    // أعلاه، ثم نشتق subtotal_cents من مجموعها مباشرة.
+                    $invoiceItemAttributes = $invoiceItemBuilder->buildAttributesForItems($createdDomainOrderItems);
+
+                    if ($invoiceItemAttributes->isEmpty()) {
+                        throw new \RuntimeException('تعذّر تجهيز بنود الفاتورة: لا توجد عناصر دومين صالحة لإنشاء الفاتورة.');
+                    }
+
+                    if ($invoiceItemAttributes->count() !== $createdDomainOrderItems->count()) {
+                        throw new \RuntimeException('عدد بنود الفاتورة المُجهَّزة لا يطابق عدد عناصر الطلب (order_items).');
+                    }
+
+                    $subtotalCents = (int) $invoiceItemAttributes->sum('total_cents');
 
                     // ADR-008 Phase 3 — coupon discount (server-side, re-validated above)
                     $couponDiscount = ($coupon && $coupon->isUsableForSubtotal($subtotalCents))
                         ? $coupon->computeDiscountCents($subtotalCents)
                         : 0;
+
+                    $taxCents   = 0;
+                    $totalCents = max(0, $subtotalCents - $couponDiscount + $taxCents);
 
                     $invoice = \App\Models\Invoice::create([
                         'client_id'      => $order->client_id,
@@ -299,14 +562,30 @@ class CheckoutController extends Controller
                         'status'         => 'draft',
                         'subtotal_cents' => $subtotalCents,
                         'discount_cents' => $couponDiscount,
-                        'tax_cents'      => 0,
-                        'total_cents'    => max(0, $subtotalCents - $couponDiscount),
-                        'currency'       => 'USD',
+                        'tax_cents'      => $taxCents,
+                        'total_cents'    => $totalCents,
+                        'currency'       => $quoteCurrencies[0],
                         'due_date'       => now()->addDays(3),
                         'order_id'       => $order->id,
                         'coupon_id'      => $coupon?->id,
                     ]);
-                    // بإمكانك لاحقًا إضافة invoice_items لكل دومين إن رغبت
+
+                    $createdInvoiceItems = $invoiceItemBuilder->persistItems($invoice, $invoiceItemAttributes);
+
+                    // تحقق صريح بعد الإنشاء — لا اعتماد على افتراض تطابق المصادر:
+                    if ($createdInvoiceItems->count() !== $createdDomainOrderItems->count()) {
+                        throw new \RuntimeException('عدد بنود الفاتورة المُنشأة فعليًا لا يطابق عدد عناصر الطلب.');
+                    }
+
+                    $persistedItemsTotal = (int) $createdInvoiceItems->sum('total_cents');
+                    if ($persistedItemsTotal !== (int) $invoice->subtotal_cents) {
+                        throw new \RuntimeException('مجموع بنود الفاتورة المُنشأة لا يطابق subtotal_cents الخاص بالفاتورة.');
+                    }
+
+                    $expectedTotalCents = max(0, (int) $invoice->subtotal_cents - (int) $invoice->discount_cents + (int) $invoice->tax_cents);
+                    if ((int) $invoice->total_cents !== $expectedTotalCents) {
+                        throw new \RuntimeException('total_cents الخاص بالفاتورة لا يطابق subtotal - discount + tax وفق السياسة الحالية.');
+                    }
                 } else {
                     // ADR-003 Phase 1 — use integer cents directly (no float * 100 rounding risk)
                     $unitCents     = $showDiscount ? ($discPriceCents ?? $basePriceCents) : $basePriceCents;
@@ -414,10 +693,6 @@ class CheckoutController extends Controller
                             $subscription = \App\Models\Tenancy\Subscription::create($subscriptionData);
                             if ($subscription) {
                                 $createdSubscriptionIds[] = $subscription->id;
-
-                                if ($isNotTemplate) {
-                                    $provisionQueue[] = $subscription;
-                                }
                             }
                         }
 
@@ -456,9 +731,11 @@ class CheckoutController extends Controller
                 }
 
                 return [
-                    'order_id' => $order->id,
-                    'invoice_id' => $invoice->id,
+                    'order_id'       => $order->id,
+                    'invoice_id'     => $invoice->id,
                     'subscription_ids' => $createdSubscriptionIds,
+                    'client'         => $client,
+                    'subtotal_cents' => (int) ($invoice->subtotal_cents ?? 0),
                 ];
             });
 
@@ -466,15 +743,41 @@ class CheckoutController extends Controller
             $invoice = Invoice::query()->findOrFail($result['invoice_id']);
             $subscriptionIds = array_values(array_filter($result['subscription_ids'] ?? []));
 
-            // ADR-008 Phase 3 — Coupon usage tracking is intentionally deferred to
-            // InvoiceSettlementService::markPaid(), which fires only after real payment.
-            // Tracking here would consume the coupon even if the customer never pays.
+            // ADR — Idempotency Phase 1: اعرض المجموع الفعلي المخزَّن في الفاتورة (سواء أُنشئت
+            // للتو أو أُعيد استخدامها كتكرار) بدل اشتقاقه من $items التي قد تكون غير مُعاد
+            // تسعيرها في مسار التكرار (تُخطَّى إعادة التسعير عمدًا في تلك الحالة أعلاه).
+            if ($isDomainOnly) {
+                $domainsTotalCents = (int) ($result['subtotal_cents'] ?? $domainsTotalCents);
+            }
 
-            if (!$isNotTemplate) {
-                app(InvoiceSettlementService::class)->markPaid($invoice, app(\App\Payments\PaymentManager::class)->gateway()->name());
-            } else {
-                foreach ($provisionQueue as $subscription) {
-                    ProvisionSubscription::dispatch($subscription->id);
+            // ADR — تسجيل الدخول يحدث هنا فقط، بعد نجاح الـ commit بالكامل (Order/OrderItems/
+            // Invoice/InvoiceItems جميعها موجودة فعليًا في قاعدة البيانات الآن). لو وصلنا لهذا
+            // السطر فالمعاملة نجحت قطعًا؛ لا يوجد أي احتمال لبقاء Client مسجَّل الدخول بلا Order.
+            if ($isGuestCheckout) {
+                auth('client')->login($result['client']);
+            }
+
+            $paymentSession = null;
+            if (!$isDomainOnly) {
+                $paymentSession = app(PaymentSessionStarter::class)->start(
+                    $invoice,
+                    (int) $invoice->client_id,
+                    route('client.invoices.checkout', ['invoice' => $invoice, 'state' => 'return']),
+                    route('client.invoices.checkout', ['invoice' => $invoice, 'state' => 'cancel']),
+                );
+
+                if (!in_array($paymentSession['status'], ['ready', 'paid'], true)) {
+                    $errorPayload = [
+                        'success' => false,
+                        'payment_session_status' => $paymentSession['status'],
+                        'message' => $paymentSession['message'],
+                    ];
+
+                    if ($request->ajax() || $request->wantsJson()) {
+                        return response()->json($errorPayload, $paymentSession['http_status']);
+                    }
+
+                    return redirect()->back()->with('error', $paymentSession['message']);
                 }
             }
 
@@ -517,6 +820,8 @@ class CheckoutController extends Controller
                 'client_name' => $client_name,
                 'checkout_mode' => $isTemplateCheckout ? 'template' : 'hosting',
                 'dashboard_url' => route('client.subscriptions'),
+                'checkout_url' => $paymentSession['checkout_url'] ?? null,
+                'payment_session_status' => $paymentSession['status'] ?? null,
             ];
 
             $responseData = array_merge($responseData, $successState);
@@ -551,6 +856,10 @@ class CheckoutController extends Controller
             // If AJAX/json requested, return JSON payload
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json($responseData);
+            }
+
+            if (is_string($paymentSession['checkout_url'] ?? null)) {
+                return redirect()->away($paymentSession['checkout_url']);
             }
 
             // Non-AJAX: redirect to a suitable checkout page depending on scenario
@@ -621,9 +930,161 @@ class CheckoutController extends Controller
                 'site_url' => $responseData['site_url'] ?? null,
             ]);
         } catch (\Throwable $e) {
+            // ADR — Idempotency Phase 1: تعارض متزامن (Race) على القيد الفريد
+            // orders_checkout_fingerprint_unique — يعني أن طلبًا متزامنًا آخر فاز بإنشاء نفس
+            // Order للتو (بين لحظة الفحص المسبق أعلاه وبدء هذه المعاملة). هذه المعاملة تراجعت
+            // بالكامل (rollback) تلقائيًا مثل أي استثناء آخر يصل هنا. نتحقق من الملكية واكتمال
+            // الطلب الفائز قبل اعتباره نجاحًا — أي استثناء آخر (أو طلب فائز غير مملوك/غير مكتمل)
+            // يسقط إلى خطأ 500 العام أدناه دون تحويله إلى نجاح.
+            if ($checkoutFingerprint !== null && $this->isCheckoutFingerprintCollision($e)) {
+                $raceOrder = \App\Models\Order::where('checkout_fingerprint', $checkoutFingerprint)->first();
+
+                if ($raceOrder && $this->checkoutFingerprintOrderBelongsToCurrentIdentity($raceOrder)) {
+                    $raceInvoice = $this->completedCheckoutInvoiceFor($raceOrder);
+
+                    if ($raceInvoice !== null) {
+                        Log::info('CheckoutController::process: concurrent duplicate checkout fingerprint recovered', [
+                            'fingerprint' => $checkoutFingerprint,
+                            'order_id'    => $raceOrder->id,
+                        ]);
+
+                        $msg = t('site.Checkout_Already_Processed', 'تم استلام طلبك بالفعل، لا داعٍ لإعادة الإرسال.');
+
+                        if ($request->ajax() || $request->wantsJson()) {
+                            return response()->json([
+                                'success'  => true,
+                                'order_no' => $raceOrder->order_number,
+                                'order_id' => $raceOrder->id,
+                                'message'  => $msg,
+                            ]);
+                        }
+
+                        return redirect()->route('checkout.cart', [
+                            'success'       => 1,
+                            'order_no'      => $raceOrder->order_number,
+                            'checkout_mode' => 'hosting',
+                        ]);
+                    }
+                }
+            }
+
             Log::error('CheckoutController::process failed', ['error' => $e->getMessage()]);
             return response()->json(['success' => false, 'message' => 'تعذر إتمام عملية الدفع الآن.', 'error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * ADR — Idempotency Phase 1: بصمة حتمية لمحاولة Checkout واحدة (سلة الدومينات فقط،
+     * checkout.cart.process → processCart() → process()). لا تُستخدم في أي مسار آخر.
+     *
+     * يجب استدعاؤها فقط بعد إعادة التسعير الموثوقة عبر DomainPricingService وبعد فحص التوفر
+     * (أي بعد أن يحمل كل عنصر في $items بالفعل price_cents/price/currency/provider_id/
+     * domain_tld_id الموثوقة من الخدمة — وليس القيم القادمة من Request/الجلسة/المتصفح).
+     *
+     * لكل عنصر تدخل في البصمة: domain (بعد trim/lowercase، مطبَّع مسبقًا)، item_option،
+     * years (من meta إن كانت قيمة صحيحة موجبة، وإلا 1 — بنفس تحويل max(1,(int)($meta['years']
+     * ?? 1)) المعتمد في DomainInvoiceItemBuilder)، price_cents، currency، provider_id،
+     * domain_tld_id. هوية مقدّم الطلب = معرّف العميل المسجَّل أو معرّف جلسة الضيف الحالية.
+     *
+     * العناصر تُرتَّب ترتيبًا حتميًا حسب: domain ثم item_option ثم years ثم provider_id ثم
+     * domain_tld_id، ثم تُحوَّل إلى JSON ثابت وتُمرَّر إلى SHA-256.
+     *
+     * تُعيد null إن كانت $items فارغة، أو إن غاب provider_id/domain_tld_id الموثوقَين عن أي
+     * عنصر (لا يجب أن يحدث عمليًا لأن كل عنصر وصل إلى هنا يكون قد نجح في إعادة التسعير أعلاه؛
+     * هذا مجرد ضمان دفاعي كي لا تُبنى بصمة على بيانات ناقصة).
+     *
+     * @param  array<int, array{domain: ?string, item_option: ?string, price_cents: int, price: float, currency: string, provider_id: int, domain_tld_id: int, meta: mixed}>  $items
+     */
+    protected function buildCheckoutFingerprint(Request $request, array $items): ?string
+    {
+        if (empty($items)) {
+            return null;
+        }
+
+        $identity = auth('client')->check()
+            ? 'client:' . auth('client')->id()
+            : 'session:' . $request->session()->getId();
+
+        $normalizedItems = array_map(function ($it) {
+            $meta = is_array($it['meta'] ?? null) ? $it['meta'] : [];
+            $years = max(1, (int) ($meta['years'] ?? 1));
+
+            return [
+                'domain'        => $it['domain'] ?? null,
+                'item_option'   => $it['item_option'] ?? null,
+                'years'         => $years,
+                'price_cents'   => (int) ($it['price_cents'] ?? 0),
+                'currency'      => $it['currency'] ?? null,
+                'provider_id'   => (int) ($it['provider_id'] ?? 0),
+                'domain_tld_id' => (int) ($it['domain_tld_id'] ?? 0),
+            ];
+        }, $items);
+
+        foreach ($normalizedItems as $it) {
+            if (empty($it['domain']) || $it['provider_id'] <= 0 || $it['domain_tld_id'] <= 0) {
+                return null;
+            }
+        }
+
+        usort($normalizedItems, function ($a, $b) {
+            return [$a['domain'], (string) $a['item_option'], $a['years'], $a['provider_id'], $a['domain_tld_id']]
+                <=> [$b['domain'], (string) $b['item_option'], $b['years'], $b['provider_id'], $b['domain_tld_id']];
+        });
+
+        return hash('sha256', $identity . '|' . json_encode($normalizedItems, JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * هل هذا الاستثناء تصادم فعلي على القيد الفريد orders_checkout_fingerprint_unique تحديدًا؟
+     * (وليس أي تصادم 23000 آخر، مثل تصادم نادر جدًا على order_number.)
+     */
+    protected function isCheckoutFingerprintCollision(\Throwable $e): bool
+    {
+        if (!($e instanceof \Illuminate\Database\QueryException)) {
+            return false;
+        }
+
+        return str_contains($e->getMessage(), '23000')
+            && str_contains($e->getMessage(), 'checkout_fingerprint');
+    }
+
+    /**
+     * تحقق الملكية قبل اعتماد أي Order موجود بنفس checkout_fingerprint: للمستخدم المسجَّل لا
+     * يُعتمَد الطلب إلا لو كان client_id مطابقًا فعليًا لهويته الحالية. للضيف، تطابق البصمة
+     * نفسه كافٍ — البصمة مبنية أصلاً من session:{id} الحالية لغير المسجَّلين وقت البحث عنها،
+     * فأي تطابق يعني بالضرورة نفس الجلسة الحالية.
+     */
+    protected function checkoutFingerprintOrderBelongsToCurrentIdentity(\App\Models\Order $order): bool
+    {
+        if (auth('client')->check()) {
+            return $order->client_id === auth('client')->id();
+        }
+
+        return true;
+    }
+
+    /**
+     * يتحقق أن Order يمثّل عملية Checkout ناجحة ومكتملة فعليًا (وليس سجلًا جزئيًا): لديه
+     * Invoice، ولديه OrderItems، ولدى تلك الفاتورة InvoiceItems. يعيد الفاتورة عند الاكتمال
+     * الكامل، أو null إن كان أي جزء ناقصًا — لا نعتبر سجلًا ناقصًا نتيجة idempotent ناجحة.
+     */
+    protected function completedCheckoutInvoiceFor(\App\Models\Order $order): ?Invoice
+    {
+        $invoice = $order->invoices()->latest()->first();
+
+        if (!$invoice) {
+            return null;
+        }
+
+        if ($order->items()->count() === 0) {
+            return null;
+        }
+
+        if ($invoice->items()->count() === 0) {
+            return null;
+        }
+
+        return $invoice;
     }
 
     /**
@@ -781,17 +1242,31 @@ class CheckoutController extends Controller
 
     public function processCart(Request $request)
     {
+        $unsupportedActionMessage = t(
+            'site.Domain_Item_Option_Unsupported',
+            'نوع عملية الدومين غير مدعوم في هذا المسار.'
+        );
+
         $data = $request->validate([
             'items'               => 'required|array|min:1',
             'items.*.domain'      => 'required|string',
-            'items.*.option'      => 'required|string', // سنطبّعها داخل process إلى item_option
+            'items.*.option'      => ['required', 'string', Rule::in(['register'])],
             'items.*.price_cents' => 'nullable|integer|min:0',
+        ], [
+            'items.*.option.required' => $unsupportedActionMessage,
+            'items.*.option.string'   => $unsupportedActionMessage,
+            'items.*.option.in'       => $unsupportedActionMessage,
         ]);
 
-        session(['palgoals_cart_domains' => $data['items']]);
+        $items = array_map(fn (array $item) => [
+            'domain'      => $item['domain'],
+            'item_option' => 'register',
+            'price_cents' => $item['price_cents'] ?? null,
+        ], $data['items']);
+
+        session(['palgoals_cart_domains' => $items]);
 
         // مرّر العناصر إلى process() مع template_id = null
-        return $this->process($request->merge(['items' => $data['items']]), null);
+        return $this->process($request->merge(['items' => $items]), null);
     }
 }
-

@@ -4,11 +4,16 @@ namespace App\Services\Domains;
 
 use App\Models\Client;
 use App\Models\Domain;
+use App\Models\DomainProvisioningAttempt;
 use App\Models\DomainProvider;
+use App\Models\DomainRegistrationClaim;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Services\Domains\Clients\EnomClient;
 use App\Services\Domains\Clients\NamecheapClient;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -18,12 +23,11 @@ class RegistrarProvisioningService
     {
         $order->loadMissing(['client', 'items', 'invoices.items']);
 
-        $orderItem = $order->items->first(function ($item) {
-            return filled($item->domain)
-                && in_array(strtolower((string) $item->item_option), ['register', 'renew'], true);
-        });
+        $orderItems = $order->items
+            ->filter(fn ($item) => filled($item->domain))
+            ->values();
 
-        if (!$orderItem) {
+        if ($orderItems->isEmpty()) {
             return [
                 'ok' => true,
                 'skipped' => true,
@@ -31,10 +35,95 @@ class RegistrarProvisioningService
             ];
         }
 
+        $domainResults = [];
+
+        foreach ($orderItems as $orderItem) {
+            try {
+                $result = $this->provisionOrderItem($order, $orderItem, $paymentMethod);
+            } catch (\Throwable $e) {
+                Log::error('Domain order item provisioning crashed.', [
+                    'order_id' => $order->getKey(),
+                    'order_item_id' => $orderItem->getKey(),
+                    'domain' => $orderItem->domain,
+                    'error' => $e->getMessage(),
+                ]);
+
+                $result = [
+                    'ok' => false,
+                    'message' => 'Domain provisioning crashed before it could finish.',
+                ];
+            }
+
+            $domainResults[] = [
+                'order_item_id' => $orderItem->getKey(),
+                'domain' => $this->normalizeDomain((string) $orderItem->domain),
+                'provisioning_status' => $orderItem->fresh()?->provisioning_status
+                    ?: OrderItem::PROVISIONING_NOT_STARTED,
+                'ok' => (bool) ($result['ok'] ?? false),
+                'message' => $result['message'] ?? null,
+                'result' => $result,
+            ];
+        }
+
+        if (count($domainResults) === 1) {
+            return array_merge($domainResults[0]['result'], [
+                'domains' => $domainResults,
+            ]);
+        }
+
+        $allSucceeded = collect($domainResults)->every(
+            fn (array $domainResult) => $domainResult['ok'] === true
+        );
+
+        return [
+            'ok' => $allSucceeded,
+            'domains' => $domainResults,
+            'message' => $allSucceeded
+                ? 'All domain order items were provisioned successfully.'
+                : 'One or more domain order items did not complete provisioning.',
+        ];
+    }
+
+    protected function provisionOrderItem(Order $order, OrderItem $orderItem, ?string $paymentMethod = null): array
+    {
         $action = strtolower((string) $orderItem->item_option);
 
         if ($action === 'renew') {
             return $this->renewOrderDomain($order, $orderItem, $paymentMethod);
+        }
+
+        if ($action !== 'register') {
+            return [
+                'ok' => false,
+                'message' => 'Unsupported domain provisioning action.',
+            ];
+        }
+
+        // ADR — Provisioning Idempotency Phase 1 (Register Domain فقط). OrderItem.provisioning_status
+        // هو مصدر الحقيقة الأساسي لمنع إعادة تنفيذ تسجيل الدومين لنفس عملية الشراء (retry، webhook
+        // مكرر، إعادة تشغيل worker، إجراء إداري مكرر). لا يُطبَّق هذا الحارس على renew/transfer/restore
+        // في هذه المرحلة — النطاق مقصور على "register" فقط.
+        $provisioningStatus = $orderItem->provisioning_status ?: OrderItem::PROVISIONING_NOT_STARTED;
+
+        if ($provisioningStatus === OrderItem::PROVISIONING_COMPLETED) {
+            return [
+                'ok' => true,
+                'skipped' => true,
+                'message' => 'Domain registration was already completed for this order item.',
+            ];
+        }
+
+        if ($provisioningStatus === OrderItem::PROVISIONING_IN_PROGRESS) {
+            return [
+                'ok' => false,
+                'message' => 'Domain registration is already in progress for this order item.',
+            ];
+        }
+
+        // failed أو not_started → يُسمح بالمتابعة (بدء جديد أو إعادة محاولة).
+
+        if (DB::transactionLevel() > 0) {
+            return $this->deferRegistrationUntilAfterCommit($order, $orderItem, $paymentMethod);
         }
 
         $client = $order->client;
@@ -46,51 +135,64 @@ class RegistrarProvisioningService
             ];
         }
 
-        $provider = $this->defaultProvider();
+        $meta = is_array($orderItem->meta) ? $orderItem->meta : [];
+        $providerResolution = $this->trustedRegistrationProvider($meta);
 
-        if (!$provider instanceof DomainProvider) {
+        if (!($providerResolution['ok'] ?? false)) {
             return [
                 'ok' => false,
-                'message' => 'No active registrar provider is configured. Expected Namecheap as the default provider.',
+                'message' => $providerResolution['message'],
             ];
         }
 
+        $provider = $providerResolution['provider'];
         $domainName = $this->normalizeDomain((string) $orderItem->domain);
-        $meta = is_array($orderItem->meta) ? $orderItem->meta : [];
 
         $registrationDate = Carbon::parse($meta['registration_date'] ?? now()->toDateString());
         $renewalDate = Carbon::parse($meta['renewal_date'] ?? $registrationDate->copy()->addYear()->toDateString());
         $years = max(1, (int) ceil(max(1, $registrationDate->diffInDays($renewalDate)) / 365));
 
-        $domain = Domain::firstOrNew([
-            'domain_name' => $domainName,
-        ]);
-
-        $domain->fill([
+        $domainAttributes = [
             'client_id' => $order->client_id,
             'registrar' => $provider->type,
             'registration_date' => $registrationDate->toDateString(),
             'renewal_date' => $renewalDate->toDateString(),
             'status' => 'pending',
-            'payment_method' => $paymentMethod ?: $domain->payment_method,
-        ]);
+            'payment_method' => $paymentMethod,
+            'dns_last_note' => null,
+        ];
 
-        if ($domain->exists && $domain->status === 'active' && strtolower((string) $domain->registrar) === strtolower($provider->type)) {
-            $this->attachDomainToOrderInvoices($order, $domain);
+        $contact = $this->buildRegistrarContactPayload($client);
+
+        try {
+            $claim = $this->claimRegistration($orderItem, $domainName, $provider, $domainAttributes);
+        } catch (\Throwable $e) {
+            Log::error('Unable to create the domain provisioning attempt.', [
+                'order_item_id' => $orderItem->getKey(),
+                'domain_id' => $domain->getKey(),
+                'provider_id' => $provider->getKey(),
+                'error' => $e->getMessage(),
+            ]);
 
             return [
-                'ok' => true,
-                'provider' => $provider,
-                'domain' => $domain,
-                'message' => 'Domain was already active with the default registrar.',
-                'skipped' => true,
+                'ok' => false,
+                'message' => 'Domain registration did not start because its provisioning attempt could not be recorded.',
             ];
         }
 
-        $domain->dns_last_note = null;
-        $domain->save();
+        if (!($claim['claimed'] ?? false)) {
+            if (($claim['domain'] ?? null) instanceof Domain) {
+                $this->attachDomainToOrderInvoices($order, $claim['domain']);
+            }
 
-        $contact = $this->buildRegistrarContactPayload($client);
+            return $claim['result'];
+        }
+
+        $orderItem = $claim['order_item'];
+        $attempt = $claim['attempt'];
+        $registrationClaim = $claim['registration_claim'];
+        $domain = $claim['domain'];
+        $this->attachDomainToOrderInvoices($order, $domain);
 
         $registration = $this->registerDomainWithProvider($provider, $domain, [
             'years' => $years,
@@ -99,6 +201,18 @@ class RegistrarProvisioningService
         ], $contact);
 
         if (!($registration['ok'] ?? false)) {
+            $definitive = ($registration['definitive'] ?? true) === true;
+            $this->finalizeRegistration(
+                $orderItem,
+                $attempt,
+                $registrationClaim,
+                $definitive ? OrderItem::PROVISIONING_FAILED : null,
+                $definitive
+                    ? DomainProvisioningAttempt::STATUS_CONFIRMED_FAILED
+                    : DomainProvisioningAttempt::STATUS_INDETERMINATE,
+                $registration
+            );
+
             $domain->forceFill([
                 'status' => 'pending',
                 'registrar' => $provider->type,
@@ -114,6 +228,15 @@ class RegistrarProvisioningService
                 'cid' => $registration['cid'] ?? null,
             ];
         }
+
+        $this->finalizeRegistration(
+            $orderItem,
+            $attempt,
+            $registrationClaim,
+            OrderItem::PROVISIONING_COMPLETED,
+            DomainProvisioningAttempt::STATUS_COMPLETED,
+            $registration
+        );
 
         $domain->forceFill([
             'status' => 'active',
@@ -133,6 +256,386 @@ class RegistrarProvisioningService
             'cid' => $registration['cid'] ?? null,
             'message' => 'Domain registered successfully with the registrar.',
         ];
+    }
+
+    protected function deferRegistrationUntilAfterCommit(
+        Order $order,
+        OrderItem $orderItem,
+        ?string $paymentMethod
+    ): array
+    {
+        $orderId = $order->getKey();
+        $orderItemId = $orderItem->getKey();
+
+        DB::afterCommit(function () use ($orderId, $orderItemId, $paymentMethod): void {
+            try {
+                $committedOrder = Order::query()
+                    ->with(['client', 'items', 'invoices.items'])
+                    ->find($orderId);
+
+                if (!$committedOrder instanceof Order) {
+                    Log::warning('Deferred registrar provisioning skipped because the order no longer exists.', [
+                        'order_id' => $orderId,
+                    ]);
+
+                    return;
+                }
+
+                $committedOrderItem = OrderItem::query()->find($orderItemId);
+
+                if (!$committedOrderItem instanceof OrderItem
+                    || (int) $committedOrderItem->order_id !== (int) $committedOrder->getKey()) {
+                    Log::warning('Deferred registrar provisioning skipped because the order item no longer exists.', [
+                        'order_id' => $orderId,
+                        'order_item_id' => $orderItemId,
+                    ]);
+
+                    return;
+                }
+
+                $result = $this->provisionOrderItem($committedOrder, $committedOrderItem, $paymentMethod);
+
+                if (!(bool) ($result['ok'] ?? false)) {
+                    Log::error('Deferred registrar provisioning failed.', [
+                        'order_id' => $orderId,
+                        'order_item_id' => $orderItemId,
+                        'domain' => $committedOrderItem->domain,
+                        'message' => $result['message'] ?? null,
+                        'cid' => $result['cid'] ?? null,
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                Log::error('Deferred registrar provisioning crashed.', [
+                    'order_id' => $orderId,
+                    'order_item_id' => $orderItemId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        });
+
+        return [
+            'ok' => true,
+            'deferred' => true,
+            'message' => 'Domain registration was deferred until after the database transaction commits.',
+        ];
+    }
+
+    protected function claimRegistration(
+        OrderItem $orderItem,
+        string $domainName,
+        DomainProvider $provider,
+        array $domainAttributes
+    ): array
+    {
+        try {
+            return DB::transaction(function () use ($orderItem, $domainName, $provider, $domainAttributes): array {
+            $lockedItem = OrderItem::query()
+                ->lockForUpdate()
+                ->find($orderItem->getKey());
+
+            if (!$lockedItem instanceof OrderItem) {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => false,
+                        'message' => 'The domain order item no longer exists.',
+                    ],
+                ];
+            }
+
+            $lockedMeta = is_array($lockedItem->meta) ? $lockedItem->meta : [];
+            $providerResolution = $this->trustedRegistrationProvider($lockedMeta);
+
+            if (!($providerResolution['ok'] ?? false)
+                || (int) $providerResolution['provider']->getKey() !== (int) $provider->getKey()
+            ) {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => false,
+                        'message' => $providerResolution['message']
+                            ?? 'Trusted registrar identity changed before registration could start.',
+                    ],
+                ];
+            }
+
+            $status = $lockedItem->provisioning_status ?: OrderItem::PROVISIONING_NOT_STARTED;
+
+            if ($status === OrderItem::PROVISIONING_COMPLETED) {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => true,
+                        'skipped' => true,
+                        'message' => 'Domain registration was already completed for this order item.',
+                    ],
+                ];
+            }
+
+            if ($status === OrderItem::PROVISIONING_IN_PROGRESS) {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => false,
+                        'message' => 'Domain registration is already in progress for this order item.',
+                    ],
+                ];
+            }
+
+            if (!in_array($status, [OrderItem::PROVISIONING_NOT_STARTED, OrderItem::PROVISIONING_FAILED], true)) {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => false,
+                        'message' => 'Domain registration cannot start from the current provisioning state.',
+                    ],
+                ];
+            }
+
+            $hasInitiatedAttempt = DomainProvisioningAttempt::query()
+                ->where('order_item_id', $lockedItem->getKey())
+                ->where('operation', DomainProvisioningAttempt::OPERATION_REGISTER)
+                ->where('status', DomainProvisioningAttempt::STATUS_INITIATED)
+                ->exists();
+
+            if ($hasInitiatedAttempt) {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => false,
+                        'message' => 'A domain registration attempt is already initiated for this order item.',
+                    ],
+                ];
+            }
+
+            $registrationClaim = DomainRegistrationClaim::query()
+                ->where('domain_name_normalized', $domainName)
+                ->lockForUpdate()
+                ->first();
+
+            if ($registrationClaim instanceof DomainRegistrationClaim
+                && $registrationClaim->status !== DomainRegistrationClaim::STATUS_RELEASED
+            ) {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => false,
+                        'message' => $registrationClaim->status === DomainRegistrationClaim::STATUS_COMPLETED
+                            ? t('site.Domain_Registration_Already_Completed', 'This domain registration was already completed by another order.')
+                            : t('site.Domain_Registration_Already_Claimed', 'This domain registration is already claimed by another order.'),
+                    ],
+                ];
+            }
+
+            $startedAt = now();
+
+            if ($registrationClaim instanceof DomainRegistrationClaim) {
+                $registrationClaim->forceFill([
+                    'order_item_id' => $lockedItem->getKey(),
+                    'status' => DomainRegistrationClaim::STATUS_CLAIMED,
+                    'claimed_at' => $startedAt,
+                    'released_at' => null,
+                ])->save();
+            } else {
+                $registrationClaim = DomainRegistrationClaim::query()->create([
+                    'domain_name_normalized' => $domainName,
+                    'order_item_id' => $lockedItem->getKey(),
+                    'status' => DomainRegistrationClaim::STATUS_CLAIMED,
+                    'claimed_at' => $startedAt,
+                ]);
+            }
+
+            $domain = Domain::query()
+                ->where('domain_name', $domainName)
+                ->lockForUpdate()
+                ->first();
+
+            if ($domain instanceof Domain
+                && $domain->status === 'active'
+                && strtolower((string) $domain->registrar) === strtolower((string) $provider->type)
+            ) {
+                $registrationClaim->forceFill([
+                    'status' => DomainRegistrationClaim::STATUS_COMPLETED,
+                    'released_at' => null,
+                ])->save();
+                $lockedItem->forceFill([
+                    'provisioning_status' => OrderItem::PROVISIONING_COMPLETED,
+                    'provisioning_completed_at' => $startedAt,
+                ])->save();
+
+                return [
+                    'claimed' => false,
+                    'domain' => $domain,
+                    'result' => [
+                        'ok' => true,
+                        'provider' => $provider,
+                        'domain' => $domain,
+                        'message' => 'Domain was already active with the default registrar.',
+                        'skipped' => true,
+                    ],
+                ];
+            }
+
+            $domain ??= new Domain(['domain_name' => $domainName]);
+            $domain->fill(array_filter(
+                $domainAttributes,
+                fn ($value) => $value !== null
+            ));
+            $domain->domain_name = $domainName;
+            $domain->dns_last_note = null;
+            $domain->save();
+
+            $lockedItem->forceFill([
+                'provisioning_status' => OrderItem::PROVISIONING_IN_PROGRESS,
+                'provisioning_started_at' => $startedAt,
+                'provisioning_completed_at' => null,
+            ])->save();
+
+            $attempt = DomainProvisioningAttempt::query()->create([
+                'order_item_id' => $lockedItem->getKey(),
+                'domain_id' => $domain->getKey(),
+                'provider_id' => $provider->getKey(),
+                'attempt_uuid' => (string) Str::uuid(),
+                'operation' => DomainProvisioningAttempt::OPERATION_REGISTER,
+                'provider_type' => strtolower((string) $provider->type),
+                'provider_mode' => strtolower((string) $provider->mode),
+                'status' => DomainProvisioningAttempt::STATUS_INITIATED,
+                'started_at' => $startedAt,
+            ]);
+
+            return [
+                'claimed' => true,
+                'order_item' => $lockedItem,
+                'attempt' => $attempt,
+                'registration_claim' => $registrationClaim,
+                'domain' => $domain,
+            ];
+            });
+        } catch (QueryException $e) {
+            if (!$this->isDomainRegistrationClaimCollision($e)) {
+                throw $e;
+            }
+
+            return [
+                'claimed' => false,
+                'result' => [
+                    'ok' => false,
+                    'message' => t(
+                        'site.Domain_Registration_Already_Claimed',
+                        'This domain registration is already claimed by another order.'
+                    ),
+                ],
+            ];
+        }
+    }
+
+    protected function finalizeRegistration(
+        OrderItem $orderItem,
+        DomainProvisioningAttempt $attempt,
+        DomainRegistrationClaim $registrationClaim,
+        ?string $orderItemStatus,
+        string $attemptStatus,
+        array $registration
+    ): void {
+        $responsePayload = $this->safeAttemptResponsePayload($registration);
+
+        DB::transaction(function () use (
+            $orderItem,
+            $attempt,
+            $registrationClaim,
+            $orderItemStatus,
+            $attemptStatus,
+            $registration,
+            $responsePayload
+        ): void {
+            $lockedItem = OrderItem::query()
+                ->lockForUpdate()
+                ->find($orderItem->getKey());
+
+            $lockedAttempt = DomainProvisioningAttempt::query()
+                ->lockForUpdate()
+                ->find($attempt->getKey());
+
+            $lockedRegistrationClaim = DomainRegistrationClaim::query()
+                ->lockForUpdate()
+                ->find($registrationClaim->getKey());
+
+            if (!$lockedItem instanceof OrderItem
+                || !$lockedAttempt instanceof DomainProvisioningAttempt
+                || !$lockedRegistrationClaim instanceof DomainRegistrationClaim
+                || $lockedItem->provisioning_status !== OrderItem::PROVISIONING_IN_PROGRESS
+                || $lockedAttempt->status !== DomainProvisioningAttempt::STATUS_INITIATED
+                || $lockedRegistrationClaim->status !== DomainRegistrationClaim::STATUS_CLAIMED
+                || (int) $lockedRegistrationClaim->order_item_id !== (int) $lockedItem->getKey()) {
+                return;
+            }
+
+            $lockedAttempt->forceFill([
+                'status' => $attemptStatus,
+                'provider_reference' => $registration['provider_reference']
+                    ?? $registration['cid']
+                    ?? null,
+                'provider_domain_id' => $registration['provider_domain_id'] ?? null,
+                'finished_at' => now(),
+                'response_payload' => $responsePayload,
+            ])->save();
+
+            if ($attemptStatus === DomainProvisioningAttempt::STATUS_COMPLETED) {
+                $lockedRegistrationClaim->forceFill([
+                    'status' => DomainRegistrationClaim::STATUS_COMPLETED,
+                    'released_at' => null,
+                ])->save();
+            } elseif ($attemptStatus === DomainProvisioningAttempt::STATUS_CONFIRMED_FAILED) {
+                $lockedRegistrationClaim->forceFill([
+                    'status' => DomainRegistrationClaim::STATUS_RELEASED,
+                    'released_at' => now(),
+                ])->save();
+            }
+
+            if ($orderItemStatus !== null) {
+                $lockedItem->forceFill([
+                    'provisioning_status' => $orderItemStatus,
+                    'provisioning_completed_at' => $orderItemStatus === OrderItem::PROVISIONING_COMPLETED
+                        ? now()
+                        : null,
+                ])->save();
+            }
+        });
+    }
+
+    protected function isDomainRegistrationClaimCollision(QueryException $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+
+        return str_contains($message, 'domain_registration_claims_domain_unique')
+            || str_contains($message, 'domain_registration_claims.domain_name_normalized');
+    }
+
+    protected function safeAttemptResponsePayload(array $registration): ?array
+    {
+        $payload = [];
+
+        foreach (['reason', 'http_code', 'code'] as $key) {
+            if (isset($registration[$key]) && is_scalar($registration[$key])) {
+                $payload[$key] = $registration[$key];
+            }
+        }
+
+        if (isset($registration['message']) && is_scalar($registration['message'])) {
+            $reason = strtolower((string) ($registration['reason'] ?? ''));
+            $payload['message'] = $reason === 'exception'
+                ? 'Registrar request ended with an exception.'
+                : Str::limit($this->redactSensitiveMessage((string) $registration['message']), 1000, '');
+        }
+
+        return $payload !== [] ? $payload : null;
+    }
+
+    protected function redactSensitiveMessage(string $message): string
+    {
+        $message = preg_replace('/([?&](?:ApiKey|ApiToken|PW|Password)=)[^&\s]+/i', '$1[redacted]', $message);
+
+        return preg_replace('/https?:\/\/[^\s?]+\?[^\s]+/i', '[redacted-url]', (string) $message);
     }
 
     protected function renewOrderDomain(Order $order, $orderItem, ?string $paymentMethod = null): array
@@ -213,6 +716,52 @@ class RegistrarProvisioningService
             ->first();
     }
 
+    /**
+     * Resolve the registrar snapshot selected by DomainPricingService for a register OrderItem.
+     * No default-provider fallback is permitted for new registrations.
+     */
+    protected function trustedRegistrationProvider(array $meta): array
+    {
+        $providerId = filter_var($meta['provider_id'] ?? null, FILTER_VALIDATE_INT);
+
+        if (!$providerId || $providerId < 1) {
+            return [
+                'ok' => false,
+                'message' => 'Trusted registrar identity is missing for this order item.',
+            ];
+        }
+
+        $provider = DomainProvider::query()->whereKey($providerId)->first();
+
+        if (!$provider instanceof DomainProvider || !$provider->is_active) {
+            return [
+                'ok' => false,
+                'message' => 'The trusted registrar provider is missing or inactive.',
+            ];
+        }
+
+        $snapshotType = strtolower(trim((string) ($meta['provider_type'] ?? '')));
+        if ($snapshotType !== '' && $snapshotType !== strtolower((string) $provider->type)) {
+            return [
+                'ok' => false,
+                'message' => 'The trusted registrar type does not match the configured provider.',
+            ];
+        }
+
+        $snapshotMode = strtolower(trim((string) ($meta['provider_mode'] ?? '')));
+        if ($snapshotMode !== '' && $snapshotMode !== strtolower((string) $provider->mode)) {
+            return [
+                'ok' => false,
+                'message' => 'The trusted registrar mode does not match the configured provider.',
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'provider' => $provider,
+        ];
+    }
+
     protected function providerForDomain(Domain $domain, ?string $preferredType = null): ?DomainProvider
     {
         $types = array_values(array_filter([
@@ -237,14 +786,13 @@ class RegistrarProvisioningService
 
     protected function attachDomainToOrderInvoices(Order $order, Domain $domain): void
     {
+        $domainName = $this->normalizeDomain((string) $domain->domain_name);
+        $escapedDomainName = addcslashes($domainName, '\\%_');
+
         foreach ($order->invoices as $invoice) {
             $invoice->items()
                 ->where('item_type', 'domain')
-                ->where(function ($query) use ($domain) {
-                    $query->whereNull('reference_id')
-                        ->orWhere('reference_id', $domain->id)
-                        ->orWhere('description', 'like', '%' . $domain->domain_name . '%');
-                })
+                ->where('description', 'like', '%' . $escapedDomainName . '%')
                 ->update(['reference_id' => $domain->id]);
         }
     }
@@ -384,18 +932,28 @@ class RegistrarProvisioningService
                 );
 
                 $response = $client->callGeneric('namecheap.domains.create', $params);
+                $identifiers = $this->providerIdentifiersFromResponse($response);
 
                 if (!($response['ok'] ?? false)) {
                     return [
                         'ok' => false,
+                        'reason' => $response['reason'] ?? 'provider_error',
                         'message' => $response['message'] ?? 'Registration failed with Namecheap.',
                         'cid' => $response['cid'] ?? null,
+                        'provider_reference' => $identifiers['provider_reference'],
+                        'provider_domain_id' => $identifiers['provider_domain_id'],
+                        'http_code' => $response['http_code'] ?? null,
+                        'code' => $response['code'] ?? null,
+                        'definitive' => ($response['reason'] ?? null) === 'provider_error',
                     ];
                 }
 
                 return [
                     'ok' => true,
+                    'reason' => 'ok',
                     'cid' => $response['cid'] ?? null,
+                    'provider_reference' => $identifiers['provider_reference'],
+                    'provider_domain_id' => $identifiers['provider_domain_id'],
                 ];
             }
 
@@ -406,7 +964,9 @@ class RegistrarProvisioningService
                 if (!$sld || !$tld) {
                     return [
                         'ok' => false,
+                        'reason' => 'invalid_domain',
                         'message' => 'Unable to split domain into SLD and TLD.',
+                        'definitive' => true,
                     ];
                 }
 
@@ -422,24 +982,40 @@ class RegistrarProvisioningService
                 );
 
                 $response = $client->purchaseDomain($provider, $params);
+                $identifiers = $this->providerIdentifiersFromResponse($response);
 
                 if (!($response['ok'] ?? false)) {
                     return [
                         'ok' => false,
+                        'reason' => $response['reason'] ?? 'provider_error',
                         'message' => $response['message'] ?? 'Registration failed with Enom.',
                         'cid' => $response['cid'] ?? null,
+                        'provider_reference' => $identifiers['provider_reference'],
+                        'provider_domain_id' => $identifiers['provider_domain_id'],
+                        'http_code' => $response['http_code'] ?? null,
+                        'code' => $response['code'] ?? null,
+                        'definitive' => in_array(
+                            $response['reason'] ?? null,
+                            ['provider_error', 'provider_response', 'rrp_error'],
+                            true
+                        ),
                     ];
                 }
 
                 return [
                     'ok' => true,
+                    'reason' => 'ok',
                     'cid' => $response['cid'] ?? null,
+                    'provider_reference' => $identifiers['provider_reference'],
+                    'provider_domain_id' => $identifiers['provider_domain_id'],
                 ];
             }
 
             return [
                 'ok' => false,
+                'reason' => 'unsupported_provider',
                 'message' => 'Unsupported registrar integration: ' . $provider->type,
+                'definitive' => true,
             ];
         } catch (\Throwable $e) {
             Log::error('Registrar provisioning failed', [
@@ -451,9 +1027,71 @@ class RegistrarProvisioningService
 
             return [
                 'ok' => false,
+                'reason' => 'exception',
                 'message' => 'Registrar error: ' . $e->getMessage(),
+                'definitive' => false,
             ];
         }
+    }
+
+    protected function providerIdentifiersFromResponse(array $response): array
+    {
+        $providerReference = isset($response['provider_reference'])
+            ? trim((string) $response['provider_reference'])
+            : '';
+        $providerDomainId = isset($response['provider_domain_id'])
+            ? trim((string) $response['provider_domain_id'])
+            : '';
+        $xml = $response['xml'] ?? null;
+
+        if ($xml instanceof \SimpleXMLElement) {
+            $providerReference = $providerReference !== ''
+                ? $providerReference
+                : $this->findXmlIdentifier($xml, [
+                    'transactionid',
+                    'orderid',
+                    'orderref',
+                    'trackingkey',
+                    'commandid',
+                    'cid',
+                ]);
+            $providerDomainId = $providerDomainId !== ''
+                ? $providerDomainId
+                : $this->findXmlIdentifier($xml, ['domainid', 'domainnameid']);
+        }
+
+        return [
+            'provider_reference' => $providerReference !== '' ? $providerReference : null,
+            'provider_domain_id' => $providerDomainId !== '' ? $providerDomainId : null,
+        ];
+    }
+
+    protected function findXmlIdentifier(\SimpleXMLElement $xml, array $candidateNames): string
+    {
+        $candidateNames = array_map('strtolower', $candidateNames);
+        $nodes = array_merge([$xml], $xml->xpath('//*') ?: []);
+
+        foreach ($nodes as $node) {
+            if (in_array(strtolower($node->getName()), $candidateNames, true)) {
+                $value = trim((string) $node);
+
+                if ($value !== '') {
+                    return $value;
+                }
+            }
+
+            foreach ($node->attributes() as $name => $value) {
+                if (in_array(strtolower((string) $name), $candidateNames, true)) {
+                    $identifier = trim((string) $value);
+
+                    if ($identifier !== '') {
+                        return $identifier;
+                    }
+                }
+            }
+        }
+
+        return '';
     }
 
     protected function renewDomainWithProvider(DomainProvider $provider, Domain $domain, array $context): array

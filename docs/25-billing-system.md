@@ -1,787 +1,536 @@
 # Billing System
 
-> **Last Updated:** 2026-06-15 · **Status:** Verified · **Source:** Code-first
-
----
+> **Last Updated:** 2026-08-26
+>
+> **Status:** Verified
+>
+> **Source:** Code-first
 
 ## Purpose
 
-This document is the authoritative reference for every money-related concept in Palgoals: orders, invoices, subscriptions, coupons, provisioning, and the full activation lifecycle. It supersedes `invoice-system.md`, `order-system.md`, and `subscription-system.md` (all archived to `docs/_archive/legacy-docs/`).
-
-Do not use those files as reference. If there is a conflict, this document and the code win.
-
----
+This document describes the billing, payment, domain, and tenant-provisioning behavior implemented by the current codebase. It is descriptive, not aspirational: where an administrative path or legacy compatibility path differs from the hosted-payment path, that difference is stated explicitly.
 
 ## Billing Principles
 
-Three principles drive every design decision in this system:
+- Transactional order, invoice, subscription, and payment amounts are stored as integer cents. `Coupon.discount_value` remains a decimal exception described under Technical Debt.
+- The server is authoritative for prices, currency, provider identity, invoice totals, and settlement state. Browser and session values are not financial proof.
+- Public hosted payment is confirmed only by a signature-verified gateway webhook whose amount and currency match both the invoice and its owning `PaymentAttempt`.
+- Financial persistence and external provisioning are separated. Registrar calls and queued tenant/WHM provisioning run after the surrounding database transaction commits.
+- Settlement, checkout creation, domain registration, and WHM account creation each have their own idempotency guard. These guards solve different duplication risks and are not interchangeable.
 
-**1. Order First** — An `Order` is the commercial intent. It is created before any invoice, before any payment, before any subscription exists. It holds what the client wants to buy and at what price.
+## Core Records
 
-**2. Invoice Second** — An `Invoice` is the financial record. It is linked to an `Order` and contains the `InvoiceItem` breakdown (subscriptions, domains, products). Invoices can exist without an Order (standalone domain invoices), but most do not.
-
-**3. Subscription Activation Last** — A `Subscription` becomes `active` only after an Invoice is marked `paid`. Activation triggers provisioning (WHM account creation or template content cloning), not the other way around.
-
-**No payment gateway exists yet.** All current payment flows use `mock_gateway`. Real card/transfer integration is a future step.
-
----
-
-## Domain Overview
-
-```mermaid
-graph TD
-    A[Client] --> B[Order]
-    B --> C[Invoice]
-    C --> D{Paid?}
-    D -->|Yes - InvoiceSettlementService| E[OrderActivationService]
-    E --> F[Subscription activated]
-    E --> G[Domain registered / renewed]
-    F --> H[TenantProvisioningService]
-    H -->|plan_type = hosting| I[WHM createacct]
-    H -->|plan_type = multi_tenant| J[TemplateCloner - clone Pages + Sections]
-    I --> K[Subscription provisioning_status = active]
-    J --> K
-    D -->|No| L[Stays unpaid/draft]
-```
-
----
-
-## Core Models
-
-| Model | Namespace | Table | Responsibility |
-|-------|-----------|-------|----------------|
-| `Order` | `App\Models` | `orders` | Commercial intent — what was purchased |
-| `OrderItem` | `App\Models` | `order_items` | Line item within an order (domain, hosting) |
-| `Invoice` | `App\Models` | `invoices` | Financial document linked to an Order |
-| `InvoiceItem` | `App\Models` | `invoice_items` | Line item within an invoice (subscription ref, domain ref) |
-| `Subscription` | `App\Models\Tenancy` | `subscriptions` | Activated service; drives tenant site + WHM account |
-| `Coupon` | `App\Models` | `coupons` | Discount codes — **model exists, not yet wired into billing** |
-| `Plan` | `App\Models` | `plans` | Hosting plan template; drives pricing and WHM package |
-| `Domain` | `App\Models` | `domains` | Registered domain record |
-
----
-
-## Billing Lifecycle
-
-Full lifecycle from purchase decision to live tenant site:
-
-```
-1.  Admin creates Order (status: pending)
-2.  Admin creates Invoice (status: draft) linked to Order
-3.  Admin adds InvoiceItems (subscription ref_id, domain name, etc.)
-4.  Admin activates Order → OrderActivationService::activate()
-         → draft invoices flipped to unpaid
-5.  Client or Admin pays Invoice
-         → InvoiceSettlementService::markPaid()          [DB transaction, row lock]
-         → Invoice.status = paid, paid_date = now()
-         → Order.status = active
-         → OrderActivationService::activate()
-              → Subscription.status = active
-              → Subscription.starts_at / ends_at / next_due_date set
-              → Domain registration/renewal (if item_option = register/renew)
-              → TenantProvisioningService::provision()
-                   → provisioning_status = in_progress
-                   → ensureDomain() — assigns/creates subdomain or verifies custom domain
-                   → if hosting plan: WHM createacct via SubscriptionSyncService
-                   → if multi_tenant plan: TemplateCloner::cloneToTenant()
-                   → provisioning_status = active (or failed)
-                   → DomainVerificationService::reset() + verify()
-                   → Notifications: SubscriptionProvisionedNotification (client)
-                                    AdminSubscriptionProvisioned (all super_admins)
-```
-
----
+| Record | Responsibility |
+|---|---|
+| `Order` | Commercial request and its business status |
+| `OrderItem` | One requested domain operation and, for registration, its provisioning state |
+| `Invoice` | Amount owed, currency, payment-session claim, and final payment state |
+| `InvoiceItem` | Auditable accounting line whose configured type is `subscription`, `domain`, or `service` |
+| `PaymentAttempt` | One hosted-gateway interaction and webhook audit trail |
+| `Subscription` | Client entitlement plus tenant/WHM provisioning state |
+| `Domain` | Resulting domain asset and renewal data |
+| `DomainRegistrationClaim` | Global normalized-domain reservation across all orders |
+| `DomainProvisioningAttempt` | Durable registrar registration attempt and provider snapshot |
 
 ## Orders
 
-### Schema (`orders` table)
+### Important fields
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | bigint PK | |
-| `client_id` | FK → clients (nullable) | Set to NULL on client delete (preserves accounting records) |
-| `order_number` | string unique | Auto-generated: `ORD-YYYYMMDD-XXXXXXXX`. **Immutable after creation.** |
-| `status` | enum | `pending`, `active`, `cancelled`, `fraud` |
-| `type` | string nullable | `domain`, `hosting`, `template`, or custom |
-| `notes` | text nullable | Admin notes |
-| `created_at` | timestamp | |
-| `updated_at` | timestamp | |
-| `deleted_at` | timestamp nullable | SoftDeletes |
+| Field | Meaning |
+|---|---|
+| `order_number` | Immutable generated business identifier |
+| `client_id` | Owning client; accounting history can survive client deletion |
+| `status` | `pending`, `active`, `cancelled`, or `fraud` |
+| `type` | Flow discriminator such as `domains`, `domain`, `subscription`, or `domain_renewal` |
+| `checkout_fingerprint` | Nullable 64-character SHA-256 fingerprint used by domain checkout idempotency |
+| `notes` | Administrative/context note |
 
-### Status Machine
+`checkout_fingerprint` has a database `UNIQUE` constraint. It is used by both the domain-only cart checkout and the independently namespaced `Client\DomainController::purchase()` flow. A repeated request owned by the same identity reuses the completed order/invoice. If two requests race, the unique constraint is the final guard; the losing transaction rolls back and resolves the winning order instead of creating duplicate financial records. An incomplete or foreign-identity match is not treated as success.
 
-```
-pending ──────────────► active ──────────────► cancelled
-   │                                                ▲
-   └────────────────────────────────────────────► fraud
+### Status flow
+
+```text
+pending -> active
+pending -> cancelled | fraud
 ```
 
-| Transition | Trigger |
-|------------|---------|
-| `pending` → `active` | `InvoiceSettlementService::markPaid()` calls `OrderActivationService::activate()` which sets Order to `active` when the linked invoice is paid |
-| `pending/active` → `cancelled` | Admin bulk action or manual update |
-| `any` → `fraud` | Admin manual flagging |
-
-### Relationships
-
-```php
-$order->client       // BelongsTo Client (withDefault — safe even if client deleted)
-$order->items        // HasMany OrderItem
-$order->invoices     // HasMany Invoice
-```
-
-### Key Behaviour
-
-- `Order::createWithUniqueNumber()` must be used instead of `Order::create()` when auto-generating order numbers — it retries up to 5 times on `SQLSTATE 23000` collisions.
-- `order_number` is locked after creation via `booted()` hook. Any attempt to update it is silently ignored.
-- `$order->subtotalCents()` sums `price_cents` from `order_items`. Does not read Invoice.
-
----
+The real online-payment path changes an order to `active` only during verified invoice settlement. Administrative order actions may set `active` directly and call `OrderActivationService` without a gateway event.
 
 ## Order Items
 
-### Schema (`order_items` table)
+### Important fields
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | bigint PK | |
-| `order_id` | FK → orders (cascade) | |
-| `domain` | string(191) nullable | FQDN: `example.com` |
-| `item_option` | string nullable | `register`, `renew`, `transfer`, `subdomain`, `existing` |
-| `price_cents` | bigint | **Integer cents.** Cast to `integer`. |
-| `meta` | json nullable | Registration date, renewal date, years, etc. |
-| `deleted_at` | timestamp nullable | SoftDeletes |
+| Field | Meaning |
+|---|---|
+| `order_id` | Parent order |
+| `domain` | Normalized domain name where applicable |
+| `item_option` | Requested operation |
+| `price_cents` | Trusted item price in integer cents |
+| `meta` | Trusted snapshots such as currency, provider identity, TLD, years, and renewal dates |
+| `provisioning_status` | Registration idempotency state |
+| `provisioning_started_at` | Registration claim time |
+| `provisioning_completed_at` | Successful registration completion time |
 
-**Unique constraint:** `(order_id, domain)` — same domain cannot appear twice in one order. NULLs are exempt.
+The public domain cart/checkout accepts only `register`. `renew` is created by the internal domain-renewal flow. Although some lower-level helpers know labels or provider operations for `transfer`, transfer is not a complete public checkout operation in the current flow.
 
-### Domain Options
+### Registration state machine
 
-| `item_option` | Meaning |
-|--------------|---------|
-| `register` | Register new domain via registrar (Namecheap/Enom) |
-| `renew` | Renew existing domain via registrar |
-| `subdomain` | Use a platform subdomain (tenant_fqdn) |
-| `existing` | Client provides their own domain (no registrar action) |
+For `register` operations only:
 
----
-
-## Invoices
-
-### Schema (`invoices` table)
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | bigint PK | |
-| `client_id` | FK → clients (cascade) | |
-| `order_id` | FK → orders (nullable, nullOnDelete) | NULL = standalone invoice (e.g. domain renewal) |
-| `number` | string unique | Human-readable invoice number |
-| `status` | enum | `draft`, `unpaid`, `paid`, `cancelled` |
-| `subtotal_cents` | integer | Before discount and tax |
-| `discount_cents` | integer | Applied discount (currently always 0 — see Technical Debt) |
-| `tax_cents` | integer | Tax amount (currently always 0 — see Tax Handling) |
-| `total_cents` | integer | `subtotal - discount + tax` |
-| `currency` | string(3) | Default `USD` |
-| `due_date` | date nullable | |
-| `paid_date` | date nullable | Set automatically when status → `paid` |
-| `deleted_at` | timestamp nullable | SoftDeletes |
-
-### Status Machine
-
-```
-draft ──► unpaid ──► paid
-  │                   │
-  └──────────────► cancelled
+```text
+not_started -> in_progress -> completed
+                         \-> failed
 ```
 
-| Transition | Who triggers it |
-|------------|----------------|
-| Created as `draft` | Admin creates invoice |
-| `draft` → `unpaid` | `OrderActivationService::activate()` — called when Order is activated |
-| `unpaid` → `paid` | `InvoiceSettlementService::markPaid()` — called after payment |
-| Any → `cancelled` | Admin bulk action or manual update |
+- The transition to `in_progress`, global domain claim, local `Domain`, and durable attempt are created atomically under row locks.
+- `completed` permanently blocks another registration call for the same order item.
+- `failed` represents a confirmed failure and may be claimed for a later explicit retry.
+- A timeout or ambiguous provider outcome leaves the item `in_progress` and the durable attempt `indeterminate`; registration is not automatically re-sent.
+- The provider request is made only after the claim transaction commits. If activation itself is inside another transaction, `RegistrarProvisioningService` registers an `DB::afterCommit(...)` callback first.
 
-### `scopePaid()` and `scopeUnpaid()`
+This state machine does not currently govern `renew`.
 
-```php
-Invoice::paid()->sum('total_cents')    // total revenue
-Invoice::unpaid()->sum('total_cents')  // includes 'draft' and 'unpaid' status
+## Invoices and Invoice Items
+
+### Invoice fields
+
+| Field | Meaning |
+|---|---|
+| `client_id`, `order_id` | Ownership and optional order link |
+| `number` | Unique invoice number |
+| `status` | `draft`, `unpaid`, `paid`, or `cancelled` |
+| `subtotal_cents` | Sum before discount and tax |
+| `discount_cents` | Server-computed plan/template and/or coupon discount |
+| `tax_cents` | Tax in cents; current checkout calculation uses zero |
+| `total_cents` | `max(0, subtotal - discount + tax)` |
+| `currency` | Three-letter invoice currency |
+| `coupon_id` | Coupon snapshot used for settlement-time usage tracking |
+| `payment_attempt_id` | Winning attempt that settled the invoice |
+| `payment_session_status` | Hosted-session claim: `idle`, `creating`, or `ready` |
+| `payment_session_attempt_id` | Attempt that owns the current hosted-session claim |
+| `due_date`, `paid_date` | Due and settlement dates |
+
+`scopeUnpaid()` includes both `draft` and `unpaid`.
+
+### Invoice item fields
+
+`InvoiceItem` stores `item_type`, `reference_id`, `description`, `qty`, `unit_price_cents`, and `total_cents`. Admin create/update accepts the keys currently declared by `config('invoices.item_types')`: `subscription`, `domain`, and `service`. All three require an integer `reference_id` in that Admin path, but their type-specific contracts differ:
+
+| `item_type` | `reference_id` validation and model contract | Settlement/activation behavior |
+|---|---|---|
+| `subscription` | Admin validation requires the referenced `Subscription` to exist. `InvoiceItem` provides a type-guarded `subscription` accessor backed by `subscriptionRelation`. | Settlement uses referenced subscription IDs for coupon attachment. For an order-linked invoice, `OrderActivationService` activates those subscriptions and queues provisioning. |
+| `domain` | Admin validation requires the referenced `Domain` to exist. `InvoiceItem` provides a type-guarded `domain` accessor backed by `domainRelation`. Automated domain invoice lines may initially use `null` until registrar provisioning attaches the resulting Domain ID. | A standalone paid invoice can activate the referenced Domain through `syncStandaloneInvoiceDomain()`. Order-linked registrar behavior is driven through order activation and its `OrderItem` operations. |
+| `service` | Admin validation requires an integer but performs no existence check for a referenced model. `InvoiceItem` has no service-specific relation or accessor, and no referential meaning is defined by the current code. | No settlement, order-activation, or provisioning branch uses `service.reference_id`. The type is selectable and persistable through the generic Admin Invoice CRUD, but no dedicated automated InvoiceItem creation flow for it exists. |
+
+The type guards apply only to the `subscription` and `domain` accessors; they do not establish a polymorphic contract for every configured item type.
+
+For domain-only checkout, every domain produces exactly one `OrderItem` and one `InvoiceItem`. `DomainInvoiceItemBuilder` copies the trusted `OrderItem.price_cents`; checkout verifies both invariants before commit:
+
+```text
+count(invoice_items) = count(domain order_items)
+SUM(invoice_items.total_cents) = invoice.subtotal_cents
 ```
 
-### Settlement Contract
-
-`InvoiceSettlementService::markPaid(Invoice $invoice, ?string $paymentMethod)`:
-
-1. Opens a DB transaction
-2. Acquires `lockForUpdate()` on the invoice row (prevents double-payment)
-3. Guards against double-settlement: returns early if already `paid`
-4. Sets `status = paid`, `paid_date = now()`
-5. If invoice has an Order: activates the Order, calls `OrderActivationService::activate()`
-6. If no Order (standalone): calls `syncStandaloneInvoiceDomain()` — finds domain item and sets `Domain.status = active`
-7. If domain registration fails inside the transaction: throws `RuntimeException`, rolls everything back
-
-### Creating Invoices
-
-The `InvoiceController::calculateTotals()` method:
-
-```php
-$subtotal = sum of (qty × unit_price_cents) per InvoiceItem
-$discount = 0   // coupons not yet wired in
-$tax      = 0   // no tax calculation
-$total    = max(0, $subtotal - $discount + $tax)
-```
-
----
-
-## Invoice Items
-
-### Schema (`invoice_items` table)
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | bigint PK | |
-| `invoice_id` | FK → invoices (cascade) | |
-| `item_type` | string | `subscription`, `domain`, or `product` |
-| `reference_id` | bigint nullable | FK to `subscriptions.id` or `domains.id` depending on `item_type` |
-| `description` | string | Human-readable line item description |
-| `qty` | unsignedInt | Default 1 |
-| `unit_price_cents` | integer | Per-unit price |
-| `total_cents` | integer | `qty × unit_price_cents` |
-| `deleted_at` | timestamp nullable | SoftDeletes |
-
-### Type-Guarded Accessors
-
-Do not access `subscriptionRelation` or `domainRelation` directly. Use the type-guarded accessors:
-
-```php
-$item->subscription   // returns Subscription|null — only when item_type = 'subscription'
-$item->domain         // returns Domain|null — only when item_type = 'domain'
-```
-
-These guard against phantom FK matches when a subscription ID happens to equal a domain ID.
-
----
-
-## Subscriptions
-
-### Schema (`subscriptions` table — cumulative across all migrations)
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | bigint PK | |
-| `client_id` | FK → clients (cascade) | |
-| `plan_id` | FK → plans (restrictOnDelete) | |
-| `template_id` | bigint nullable | FK → templates |
-| `status` | enum | `pending`, `active`, `suspended`, `cancelled` |
-| `provisioning_status` | enum | `pending`, `provisioning`, `active`, `failed` |
-| `provisioned_at` | datetime nullable | Set when provisioning_status → active |
-| `price` | decimal(10,2) | **⚠️ TD-1 — should be integer cents** |
-| `billing_cycle` | enum | `monthly`, `annually` |
-| `engine` | string nullable | |
-| `username` | string nullable | WHM/cPanel username |
-| `cpanel_username` | string nullable | |
-| `cpanel_password` | string nullable | ⚠️ Stored in plaintext — see Security |
-| `cpanel_url` | string nullable | |
-| `server_id` | bigint nullable | FK → servers |
-| `server_package` | string nullable | WHM package name |
-| `next_due_date` | date nullable | |
-| `starts_at` | date nullable | Set on activation |
-| `ends_at` | date nullable | Set on activation (starts_at + 1 month or 1 year) |
-| `last_synced_at` | datetime nullable | |
-| `last_sync_message` | text nullable | Last WHM response |
-| `domain_option` | enum | `new`, `subdomain`, `existing` |
-| `domain_name` | string nullable | FQDN |
-| `subdomain` | string nullable | Platform subdomain (without FQDN) |
-| `domain_id` | bigint nullable | FK → domains |
-| `domain_verification_status` | string nullable | `pending`, `dns_pending`, `ssl_pending`, `active`, `failed` |
-| `domain_last_checked_at` | datetime nullable | |
-| `domain_verified_at` | datetime nullable | |
-| `domain_verification_error` | text nullable | |
-| `settings` | json nullable | |
-| `theme_settings` | json nullable | |
-| `deleted_at` | timestamp nullable | SoftDeletes |
-
-### Status Machines
-
-**`status` (business status):**
-
-```
-pending ──► active ──► suspended ──► active   (unsuspend)
-                │
-                └──────────────────► cancelled  (terminate)
-```
-
-| Transition | Trigger |
-|------------|---------|
-| `pending` → `active` | `OrderActivationService::activate()` on payment |
-| `active` → `suspended` | Admin action → `suspendacct` WHM call |
-| `suspended` → `active` | Admin action → `unsuspendacct` WHM call |
-| `active/suspended` → `cancelled` | Admin terminate → `TerminateSubscriptionOnProvider` job → `removeacct` WHM call |
-
-**`provisioning_status` (technical status):**
-
-```
-pending ──► provisioning ──► active
-                  │
-                  └──────────► failed
-```
-
-| Transition | Trigger |
-|------------|---------|
-| `pending` → `provisioning` | `TenantProvisioningService::provision()` start |
-| `provisioning` → `active` | WHM createacct success OR TemplateCloner success |
-| `provisioning` → `failed` | Exception thrown during WHM call or template cloning |
-
-### Domain Helpers
-
-```php
-$sub->requiresDomainVerification()   // true if domain_option !== 'subdomain' and not a platform host
-$sub->effectiveDomainVerificationStatus()   // accounts for non-custom domains (returns 'active' implicitly)
-$sub->activeSiteHost()               // returns the live hostname for the tenant site
-$sub->activeSiteUrl()                // full URL including scheme
-$sub->fallbackSiteHost()             // platform subdomain as fallback when custom domain not verified
-```
-
----
+Domain invoice lines start with `reference_id = null`. When the matching `Domain` record exists, registrar provisioning attaches its ID to the invoice line whose description contains that normalized domain name. Multi-domain invoices therefore attach each resulting domain to its corresponding line rather than using only the first item.
 
 ## Coupons
 
-### Schema (`coupons` table)
+Coupon codes are resolved and recalculated server-side during checkout. A usable coupon may populate `invoice.coupon_id` and `discount_cents`. Usage is not consumed when a draft invoice is created. During `InvoiceSettlementService::markPaid()`, the coupon row is locked, `used_count` is incremented once, and referenced subscriptions are attached with `syncWithoutDetaching()`. The invoice's paid-state early return prevents a duplicate webhook from consuming the coupon twice.
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | bigint PK | |
-| `code` | string unique | Coupon code |
-| `discount_type` | enum | `fixed`, `percent` |
-| `discount_value` | decimal(10,2) | ⚠️ **TD-2** — should be integer cents for `fixed` type |
-| `expires_at` | date nullable | |
+The settlement step intentionally honors a coupon already attached to an invoice and does not re-check `max_uses` after payment has occurred.
 
-### Pivot Table (`coupon_subscription`)
+## Currency Contract
 
-| Column | Notes |
-|--------|-------|
-| `coupon_id` | FK → coupons (cascade) |
-| `subscription_id` | FK → subscriptions (cascade) |
-| `created_at` / `updated_at` | |
+### Domain checkout source of truth
 
-### Current State
-
-**The Coupon model and pivot table exist, but coupon application is not wired into the billing calculation.** The `InvoiceController::calculateTotals()` method hard-codes `$discount = 0`. The `Subscription::coupons()` relationship stores which coupons are associated, but this association does not affect Invoice `discount_cents`.
-
-See **Technical Debt § TD-3**.
-
----
-
-## Provisioning Flow
-
-Two provisioning paths exist, determined by `Plan.plan_type`:
-
-### Path A — `hosting` (WHM/cPanel)
-
-Called by `TenantProvisioningService::provision()` when `$subscription->plan->plan_type === 'hosting'`.
-
-```
-SubscriptionSyncService::sync($subscription)
-  1. Resolve server credentials (hostname/IP + WHM API token)
-  2. Resolve server_package from subscription.server_package or plan.server_package
-  3. Build createacct params: domain, plan, contactemail, password
-  4. Generate username candidates (up to 5):
-       candidate 1: subscription.username (if exists)
-       candidate 2: client.slug + subscription.id
-       candidate 3: palgoal{subscription.id}
-       candidates 4-5: palgoal{subscription.id}{n}
-  5. Sanitize username: lowercase, alphanumeric, max 16 chars
-  6. POST to https://{host}:2087/json-api/createacct (WHM API)
-  7. On success: update subscription.username if a different candidate was used
-  8. On all failures: return error message → TenantProvisioningService sets provisioning_status = failed
+```text
+DomainPricingService quote
+-> cart's trusted server-side item
+-> OrderItem.meta.currency
+-> Invoice.currency
+-> PaymentAttempt.currency
+-> gateway request
+-> verified webhook comparison
 ```
 
-**WHM Terminate:** `SubscriptionSyncService::terminate()` calls `removeacct` and sets `subscription.status = cancelled`.
+`DomainPricingService` reads active supported registrar/TLD price rows, selects a positive `sale` price or falls back to positive `cost`, converts it to integer cents, and normalizes the currency to an uppercase three-letter code. It also snapshots `provider_id`, `provider_type`, `provider_mode`, and `domain_tld_id` with the quote.
 
-**WHM Suspend/Unsuspend:** Direct calls from `SubscriptionController::suspendToProvider()` / `unsuspendToProvider()` — `suspendacct` / `unsuspendacct` WHM calls.
+Rules enforced by current checkout/payment code:
 
-### Path B — `multi_tenant` (Template Cloning)
+- Hosted-payment currencies are `USD`, `ILS`, and `JOD`.
+- Currency is normalized as an uppercase three-letter code.
+- A domain cart containing more than one currency is rejected; one invoice cannot mix currencies.
+- Competing quotes for one TLD in different currencies are not numerically compared, so that TLD is unavailable to checkout in that ambiguous case.
+- There is no FX conversion policy.
+- Request/session currency and price are never accepted as authority.
+- The webhook currency must equal both `invoice.currency` and `payment_attempt.currency`, while the webhook amount must equal both stored cent amounts.
 
-Called when `$subscription->plan->plan_type === 'multi_tenant'`.
+Template/plan checkout currently writes `USD`; domain checkout carries the trusted catalog currency.
 
-```
-TenantProvisioningService::provisionMultiTenant($subscription)
-  1. TemplateCloner::cloneToTenant(template: $sub->template, tenant: $sub)
-  2. Creates Page records (context = 'tenant', tenant_id = subscription.id)
-  3. Clones all Sections + SectionTranslations from template pages
-  4. Guard: if tenant content already exists → skip (idempotent)
-```
+## Registrar Provider Contract
 
-### Queue Behaviour
+For new registrations the provider is selected by the trusted pricing quote, not by a generic registrar preference:
 
-- `ProvisionSubscription` job — dispatched on `provisioning` queue. Direct call path: `TenantProvisioningService` called synchronously from `OrderActivationService::activate()`. The job is also available for manual re-provisioning.
-- `SyncSubscriptionToProvider` job — dispatched when the fallback path in `OrderActivationService` creates a new subscription. Uses 3 retries.
-- `TerminateSubscriptionOnProvider` job — dispatched from admin bulk-terminate action. 3 retries.
-
----
-
-## Activation Flow
-
-What happens step-by-step after an invoice is paid:
-
-```
-InvoiceSettlementService::markPaid($invoice, $paymentMethod)
-│
-├── [DB transaction + row lock]
-├── Invoice.status = paid, Invoice.paid_date = now()
-├── Order.status = active
-│
-└── OrderActivationService::activate($order, $paymentMethod)
-    │
-    ├── Flip draft invoices → unpaid
-    ├── Extract domain from first order_item with a domain value
-    │
-    ├── [If item_option = register or renew]
-    │   └── RegistrarProvisioningService::provisionOrderDomain()
-    │       ├── Finds active DomainProvider (Namecheap first, then Enom)
-    │       ├── Calls registrar API (create or renew)
-    │       ├── Updates Domain.status = active on success
-    │       └── On failure → throws RuntimeException → ROLLS BACK entire transaction
-    │
-    ├── [Path A: invoice items have subscription reference_ids]
-    │   ├── Load subscriptions from reference_ids
-    │   ├── For each subscription:
-    │   │   ├── status = active
-    │   │   ├── starts_at = now()
-    │   │   ├── ends_at = starts_at + 1 month (monthly) or 1 year (annually)
-    │   │   ├── next_due_date = ends_at
-    │   │   └── TenantProvisioningService::provision()
-    │   └── Return collected activated subscriptions
-    │
-    └── [Path B: fallback — no subscription refs in items]
-        ├── Find first invoice item with item_type = subscription
-        ├── Treat reference_id as Template ID (⚠️ TD-4 — ambiguous)
-        ├── Create OR update Subscription
-        └── Dispatch SyncSubscriptionToProvider job
+```text
+DomainPricingService quote
+-> provider_id/type/mode snapshot
+-> availability check using that provider
+-> OrderItem.meta provider snapshot
+-> RegistrarProvisioningService validates the same active provider
+-> DomainProvisioningAttempt provider snapshot
+-> reconciliation using the attempt's provider
 ```
 
----
+There is no silent provider substitution for a new registration. A missing `provider_id`, inactive/missing provider, or mismatch in the snapshotted type/mode blocks registration. Provider values supplied by the browser are overwritten by the trusted quote.
 
-## Domain Purchase Flow
+Renewal is a different internal path: it primarily follows the existing domain registrar and renewal catalog data. The strict quote-snapshot rule above is the registration contract.
 
-Handled inside `OrderActivationService::activate()` → `RegistrarProvisioningService::provisionOrderDomain()`.
+## Domain Checkout Flow
 
-### Supported Registrars
+### Domain-only cart and client purchase
 
-| Registrar | Client Class | Default Priority |
-|-----------|-------------|-----------------|
-| Namecheap | `App\Services\Domains\Clients\NamecheapClient` | 1 (preferred) |
-| Enom | `App\Services\Domains\Clients\EnomClient` | 2 (fallback) |
+1. Normalize the requested domain(s); only `register` is accepted by the public cart.
+2. Re-price every domain through `DomainPricingService`.
+3. Reject missing/changed prices, mixed currency, inactive providers, or inconclusive/unavailable provider checks.
+4. Build the namespaced deterministic `checkout_fingerprint` from identity and trusted normalized quote/item data.
+5. Reuse a valid prior order/invoice or atomically create the client (for guest cart), pending order, one `OrderItem` per domain, invoice, and one `InvoiceItem` per domain.
+6. Redirect to invoice checkout. The request does not mark the invoice paid and does not register the domain.
+7. Start/reuse a hosted payment session.
+8. On verified payment, settle the invoice, activate the order locally, then execute registrar work after commit.
 
-Provider selected by `DomainProvider::active()->whereIn('type', ['namecheap', 'enom'])->orderByRaw(...)`.
+Every domain item is processed independently by `RegistrarProvisioningService::provisionOrderDomain()`. One item crashing or failing does not prevent the loop from attempting later items. Each registration has its own item state, durable attempt, and global claim.
 
-### Registration Flow
+## Hosted Payment Flow
 
-```
-1. Find order item where domain is set and item_option = 'register'
-2. Normalize domain (lowercase, IDN → ASCII)
-3. Find active DomainProvider (namecheap preferred)
-4. Build WHOIS contact payload from Client fields (all 4 roles: Registrant, Admin, Tech, AuxBilling)
-5. Call registrar API:
-   - Namecheap: namecheap.domains.create
-   - Enom: Purchase command
-6. On success:
-   - Domain.status = active
-   - Domain.registrar = provider.type
-   - Attach Domain to all invoice items with item_type = domain
-7. On failure:
-   - Domain.status = pending, dns_last_note = error
-   - Return {ok: false, message: ...}
-   - InvoiceSettlementService throws RuntimeException → FULL ROLLBACK
-```
+### End-to-end flow
 
-### Renewal Flow
-
-```
-1. Find order item where item_option = 'renew'
-2. Resolve Domain record from client_id + domain_name
-3. Find DomainProvider (preferring domain's current registrar)
-4. Call renew API (Namecheap: namecheap.domains.renew, Enom: Extend command)
-5. Update Domain.renewal_date on success
+```text
+Invoice
+-> PaymentSessionStarter
+-> PaymentAttempt
+-> active PaymentGateway implementation
+-> Lahza hosted checkout
+-> signature-verified PaymentWebhookController
+-> amount/currency reconciliation
+-> InvoiceSettlementService::markPaid()
+-> local order/subscription activation
+-> commit
+-> external provisioning
 ```
 
----
+`PaymentManager` resolves an active database-configured gateway first, then the configured gateway map. `LahzaGateway` implements hosted checkout, HMAC webhook verification, transaction lookup, and refunds. `MockGateway` remains a non-settling compatibility/configuration fallback: its hosted-session and webhook methods throw, so it cannot simulate a successful public payment.
 
-## Status Machines (Summary)
+### PaymentAttempt schema and role
 
-### Order
+The implemented payment audit fields are:
 
-| Status | Meaning |
-|--------|---------|
-| `pending` | Created, awaiting payment / activation |
-| `active` | Invoice paid, subscriptions activated |
-| `cancelled` | Cancelled by admin |
-| `fraud` | Flagged as fraudulent |
+- `invoice_id`
+- `order_id`
+- `client_id`
+- `gateway`
+- `idempotency_key`
+- `gateway_session_id`
+- `gateway_transaction_id`
+- `gateway_amount_cents`
+- `currency`
+- `status`
+- `gateway_status_raw`
+- `gateway_response`
+- `webhook_verified_at`
+- `gateway_succeeded_at`
+- `settled_at`
+- `refunded_at`
+- `refund_amount_cents`
 
-### Invoice
+The principal status constants are `initiated`, `pending`, `succeeded`, `failed`, `cancelled`, and `refunded`:
 
-| Status | Meaning |
-|--------|---------|
-| `draft` | Created, not yet presented |
-| `unpaid` | Presented to client, payment due |
-| `paid` | Payment confirmed, activation triggered |
-| `cancelled` | Voided |
+| Status | Current ingress and permitted later behavior |
+|---|---|
+| `pending` | Created while session creation is claimed. It may remain pending for an indeterminate provider result, become `initiated` after the provider session is stored, become `failed` after a confirmed pre-session failure, or become `cancelled` if the invoice becomes paid before the provider session can be published. |
+| `initiated` | A checkout session exists. Client cancellation can mark it `cancelled`; a verified negative webhook can mark it `failed`; verified success can settle it. A missing reusable checkout URL can move it back to `pending` before another controlled provider call. |
+| `failed` | A confirmed negative session/webhook result. It is not terminal against later verified payment proof and may become `succeeded`. |
+| `cancelled` | A local client/session cancellation marker, not financial proof. A later verified success is still allowed to settle it; it is not protected as a terminal financial state. |
+| `succeeded` | Written by `InvoiceSettlementService` with `settled_at` when local invoice settlement succeeds. It is terminal against stale positive or negative payment webhooks. |
+| `refunded` | Reserved by the model/schema for a confirmed refund and protected as terminal against stale payment webhooks. Lahza exposes a refund API, but the current application has no controller/service that persists `refunded`, `refunded_at`, or `refund_amount_cents`; this document does not claim a complete refund workflow. |
 
-### Subscription — business status
+The unique `idempotency_key` is sent to the gateway. A hosted-session identity is the pair `(gateway, gateway_session_id)`, enforced by a composite database unique constraint. `gateway_session_id` remains nullable so multiple attempts may be created before any provider response; SQL uniqueness permits multiple `NULL` values. The same non-null session string may exist under different gateway namespaces, but not twice for the same gateway. Webhook lookup uses the same gateway/session pair, and `gateway_transaction_id` records the gateway transaction.
 
-| Status | Meaning |
-|--------|---------|
-| `pending` | Created, awaiting activation |
-| `active` | Paid and provisioned |
-| `suspended` | Temporarily suspended (WHM: suspendacct) |
-| `cancelled` | Terminated permanently (WHM: removeacct) |
+`gateway_succeeded_at` is durable evidence that a signature-verified success matched the attempt/invoice amount and currency and passed any successful secondary transaction reconciliation. On the first verified success, the attempt row lock atomically fixes a first-write snapshot consisting of `gateway_succeeded_at`, `gateway_transaction_id` (which may be `null`), `gateway_status_raw`, `gateway_response`, and `webhook_verified_at`. Later successful delivery cannot rewrite any of those fields, but it may still continue to local settlement when the attempt is not yet settled. It is distinct from both `status = succeeded` plus `settled_at`, which mean local settlement completed, and `invoice.payment_attempt_id`, which identifies the one settlement winner.
 
-### Subscription — provisioning_status
+If a verified success replay carries a transaction ID different from the immutable first snapshot—including a non-null ID after an initial `null`—the stored snapshot is unchanged and a warning containing identifiers only is logged for operational review. The code does not classify that mismatch automatically as a duplicate charge. The local Lahza adapter distinguishes the webhook `data.id` transaction identifier from the `reference` used for gateway/session lookup, but it documents no global, merchant, or gateway-scoped uniqueness guarantee for `data.id`; `gateway_transaction_id` therefore remains a nullable, non-unique index.
 
-| Status | Meaning |
-|--------|---------|
-| `pending` | Not yet attempted |
-| `provisioning` | In progress (WHM call or template clone running) |
-| `active` | Successfully provisioned |
-| `failed` | Provisioning threw an exception |
+### Invoice payment-session claim
 
----
+`PaymentSessionStarter` locks the invoice and uses:
 
-## Money Storage Rules
+```text
+idle -> creating -> ready
+```
 
-> **Rule: All monetary amounts are stored as integer cents.**
+The invoice's `payment_session_attempt_id` owns the claim. This prevents concurrent `PaymentAttempt`/session creation and prevents a new session from being created while the first request is still `creating`.
 
-This is the project standard. `1000` = `$10.00`. Never use floats for money.
+- `ready` reuses the existing checkout URL when possible.
+- `creating` returns a processing result rather than issuing another gateway call.
+- A conclusive pre-session failure marks the attempt failed and releases the invoice to `idle`.
+- An indeterminate gateway result keeps `creating` and the owner attempt, preventing an unsafe second session.
+- External session creation occurs outside the claim transaction.
 
-| Model | Column | Type | Compliant? |
-|-------|--------|------|-----------|
-| `Invoice` | `subtotal_cents`, `discount_cents`, `tax_cents`, `total_cents` | `integer` | ✅ |
-| `InvoiceItem` | `unit_price_cents`, `total_cents` | `integer` | ✅ |
-| `OrderItem` | `price_cents` | `unsignedBigInteger` | ✅ |
-| `Plan` | `monthly_price_cents`, `annual_price_cents` | `integer` | ✅ |
-| `Subscription` | `price` | `decimal(10,2)` cast to `float` | **❌ TD-1** |
-| `Coupon` | `discount_value` | `decimal(10,2)` | **❌ TD-2** |
+### Checkout controllers
 
-**Reading Plan prices:**
+`Client\InvoiceCheckoutController` validates invoice ownership/state and delegates session creation to `PaymentSessionStarter`. It never calls `markPaid()` and a return/cancel URL is not proof of payment.
+
+Template and non-template plan checkout in `Front\CheckoutController` create the order, subscription, invoice, and invoice items locally, commit, start the hosted session, and wait for the webhook. The client request cannot set the invoice to `paid`, activate the order, or dispatch tenant/WHM provisioning. Domain-only checkout continues to the invoice checkout page, which starts the same hosted-session flow.
+
+### Webhook verification and idempotency
+
+`PaymentWebhookController` is the only application-code caller of `InvoiceSettlementService::markPaid()` in the online financial path. It:
+
+1. Resolves and matches the active gateway name.
+2. Verifies the raw request signature before trusting the payload.
+3. Acknowledges non-success events without settling; explicit failures update only the attempt.
+4. Matches a success event by gateway and `gateway_session_id`.
+5. Compares webhook, attempt, and invoice amount/currency.
+6. Optionally performs a secondary `getTransaction()` reconciliation when a transaction ID is present.
+7. Locks the attempt and durably records `gateway_succeeded_at` plus safe success metadata.
+8. Calls settlement separately; terminal `succeeded`/`refunded` attempts and already-paid invoices are no-ops.
+
+Every verified negative branch that records `failed`—an explicit payment failure, webhook amount/currency mismatch, or secondary transaction-reconciliation mismatch—performs the mutation in a short transaction, reloads the `PaymentAttempt` with `lockForUpdate()`, and rechecks its current status. `succeeded` and `refunded` are terminal against later payment webhook events. An attempt with `gateway_succeeded_at` is also protected from later negative mutation even when it is not the settlement winner, so a stale event cannot erase verified external success or overwrite its transaction metadata.
+
+A prior negative event is not permanently terminal. If a later signature-verified success event matches the same attempt and passes the authoritative amount/currency and optional transaction checks, it may change `failed` to `succeeded` and settle the still-unpaid invoice. This prevents arrival order from making an earlier negative event win over later confirmed payment proof. It is not a payment-reconciliation job.
+
+One invoice may exceptionally have more than one attempt with verified external success evidence, but it has exactly one local settlement owner. A non-winning externally successful attempt is detected by `gateway_succeeded_at IS NOT NULL`, `settled_at IS NULL`, a paid related invoice, and `invoice.payment_attempt_id != payment_attempts.id`. This represents a potential duplicate charge requiring operational review: it does not reactivate the invoice/order, consume the coupon again, or dispatch provisioning again, and no automatic refund is performed.
+
+### `markPaid()` contract
+
+Signature:
 
 ```php
-$plan->monthly_price        // float: monthly_price_cents / 100
-$plan->annual_price         // float: annual_price_cents / 100
-$plan->formatted_monthly_price  // string: "$10.00"
-$plan->formatted_annual_price   // string: "$100.00"
+markPaid(Invoice $invoice, ?string $paymentMethod = null, ?PaymentAttempt $paymentAttempt = null): void
 ```
 
-> **ADR-003 (pending):** The formal ADR for integer-cents-only storage across all models has not been written. When created, it should mandate migrating `subscriptions.price` → `price_cents` and `coupons.discount_value` → `discount_value_cents`.
+Inside one transaction it locks the invoice, rejects a non-owning hosted attempt, marks the invoice paid, records `paid_date` and winning attempt, finalizes the attempt, consumes coupon usage once, sets the order active, and calls `OrderActivationService` for local activation. A manual call without `PaymentAttempt` is accepted only when the invoice's session claim is `idle`.
 
----
+Administrative invoice create-as-paid, update-to-paid, and bulk mark-paid actions use the same service with payment method `admin_manual` and no `PaymentAttempt`. Create-as-paid first persists the invoice as `unpaid` together with all invoice items, commits that local transaction, and then settles it. Update-to-paid likewise commits item/totals changes before settlement. Bulk settlement calls the service separately for each invoice, so one rejected invoice does not prevent the others from settling and no long controller transaction contains the batch. An invoice with a `creating` or `ready` hosted-session claim is rejected by the existing ownership guard and remains unpaid. Already-paid invoices are not resettled.
 
-## Pricing Rules
+### Paid invoice immutability
 
-### Plan Pricing
+Paid invoices are immutable through the current Admin Invoice CRUD. `InvoiceController` re-reads and locks the persisted invoice before an update or deletion. If its current status is `paid`, the controller does not change the status, `paid_date`, totals, currency, relationships, or invoice items, and it does not delete the invoice. Bulk status changes and deletion lock the selected rows and skip paid invoices while reporting affected and skipped counts. Bulk mark-paid remains idempotent: an already-paid invoice is reported as skipped and does not repeat settlement side effects.
 
-Two price columns per plan, both in cents:
+Changing a paid amount or line item, or reverting paid status, requires a future explicit refund, credit-note, or accounting-adjustment workflow. No such reversal workflow is implemented.
 
-| Column | Billing Cycle |
-|--------|--------------|
-| `monthly_price_cents` | Monthly subscriptions |
-| `annual_price_cents` | Annual subscriptions |
+Invoices whose `payment_session_status` is `creating` or `ready` are also immutable through Admin financial update, individual deletion, bulk status mutation, and bulk deletion while the hosted payment session is active. The controller evaluates this state from the locked database row before computing totals or replacing line items. This prevents local invoice amounts and items from diverging from the amount already sent to the gateway. Reminder remains available because it is read-only. Admin manual mark-paid still passes active sessions to the settlement ownership guard and is rejected; no hosted-session cancellation workflow exists.
 
-### Subscription Price at Creation
+Admin invoice duplication creates a new standalone draft invoice for supported non-domain invoices. The duplicate clears `order_id`, `coupon_id`, `payment_attempt_id`, `payment_session_attempt_id`, and `paid_date`, and resets `payment_session_status` to `idle` and `status` to `draft`. Client, currency, totals, and commercial line items are copied according to their existing contract, including supported item `reference_id` values. It does not create or copy a `PaymentAttempt`, even when the original is paid or has an active hosted session. Paying the standalone duplicate therefore cannot reactivate the original order or consume its coupon again.
 
-When a subscription is created via `OrderActivationService` fallback path (Path B), `$template->price` is used — a `decimal` field, not cents. This is another instance of TD-1.
+Invoices containing a `domain` item are not currently duplicable. Their `reference_id` points to an existing `Domain`, and settling a standalone invoice can mutate that domain through `syncStandaloneInvoiceDomain()`. The Admin bulk duplicate action checks the current persisted items before calling `replicate()`, skips each affected domain invoice, and continues processing other selected invoices. Duplication is blocked rather than silently changing reference semantics; this policy does not clone domains or redefine domain item references. These protections are enforced at the Admin Invoice CRUD boundary, not by a model observer or global model event.
 
-### Discounts
+## Domain Registration Claims and Attempts
 
-Coupons exist but are not applied in the billing calculation. `discount_cents` is always `0` in generated invoices.
+### Global claim
 
-### Renewals
+`domain_registration_claims` contains:
 
-`ends_at` / `next_due_date` are set at activation time:
+| Field | Meaning |
+|---|---|
+| `domain_name_normalized` | Globally unique normalized domain name |
+| `order_item_id` | Item that owns the claim |
+| `status` | `claimed`, `completed`, or `released` |
+| `claimed_at`, `released_at` | Claim lifecycle timestamps |
 
-```php
-$billingCycle = $subscription->billing_cycle ?? 'annually';
-$nextDueDate  = str_contains($billingCycle, 'month')
-    ? $startsAt->copy()->addMonth()
-    : $startsAt->copy()->addYear();
+This is a global domain-name guard, not merely an order-item guard. A `claimed` or `completed` row blocks another order. A timeout/ambiguous response keeps the claim `claimed`. Only a `confirmed_failed` attempt releases it; a released row can be atomically reassigned to a later item. The unique database index handles concurrent collisions.
+
+### Durable attempt
+
+`domain_provisioning_attempts` records:
+
+- `order_item_id`, nullable `domain_id`
+- `provider_id`, `provider_type`, `provider_mode`
+- unique `attempt_uuid`
+- `operation` (currently `register`)
+- `status`: `initiated`, `completed`, `confirmed_failed`, or `indeterminate`
+- `provider_reference`, `provider_domain_id`
+- `started_at`, `finished_at`, and safe `response_payload`
+
+The provider ID/type/mode are a durable snapshot used for audit and reconciliation. A definitive rejection becomes `confirmed_failed`, sets the item to `failed`, and releases the global claim. Success becomes `completed`, completes both item and claim, and activates the `Domain`. A timeout, transient HTTP result, malformed/ambiguous response, or uncertain duplicate remains `indeterminate` with the item and claim held.
+
+## Domain Reconciliation
+
+Command:
+
+```text
+php artisan domains:reconcile-provisioning
 ```
 
-No automatic renewal billing exists. Renewals must be created manually by an admin.
+Relevant options are `--attempt`, `--order-item`, `--limit`, `--older-than`, `--dry-run`, and `--apply`.
 
----
+- Read-only behavior is the default; `--dry-run` makes that intent explicit.
+- It selects old `register` attempts in `initiated`/`indeterminate` whose order items remain `in_progress`.
+- It queries the provider snapshotted by the original attempt and never sends another registration request.
+- Results include `registered_by_us`, `provider_processing`, `external_unavailable`, `likely_not_sent`, and `indeterminate`.
+- `--apply` changes data only for conclusive `registered_by_us`: it completes the attempt/item and activates the domain in a short transaction.
+- Processing, unknown, externally unavailable, and likely-not-sent results are not automatically converted to failure and do not release the claim.
 
-## Tax Handling
+## Domain Renewal and Auto-Renew
 
-No tax system is implemented. The `tax_cents` column exists in the `invoices` table and is set to `0` in all invoice creation flows. No tax rate configuration exists in the codebase.
+The scheduler runs `domains:process-auto-renewals` daily at `02:00` with `withoutOverlapping()`.
 
-If tax is required in the future, the `tax_cents` column is already present — a rate calculation step must be added to `InvoiceController::calculateTotals()`.
+For an eligible `Domain` with `auto_renew = true`, the service reuses an existing draft/unpaid renewal invoice or creates:
 
----
-
-## Payment Flow
-
-### Current Reality — No Real Gateway
-
-There is no payment gateway integration. All payment flows use the string `'mock_gateway'` as the payment method identifier.
-
-### Entry Points
-
-| Controller | Route context | Trigger |
-|-----------|---------------|---------|
-| `InvoiceCheckoutController::pay()` | Client portal | Client clicks "Pay" on their invoice |
-| `CheckoutController` | Public front-end checkout | Public order completion |
-| `InvoiceController::bulkAction()` | Admin dashboard | Admin marks invoice(s) as paid manually |
-
-All three paths eventually call:
-
-```php
-app(InvoiceSettlementService::class)->markPaid($invoice, 'mock_gateway');
+```text
+Order(status=pending, type=domain_renewal)
+-> OrderItem(item_option=renew)
+-> Invoice(status=unpaid)
+-> InvoiceItem(item_type=domain, reference_id=domain.id)
+-> wait for client payment
 ```
 
-### Admin Manual Payment
+The scheduler does not call `markPaid()`, does not create a `PaymentAttempt`, and does not call the registrar renewal API. `--dry-run` calculates and reports the plan without database writes or provider renewal calls.
 
-Admin can set invoice status to `paid` directly via the edit form or bulk action. The bulk action path also calls `InvoiceSettlementService` to trigger full activation.
+After the client starts a payment session and the verified webhook settles the renewal invoice, `OrderActivationService` passes the `renew` item to `RegistrarProvisioningService`. If settlement is still inside a transaction, the provider renewal is deferred with `DB::afterCommit(...)`.
 
-### Webhook / Online Gateway
+Renewal pricing first tries the enabled registrar/TLD `renew` price, then a registration-price fallback, and finally a hard-coded amount if neither catalog price exists. This fallback chain is current behavior and is listed as technical debt below.
 
-Not implemented. The `Domain.payment_method` column stores `'mock_gateway'` as a placeholder.
+## Subscription and Tenant Provisioning
 
----
+### Subscription fields and states
 
-## Failure Handling
+Important fields include `client_id`, `plan_id`, `template_id`, `status`, `provisioning_status`, `price_cents`, billing dates/cycle, server/package, username/cPanel credentials, domain data, and provisioning/sync timestamps.
 
-### Invoice Settlement Failure
+`provisioning_status` is a string with these exact values:
 
-`InvoiceSettlementService::markPaid()` runs inside a `DB::transaction()`. Any exception (including domain registration failure) rolls back the entire transaction. The invoice remains in its previous state. Admin must retry.
-
-### Provisioning Failure
-
-`TenantProvisioningService::provision()` catches `Throwable`:
-
-```php
-$subscription->forceFill([
-    'provisioning_status' => Subscription::PROVISIONING_FAILED,
-    'last_sync_message'   => $exception->getMessage(),
-])->save();
+```text
+pending -> provisioning -> active
+                        \-> failed
+                        \-> unknown
+failed  -> provisioning  (a later explicit job run may claim it)
 ```
 
-The `provisioning_status` is set to `failed` and the error message is stored in `last_sync_message`. The subscription remains `active` (billing was settled), only provisioning failed. Admin can retry via WHM sync action.
+`status` is the business entitlement state and is separate from `provisioning_status`. Payment activation may set business `status = active` before the asynchronous external work reaches provisioning `active`.
 
-### WHM createacct Failure
+### Paid activation path
 
-`SubscriptionSyncService::sync()` tries up to 5 username candidates. On all failures, returns an error string (does not throw). `TenantProvisioningService` re-throws, which sets `provisioning_status = failed`.
-
-### Domain Registration Failure
-
-`RegistrarProvisioningService` returns `['ok' => false, 'message' => '...']`. `InvoiceSettlementService` receives this and throws `RuntimeException`, rolling back the full settlement transaction.
-
-### Queue Job Failure
-
-- `ProvisionSubscription` — throws on failure (retried by queue worker). `provisioning_status` is set to `failed` after the last attempt.
-- `SyncSubscriptionToProvider` — 3 retries. Updates `last_sync_message` on failure.
-- `TerminateSubscriptionOnProvider` — 3 retries. Logs failure. Subscription status is not changed if WHM call fails.
-
----
-
-## Security Considerations
-
-See `docs/24-security-notes.md` for the full security model. Billing-specific risks:
-
-| Risk | Detail |
-|------|--------|
-| `cpanel_password` stored in plaintext | `subscriptions.cpanel_password` is a fillable string column with no encryption. If the database is compromised, all hosted account credentials are exposed. |
-| WHM API token stored in DB | `servers.api_token` is stored as plaintext. Same exposure risk. |
-| No idempotency key on payment | `lockForUpdate()` prevents double-settlement within a single process, but there is no external idempotency key for retried webhook calls (no real gateway yet). |
-| Mock gateway in production | `'mock_gateway'` is hardcoded as the payment method. Any client who can reach the checkout route can pay without providing real payment credentials. |
-
----
-
-## Common Workflows
-
-### Create an Invoice Manually (Admin)
-
-```
-1. Go to /admin/invoices/create
-2. Select client
-3. Select order (optional — leave blank for standalone invoice)
-4. Add InvoiceItems (subscription ref_id + description + qty + price)
-5. Set status = draft (default) or unpaid
-6. Save → totals are calculated server-side (subtotal - 0 + 0)
+```text
+verified webhook
+-> InvoiceSettlementService transaction
+-> invoice paid + order active + subscription locally active
+-> OrderActivationService
+-> ProvisionSubscription::dispatch(subscription_id)->afterCommit()
+-> COMMIT
+-> provisioning queue job
+-> TenantProvisioningService
 ```
 
-### Mark Invoice as Paid (Admin)
+`OrderActivationService` no longer calls `TenantProvisioningService::provision()` synchronously. It dispatches the existing `ProvisionSubscription` job with `afterCommit()`. If no database transaction is open, Laravel dispatches normally without waiting for a nonexistent commit; if a transaction is open, the job is released only after the outermost successful commit and is discarded on rollback.
 
-```
-1. Open invoice or use bulk action
-2. Set status = paid
-3. InvoiceSettlementService::markPaid() is called
-4. Order activated → Subscription activated → Provisioning dispatched
-```
+`ProvisionSubscription` implements `ShouldQueue`, uses the `provisioning` queue, reloads the subscription, delegates to `TenantProvisioningService`, logs exceptions, and rethrows them for the queue's existing failure/retry behavior. It does not implement `ShouldBeUnique`, and this document does not claim job-level uniqueness.
 
-### Apply Coupon (Not Yet Possible)
+Provisioning failure after commit cannot roll back the paid invoice or return the order to unpaid/pending. The invoice and local activation persist; the subscription provisioning state and job logs capture the later outcome.
 
-Coupons cannot be applied to invoices. The `coupon_subscription` pivot exists but the billing calculator does not read from it. See TD-3.
+### Hosting / WHM (`plan_type = hosting`)
 
-### Activate Subscription Manually
-
-```
-1. Open subscription in admin
-2. Use "Sync to Provider" action
-3. SubscriptionSyncService::sync() is called directly
-4. WHM createacct is attempted
-5. provisioning_status updates to active or failed
+```text
+TenantProvisioningService
+-> SubscriptionSyncService::provisionAccount()
+-> short transaction + row lock + atomic claim
+-> provisioning
+-> exactly one WHM createacct request outside transactions
+-> active | failed | unknown
 ```
 
-### Terminate Subscription
+Idempotency rules:
 
+- `active`, `provisioning`, and `unknown` are blocked states and do not send `createacct`.
+- Only `pending` or `failed` can be claimed, after local configuration validation.
+- The account username is fixed and persisted during the claim. There is no alternative-username loop or fallback username after an ambiguous response.
+- A conclusive WHM rejection becomes `failed`.
+- Timeout, connection uncertainty, transient HTTP status, malformed response, missing conclusion, and duplicate/already-exists-style ambiguity become `unknown`.
+- `unknown` requires reconciliation before any deliberate retry; automatic job retry cannot issue another `createacct` from that state.
+- The WHM HTTP request runs after the claim transaction commits and at `DB::transactionLevel() === 0` on the queued paid-activation path.
+
+### Multi-tenant plans
+
+For non-hosting plans, `TenantProvisioningService` atomically claims local provisioning, ensures the domain, and clones canonical template content through `TemplateCloner`. Existing canonical tenant content prevents a duplicate clone. Success sets provisioning `active`; a thrown failure sets `failed`. Paid order activation reaches this path through the same after-commit job.
+
+## Failure Semantics
+
+| Failure | Persisted behavior |
+|---|---|
+| Gateway session creation conclusively fails | Attempt becomes `failed`; invoice session claim returns to `idle`; invoice remains unpaid |
+| Gateway session result is uncertain | Claim stays `creating`; no second session is issued automatically |
+| Invalid signature | Request is rejected with no attempt, invoice, or order mutation |
+| Amount/currency or transaction-reconciliation mismatch | Settlement is rejected; an unsettled attempt becomes `failed` under a row lock, while an already `succeeded` attempt is never downgraded; invoice/order remain unchanged |
+| Negative webhook after success | Attempt success and its settlement identifiers/timestamps remain unchanged |
+| Payment webhook after `refunded` | Attempt status, refund/settlement fields, and gateway transaction metadata remain unchanged |
+| Additional verified success after another attempt settled the invoice | `gateway_succeeded_at` and success metadata persist on the additional attempt; it remains locally unsettled, the winning pointer and activation side effects remain unchanged, and a warning is logged for operational review |
+| Verified success replay with a different transaction ID | The first verified-success snapshot remains unchanged; an identifier-only warning is logged for operational review, with no automatic refund or reconciliation |
+| Verified success after a prior failure | The locked attempt may become `succeeded` and settle the still-unpaid invoice after all ownership, amount, currency, and optional transaction checks pass |
+| Duplicate successful webhook | Attempt/invoice locks and paid-state guards make it a no-op |
+| Registrar definitive registration failure | Attempt `confirmed_failed`, item `failed`, global claim `released`; paid invoice is not rolled back because registrar work is after commit |
+| Registrar ambiguous outcome | Attempt `indeterminate`, item `in_progress`, claim `claimed`; no automatic re-registration |
+| WHM definitive rejection | Subscription provisioning becomes `failed`; paid invoice remains paid |
+| WHM ambiguous outcome | Subscription provisioning becomes `unknown`; paid invoice remains paid; no automatic `createacct` retry |
+| Queue exception | Job logs and rethrows according to its existing queue policy; financial rows remain committed |
+
+## Security Controls
+
+- Lahza webhook verification uses the raw request body and signature header; return URLs and browser forms are never payment proof. Signature contract: HMAC-SHA256 over the exact raw request body, using the configured `webhook_secret`, compared against the `x-lahza-signature` header (corrected from SHA512 in P1-13A2; see ADR_007_PHASE5B_LAHZA_GATEWAY_REPORT.md).
+- Webhook amount/currency are checked against both the invoice and attempt, and optional transaction lookup provides defense in depth.
+- Payment gateway credentials are encrypted casts and hidden from serialization.
+- Registrar passwords/tokens/API keys are encrypted casts and hidden from serialization.
+- WHM server password and API token are encrypted by `Server` accessors/mutators.
+- Domain provider identity and prices are snapshotted from server-side catalog rows, not trusted request values.
+- Attempt response payloads are allow-listed/redacted before persistence.
+- The composite unique constraint on `(gateway, gateway_session_id)` prevents two valid attempts from sharing one hosted-session identity inside the same gateway namespace.
+- Database unique constraints also protect payment idempotency keys, checkout fingerprints, registrar attempt UUIDs, and global normalized-domain claims.
+
+## Current Technical Debt and Known Exceptions
+
+| Area | Verified current issue |
+|---|---|
+| cPanel credential storage | `subscriptions.cpanel_password` has no encrypted cast/mutator and is stored as plain text. WHM server `api_token` is encrypted and is not part of this debt. |
+| Invoice item reference | `invoice_items.reference_id` is type-discriminated rather than a real polymorphic foreign key. Type-guarded accessors reduce phantom matches for `subscription` and `domain`, but database referential integrity remains ambiguous. |
+| Service invoice reference | Admin Invoice CRUD accepts an integer `reference_id` for `service`, but there is no service-specific existence validation, model relation/accessor, foreign-key contract, or documented referential meaning. No current settlement or activation behavior consumes that value. |
+| Gateway transaction identity | `payment_attempts.gateway_transaction_id` has a non-unique index. The current code does not establish a provider-independent uniqueness contract, so the transaction-identity audit does not add a constraint; repeated transaction IDs across attempts require separate identity analysis. |
+| Fixed coupon value/currency | `coupons.discount_value` is still `decimal(10,2)`. For `fixed`, `computeDiscountCents()` multiplies it by 100 and describes it as USD, but checkout can create domain invoices in `USD`, `ILS`, or `JOD`; there is no coupon currency field or FX policy. |
+| Renewal pricing | Renewal may fall back from a renewal price to a registration price and ultimately to a hard-coded amount; this is weaker than the strict registration quote contract. |
+| Registrar failure logging | In the exception handler around registration claim creation, the log context references `$domain` before that local variable is assigned, which may obscure the original failure. |
+| Legacy code comments | Several PHP docblocks still describe earlier phases (for example old payment-phase wording) even though executable code implements the newer flow. This document follows executable code and migrations. |
+
+The following former debt statements are no longer accurate and are intentionally absent: missing payment/webhook infrastructure, lack of payment/checkout idempotency, first-domain-only provisioning, registrar calls inside financial transactions, automatic WHM username retries, and lack of scheduled renewal invoice creation.
+
+## Operational Commands
+
+```text
+php artisan domains:process-auto-renewals --dry-run
+php artisan domains:process-auto-renewals
+php artisan domains:reconcile-provisioning --dry-run
+php artisan domains:reconcile-provisioning --apply
+php artisan payments:review-duplicate-charges
 ```
-1. Admin bulk-terminate action OR individual terminate button
-2. TerminateSubscriptionOnProvider job dispatched (3 retries)
-3. WHM removeacct called
-4. Subscription.status = cancelled
-```
 
-### Suspend / Unsuspend
+Use reconciliation before making any decision about an `indeterminate` registrar attempt or an `unknown` WHM outcome. Neither state is proof that the external request failed.
 
-```
-1. Admin action in SubscriptionController
-2. Direct WHM calls: suspendacct / unsuspendacct
-3. Subscription.status updated to suspended / active
-```
+`payments:review-duplicate-charges` is a manual, read-only report for non-winning attempts that have verified external success evidence. Its detector is exactly: `payment_attempts.gateway_succeeded_at IS NOT NULL`, `payment_attempts.settled_at IS NULL`, a related paid invoice with a non-null winning `payment_attempt_id`, and a winning attempt different from the reported attempt. The default mode reads only the database, makes no gateway call, and performs no refund, settlement, or other mutation. Filters are available through `--attempt=`, `--invoice=`, `--limit=` (default 50), and `--older-than=` in minutes based on `gateway_succeeded_at`.
 
----
+The report conservatively classifies rows as `potential_duplicate_charge`, `shared_transaction_id`, `distinct_transaction_ids`, `inconsistent_settlement_state`, or `already_refunded`; none of these labels automatically establishes a double charge. It also reports whether the same gateway and transaction ID occur on another attempt. A shared transaction ID is specifically a warning that both attempts carry the same external identifier, not proof of two charges. Refunded additional attempts remain visible for audit.
 
-## Technical Debt
+Passing `--verify-gateway` permits only a read-only `getTransaction()` lookup when the additional attempt has a transaction ID. The gateway class is resolved from the name stored on that historical attempt; when its constructor requires database configuration, the row with the matching unique `payment_gateways.driver` is used even if inactive. Resolution never falls back to the current default or active gateway. A null transaction ID is reported as `unavailable_no_transaction_id` without an API call.
 
-| ID | Location | Issue | Priority |
-|----|----------|-------|----------|
-| TD-1 | `subscriptions.price decimal(10,2)` | Money stored as float, not integer cents. Violates the project money-storage rule. Must be migrated to `price_cents integer`. | High |
-| TD-2 | `coupons.discount_value decimal(10,2)` | Same violation. `fixed` type discounts should be stored as `discount_value_cents integer`. | Medium |
-| TD-3 | `InvoiceController::calculateTotals()` | `$discount = 0` — coupon application is not wired in. The coupon model, pivot table, and subscriptions relationship all exist but nothing reads them. | High |
-| TD-4 | `OrderActivationService` Path B fallback | When no subscription `reference_id` is in invoice items, the code treats the first invoice item's `reference_id` as a `Template` ID and creates a new Subscription from it. This is confusing (same column, different entity) and error-prone. | Medium |
-| TD-5 | All payment flows | `'mock_gateway'` is hardcoded everywhere. No real payment gateway exists. Any authenticated client can checkout without providing real payment. | Critical (pre-production) |
-| TD-6 | `SubscriptionSyncService::sync()` | cPanel password for WHM account is generated via `Str::random(14) . '!A9'` if not set on subscription, but is never persisted back to the subscription record. Password is effectively lost after WHM account creation. | High |
-| TD-7 | `OrderActivationService` Path B | `reference_id` is used for both Subscription IDs (Path A) and Template IDs (Path B). This dual-use of the same column in the same `item_type = 'subscription'` items makes the code ambiguous. Path B was likely temporary scaffolding. | Medium |
+`verified_succeeded` requires more than a successful provider status. The returned transaction identifier must equal the attempt's stored `gateway_transaction_id`; its non-null cent amount must equal both `payment_attempts.gateway_amount_cents` and the related invoice's `total_cents`; and its non-null currency, normalized with `trim()` and uppercase as in webhook reconciliation, must equal both stored currencies. Known discrepancies are reported as `transaction_identity_mismatch`, `amount_mismatch`, `currency_mismatch`, or `amount_currency_mismatch`. A missing transaction amount or currency is `indeterminate`, because absence is not proof of a mismatch. These results are diagnostic only and are never written back to the invoice, attempt, order, or gateway; the command performs no refund, settlement, or auto-fix.
 
----
+### Duplicate-charge operational review history
 
-## Future Improvements
+Detection, operational review, and refund are separate contracts. Detection remains the financial predicate documented above and does not disappear after a human review. Operational decisions are stored per additional `PaymentAttempt` in `payment_duplicate_charge_reviews`; no review fields are stored on the attempt or invoice. Refund is not implemented by this history layer.
 
-These are evident from the code structure (not speculative roadmap items):
+Review history is append-only. `unreviewed` is not a stored status: it means the candidate has no history rows. Each new decision inserts a row with the reviewer, review time, safe financial-evidence snapshot, detector classification, and optional pre-existing verification snapshot. The current review is the row ordered first by `reviewed_at DESC`, then `id DESC`. Concurrent inserts therefore preserve both decisions without a lost update.
 
-**Payment Gateway** — The architecture is ready for a real gateway. `InvoiceSettlementService::markPaid($invoice, $paymentMethod)` accepts a payment method string. Adding a real gateway means calling `markPaid` with the real gateway identifier after webhook confirmation.
-
-**Coupon Application** — The data model is complete. Only `InvoiceController::calculateTotals()` needs to be updated to read `Coupon.discount_value` and apply it to `discount_cents`.
-
-**Automatic Renewals** — `next_due_date` is tracked per subscription. A scheduled job that queries `subscriptions.next_due_date <= today` and creates renewal invoices would complete the renewal lifecycle.
-
-**ADR-003** — A formal decision record is needed for the integer-cents-only money storage rule, mandating the migration path for TD-1 and TD-2.
-
----
+The stored `review_status` values are `needs_follow_up` and `resolved`; the only resolutions are `confirmed_duplicate` and `not_duplicate`. A follow-up row may have no conclusion or may record `confirmed_duplicate` while operational action remains open. A resolved row must have a conclusion. `confirmed_duplicate` is an audit conclusion and never triggers a refund. `not_duplicate` does not erase `gateway_succeeded_at` or other gateway evidence. A refunded attempt remains a separate financial fact derived from `PaymentAttempt.status` or `refunded_at`; `already_refunded` is not a review resolution.
 
 ## Related Documents
 
-| Document | What it covers |
-|----------|---------------|
-| [03-database-architecture.md](03-database-architecture.md) | Full schema, indexes, FK cascade rules |
-| [24-security-notes.md](24-security-notes.md) | WHM credential risks, auth model, policy system |
-| [01-system-architecture.md](01-system-architecture.md) | Service layer design, queue configuration |
-| [adr/001-page-section-as-source-of-truth.md](adr/001-page-section-as-source-of-truth.md) | ADR-001: Page+Section as tenant content model |
+- [Project Overview](00-project-overview.md)
+- [System Architecture](01-system-architecture.md)
+- [Database Architecture](03-database-architecture.md)
+- [Developer Guide](21-developer-guide.md)
+- [Coding Standards](22-coding-standards.md)
+- [Security Notes](24-security-notes.md)

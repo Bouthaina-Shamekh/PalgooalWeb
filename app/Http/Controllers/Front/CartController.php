@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Front;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order;
+use App\Services\Domains\DomainPricingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class CartController extends Controller
 {
@@ -89,8 +89,18 @@ class CartController extends Controller
      */
     public function store(Request $request)
     {
+        $unsupportedActionMessage = t(
+            'site.Domain_Item_Option_Unsupported',
+            'نوع عملية الدومين غير مدعوم في هذا المسار.'
+        );
+
         $request->validate([
-            'items' => 'required|array|min:1',
+            'items'               => 'required|array|min:1',
+            'items.*.item_option' => ['required', 'string', Rule::in(['register'])],
+        ], [
+            'items.*.item_option.required' => $unsupportedActionMessage,
+            'items.*.item_option.string'   => $unsupportedActionMessage,
+            'items.*.item_option.in'       => $unsupportedActionMessage,
         ]);
 
         // عناصر مرسلة من الواجهة
@@ -105,25 +115,88 @@ class CartController extends Controller
             return false;
         }));
 
-        // طبّع العناصر الواردة
-        $incoming = array_map(function ($it) {
-            return [
-                'domain'      => isset($it['domain']) ? strtolower(trim($it['domain'])) : null,
-                'item_option' => $it['item_option'] ?? $it['option'] ?? null,
-                'price_cents' => isset($it['price_cents']) ? (int) $it['price_cents'] : 0,
-                'meta'        => $it['meta'] ?? null,
-            ];
-        }, $raw);
+        if (empty($raw)) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'لا توجد عناصر دومين صالحة في الطلب.',
+            ], 422);
+        }
 
-        // حمّل من السيشن وطبّعه أيضًا (لمرات سابقة)
+        // ADR — تسعير موثوق: price_cents القادم من المتصفح لا يُعتمَد كمصدر مالي إطلاقاً.
+        // كل دومين يُعاد تسعيره هنا من DomainPricingService (domain_tld_prices)؛ فشل تسعير أي عنصر يوقف الدفعة كاملة (لا سلة جزئية).
+        $pricing = app(DomainPricingService::class);
+
+        $incoming = [];
+        foreach ($raw as $it) {
+            $domain = isset($it['domain']) ? strtolower(trim((string) $it['domain'])) : null;
+            $clientPriceCents = isset($it['price_cents']) ? (int) $it['price_cents'] : null;
+
+            if (!$domain) {
+                return response()->json([
+                    'ok'      => false,
+                    'message' => 'تعذر تحديد سعر هذا الدومين حالياً.',
+                ], 422);
+            }
+
+            $quote = $pricing->registrationQuoteForDomain($domain);
+
+            if ($quote === null) {
+                Log::warning('Cart store: no trusted registration price for domain', [
+                    'domain'                       => $domain,
+                    'client_submitted_price_cents' => $clientPriceCents,
+                ]);
+
+                return response()->json([
+                    'ok'      => false,
+                    'message' => 'تعذر تحديد سعر هذا الدومين حالياً.',
+                ], 422);
+            }
+
+            // تسجيل تشخيصي فقط عند اختلاف ما أرسله المتصفح عن السعر الموثوق — لا يُستخدم مالياً بأي شكل
+            if ($clientPriceCents !== null && $clientPriceCents !== $quote['price_cents']) {
+                Log::info('Cart store: client-submitted price_cents ignored (differs from trusted catalog price)', [
+                    'domain'                       => $domain,
+                    'client_submitted_price_cents' => $clientPriceCents,
+                    'trusted_price_cents'          => $quote['price_cents'],
+                ]);
+            }
+
+            $incoming[] = [
+                'domain'        => $domain,
+                'item_option'   => 'register',
+                'price_cents'   => $quote['price_cents'],
+                'price'         => $quote['price'],
+                'currency'      => $quote['currency'],
+                'provider_id'   => $quote['provider_id'],
+                'provider_type' => $quote['provider_type'],
+                'provider_mode' => $quote['provider_mode'],
+                'domain_tld_id' => $quote['domain_tld_id'],
+                'meta'          => array_merge(is_array($it['meta'] ?? null) ? $it['meta'] : [], [
+                    'provider_id' => $quote['provider_id'],
+                    'provider_type' => $quote['provider_type'],
+                    'provider_mode' => $quote['provider_mode'],
+                    'domain_tld_id' => $quote['domain_tld_id'],
+                    'currency' => $quote['currency'],
+                    'years' => 1,
+                ]),
+            ];
+        }
+
+        // حمّل من السيشن وطبّعه أيضًا (لمرات سابقة — عناصر موثوقة بالفعل من نفس هذا المسار)
         $existingRaw = session('palgoals_cart_domains', []);
         $existingRaw = is_array($existingRaw) ? $existingRaw : [];
         $existing = array_map(function ($it) {
             return [
-                'domain'      => isset($it['domain']) ? strtolower(trim($it['domain'])) : null,
-                'item_option' => $it['item_option'] ?? $it['option'] ?? null,
-                'price_cents' => isset($it['price_cents']) ? (int) $it['price_cents'] : 0,
-                'meta'        => $it['meta'] ?? null,
+                'domain'        => isset($it['domain']) ? strtolower(trim($it['domain'])) : null,
+                'item_option'   => $it['item_option'] ?? $it['option'] ?? null,
+                'price_cents'   => isset($it['price_cents']) ? (int) $it['price_cents'] : 0,
+                'price'         => $it['price'] ?? null,
+                'currency'      => $it['currency'] ?? null,
+                'provider_id'   => $it['provider_id'] ?? null,
+                'provider_type' => $it['provider_type'] ?? null,
+                'provider_mode' => $it['provider_mode'] ?? null,
+                'domain_tld_id' => $it['domain_tld_id'] ?? null,
+                'meta'          => $it['meta'] ?? null,
             ];
         }, $existingRaw);
 
@@ -140,17 +213,22 @@ class CartController extends Controller
         // أزل تكرار العناصر الواردة مع مراعاة الموجود سابقًا
         [$incomingUnique, $dups] = $this->dedupeItems($incoming, $existingDomains);
 
-        // تحقق بعد التطبيع
+        // تحقق بعد التطبيع — price_cents الآن مطلوب وموجب دائماً (مصدره الخدمة الموثوقة فقط)
         $v = Validator::make(['items' => array_merge($existingUnique, $incomingUnique)], [
             'items'               => 'required|array|min:1',
             'items.*.domain'      => 'required|string|min:1|distinct',
-            'items.*.item_option' => 'required|string|min:1',
-            'items.*.price_cents' => 'nullable|integer|min:0',
+            'items.*.item_option' => ['required', 'string', Rule::in(['register'])],
+            'items.*.price_cents' => 'required|integer|min:1',
+        ], [
+            'items.*.item_option.required' => $unsupportedActionMessage,
+            'items.*.item_option.string'   => $unsupportedActionMessage,
+            'items.*.item_option.in'       => $unsupportedActionMessage,
         ]);
         if ($v->fails()) {
             return response()->json([
                 'ok'      => false,
-                'message' => 'بيانات السلة غير صالحة.',
+                'message' => $v->errors()->first('items.*.item_option')
+                    ?: 'بيانات السلة غير صالحة.',
                 'errors'  => $v->errors(),
             ], 422);
         }
@@ -177,101 +255,5 @@ class CartController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    /**
-     * Process domain-only checkout using session-stored (or body-sent) cart
-     */
-    public function processDomains(Request $request)
-    {
-        $raw = $request->input('items', session('palgoals_cart_domains', []));
-        if (empty($raw) || !is_array($raw)) {
-            return response()->json(['ok' => false, 'message' => 'السلة فارغة.'], 422);
-        }
-
-        // فلترة غير الدومينات (أمان إضافي)
-        $raw = array_values(array_filter($raw, function ($it) {
-            if (isset($it['domain']) && trim((string)$it['domain']) !== '') return true;
-            if (isset($it['kind']) && $it['kind'] === 'domain') return true;
-            return false;
-        }));
-
-        // طبّع العناصر
-        $items = array_map(function ($it) {
-            return [
-                'domain'      => isset($it['domain']) ? strtolower(trim($it['domain'])) : null,
-                'item_option' => $it['item_option'] ?? $it['option'] ?? null,
-                'price_cents' => isset($it['price_cents']) ? (int) $it['price_cents'] : 0,
-                'meta'        => $it['meta'] ?? null,
-            ];
-        }, $raw);
-
-        // أزل التكرار داخل الطلب نفسه (حتى لو الفرونت كرّر)
-        [$uniqueItems, $dups] = $this->dedupeItems($items, []);
-        if (empty($uniqueItems)) {
-            return response()->json(['ok' => false, 'message' => 'السلة فارغة بعد إزالة العناصر المكررة.'], 422);
-        }
-
-        // تحقق سريع
-        $v = Validator::make(['items' => $uniqueItems], [
-            'items'               => 'required|array|min:1',
-            'items.*.domain'      => 'required|string|min:1|distinct',
-            'items.*.item_option' => 'required|string|min:1',
-            'items.*.price_cents' => 'nullable|integer|min:0',
-        ]);
-        if ($v->fails()) {
-            return response()->json([
-                'ok'      => false,
-                'message' => 'بيانات السلة غير صالحة.',
-                'errors'  => $v->errors(),
-            ], 422);
-        }
-
-        $total = array_reduce($uniqueItems, fn($carry, $it) => $carry + ((int) ($it['price_cents'] ?? 0)), 0);
-
-        try {
-            $order = DB::transaction(function () use ($uniqueItems) {
-                // ملاحظة: يُفترض أن order_number يتولَّد تلقائيًا في موديل Order (booted())
-                $order = Order::create([
-                    'client_id' => auth('client')->check() ? auth('client')->id() : null,
-                    'status'    => 'pending',
-                    'type'      => 'domain_only',
-                    'notes'     => 'الحجز من السلة المؤقتة',
-                ]);
-
-                // حمولة البنود
-                $payload = array_map(function ($it) {
-                    return [
-                        'domain'      => $it['domain'],
-                        'item_option' => $it['item_option'],
-                        'price_cents' => (int) ($it['price_cents'] ?? 0),
-                        'meta'        => $it['meta'] ?? null,
-                    ];
-                }, $uniqueItems);
-
-                // إنشاء البنود
-                $order->items()->createMany($payload);
-
-                return $order;
-            });
-        } catch (\Throwable $e) {
-            Log::error('CartController::processDomains transaction failed', ['error' => $e->getMessage()]);
-            return response()->json(['ok' => false, 'message' => 'تعذر إنشاء الطلب. حاول لاحقًا.'], 500);
-        }
-
-        // خزّن مرجعًا في الجلسة لاستهلاكه لاحقًا في /checkout/cart
-        session([
-            'palgoals_reserved'      => $uniqueItems,
-            'palgoals_last_order_id' => $order->id,
-            'palgoals_cart_domains'  => $uniqueItems, // تستخدمها CheckoutController@cart لتمرير العناصر للعرض
-        ]);
-
-        return response()->json([
-            'ok'                  => true,
-            'message'             => 'تم حجز الدومينات وإنشاء طلب مؤقت.',
-            'order_no'            => $order->order_number,
-            'order_id'            => $order->id,
-            'total_cents'         => $total,
-            'skipped_duplicates'  => $dups, // دومينات كانت مكررة وتم تجاهلها
-        ]);
-    }
 }
 

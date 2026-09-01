@@ -55,6 +55,8 @@ class InvoiceSettlementService
                 return;
             }
 
+            $this->assertPaymentSessionOwnsSettlement($lockedInvoice, $paymentAttempt);
+
             // ── Settle the invoice ────────────────────────────────────────
             $invoiceUpdate = [
                 'status'    => 'paid',
@@ -64,6 +66,13 @@ class InvoiceSettlementService
             // ADR-007 Phase 2 — Link the winning PaymentAttempt to the invoice
             if ($paymentAttempt !== null) {
                 $invoiceUpdate['payment_attempt_id'] = $paymentAttempt->id;
+            }
+
+            if (in_array($lockedInvoice->payment_session_status, [
+                Invoice::PAYMENT_SESSION_CREATING,
+                Invoice::PAYMENT_SESSION_READY,
+            ], true)) {
+                $invoiceUpdate['payment_session_status'] = Invoice::PAYMENT_SESSION_READY;
             }
 
             $lockedInvoice->update($invoiceUpdate);
@@ -138,6 +147,44 @@ class InvoiceSettlementService
 
             $this->syncStandaloneInvoiceDomain($lockedInvoice, $paymentMethod);
         });
+    }
+
+    /**
+     * A hosted-payment claim may only be settled by its linked PaymentAttempt.
+     * Legacy settlement without PaymentAttempt remains valid only while the invoice is idle.
+     */
+    protected function assertPaymentSessionOwnsSettlement(
+        Invoice $invoice,
+        ?PaymentAttempt $paymentAttempt,
+    ): void {
+        $sessionStatus = $invoice->payment_session_status ?: Invoice::PAYMENT_SESSION_IDLE;
+
+        if ($sessionStatus === Invoice::PAYMENT_SESSION_IDLE) {
+            if ($paymentAttempt !== null) {
+                throw new \RuntimeException('Payment attempt does not own an active invoice session claim.');
+            }
+
+            return;
+        }
+
+        if (!in_array($sessionStatus, [
+            Invoice::PAYMENT_SESSION_CREATING,
+            Invoice::PAYMENT_SESSION_READY,
+        ], true)) {
+            throw new \RuntimeException('Unsupported invoice payment session state.');
+        }
+
+        if ($paymentAttempt === null
+            || (int) $paymentAttempt->id !== (int) $invoice->payment_session_attempt_id
+        ) {
+            throw new \RuntimeException('Payment attempt does not own the invoice session claim.');
+        }
+
+        if ((int) $paymentAttempt->gateway_amount_cents !== (int) $invoice->total_cents
+            || (string) $paymentAttempt->currency !== (string) $invoice->currency
+        ) {
+            throw new \RuntimeException('Payment attempt amount or currency does not match invoice.');
+        }
     }
 
     protected function syncStandaloneInvoiceDomain(Invoice $invoice, ?string $paymentMethod = null): void

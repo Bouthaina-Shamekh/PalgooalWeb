@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * PaymentAttempt — audit record for every payment gateway interaction.
@@ -28,6 +30,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null                     $gateway_status_raw
  * @property array|null                      $gateway_response
  * @property \Illuminate\Support\Carbon|null $webhook_verified_at
+ * @property \Illuminate\Support\Carbon|null $gateway_succeeded_at
  * @property \Illuminate\Support\Carbon|null $settled_at
  * @property \Illuminate\Support\Carbon|null $refunded_at
  * @property int|null                        $refund_amount_cents
@@ -72,6 +75,7 @@ class PaymentAttempt extends Model
         'gateway_status_raw',
         'gateway_response',
         'webhook_verified_at',
+        'gateway_succeeded_at',
         'settled_at',
         'refunded_at',
         'refund_amount_cents',
@@ -82,6 +86,7 @@ class PaymentAttempt extends Model
         'gateway_amount_cents'  => 'integer',
         'refund_amount_cents'   => 'integer',
         'webhook_verified_at'   => 'datetime',
+        'gateway_succeeded_at'  => 'datetime',
         'settled_at'            => 'datetime',
         'refunded_at'           => 'datetime',
     ];
@@ -103,6 +108,19 @@ class PaymentAttempt extends Model
         return $this->belongsTo(Client::class);
     }
 
+    public function duplicateChargeReviews(): HasMany
+    {
+        return $this->hasMany(PaymentDuplicateChargeReview::class);
+    }
+
+    public function currentDuplicateChargeReview(): HasOne
+    {
+        return $this->hasOne(PaymentDuplicateChargeReview::class)->ofMany([
+            'reviewed_at' => 'max',
+            'id' => 'max',
+        ]);
+    }
+
     // ── Status helpers ────────────────────────────────────────────────────
 
     public function isSucceeded(): bool
@@ -118,6 +136,20 @@ class PaymentAttempt extends Model
     public function isSettled(): bool
     {
         return $this->settled_at !== null;
+    }
+
+    public function hasVerifiedGatewaySuccess(): bool
+    {
+        return $this->gateway_succeeded_at !== null;
+    }
+
+    /** Financially terminal against stale success/failure webhook delivery. */
+    public function isWebhookTerminal(): bool
+    {
+        return in_array($this->status, [
+            self::STATUS_SUCCEEDED,
+            self::STATUS_REFUNDED,
+        ], true);
     }
 
     // ── Scopes ────────────────────────────────────────────────────────────

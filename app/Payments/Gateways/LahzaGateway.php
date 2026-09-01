@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Log;
  * Lahza is a Palestinian payment gateway operated by Bank of Palestine.
  * Supported currencies: ILS, JOD, USD.
  * Checkout model: hosted redirect (client is redirected to Lahza's hosted page).
- * Webhook signature: HMAC-SHA512 via x-lahza-signature header.
+ * Webhook signature: HMAC-SHA256 via x-lahza-signature header (docs.lahza.io/payments/webhooks).
  *
  * Configuration is read from the `payment_gateways` DB row (driver = 'lahza'),
  * injected by PaymentManager via the service container — keys are decrypted
@@ -130,7 +130,7 @@ class LahzaGateway implements PaymentGatewayInterface
         $payload = [
             'email'        => $invoice->client?->email ?? '',
             'amount'       => $invoice->total_cents,    // authoritative: DB cents
-            'currency'     => strtoupper($invoice->currency ?? 'USD'),
+            'currency'     => (string) $invoice->currency,
             'reference'    => $idempotencyKey,           // our UUID = Lahza reference
             'callback_url' => route('payment.webhook', ['gateway' => self::GATEWAY_NAME]),
             'return_url'   => $returnUrl,
@@ -218,7 +218,7 @@ class LahzaGateway implements PaymentGatewayInterface
      * Verify a Lahza webhook request and return a normalized event.
      *
      * Security invariant:
-     *   1. HMAC-SHA512 is computed over the raw payload bytes.
+     *   1. HMAC-SHA256 is computed over the raw payload bytes.
      *   2. hash_equals() prevents timing attacks.
      *   3. JSON is parsed ONLY AFTER signature verification.
      *
@@ -251,8 +251,8 @@ class LahzaGateway implements PaymentGatewayInterface
             );
         }
 
-        // --- Step 1: Verify HMAC-SHA512 BEFORE parsing JSON ---
-        $expected = hash_hmac('sha512', $rawPayload, $webhookSecret);
+        // --- Step 1: Verify HMAC-SHA256 BEFORE parsing JSON ---
+        $expected = hash_hmac('sha256', $rawPayload, $webhookSecret);
 
         if (! hash_equals($expected, strtolower($signatureHeader))) {
             $this->logError('verifyWebhook: HMAC mismatch', [

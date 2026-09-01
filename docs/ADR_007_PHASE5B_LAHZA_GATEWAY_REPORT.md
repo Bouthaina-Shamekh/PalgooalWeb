@@ -126,7 +126,7 @@ Lahza server                  PaymentWebhookController       LahzaGateway
       │                            │  verifyWebhook(raw, header) │
       │                            │────────────────────────────▶│
       │                            │                             │
-      │                            │  1. HMAC-SHA512(raw, secret)│
+      │                            │  1. HMAC-SHA256(raw, secret)│
       │                            │  2. hash_equals(expected,   │
       │                            │       header)               │
       │                            │  3. If mismatch →           │
@@ -138,7 +138,7 @@ Lahza server                  PaymentWebhookController       LahzaGateway
 
 **Security invariants:**
 
-1. `hash_hmac('sha512', $rawPayload, $webhookSecret)` — computed on raw bytes before any parsing.
+1. `hash_hmac('sha256', $rawPayload, $webhookSecret)` — computed on raw bytes before any parsing. **Corrected in P1-13A2** — the original Phase 5B implementation used SHA512, based on an unsourced assumption; docs.lahza.io/payments/webhooks documents SHA256, corroborated by an independent Lahza integration package. See P1-13A1/P1-13A2 verification reports.
 2. `hash_equals($expected, strtolower($signatureHeader))` — constant-time comparison, prevents timing attacks.
 3. JSON is parsed **only after** signature verification passes.
 4. If `WebhookVerificationException` is thrown, the webhook controller returns HTTP 401 (not 500, which would trigger Lahza retry on a forged request).
@@ -227,7 +227,7 @@ Phase 5B adds only the gateway implementation class. No controller routes to `cr
 | Phase 5C Requirement | Available? |
 |---------------------|------------|
 | `LahzaGateway::createSession()` — returns `PaymentSession{checkoutUrl}` | ✅ Phase 5B |
-| `LahzaGateway::verifyWebhook()` — HMAC-SHA512, returns `WebhookEvent` | ✅ Phase 5B |
+| `LahzaGateway::verifyWebhook()` — HMAC-SHA256, returns `WebhookEvent` | ✅ Phase 5B (algorithm corrected P1-13A2) |
 | `LahzaGateway::getTransaction()` — verify by reference | ✅ Phase 5B |
 | `LahzaGateway::refund()` — issue refund | ✅ Phase 5B |
 | `PaymentGateway` DB row with encrypted keys | ✅ Phase 5A |

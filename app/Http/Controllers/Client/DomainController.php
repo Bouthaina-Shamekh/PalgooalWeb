@@ -11,7 +11,11 @@ use App\Models\DomainTld;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Template;
+use App\Services\Billing\DomainInvoiceItemBuilder;
+use App\Services\Domains\DomainAvailabilityService;
+use App\Services\Domains\DomainPricingService;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -255,7 +259,6 @@ class DomainController extends Controller
 
         $domain = $request->domain;
         $client = Client::findOrFail(Auth::guard('client')->user()->id);
-        $defaultRegistrar = $this->defaultRegistrar();
         $quote = $this->resolveDomainQuote($domain);
 
         // Check if domain is still available
@@ -274,20 +277,29 @@ class DomainController extends Controller
                 ->with('error', 'Domain already exists in your account.');
         }
 
+        // ADR — تسعير موثوق: لا يُعتمَد أي سعر ثابت/افتراضي. المصدر الوحيد الآن هو
+        // DomainPricingService (domain_tld_prices)؛ في حال عدم وجود سعر موثوق تتوقف
+        // العملية هنا قبل أي إنشاء لأي سجل (لا Order ولا Invoice ولا Domain).
+        $trustedQuote = $this->resolveTrustedRegistrationQuote($domain);
+
+        if ($trustedQuote === null) {
+            return redirect()->route('client.domains.search')
+                ->with('error', 'تعذر تحديد سعر هذا الدومين حاليًا.');
+        }
+
         $registrationDate = Carbon::today();
         $renewalDate = (clone $registrationDate)->addYear();
-        $priceCents = $this->resolveQuotePriceCents($quote, $domain);
 
         $domainData = [
             'client_id' => $client->id,
             'domain_name' => $domain,
-            'registrar' => (string) $request->query('registrar', $defaultRegistrar),
+            'registrar' => $trustedQuote['provider_type'],
             'registration_date' => $registrationDate->format('Y-m-d'),
             'renewal_date' => $renewalDate->format('Y-m-d'),
             'status' => 'pending',
             'term_years' => 1,
-            'price_cents' => $priceCents,
-            'currency' => $quote['currency'] ?? 'USD',
+            'price_cents' => $trustedQuote['price_cents'],
+            'currency' => $trustedQuote['currency'],
         ];
 
         return view('client.domains.buy', [
@@ -315,88 +327,170 @@ class DomainController extends Controller
                 ->with('error', 'Unauthorized access.');
         }
 
-        $quote = $this->resolveDomainQuote($request->domain_name);
+        $domainName = $this->normalizePurchaseDomain($request->domain_name);
 
-        // Final availability check
-        if (!($quote['available'] ?? false)) {
+        // ADR — تسعير موثوق: لا يُعتمَد أي سعر ثابت/افتراضي. المصدر الوحيد الآن هو
+        // DomainPricingService (domain_tld_prices)؛ في حال عدم وجود سعر موثوق تتوقف
+        // العملية هنا قبل أي كتابة لقاعدة البيانات (لا Order ولا Invoice ولا order_items).
+        $trustedQuote = $this->resolveTrustedRegistrationQuote($domainName);
+
+        if ($trustedQuote === null) {
             return redirect()->route('client.domains.search')
-                ->with('error', 'Domain is no longer available.');
+                ->with('error', 'تعذر تحديد سعر هذا الدومين حاليًا.');
         }
 
-        $existingDomain = Domain::where('domain_name', $request->domain_name)->first();
+        $provider = DomainProvider::query()
+            ->active()
+            ->whereKey($trustedQuote['provider_id'])
+            ->where('type', $trustedQuote['provider_type'])
+            ->where('mode', $trustedQuote['provider_mode'])
+            ->first();
+
+        if (!$provider instanceof DomainProvider) {
+            return redirect()->route('client.domains.search')
+                ->with('error', 'تعذر استخدام مزوّد الدومين المحدد حاليًا. حاول مرة أخرى لاحقًا.');
+        }
+
+        $quote = $this->resolveDomainQuote($domainName);
+
+        // ADR — إعادة تحقق فعلية للتوفر لدى المزوّد مباشرة قبل الدخول إلى DB::transaction()؛
+        // لا يُعتمَد available من نتيجة بحث سابقة (حتى لو كانت من resolveDomainQuote() أعلاه).
+        // هذه عملية تسجيل جديد دائماً (item_option = register)، لذا تخضع للفحص دائماً.
+        $availMap = app(DomainAvailabilityService::class)
+            ->verifyRegistrationAvailabilityBatch([$domainName], $provider);
+
+        if ($availMap === null) {
+            Log::error('Client domain purchase: provider availability check failed', ['domain' => $domainName]);
+            return redirect()->route('client.domains.search')
+                ->with('error', 'تعذر التحقق من توفر الدومين حاليًا. حاول مرة أخرى لاحقًا.');
+        }
+
+        if (!($availMap[$domainName] ?? false)) {
+            return redirect()->route('client.domains.search')
+                ->with('error', 'الدومين ' . $domainName . ' لم يعد متاحًا للتسجيل.');
+        }
+
+        $checkoutFingerprint = $this->buildClientDomainPurchaseFingerprint(
+            $client->id,
+            $domainName,
+            $trustedQuote
+        );
+        $existingOrder = Order::query()
+            ->where('checkout_fingerprint', $checkoutFingerprint)
+            ->first();
+
+        if ($existingOrder instanceof Order) {
+            return $this->clientDomainPurchaseOrderResponse($existingOrder, $client->id, $domainName);
+        }
+
+        $existingDomain = Domain::where('domain_name', $domainName)->first();
 
         if ($existingDomain) {
             return redirect()->route('client.domains.index')
                 ->with('error', 'Domain already exists in your account.');
         }
 
-        $existingInvoice = $this->findPendingDomainInvoice($client->id, $request->domain_name);
-
-        if ($existingInvoice) {
-            return redirect()->route('client.invoices.checkout', $existingInvoice)
-                ->with('ok', t('client.Domain_Invoice_Exists', 'توجد فاتورة غير مدفوعة لهذا النطاق. تابع عملية الدفع.'));
-        }
-
         try {
-            $registrar = $this->defaultRegistrar();
             $registrationDate = Carbon::today();
             $renewalDate = (clone $registrationDate)->addYear();
-            $priceCents = $this->resolveQuotePriceCents($quote, $request->domain_name);
-            $currency = $quote['currency'] ?? 'USD';
+            $currency = $trustedQuote['currency'];
+            $priceCents = $trustedQuote['price_cents'];
+
+            $invoiceItemBuilder = app(DomainInvoiceItemBuilder::class);
 
             $invoice = DB::transaction(function () use (
                 $client,
-                $request,
-                $registrar,
+                $domainName,
                 $registrationDate,
                 $renewalDate,
                 $priceCents,
                 $currency,
-                $quote
+                $quote,
+                $trustedQuote,
+                $invoiceItemBuilder,
+                $checkoutFingerprint
             ) {
                 $order = Order::create([
                     'client_id' => $client->id,
                     'status' => Order::STATUS_PENDING,
                     'type' => 'domain',
-                    'notes' => 'Domain order for ' . $request->domain_name,
+                    'checkout_fingerprint' => $checkoutFingerprint,
+                    'notes' => 'Domain order for ' . $domainName,
                 ]);
 
-                $order->items()->create([
-                    'domain' => $request->domain_name,
+                $orderItem = $order->items()->create([
+                    'domain' => $domainName,
                     'item_option' => 'register',
                     'price_cents' => $priceCents,
                     'meta' => [
                         'currency' => $currency,
-                        'registrar' => $registrar,
+                        'registrar' => $trustedQuote['provider_type'],
+                        'provider_id' => $trustedQuote['provider_id'],
+                        'provider_type' => $trustedQuote['provider_type'],
+                        'provider_mode' => $trustedQuote['provider_mode'],
+                        'domain_tld_id' => $trustedQuote['domain_tld_id'],
+                        'years' => 1,
                         'registration_date' => $registrationDate->format('Y-m-d'),
                         'renewal_date' => $renewalDate->format('Y-m-d'),
                         'term_years' => 1,
                         'quote' => [
-                            'price' => $quote['price'] ?? null,
+                            'price' => $trustedQuote['price'],
                             'is_premium' => (bool) ($quote['is_premium'] ?? false),
                         ],
                     ],
                 ]);
+
+                // ADR — Phase 2: توحيد InvoiceItems لفواتير الدومينات. نستبدل الإنشاء اليدوي
+                // لبند الفاتورة بنفس DomainInvoiceItemBuilder المستخدم في CheckoutController،
+                // ونشتق subtotal_cents من خصائص البند المُجهَّزة (مبنية من price_cents الموثوق
+                // لنفس OrderItem أعلاه) بدلاً من الاعتماد المباشر على متغيّر $priceCents.
+                $invoiceItemAttributes = $invoiceItemBuilder->buildAttributesForItems(collect([$orderItem]));
+
+                if ($invoiceItemAttributes->isEmpty()) {
+                    throw new \RuntimeException('تعذّر تجهيز بند الفاتورة لهذا الدومين.');
+                }
+
+                if ($invoiceItemAttributes->count() !== 1) {
+                    throw new \RuntimeException('عدد بنود الفاتورة المُجهَّزة لا يطابق عنصر الطلب (order_items).');
+                }
+
+                $subtotalCents = (int) $invoiceItemAttributes->sum('total_cents');
+                // لا كوبون ولا ضريبة في هذا المسار حالياً (نفس السياسة المالية السابقة تمامًا:
+                // subtotal_cents === total_cents) — فقط أصبح subtotal مشتقًا من بند الفاتورة
+                // نفسه بدلاً من $priceCents مباشرة.
+                $discountCents = 0;
+                $taxCents = 0;
+                $totalCents = max(0, $subtotalCents - $discountCents + $taxCents);
 
                 $invoice = Invoice::create([
                     'client_id' => $client->id,
                     'order_id' => $order->id,
                     'number' => $this->generateUniqueInvoiceNumber(),
                     'status' => 'unpaid',
-                    'subtotal_cents' => $priceCents,
-                    'total_cents' => $priceCents,
+                    'subtotal_cents' => $subtotalCents,
+                    'discount_cents' => $discountCents,
+                    'tax_cents' => $taxCents,
+                    'total_cents' => $totalCents,
                     'currency' => $currency,
                     'due_date' => now()->addDays(7),
                 ]);
 
-                $invoice->items()->create([
-                    'item_type' => 'domain',
-                    'reference_id' => null,
-                    'description' => 'Domain Registration: ' . $request->domain_name,
-                    'qty' => 1,
-                    'unit_price_cents' => $priceCents,
-                    'total_cents' => $priceCents,
-                ]);
+                $createdInvoiceItems = $invoiceItemBuilder->persistItems($invoice, $invoiceItemAttributes);
+
+                // تحقق صريح بعد الإنشاء — لا اعتماد على افتراض تطابق المصادر:
+                if ($createdInvoiceItems->count() !== 1) {
+                    throw new \RuntimeException('لم يتم إنشاء بند الفاتورة فعليًا بشكل صحيح.');
+                }
+
+                $persistedItemsTotal = (int) $createdInvoiceItems->sum('total_cents');
+                if ($persistedItemsTotal !== (int) $invoice->subtotal_cents) {
+                    throw new \RuntimeException('مجموع بند الفاتورة المُنشأ لا يطابق subtotal_cents الخاص بالفاتورة.');
+                }
+
+                $expectedTotalCents = max(0, (int) $invoice->subtotal_cents - (int) $invoice->discount_cents + (int) $invoice->tax_cents);
+                if ((int) $invoice->total_cents !== $expectedTotalCents) {
+                    throw new \RuntimeException('total_cents الخاص بالفاتورة لا يطابق subtotal - discount + tax وفق السياسة الحالية.');
+                }
 
                 return $invoice;
             });
@@ -404,10 +498,30 @@ class DomainController extends Controller
             return redirect()->route('client.invoices.checkout', $invoice)
                 ->with('ok', t('client.Domain_Order_Created', 'تم إنشاء طلبك بنجاح. تابع إلى صفحة الدفع.'));
 
+        } catch (QueryException $e) {
+            if ($this->isClientDomainPurchaseFingerprintCollision($e)) {
+                $winningOrder = Order::query()
+                    ->where('checkout_fingerprint', $checkoutFingerprint)
+                    ->first();
+
+                if ($winningOrder instanceof Order) {
+                    return $this->clientDomainPurchaseOrderResponse($winningOrder, $client->id, $domainName);
+                }
+            }
+
+            Log::error('Domain purchase checkout creation failed', [
+                'client_id' => $client->id,
+                'domain' => $domainName,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->back()
+                ->with('error', 'Failed to create the order. Please try again.')
+                ->withInput();
         } catch (\Throwable $e) {
             Log::error('Domain purchase checkout creation failed', [
                 'client_id' => $client->id,
-                'domain' => $request->domain_name,
+                'domain' => $domainName,
                 'error' => $e->getMessage(),
             ]);
 
@@ -581,47 +695,126 @@ class DomainController extends Controller
             ]);
         }
 
-        if ($quote['price'] === null) {
-            $catalog = $this->buildSearchCatalog();
-            $extension = ltrim(strtolower((string) pathinfo($domain, PATHINFO_EXTENSION)), '.');
-
-            if ($extension !== '' && isset($catalog['fallback_prices'][$extension])) {
-                $quote['price'] = (float) $catalog['fallback_prices'][$extension];
-            }
-        }
-
+        // ADR — لا يُستخدم أي سعر بديل/ثابت هنا. إن لم يُرجع فحص التوفر سعرًا حقيقيًا،
+        // يبقى $quote['price'] = null، ويُترك تحديد السعر الموثوق النهائي حصريًا لـ
+        // resolveTrustedRegistrationQuote() عبر DomainPricingService (domain_tld_prices).
         return $quote;
     }
 
-    protected function resolveQuotePriceCents(array $quote, string $domain): int
+    /**
+     * عرض السعر الموثوق الكامل لتسجيل دومين، ويتضمن هوية المزوّد المختار.
+     * لا يوجد أي سعر أو مزوّد افتراضي هنا؛ يُعاد null إن لم يوجد Quote موثوق،
+     * وعندها يجب على المستدعي إيقاف العملية بالكامل قبل أي كتابة لقاعدة البيانات.
+     */
+    protected function resolveTrustedRegistrationQuote(string $domain): ?array
     {
-        if (is_numeric($quote['price'] ?? null)) {
-            return (int) round(((float) $quote['price']) * 100);
-        }
-
-        $extension = ltrim(strtolower((string) pathinfo($domain, PATHINFO_EXTENSION)), '.');
-        $catalog = $this->buildSearchCatalog();
-        $price = $catalog['fallback_prices'][$extension] ?? 10;
-
-        return (int) round(((float) $price) * 100);
+        return app(DomainPricingService::class)->registrationQuoteForDomain($domain);
     }
 
-    protected function findPendingDomainInvoice(int $clientId, string $domain): ?Invoice
+    protected function normalizePurchaseDomain(string $domain): string
     {
-        return Invoice::query()
+        $domain = strtolower(trim(rtrim($domain, '.')));
+
+        if (function_exists('idn_to_ascii')) {
+            $ascii = @idn_to_ascii($domain, IDNA_DEFAULT, INTL_IDNA_VARIANT_UTS46);
+            if ($ascii) {
+                $domain = strtolower($ascii);
+            }
+        }
+
+        return $domain;
+    }
+
+    protected function buildClientDomainPurchaseFingerprint(int $clientId, string $domain, array $quote): string
+    {
+        $payload = [
+            'namespace' => 'client-domain-purchase',
+            'client_id' => $clientId,
+            'domain' => $domain,
+            'item_option' => 'register',
+            'years' => 1,
+            'price_cents' => (int) $quote['price_cents'],
+            'currency' => strtoupper(trim((string) $quote['currency'])),
+            'provider_id' => (int) $quote['provider_id'],
+            'provider_type' => strtolower(trim((string) $quote['provider_type'])),
+            'provider_mode' => strtolower(trim((string) $quote['provider_mode'])),
+            'domain_tld_id' => (int) $quote['domain_tld_id'],
+        ];
+
+        return hash('sha256', 'client-domain-purchase|' . json_encode($payload, JSON_UNESCAPED_UNICODE));
+    }
+
+    protected function clientDomainPurchaseOrderResponse(Order $order, int $clientId, string $domain)
+    {
+        $invoice = $this->completedClientDomainPurchaseInvoice($order, $clientId, $domain);
+
+        if (!$invoice instanceof Invoice) {
+            Log::error('Client domain purchase fingerprint matched an incomplete order.', [
+                'order_id' => $order->getKey(),
+                'client_id' => $clientId,
+                'domain' => $domain,
+            ]);
+
+            return redirect()->back()->with('error', t(
+                'client.Domain_Purchase_Incomplete_Order',
+                'تعذر استعادة طلب الدومين السابق لأنه غير مكتمل. يرجى التواصل مع الدعم الفني.'
+            ));
+        }
+
+        if ($invoice->status === 'paid') {
+            return redirect()->route('client.invoices.checkout', [
+                'invoice' => $invoice,
+                'state' => 'paid',
+            ])->with('ok', t('client.Domain_Invoice_Already_Paid', 'تم دفع فاتورة هذا الطلب مسبقًا.'));
+        }
+
+        if (in_array($invoice->status, ['draft', 'unpaid'], true)) {
+            return redirect()->route('client.invoices.checkout', $invoice)
+                ->with('ok', t('client.Domain_Invoice_Exists', 'توجد فاتورة غير مدفوعة لهذا النطاق. تابع عملية الدفع.'));
+        }
+
+        return redirect()->route('client.invoices.checkout', [
+            'invoice' => $invoice,
+            'state' => strtolower((string) $invoice->status),
+        ])->with('error', t(
+            'client.Domain_Invoice_Not_Payable',
+            'فاتورة طلب الدومين السابق غير قابلة للدفع بحالتها الحالية.'
+        ));
+    }
+
+    protected function completedClientDomainPurchaseInvoice(Order $order, int $clientId, string $domain): ?Invoice
+    {
+        if ((int) $order->client_id !== $clientId || $order->type !== 'domain') {
+            return null;
+        }
+
+        if (!$order->items()
+            ->where('domain', $domain)
+            ->where('item_option', 'register')
+            ->exists()
+        ) {
+            return null;
+        }
+
+        $invoice = $order->invoices()
             ->where('client_id', $clientId)
-            ->where('status', 'unpaid')
-            ->where(function ($query) use ($domain) {
-                $query->whereHas('order.items', function ($orderItems) use ($domain) {
-                    $orderItems->where('domain', $domain)
-                        ->where('item_option', 'register');
-                })->orWhereHas('items', function ($items) use ($domain) {
-                    $items->where('item_type', 'domain')
-                        ->where('description', 'like', '%' . $domain . '%');
-                });
-            })
             ->latest('id')
             ->first();
+
+        if (!$invoice instanceof Invoice || !$invoice->items()->exists()) {
+            return null;
+        }
+
+        return $invoice;
+    }
+
+    protected function isClientDomainPurchaseFingerprintCollision(QueryException $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+
+        return str_contains($message, '23000')
+            && (str_contains($message, 'orders_checkout_fingerprint_unique')
+                || str_contains($message, 'checkout_fingerprint'));
     }
 
     protected function generateUniqueInvoiceNumber(): string

@@ -12,10 +12,18 @@ class Invoice extends Model
 {
     use SoftDeletes;
 
+    public const PAYMENT_SESSION_IDLE = 'idle';
+
+    public const PAYMENT_SESSION_CREATING = 'creating';
+
+    public const PAYMENT_SESSION_READY = 'ready';
+
     protected $fillable = [
         'client_id',
         'order_id',
         'payment_attempt_id',
+        'payment_session_attempt_id',
+        'payment_session_status',
         'coupon_id',          // ADR-008 Phase 1
         'number',
         'status',
@@ -60,6 +68,12 @@ class Invoice extends Model
     public function paymentAttempt(): BelongsTo
     {
         return $this->belongsTo(PaymentAttempt::class);
+    }
+
+    /** The PaymentAttempt that owns the current hosted-session claim. */
+    public function paymentSessionAttempt(): BelongsTo
+    {
+        return $this->belongsTo(PaymentAttempt::class, 'payment_session_attempt_id');
     }
 
     /**

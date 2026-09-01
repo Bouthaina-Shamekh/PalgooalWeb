@@ -25,6 +25,7 @@ class Subscription extends Model
     public const PROVISIONING_IN_PROGRESS = 'provisioning';
     public const PROVISIONING_ACTIVE = 'active';
     public const PROVISIONING_FAILED = 'failed';
+    public const PROVISIONING_UNKNOWN = 'unknown';
 
     public const DOMAIN_VERIFICATION_PENDING = 'pending';
     public const DOMAIN_VERIFICATION_DNS_PENDING = 'dns_pending';

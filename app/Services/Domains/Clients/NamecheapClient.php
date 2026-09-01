@@ -141,6 +141,9 @@ class NamecheapClient
                 'ok'      => false,
                 'reason'  => 'provider_error',
                 'message' => $errMsg,
+                'code'    => isset($errNode?->attributes()['Number'])
+                    ? (string) $errNode->attributes()['Number']
+                    : null,
                 'xml'     => $xml,
             ];
         }
@@ -277,6 +280,93 @@ class NamecheapClient
         ]);
     }
 
+    /** Read-only ownership evidence from namecheap.domains.getInfo. */
+    public function getDomainInfo(string $fqdn): array
+    {
+        $fqdn = strtolower(trim($fqdn));
+        if ($fqdn === '' || !str_contains($fqdn, '.')) {
+            return [
+                'ok' => false,
+                'reason' => 'invalid_domain',
+                'message' => 'Invalid domain name for namecheap.domains.getInfo.',
+            ];
+        }
+
+        $response = $this->callGeneric('namecheap.domains.getInfo', [
+            'DomainName' => $fqdn,
+        ]);
+
+        if (!($response['ok'] ?? false)) {
+            if (in_array((string) ($response['code'] ?? ''), ['2019166', '2016166', '3019510'], true)) {
+                $response['reason'] = 'domain_not_in_account';
+            }
+
+            unset($response['xml']);
+
+            return $response;
+        }
+
+        /** @var \SimpleXMLElement $xml */
+        $xml = $response['xml'];
+        $node = $xml->xpath('//*[local-name()="DomainGetInfoResult"]')[0] ?? null;
+
+        if (!$node instanceof \SimpleXMLElement) {
+            return [
+                'ok' => false,
+                'reason' => 'unexpected_response',
+                'message' => 'Namecheap response did not include DomainGetInfoResult.',
+            ];
+        }
+
+        $attributes = $node->attributes();
+        $details = $node->xpath('./*[local-name()="DomainDetails"]')[0] ?? null;
+
+        return [
+            'ok' => true,
+            'reason' => 'ok',
+            'domain_name' => strtolower(trim((string) ($attributes['DomainName'] ?? $fqdn))),
+            'is_owner' => $this->nullableBoolean((string) ($attributes['IsOwner'] ?? '')),
+            'status' => trim((string) ($attributes['Status'] ?? '')) ?: null,
+            'provider_domain_id' => trim((string) ($attributes['ID'] ?? '')) ?: null,
+            'registered_at' => $this->childValue($details, 'CreatedDate'),
+            'expires_at' => $this->childValue($details, 'ExpiredDate'),
+        ];
+    }
+
+    /** Read-only availability lookup used only after getInfo proves absence from this account. */
+    public function checkAvailability(string $fqdn): array
+    {
+        $response = $this->callGeneric('namecheap.domains.check', [
+            'DomainList' => strtolower(trim($fqdn)),
+        ]);
+
+        if (!($response['ok'] ?? false)) {
+            unset($response['xml']);
+
+            return $response;
+        }
+
+        /** @var \SimpleXMLElement $xml */
+        $xml = $response['xml'];
+        $node = $xml->xpath('//*[local-name()="DomainCheckResult"]')[0] ?? null;
+        $attributes = $node?->attributes();
+        $available = $attributes ? $this->nullableBoolean((string) ($attributes['Available'] ?? '')) : null;
+
+        if ($available === null) {
+            return [
+                'ok' => false,
+                'reason' => 'unexpected_response',
+                'message' => 'Namecheap response did not include a decisive availability value.',
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'reason' => 'ok',
+            'available' => $available,
+        ];
+    }
+
     public function getNameservers(string $fqdn): array
     {
         [$sld, $tld] = $this->splitDomainParts($fqdn);
@@ -350,5 +440,30 @@ class NamecheapClient
         $tld = isset($parts[1]) ? Str::of($parts[1])->ascii()->trim()->value() : null;
 
         return [$sld ?: null, $tld ?: null];
+    }
+
+    protected function nullableBoolean(string $value): ?bool
+    {
+        $value = strtolower(trim($value));
+        if (in_array($value, ['true', '1', 'yes'], true)) {
+            return true;
+        }
+        if (in_array($value, ['false', '0', 'no'], true)) {
+            return false;
+        }
+
+        return null;
+    }
+
+    protected function childValue(?\SimpleXMLElement $node, string $localName): ?string
+    {
+        if (!$node instanceof \SimpleXMLElement) {
+            return null;
+        }
+
+        $match = $node->xpath('./*[local-name()="' . $localName . '"]')[0] ?? null;
+        $value = $match instanceof \SimpleXMLElement ? trim((string) $match) : '';
+
+        return $value !== '' ? $value : null;
     }
 }

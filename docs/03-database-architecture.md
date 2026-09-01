@@ -340,7 +340,7 @@ erDiagram
 | `plan_id` | FK → plans | RESTRICT DELETE |
 | `template_id` | FK nullable → templates | nullOnDelete |
 | `status` | enum | `pending`, `active`, `suspended`, `cancelled` |
-| `provisioning_status` | string | `pending`, `provisioning`, `active`, `failed` |
+| `provisioning_status` | string | `pending`, `provisioning`, `active`, `failed`, `unknown` (`unknown` blocks automatic WHM retries pending reconciliation) |
 | `provisioned_at` | timestamp nullable | |
 | `billing_cycle` | enum | `monthly`, `annually` |
 | `price` | decimal(10,2) | Price at time of subscription (inconsistency: should be cents) |
@@ -858,7 +858,9 @@ Client subscribes to Plan (plan_type = multi_tenant)
 ↓
 Subscription created (status=pending, provisioning_status=pending)
 ↓
-TenantProvisioningService::provision() called
+Financial/local activation commits and ProvisionSubscription is dispatched after commit
+↓
+TenantProvisioningService::provision() called by the queue job
 ↓
 TemplateCloner::cloneToTenant()
   → reads Template + its Sections

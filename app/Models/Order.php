@@ -27,6 +27,10 @@ class Order extends Model
         'status',
         'type',
         'notes',
+        // ADR — Idempotency Phase 1: بصمة حتمية لمحاولة Checkout (سلة الدومينات فقط)،
+        // تُحسَب وتُمرَّر صراحة من CheckoutController::process(). راجع migration
+        // 2026_07_24_000001_add_checkout_fingerprint_to_orders_table.
+        'checkout_fingerprint',
     ];
 
     protected $casts = [
@@ -34,6 +38,7 @@ class Order extends Model
         'status'    => 'string',
         'type'      => 'string',
         'notes'     => 'string',
+        'checkout_fingerprint' => 'string',
     ];
 
     protected static function booted(): void

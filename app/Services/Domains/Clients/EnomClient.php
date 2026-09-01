@@ -36,21 +36,38 @@ class EnomClient
     }
 
     /** ?????ذ HTTP ???د?à ?ح???ë eNom */
-    protected function request(DomainProvider $p, array $params): array
+    /**
+     * ADR — Registrar Retry Safety Phase 1: أوامر الكتابة غير Idempotent (Purchase/Extend/
+     * RegisterNameServer/UpdateNameServer/ModifyNS) لا يجوز إعادة إرسالها تلقائيًا — لو نجح
+     * المزوّد فعليًا ثم انقطع الاتصال قبل عودة الاستجابة، فإن retry() التلقائي هنا كان سيُعيد
+     * نفس أمر الكتابة (تسجيل/تجديد/تعديل مزدوج عند المزوّد الفعلي). أوامر القراءة (GetBalance،
+     * PE_Get*Price، Check، CheckNSStatus، GetDNS، GetDomainInfo) آمنة للتكرار ولا تُغيّر أي حالة
+     * لدى المزوّد، فتبقى محتفظة بنفس retry(1,200) المحدود كما كان.
+     *
+     * $retrySafe=true (افتراضي، سلوك سابق دون تغيير) لأوامر القراءة، و false صراحة من كل نداء
+     * لأمر كتابة أدناه.
+     */
+    protected function request(DomainProvider $p, array $params, bool $retrySafe = true): array
     {
         $endpoint = $this->endpointFor($p);
         $query    = array_merge($this->baseParams($p), $params);
 
-        $t0   = microtime(true);
-        $resp = Http::withHeaders([
+        $t0 = microtime(true);
+
+        $httpRequest = Http::withHeaders([
             'Accept'     => 'application/xml',
             'User-Agent' => 'PalgoalsBot/1.0',
         ])
             ->withOptions([
                 'curl' => [\CURLOPT_IPRESOLVE => \CURL_IPRESOLVE_V4],
             ])
-            ->connectTimeout(6)->timeout(15)->retry(1, 200)
-            ->get($endpoint, $query);
+            ->connectTimeout(6)->timeout(15);
+
+        if ($retrySafe) {
+            $httpRequest = $httpRequest->retry(1, 200);
+        }
+
+        $resp = $httpRequest->get($endpoint, $query);
 
         $ms   = (int)round((microtime(true) - $t0) * 1000);
         $ct   = (string)$resp->header('Content-Type');
@@ -264,7 +281,12 @@ class EnomClient
      * فحص توفر دومين واحد عبر أمر Enom "Check".
      * لا تنفّذ Retry أو Batching هنا؛ التكرار على عدة دومينات مسؤولية المستدعي (DomainSearchController::enomCheck()).
      */
-    public function checkAvailability(DomainProvider $provider, string $sld, string $tld): array
+    public function checkAvailability(
+        DomainProvider $provider,
+        string $sld,
+        string $tld,
+        bool $retrySafe = true
+    ): array
     {
         try {
             $sld = trim($sld);
@@ -283,7 +305,7 @@ class EnomClient
                 'command' => 'Check',
                 'SLD' => $sld,
                 'TLD' => $tld,
-            ]);
+            ], retrySafe: $retrySafe);
 
             if (!($r['ok'] ?? false)) {
                 return [
@@ -401,6 +423,8 @@ class EnomClient
         return null;
     }
 
+    // ADR — أمر كتابة غير Idempotent: يُسجِّل الدومين فعليًا لدى المزوّد. retrySafe:false يمنع
+    // إعادة إرسال Purchase تلقائيًا لو انقطع الاتصال بعد أن يكون المزوّد قد نفّذ التسجيل فعلاً.
     public function purchaseDomain(DomainProvider $p, array $params): array
     {
         $payload = array_merge([
@@ -408,9 +432,11 @@ class EnomClient
             'UseDNS' => 'default',
         ], $params);
 
-        return $this->request($p, $payload);
+        return $this->request($p, $payload, retrySafe: false);
     }
 
+    // ADR — أمر كتابة غير Idempotent: يُجدِّد الدومين فعليًا لدى المزوّد (قد يخصم رصيدًا).
+    // retrySafe:false يمنع إعادة إرسال Extend تلقائيًا بعد نجاح فعلي عند المزوّد.
     public function renewDomain(DomainProvider $p, string $fqdn, int $years = 1): array
     {
         [$sld, $tld] = $this->splitDomainParts($fqdn);
@@ -428,7 +454,7 @@ class EnomClient
             'SLD' => $sld,
             'TLD' => $tld,
             'NumYears' => max(1, $years),
-        ]);
+        ], retrySafe: false);
     }
 
     public function checkNameserverStatus(DomainProvider $p, string $nameserver): array
@@ -454,6 +480,8 @@ class EnomClient
         ];
     }
 
+    // ADR — أمر كتابة: يُنشئ/يُسجِّل nameserver فعليًا لدى المزوّد. retrySafe:false يمنع إعادة
+    // الإرسال التلقائية بعد نجاح فعلي عند المزوّد.
     public function registerNameserver(DomainProvider $p, string $nameserver, string $ip): array
     {
         return $this->request($p, [
@@ -461,9 +489,10 @@ class EnomClient
             'Add' => 'true',
             'NSName' => strtolower(trim($nameserver)),
             'IP' => trim($ip),
-        ]);
+        ], retrySafe: false);
     }
 
+    // ADR — أمر كتابة: يُحدِّث IP نيمسيرفر فعليًا لدى المزوّد. retrySafe:false لنفس السبب.
     public function updateNameserverIp(DomainProvider $p, string $nameserver, string $oldIp, string $newIp): array
     {
         return $this->request($p, [
@@ -471,9 +500,11 @@ class EnomClient
             'NS' => strtolower(trim($nameserver)),
             'OldIP' => trim($oldIp),
             'NewIP' => trim($newIp),
-        ]);
+        ], retrySafe: false);
     }
 
+    // ADR — أمر كتابة: يُعدِّل تفويض DNS فعليًا لدى المزوّد. retrySafe:false يمنع إعادة الإرسال
+    // التلقائية بعد نجاح فعلي عند المزوّد.
     public function updateNameservers(DomainProvider $p, string $fqdn, array $nameservers): array
     {
         [$sld, $tld] = $this->splitDomainParts($fqdn);
@@ -499,7 +530,91 @@ class EnomClient
             $payload['NS' . $position] = $nameserver;
         }
 
-        return $this->request($p, $payload);
+        return $this->request($p, $payload, retrySafe: false);
+    }
+
+    /**
+     * Read-only ownership evidence for a domain in this exact eNom reseller account.
+     * Reconciliation deliberately disables HTTP retry so one manual run performs one lookup.
+     */
+    public function getDomainInfo(DomainProvider $p, string $fqdn): array
+    {
+        [$sld, $tld] = $this->splitDomainParts($fqdn);
+
+        if (!$sld || !$tld) {
+            return [
+                'ok' => false,
+                'reason' => 'invalid_domain',
+                'message' => 'Unable to split domain into SLD/TLD for GetDomainInfo.',
+            ];
+        }
+
+        try {
+            $response = $this->request($p, [
+                'command' => 'GetDomainInfo',
+                'SLD' => $sld,
+                'TLD' => $tld,
+            ], retrySafe: false);
+        } catch (\Throwable $e) {
+            return [
+                'ok' => false,
+                'reason' => 'exception',
+                'message' => 'eNom GetDomainInfo ended with an exception.',
+            ];
+        }
+
+        if (!($response['ok'] ?? false)) {
+            $message = strtolower((string) ($response['message'] ?? ''));
+            $notInAccount = in_array((string) ($response['reason'] ?? ''), [
+                'provider_error',
+                'provider_response',
+                'rrp_error',
+            ], true) && Str::contains($message, [
+                'not associated',
+                'not found',
+                'not in your account',
+                'does not belong',
+                'unable to find domain',
+            ]);
+
+            if ($notInAccount) {
+                $response['reason'] = 'domain_not_in_account';
+            }
+
+            unset($response['xml']);
+
+            return $response;
+        }
+
+        /** @var \SimpleXMLElement $xml */
+        $xml = $response['xml'];
+        $domainNode = $xml->xpath('//*[local-name()="GetDomainInfo"]/*[local-name()="domainname"]')[0] ?? null;
+        $statusNode = $xml->xpath('//*[local-name()="GetDomainInfo"]/*[local-name()="status"]')[0]
+            ?? $xml->xpath('//*[local-name()="status"]')[0]
+            ?? null;
+        $belongsToNode = $statusNode?->xpath('./*[local-name()="belongs-to"]')[0] ?? null;
+        $domainAttributes = $domainNode?->attributes();
+        $belongsToAttributes = $belongsToNode?->attributes();
+
+        $domainId = isset($domainAttributes['domainnameid'])
+            ? trim((string) $domainAttributes['domainnameid'])
+            : null;
+        $partyId = isset($belongsToAttributes['party-id'])
+            ? trim((string) $belongsToAttributes['party-id'])
+            : null;
+
+        return [
+            'ok' => true,
+            'reason' => 'ok',
+            'domain_name' => strtolower($fqdn),
+            'provider_domain_id' => $domainId !== '' ? $domainId : null,
+            'registration_status' => $this->childValue($statusNode, 'registrationstatus'),
+            'purchase_status' => $this->childValue($statusNode, 'purchase-status'),
+            'belongs_to_party_id' => $partyId !== '' ? $partyId : null,
+            'registered_at' => $this->firstXmlValue($xml, ['RegistryCreateDate', 'creationdate']),
+            'expires_at' => $this->childValue($statusNode, 'expiration')
+                ?? $this->firstXmlValue($xml, ['RegistryExpDate', 'expirationdate']),
+        ];
     }
 
     public function getDns(DomainProvider $p, string $fqdn): array
@@ -596,5 +711,31 @@ class EnomClient
         $tld = isset($parts[1]) ? Str::of($parts[1])->ascii()->trim()->value() : null;
 
         return [$sld ?: null, $tld ?: null];
+    }
+
+    protected function childValue(?\SimpleXMLElement $node, string $localName): ?string
+    {
+        if (!$node instanceof \SimpleXMLElement) {
+            return null;
+        }
+
+        $match = $node->xpath('./*[local-name()="' . $localName . '"]')[0] ?? null;
+        $value = $match instanceof \SimpleXMLElement ? trim((string) $match) : '';
+
+        return $value !== '' ? $value : null;
+    }
+
+    protected function firstXmlValue(\SimpleXMLElement $xml, array $localNames): ?string
+    {
+        foreach ($localNames as $localName) {
+            $match = $xml->xpath('//*[local-name()="' . $localName . '"]')[0] ?? null;
+            $value = $match instanceof \SimpleXMLElement ? trim((string) $match) : '';
+
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
     }
 }

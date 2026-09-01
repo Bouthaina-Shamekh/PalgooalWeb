@@ -2,7 +2,9 @@
 
 namespace App\Services\Billing;
 
+use App\Jobs\ProvisionSubscription;
 use App\Models\Order;
+use App\Models\Tenancy\Subscription;
 use App\Services\Domains\RegistrarProvisioningService;
 use Illuminate\Support\Facades\Log;
 
@@ -34,17 +36,23 @@ class OrderActivationService
             'subscriptions'       => collect(),
         ];
 
-        // Flip related draft invoices to unpaid.
-        foreach ($order->invoices as $invoice) {
-            if ($invoice->status === 'draft') {
-                $invoice->status = 'unpaid';
-                $invoice->save();
-            }
-        }
+        // Read current database state instead of a possibly stale loaded relation.
+        // The status predicate guarantees that a concurrently/currently paid invoice
+        // can never be written back to unpaid by order activation.
+        $order->invoices()
+            ->where('status', 'draft')
+            ->update(['status' => 'unpaid']);
 
-        $domain       = $this->extractDomainData($order);
-        $domainName   = $domain['domain_name'];
-        $domainOption = $domain['domain_option'];
+        $domainItems = $order->items
+            ->filter(fn ($item) => filled($item->domain))
+            ->values();
+        $domainName = null;
+        $domainOption = null;
+
+        if ($domainItems->count() === 1) {
+            $domainName = $domainItems[0]->domain;
+            $domainOption = $domainItems[0]->item_option;
+        }
 
         $subscriptionIds = $order->invoices
             ->flatMap(fn ($invoice) => $invoice->items
@@ -56,7 +64,11 @@ class OrderActivationService
             ->values();
 
         // Register or renew domain if requested.
-        if (!empty($domainName) && in_array(strtolower((string) $domainOption), ['register', 'renew'], true)) {
+        $hasProvisionableDomain = $domainItems->contains(
+            fn ($item) => in_array(strtolower((string) $item->item_option), ['register', 'renew'], true)
+        );
+
+        if ($hasProvisionableDomain) {
             try {
                 $result['domain_registration'] = $this->registrar
                     ->provisionOrderDomain($order, $paymentMethod);
@@ -106,7 +118,7 @@ class OrderActivationService
 
                 $subscriptionModel->fill($updateData)->save();
 
-                app(\App\Services\Tenancy\TenantProvisioningService::class)->provision($subscriptionModel);
+                $this->queueProvisioning($subscriptionModel);
 
                 $activated->push($subscriptionModel->fresh(['client', 'plan', 'server', 'template']));
             }
@@ -119,9 +131,10 @@ class OrderActivationService
         // Fallback: create a new subscription from the first subscription-type invoice item.
         $templateId = null;
         if ($order->invoices && $order->invoices->count()) {
-            $firstItem = $order->invoices->first()?->items->first();
-            if ($firstItem && $firstItem->item_type === 'subscription') {
-                $templateId = $firstItem->reference_id;
+            $leadingInvoice = $order->invoices[0] ?? null;
+            $leadingItem = $leadingInvoice?->items[0] ?? null;
+            if ($leadingItem && $leadingItem->item_type === 'subscription') {
+                $templateId = $leadingItem->reference_id;
             }
         }
 
@@ -218,31 +231,16 @@ class OrderActivationService
             ]);
         }
 
-        try {
-            if ($subscriptionModel instanceof \App\Models\Tenancy\Subscription) {
-                \App\Jobs\SyncSubscriptionToProvider::dispatch($subscriptionModel->id);
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to dispatch sync job for order ' . $order->id . ': ' . $e->getMessage());
+        if ($subscriptionModel instanceof Subscription) {
+            $this->queueProvisioning($subscriptionModel);
         }
 
         return $result;
     }
 
-    /**
-     * Extract domain name and domain option from the first order item that has a domain.
-     */
-    protected function extractDomainData(Order $order): array
+    protected function queueProvisioning(Subscription $subscription): void
     {
-        $item = $order->items()
-            ->whereNotNull('domain')
-            ->where('domain', '<>', '')
-            ->orderBy('id')
-            ->first();
-
-        return [
-            'domain_name'   => $item->domain ?? null,
-            'domain_option' => $item->item_option ?? null,
-        ];
+        ProvisionSubscription::dispatch($subscription->id)->afterCommit();
     }
+
 }
