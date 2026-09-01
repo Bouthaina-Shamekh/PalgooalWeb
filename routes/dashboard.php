@@ -542,7 +542,7 @@ Route::group([
     Route::post('/domain-tlds/save-all', [DomainTldController::class, 'saveAll'])->name('domain_tlds.save-all');
     Route::post('/domain-tlds/apply-pricing', [DomainTldController::class, 'applyPricing'])->name('domain_tlds.apply-pricing');
     Route::delete('/domain-tlds/{domainTld}', [DomainTldController::class, 'destroy'])->name('domain_tlds.destroy');
-    Route::post('/domain-tlds/bulk-destroy', [DomainTldController::class, 'bulk-destroy'])->name('domain_tlds.bulk-destroy');
+    Route::post('/domain-tlds/bulk-destroy', [DomainTldController::class, 'bulkDestroy'])->name('domain_tlds.bulk-destroy');
 
     // -------------------------------------------------------------------------
     // Settings → Payments (ADR-007 Phase 5A)

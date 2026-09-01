@@ -12,6 +12,62 @@ use Illuminate\Support\Facades\Http;
 
 class DomainTldController extends Controller
 {
+    /**
+     * قائمة TLDs الافتراضية للإقلاع من الصفر (cold start)، مشتركة بين كل المزوّدين.
+     * TLD-1: توحيد سلوك cold-start بين Namecheap وEnom بدل fallback منفصل لكل مزوّد.
+     */
+    private const DEFAULT_BOOTSTRAP_TLDS = [
+        'com',
+        'net',
+        'org',
+        'shop',
+        'xyz',
+        'live',
+        'news',
+        'rocks',
+        'ninja',
+    ];
+
+    /**
+     * نفس normalization المستخدمة أصلاً في sync() لحقل "tlds" القادم من الطلب:
+     * lowercase + trim + إزالة أي نقطة بادئة + استبعاد الفارغ + إزالة التكرار.
+     *
+     * @param  array<int, string>  $tlds
+     * @return array<int, string>
+     */
+    private function normalizeTlds(array $tlds): array
+    {
+        return collect($tlds)
+            ->map(fn ($s) => strtolower(trim(ltrim((string) $s, '.'))))
+            ->filter()->unique()->values()->all();
+    }
+
+    /**
+     * ترتيب اختيار TLDs للمزامنة (نفس المنطق لكل من Namecheap وEnom):
+     * 1) قائمة صريحة من الطلب (إن وُجدت) — تُستخدم كما هي فقط.
+     * 2) وإلا: TLDs المعلّمة حاليًا في الكتالوج لهذا المزوّد (in_catalog = true).
+     * 3) وإلا: القائمة البذرية المشتركة DEFAULT_BOOTSTRAP_TLDS (بعد نفس الـ normalization).
+     *
+     * @param  array<int, string>  $explicitTlds
+     * @return array<int, string>
+     */
+    private function resolveTldsToSync(int $providerId, array $explicitTlds): array
+    {
+        if (!empty($explicitTlds)) {
+            return $explicitTlds;
+        }
+
+        $catalogTlds = \App\Models\DomainTld::where('provider_id', $providerId)
+            ->where('in_catalog', true)
+            ->pluck('tld')->all();
+
+        if (!empty($catalogTlds)) {
+            return $catalogTlds;
+        }
+
+        return $this->normalizeTlds(self::DEFAULT_BOOTSTRAP_TLDS);
+    }
+
     public function index(Request $req)
     {
         $this->authorize('viewAny', DomainTld::class);
@@ -43,7 +99,7 @@ class DomainTldController extends Controller
 
         $report = ($provider->type === 'namecheap')
             ? $this->syncFromNamecheap($provider, $onlyTlds)
-            : $this->syncFromEnom($provider);
+            : $this->syncFromEnom($provider, $onlyTlds);
 
         return redirect()
             ->route('dashboard.domain_tlds.index', ['provider_id' => $provider->id])
@@ -117,14 +173,8 @@ class DomainTldController extends Controller
             return $xml ? [$xml, null] : [null, 'XML parse error'];
         };
 
-        // لو ما مرّرت قائمة، استخدم ما هو معلّم in_catalog
-        if (empty($onlyTlds)) {
-            $onlyTlds = \App\Models\DomainTld::where('provider_id', $p->id)
-                ->where('in_catalog', true)->pluck('tld')->all();
-        }
-        if (empty($onlyTlds)) {
-            return ['added' => 0, 'updated' => 0, 'tlds' => 0, 'message' => 'لا توجد TLDs مختارة (in_catalog).'];
-        }
+        // ترتيب الاختيار الموحّد: صريح من الطلب → in_catalog → bootstrap مشترك (TLD-1)
+        $onlyTlds = $this->resolveTldsToSync($p->id, $onlyTlds);
 
         // أداة استخراج (years, price, currency) من أي عقدة تسعير
         $extractPricing = function (\SimpleXMLElement $node): array {
@@ -224,19 +274,17 @@ class DomainTldController extends Controller
             }
         }
 
+        if ($added === 0 && $updated === 0 && $message === '') {
+            $message = 'لم يصل أي سعر فعلي من المزوّد لهذه القائمة رغم محاولة الاتصال — راجع بيانات الاعتماد أو الـ TLDs المطلوبة.';
+        }
+
         return ['added' => $added, 'updated' => $updated, 'tlds' => $tldsTouched, 'message' => $message];
     }
 
-    protected function syncFromEnom(\App\Models\DomainProvider $p): array
+    protected function syncFromEnom(\App\Models\DomainProvider $p, array $onlyTlds = []): array
     {
-        // اختر الـTLDs من الكتالوج أو ثبّت قائمة صغيرة كبداية
-        $tlds = \App\Models\DomainTld::where('provider_id', $p->id)
-            ->where('in_catalog', true)
-            ->pluck('tld')->all();
-
-        if (empty($tlds)) {
-            $tlds = ['com', 'net', 'org', 'shop', 'xyz', 'live', 'news', 'rocks', 'ninja'];
-        }
+        // نفس ترتيب الاختيار الموحّد المستخدم في Namecheap: صريح → in_catalog → bootstrap مشترك (TLD-1)
+        $tlds = $this->resolveTldsToSync($p->id, $onlyTlds);
 
         $client  = app(\App\Services\Domains\Clients\EnomClient::class);
         $added = 0;
@@ -283,7 +331,12 @@ class DomainTldController extends Controller
             }
         }
 
-        return ['added' => $added, 'updated' => $updated, 'tlds' => $tldsTouched, 'message' => implode(' | ', array_slice($msgParts, 0, 8))];
+        $enomMessage = implode(' | ', array_slice($msgParts, 0, 8));
+        if ($added === 0 && $updated === 0 && $enomMessage === '') {
+            $enomMessage = 'لم يصل أي سعر فعلي من المزوّد لهذه القائمة رغم محاولة الاتصال — راجع بيانات الاعتماد أو الـ TLDs المطلوبة.';
+        }
+
+        return ['added' => $added, 'updated' => $updated, 'tlds' => $tldsTouched, 'message' => $enomMessage];
     }
 
 
