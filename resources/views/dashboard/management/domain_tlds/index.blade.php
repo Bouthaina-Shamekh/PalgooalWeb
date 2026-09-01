@@ -31,90 +31,95 @@
 
     <div class="space-y-6">
 
-        {{-- B. Sync section: تصفية + مزامنة، formان مستقلان بصريًا داخل بطاقة واحدة --}}
-        <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-            <h3 class="mb-4 text-sm font-semibold text-gray-800">المزوّد والمزامنة</h3>
-
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        {{-- B. Sync section: تصفية + مزامنة، formان مستقلان بصريًا، شبكة متوازنة compact --}}
+        <div class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div class="grid gap-4 lg:grid-cols-2">
                 {{-- فلترة بالمزوّد (GET) — form مستقل تمامًا --}}
-                <form method="get" class="flex flex-wrap items-end gap-3">
-                    <div class="w-48">
-                        <label for="filter-provider-id" class="mb-1 block text-xs font-medium text-gray-600">تصفية
-                            الجدول بالمزوّد</label>
-                        <select id="filter-provider-id" name="provider_id"
-                            class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                            <option value="">-- الكل --</option>
-                            @foreach ($providers as $p)
-                                <option value="{{ $p->id }}" @selected($providerId == $p->id)>{{ $p->name }}
-                                    ({{ $p->type }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <button type="submit"
-                        class="inline-flex items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">تصفية</button>
-                </form>
-
-                <div class="hidden h-10 w-px bg-gray-200 lg:block"></div>
+                <div>
+                    <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">تصفية الجدول</h3>
+                    <form method="get" class="flex flex-wrap items-end gap-3">
+                        <div class="min-w-[10rem] flex-1">
+                            <label for="filter-provider-id"
+                                class="mb-1 block text-xs font-medium text-gray-600">المزوّد</label>
+                            <select id="filter-provider-id" name="provider_id"
+                                class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value="">-- الكل --</option>
+                                @foreach ($providers as $p)
+                                    <option value="{{ $p->id }}" @selected($providerId == $p->id)>{{ $p->name }}
+                                        ({{ $p->type }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <button type="submit"
+                            class="inline-flex items-center justify-center rounded-md bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">تصفية</button>
+                    </form>
+                </div>
 
                 {{-- مزامنة من المزوّد (POST) — form مستقل تمامًا، لا يشارك select مع فورم التصفية --}}
-                <form action="{{ route('dashboard.domain_tlds.sync') }}" method="post"
-                    class="flex flex-wrap items-end gap-3 rounded-md border border-dashed border-gray-300 bg-gray-50/60 p-3">
-                    @csrf
-                    <div class="w-48">
-                        <label for="sync-provider-id" class="mb-1 block text-xs font-medium text-gray-600">مزامنة من
-                            المزوّد</label>
-                        <select id="sync-provider-id" name="provider_id" required
-                            class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                            @foreach ($providers as $p)
-                                <option value="{{ $p->id }}" @selected($providerId == $p->id)>{{ $p->name }}
-                                    ({{ $p->type }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="w-56">
-                        <label for="sync-tlds" class="mb-1 block text-xs font-medium text-gray-600">TLDs
-                            (اختياري)</label>
-                        <input id="sync-tlds" name="tlds" placeholder="com,net,org" value="{{ old('tlds') }}"
-                            class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                    </div>
-                    <button type="submit"
-                        class="inline-flex items-center justify-center rounded-md bg-indigo-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">سحب
-                        الأسعار</button>
-                </form>
+                <div class="rounded-md border border-dashed border-gray-300 bg-gray-50/60 p-3">
+                    <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">مزامنة الأسعار من
+                        المزوّد</h3>
+                    <form action="{{ route('dashboard.domain_tlds.sync') }}" method="post"
+                        class="flex flex-wrap items-end gap-3">
+                        @csrf
+                        <div class="min-w-[9rem] flex-1">
+                            <label for="sync-provider-id"
+                                class="mb-1 block text-xs font-medium text-gray-600">المزوّد</label>
+                            <select id="sync-provider-id" name="provider_id" required
+                                class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                @foreach ($providers as $p)
+                                    <option value="{{ $p->id }}" @selected($providerId == $p->id)>{{ $p->name }}
+                                        ({{ $p->type }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="min-w-[9rem] flex-1">
+                            <label for="sync-tlds" class="mb-1 block text-xs font-medium text-gray-600">TLDs
+                                (اختياري)</label>
+                            <input id="sync-tlds" name="tlds" placeholder="com,net,org" value="{{ old('tlds') }}"
+                                class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        </div>
+                        <button type="submit"
+                            class="inline-flex items-center justify-center rounded-md bg-indigo-500 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">سحب
+                            الأسعار</button>
+                    </form>
+                    <p class="mt-2 text-[11px] leading-relaxed text-gray-400">اتركه فارغًا لمزامنة العناصر "ضمن
+                        المزامنة" فقط.</p>
+                </div>
             </div>
-            <p class="mt-2 text-[11px] leading-relaxed text-gray-500">اتركه فارغًا لمزامنة العناصر المعلّمة "ضمن
-                المزامنة" في الكتالوج فقط.</p>
         </div>
 
-        {{-- C. Catalog / pricing table — المحتوى الرئيسي --}}
+        {{-- C. Catalog / pricing table — المحتوى الرئيسي، الأولوية البصرية الأعلى --}}
         <div class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
                 <h3 class="text-sm font-semibold text-gray-800">كتالوج الأسعار</h3>
 
-                <div class="flex flex-wrap items-center gap-2">
-                    <button type="button" id="checkAll"
-                        class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">تحديد
-                        الكل ضمن المزامنة</button>
-                    <button type="button" id="uncheckAll"
-                        class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">إلغاء
-                        تحديد الكل</button>
+                <div class="flex flex-wrap items-center gap-3">
+                    {{-- مجموعة "ضمن المزامنة" — منفصلة بصريًا عن الحذف --}}
+                    <div class="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5">
+                        <span class="text-[11px] font-medium text-gray-500">ضمن المزامنة:</span>
+                        <button type="button" id="checkAll"
+                            class="rounded border border-gray-300 bg-white px-2 py-1 text-[11px] font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">تحديد
+                            الكل</button>
+                        <button type="button" id="uncheckAll"
+                            class="rounded border border-gray-300 bg-white px-2 py-1 text-[11px] font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">إلغاء</button>
+                    </div>
 
-                    <span class="mx-1 h-6 w-px bg-gray-200" aria-hidden="true"></span>
-
-                    {{-- حذف جماعي (اختياري) — form مستقل، منطقة خطر مميّزة بصريًا وليست إجراءً رئيسيًا --}}
+                    {{-- حذف جماعي (اختياري) — form مستقل، danger zone منفصلة تمامًا --}}
                     <form id="bulkDeleteForm" action="{{ route('dashboard.domain_tlds.bulk-destroy') }}"
                         method="POST" onsubmit="return confirm('هل تريد حذف العناصر المحددة؟');"
-                        class="inline-flex">
+                        class="flex items-center gap-2 rounded-md border border-red-200 bg-red-50/50 px-2 py-1.5">
                         @csrf
+                        <span class="text-[11px] font-medium text-red-500">حذف جماعي:</span>
                         <button type="submit"
-                            class="inline-flex items-center rounded-md border border-red-300 bg-red-50/60 px-3 py-1.5 text-xs font-medium text-red-600 shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1">حذف
-                            المحدد للحذف</button>
+                            class="rounded border border-red-300 bg-white px-2 py-1 text-[11px] font-medium text-red-600 shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1">حذف
+                            المحدد</button>
                     </form>
                 </div>
             </div>
 
-            <p class="mb-3 text-[11px] text-gray-500">"تحديد الكل / إلغاء تحديد الكل" يُطبَّق على عمود "ضمن المزامنة"
-                للصفحة الحالية فقط. عمود "تحديد" الأول في الجدول مخصّص لاختيار صفوف الحذف الجماعي فقط.</p>
+            <p class="mb-3 text-[11px] text-gray-400">"ضمن المزامنة" يخص الكتالوج، وهو مستقل تمامًا عن تحديد صفوف
+                الحذف الجماعي (آخر عمودين في الجدول).</p>
 
             {{-- حفظ الكتالوج + أسعار البيع (POST) للصفحة الحالية --}}
             <form id="saveAllForm" action="{{ route('dashboard.domain_tlds.save-all') }}" method="post">
@@ -125,6 +130,20 @@
                     <table id="tldsTable" class="min-w-full divide-y divide-gray-200 text-end text-sm">
                         <thead class="bg-gray-50 text-[11px] font-semibold text-gray-600">
                             <tr>
+                                <th scope="col" class="px-3 py-2">TLD</th>
+                                <th scope="col" class="px-2 py-2">
+                                    <span title="عند التفعيل يظهر هذا الامتداد للعميل ويمكن شراؤه. عند التعطيل يُستبعد كليًا من أسعار الموقع حتى لو كان له سعر مضبوط.">متاح
+                                        للبيع</span>
+                                </th>
+                                <th scope="col" class="px-2 py-2">العملة</th>
+                                <th scope="col" class="px-3 py-2">Register</th>
+                                <th scope="col" class="px-3 py-2">Renew</th>
+                                <th scope="col" class="px-3 py-2">Transfer</th>
+                                <th scope="col" class="px-2 py-2">
+                                    <span title="يحدّد فقط أي الامتدادات تُعاد مزامنتها تلقائيًا من المزوّد عند ترك حقل TLDs فارغًا، ولا يؤثر على ظهور الامتداد للعميل.">ضمن
+                                        المزامنة</span>
+                                </th>
+                                <th scope="col" class="px-2 py-2">آخر مزامنة</th>
                                 <th scope="col" class="px-2 py-2">
                                     <label class="inline-flex items-center gap-1">
                                         <input type="checkbox" id="selectAllRows"
@@ -133,21 +152,6 @@
                                         <span>تحديد</span>
                                     </label>
                                 </th>
-                                <th scope="col" class="px-2 py-2">
-                                    <span title="يحدّد فقط أي الامتدادات تُعاد مزامنتها تلقائيًا من المزوّد عند ترك حقل TLDs فارغًا، ولا يؤثر على ظهور الامتداد للعميل.">ضمن
-                                        المزامنة</span>
-                                </th>
-                                <th scope="col" class="px-2 py-2">TLD</th>
-                                <th scope="col" class="px-2 py-2">المزوّد</th>
-                                <th scope="col" class="px-2 py-2">العملة</th>
-                                <th scope="col" class="px-2 py-2">
-                                    <span title="عند التفعيل يظهر هذا الامتداد للعميل ويمكن شراؤه. عند التعطيل يُستبعد كليًا من أسعار الموقع حتى لو كان له سعر مضبوط.">متاح
-                                        للبيع</span>
-                                </th>
-                                <th scope="col" class="px-2 py-2">Register</th>
-                                <th scope="col" class="px-2 py-2">Renew</th>
-                                <th scope="col" class="px-2 py-2">Transfer</th>
-                                <th scope="col" class="px-2 py-2">آخر مزامنة</th>
                                 <th scope="col" class="px-2 py-2">حذف</th>
                             </tr>
                         </thead>
@@ -164,12 +168,38 @@
                                     ];
                                 @endphp
                                 <tr class="hover:bg-indigo-50/30" data-row-id="{{ $row->id }}">
+                                    <td class="whitespace-nowrap px-3 py-2 text-sm font-semibold text-gray-900">
+                                        .{{ $row->tld }}</td>
                                     <td class="px-2 py-2">
-                                        <input type="checkbox"
-                                            class="row-check h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                            aria-label="تحديد .{{ $row->tld }} للحذف الجماعي"
-                                            value="{{ $row->id }}">
+                                        <span
+                                            class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold {{ $row->enabled ? 'bg-green-100 text-green-700 ring-1 ring-green-200' : 'bg-gray-100 text-gray-600 ring-1 ring-gray-200' }}">{{ $row->enabled ? 'متاح للبيع' : 'غير متاح' }}</span>
                                     </td>
+                                    <td class="px-2 py-2 text-xs font-medium text-gray-600">{{ $row->currency }}</td>
+                                    @foreach ($pricingGroups as $price)
+                                        <td class="min-w-[9rem] px-3 py-2.5 align-top">
+                                            <div class="text-[11px] text-gray-500">التكلفة
+                                                <span class="font-medium text-gray-700">{{ optional($price)->cost ?? '—' }}</span>
+                                            </div>
+                                            @if ($price)
+                                                <input name="items[{{ $price->id }}][id]" type="hidden"
+                                                    value="{{ $price->id }}">
+                                                <div class="mt-1.5 flex items-center gap-1.5">
+                                                    <label for="sale-{{ $price->id }}"
+                                                        class="text-xs font-medium text-gray-700">البيع</label>
+                                                    <input id="sale-{{ $price->id }}"
+                                                        name="items[{{ $price->id }}][sale]" type="number"
+                                                        step="0.01" min="0" value="{{ $price->sale }}"
+                                                        class="w-24 rounded-md border border-gray-300 bg-white px-1.5 py-1 text-xs focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                                </div>
+                                                @if (is_null($price->sale))
+                                                    <p class="mt-1 text-[10px] leading-tight text-amber-600">يُستخدم
+                                                        سعر التكلفة</p>
+                                                @endif
+                                            @else
+                                                <span class="text-xs text-gray-400">—</span>
+                                            @endif
+                                        </td>
+                                    @endforeach
                                     <td class="px-2 py-2">
                                         <input type="checkbox"
                                             class="catalog-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
@@ -178,40 +208,14 @@
                                             @checked($row->in_catalog)>
                                         <input type="hidden" name="visible_ids[]" value="{{ $row->id }}">
                                     </td>
-                                    <td class="whitespace-nowrap px-2 py-2 text-gray-800">.{{ $row->tld }}</td>
-                                    <td class="whitespace-nowrap px-2 py-2 text-xs text-gray-500">{{ $row->provider }}</td>
-                                    <td class="px-2 py-2 text-xs text-gray-500">{{ $row->currency }}</td>
-                                    <td class="px-2 py-2">
-                                        <span
-                                            class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold {{ $row->enabled ? 'bg-green-100 text-green-700 ring-1 ring-green-200' : 'bg-gray-100 text-gray-600 ring-1 ring-gray-200' }}">{{ $row->enabled ? 'متاح للبيع' : 'غير متاح' }}</span>
-                                    </td>
-                                    @foreach ($pricingGroups as $price)
-                                        <td class="px-2 py-2 align-top">
-                                            <div class="text-[11px] text-gray-500">التكلفة
-                                                <span class="font-medium text-gray-700">{{ optional($price)->cost ?? '—' }}</span>
-                                            </div>
-                                            @if ($price)
-                                                <input name="items[{{ $price->id }}][id]" type="hidden"
-                                                    value="{{ $price->id }}">
-                                                <div class="mt-1 flex items-center gap-1">
-                                                    <label for="sale-{{ $price->id }}"
-                                                        class="text-[11px] font-medium text-gray-700">البيع</label>
-                                                    <input id="sale-{{ $price->id }}"
-                                                        name="items[{{ $price->id }}][sale]" type="number"
-                                                        step="0.01" min="0" value="{{ $price->sale }}"
-                                                        class="w-20 rounded-md border border-gray-300 bg-white px-1.5 py-1 text-xs focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                                                </div>
-                                                @if (is_null($price->sale))
-                                                    <p class="mt-0.5 text-[10px] leading-tight text-amber-600">يُستخدم
-                                                        سعر التكلفة</p>
-                                                @endif
-                                            @else
-                                                <span class="text-xs text-gray-400">—</span>
-                                            @endif
-                                        </td>
-                                    @endforeach
-                                    <td class="whitespace-nowrap px-2 py-2 text-xs text-gray-500">
+                                    <td class="whitespace-nowrap px-2 py-2 text-[11px] text-gray-400">
                                         {{ optional($row->synced_at)->format('Y-m-d H:i') ?? '—' }}
+                                    </td>
+                                    <td class="px-2 py-2">
+                                        <input type="checkbox"
+                                            class="row-check h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            aria-label="تحديد .{{ $row->tld }} للحذف الجماعي"
+                                            value="{{ $row->id }}">
                                     </td>
                                     <td class="px-2 py-2">
                                         <form action="{{ route('dashboard.domain_tlds.destroy', $row) }}"
@@ -248,7 +252,7 @@
             </summary>
             <div class="border-t border-gray-100 p-5">
                 <form action="{{ route('dashboard.domain_tlds.apply-pricing') }}" method="post"
-                    class="rounded-lg bg-gradient-to-br from-indigo-50 to-white p-4 ring-1 ring-inset ring-indigo-100/60">
+                    class="rounded-lg bg-indigo-50/40 p-4 ring-1 ring-inset ring-indigo-100/60">
                     @csrf
                     <div class="grid grid-cols-12 gap-4">
                         <div class="col-span-12 sm:col-span-3">
