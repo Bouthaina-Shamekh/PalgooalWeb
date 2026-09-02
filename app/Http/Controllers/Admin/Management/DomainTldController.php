@@ -29,6 +29,13 @@ class DomainTldController extends Controller
     ];
 
     /**
+     * TLD-2B: حد أقصى لعدد TLDs الصريحة القادمة من حقل "tlds" في نموذج المزامنة،
+     * لمنع طلب واحد من إطلاق عدد غير محدود من نداءات HTTP الخارجية للمزوّد.
+     * يُطبَّق فقط على القائمة الصريحة؛ لا يمس أولوية catalog/bootstrap في resolveTldsToSync().
+     */
+    private const MAX_EXPLICIT_TLDS = 50;
+
+    /**
      * نفس normalization المستخدمة أصلاً في sync() لحقل "tlds" القادم من الطلب:
      * lowercase + trim + إزالة أي نقطة بادئة + استبعاد الفارغ + إزالة التكرار.
      *
@@ -68,42 +75,123 @@ class DomainTldController extends Controller
         return $this->normalizeTlds(self::DEFAULT_BOOTSTRAP_TLDS);
     }
 
+    /**
+     * TLD-2B: يصنّف نتيجة sync() الواحدة إلى success/warning/error بناءً فقط على
+     * ما تم إثباته فعليًا (عدد صفوف الأسعار المضافة/المحدثة + وجود issues مُهيكلة).
+     * لا success أخضر غير مشروط عند وجود issues.
+     */
+    private function classifySyncStatus(int $priceRowsAdded, int $priceRowsUpdated, array $issues): string
+    {
+        if (empty($issues)) {
+            return 'success';
+        }
+        if ($priceRowsAdded > 0 || $priceRowsUpdated > 0) {
+            return 'warning';
+        }
+        return 'error';
+    }
+
     public function index(Request $req)
     {
         $this->authorize('viewAny', DomainTld::class);
         $providerId = (int) $req->query('provider_id', 0);
         $providers  = DomainProvider::active()->whereIn('type', ['namecheap', 'enom'])->get();
 
+        // TLD-2B: فلاتر إضافية additive فقط — بحث TLD + enabled + in_catalog. لا تمس pagination
+        // ولا أي عقد حالي؛ withQueryString() الموجودة أصلاً في الـBlade تحملها عبر صفحات الترقيم.
+        $tldSearch = trim((string) $req->query('q', ''));
+        $enabledFilter = (string) $req->query('enabled', 'all');
+        if (!in_array($enabledFilter, ['all', '1', '0'], true)) $enabledFilter = 'all';
+        $catalogFilter = (string) $req->query('in_catalog', 'all');
+        if (!in_array($catalogFilter, ['all', '1', '0'], true)) $catalogFilter = 'all';
+
         $q = DomainTld::query()->with(['prices' => function ($q) {
             $q->whereIn('action', ['register', 'renew', 'transfer'])->where('years', 1);
         }])->orderBy('tld');
 
         if ($providerId) $q->where('provider_id', $providerId);
+        if ($tldSearch !== '') $q->where('tld', 'like', '%' . $tldSearch . '%');
+        if ($enabledFilter !== 'all') $q->where('enabled', $enabledFilter === '1');
+        if ($catalogFilter !== 'all') $q->where('in_catalog', $catalogFilter === '1');
 
         $rows = $q->paginate(50);
 
-        return view('dashboard.management.domain_tlds.index', compact('rows', 'providers', 'providerId'));
+        return view('dashboard.management.domain_tlds.index', compact(
+            'rows', 'providers', 'providerId', 'tldSearch', 'enabledFilter', 'catalogFilter'
+        ));
     }
 
     public function sync(Request $req)
     {
         $this->authorize('create', DomainTld::class);
+
+        // TLD-2B: عدم استخدام firstOrFail() هنا لتفادي 404 خام — provider غير موجود/غير نشط
+        // يُعالَج الآن كـ sync_summary بحالة error مفهومة للأدمن بدل صفحة خطأ خام.
         $provider = DomainProvider::active()
             ->where('id', (int) $req->input('provider_id'))
             ->whereIn('type', ['namecheap', 'enom'])
-            ->firstOrFail();
+            ->first();
 
-        $onlyTlds = collect(explode(',', (string)$req->input('tlds', '')))
-            ->map(fn($s) => strtolower(trim(ltrim($s, '.'))))
-            ->filter()->unique()->values()->all();
+        if (!$provider) {
+            return redirect()
+                ->route('dashboard.domain_tlds.index')
+                ->with('sync_summary', [
+                    'status'             => 'error',
+                    'provider'           => null,
+                    'requested_tlds'     => 0,
+                    'price_rows_added'   => 0,
+                    'price_rows_updated' => 0,
+                    'issues_count'       => 1,
+                    'issues'             => [[
+                        'tld' => null,
+                        'action' => null,
+                        'reason' => 'المزوّد المحدد غير موجود أو غير نشط.',
+                    ]],
+                    'timestamp' => now()->format('Y-m-d H:i:s'),
+                ]);
+        }
+
+        $explicitTlds = $this->normalizeTlds(explode(',', (string) $req->input('tlds', '')));
+
+        // TLD-2B: حد أقصى للقائمة الصريحة فقط (Sync input hardening) — لا يمس أولوية
+        // catalog/bootstrap داخل resolveTldsToSync() لأنها تُستدعى فقط عندما تكون القائمة الصريحة فارغة.
+        $requestedExplicitCount = count($explicitTlds);
+        $explicitTlds = array_slice($explicitTlds, 0, self::MAX_EXPLICIT_TLDS);
+        $trimmedExplicitCount = $requestedExplicitCount - count($explicitTlds);
 
         $report = ($provider->type === 'namecheap')
-            ? $this->syncFromNamecheap($provider, $onlyTlds)
-            : $this->syncFromEnom($provider, $onlyTlds);
+            ? $this->syncFromNamecheap($provider, $explicitTlds)
+            : $this->syncFromEnom($provider, $explicitTlds);
+
+        $issues = $report['issues'] ?? [];
+        if ($trimmedExplicitCount > 0) {
+            array_unshift($issues, [
+                'tld' => null,
+                'action' => null,
+                'reason' => "تم تجاهل {$trimmedExplicitCount} TLD إضافية بسبب الحد الأقصى (" . self::MAX_EXPLICIT_TLDS . ') لكل طلب مزامنة.',
+            ]);
+        }
+
+        $status = $this->classifySyncStatus((int) $report['added'], (int) $report['updated'], $issues);
+
+        $summary = [
+            'status'             => $status,
+            'provider'           => [
+                'id'   => $provider->id,
+                'name' => $provider->name,
+                'type' => $provider->type,
+            ],
+            'requested_tlds'     => (int) ($report['requested'] ?? 0),
+            'price_rows_added'   => (int) $report['added'],
+            'price_rows_updated' => (int) $report['updated'],
+            'issues_count'       => count($issues),
+            'issues'             => $issues,
+            'timestamp'          => now()->format('Y-m-d H:i:s'),
+        ];
 
         return redirect()
             ->route('dashboard.domain_tlds.index', ['provider_id' => $provider->id])
-            ->with('ok', "تمت المزامنة: أضفنا {$report['added']} وحدثنا {$report['updated']} • {$report['message']}");
+            ->with('sync_summary', $summary);
     }
 
     public function updateSale(Request $req)
@@ -152,6 +240,7 @@ class DomainTldController extends Controller
         $updated = 0;
         $tldsTouched = 0;
         $message = '';
+        $issues = []; // TLD-2B: structured issues [tld, action, reason] — بديل عن رسالة نصية غير مُهيكلة فقط
 
         // مغلّف XPath آمن: يضمن تسجيل namespace 'nc' على نفس السياق قبل كل استعلام
         $NS = 'http://api.namecheap.com/xml.response';
@@ -175,6 +264,7 @@ class DomainTldController extends Controller
 
         // ترتيب الاختيار الموحّد: صريح من الطلب → in_catalog → bootstrap مشترك (TLD-1)
         $onlyTlds = $this->resolveTldsToSync($p->id, $onlyTlds);
+        $requested = count($onlyTlds); // TLD-2B: يُعاد في التقرير لتمييزه عن عدّادات صفوف الأسعار
 
         // أداة استخراج (years, price, currency) من أي عقدة تسعير
         $extractPricing = function (\SimpleXMLElement $node): array {
@@ -207,6 +297,8 @@ class DomainTldController extends Controller
 
                 if (!$xml) {
                     $message .= " [{$tldWanted} {$action}: $err]";
+                    // TLD-2B (D): كانت تمر بصمت — الآن مُسجَّلة كـ issue مُهيكل، بدون تغيير endpoint/auth/parsing.
+                    $issues[] = ['tld' => $tldWanted, 'action' => strtolower($action), 'reason' => "transport_error: {$err}"];
                     continue;
                 }
                 // جهّز الـnamespace على الجذر قبل أي XPath
@@ -214,6 +306,7 @@ class DomainTldController extends Controller
                 $statusOk = strcasecmp((string)($xml['Status'] ?? ''), 'OK') === 0;
                 if (!$statusOk) {
                     $message .= " [{$tldWanted} {$action}: provider error]";
+                    $issues[] = ['tld' => $tldWanted, 'action' => strtolower($action), 'reason' => 'provider_error'];
                     continue;
                 }
 
@@ -223,9 +316,13 @@ class DomainTldController extends Controller
                     // fallback لو رد بدون namespace (نادر)
                     $products = $xp($xml, '//Product');
                 }
-                if (empty($products)) continue;
+                if (empty($products)) {
+                    // TLD-2B (D): "empty products" كانت تمر بصمت تمامًا — الآن مُسجَّلة كـ issue مُهيكل.
+                    $issues[] = ['tld' => $tldWanted, 'action' => strtolower($action), 'reason' => 'no_products_returned'];
+                    continue;
+                }
 
-                DB::transaction(function () use ($products, $action, $p, &$added, &$updated, &$tldsTouched, $xp, $extractPricing) {
+                DB::transaction(function () use ($products, $action, $p, &$added, &$updated, &$tldsTouched, &$issues, $xp, $extractPricing) {
                     foreach ($products as $prod) {
                         // سجل namespace على النود نفسها قبل أي xpath عليها
                         $xp($prod, '.');
@@ -248,6 +345,7 @@ class DomainTldController extends Controller
                         }
 
                         $tldCurrency = null;
+                        $savedAnyPrice = false; // TLD-2B (D): لتمييز "منتج بلا أي سعر صالح" كـ issue
 
                         foreach ($nodes as $n) {
                             [$years, $cost, $curr] = $extractPricing($n);
@@ -262,8 +360,14 @@ class DomainTldController extends Controller
                             $pr->cost = $cost; // نحدّث التكلفة فقط
                             $pr->save();
                             $ex ? $updated++ : $added++;
+                            $savedAnyPrice = true;
 
                             if (!$tldCurrency && $curr) $tldCurrency = $curr;
+                        }
+
+                        if (!$savedAnyPrice) {
+                            // TLD-2B (D): "missing cost" (لا سعر صالح ضمن أي عقدة) كانت تمر بصمت — الآن issue مُهيكل.
+                            $issues[] = ['tld' => $tld, 'action' => strtolower($action), 'reason' => 'no_valid_price_data'];
                         }
 
                         if ($tldCurrency) $tldRow->currency = $tldCurrency;
@@ -278,19 +382,28 @@ class DomainTldController extends Controller
             $message = 'لم يصل أي سعر فعلي من المزوّد لهذه القائمة رغم محاولة الاتصال — راجع بيانات الاعتماد أو الـ TLDs المطلوبة.';
         }
 
-        return ['added' => $added, 'updated' => $updated, 'tlds' => $tldsTouched, 'message' => $message];
+        return [
+            'added' => $added,
+            'updated' => $updated,
+            'tlds' => $tldsTouched,
+            'message' => $message,
+            'requested' => $requested,
+            'issues' => $issues,
+        ];
     }
 
     protected function syncFromEnom(\App\Models\DomainProvider $p, array $onlyTlds = []): array
     {
         // نفس ترتيب الاختيار الموحّد المستخدم في Namecheap: صريح → in_catalog → bootstrap مشترك (TLD-1)
         $tlds = $this->resolveTldsToSync($p->id, $onlyTlds);
+        $requested = count($tlds); // TLD-2B: يُعاد في التقرير لتمييزه عن عدّادات صفوف الأسعار
 
         $client  = app(\App\Services\Domains\Clients\EnomClient::class);
         $added = 0;
         $updated = 0;
         $tldsTouched = 0;
         $msgParts = [];
+        $issues = []; // TLD-2B: structured issues [tld, action, reason]
 
         foreach ($tlds as $tld) {
             $tld = ltrim(strtolower($tld), '.');
@@ -304,7 +417,16 @@ class DomainTldController extends Controller
             $tldsTouched++;
 
             foreach (['register', 'renew', 'transfer'] as $act) {
-                $r = $client->getAnyPrice($p, $tld, $act, 1);
+                // TLD-2B (C): التقاط محلي لأي استثناء نقل (transport exception) من EnomClient — بدون أي
+                // تغيير على contract الخاص بـ EnomClient (لا يُمسّ availability/provisioning). يمنع سقوط
+                // sync() بخطأ 500 خام عند انقطاع الاتصال بالمزوّد، ويحوّله إلى issue مُهيكل بدل إخفائه.
+                try {
+                    $r = $client->getAnyPrice($p, $tld, $act, 1);
+                } catch (\Throwable $e) {
+                    $msgParts[] = "{$tld} {$act}: transport_exception ({$e->getMessage()})";
+                    $issues[] = ['tld' => $tld, 'action' => $act, 'reason' => 'transport_exception: ' . $e->getMessage()];
+                    continue;
+                }
 
                 if ($r['ok'] && $r['price'] !== null) {
                     $pr = \App\Models\DomainTldPrice::firstOrNew([
@@ -326,6 +448,7 @@ class DomainTldController extends Controller
                     $reason = $r['reason'] ?? ($r['source'] ?? 'unknown');
                     $m = $r['message'] ?? 'no price';
                     $msgParts[] = "{$tld} {$act}: {$reason}" . ($m ? " ({$m})" : '');
+                    $issues[] = ['tld' => $tld, 'action' => $act, 'reason' => $reason . ($m ? ": {$m}" : '')];
                     // نترك السعر كما هو (قد يكون موجودًا من مزامنة سابقة)
                 }
             }
@@ -336,7 +459,14 @@ class DomainTldController extends Controller
             $enomMessage = 'لم يصل أي سعر فعلي من المزوّد لهذه القائمة رغم محاولة الاتصال — راجع بيانات الاعتماد أو الـ TLDs المطلوبة.';
         }
 
-        return ['added' => $added, 'updated' => $updated, 'tlds' => $tldsTouched, 'message' => $enomMessage];
+        return [
+            'added' => $added,
+            'updated' => $updated,
+            'tlds' => $tldsTouched,
+            'message' => $enomMessage,
+            'requested' => $requested,
+            'issues' => $issues,
+        ];
     }
 
 

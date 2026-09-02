@@ -29,6 +29,57 @@
         </div>
     @endif
 
+    {{-- TLD-2B: ملخّص مزامنة مُهيكل (sync_summary) — هو المصدر الوحيد لعرض نتيجة sync().
+         session('ok') أعلاه يبقى كما هو لبقية العمليات (حفظ الكتالوج/التسعير بالجملة/الحذف)،
+         ولا تُستخدم من sync() بعد الآن لتفادي تعارض لونين لنفس النتيجة. --}}
+    @if (session('sync_summary'))
+        @php
+            $syncSummary = session('sync_summary');
+            $syncStatusStyles = [
+                'success' => ['role' => 'status', 'live' => 'polite', 'box' => 'border-green-200 bg-green-50 text-green-700', 'label' => 'تمت المزامنة بنجاح'],
+                'warning' => ['role' => 'status', 'live' => 'polite', 'box' => 'border-amber-300 bg-amber-50 text-amber-800', 'label' => 'تمت المزامنة جزئيًا'],
+                'error'   => ['role' => 'alert', 'live' => 'assertive', 'box' => 'border-red-200 bg-red-50 text-red-700', 'label' => 'فشلت المزامنة'],
+            ];
+            $syncStyle = $syncStatusStyles[$syncSummary['status']] ?? $syncStatusStyles['error'];
+        @endphp
+        <div role="{{ $syncStyle['role'] }}" aria-live="{{ $syncStyle['live'] }}"
+            class="mb-4 rounded-md border {{ $syncStyle['box'] }} px-4 py-3 text-sm">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="font-semibold">
+                    {{ $syncStyle['label'] }}
+                    @if (!empty($syncSummary['provider']))
+                        — {{ $syncSummary['provider']['name'] }} ({{ $syncSummary['provider']['type'] }})
+                    @endif
+                </span>
+                <span class="text-[11px] text-gray-500">{{ $syncSummary['timestamp'] }}</span>
+            </div>
+            <div class="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                <span>TLDs المطلوبة: <strong>{{ $syncSummary['requested_tlds'] }}</strong></span>
+                <span>صفوف أسعار أُضيفت: <strong>{{ $syncSummary['price_rows_added'] }}</strong></span>
+                <span>صفوف أسعار حُدّثت: <strong>{{ $syncSummary['price_rows_updated'] }}</strong></span>
+                <span>مشكلات: <strong>{{ $syncSummary['issues_count'] }}</strong></span>
+            </div>
+            @if (!empty($syncSummary['issues']))
+                <details class="mt-2">
+                    <summary class="cursor-pointer select-none text-xs font-medium underline">عرض تفاصيل المشكلات ({{ count($syncSummary['issues']) }})</summary>
+                    <ul class="mt-1.5 max-h-40 space-y-0.5 overflow-y-auto text-[11px] leading-relaxed">
+                        @foreach ($syncSummary['issues'] as $issue)
+                            <li>
+                                @if (!empty($issue['tld']))
+                                    <span class="font-medium">.{{ $issue['tld'] }}</span>
+                                @endif
+                                @if (!empty($issue['action']))
+                                    ({{ $issue['action'] }})
+                                @endif
+                                — {{ $issue['reason'] }}
+                            </li>
+                        @endforeach
+                    </ul>
+                </details>
+            @endif
+        </div>
+    @endif
+
     <div class="space-y-6">
 
         {{-- B. Sync section: تصفية + مزامنة، formان مستقلان بصريًا، شبكة متوازنة compact --}}
@@ -38,6 +89,10 @@
                 <div>
                     <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">تصفية الجدول</h3>
                     <form method="get" class="flex flex-wrap items-end gap-3">
+                        {{-- TLD-2B: تمرير فلاتر الكتالوج الحالية عند تغيير المزوّد بدل إعادة تعيينها --}}
+                        <input type="hidden" name="q" value="{{ $tldSearch }}">
+                        <input type="hidden" name="enabled" value="{{ $enabledFilter }}">
+                        <input type="hidden" name="in_catalog" value="{{ $catalogFilter }}">
                         <div class="min-w-[10rem] flex-1">
                             <label for="filter-provider-id"
                                 class="mb-1 block text-xs font-medium text-gray-600">المزوّد</label>
@@ -118,6 +173,41 @@
                 </div>
             </div>
 
+            {{-- TLD-2B: فلاتر إضافية additive — بحث TLD + enabled + in_catalog، تعمل مع provider_id الحالي --}}
+            <form method="get"
+                class="mb-3 flex flex-wrap items-end gap-2 rounded-md border border-gray-200 bg-gray-50/60 px-3 py-2">
+                <input type="hidden" name="provider_id" value="{{ $providerId }}">
+                <div class="min-w-[8rem]">
+                    <label for="filter-q" class="mb-1 block text-[11px] font-medium text-gray-500">بحث TLD</label>
+                    <input id="filter-q" name="q" type="text" value="{{ $tldSearch }}" placeholder="com, shop..."
+                        class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-xs focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label for="filter-enabled" class="mb-1 block text-[11px] font-medium text-gray-500">متاح للبيع</label>
+                    <select id="filter-enabled" name="enabled"
+                        class="rounded-md border border-gray-300 bg-white px-1.5 py-1 text-xs focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        <option value="all" @selected($enabledFilter === 'all')>الكل</option>
+                        <option value="1" @selected($enabledFilter === '1')>متاح فقط</option>
+                        <option value="0" @selected($enabledFilter === '0')>غير متاح فقط</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-in-catalog" class="mb-1 block text-[11px] font-medium text-gray-500">ضمن المزامنة</label>
+                    <select id="filter-in-catalog" name="in_catalog"
+                        class="rounded-md border border-gray-300 bg-white px-1.5 py-1 text-xs focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                        <option value="all" @selected($catalogFilter === 'all')>الكل</option>
+                        <option value="1" @selected($catalogFilter === '1')>ضمنها فقط</option>
+                        <option value="0" @selected($catalogFilter === '0')>خارجها فقط</option>
+                    </select>
+                </div>
+                <button type="submit"
+                    class="rounded-md bg-gray-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1">تصفية</button>
+                @if ($tldSearch !== '' || $enabledFilter !== 'all' || $catalogFilter !== 'all')
+                    <a href="{{ route('dashboard.domain_tlds.index', array_filter(['provider_id' => $providerId ?: null])) }}"
+                        class="text-[11px] font-medium text-indigo-600 hover:underline">إعادة تعيين الفلاتر</a>
+                @endif
+            </form>
+
             <p class="mb-3 text-[11px] text-gray-400">"ضمن المزامنة" يخص الكتالوج، وهو مستقل تمامًا عن تحديد صفوف
                 الحذف الجماعي (آخر عمودين في الجدول).</p>
 
@@ -143,13 +233,13 @@
                                     <span title="يحدّد فقط أي الامتدادات تُعاد مزامنتها تلقائيًا من المزوّد عند ترك حقل TLDs فارغًا، ولا يؤثر على ظهور الامتداد للعميل.">ضمن
                                         المزامنة</span>
                                 </th>
-                                <th scope="col" class="px-2 py-2">آخر مزامنة</th>
+                                <th scope="col" class="px-2 py-2">آخر محاولة مزامنة</th>
                                 <th scope="col" class="px-2 py-2">
                                     <label class="inline-flex items-center gap-1">
                                         <input type="checkbox" id="selectAllRows"
                                             aria-label="تحديد كل الصفوف للحذف الجماعي"
                                             class="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                        <span>تحديد</span>
+                                        <span>تحديد للحذف</span>
                                     </label>
                                 </th>
                                 <th scope="col" class="px-2 py-2">حذف</th>
