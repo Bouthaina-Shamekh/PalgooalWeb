@@ -211,6 +211,131 @@
             <p class="mb-3 text-[11px] text-gray-400">"ضمن المزامنة" يخص الكتالوج، وهو مستقل تمامًا عن تحديد صفوف
                 الحذف الجماعي (آخر عمودين في الجدول).</p>
 
+            {{-- TLD-2B.1: تسعير تلقائي بالجملة — نُقلت إلى داخل بطاقة الكتالوج مباشرة قبل الجدول (كانت
+                 سابقًا بطاقة مستقلة أسفل الصفحة). لا تزال مطوية افتراضيًا عبر <details>، بدون Modal وبدون
+                 JS جديد؛ الحقول/name/value/action/method والفورم الداخلي بالكامل دون أي تغيير — فقط أُعيد
+                 تنسيق الغلاف الخارجي (details/summary) ليبدو شريطًا ثانويًا مدمجًا داخل الكتالوج بدل بطاقة
+                 بيضاء ضخمة مستقلة (إزالة الظل والحد المكرَّرين، تصغير حجم الـsummary). --}}
+            <details class="mb-4 rounded-md border border-gray-200 bg-gray-50/40">
+                <summary
+                    class="cursor-pointer select-none rounded-md px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-100">
+                    التسعير بالجملة (متقدم)
+                </summary>
+                <div class="border-t border-gray-200 p-4">
+                    <form action="{{ route('dashboard.domain_tlds.apply-pricing') }}" method="post"
+                        class="rounded-lg bg-indigo-50/40 p-4 ring-1 ring-inset ring-indigo-100/60">
+                        @csrf
+                        <div class="grid grid-cols-12 gap-4">
+                            <div class="col-span-12 sm:col-span-3">
+                                <label for="pricing-scope"
+                                    class="mb-1 block text-xs font-medium text-gray-600">النطاق</label>
+                                <select id="pricing-scope" name="scope"
+                                    class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                    <option value="page">الصفحة الحالية فقط</option>
+                                    <option value="provider" @selected($providerId)>كل صفوف المزود المصفّى</option>
+                                </select>
+                            </div>
+                            <div class="col-span-12 sm:col-span-3">
+                                <label for="pricing-provider-id" class="mb-1 block text-xs font-medium text-gray-600">المزوّد
+                                    (عند اختيار نطاق المزود)</label>
+                                <select id="pricing-provider-id" name="provider_id"
+                                    class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                    <option value="">— اختر —</option>
+                                    @foreach ($providers as $p)
+                                        <option value="{{ $p->id }}" @selected($providerId == $p->id)>{{ $p->name }}
+                                            ({{ $p->type }})</option>
+                                    @endforeach
+                                </select>
+                                <label class="mt-2 inline-flex items-center gap-2 text-[11px] font-medium text-gray-600">
+                                    <input type="checkbox" name="only_in_catalog" value="1"
+                                        class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                    <span>فقط "ضمن المزامنة"</span>
+                                </label>
+                            </div>
+                            <div class="col-span-12 sm:col-span-3">
+                                <span class="mb-1 block text-xs font-medium text-gray-600">الأكشن</span>
+                                <div class="flex flex-wrap gap-x-3 gap-y-2 rounded-md bg-white p-2 ring-1 ring-gray-200">
+                                    <label class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700">
+                                        <input type="checkbox" name="actions[]" value="register" checked
+                                            class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        Register
+                                    </label>
+                                    <label class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700">
+                                        <input type="checkbox" name="actions[]" value="renew" checked
+                                            class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        Renew
+                                    </label>
+                                    <label class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700">
+                                        <input type="checkbox" name="actions[]" value="transfer" checked
+                                            class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        Transfer
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-span-6 sm:col-span-3">
+                                <label for="pricing-years" class="mb-1 block text-xs font-medium text-gray-600">المدة
+                                    (سنوات)</label>
+                                <input id="pricing-years" type="number" name="years" value="1" min="1" max="10"
+                                    class="block w-24 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            </div>
+                            <div class="col-span-12 sm:col-span-4">
+                                <span class="mb-1 block text-xs font-medium text-gray-600">نمط التسعير</span>
+                                <div class="flex flex-wrap items-center gap-4 rounded-md bg-white p-2 ring-1 ring-gray-200">
+                                    <label
+                                        class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700"><input
+                                            type="radio" name="mode" value="percent" checked
+                                            class="h-3.5 w-3.5 border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        نسبة
+                                        %</label>
+                                    <label
+                                        class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700"><input
+                                            type="radio" name="mode" value="fixed_margin"
+                                            class="h-3.5 w-3.5 border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        هامش ثابت
+                                        +</label>
+                                    <label
+                                        class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700"><input
+                                            type="radio" name="mode" value="fixed_final"
+                                            class="h-3.5 w-3.5 border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                                        سعر
+                                        نهائي =</label>
+                                    <label for="pricing-value" class="sr-only">قيمة التسعير</label>
+                                    <input id="pricing-value" type="number" step="0.01" name="value"
+                                        placeholder="القيمة" required
+                                        class="w-28 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                                </div>
+                            </div>
+                            <div class="col-span-6 sm:col-span-3">
+                                <label for="pricing-rounding" class="mb-1 block text-xs font-medium text-gray-600">طريقة
+                                    التقريب</label>
+                                <select id="pricing-rounding" name="rounding"
+                                    class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                    <option value="2dp">رقمين عشريين (2dp)</option>
+                                    <option value="99">إنهاء بـ .99</option>
+                                </select>
+                            </div>
+                            <div class="col-span-6 sm:col-span-3">
+                                <span class="mb-1 block text-xs font-medium text-gray-600">خيارات</span>
+                                <label
+                                    class="inline-flex items-center gap-2 rounded-md border border-red-200 bg-red-50/60 px-2 py-1 text-[11px] font-medium text-red-700 ring-1 ring-red-100">
+                                    <input type="checkbox" name="overwrite" value="1"
+                                        class="h-3.5 w-3.5 rounded border-red-300 text-red-600 focus:ring-red-500">
+                                    ⚠ الكتابة فوق أسعار البيع الموجودة
+                                </label>
+                            </div>
+                            <div class="col-span-12 sm:col-span-2 flex items-end">
+                                <button type="submit"
+                                    class="w-full rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1">تطبيق
+                                    التسعير</button>
+                            </div>
+                        </div>
+                        @foreach ($rows as $row)
+                            <input type="hidden" name="visible_ids[]" value="{{ $row->id }}">
+                        @endforeach
+                    </form>
+                </div>
+            </details>
+
             {{-- حفظ الكتالوج + أسعار البيع (POST) للصفحة الحالية --}}
             <form id="saveAllForm" action="{{ route('dashboard.domain_tlds.save-all') }}" method="post">
                 @csrf
@@ -333,127 +458,6 @@
                 <div class="mt-4">{{ $rows->withQueryString()->links() }}</div>
             </form>
         </div>
-
-        {{-- D. Secondary / advanced: تسعير تلقائي بالجملة — مطوٍ افتراضيًا، بدون Modal وبدون JS جديد --}}
-        <details class="rounded-lg border border-gray-200 bg-white shadow-sm">
-            <summary
-                class="cursor-pointer select-none rounded-lg px-5 py-4 text-sm font-semibold text-gray-800 hover:bg-gray-50">
-                التسعير بالجملة (متقدم)
-            </summary>
-            <div class="border-t border-gray-100 p-5">
-                <form action="{{ route('dashboard.domain_tlds.apply-pricing') }}" method="post"
-                    class="rounded-lg bg-indigo-50/40 p-4 ring-1 ring-inset ring-indigo-100/60">
-                    @csrf
-                    <div class="grid grid-cols-12 gap-4">
-                        <div class="col-span-12 sm:col-span-3">
-                            <label for="pricing-scope"
-                                class="mb-1 block text-xs font-medium text-gray-600">النطاق</label>
-                            <select id="pricing-scope" name="scope"
-                                class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                                <option value="page">الصفحة الحالية فقط</option>
-                                <option value="provider" @selected($providerId)>كل صفوف المزود المصفّى</option>
-                            </select>
-                        </div>
-                        <div class="col-span-12 sm:col-span-3">
-                            <label for="pricing-provider-id" class="mb-1 block text-xs font-medium text-gray-600">المزوّد
-                                (عند اختيار نطاق المزود)</label>
-                            <select id="pricing-provider-id" name="provider_id"
-                                class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                                <option value="">— اختر —</option>
-                                @foreach ($providers as $p)
-                                    <option value="{{ $p->id }}" @selected($providerId == $p->id)>{{ $p->name }}
-                                        ({{ $p->type }})</option>
-                                @endforeach
-                            </select>
-                            <label class="mt-2 inline-flex items-center gap-2 text-[11px] font-medium text-gray-600">
-                                <input type="checkbox" name="only_in_catalog" value="1"
-                                    class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                <span>فقط "ضمن المزامنة"</span>
-                            </label>
-                        </div>
-                        <div class="col-span-12 sm:col-span-3">
-                            <span class="mb-1 block text-xs font-medium text-gray-600">الأكشن</span>
-                            <div class="flex flex-wrap gap-x-3 gap-y-2 rounded-md bg-white p-2 ring-1 ring-gray-200">
-                                <label class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700">
-                                    <input type="checkbox" name="actions[]" value="register" checked
-                                        class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                    Register
-                                </label>
-                                <label class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700">
-                                    <input type="checkbox" name="actions[]" value="renew" checked
-                                        class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                    Renew
-                                </label>
-                                <label class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700">
-                                    <input type="checkbox" name="actions[]" value="transfer" checked
-                                        class="h-3.5 w-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                    Transfer
-                                </label>
-                            </div>
-                        </div>
-                        <div class="col-span-6 sm:col-span-3">
-                            <label for="pricing-years" class="mb-1 block text-xs font-medium text-gray-600">المدة
-                                (سنوات)</label>
-                            <input id="pricing-years" type="number" name="years" value="1" min="1" max="10"
-                                class="block w-24 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                        </div>
-                        <div class="col-span-12 sm:col-span-4">
-                            <span class="mb-1 block text-xs font-medium text-gray-600">نمط التسعير</span>
-                            <div class="flex flex-wrap items-center gap-4 rounded-md bg-white p-2 ring-1 ring-gray-200">
-                                <label
-                                    class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700"><input
-                                        type="radio" name="mode" value="percent" checked
-                                        class="h-3.5 w-3.5 border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                    نسبة
-                                    %</label>
-                                <label
-                                    class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700"><input
-                                        type="radio" name="mode" value="fixed_margin"
-                                        class="h-3.5 w-3.5 border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                    هامش ثابت
-                                    +</label>
-                                <label
-                                    class="inline-flex items-center gap-1 text-[11px] font-medium text-gray-700"><input
-                                        type="radio" name="mode" value="fixed_final"
-                                        class="h-3.5 w-3.5 border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                                    سعر
-                                    نهائي =</label>
-                                <label for="pricing-value" class="sr-only">قيمة التسعير</label>
-                                <input id="pricing-value" type="number" step="0.01" name="value"
-                                    placeholder="القيمة" required
-                                    class="w-28 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-                            </div>
-                        </div>
-                        <div class="col-span-6 sm:col-span-3">
-                            <label for="pricing-rounding" class="mb-1 block text-xs font-medium text-gray-600">طريقة
-                                التقريب</label>
-                            <select id="pricing-rounding" name="rounding"
-                                class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                                <option value="2dp">رقمين عشريين (2dp)</option>
-                                <option value="99">إنهاء بـ .99</option>
-                            </select>
-                        </div>
-                        <div class="col-span-6 sm:col-span-3">
-                            <span class="mb-1 block text-xs font-medium text-gray-600">خيارات</span>
-                            <label
-                                class="inline-flex items-center gap-2 rounded-md border border-red-200 bg-red-50/60 px-2 py-1 text-[11px] font-medium text-red-700 ring-1 ring-red-100">
-                                <input type="checkbox" name="overwrite" value="1"
-                                    class="h-3.5 w-3.5 rounded border-red-300 text-red-600 focus:ring-red-500">
-                                ⚠ الكتابة فوق أسعار البيع الموجودة
-                            </label>
-                        </div>
-                        <div class="col-span-12 sm:col-span-2 flex items-end">
-                            <button type="submit"
-                                class="w-full rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1">تطبيق
-                                التسعير</button>
-                        </div>
-                    </div>
-                    @foreach ($rows as $row)
-                        <input type="hidden" name="visible_ids[]" value="{{ $row->id }}">
-                    @endforeach
-                </form>
-            </div>
-        </details>
 
         <div class="rounded-md bg-gray-50 px-4 py-3 text-[11px] leading-relaxed text-gray-600">
             ملاحظة: يتم سحب الأسعار فقط لـ TLDs "ضمن المزامنة" في الكتالوج أو المحددة يدويًا في حقل <strong
