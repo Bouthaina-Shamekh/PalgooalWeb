@@ -286,8 +286,13 @@ class SectionQueryResolver
             ->mapWithKeys(function ($p) {
                 $tld = strtolower($p->tld->tld ?? '');
                 if ($tld === '') return [];
-                $price = $p->sale ?? $p->cost;
-                return $price !== null ? [$tld => (float) $price] : [];
+                // TLD-3A — sale فقط. cost (تكلفة داخلية) لا يُعرض أبداً كسعر عميل هنا، مع الحفاظ
+                // على structure المصفوفة الحالية (tld => float) دون تغيير.
+                $sale = $p->sale;
+                if (!is_numeric($sale) || (float) $sale <= 0) {
+                    return [];
+                }
+                return [$tld => (float) $sale];
             })
             ->toArray();
 

@@ -42,14 +42,21 @@ class DomainSearchController extends Controller
             ], 422);
         }
 
-        // Quote التسعير هو مصدر حقيقة المزوّد. كل مجموعة تُفحص لدى المزوّد الذي سعّرها فقط.
+        // Quote التسعير هو مصدر حقيقة المزوّد عند وجود سعر بيع موثوق. كل مجموعة تُفحص لدى
+        // المزوّد الذي سعّرها في هذه الحالة.
         $tlds = array_unique(array_map(fn($d) => strtolower(pathinfo($d, PATHINFO_EXTENSION)), $domains));
         $bestPriceByTld = $this->pricing()->registrationQuotesForTlds($tlds);
+
+        // TLD-3A.1 — Root cause fix: فحص التوافر (Availability) لا يجوز أن يُحجَب بسبب غياب سعر
+        // بيع موثوق (missing_sale). providersForTlds() توجّه طلب التوافر لمزوّد فعّال حتى إن لم
+        // يوجد Trusted Quote بعد؛ لا تشارك في أي قرار تسعيري ولا تُستخدم لعرض أي سعر لاحقاً —
+        // $bestPriceByTld يبقى المصدر الوحيد للسعر المعروض، كما هو دون أي تغيير.
+        $providersByTld = $this->pricing()->providersForTlds($tlds);
         $providerGroups = [];
 
         foreach ($domains as $domain) {
             $tld = strtolower(pathinfo($domain, PATHINFO_EXTENSION));
-            $providerId = (int) ($bestPriceByTld[$tld]['provider_id'] ?? 0);
+            $providerId = (int) ($bestPriceByTld[$tld]['provider_id'] ?? $providersByTld[$tld]['provider_id'] ?? 0);
 
             if ($providerId > 0) {
                 $providerGroups[$providerId][] = $domain;
@@ -144,6 +151,13 @@ class DomainSearchController extends Controller
                 }
             }
 
+            // TLD-3A — فصل Availability عن Sellability (حقول إضافية، لا تُلغي/تُعيد تسمية أي حقل قائم):
+            // sellable=true فقط عندما توجد قيمة سعر فعلية بالفعل (بريميوم من المزوّد، أو sale موثوق
+            // من الكتالوج عبر DomainPricingService). pricing_status='missing_sale' حصراً في حالة
+            // available=true لكن بلا سعر بيع موثوق (لا يجوز تحويلها إلى unavailable أو unknown).
+            $sellable = $isAvailable === true && $price !== null;
+            $pricingStatus = $isAvailable === true ? ($price !== null ? 'ok' : 'missing_sale') : null;
+
             $results[] = [
                 'domain'     => $domain,
                 'available'  => $isAvailable,
@@ -153,6 +167,8 @@ class DomainSearchController extends Controller
                 'is_premium' => (bool)$availRow['is_premium'],
                 'price'      => $price,
                 'currency'   => $price !== null ? ($currency ?? 'USD') : null,
+                'sellable'       => $sellable,
+                'pricing_status' => $pricingStatus,
             ];
         }
 

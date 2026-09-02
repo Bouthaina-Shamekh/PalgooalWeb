@@ -2,6 +2,7 @@
 
 namespace App\Services\Domains;
 
+use App\Models\DomainTld;
 use App\Models\DomainTldPrice;
 
 /**
@@ -81,8 +82,10 @@ class DomainPricingService
                 continue;
             }
 
-            // نفس أولوية الاختيار الحالية: sale أولاً ثم cost، مع تطبيق تحقق صحة السعر على كل مرشّح
-            $price = $this->pickValidPrice($row->sale, $row->cost);
+            // TLD-3A — القاعدة التجارية الجديدة: sale فقط. عرض/بيع تسجيل الدومين لا يُشتق أبداً من
+            // cost (بيانات تكلفة داخلية فقط، تُستخدم في التسعير بالجملة الإداري ولا تُستخدم كسعر
+            // عميل). sale=null أو 0 أو غير رقمية → لا Trusted Quote لهذا الصف إطلاقاً (لا fallback).
+            $price = $this->pickValidPrice($row->sale);
             if ($price === null) {
                 continue;
             }
@@ -129,6 +132,69 @@ class DomainPricingService
     }
 
     /**
+     * TLD-3A.1 — يحلّ مزوّداً موثوقاً بفحص التوافر لكل TLD، بصرف النظر عن وجود سعر sale صالح.
+     *
+     * جذر مشكلة TLD-3A.1: قبل هذا الإصلاح كان اختيار "أي مزوّد نسأله عن التوافر" في
+     * DomainSearchController::check() يعتمد حصراً على provider_id القادم من
+     * registrationQuotesForTlds()، فإذا غاب سعر بيع موثوق (sale=null) لم يُستشَر أي مزوّد
+     * إطلاقاً، وسقط الدومين خطأً إلى status=unknown رغم كونه متاحاً فعلياً — لا يجوز أبداً أن
+     * يتحول "لا سعر بيع" إلى "تعذّر التحقق التقني".
+     *
+     * هذه الدالة منفصلة تماماً عن أي قرار تسعيري: لا تشارك في اختيار "أفضل سعر" ولا في ترتيب
+     * المزوّدين المعتمد بالتسعير (registrationQuotesForTlds() لم يتغيّر بحرف واحد)، والغرض
+     * الوحيد منها توجيه طلب فحص التوافر عندما لا يوجد Trusted Quote بعد. عند تعدد المزوّدين
+     * الفعّالين لنفس TLD بلا أي ترجيح سعري ممكن، يُختار أول صف مطابق (لا يوجد سعر يفصل بينهم أصلاً).
+     *
+     * @param  array<int, string>  $tlds
+     * @return array<string, array{provider_id:int, provider_type:string, provider_mode:string}>
+     */
+    public function providersForTlds(array $tlds): array
+    {
+        $cleanTlds = array_values(array_unique(array_filter(array_map(
+            fn ($t) => strtolower(trim((string) $t)),
+            $tlds
+        ), fn ($t) => $t !== '')));
+
+        if (empty($cleanTlds)) {
+            return [];
+        }
+
+        $rows = DomainTld::query()
+            ->select([
+                'domain_tlds.tld',
+                'domain_tlds.enabled',
+                'domain_tlds.provider_id',
+                'domain_providers.is_active',
+                'domain_providers.type as provider_type',
+                'domain_providers.mode as provider_mode',
+            ])
+            ->join('domain_providers', 'domain_providers.id', '=', 'domain_tlds.provider_id')
+            ->whereIn('domain_tlds.tld', $cleanTlds)
+            ->whereIn('domain_providers.type', ['namecheap', 'enom'])
+            ->get();
+
+        $out = [];
+        foreach ($rows as $row) {
+            if (!$row->is_active || !$row->enabled) {
+                continue;
+            }
+
+            $tldKey = strtolower(trim((string) $row->tld));
+            if ($tldKey === '' || isset($out[$tldKey])) {
+                continue;
+            }
+
+            $out[$tldKey] = [
+                'provider_id'   => (int) $row->provider_id,
+                'provider_type' => strtolower(trim((string) $row->provider_type)),
+                'provider_mode' => strtolower(trim((string) $row->provider_mode)),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * يستخرج TLD من اسم دومين بأمان: lowercase + trim، بدون أي نقطة بادئة،
      * ويعيد null إن تعذّر استخراج امتداد حقيقي (لا نقطة في الاسم، أو الجزء بعدها فارغ).
      */
@@ -146,27 +212,25 @@ class DomainPricingService
     }
 
     /**
-     * يختار sale إن كانت قيمة سعر صالحة (رقمية وأكبر من صفر)، وإلا cost بنفس الشرط.
-     * القيمة null أو السالبة أو الصفرية تُرفض؛ لا يوجد حالياً أي علامة في الكتالوج
-     * (domain_tlds/domain_tld_prices) تُفعّل صراحةً دعم دومينات مجانية، لذا الصفر مرفوض دائماً.
+     * TLD-3A — Require Explicit Sale Price for Domain Quotes.
+     *
+     * يقبل sale فقط كسعر عميل موثوق (رقمي وأكبر من صفر). القيمة null أو '' أو غير رقمية أو <= 0
+     * تُرفض بلا أي fallback إلى cost. cost يبقى بيانات تكلفة داخلية بحتة (يُعرض للإدارة في التسعير
+     * بالجملة فقط) ولا يجوز أبداً أن يتحوّل إلى سعر عميل تلقائياً — لا يوجد حالياً أي علامة في
+     * الكتالوج (domain_tlds/domain_tld_prices) تُفعّل صراحةً دعم دومينات مجانية، لذا الصفر مرفوض دائماً.
      */
-    protected function pickValidPrice($sale, $cost): ?float
+    protected function pickValidPrice($sale): ?float
     {
-        foreach ([$sale, $cost] as $candidate) {
-            if ($candidate === null || $candidate === '') {
-                continue;
-            }
-            if (!is_numeric($candidate)) {
-                continue;
-            }
-
-            $value = (float) $candidate;
-            if ($value > 0) {
-                return $value;
-            }
+        if ($sale === null || $sale === '') {
+            return null;
+        }
+        if (!is_numeric($sale)) {
+            return null;
         }
 
-        return null;
+        $value = (float) $sale;
+
+        return $value > 0 ? $value : null;
     }
 
     /**

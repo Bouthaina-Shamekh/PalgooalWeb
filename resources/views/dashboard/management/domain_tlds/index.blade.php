@@ -407,8 +407,8 @@
                                                         class="w-24 rounded-md border border-gray-300 bg-white px-1.5 py-1 text-xs focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
                                                 </div>
                                                 @if (is_null($price->sale))
-                                                    <p class="mt-1 text-[10px] leading-tight text-amber-600">يُستخدم
-                                                        سعر التكلفة</p>
+                                                    <p class="mt-1 text-[10px] leading-tight text-amber-600">غير متاح
+                                                        للبيع حتى يتم تحديد سعر البيع</p>
                                                 @endif
                                             @else
                                                 <span class="text-xs text-gray-400">—</span>

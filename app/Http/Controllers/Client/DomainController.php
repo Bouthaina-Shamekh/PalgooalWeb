@@ -570,7 +570,11 @@ class DomainController extends Controller
             }
 
             $priceRow = $row->prices->first();
-            $price = $priceRow?->sale ?? $priceRow?->cost;
+            // TLD-3A — sale فقط. لا يُستخدم cost (تكلفة داخلية) كسعر معروض للعميل في كتالوج
+            // العرض/autocomplete هذا؛ مسار الشراء الفعلي أصلاً موثوق حصراً عبر
+            // resolveTrustedRegistrationQuote() (DomainPricingService)، ولم يُلمَس هنا.
+            $rawSale = $priceRow?->sale;
+            $price = (is_numeric($rawSale) && (float) $rawSale > 0) ? (float) $rawSale : null;
 
             if (
                 !isset($catalog[$tld])

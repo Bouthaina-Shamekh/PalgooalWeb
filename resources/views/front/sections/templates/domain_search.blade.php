@@ -103,6 +103,9 @@
     var LABEL_UNAVAILABLE = @json(t('site.Domain_Search_Unavailable', 'غير متاح'));
     var LABEL_UNKNOWN = @json(t('site.Domain_Search_Unknown', 'تعذّر التحقق الآن'));
     var MSG_UNKNOWN_DETAIL = @json(t('site.Domain_Search_Unknown_Detail', 'تعذّر التحقق من توفر هذا النطاق حالياً.'));
+    // TLD-3A — رسالة مستقلة لحالة "متاح لدى المزوّد لكن بلا سعر بيع موثوق" (missing_sale).
+    // هذه الحالة ليست unavailable وليست unknown/technical failure؛ لذلك لها نص منفصل ولا Retry.
+    var MSG_MISSING_SALE = @json(t('site.Domain_Search_Missing_Sale', 'الدومين متاح، لكن السعر غير متوفر حالياً.'));
     var LABEL_RETRY = @json(t('site.Domain_Search_Retry', 'إعادة المحاولة'));
     var LABEL_PREMIUM = @json(t('site.Domain_Search_Premium', 'بريميوم'));
     var LABEL_PER_YEAR = @json(t('site.Domain_Search_Per_Year', '/ سنة'));
@@ -224,6 +227,16 @@
         var isPremium = !!(item && item.is_premium === true);
         var price = item ? item.price : null;
         var currency = item ? item.currency : null;
+        var hasPriceValue = price !== null && price !== undefined && price !== '' && !isNaN(Number(price));
+
+        // TLD-3A — Sellability منفصلة عن Availability. العقد الصريح المفضَّل هو item.sellable
+        // (boolean من الخادم). إن غاب (توافق خلفي)، يُشتق: متاح + (بريميوم أو سعر فعلي) = sellable.
+        var sellable = item && typeof item.sellable === 'boolean'
+            ? item.sellable
+            : (status === 'available' && (isPremium || hasPriceValue));
+        // available لكن غير sellable = متاح فعلاً لدى المزوّد لكن بلا سعر بيع موثوق حالياً.
+        // ممنوع معاملتها كـ unavailable أو تحويلها إلى unknown/Retry.
+        var missingSale = status === 'available' && !sellable;
 
         var borderTone = status === 'available'
             ? 'border-green-400/60'
@@ -255,8 +268,14 @@
             top.appendChild(detail);
         }
 
-        if (status === 'available') {
-            var hasMeta = isPremium || (price !== null && price !== undefined && price !== '');
+        if (missingSale) {
+            // TLD-3A — لا سعر، لا زر حجز، لا Retry: فقط توضيح أن الدومين متاح لكن السعر غير متوفر.
+            var missingSaleDetail = document.createElement('p');
+            missingSaleDetail.className = 'mt-2 text-sm text-white/80';
+            missingSaleDetail.textContent = MSG_MISSING_SALE;
+            top.appendChild(missingSaleDetail);
+        } else if (status === 'available') {
+            var hasMeta = isPremium || hasPriceValue;
             if (hasMeta) {
                 var metaRow = document.createElement('div');
                 metaRow.className = 'mt-2 flex items-center gap-2 flex-wrap';
@@ -265,7 +284,7 @@
                     metaRow.appendChild(statusBadge(LABEL_PREMIUM, 'unknown'));
                 }
 
-                if (price !== null && price !== undefined && price !== '' && !isNaN(Number(price))) {
+                if (hasPriceValue) {
                     var priceWrap = document.createElement('div');
                     priceWrap.className = 'flex items-baseline gap-1';
 
@@ -289,16 +308,14 @@
 
         card.appendChild(top);
 
-        if (status === 'available' && domain) {
+        if (status === 'available' && sellable && domain) {
             var bookBtn = document.createElement('button');
             bookBtn.type = 'button';
             bookBtn.className = 'inline-flex items-center justify-center w-full bg-red-brand text-white text-sm font-bold px-4 py-2 rounded-lg hover:bg-opacity-90 transition disabled:opacity-60 disabled:cursor-not-allowed focus-visible:ring-4 focus-visible:ring-white/60';
             bookBtn.textContent = LABEL_BOOK_NOW;
             bookBtn.setAttribute('aria-label', LABEL_BOOK_NOW_ARIA_TPL.replace(':domain', domain));
 
-            var priceCents = (price !== null && price !== undefined && price !== '' && !isNaN(Number(price)))
-                ? Math.round(Number(price) * 100)
-                : 0;
+            var priceCents = hasPriceValue ? Math.round(Number(price) * 100) : 0;
 
             bookBtn.addEventListener('click', function () {
                 addDomainToCart(domain, priceCents, bookBtn);
