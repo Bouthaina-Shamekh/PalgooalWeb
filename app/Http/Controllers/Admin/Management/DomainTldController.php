@@ -499,13 +499,26 @@ class DomainTldController extends Controller
         $items    = $req->input('items', []);                  // sale prices keyed by price id
 
         // Basic validation (lightweight, per-field).
+        //
+        // TLD-3A.3 (P1b) — إصلاح: Laravel's default ConvertEmptyStringsToNull middleware يحوّل أي
+        // "" وارد من حقل sale إلى null قبل وصول الطلب إلى هنا. الكود السابق كان يفحص فقط
+        // ($data['sale'] === '') ليقرر NULL، وهذه المقارنة لا تتحقق أبداً بعد الـmiddleware، فكان
+        // يقع في الفرع الآخر وينفّذ (float) null = 0.0 خطأً بدل NULL. الإصلاح: '' و null كلاهما
+        // "أُرسل فارغاً" ويُعاملان معاملة واحدة → NULL صراحة. ونفرّق كذلك بين "الحقل لم يُرسل
+        // إطلاقاً" (مفتاح sale غائب من data — نتجاهل الصف بلا أي تحديث لسعر البيع الحالي) و"أُرسل
+        // فارغاً" (يُخزَّن NULL). cost لا يُقرأ ولا يُكتب هنا إطلاقاً، كما كان.
         $validatedItems = [];
         foreach ($items as $priceId => $data) {
             if (!isset($data['id']) || (int)$data['id'] !== (int)$priceId) continue; // integrity check
-            if (isset($data['sale']) && $data['sale'] !== '' && !is_numeric($data['sale'])) continue; // skip invalid
+
+            if (!array_key_exists('sale', $data)) continue; // لم يُرسل إطلاقاً — لا تغيير على sale الحالي
+
+            $rawSale = $data['sale'];
+            if ($rawSale !== null && $rawSale !== '' && !is_numeric($rawSale)) continue; // قيمة غير صالحة — تجاهل الصف
+
             $validatedItems[$priceId] = [
                 'id' => (int)$data['id'],
-                'sale' => $data['sale'] === '' ? null : (float)$data['sale'],
+                'sale' => ($rawSale === null || $rawSale === '') ? null : (float)$rawSale,
             ];
         }
 

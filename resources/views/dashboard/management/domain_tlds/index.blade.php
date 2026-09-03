@@ -433,14 +433,13 @@
                                             value="{{ $row->id }}">
                                     </td>
                                     <td class="px-2 py-2">
-                                        <form action="{{ route('dashboard.domain_tlds.destroy', $row) }}"
-                                            method="POST"
-                                            onsubmit="return confirm('حذف .{{ $row->tld }} وجميع أسعاره؟');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit"
-                                                class="rounded-md border border-red-200 bg-white px-2.5 py-1 text-[11px] font-medium text-red-600 shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1">حذف</button>
-                                        </form>
+                                        {{-- TLD-3A.3 (P1a) — لا وسم form هنا إطلاقاً: كان متداخلاً داخل #saveAllForm،
+                                             ما يجعل المتصفح يغلق #saveAllForm مبكراً عند أول صف (قاعدة HTML5 القياسية
+                                             لعدم السماح بتداخل النماذج). الزر الآن يستهدف نموذج حذف مستقل خارج
+                                             #saveAllForm بالكامل عبر form="row-delete-{{ $row->id }}" (انظر أسفل
+                                             الجدول) — نفس route/CSRF/DELETE semantics/رسالة التأكيد دون أي تغيير. --}}
+                                        <button type="submit" form="row-delete-{{ $row->id }}"
+                                            class="rounded-md border border-red-200 bg-white px-2.5 py-1 text-[11px] font-medium text-red-600 shadow-sm hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1">حذف</button>
                                     </td>
                                 </tr>
                             @endforeach
@@ -450,13 +449,24 @@
 
                 <div class="mt-5 flex flex-wrap items-center gap-4">
                     <button type="submit"
-                        class="inline-flex items-center rounded-md bg-emerald-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1">حفظ
-                        الكتالوج وأسعار البيع</button>
+                        class="inline-flex items-center rounded-md bg-emerald-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1">حفظ الكتالوج وأسعار البيع</button>
                     <p class="text-[11px] text-gray-500">يحفظ "ضمن المزامنة" وأسعار البيع للصفحة الحالية فقط.</p>
                 </div>
 
                 <div class="mt-4">{{ $rows->withQueryString()->links() }}</div>
             </form>
+
+            {{-- TLD-3A.3 (P1a) — نماذج الحذف الفردي: مستقلة تماماً، خارج #saveAllForm عمداً (لا تداخل
+                 نماذج إطلاقاً). كل نموذج بلا واجهة مرئية خاصة به؛ الزر الفعلي المرئي داخل الجدول أعلاه
+                 يستهدفه عبر form="row-delete-{id}". نفس action/method('DELETE')/@csrf/رسالة confirm
+                 كما كانت تماماً قبل هذا الإصلاح — فقط الموضع في DOM تغيّر. --}}
+            @foreach ($rows as $row)
+                <form id="row-delete-{{ $row->id }}" action="{{ route('dashboard.domain_tlds.destroy', $row) }}"
+                    method="POST" onsubmit="return confirm('حذف .{{ $row->tld }} وجميع أسعاره؟');" hidden>
+                    @csrf
+                    @method('DELETE')
+                </form>
+            @endforeach
         </div>
 
         <div class="rounded-md bg-gray-50 px-4 py-3 text-[11px] leading-relaxed text-gray-600">
