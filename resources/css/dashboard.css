@@ -196,6 +196,21 @@
     .dark .topbar-theme-input:checked + .topbar-theme-label {
         background-color: rgba(36, 11, 54, 0.28);
     }
+
+    /* TLD-3A.3d — كلاس محلي محدود لزر "حفظ الكتالوج وأسعار البيع" في صفحة إدارة TLD.
+       السبب: public/assets/dashboard/css/style.css (ثيم Able Pro، Tailwind v3، unlayered)
+       يحتوي قاعدة "button { background-color: transparent; }" غير موضوعة داخل أي @layer،
+       وهذه القاعدة unlayered تتغلب حتماً على أي utility من Tailwind v4 (dashboard.css/app.css)
+       مهما علت specificity أو تأخر تحميل الملف (Cascade Layers spec: unlayered > layered دائماً).
+       هذا الكلاس محلي بالكامل لهذا الزر فقط؛ !important هنا مقصود ومحصور النطاق (راجع تقارير
+       TLD-3A.3c وTLD-3A.3d). لا يغيّر أي سلوك button عام، ولا يمس style.css أو ترتيب الطبقات. */
+    .domain-tld-save-button {
+        background-color: #047857 !important;
+    }
+
+    .domain-tld-save-button:hover {
+        background-color: #065f46 !important;
+    }
 }
 
 /* Custom utilities for dashboard */

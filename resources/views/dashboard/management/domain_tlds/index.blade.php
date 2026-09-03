@@ -449,7 +449,7 @@
 
                 <div class="mt-5 flex flex-wrap items-center gap-4">
                     <button type="submit"
-                        class="inline-flex items-center rounded-md bg-emerald-600 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1">حفظ الكتالوج وأسعار البيع</button>
+                        class="domain-tld-save-button inline-flex w-full items-center justify-center rounded-md border border-[#065f46] px-5 py-2.5 text-sm font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#10b981] focus:ring-offset-1 sm:w-auto">حفظ الكتالوج وأسعار البيع</button>
                     <p class="text-[11px] text-gray-500">يحفظ "ضمن المزامنة" وأسعار البيع للصفحة الحالية فقط.</p>
                 </div>
 
