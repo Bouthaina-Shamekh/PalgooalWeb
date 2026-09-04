@@ -43,14 +43,20 @@
 
             <section class="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div class="space-y-2">
-                    <label for="registrar" class="text-sm font-medium text-gray-700">
-                        {{ __('Registrar') }}
+                    <label for="provider_id" class="text-sm font-medium text-gray-700">
+                        {{ __('Provider') }}
                     </label>
-                    <select id="registrar" name="registrar" class="form-select">
-                        <option value="">{{ __('Select registrar') }}</option>
-                        @foreach ($registrarOptions as $value => $label)
-                            <option value="{{ $value }}"
-                                @selected(old('registrar', $domain->registrar) === $value)>{{ $label }}</option>
+                    {{-- TLD-3E.2 — Admin Register Exact Provider Selection: the option value is
+                         the exact DomainProvider.id, never a registrar-type string, so two active
+                         providers sharing the same type are never ambiguous. Only active
+                         providers are listed. --}}
+                    <select id="provider_id" name="provider_id" class="form-select">
+                        <option value="">{{ __('Select provider') }}</option>
+                        @foreach ($providers as $provider)
+                            <option value="{{ $provider->id }}"
+                                @selected((int) old('provider_id', $domain->provider_id) === (int) $provider->id)>
+                                {{ $provider->name ?: ucfirst($provider->type) }} — {{ ucfirst($provider->type) }} — {{ ucfirst($provider->mode) }}
+                            </option>
                         @endforeach
                     </select>
                 </div>

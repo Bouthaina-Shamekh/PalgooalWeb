@@ -34,6 +34,15 @@
           @endif
         </div>
 
+        {{-- TLD-3E.2 — Admin DNS Exact Provider Selection: read-only identity display only,
+             sourced from the resolved Domain.provider_id — never an editable provider selector,
+             so DNS on a managed domain can never silently target a different provider. --}}
+        @if (!empty($remoteDns['provider_label']))
+          <div class="mt-2 text-xs text-slate-500">
+            {{ __('Managed provider: :provider', ['provider' => $remoteDns['provider_label']]) }}
+          </div>
+        @endif
+
         @if (!empty($remoteDns['error']))
           <div class="mt-2 text-sm text-red-600">
             {{ $remoteDns['error'] }}

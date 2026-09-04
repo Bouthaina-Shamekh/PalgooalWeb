@@ -129,14 +129,19 @@ class DomainController extends Controller
     public function editRegister(Domain $domain)
     {
         $this->authorize('update', $domain);
-        $registrarOptions = [
-            'enom' => 'enom',
-            'namecheap' => 'namecheap',
-        ];
+
+        // TLD-3E.2 — Admin Register Exact Provider Selection: pass the exact active
+        // DomainProvider rows (id/name/type/mode) so the view can offer an unambiguous
+        // provider_id select instead of a bare registrar-type string.
+        $providers = DomainProvider::query()
+            ->active()
+            ->orderBy('type')
+            ->orderBy('name')
+            ->get(['id', 'name', 'type', 'mode']);
 
         return view('dashboard.management.domains.register', [
             'domain' => $domain,
-            'registrarOptions' => $registrarOptions,
+            'providers' => $providers,
         ]);
     }
 
@@ -144,8 +149,10 @@ class DomainController extends Controller
     public function updateRegister(Request $request, Domain $domain)
     {
         $this->authorize('update', $domain);
+        // TLD-3E.2 — Admin Register Exact Provider Selection: the admin now selects an exact
+        // DomainProvider row (provider_id), never a bare registrar-type string.
         $validated = $request->validate([
-            'registrar' => ['required', 'string', 'max:255'],
+            'provider_id' => ['required', 'integer', 'exists:domain_providers,id'],
             'registration_date' => ['required', 'date'],
             'renewal_date' => ['required', 'date', 'after_or_equal:registration_date'],
             'status' => ['required', 'string', 'max:50'],
@@ -162,14 +169,25 @@ class DomainController extends Controller
             ]);
         }
 
-        $provider = DomainProvider::query()
-            ->active()
-            ->ofType(strtolower($validated['registrar']))
-            ->first();
+        // TLD-3E.2 — resolve ONLY the exact selected provider_id — never ofType()->first(), never
+        // a type-based lookup, never defaultProvider(), never a fallback of any kind.
+        $provider = DomainProvider::query()->active()->find($validated['provider_id']);
 
         if (!$provider) {
-            return back()->withErrors([
-                'registrar' => __('No active provider configuration found for :registrar.', ['registrar' => $validated['registrar']]),
+            return back()->withInput()->withErrors([
+                'provider_id' => __('The selected provider is inactive or no longer exists.'),
+            ]);
+        }
+
+        // TLD-3E.2 — Existing Managed Domain Safety: a domain that already has its own trusted
+        // provider_id can only be (re-)registered through THAT SAME provider from this screen.
+        // Registering it through a different provider_id would be a provider reassignment /
+        // transfer, which is explicitly out of scope for this phase — no transfer semantics, no
+        // silent provider switch. An external/unmanaged domain (provider_id null) is unaffected
+        // and may register through any active provider, transitioning to managed on success.
+        if ($domain->provider_id !== null && (int) $domain->provider_id !== (int) $provider->getKey()) {
+            return back()->withInput()->withErrors([
+                'provider_id' => __('This domain is already managed by a different provider. Switching providers is not supported from this screen.'),
             ]);
         }
 
@@ -283,15 +301,30 @@ class DomainController extends Controller
             'fetched_at' => null,
         ];
 
-        $registrar = strtolower((string) $domain->registrar);
-        if ($registrar !== '') {
-            $provider = DomainProvider::query()
-                ->active()
-                ->ofType($registrar)
-                ->first();
+        // TLD-3E.2 — Admin DNS Exact Provider Selection: resolve ONLY via Domain.provider_id —
+        // never Domain.registrar (display/compatibility metadata only) and never ofType()->first().
+        if ($domain->provider_id === null) {
+            $remoteDns['error'] = __('لا يوجد مزود مُدار مرتبط بهذا النطاق.');
+        } else {
+            $provider = DomainProvider::query()->active()->find($domain->provider_id);
 
             if ($provider) {
+                // TLD-3E.2 — DNS Provider Consistency: Domain.registrar is display/compatibility
+                // metadata only and is never used to resolve or override the provider — but a
+                // mismatch against the trusted provider_id is a drift signal worth logging (the
+                // same non-blocking pattern documented for renewal in TLD-3D), not auto-corrected.
+                if (strtolower((string) $domain->registrar) !== '' && strtolower((string) $domain->registrar) !== strtolower((string) $provider->type)) {
+                    Log::warning('Domain registrar does not match its trusted provider (DNS view).', [
+                        'domain_id' => $domain->id,
+                        'domain' => $domain->domain_name,
+                        'registrar' => $domain->registrar,
+                        'provider_id' => $provider->id,
+                        'provider_type' => $provider->type,
+                    ]);
+                }
+
                 $remoteDns['provider'] = $provider->type;
+                $remoteDns['provider_label'] = trim(($provider->name ?: Str::title($provider->type)) . ' — ' . Str::title($provider->type) . ' — ' . Str::title($provider->mode));
                 try {
                     if ($provider->type === 'enom') {
                         $client = new EnomClient();
@@ -342,7 +375,7 @@ class DomainController extends Controller
                 }
                 $remoteDns['fetched_at'] = now();
             } else {
-                $remoteDns['error'] = __('No active provider configuration found for :registrar.', ['registrar' => $registrar]);
+                $remoteDns['error'] = __('The linked provider is inactive or no longer exists.');
             }
         }
 
@@ -387,20 +420,29 @@ class DomainController extends Controller
                 ]);
         }
 
-        $registrar = strtolower((string) $domain->registrar);
-        if ($registrar === '') {
+        // TLD-3E.2 — Admin DNS Exact Provider Selection: resolve ONLY via Domain.provider_id —
+        // never Domain.registrar and never ofType()->first(). registrar/provider.type mismatch is
+        // logged as a drift signal (see below) but never used to change or auto-correct provider_id.
+        if ($domain->provider_id === null) {
             return back()->withInput()
-                ->withErrors(['nameservers' => __('Domain registrar is not set. Assign a registrar before pushing DNS changes.')]);
+                ->withErrors(['nameservers' => __('لا يوجد مزود مُدار مرتبط بهذا النطاق.')]);
         }
 
-        $provider = DomainProvider::query()
-            ->active()
-            ->ofType($registrar)
-            ->first();
+        $provider = DomainProvider::query()->active()->find($domain->provider_id);
 
         if (!$provider) {
             return back()->withInput()
-                ->withErrors(['nameservers' => __('No active provider configuration found for :registrar.', ['registrar' => $registrar])]);
+                ->withErrors(['nameservers' => __('The linked provider is inactive or no longer exists.')]);
+        }
+
+        if (strtolower((string) $domain->registrar) !== '' && strtolower((string) $domain->registrar) !== strtolower((string) $provider->type)) {
+            Log::warning('Domain registrar does not match its trusted provider (DNS update).', [
+                'domain_id' => $domain->id,
+                'domain' => $domain->domain_name,
+                'registrar' => $domain->registrar,
+                'provider_id' => $provider->id,
+                'provider_type' => $provider->type,
+            ]);
         }
 
         $syncResult = $this->pushNameserversToProvider($provider, $domain, $requestedNameservers);
