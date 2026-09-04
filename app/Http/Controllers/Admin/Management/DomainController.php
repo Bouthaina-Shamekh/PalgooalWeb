@@ -12,6 +12,9 @@ use App\Models\Invoice;
 use App\Models\DomainProvider;
 use App\Services\Domains\Clients\EnomClient;
 use App\Services\Domains\Clients\NamecheapClient;
+use App\Services\Domains\DomainRenewalService;
+use App\Services\Domains\Exceptions\MissingDomainProviderException;
+use App\Services\Domains\Exceptions\MissingRenewalPriceException;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -234,54 +237,83 @@ class DomainController extends Controller
             ->with('success', __('Domain registered successfully via :provider.', ['provider' => Str::title($provider->type)]));
     }
 
-    /** فورم التجديد */
-    public function editRenew(Domain $domain)
+    /**
+     * TLD-3E.3A — Replace Admin Renew Placeholder with Trusted Renewal Invoice Flow.
+     *
+     * This is now a trusted renewal SUMMARY/confirmation screen — never a direct Domain-record
+     * editor. It shows the domain's current renewal date and its exact managed provider
+     * identity (Domain.provider_id → DomainProvider, never Domain.registrar), and whether a
+     * pending renewal invoice already exists (via DomainRenewalService::findPendingRenewalInvoice(),
+     * a read-only query — no pricing logic is duplicated here). No renewal price is previewed:
+     * DomainRenewalService::buildRenewalQuote() is protected and intentionally not exposed or
+     * duplicated in this phase (correctness over a price preview, per TLD-3E.3A section 5).
+     */
+    public function editRenew(Domain $domain, DomainRenewalService $renewals)
     {
         $this->authorize('update', $domain);
-        $currentRenewal = $domain->renewal_date ? Carbon::parse($domain->renewal_date) : null;
-        $suggestedRenewal = ($currentRenewal ?? now())->copy()->addYear()->format('Y-m-d');
-        $renewalDateValue = ($currentRenewal ?? now())->format('Y-m-d');
 
-        $statusOptions = [
-            'active'  => __('Active'),
-            'pending' => __('Pending'),
-            'expired' => __('Expired'),
-        ];
+        $domain->loadMissing('provider');
+
+        $hasPendingInvoice = $domain->provider_id !== null
+            && $renewals->findPendingRenewalInvoice($domain) !== null;
 
         return view('dashboard.management.domains.renew', [
             'domain' => $domain,
-            'currentRenewal' => $renewalDateValue,
-            'suggestedRenewal' => $suggestedRenewal,
-            'statusOptions' => $statusOptions,
+            'currentRenewal' => $domain->renewal_date
+                ? Carbon::parse($domain->renewal_date)->format('Y-m-d')
+                : null,
+            'provider' => $domain->provider,
+            'hasPendingInvoice' => $hasPendingInvoice,
         ]);
     }
 
-    /** حفظ التجديد (Placeholder) */
-    public function updateRenew(Request $request, Domain $domain)
+    /**
+     * TLD-3E.3A — Replace Admin Renew Placeholder with Trusted Renewal Invoice Flow.
+     *
+     * Admin renewal no longer directly mutates Domain.renewal_date / Domain.status /
+     * Domain.payment_method, no longer accepts a price/provider/date/status/payment_method from
+     * the request, and never calls the registrar API here. It invokes the SAME trusted,
+     * exact-provider-identity, sale-only pipeline the client renewal flow uses
+     * (DomainRenewalService::prepareRenewalCheckout()) and redirects to the existing Admin
+     * invoice view for the resulting/reused Invoice — payment/settlement and registrar
+     * provisioning happen later, through the existing OrderActivationService /
+     * RegistrarProvisioningService pipeline, exactly as they do for the client flow.
+     */
+    public function updateRenew(Request $request, Domain $domain, DomainRenewalService $renewals)
     {
         $this->authorize('update', $domain);
-        $minimumRenewalDate = $domain->renewal_date
-            ? Carbon::parse($domain->renewal_date)->format('Y-m-d')
-            : now()->format('Y-m-d');
 
-        $validated = $request->validate([
-            'renewal_date'   => ['required', 'date', 'after_or_equal:' . $minimumRenewalDate],
-            'status'         => ['required', 'string', 'max:50'],
-            'payment_method' => ['nullable', 'string', 'max:255'],
-            'notes'          => ['nullable', 'string', 'max:500'],
-        ]);
+        try {
+            $checkout = $renewals->prepareRenewalCheckout($domain);
+        } catch (MissingDomainProviderException $e) {
+            Log::warning('Admin renewal blocked: domain has no trusted managed provider identity.', [
+                'domain_id' => $domain->id,
+                'domain' => $domain->domain_name,
+                'error' => $e->getMessage(),
+            ]);
 
-        $domain->update([
-            'renewal_date'   => $validated['renewal_date'],
-            'status'         => $validated['status'],
-            'payment_method' => $validated['payment_method'] ?? $domain->payment_method,
-        ]);
+            return back()->withErrors([
+                'renewal' => __('لا يمكن تجديد هذا النطاق عبر المنصة لأنه غير مرتبط بمزوّد مُدار.'),
+            ]);
+        } catch (MissingRenewalPriceException $e) {
+            Log::warning('Admin renewal blocked: no trusted renewal sale price.', [
+                'domain_id' => $domain->id,
+                'domain' => $domain->domain_name,
+                'error' => $e->getMessage(),
+            ]);
 
-        // @todo: إنشاء فاتورة/عملية دفع للتجديد
+            return back()->withErrors([
+                'renewal' => __('تعذر تجديد هذا النطاق حالياً: لا يوجد سعر تجديد معتمد لهذا النطاق.'),
+            ]);
+        }
+
+        $invoice = $checkout['invoice'];
 
         return redirect()
-            ->route('dashboard.domains.index')
-            ->with('success', __('Domain renewal saved. Automation with registrar pending.'));
+            ->route('dashboard.invoices.show', $invoice)
+            ->with('success', $checkout['created']
+                ? __('Renewal invoice created. Settle the invoice to renew the domain with the registrar.')
+                : __('An existing pending renewal invoice was found. Settle it to renew the domain.'));
     }
 
     /** DNS: فورم */
