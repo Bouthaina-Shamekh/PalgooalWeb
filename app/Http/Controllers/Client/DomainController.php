@@ -155,12 +155,53 @@ class DomainController extends Controller
         return redirect()->route('client.domains.index')->with('ok', t('client.Domain_Deleted', 'تم حذف النطاق بنجاح.'));
     }
  
+    /**
+     * TLD-3E.4D — Prerequisite fix (not a behavior redesign).
+     *
+     * Mirrors Client\DomainDnsController::ownedDomain() verbatim — the only existing
+     * implementation of this ownership pattern in the Client namespace. edit()/update()/
+     * destroy()/toggleAutoRenew() below all called $this->ownedDomain() without this class
+     * ever defining it, so all four fatal-errored (Call to undefined method) on every request.
+     * Adding it does not change ownership semantics; it makes the already-intended check run.
+     */
+    protected function ownedDomain(Domain $domain): Domain
+    {
+        abort_if((int) $domain->client_id !== (int) Auth::guard('client')->id(), 404);
+
+        return $domain;
+    }
+
+    /**
+     * TLD-3E.4D — External Domain Auto-Renew Guard.
+     *
+     * Enabling auto-renew requires Domain.provider_id to reference an active managed provider
+     * (Domain.provider_id is the Source of Truth for Managed vs External, per TLD-3D / TLD-3E.4).
+     * Disabling auto-renew is always allowed — including from the invalid legacy state
+     * (provider_id null, auto_renew true) — so a client can always self-recover. No provider is
+     * attached here, registrar is never consulted, and Domain.provider_id is never written by
+     * this method; it only ever writes Domain.auto_renew.
+     */
     public function toggleAutoRenew(Domain $domain)
     {
         $domain = $this->ownedDomain($domain);
 
+        $enabling = !$domain->auto_renew;
+
+        if ($enabling) {
+            $domain->loadMissing('provider');
+
+            if ($domain->provider_id === null || !$domain->provider || !$domain->provider->is_active) {
+                return redirect()
+                    ->route('client.domains.index')
+                    ->with('error', t(
+                        'client.Auto_Renew_Requires_Managed_Provider',
+                        'لا يمكن تفعيل التجديد التلقائي لهذا النطاق لأنه غير مرتبط بمزوّد مُدار.'
+                    ));
+            }
+        }
+
         $domain->update([
-            'auto_renew' => !$domain->auto_renew,
+            'auto_renew' => $enabling,
         ]);
 
         return redirect()
