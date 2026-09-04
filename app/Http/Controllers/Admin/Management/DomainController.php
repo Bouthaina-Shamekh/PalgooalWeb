@@ -40,11 +40,29 @@ class DomainController extends Controller
         return view('dashboard.management.domains.create', compact('clients', 'domain'));
     }
 
-    /** حفظ إنشاء */
+    /**
+     * حفظ إنشاء
+     *
+     * TLD-3E.4A — Formalize External-Only Admin Create Contract.
+     *
+     * Admin Create produces External/Unmanaged domains ONLY. provider_id and auto_renew are
+     * NOT accepted from the request at all (StoreDomainRequest has no rule for either key, so
+     * FormRequest::validated() already strips them before this method ever runs) — the explicit
+     * assignments below are a defense-in-depth restatement of that contract, not a new
+     * restriction: they guarantee provider_id stays null and auto_renew stays false even if a
+     * future change to the request/form ever adds those keys, or a forged raw request body
+     * contains them. No provider is resolved or looked up here, and registrar is left exactly
+     * as submitted (display/legacy metadata only — TLD-3E.4B territory). The only route from
+     * External to Managed remains the existing Admin Register success path (TLD-3E.1/TLD-3E.2).
+     */
     public function store(StoreDomainRequest $request)
     {
         $this->authorize('create', Domain::class);
         $data = $request->validated();
+
+        // TLD-3E.4A: Admin Create can never produce a Managed or auto-renewing domain.
+        $data['provider_id'] = null;
+        $data['auto_renew'] = false;
 
         // تطبيع اسم النطاق
         $data['domain_name'] = $this->normalizeDomain($data['domain_name']);
