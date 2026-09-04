@@ -17,11 +17,24 @@
 <div class="col-span-12 md:col-span-6">
     <div class="mb-3">
         <label for="registrar" class="form-label">Registrar Domain</label>
-        <select id="registrar" name="registrar" class="form-select">
-            <option value="" @selected($domain->registrar == '')>-- Select Registrar Domain --</option>
-            <option value="enom" @selected($domain->registrar == 'enom')>enom</option>
-            <option value="namcheap" @selected($domain->registrar == 'namcheap')>namcheap</option>
-        </select>
+        @if ($domain->exists && $domain->provider_id !== null)
+            {{-- TLD-3E.4B: Managed domain — registrar is Source-of-Truth-derived from the exact
+                 linked DomainProvider (never editable here, never a provider picker). A disabled
+                 select would not submit at all, so a hidden field carries the current value to
+                 satisfy UpdateDomainRequest's existing "required" rule; the controller still
+                 authoritatively overrides it from Domain.provider_id regardless of this value. --}}
+            <input type="text" class="form-control" value="{{ $domain->provider?->type ?? $domain->registrar }}" disabled>
+            <input type="hidden" name="registrar" value="{{ $domain->registrar }}">
+            <p class="text-xs text-gray-500 mt-1">
+                {{ __('نطاق مُدار: هذه القيمة مشتقة من المزوّد الموثوق المرتبط ولا يمكن تعديلها من هنا.') }}
+            </p>
+        @else
+            <select id="registrar" name="registrar" class="form-select">
+                <option value="" @selected($domain->registrar == '')>-- Select Registrar Domain --</option>
+                <option value="enom" @selected($domain->registrar == 'enom')>enom</option>
+                <option value="namcheap" @selected($domain->registrar == 'namcheap')>namcheap</option>
+            </select>
+        @endif
     </div>
 </div>
 <div class="col-span-12 md:col-span-6">

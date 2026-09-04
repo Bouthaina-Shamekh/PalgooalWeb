@@ -116,12 +116,53 @@ class DomainController extends Controller
         return view('dashboard.management.domains.edit', compact('domain', 'clients'));
     }
 
-    /** حفظ تعديل */
+    /**
+     * حفظ تعديل
+     *
+     * TLD-3E.4B — Admin Edit Invariants.
+     *
+     * Provider identity (Domain.provider_id) is immutable through ordinary Edit: it is not in
+     * UpdateDomainRequest's rules (so it never reaches validated() to begin with), and the
+     * unset() below is a defense-in-depth restatement of that — a forged provider_id in the
+     * raw request can never change it, and this method never assigns it. There is no provider
+     * picker, no transfer flow, and no detach flow here.
+     *
+     * For a Managed domain (provider_id !== null), registrar is derived exclusively from the
+     * exact linked DomainProvider (Domain.provider_id → DomainProvider, never ofType()/first()),
+     * overriding whatever was submitted — this prevents the domain drifting into
+     * provider_id=Enom / registrar=namecheap. An inactive linked provider does not block this
+     * metadata edit (provider_id remains valid historical identity; this screen performs no
+     * renewal/DNS/registration), so registrar is still derived and unrelated fields still save.
+     * If provider_id is set but the linked provider cannot be resolved (defensive — the
+     * provider_id FK uses restrictOnDelete(), so this should not occur in practice), the update
+     * is rejected safely with an Admin-facing error: provider_id is never nulled, invented, or
+     * silently trusted from the request.
+     *
+     * For an External domain (provider_id === null), registrar remains editable metadata exactly
+     * as before; Edit never attaches a provider or infers one from registrar — External → Managed
+     * remains possible only through a successful Admin Register action.
+     */
     public function update(UpdateDomainRequest $request, Domain $domain)
     {
         $this->authorize('update', $domain);
         $data = $request->validated();
         $data['domain_name'] = $this->normalizeDomain($data['domain_name']);
+
+        // TLD-3E.4B: provider identity is never accepted from the request.
+        unset($data['provider_id']);
+
+        if ($domain->provider_id !== null) {
+            $domain->loadMissing('provider');
+
+            if (!$domain->provider) {
+                return back()->withInput()->withErrors([
+                    'registrar' => __('تعذر تحديث هذا النطاق: تعذر تحديد مزوّد النطاق المرتبط به.'),
+                ]);
+            }
+
+            // Managed domain: the submitted registrar value is always ignored/overridden.
+            $data['registrar'] = $domain->provider->type;
+        }
 
         DB::transaction(function () use ($domain, $data) {
             $domain->update($data);
