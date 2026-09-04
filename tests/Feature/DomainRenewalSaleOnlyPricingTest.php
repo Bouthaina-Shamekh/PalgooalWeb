@@ -23,16 +23,23 @@ use Tests\TestCase;
  * TLD-3B — Strict Sale-Only Renewal Pricing.
  *
  * Locks in the new renewal-pricing contract: DomainRenewalService::buildRenewalQuote() accepts
- * ONLY an explicit, numeric, `> 0` `renew.sale` row, for the domain's own TLD and its own active
- * provider (matching $domain->registrar). Every fallback tier identified by the TLD-3B audit gate
- * — renew.cost, register.sale, register.cost, and the hard-coded `10.0 * years` — is removed with
- * no replacement. When no trusted price exists, the whole renewal operation must fail safely
+ * ONLY an explicit, numeric, `> 0` `renew.sale` row, for the domain's own TLD and its own exact
+ * trusted provider. Every fallback tier identified by the TLD-3B audit gate — renew.cost,
+ * register.sale, register.cost, and the hard-coded `10.0 * years` — is removed with no
+ * replacement. When no trusted price exists, the whole renewal operation must fail safely
  * *before* any financial write: no Order, no OrderItem, no Invoice, no InvoiceItem, no
  * PaymentAttempt. `cost` never surfaces as a customer-facing renewal price.
  *
+ * TLD-3D — Hybrid Provider Identity updated how the "own trusted provider" above is resolved:
+ * domains here are created with an explicit Domain.provider_id (not just a registrar type
+ * string), matching the new contract where buildRenewalQuote() reads Domain.provider_id
+ * directly and never resolves a provider by Domain.registrar's type. The pricing assertions
+ * themselves (sale-only, no fallback, no hardcoded value) are unchanged from TLD-3B.
+ *
  * Auto-renew's own failure-path behavior (failed++, no provider call, continues to next domain)
  * and the untouched happy-path / pending-invoice-reuse / settlement regressions are covered in
- * DomainAutoRenewalTest — not duplicated here.
+ * DomainAutoRenewalTest — not duplicated here. Provider-identity-specific tests (snapshot,
+ * cross-provider drift, provisioning cross-check) live in RenewalProviderSourceOfTruthTest.
  */
 class DomainRenewalSaleOnlyPricingTest extends TestCase
 {
@@ -51,7 +58,7 @@ class DomainRenewalSaleOnlyPricingTest extends TestCase
         $provider = $this->makeProvider('namecheap');
         $tld = $this->makeTld($provider, 'test');
         $this->makePrice($tld, action: 'renew', sale: 15.75, cost: 9.00);
-        $domain = $this->makeDomain($this->makeClient(), 'renews-fine.test', 'namecheap');
+        $domain = $this->makeDomain($this->makeClient(), 'renews-fine.test', $provider);
 
         $checkout = app(DomainRenewalService::class)->prepareRenewalCheckout($domain);
 
@@ -63,6 +70,7 @@ class DomainRenewalSaleOnlyPricingTest extends TestCase
         $this->assertSame(1, Order::query()->count());
         $this->assertSame(1575, OrderItem::query()->sole()->price_cents);
         $this->assertSame(1575, InvoiceItem::query()->sole()->unit_price_cents);
+        $this->assertSame($provider->id, OrderItem::query()->sole()->meta['provider_id']);
     }
 
     /* ================================ B ================================ */
@@ -72,7 +80,7 @@ class DomainRenewalSaleOnlyPricingTest extends TestCase
         $provider = $this->makeProvider('namecheap');
         $tld = $this->makeTld($provider, 'test');
         $this->makePrice($tld, action: 'renew', sale: null, cost: 11.00);
-        $domain = $this->makeDomain($this->makeClient(), 'no-sale.test', 'namecheap');
+        $domain = $this->makeDomain($this->makeClient(), 'no-sale.test', $provider);
 
         // If renew.cost were still used as a fallback the checkout would succeed with
         // total_cents = 1100; asserting rejection + zero writes proves cost was never touched.
@@ -86,7 +94,7 @@ class DomainRenewalSaleOnlyPricingTest extends TestCase
         $provider = $this->makeProvider('namecheap');
         $tld = $this->makeTld($provider, 'test');
         $this->makePrice($tld, action: 'renew', sale: 0, cost: 11.00);
-        $domain = $this->makeDomain($this->makeClient(), 'zero-sale.test', 'namecheap');
+        $domain = $this->makeDomain($this->makeClient(), 'zero-sale.test', $provider);
 
         $this->assertRenewalRejectedWithNoFinancialWrites($domain);
     }
@@ -99,7 +107,7 @@ class DomainRenewalSaleOnlyPricingTest extends TestCase
         $tld = $this->makeTld($provider, 'test');
         $this->makePrice($tld, action: 'renew', sale: null, cost: null);
         $this->makePrice($tld, action: 'register', sale: 20.00, cost: 12.00);
-        $domain = $this->makeDomain($this->makeClient(), 'renew-row-empty.test', 'namecheap');
+        $domain = $this->makeDomain($this->makeClient(), 'renew-row-empty.test', $provider);
 
         // If register.sale were still used as a fallback the checkout would succeed with
         // total_cents = 2000; asserting rejection + zero writes proves it was never touched.
@@ -114,7 +122,7 @@ class DomainRenewalSaleOnlyPricingTest extends TestCase
         $tld = $this->makeTld($provider, 'test');
         $this->makePrice($tld, action: 'renew', sale: null, cost: null);
         $this->makePrice($tld, action: 'register', sale: null, cost: null);
-        $domain = $this->makeDomain($this->makeClient(), 'nothing-priced.test', 'namecheap');
+        $domain = $this->makeDomain($this->makeClient(), 'nothing-priced.test', $provider);
 
         // If the old `10.0 * years` fallback were still present, this would succeed with
         // total_cents = 1000 instead of throwing.
@@ -128,30 +136,32 @@ class DomainRenewalSaleOnlyPricingTest extends TestCase
         $provider = $this->makeProvider('namecheap');
         $tld = $this->makeTld($provider, 'test', currency: '12');
         $this->makePrice($tld, action: 'renew', sale: 15.00, cost: 9.00);
-        $domain = $this->makeDomain($this->makeClient(), 'bad-currency.test', 'namecheap');
+        $domain = $this->makeDomain($this->makeClient(), 'bad-currency.test', $provider);
 
         $this->assertRenewalRejectedWithNoFinancialWrites($domain);
     }
 
     /* ================================ G ================================ */
 
-    public function test_manual_renewal_rejects_when_the_matching_provider_is_inactive(): void
+    public function test_manual_renewal_rejects_when_the_trusted_provider_is_inactive(): void
     {
         $provider = $this->makeProvider('namecheap', active: false);
         $tld = $this->makeTld($provider, 'test');
         $this->makePrice($tld, action: 'renew', sale: 15.00, cost: 9.00);
-        $domain = $this->makeDomain($this->makeClient(), 'inactive-provider.test', 'namecheap');
+        $domain = $this->makeDomain($this->makeClient(), 'inactive-provider.test', $provider);
 
         $this->assertRenewalRejectedWithNoFinancialWrites($domain);
     }
 
     public function test_manual_renewal_does_not_fall_back_to_a_different_active_provider(): void
     {
-        // Domain is held at namecheap, but only enom has a valid renew.sale for this TLD.
-        // Pricing must not silently borrow another provider's price.
+        // Domain's trusted provider_id points at namecheap, which has no priced renew row for
+        // this TLD. A completely different, active provider (enom) happens to have a valid sale
+        // for the same TLD name. Pricing must never borrow another provider's price.
+        $namecheap = $this->makeProvider('namecheap');
         $enom = $this->makeProvider('enom');
         $this->makePrice($this->makeTld($enom, 'test'), action: 'renew', sale: 15.00, cost: 9.00);
-        $domain = $this->makeDomain($this->makeClient(), 'wrong-provider.test', 'namecheap');
+        $domain = $this->makeDomain($this->makeClient(), 'wrong-provider.test', $namecheap);
 
         $this->assertRenewalRejectedWithNoFinancialWrites($domain);
     }
@@ -163,7 +173,7 @@ class DomainRenewalSaleOnlyPricingTest extends TestCase
         $provider = $this->makeProvider('namecheap');
         $tld = $this->makeTld($provider, 'test');
         $this->makePrice($tld, action: 'renew', sale: null, cost: null);
-        $domain = $this->makeDomain($this->makeClient(), 'no-records.test', 'namecheap');
+        $domain = $this->makeDomain($this->makeClient(), 'no-records.test', $provider);
 
         $this->assertRenewalRejectedWithNoFinancialWrites($domain);
     }
@@ -174,7 +184,7 @@ class DomainRenewalSaleOnlyPricingTest extends TestCase
         $tld = $this->makeTld($provider, 'test');
         $this->makePrice($tld, action: 'renew', sale: null, cost: null);
         $client = $this->makeClient();
-        $domain = $this->makeDomain($client, 'controller-no-price.test', 'namecheap');
+        $domain = $this->makeDomain($client, 'controller-no-price.test', $provider);
 
         $response = $this->actingAs($client, 'client')->post(route('client.domains.renew', $domain));
 
@@ -185,6 +195,32 @@ class DomainRenewalSaleOnlyPricingTest extends TestCase
         $this->assertSame(0, Invoice::query()->count());
         $this->assertSame(0, InvoiceItem::query()->count());
         $this->assertSame(0, PaymentAttempt::query()->count());
+    }
+
+    public function test_manual_renewal_rejects_when_domain_has_no_trusted_provider_identity(): void
+    {
+        // TLD-3D — an external/unmanaged domain (provider_id null) must fail safely for managed
+        // renewal pricing, even when a priced renew row happens to exist for its TLD under some
+        // active provider — pricing must never resolve a provider by registrar type as a
+        // fallback once provider_id is the source of truth.
+        $provider = $this->makeProvider('namecheap');
+        $tld = $this->makeTld($provider, 'test');
+        $this->makePrice($tld, action: 'renew', sale: 15.00, cost: 9.00);
+
+        $client = $this->makeClient();
+        $domain = Domain::query()->create([
+            'client_id' => $client->id,
+            'domain_name' => 'unmanaged.test',
+            'registrar' => 'namecheap',
+            'provider_id' => null,
+            'registration_date' => now()->subYear()->toDateString(),
+            'renewal_date' => now()->addDays(10)->toDateString(),
+            'auto_renew' => false,
+            'status' => 'active',
+            'payment_method' => 'lahza',
+        ]);
+
+        $this->assertRenewalRejectedWithNoFinancialWrites($domain);
     }
 
     /* ================================ M ================================ */
@@ -276,12 +312,13 @@ class DomainRenewalSaleOnlyPricingTest extends TestCase
         ]);
     }
 
-    private function makeDomain(Client $client, string $domainName, string $registrar): Domain
+    private function makeDomain(Client $client, string $domainName, DomainProvider $provider): Domain
     {
         return Domain::query()->create([
             'client_id' => $client->id,
             'domain_name' => $domainName,
-            'registrar' => $registrar,
+            'registrar' => $provider->type,
+            'provider_id' => $provider->id,
             'registration_date' => now()->subYear()->toDateString(),
             'renewal_date' => now()->addDays(10)->toDateString(),
             'auto_renew' => false,

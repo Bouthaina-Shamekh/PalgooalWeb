@@ -268,10 +268,19 @@ class DomainAutoRenewalTest extends TestCase
             'company_name' => 'Auto Renewal Test',
         ]);
 
+        // TLD-3D: Domain.provider_id is now the source of truth for renewal
+        // pricing/provisioning. Resolve the trusted provider by the same
+        // registrar type this helper defaults domains to (or an override's
+        // registrar type), so every domain created here has a valid,
+        // matching provider_id unless a test explicitly overrides it.
+        $registrarType = $overrides['registrar'] ?? 'namecheap';
+        $provider = DomainProvider::query()->where('type', $registrarType)->first();
+
         return Domain::query()->create(array_merge([
             'client_id' => $client->id,
             'domain_name' => uniqid('auto-renew-', false) . '.test',
             'registrar' => 'namecheap',
+            'provider_id' => $provider?->id,
             'registration_date' => now()->subYear()->toDateString(),
             'renewal_date' => now()->addDays(3)->toDateString(),
             'auto_renew' => true,

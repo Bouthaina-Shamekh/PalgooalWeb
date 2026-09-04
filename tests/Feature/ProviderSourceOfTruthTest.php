@@ -299,6 +299,67 @@ class ProviderSourceOfTruthTest extends TestCase
         $this->assertSame(0, DomainProvisioningAttempt::query()->count());
     }
 
+    /**
+     * TLD-3D — Domain Provider Identity Writers (test B of the implementation test plan).
+     *
+     * Managed registration must write the exact trusted provider_id already resolved by
+     * trustedRegistrationProvider() onto the new Domain row — not merely its registrar type
+     * string. Domain.provider_id is the new Source of Truth for renewal pricing/provisioning.
+     */
+    public function test_managed_registration_writes_the_exact_trusted_provider_id_onto_the_domain(): void
+    {
+        [$namecheap, $enom] = $this->createCatalog();
+        $client = $this->makeClient();
+        $order = Order::query()->create([
+            'client_id' => $client->id,
+            'status' => Order::STATUS_PENDING,
+            'type' => 'domains',
+        ]);
+        $this->makeRegisterItem($order, 'writes-provider-id.com', $namecheap);
+        $service = $this->fakeRegistrar();
+
+        $result = $service->provisionOrderDomain($order->fresh(['client', 'items', 'invoices.items']));
+
+        $this->assertTrue($result['ok']);
+        $domain = Domain::query()->where('domain_name', 'writes-provider-id.com')->sole();
+        $this->assertSame($namecheap->id, $domain->provider_id);
+        $this->assertSame('namecheap', $domain->registrar);
+        $this->assertNotSame($enom->id, $domain->provider_id);
+    }
+
+    /**
+     * TLD-3D — Domain Provider Identity Writers (test C of the implementation test plan).
+     *
+     * With two ACTIVE providers sharing the same type ("namecheap"), Domain.provider_id after
+     * registration must equal the exact provider_id from the trusted registration snapshot —
+     * never merely "some active provider of the same type". A type-only resolver would not be
+     * able to tell these two rows apart; the provider_id-based writer must.
+     */
+    public function test_managed_registration_with_two_same_type_providers_writes_the_exact_snapshot_provider_id(): void
+    {
+        $namecheapPrimary = $this->makeProvider('namecheap', 'test');
+        $namecheapSecondary = $this->makeProvider('namecheap', 'test');
+        $this->makeTldPrice($namecheapPrimary, 'com', 10);
+        $this->makeTldPrice($namecheapSecondary, 'net', 8);
+
+        $client = $this->makeClient();
+        $order = Order::query()->create([
+            'client_id' => $client->id,
+            'status' => Order::STATUS_PENDING,
+            'type' => 'domains',
+        ]);
+        // The trusted snapshot explicitly names the SECOND same-type provider row.
+        $this->makeRegisterItem($order, 'two-same-type.net', $namecheapSecondary);
+        $service = $this->fakeRegistrar();
+
+        $result = $service->provisionOrderDomain($order->fresh(['client', 'items', 'invoices.items']));
+
+        $this->assertTrue($result['ok']);
+        $domain = Domain::query()->where('domain_name', 'two-same-type.net')->sole();
+        $this->assertSame($namecheapSecondary->id, $domain->provider_id);
+        $this->assertNotSame($namecheapPrimary->id, $domain->provider_id);
+    }
+
     private function createCatalog(): array
     {
         $namecheap = $this->makeProvider('namecheap', 'test');

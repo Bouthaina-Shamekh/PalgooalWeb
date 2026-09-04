@@ -12,6 +12,7 @@ class Domain extends Model
         'template_id',
         'domain_name',
         'registrar',
+        'provider_id',
         'registration_date',
         'renewal_date',
         'auto_renew',
@@ -31,6 +32,16 @@ class Domain extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    /**
+     * TLD-3D — Hybrid Provider Identity. Source of Truth لهوية المزوّد عندما تكون موجودة
+     * (provider_id ليس null). null يمثل نطاقاً خارجياً/غير مُدار (manual/quick-add)، وهذا
+     * مسموح ومقصود في هذه المرحلة — راجع تدقيق TLD-3D.
+     */
+    public function provider(): BelongsTo
+    {
+        return $this->belongsTo(DomainProvider::class, 'provider_id');
     }
 
     public function template(): BelongsTo

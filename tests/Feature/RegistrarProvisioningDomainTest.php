@@ -397,12 +397,21 @@ class RegistrarProvisioningDomainTest extends TestCase
             'meta' => [
                 'current_renewal_date' => now()->toDateString(),
                 'renewal_date' => now()->addYear()->toDateString(),
+                // TLD-3D — Hybrid Provider Identity: renewal provisioning now requires the exact
+                // trusted provider snapshot on the OrderItem, cross-checked against the domain's
+                // own Domain.provider_id below. This fixture is unrelated to that contract (it
+                // only proves renew routes away from registration attempts), so the snapshot is
+                // filled in from the same $provider the Domain below is given.
+                'provider_id' => $provider->getKey(),
+                'provider_type' => $provider->type,
+                'provider_mode' => $provider->mode,
             ],
         ]);
         Domain::query()->create([
             'client_id' => $order->client_id,
             'domain_name' => $orderItem->domain,
             'registrar' => $provider->type,
+            'provider_id' => $provider->getKey(),
             'registration_date' => now()->subYear()->toDateString(),
             'renewal_date' => now()->toDateString(),
             'status' => 'active',

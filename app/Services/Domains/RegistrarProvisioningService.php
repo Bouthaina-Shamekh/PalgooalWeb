@@ -154,6 +154,10 @@ class RegistrarProvisioningService
 
         $domainAttributes = [
             'client_id' => $order->client_id,
+            // TLD-3D — provider_id هو Source of Truth الجديد؛ registrar يبقى نصاً مُطبَّعاً
+            // للتوافق/العرض فقط. $provider هنا هو الـ DomainProvider model الموثوق الذي أعادته
+            // trustedRegistrationProvider() بالفعل — لا حاجة لأي lookup إضافي.
+            'provider_id' => $provider->getKey(),
             'registrar' => $provider->type,
             'registration_date' => $registrationDate->toDateString(),
             'renewal_date' => $renewalDate->toDateString(),
@@ -453,6 +457,11 @@ class RegistrarProvisioningService
             if ($domain instanceof Domain
                 && $domain->status === 'active'
                 && strtolower((string) $domain->registrar) === strtolower((string) $provider->type)
+                // TLD-3D — minimal drift guard: a same-type provider row is not necessarily the
+                // SAME provider record (e.g. "Namecheap Live" vs "Namecheap Sandbox"). When the
+                // existing domain already has a trusted provider_id, it must match exactly; a
+                // domain with no provider_id yet (legacy/manual) keeps today's type-only check.
+                && ($domain->provider_id === null || (int) $domain->provider_id === (int) $provider->getKey())
             ) {
                 $registrationClaim->forceFill([
                     'status' => DomainRegistrationClaim::STATUS_COMPLETED,
@@ -651,15 +660,30 @@ class RegistrarProvisioningService
             ];
         }
 
-        $provider = $this->providerForDomain($domain, $meta['registrar'] ?? null);
+        // TLD-3D — Hybrid Provider Identity: renewal no longer resolves a provider live via
+        // providerForDomain()'s type-based fallback chain (the drift TLD-3C confirmed). It uses
+        // ONLY the exact provider_id snapshotted onto this OrderItem at renewal-quote time,
+        // cross-checked against Domain.provider_id and the provider's current active/type/mode
+        // state — no fallback to any other provider.
+        $providerResolution = $this->trustedRenewalProvider($domain, $meta);
 
-        if (!$provider instanceof DomainProvider) {
+        if (!($providerResolution['ok'] ?? false)) {
+            Log::warning('Renewal provisioning blocked: provider identity could not be trusted.', [
+                'order_id' => $order->getKey(),
+                'domain_id' => $domain->getKey(),
+                'domain' => $domain->domain_name,
+                'reason' => $providerResolution['reason'] ?? 'unknown',
+            ]);
+
             return [
                 'ok' => false,
                 'domain' => $domain,
-                'message' => 'No active registrar provider is configured for the domain renewal request.',
+                'message' => $providerResolution['message'],
+                'reason' => $providerResolution['reason'] ?? null,
             ];
         }
+
+        $provider = $providerResolution['provider'];
 
         $currentRenewalDate = Carbon::parse($meta['current_renewal_date'] ?? $domain->renewal_date ?? now()->toDateString());
         $renewalDate = Carbon::parse($meta['renewal_date'] ?? $currentRenewalDate->copy()->addYear()->toDateString());
@@ -672,9 +696,12 @@ class RegistrarProvisioningService
         ]);
 
         if (!($renewal['ok'] ?? false)) {
+            // TLD-3D — never write provider_id/registrar here. $provider is already the exact,
+            // cross-checked identity Domain.provider_id already points to; re-stamping it on
+            // failure would silently "correct" a drift signal instead of surfacing it, and this
+            // path never reaches a mismatched provider in the first place (rejected above).
             $domain->forceFill([
                 'status' => $domain->status ?: 'active',
-                'registrar' => $provider->type,
                 'payment_method' => $paymentMethod ?: $domain->payment_method,
                 'dns_last_note' => $renewal['message'] ?? 'Automatic registrar renewal failed.',
             ])->save();
@@ -690,7 +717,6 @@ class RegistrarProvisioningService
 
         $domain->forceFill([
             'status' => 'active',
-            'registrar' => $provider->type,
             'renewal_date' => $renewalDate->toDateString(),
             'payment_method' => $paymentMethod ?: $domain->payment_method,
             'dns_last_note' => null,
@@ -704,6 +730,93 @@ class RegistrarProvisioningService
             'domain' => $domain,
             'cid' => $renewal['cid'] ?? null,
             'message' => 'Domain renewed successfully with the registrar.',
+        ];
+    }
+
+    /**
+     * TLD-3D — Hybrid Provider Identity: the sole, exact-identity resolver for renewal
+     * provisioning. Mirrors trustedRegistrationProvider()'s "no fallback" contract, but adds
+     * the one extra cross-check registration doesn't need: the OrderItem's provider_id snapshot
+     * must still match the domain's OWN current Domain.provider_id (registration has no
+     * equivalent concept to drift against). Any failure returns a distinct, non-generic reason
+     * code — never a silent substitution.
+     */
+    protected function trustedRenewalProvider(Domain $domain, array $meta): array
+    {
+        $snapshotProviderId = filter_var($meta['provider_id'] ?? null, FILTER_VALIDATE_INT);
+        $snapshotType = strtolower(trim((string) ($meta['provider_type'] ?? '')));
+        $snapshotMode = strtolower(trim((string) ($meta['provider_mode'] ?? '')));
+
+        if (!$snapshotProviderId || $snapshotProviderId < 1 || $snapshotType === '' || $snapshotMode === '') {
+            return [
+                'ok' => false,
+                'reason' => 'renewal_provider_snapshot_missing',
+                'message' => 'The renewal provider identity snapshot is missing for this order item.',
+            ];
+        }
+
+        if ($domain->provider_id === null) {
+            return [
+                'ok' => false,
+                'reason' => 'domain_provider_missing',
+                'message' => 'The domain has no trusted provider identity configured.',
+            ];
+        }
+
+        if ((int) $domain->provider_id !== $snapshotProviderId) {
+            return [
+                'ok' => false,
+                'reason' => 'renewal_provider_domain_mismatch',
+                'message' => "The renewal provider snapshot does not match the domain's current trusted provider.",
+            ];
+        }
+
+        $provider = DomainProvider::query()->whereKey($snapshotProviderId)->first();
+
+        if (!$provider instanceof DomainProvider) {
+            return [
+                'ok' => false,
+                'reason' => 'renewal_provider_snapshot_missing',
+                'message' => 'The trusted renewal provider no longer exists.',
+            ];
+        }
+
+        if (!$provider->is_active) {
+            return [
+                'ok' => false,
+                'reason' => 'renewal_provider_inactive',
+                'message' => 'The trusted renewal provider is inactive.',
+            ];
+        }
+
+        if ($snapshotType !== strtolower((string) $provider->type)) {
+            return [
+                'ok' => false,
+                'reason' => 'renewal_provider_type_mismatch',
+                'message' => 'The renewal provider type snapshot does not match the configured provider.',
+            ];
+        }
+
+        if ($snapshotMode !== strtolower((string) $provider->mode)) {
+            return [
+                'ok' => false,
+                'reason' => 'renewal_provider_mode_mismatch',
+                'message' => 'The renewal provider mode snapshot does not match the configured provider.',
+            ];
+        }
+
+        $domainRegistrar = strtolower((string) $domain->registrar);
+        if ($domainRegistrar !== '' && $domainRegistrar !== strtolower((string) $provider->type)) {
+            return [
+                'ok' => false,
+                'reason' => 'renewal_provider_domain_mismatch',
+                'message' => "The domain's registrar value does not match its trusted provider — additional drift signal.",
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'provider' => $provider,
         ];
     }
 

@@ -7,6 +7,7 @@ use App\Models\DomainProvider;
 use App\Models\DomainTld;
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Services\Domains\Exceptions\MissingDomainProviderException;
 use App\Services\Domains\Exceptions\MissingRenewalPriceException;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -73,7 +74,10 @@ class DomainRenewalService
                 'price_cents' => $quote['price_cents'],
                 'meta' => [
                     'currency' => $quote['currency'],
-                    'registrar' => $lockedDomain->registrar ?: $this->defaultRegistrarType(),
+                    'registrar' => $quote['provider_type'],
+                    'provider_id' => $quote['provider_id'],
+                    'provider_type' => $quote['provider_type'],
+                    'provider_mode' => $quote['provider_mode'],
                     'domain_id' => $lockedDomain->id,
                     'current_renewal_date' => $currentRenewalDate->toDateString(),
                     'renewal_date' => $nextRenewalDate->toDateString(),
@@ -148,7 +152,7 @@ class DomainRenewalService
                     $summary['details'][] = [
                         'domain' => $domain->domain_name,
                         'renewal_date' => Carbon::parse($domain->renewal_date)->toDateString(),
-                        'provider' => strtolower((string) ($domain->registrar ?: $this->defaultRegistrarType())),
+                        'provider' => $quote['provider_type'],
                         'estimated_price_cents' => $quote['price_cents'],
                         'currency' => $quote['currency'],
                         'pending_invoice' => $pendingInvoice instanceof Invoice,
@@ -190,22 +194,30 @@ class DomainRenewalService
             } catch (MissingRenewalPriceException $e) {
                 $registrar = strtolower((string) ($domain->registrar ?: $this->defaultRegistrarType()));
                 $tld = $this->extractTld($domain->domain_name);
+                $reason = $e instanceof MissingDomainProviderException
+                    ? 'domain_provider_missing'
+                    : 'missing_renewal_sale';
 
-                Log::warning('Auto-renew skipped: no trusted renewal sale price for domain.', [
+                Log::warning('Auto-renew skipped: no trusted renewal price for domain.', [
                     'domain_id' => $domain->id,
                     'domain' => $domain->domain_name,
                     'registrar' => $registrar,
                     'tld' => $tld,
-                    'reason' => 'missing_renewal_sale',
+                    'reason' => $reason,
                     'error' => $e->getMessage(),
                 ]);
 
                 if (!$dryRun) {
                     $domain->forceFill([
-                        'dns_last_note' => t(
-                            'client.domains.auto_renew_price_unavailable',
-                            'Auto-renew skipped: no trusted renewal price (sale) is currently available for this domain.'
-                        ),
+                        'dns_last_note' => $reason === 'domain_provider_missing'
+                            ? t(
+                                'client.domains.auto_renew_provider_unavailable',
+                                'Auto-renew skipped: this domain has no trusted registrar provider configured.'
+                            )
+                            : t(
+                                'client.domains.auto_renew_price_unavailable',
+                                'Auto-renew skipped: no trusted renewal price (sale) is currently available for this domain.'
+                            ),
                     ])->save();
                 }
 
@@ -319,19 +331,44 @@ class DomainRenewalService
     }
 
     /**
-     * TLD-3B — Strict Sale-Only Renewal Pricing.
+     * TLD-3B/TLD-3D — Strict Sale-Only, Exact-Provider-Identity Renewal Pricing.
      *
-     * يقبل حصراً renew.sale الصريح والرقمي والأكبر من صفر، لنفس الـTLD ونفس
-     * المزوّد (provider) الفعّال الذي يحمل النطاق حالياً. لا يوجد أي fallback:
-     * لا renew.cost، لا register.sale، لا register.cost، ولا أي قيمة ثابتة
-     * (hard-coded). أي إخفاق في تحقيق هذا الشرط يوقف العملية فوراً برمي
-     * MissingRenewalPriceException — ولا يُعاد أبداً سعر اصطناعي (synthetic).
+     * TLD-3D — Hybrid Provider Identity: Domain.provider_id (when present) is the ONLY source
+     * of truth used to resolve the provider for managed renewal pricing. There is no lookup by
+     * Domain.registrar's type string anymore, no defaultRegistrarType() fallback, and no
+     * cross-type substitution — closing the pricing-vs-provisioning drift confirmed by TLD-3C.
+     * A null Domain.provider_id represents a legitimate external/unmanaged domain (manual
+     * admin/client "quick add" — TLD-3D audit section 13/16); managed renewal pricing must
+     * fail safely for it via MissingDomainProviderException, never guess a provider.
+     *
+     * Once a provider is resolved this way, it must still be active, and the matching
+     * DomainTld row (enabled, same tld, same exact provider_id) must carry an explicit,
+     * numeric, > 0 renew.sale and a valid ISO-like currency — no renew.cost, no register.sale,
+     * no register.cost, no hard-coded fallback (TLD-3B contract, unchanged). Any failure throws
+     * — never a synthetic price.
      */
     protected function buildRenewalQuote(Domain $domain, int $years = 1): array
     {
-        $registrar = strtolower((string) ($domain->registrar ?: $this->defaultRegistrarType()));
-        $tld = $this->extractTld($domain->domain_name);
         $years = max(1, $years);
+
+        if ($domain->provider_id === null) {
+            throw new MissingDomainProviderException(sprintf(
+                'Domain [%s] has no trusted provider identity (provider_id is null — external/unmanaged domain); managed renewal pricing is not available.',
+                $domain->domain_name,
+            ));
+        }
+
+        $provider = DomainProvider::query()->whereKey($domain->provider_id)->first();
+
+        if (!$provider instanceof DomainProvider || !$provider->is_active) {
+            throw new MissingDomainProviderException(sprintf(
+                'Domain [%s] trusted provider_id [%s] is missing or inactive.',
+                $domain->domain_name,
+                (string) $domain->provider_id,
+            ));
+        }
+
+        $tld = $this->extractTld($domain->domain_name);
 
         $row = DomainTld::query()
             ->with([
@@ -341,19 +378,17 @@ class DomainRenewalService
             ])
             ->where('enabled', true)
             ->whereIn('tld', [$tld, '.' . $tld])
-            ->whereHas('provider', function ($query) use ($registrar) {
-                $query->active()->where('type', $registrar);
-            })
+            ->where('provider_id', $provider->getKey())
             ->first();
 
         $sale = $row?->prices->first()?->sale;
 
         if ($sale === null || $sale === '' || !is_numeric($sale) || (float) $sale <= 0) {
             throw new MissingRenewalPriceException(sprintf(
-                'Missing trusted renew.sale price for domain [%s], tld [%s], registrar [%s], years [%d].',
+                'Missing trusted renew.sale price for domain [%s], tld [%s], provider_id [%d], years [%d].',
                 $domain->domain_name,
                 $tld,
-                $registrar,
+                $provider->getKey(),
                 $years,
             ));
         }
@@ -362,16 +397,19 @@ class DomainRenewalService
 
         if ($currency === '' || !preg_match('/^[A-Z]{3}$/', $currency)) {
             throw new MissingRenewalPriceException(sprintf(
-                'Invalid or missing renewal currency for domain [%s], tld [%s], registrar [%s].',
+                'Invalid or missing renewal currency for domain [%s], tld [%s], provider_id [%d].',
                 $domain->domain_name,
                 $tld,
-                $registrar,
+                $provider->getKey(),
             ));
         }
 
         return [
             'price_cents' => (int) round(((float) $sale) * 100),
             'currency' => $currency,
+            'provider_id' => $provider->getKey(),
+            'provider_type' => strtolower((string) $provider->type),
+            'provider_mode' => strtolower((string) $provider->mode),
         ];
     }
 
