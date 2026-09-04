@@ -7,6 +7,7 @@ use App\Models\DomainProvider;
 use App\Models\DomainTld;
 use App\Models\Invoice;
 use App\Models\Order;
+use App\Services\Domains\Exceptions\MissingRenewalPriceException;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -186,6 +187,29 @@ class DomainRenewalService
                 ])->save();
 
                 $summary['awaiting_payment']++;
+            } catch (MissingRenewalPriceException $e) {
+                $registrar = strtolower((string) ($domain->registrar ?: $this->defaultRegistrarType()));
+                $tld = $this->extractTld($domain->domain_name);
+
+                Log::warning('Auto-renew skipped: no trusted renewal sale price for domain.', [
+                    'domain_id' => $domain->id,
+                    'domain' => $domain->domain_name,
+                    'registrar' => $registrar,
+                    'tld' => $tld,
+                    'reason' => 'missing_renewal_sale',
+                    'error' => $e->getMessage(),
+                ]);
+
+                if (!$dryRun) {
+                    $domain->forceFill([
+                        'dns_last_note' => t(
+                            'client.domains.auto_renew_price_unavailable',
+                            'Auto-renew skipped: no trusted renewal price (sale) is currently available for this domain.'
+                        ),
+                    ])->save();
+                }
+
+                $summary['failed']++;
             } catch (\Throwable $e) {
                 Log::error('Auto-renew processing failed', [
                     'domain_id' => $domain->id,
@@ -294,16 +318,26 @@ class DomainRenewalService
         return [$currentRenewalDate, $nextRenewalDate];
     }
 
+    /**
+     * TLD-3B — Strict Sale-Only Renewal Pricing.
+     *
+     * يقبل حصراً renew.sale الصريح والرقمي والأكبر من صفر، لنفس الـTLD ونفس
+     * المزوّد (provider) الفعّال الذي يحمل النطاق حالياً. لا يوجد أي fallback:
+     * لا renew.cost، لا register.sale، لا register.cost، ولا أي قيمة ثابتة
+     * (hard-coded). أي إخفاق في تحقيق هذا الشرط يوقف العملية فوراً برمي
+     * MissingRenewalPriceException — ولا يُعاد أبداً سعر اصطناعي (synthetic).
+     */
     protected function buildRenewalQuote(Domain $domain, int $years = 1): array
     {
         $registrar = strtolower((string) ($domain->registrar ?: $this->defaultRegistrarType()));
         $tld = $this->extractTld($domain->domain_name);
+        $years = max(1, $years);
 
         $row = DomainTld::query()
             ->with([
                 'prices' => fn ($query) => $query
                     ->where('action', 'renew')
-                    ->where('years', max(1, $years)),
+                    ->where('years', $years),
             ])
             ->where('enabled', true)
             ->whereIn('tld', [$tld, '.' . $tld])
@@ -312,40 +346,33 @@ class DomainRenewalService
             })
             ->first();
 
-        $price = $row?->prices->first()?->sale ?? $row?->prices->first()?->cost;
-        $currency = $row?->currency ?: 'USD';
+        $sale = $row?->prices->first()?->sale;
 
-        if (!is_numeric($price)) {
-            $price = $this->fallbackRenewalPrice($domain, $years);
+        if ($sale === null || $sale === '' || !is_numeric($sale) || (float) $sale <= 0) {
+            throw new MissingRenewalPriceException(sprintf(
+                'Missing trusted renew.sale price for domain [%s], tld [%s], registrar [%s], years [%d].',
+                $domain->domain_name,
+                $tld,
+                $registrar,
+                $years,
+            ));
+        }
+
+        $currency = strtoupper(trim((string) ($row->currency ?? '')));
+
+        if ($currency === '' || !preg_match('/^[A-Z]{3}$/', $currency)) {
+            throw new MissingRenewalPriceException(sprintf(
+                'Invalid or missing renewal currency for domain [%s], tld [%s], registrar [%s].',
+                $domain->domain_name,
+                $tld,
+                $registrar,
+            ));
         }
 
         return [
-            'price_cents' => (int) round(((float) $price) * 100),
+            'price_cents' => (int) round(((float) $sale) * 100),
             'currency' => $currency,
         ];
-    }
-
-    protected function fallbackRenewalPrice(Domain $domain, int $years = 1): float
-    {
-        $tld = $this->extractTld($domain->domain_name);
-
-        $row = DomainTld::query()
-            ->with([
-                'prices' => fn ($query) => $query
-                    ->where('action', 'register')
-                    ->where('years', max(1, $years)),
-            ])
-            ->where('enabled', true)
-            ->whereIn('tld', [$tld, '.' . $tld])
-            ->first();
-
-        $price = $row?->prices->first()?->sale ?? $row?->prices->first()?->cost;
-
-        if (is_numeric($price)) {
-            return (float) $price;
-        }
-
-        return 10.0 * max(1, $years);
     }
 
     protected function extractTld(string $domainName): string

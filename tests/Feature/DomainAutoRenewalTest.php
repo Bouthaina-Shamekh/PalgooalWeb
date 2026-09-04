@@ -177,6 +177,49 @@ class DomainAutoRenewalTest extends TestCase
         Http::assertNothingSent();
     }
 
+    /**
+     * TLD-3B — Strict Sale-Only Renewal Pricing (item I of the test plan).
+     *
+     * A domain whose TLD has no trusted renew.sale must be counted as failed and must never
+     * produce an Invoice, never call the registrar, and must not stop processing of the next
+     * due domain in the batch.
+     */
+    public function test_auto_renew_with_missing_trusted_sale_is_marked_failed_and_does_not_block_other_domains(): void
+    {
+        $provider = DomainProvider::query()->where('type', 'namecheap')->first();
+
+        $tld = DomainTld::query()->create([
+            'provider_id' => $provider->id,
+            'provider' => 'namecheap',
+            'tld' => 'nosale',
+            'currency' => 'USD',
+            'enabled' => true,
+        ]);
+
+        $tld->prices()->create([
+            'action' => 'renew',
+            'years' => 1,
+            'cost' => 10,
+            'sale' => null,
+        ]);
+
+        $failingDomain = $this->makeDomain([
+            'domain_name' => 'auto-renew-nosale.nosale',
+        ]);
+        $healthyDomain = $this->makeDomain([
+            'domain_name' => 'auto-renew-healthy.test',
+        ]);
+
+        $summary = app(DomainRenewalService::class)->processDueAutoRenewals();
+
+        $this->assertSame(1, $summary['failed']);
+        $this->assertSame(1, $summary['created']);
+        $this->assertSame(0, Invoice::query()->where('client_id', $failingDomain->client_id)->count());
+        $this->assertSame(1, Invoice::query()->where('client_id', $healthyDomain->client_id)->count());
+        $this->assertStringContainsString('Auto-renew skipped', (string) $failingDomain->fresh()->dns_last_note);
+        Http::assertNothingSent();
+    }
+
     public function test_DomainRenewal_verified_payment_settlement_can_still_activate_the_order(): void
     {
         $domain = $this->makeDomain();
