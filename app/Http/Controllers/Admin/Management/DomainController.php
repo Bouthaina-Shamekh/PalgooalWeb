@@ -197,8 +197,15 @@ class DomainController extends Controller
             return back()->withInput()->withErrors(['registrar' => $message]);
         }
 
+        // TLD-3E.1 — Admin Register Exact Provider Identity: persist the EXACT $provider
+        // instance already used for the (successful) registrar API call above — never
+        // re-resolved by type after the call. This is the only point where an Admin-registered
+        // Domain transitions from external/unmanaged (provider_id null) to managed, and it must
+        // only happen after the registrar API confirmed success (the failure branch above
+        // returns before reaching this point and never touches the Domain).
         $domain->update([
-            'registrar' => strtolower($validated['registrar']),
+            'provider_id' => $provider->getKey(),
+            'registrar' => $provider->type,
             'registration_date' => $registrationDate->toDateString(),
             'renewal_date'      => $renewalDate->toDateString(),
             'status' => $validated['status'],
