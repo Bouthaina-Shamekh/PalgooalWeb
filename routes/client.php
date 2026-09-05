@@ -321,7 +321,7 @@ $redirectClientResponse = static function (Request $request) use ($resolveClient
     return redirect()->to($redirectTarget);
 };
 
-Route::post('client/login', function (Request $request) use ($redirectClientResponse) {
+Route::post('client/login', function (Request $request) use ($redirectClientResponse, $resolveClientRedirectTarget) {
     $request->validate([
         'email'    => ['required', 'email', 'max:191'],
         'password' => ['required', 'string', 'max:255'],
@@ -362,12 +362,13 @@ Route::post('client/login', function (Request $request) use ($redirectClientResp
         }
 
         // Redirect to the intended page or the client dashboard.
-        $target = null;
-        $redirectInput = trim((string) $request->input('redirect_to', ''));
-        if ($redirectInput !== '' && str_starts_with($redirectInput, '/') &&
-            !preg_match('#^/(?:assets|build|storage)(?:/|$)#', $redirectInput)) {
-            $target = $redirectInput;
-        }
+        // TLD-3F.2A: reuse the same vetted, open-redirect-safe resolver already used by the
+        // failure branch above and by client/logout below, instead of the narrower inline
+        // check this branch used to have (which only ever accepted a value starting with "/"
+        // and therefore silently rejected the absolute checkout URL / url.intended URL this
+        // app actually sends as redirect_to).
+        $target = $resolveClientRedirectTarget($request);
+
         return redirect()->to($target ?? route('client.home'))
             ->with('success', __('Login successful.'));
     }
