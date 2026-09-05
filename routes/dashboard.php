@@ -352,6 +352,14 @@ Route::group([
     Route::put('domains/{domain}/dns', [DomainController::class, 'updateDns'])
         ->name('domains.dns.update');
 
+    // TLD-3G.1B — Admin Adopt Existing Domain. Placed before the resource route below
+    // (same convention as register/renew/dns above) so it is never shadowed by the
+    // resource's domains/{domain} wildcard routes.
+    Route::get('domains/adopt/create', [DomainController::class, 'createAdopt'])
+        ->name('domains.adopt.create');
+    Route::post('domains/adopt', [DomainController::class, 'storeAdopt'])
+        ->name('domains.adopt.store');
+
     // ⚠️ Important: keep this resource as-is to preserve route name "dashboard.domains.index"
     Route::resource('domains', DomainController::class)->names('domains');
 

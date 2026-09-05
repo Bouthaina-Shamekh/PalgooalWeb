@@ -166,11 +166,150 @@ class AdminDomainDnsProviderTest extends TestCase
 
     /* ==================================== L ===================================== */
 
-    public function test_no_ofType_first_resolution_remains_in_domain_controller(): void
+    /**
+     * TLD-3G.1B-R1 — this assertion was originally a blanket ban on the substring "->ofType("
+     * anywhere in DomainController.php. TLD-3G.1B legitimately added
+     * DomainProvider::query()->active()->ofType('enom')->mode('live')->orderBy('name')->get(...)
+     * to createAdopt() — a non-ambiguous collection filter for the Admin "Import Existing
+     * Domain" provider <select> (it is never followed by ->first(), so it can never silently
+     * pick one of several matching rows). That is not the ambiguity this test protects against,
+     * so the blanket substring ban is now stale and too broad.
+     *
+     * The actual invariant (per this class's docblock) is that editDns()/updateDns() resolve a
+     * provider ONLY via the trusted Domain.provider_id and never via
+     * DomainProvider::query()->ofType($type)->first() ambiguity. This revision enforces that
+     * invariant precisely instead of broadly:
+     *
+     *   1) Extracts the exact source of editDns() and updateDns() (brace-balanced, comment/
+     *      string aware) and asserts neither contains "->ofType(" at all — those two methods
+     *      have no legitimate reason to filter a provider collection, so this stays a strict
+     *      substring ban scoped to exactly the methods the invariant is about.
+     *   2) As a belt-and-suspenders whole-file check, asserts the actual dangerous chained
+     *      pattern — ofType(...) immediately followed by ->first( — never appears anywhere in
+     *      DomainController.php, regardless of which method it might be added to in the future.
+     *      This still fails on a reintroduced ofType()->first() anywhere, while never failing on
+     *      a legitimate ofType(...)->get(...)/->mode(...)/etc. collection filter such as
+     *      createAdopt()'s.
+     */
+    public function test_dns_methods_never_resolve_provider_via_ofType_first_ambiguity(): void
     {
         $source = file_get_contents(app_path('Http/Controllers/Admin/Management/DomainController.php'));
         $this->assertIsString($source);
-        $this->assertStringNotContainsString('->ofType(', $source, 'DomainController must not resolve any provider via ofType()->first() ambiguity anymore');
+
+        $editDns = $this->extractMethodSource($source, 'editDns');
+        $updateDns = $this->extractMethodSource($source, 'updateDns');
+
+        $this->assertStringNotContainsString(
+            '->ofType(',
+            $editDns,
+            'editDns() must not resolve any provider via ofType()->first() ambiguity'
+        );
+        $this->assertStringNotContainsString(
+            '->ofType(',
+            $updateDns,
+            'updateDns() must not resolve any provider via ofType()->first() ambiguity'
+        );
+
+        $this->assertDoesNotMatchRegularExpression(
+            '/->ofType\([^)]*\)\s*->first\s*\(/',
+            $source,
+            'DomainController must not resolve any provider via ofType(...)->first() ambiguity anywhere'
+        );
+    }
+
+    /**
+     * Extracts the brace-balanced source of a named method (comment/string aware) so assertions
+     * can be scoped to exactly that method's body rather than the whole controller file.
+     */
+    private function extractMethodSource(string $source, string $methodName): string
+    {
+        $needle = 'function ' . $methodName . '(';
+        $start = strpos($source, $needle);
+        $this->assertNotFalse($start, "Could not locate method {$methodName}() in DomainController source.");
+
+        $bodyStart = strpos($source, '{', $start);
+        $this->assertNotFalse($bodyStart, "Could not locate the opening brace of {$methodName}().");
+
+        $depth = 0;
+        $length = strlen($source);
+        $inSingle = false;
+        $inDouble = false;
+        $inLineComment = false;
+        $inBlockComment = false;
+
+        for ($i = $bodyStart; $i < $length; $i++) {
+            $char = $source[$i];
+            $next = $source[$i + 1] ?? '';
+
+            if ($inLineComment) {
+                if ($char === "\n") {
+                    $inLineComment = false;
+                }
+                continue;
+            }
+
+            if ($inBlockComment) {
+                if ($char === '*' && $next === '/') {
+                    $inBlockComment = false;
+                    $i++;
+                }
+                continue;
+            }
+
+            if ($inSingle) {
+                if ($char === '\\') {
+                    $i++;
+                } elseif ($char === "'") {
+                    $inSingle = false;
+                }
+                continue;
+            }
+
+            if ($inDouble) {
+                if ($char === '\\') {
+                    $i++;
+                } elseif ($char === '"') {
+                    $inDouble = false;
+                }
+                continue;
+            }
+
+            if ($char === '/' && $next === '/') {
+                $inLineComment = true;
+                $i++;
+                continue;
+            }
+
+            if ($char === '/' && $next === '*') {
+                $inBlockComment = true;
+                $i++;
+                continue;
+            }
+
+            if ($char === "'") {
+                $inSingle = true;
+                continue;
+            }
+
+            if ($char === '"') {
+                $inDouble = true;
+                continue;
+            }
+
+            if ($char === '{') {
+                $depth++;
+                continue;
+            }
+
+            if ($char === '}') {
+                $depth--;
+                if ($depth === 0) {
+                    return substr($source, $bodyStart, $i - $bodyStart + 1);
+                }
+            }
+        }
+
+        $this->fail("Could not locate the closing brace of {$methodName}().");
     }
 
     /* ================================ Helpers ================================ */

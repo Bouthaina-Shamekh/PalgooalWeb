@@ -13,6 +13,7 @@ use App\Models\DomainProvider;
 use App\Services\Domains\Clients\EnomClient;
 use App\Services\Domains\Clients\NamecheapClient;
 use App\Services\Domains\DomainRenewalService;
+use App\Services\Domains\ExistingDomainVerificationService;
 use App\Services\Domains\Exceptions\MissingDomainProviderException;
 use App\Services\Domains\Exceptions\MissingRenewalPriceException;
 use Illuminate\Support\Str;
@@ -297,6 +298,180 @@ class DomainController extends Controller
     }
 
     /**
+     * TLD-3G.1B — Admin Adopt Existing Domain: form.
+     *
+     * Offers only the exact eligible provider rows (active + live + enom — never resolved by
+     * registrar string, never a default/fallback provider) and the existing project-wide
+     * client list (same convention as create()/edit()). No registrar/status/date/auto-renew
+     * fields are exposed here — those are always derived from trusted eNom verification data
+     * in storeAdopt(), never accepted from the Admin.
+     */
+    public function createAdopt()
+    {
+        $this->authorize('create', Domain::class);
+
+        $providers = DomainProvider::query()
+            ->active()
+            ->ofType('enom')
+            ->mode('live')
+            ->orderBy('name')
+            ->get(['id', 'name', 'type', 'mode']);
+
+        $clients = Client::all();
+
+        return view('dashboard.management.domains.adopt', compact('providers', 'clients'));
+    }
+
+    /**
+     * TLD-3G.1B — Admin Adopt Existing Domain: store.
+     *
+     * This is an administrative ownership/import action for a domain that ALREADY exists in the
+     * configured Enom Live reseller account — it never registers, purchases, renews, or mutates
+     * DNS for anything. The only Enom traffic this action can ever cause is the single read-only
+     * GetDomainInfo lookup already encapsulated by ExistingDomainVerificationService.
+     *
+     * Provider eligibility is checked twice by design: once here (so a forged/rotted provider_id
+     * produces a clear Admin-facing error before verification even runs) and once again inside
+     * ExistingDomainVerificationService::verify() itself — both checks are the exact same
+     * is_active/mode/type contract, so eligibility can never be bypassed by either layer alone.
+     * In both places it is the exact submitted provider row only: no ofType()->first(), no
+     * default provider, no same-type fallback, no registrar-string resolution.
+     *
+     * Enom verification happens BEFORE the DB transaction (never inside it), so no DB lock is
+     * ever held while waiting on the external API, and a verification failure never touches the
+     * Domain table, or creates an Order/Invoice/InvoiceItem/OrderItem/PaymentAttempt/
+     * DomainProvisioningAttempt.
+     */
+    public function storeAdopt(Request $request, ExistingDomainVerificationService $verifier)
+    {
+        $this->authorize('create', Domain::class);
+
+        $validated = $request->validate([
+            'provider_id' => ['required', 'integer', 'exists:domain_providers,id'],
+            'domain_name' => ['required', 'string', 'max:255'],
+            'client_id'   => ['required', 'integer', 'exists:clients,id'],
+        ]);
+
+        // TLD-3G.1B — exact provider eligibility guard, evaluated BEFORE the verification
+        // service is ever called. A provider_id that resolves but is inactive/test-mode/
+        // non-enom is rejected here with a clear message; the verification service applies the
+        // identical contract again as its own first step, so eligibility cannot be bypassed by
+        // going around this controller-level check alone.
+        $provider = DomainProvider::query()->find($validated['provider_id']);
+
+        if (!$provider || !$provider->is_active) {
+            return back()->withInput()->withErrors([
+                'provider_id' => __('The selected provider is inactive or no longer exists.'),
+            ]);
+        }
+
+        if (strtolower((string) $provider->mode) !== 'live') {
+            return back()->withInput()->withErrors([
+                'provider_id' => __('The selected provider is not in live mode.'),
+            ]);
+        }
+
+        if (strtolower((string) $provider->type) !== 'enom') {
+            return back()->withInput()->withErrors([
+                'provider_id' => __('The selected provider is not an eNom provider.'),
+            ]);
+        }
+
+        $client = Client::find($validated['client_id']);
+
+        if (!$client) {
+            return back()->withInput()->withErrors([
+                'client_id' => __('The selected client no longer exists.'),
+            ]);
+        }
+
+        // Read-only eNom verification — the ONLY Enom traffic this action can ever cause.
+        $verification = $verifier->verify($provider, $validated['domain_name']);
+
+        if (!($verification['verified'] ?? false)) {
+            return back()->withInput()->withErrors([
+                'domain_name' => $this->adoptionFailureMessage((string) ($verification['reason'] ?? 'unknown')),
+            ]);
+        }
+
+        $normalizedDomain = $verification['domain_name'];
+
+        // TLD-3G.1B — REGISTRATION_DATE STOP GATE: domains.registration_date is NOT NULL, and
+        // this action must never invent a value (no today(), no renewal-minus-one-year, no
+        // Admin-typed date). If eNom did not return a trustworthy, parseable registration date,
+        // the adoption fails safely with no Domain write of any kind.
+        $registrationDate = $this->parseTrustedDate($verification['registered_at'] ?? null);
+
+        if ($registrationDate === null) {
+            return back()->withInput()->withErrors([
+                'domain_name' => __('eNom did not return a trustworthy registration date for this domain, so it cannot be imported yet.'),
+            ]);
+        }
+
+        // renewal_date is nullable in the schema — set it only when eNom's expiry date is
+        // present and parseable; never invented when absent.
+        $renewalDate = $this->parseTrustedDate($verification['expires_at'] ?? null);
+
+        $existing = Domain::where('domain_name', $normalizedDomain)->first();
+
+        // CASE D/E — already Managed (provider_id !== null), regardless of provider/client match
+        // → hard reject. No refresh/re-sync/transfer/reassignment semantics in this phase.
+        if ($existing && $existing->provider_id !== null) {
+            return back()->withInput()->withErrors([
+                'domain_name' => __('This domain is already managed in PALGOALS and cannot be imported again from this screen.'),
+            ]);
+        }
+
+        // CASE C — External but assigned to a different client → hard reject. Never silently
+        // reassigns client ownership.
+        if ($existing && (int) $existing->client_id !== (int) $client->getKey()) {
+            return back()->withInput()->withErrors([
+                'client_id' => __('This domain is already recorded under a different client and cannot be reassigned from this screen.'),
+            ]);
+        }
+
+        // CASE A (create) / CASE B (external, same client → upgrade in place). Zero financial or
+        // provisioning side effects: no Order, Invoice, InvoiceItem, OrderItem, PaymentAttempt,
+        // or DomainProvisioningAttempt is created anywhere in this transaction, and no
+        // RegistrarProvisioningService/DomainRenewalService/checkout/payment service is called.
+        $domain = DB::transaction(function () use ($existing, $client, $provider, $normalizedDomain, $registrationDate, $renewalDate) {
+            if ($existing) {
+                // CASE B — upgrade External → Managed in place. client_id is preserved
+                // (never re-written, even to the same value) and no second Domain row is
+                // created.
+                $existing->update([
+                    'provider_id' => $provider->getKey(),
+                    'registrar' => $provider->type,
+                    'status' => 'active',
+                    'registration_date' => $registrationDate->toDateString(),
+                    'renewal_date' => $renewalDate?->toDateString(),
+                    'auto_renew' => false,
+                ]);
+
+                return $existing;
+            }
+
+            // CASE A — brand-new Managed domain.
+            return Domain::create([
+                'client_id' => $client->getKey(),
+                'domain_name' => $normalizedDomain,
+                'registrar' => $provider->type,
+                'provider_id' => $provider->getKey(),
+                'status' => 'active',
+                'registration_date' => $registrationDate->toDateString(),
+                'renewal_date' => $renewalDate?->toDateString(),
+                'auto_renew' => false,
+                'payment_method' => null,
+            ]);
+        });
+
+        return redirect()
+            ->route('dashboard.domains.index')
+            ->with('success', __('تم استيراد النطاق وربطه بالعميل بنجاح.'));
+    }
+
+
+    /**
      * TLD-3E.3A — Replace Admin Renew Placeholder with Trusted Renewal Invoice Flow.
      *
      * This is now a trusted renewal SUMMARY/confirmation screen — never a direct Domain-record
@@ -579,6 +754,45 @@ class DomainController extends Controller
     }
 
     /** ————— Helpers ————— */
+
+    /**
+     * TLD-3G.1B — maps an ExistingDomainVerificationService failure `reason` to a clear,
+     * Admin-facing message. Never leaks eNom credentials, raw XML, party/account identifiers,
+     * or endpoint internals — only the already-safe `message` values the service itself may
+     * return are ever this specific, and even those are only ever generic/human text.
+     */
+    protected function adoptionFailureMessage(string $reason): string
+    {
+        return match ($reason) {
+            'provider_inactive' => __('The selected provider is inactive or no longer exists.'),
+            'provider_not_live' => __('The selected provider is not in live mode.'),
+            'provider_not_enom' => __('The selected provider is not an eNom provider.'),
+            'invalid_domain' => __('The domain name is missing or not a valid domain.'),
+            'domain_mismatch' => __('eNom did not confirm this domain.'),
+            'missing_account_membership_evidence',
+            'registration_not_confirmed' => __('eNom could not confirm that this domain is registered and paid for in the selected account, so it cannot be imported yet.'),
+            'enom_api_failure' => __('Unable to verify this domain with eNom right now. Please try again later.'),
+            default => __('This domain could not be verified for import.'),
+        };
+    }
+
+    /**
+     * TLD-3G.1B — parses a raw eNom-sourced date string (e.g. RegistryCreateDate/expiration,
+     * format not guaranteed) into a Carbon instance, returning null for anything missing or
+     * unparseable rather than throwing. Never invents a date when this returns null.
+     */
+    protected function parseTrustedDate(?string $value): ?Carbon
+    {
+        if ($value === null || trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
 
     protected function normalizeDomain(string $fqdn): string
     {

@@ -20,6 +20,11 @@
                 @can('create', \App\Models\Domain::class)
                     <a href="{{ route('dashboard.domains.create') }}" class="btn btn-primary">Add Domains</a>
                 @endcan
+                @can('create', \App\Models\Domain::class)
+                    <a href="{{ route('dashboard.domains.adopt.create') }}" class="btn btn-outline-primary">
+                        {{ __('Import Existing Domain') }}
+                    </a>
+                @endcan
             </div>
         </div>
 
