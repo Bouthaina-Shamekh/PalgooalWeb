@@ -377,12 +377,19 @@ class AdminExistingDomainAdoptionTest extends TestCase
 
     public function test_missing_registered_at_fails_safely_and_creates_no_domain(): void
     {
+        // TLD-3G.1C-C — storeAdopt() now falls back to a read-only RDAP lookup when eNom's
+        // registered_at is null. This test's intent (missing registered_at fails safely, zero
+        // Domain rows) is unchanged: the IANA bootstrap call is stubbed to fail closed too, so
+        // the RDAP fallback itself finds nothing usable, and no real network request ever
+        // leaves this test. See RdapDomainRegistrationDateServiceTest and
+        // AdminExistingDomainAdoptionRdapFallbackTest for the RDAP-specific coverage.
         Http::fake([
             'reseller.enom.com/*' => Http::response(
                 $this->fakeGetDomainInfoXml(registeredAt: null),
                 200,
                 ['Content-Type' => 'application/xml']
             ),
+            'data.iana.org/*' => Http::response('Service Unavailable', 503),
         ]);
 
         $admin = $this->makeAdmin();

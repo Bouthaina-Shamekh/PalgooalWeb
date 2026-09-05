@@ -14,6 +14,7 @@ use App\Services\Domains\Clients\EnomClient;
 use App\Services\Domains\Clients\NamecheapClient;
 use App\Services\Domains\DomainRenewalService;
 use App\Services\Domains\ExistingDomainVerificationService;
+use App\Services\Domains\RdapDomainRegistrationDateService;
 use App\Services\Domains\Exceptions\MissingDomainProviderException;
 use App\Services\Domains\Exceptions\MissingRenewalPriceException;
 use Illuminate\Support\Str;
@@ -342,7 +343,7 @@ class DomainController extends Controller
      * Domain table, or creates an Order/Invoice/InvoiceItem/OrderItem/PaymentAttempt/
      * DomainProvisioningAttempt.
      */
-    public function storeAdopt(Request $request, ExistingDomainVerificationService $verifier)
+    public function storeAdopt(Request $request, ExistingDomainVerificationService $verifier, RdapDomainRegistrationDateService $rdap)
     {
         $this->authorize('create', Domain::class);
 
@@ -396,15 +397,29 @@ class DomainController extends Controller
 
         $normalizedDomain = $verification['domain_name'];
 
-        // TLD-3G.1B — REGISTRATION_DATE STOP GATE: domains.registration_date is NOT NULL, and
-        // this action must never invent a value (no today(), no renewal-minus-one-year, no
-        // Admin-typed date). If eNom did not return a trustworthy, parseable registration date,
-        // the adoption fails safely with no Domain write of any kind.
+        // TLD-3G.1B/TLD-3G.1C-C — REGISTRATION_DATE STOP GATE: domains.registration_date is
+        // NOT NULL, and this action must never invent a value (no today(), no
+        // renewal-minus-one-year, no Admin-typed date). eNom is tried first; only if and because
+        // eNom did not return a trustworthy registration date do we fall back to a single
+        // read-only RDAP lookup (RdapDomainRegistrationDateService) for the exact same
+        // normalized domain. RDAP is never queried when eNom already provided a usable date, and
+        // it can never alter provider_id/client_id/provider identity or any other adoption
+        // field — its only output is the registration date itself. If neither eNom nor RDAP
+        // provides a trustworthy, parseable registration date, the adoption fails safely with no
+        // Domain write of any kind.
         $registrationDate = $this->parseTrustedDate($verification['registered_at'] ?? null);
 
         if ($registrationDate === null) {
+            $rdapResult = $rdap->resolveRegistrationDate($normalizedDomain);
+
+            if ($rdapResult['ok'] ?? false) {
+                $registrationDate = $this->parseTrustedDate($rdapResult['registered_at'] ?? null);
+            }
+        }
+
+        if ($registrationDate === null) {
             return back()->withInput()->withErrors([
-                'domain_name' => __('eNom did not return a trustworthy registration date for this domain, so it cannot be imported yet.'),
+                'domain_name' => __('Neither eNom nor domain registry (RDAP) data provided a trustworthy registration date for this domain, so it cannot be imported yet.'),
             ]);
         }
 
