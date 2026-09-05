@@ -617,6 +617,152 @@ class EnomClient
         ];
     }
 
+    /**
+     * TLD-3G.1C-A — TEMPORARY DIAGNOSTIC ONLY. Safe to remove once the real eNom date-field
+     * name is confirmed and the parser (registered_at in getDomainInfo() above) is fixed.
+     *
+     * Issues ONLY command=GetDomainInfo, via the exact same request() infrastructure
+     * getDomainInfo() itself uses (same endpoint resolution, same auth params, same
+     * retrySafe:false single-lookup behavior) — never Purchase, Extend, ModifyNS,
+     * RegisterNameServer, UpdateNameServer, or any other mutating command. This method does
+     * NOT alter getDomainInfo()'s own return contract in any way; it is a fully separate,
+     * additive method.
+     *
+     * Provider eligibility is validated here directly — is_active, mode==='live',
+     * type==='enom', the exact $p instance supplied, no ofType()->first(), no default
+     * provider, no same-type fallback — so this diagnostic can never be pointed at an
+     * inactive/test-mode/non-enom provider even when called directly, bypassing
+     * ExistingDomainVerificationService's own identical guard.
+     *
+     * Returns ONLY a sanitized list of date-like element/attribute names and trimmed values
+     * actually present in the real response (see extractDateLikeFields() for the exact
+     * filtering contract) — never raw XML, never the request URL, never credentials, never
+     * unrelated registrar/contact/account data.
+     */
+    public function inspectDomainInfoDateFields(DomainProvider $p, string $fqdn): array
+    {
+        if (!$p->is_active) {
+            return ['ok' => false, 'reason' => 'provider_inactive', 'fields' => []];
+        }
+
+        if (strtolower((string) $p->mode) !== 'live') {
+            return ['ok' => false, 'reason' => 'provider_not_live', 'fields' => []];
+        }
+
+        if (strtolower((string) $p->type) !== 'enom') {
+            return ['ok' => false, 'reason' => 'provider_not_enom', 'fields' => []];
+        }
+
+        [$sld, $tld] = $this->splitDomainParts($fqdn);
+
+        if (!$sld || !$tld) {
+            return ['ok' => false, 'reason' => 'invalid_domain', 'fields' => []];
+        }
+
+        try {
+            $response = $this->request($p, [
+                'command' => 'GetDomainInfo',
+                'SLD' => $sld,
+                'TLD' => $tld,
+            ], retrySafe: false);
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'reason' => 'exception', 'fields' => []];
+        }
+
+        if (!($response['ok'] ?? false)) {
+            return ['ok' => false, 'reason' => (string) ($response['reason'] ?? 'provider_error'), 'fields' => []];
+        }
+
+        /** @var \SimpleXMLElement $xml */
+        $xml = $response['xml'];
+
+        return [
+            'ok' => true,
+            'reason' => 'ok',
+            'fields' => $this->extractDateLikeFields($xml),
+        ];
+    }
+
+    /**
+     * TLD-3G.1C-A — TEMPORARY DIAGNOSTIC ONLY. Recursively walks the given XML tree and
+     * returns ONLY ['name' => local-node-name, 'value' => trimmed-text] entries for elements,
+     * and ['name' => '@attribute-name', 'value' => trimmed-attribute-value] entries for
+     * attributes, whose local name case-insensitively CONTAINS one of: date, time, expir,
+     * creat, register.
+     *
+     * A hard-coded, case-insensitive exclusion list is checked FIRST, before the keyword
+     * filter, for both element and attribute names — uid, pw, password, api key/token, client
+     * ip, party-id, belongs-to, reseller/account identifiers, username — so a node can never
+     * be returned merely because a sensitive-sounding name happens to also contain one of the
+     * date keywords. Never returns raw XML, request URLs, or anything not matching the filter.
+     * Hard-capped to $limit entries (default 50).
+     */
+    protected function extractDateLikeFields(\SimpleXMLElement $xml, int $limit = 50): array
+    {
+        $keywords = ['date', 'time', 'expir', 'creat', 'register'];
+        $excluded = [
+            'uid', 'pw', 'password', 'pass', 'apikey', 'api_token', 'apitoken', 'token',
+            'clientip', 'client-ip', 'ip', 'party-id', 'partyid', 'belongs-to', 'belongsto',
+            'resellerid', 'reseller-id', 'accountid', 'account-id', 'username', 'requestheader',
+        ];
+
+        $isExcluded = static function (string $name) use ($excluded): bool {
+            $lower = strtolower($name);
+            foreach ($excluded as $bad) {
+                if ($lower === $bad || str_contains($lower, $bad)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        $matchesKeyword = static function (string $name) use ($keywords): bool {
+            $lower = strtolower($name);
+            foreach ($keywords as $keyword) {
+                if (str_contains($lower, $keyword)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        $results = [];
+
+        $walk = function (\SimpleXMLElement $node) use (&$walk, &$results, $isExcluded, $matchesKeyword, $limit): void {
+            if (count($results) >= $limit) {
+                return;
+            }
+
+            $localName = $node->getName();
+
+            if (!$isExcluded($localName) && $matchesKeyword($localName)) {
+                $results[] = ['name' => $localName, 'value' => trim((string) $node)];
+            }
+
+            foreach ($node->attributes() as $attrName => $attrValue) {
+                if (count($results) >= $limit) {
+                    return;
+                }
+                $attrNameString = (string) $attrName;
+                if (!$isExcluded($attrNameString) && $matchesKeyword($attrNameString)) {
+                    $results[] = ['name' => '@' . $attrNameString, 'value' => trim((string) $attrValue)];
+                }
+            }
+
+            foreach ($node->children() as $child) {
+                if (count($results) >= $limit) {
+                    return;
+                }
+                $walk($child);
+            }
+        };
+
+        $walk($xml);
+
+        return array_slice($results, 0, $limit);
+    }
+
+
     public function getDns(DomainProvider $p, string $fqdn): array
     {
         [$sld, $tld] = $this->splitDomainParts($fqdn);
