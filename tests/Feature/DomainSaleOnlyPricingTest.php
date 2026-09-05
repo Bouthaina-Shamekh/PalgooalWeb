@@ -31,6 +31,12 @@ use Tests\TestCase;
  * Out of scope (explicitly, per TLD-3A decision): DomainRenewalService — it keeps an independent
  * cost fallback (renew sale -> renew cost -> register sale/cost -> hardcoded 10.0 * years),
  * deferred to TLD-3B — Renewal Pricing Contract Audit. Not touched, not tested here.
+ *
+ * TLD-3F.1 — fixture note: every provider in this file is now created with mode='live'. This
+ * file tests sale-only pricing rules exclusively; provider mode was never the subject of any
+ * assertion here, but a mode='test' provider is no longer eligible at all under the live-only
+ * customer eligibility contract, so the generic fixtures were updated to keep these tests
+ * exercising the sale-only rule they were written for.
  */
 class DomainSaleOnlyPricingTest extends TestCase
 {
@@ -46,7 +52,7 @@ class DomainSaleOnlyPricingTest extends TestCase
 
     public function test_registration_quote_uses_sale_when_valid(): void
     {
-        $provider = $this->makeProvider('namecheap', 'test');
+        $provider = $this->makeProvider('namecheap', 'live');
         $this->makePrice($this->makeTld($provider, 'com'), sale: 12.99, cost: 8.00);
 
         $quote = app(DomainPricingService::class)->registrationQuoteForDomain('example.com');
@@ -58,7 +64,7 @@ class DomainSaleOnlyPricingTest extends TestCase
 
     public function test_registration_quote_is_null_when_sale_is_null_even_with_a_cost_value(): void
     {
-        $provider = $this->makeProvider('namecheap', 'test');
+        $provider = $this->makeProvider('namecheap', 'live');
         $this->makePrice($this->makeTld($provider, 'com'), sale: null, cost: 13.00);
 
         $this->assertNull(app(DomainPricingService::class)->registrationQuoteForDomain('nosale.com'));
@@ -66,7 +72,7 @@ class DomainSaleOnlyPricingTest extends TestCase
 
     public function test_registration_quote_is_null_when_sale_is_zero(): void
     {
-        $provider = $this->makeProvider('namecheap', 'test');
+        $provider = $this->makeProvider('namecheap', 'live');
         $this->makePrice($this->makeTld($provider, 'com'), sale: 0, cost: 13.00);
 
         $this->assertNull(app(DomainPricingService::class)->registrationQuoteForDomain('zero-sale.com'));
@@ -91,7 +97,7 @@ class DomainSaleOnlyPricingTest extends TestCase
 
     public function test_multi_provider_quote_prefers_the_provider_with_a_valid_sale_over_a_cheaper_cost_only_row(): void
     {
-        $namecheap = $this->makeProvider('namecheap', 'test');
+        $namecheap = $this->makeProvider('namecheap', 'live');
         $enom = $this->makeProvider('enom', 'live');
         // TLD-3A spec section 4's worked example: Namecheap cost=13/sale=null must not win just
         // because its cost is cheaper than Enom's sale=18.
@@ -108,7 +114,7 @@ class DomainSaleOnlyPricingTest extends TestCase
 
     public function test_registration_quote_is_null_when_every_provider_has_no_sale(): void
     {
-        $namecheap = $this->makeProvider('namecheap', 'test');
+        $namecheap = $this->makeProvider('namecheap', 'live');
         $enom = $this->makeProvider('enom', 'live');
         $this->makePrice($this->makeTld($namecheap, 'com'), sale: null, cost: 13.00);
         $this->makePrice($this->makeTld($enom, 'com'), sale: null, cost: 14.00);
@@ -120,7 +126,7 @@ class DomainSaleOnlyPricingTest extends TestCase
 
     public function test_search_reports_available_and_sellable_when_a_trusted_sale_quote_exists(): void
     {
-        $provider = $this->makeProvider('namecheap', 'test');
+        $provider = $this->makeProvider('namecheap', 'live');
         $this->makePrice($this->makeTld($provider, 'com'), sale: 12.99, cost: 8.00);
         $this->app->instance(DomainAvailabilityService::class, $this->fakeAlwaysAvailable());
 
@@ -135,7 +141,7 @@ class DomainSaleOnlyPricingTest extends TestCase
 
     public function test_search_reports_available_but_unsellable_when_provider_has_it_but_sale_is_missing(): void
     {
-        $provider = $this->makeProvider('namecheap', 'test');
+        $provider = $this->makeProvider('namecheap', 'live');
         $this->makePrice($this->makeTld($provider, 'com'), sale: null, cost: 13.00);
         $this->app->instance(DomainAvailabilityService::class, $this->fakeAlwaysAvailable());
 
@@ -155,7 +161,7 @@ class DomainSaleOnlyPricingTest extends TestCase
 
     public function test_cart_rejects_a_domain_with_no_trusted_sale_quote_and_persists_nothing(): void
     {
-        $provider = $this->makeProvider('namecheap', 'test');
+        $provider = $this->makeProvider('namecheap', 'live');
         $this->makePrice($this->makeTld($provider, 'com'), sale: null, cost: 13.00);
 
         $response = $this->postJson(route('cart.store'), [
@@ -181,7 +187,7 @@ class DomainSaleOnlyPricingTest extends TestCase
         // ('items' => 'required|array|min:1'), which is a Laravel ValidationException response
         // ({message, errors} — no 'success' key) and is a different contract entirely; that
         // mismatch, not a CheckoutController regression, was the TLD-3A runtime failure's cause.
-        $provider = $this->makeProvider('namecheap', 'test');
+        $provider = $this->makeProvider('namecheap', 'live');
         $tld = $this->makeTld($provider, 'com');
         $price = $this->makePrice($tld, sale: 10.00, cost: 7.00);
         $client = $this->makeClient();
@@ -209,7 +215,7 @@ class DomainSaleOnlyPricingTest extends TestCase
 
     public function test_client_domain_purchase_rejects_a_domain_with_no_trusted_sale_quote(): void
     {
-        $provider = $this->makeProvider('namecheap', 'test');
+        $provider = $this->makeProvider('namecheap', 'live');
         $this->makePrice($this->makeTld($provider, 'com'), sale: null, cost: 13.00);
         $client = $this->makeClient();
         $this->app->instance(DomainAvailabilityService::class, $this->fakeAlwaysAvailable());
@@ -228,7 +234,7 @@ class DomainSaleOnlyPricingTest extends TestCase
 
     public function test_client_domain_search_catalog_excludes_cost_as_a_fallback_price(): void
     {
-        $provider = $this->makeProvider('namecheap', 'test');
+        $provider = $this->makeProvider('namecheap', 'live');
         $this->makePrice($this->makeTld($provider, 'com', inCatalog: true), sale: 9.99, cost: 5.00);
         $this->makePrice($this->makeTld($provider, 'net', inCatalog: true), sale: null, cost: 13.00);
         $client = $this->makeClient();
@@ -243,7 +249,7 @@ class DomainSaleOnlyPricingTest extends TestCase
 
     public function test_section_query_resolver_search_domain_excludes_cost_as_a_fallback_price(): void
     {
-        $provider = $this->makeProvider('namecheap', 'test');
+        $provider = $this->makeProvider('namecheap', 'live');
         $this->makePrice($this->makeTld($provider, 'com', inCatalog: true), sale: 9.99, cost: 5.00);
         $this->makePrice($this->makeTld($provider, 'net', inCatalog: true), sale: null, cost: 13.00);
 

@@ -12,6 +12,11 @@ use App\Models\DomainTldPrice;
  * جدول domain_tlds لا يحمل أي عمود سعري (مؤكَّد من الـ migrations)، ويُستخدم فقط
  * لبيانات المزوّد/العملة/التفعيل. لا تُقبل أي قيمة سعر قادمة من Request أو Session
  * في أي مكان يستدعي هذه الخدمة.
+ *
+ * TLD-3F.1 — Live Provider Eligibility Guard: كل استعلامات هذه الخدمة (تسعير وتوافر-فقط)
+ * تشترط provider.mode = 'live' إلى جانب provider.is_active = true وprovider.type ضمن
+ * ['enom','namecheap']. أي مزوّد test/sandbox مستبعد تماماً من مسار العميل الحقيقي — بصرف
+ * النظر عن سعره أو حالة تفعيله. هذا القيد على مستوى الاستعلام (query-level)، وليس فلترة لاحقة.
  */
 class DomainPricingService
 {
@@ -36,6 +41,10 @@ class DomainPricingService
     /**
      * يعيد أفضل سعر تسجيل موثوق لكل TLD (مفاتيح المصفوفة الناتجة = TLD بحروف صغيرة).
      * أي TLD بلا سعر موثوق لا يظهر إطلاقاً في المصفوفة الناتجة (لا يُوضع كـ null داخلها).
+     *
+     * TLD-3F.1: كل صف يُستبعد ما لم يكن provider.mode = 'live' (شرط استعلام إضافي إلى جانب
+     * is_active/enabled الحاليين) — لا تغيير على قاعدة sale-only، أو منطق أرخص سعر، أو التعامل
+     * مع years/العملة.
      *
      * @param  array<int, string>  $tlds
      * @return array<string, array{tld:string,price:float,price_cents:int,currency:string,provider_id:int,provider_type:string,provider_mode:string,domain_tld_id:int}>
@@ -72,6 +81,10 @@ class DomainPricingService
             ->where('domain_tld_prices.action', 'register')
             ->where('domain_tld_prices.years', $years)
             ->whereIn('domain_providers.type', ['namecheap', 'enom'])
+            // TLD-3F.1 — Live Provider Eligibility Guard: a test/sandbox-mode provider must never
+            // participate in the customer-facing registration quote, regardless of price or
+            // active status. Query-level filter, ranked alongside the existing type restriction.
+            ->where('domain_providers.mode', 'live')
             ->get();
 
         $candidates = [];
@@ -145,6 +158,9 @@ class DomainPricingService
      * الوحيد منها توجيه طلب فحص التوافر عندما لا يوجد Trusted Quote بعد. عند تعدد المزوّدين
      * الفعّالين لنفس TLD بلا أي ترجيح سعري ممكن، يُختار أول صف مطابق (لا يوجد سعر يفصل بينهم أصلاً).
      *
+     * TLD-3F.1: نفس الاستبعاد — provider.mode = 'live' مطلوب أيضاً هنا، وإلا فإن دومين مرتبط
+     * حصراً بمزوّد test/sandbox سيظهر "متاح" عبر مزوّد لا يجوز استخدامه لعميل حقيقي إطلاقاً.
+     *
      * @param  array<int, string>  $tlds
      * @return array<string, array{provider_id:int, provider_type:string, provider_mode:string}>
      */
@@ -171,6 +187,10 @@ class DomainPricingService
             ->join('domain_providers', 'domain_providers.id', '=', 'domain_tlds.provider_id')
             ->whereIn('domain_tlds.tld', $cleanTlds)
             ->whereIn('domain_providers.type', ['namecheap', 'enom'])
+            // TLD-3F.1 — Live Provider Eligibility Guard: the availability-only fallback must
+            // never resolve a test/sandbox-mode provider either — availability may only be shown
+            // via a provider that is actually eligible for real customer registration.
+            ->where('domain_providers.mode', 'live')
             ->get();
 
         $out = [];

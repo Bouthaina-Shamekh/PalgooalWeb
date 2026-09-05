@@ -41,6 +41,13 @@ class DomainAvailabilityService
      * فحص توافر دفعة دومينات لدى مزوّد فعّال واحد — نفس منطق الاختيار والتفريع الأصلي
      * (namecheap له أولوية، ثم enom). العقد:
      * ['ok'=>bool,'reason'=>string,'message'=>string,'results'=>[{domain,available,is_premium,price,currency}]]
+     *
+     * TLD-3F.1 — Live Provider Eligibility Guard: كلا مساري هذه الدالة (مزوّد صريح من المستدعي،
+     * أو الحل الافتراضي بلا مزوّد) يشترطان الآن provider.mode = 'live' أيضاً. هذه الدالة لها
+     * مستدعٍ واحد فقط غير هذه الدالة نفسها (verifyRegistrationAvailabilityBatch())، وكلاهما على
+     * مسار العميل الحقيقي حصراً (DomainSearchController::check() ما قبل الشراء، والتحقق قبل
+     * الشراء في Client/Cart/Checkout) — لا يوجد أي مسار Admin sandbox/connectivity-test يستدعي
+     * checkDomains() في هذا الكود، فإفراض live-only هنا آمن ولا يكسر أي أداة اختبار إدارية.
      */
     public function checkDomains(array $domains, ?DomainProvider $provider = null): array
     {
@@ -55,10 +62,14 @@ class DomainAvailabilityService
 
         if ($provider === null) {
             $provider = DomainProvider::active()
+                ->mode('live')
                 ->whereIn('type', ['namecheap', 'enom'])
                 ->orderByRaw("FIELD(type,'namecheap','enom')")
                 ->first();
-        } elseif (!$provider->is_active || !in_array(strtolower((string) $provider->type), ['namecheap', 'enom'], true)) {
+        } elseif (!$provider->is_active
+            || strtolower((string) $provider->mode) !== 'live'
+            || !in_array(strtolower((string) $provider->type), ['namecheap', 'enom'], true)
+        ) {
             return [
                 'ok' => false,
                 'reason' => 'invalid_provider',

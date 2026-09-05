@@ -29,6 +29,13 @@ use Tests\TestCase;
  * subclass تجريبي — لا يوجد أي اتصال شبكة حقيقي هنا. باقي المسار (Order/OrderItem/Domain
  * عبر Eloquent) يعمل فعليًا ضد قاعدة SQLite في الذاكرة (phpunit.xml: DB_CONNECTION=sqlite,
  * DB_DATABASE=:memory:). يُستخدم migrate:fresh لكل اختبار كي لا تُحاط عملية afterCommit بمعاملة اختبارية.
+ *
+ * TLD-3F.1 — fixture note: the shared provider fixture in makeOrderWithRegisterItem() is now
+ * mode='live'. This file tests provisioning state-machine mechanics only (retry, locking,
+ * idempotent skip, commit-before-call ordering, ambiguous-failure handling) — it was never
+ * testing sandbox/live eligibility — but trustedRegistrationProvider() now rejects any
+ * mode!=='live' provider outright, so the generic fixture had to move to 'live' to keep these
+ * tests exercising the mechanics they were written for.
  */
 class RegistrarProvisioningDomainTest extends TestCase
 {
@@ -56,7 +63,7 @@ class RegistrarProvisioningDomainTest extends TestCase
             'username'  => 'testuser',
             'password'  => 'testpass',
             'is_active' => true,
-            'mode'      => 'test',
+            'mode'      => 'live',
         ]);
 
         $order = Order::create([
@@ -239,7 +246,7 @@ class RegistrarProvisioningDomainTest extends TestCase
         $this->assertNotNull($attempt->domain_id);
         $this->assertSame($provider->id, $attempt->provider_id);
         $this->assertSame('enom', $attempt->provider_type);
-        $this->assertSame('test', $attempt->provider_mode);
+        $this->assertSame('live', $attempt->provider_mode);
         $this->assertSame(DomainProvisioningAttempt::OPERATION_REGISTER, $attempt->operation);
         $this->assertSame('FAKE-REFERENCE-123', $attempt->provider_reference);
         $this->assertSame('FAKE-DOMAIN-456', $attempt->provider_domain_id);
@@ -247,7 +254,7 @@ class RegistrarProvisioningDomainTest extends TestCase
         $this->assertNotNull($attempt->finished_at);
         $this->assertSame($provider->id, $service->attemptProviderIdAtProviderCall);
         $this->assertSame('enom', $service->attemptProviderTypeAtProviderCall);
-        $this->assertSame('test', $service->attemptProviderModeAtProviderCall);
+        $this->assertSame('live', $service->attemptProviderModeAtProviderCall);
     }
 
     public function test_external_transaction_commits_before_provider_call(): void

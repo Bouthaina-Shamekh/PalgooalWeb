@@ -41,7 +41,7 @@ class ProviderSourceOfTruthTest extends TestCase
 
         $this->assertSame($namecheap->id, $com['provider_id']);
         $this->assertSame('namecheap', $com['provider_type']);
-        $this->assertSame('test', $com['provider_mode']);
+        $this->assertSame('live', $com['provider_mode']);
         $this->assertSame('com', $com['tld']);
         $this->assertGreaterThan(0, $com['domain_tld_id']);
         $this->assertSame(1000, $com['price_cents']);
@@ -77,7 +77,7 @@ class ProviderSourceOfTruthTest extends TestCase
         $item = session('palgoals_cart_domains')[0];
         $this->assertSame($namecheap->id, $item['provider_id']);
         $this->assertSame('namecheap', $item['provider_type']);
-        $this->assertSame('test', $item['provider_mode']);
+        $this->assertSame('live', $item['provider_mode']);
         $this->assertSame($namecheap->id, $item['meta']['provider_id']);
         $this->assertSame('namecheap', $item['meta']['provider_type']);
         $this->assertSame('USD', $item['meta']['currency']);
@@ -187,7 +187,7 @@ class ProviderSourceOfTruthTest extends TestCase
         $item = OrderItem::query()->sole();
         $this->assertSame($namecheap->id, $item->meta['provider_id']);
         $this->assertSame('namecheap', $item->meta['provider_type']);
-        $this->assertSame('test', $item->meta['provider_mode']);
+        $this->assertSame('live', $item->meta['provider_mode']);
         $this->assertGreaterThan(0, $item->meta['domain_tld_id']);
         $this->assertSame('USD', $item->meta['currency']);
         $this->assertSame([$namecheap->id], array_values(array_unique($availability->providerIds)));
@@ -262,10 +262,14 @@ class ProviderSourceOfTruthTest extends TestCase
                 'provider_type' => 'enom',
                 'provider_mode' => 'test',
             ],
+            // TLD-3F.1: $namecheap is now provisioned as mode=live (fixture updated for the
+            // live-only eligibility contract), so the genuine mismatch here is claiming a
+            // 'test' snapshot mode against the real 'live' provider — drift detection must
+            // still reject it.
             'mode_mismatch' => [
                 'provider_id' => $namecheap->id,
                 'provider_type' => 'namecheap',
-                'provider_mode' => 'live',
+                'provider_mode' => 'test',
             ],
         ];
         $enom->update(['is_active' => false]);
@@ -337,8 +341,8 @@ class ProviderSourceOfTruthTest extends TestCase
      */
     public function test_managed_registration_with_two_same_type_providers_writes_the_exact_snapshot_provider_id(): void
     {
-        $namecheapPrimary = $this->makeProvider('namecheap', 'test');
-        $namecheapSecondary = $this->makeProvider('namecheap', 'test');
+        $namecheapPrimary = $this->makeProvider('namecheap', 'live');
+        $namecheapSecondary = $this->makeProvider('namecheap', 'live');
         $this->makeTldPrice($namecheapPrimary, 'com', 10);
         $this->makeTldPrice($namecheapSecondary, 'net', 8);
 
@@ -362,7 +366,7 @@ class ProviderSourceOfTruthTest extends TestCase
 
     private function createCatalog(): array
     {
-        $namecheap = $this->makeProvider('namecheap', 'test');
+        $namecheap = $this->makeProvider('namecheap', 'live');
         $enom = $this->makeProvider('enom', 'live');
 
         $this->makeTldPrice($namecheap, 'com', 10);

@@ -192,13 +192,16 @@ class ClientDomainPurchaseIdempotencyTest extends TestCase
         ]);
     }
 
+    // TLD-3F.1 — fixture note: mode is now 'live'. This file tests purchase-fingerprint
+    // idempotency only, never provider-mode eligibility, but the trusted registration
+    // quote now requires a live provider to resolve at all.
     private function makeCatalog(string $tldName, int $priceCents, string $currency): DomainTld
     {
         $provider = DomainProvider::query()->firstOrCreate(
             ['type' => 'namecheap'],
             [
                 'name' => 'Namecheap Purchase Test',
-                'mode' => 'test',
+                'mode' => 'live',
                 'endpoint' => 'https://namecheap.example.test',
                 'username' => 'test-user',
                 'password' => 'test-password',

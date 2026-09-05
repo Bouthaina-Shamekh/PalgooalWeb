@@ -832,6 +832,14 @@ class RegistrarProvisioningService
     /**
      * Resolve the registrar snapshot selected by DomainPricingService for a register OrderItem.
      * No default-provider fallback is permitted for new registrations.
+     *
+     * TLD-3F.1 — Live Provider Eligibility Guard: this method is used ONLY by customer domain
+     * registration provisioning (provisionOrderItem() / its post-commit retry path) — it is never
+     * shared with an Admin manual/sandbox registration flow — so a hard live-mode assertion on the
+     * CURRENT linked provider is added below. This checks the provider's actual current mode
+     * (not just whether it matches whatever the snapshot happened to record), so it also catches a
+     * forged/legacy OrderItem snapshot that itself says provider_mode=test, and it never calls a
+     * sandbox/test registrar API for a real customer registration.
      */
     protected function trustedRegistrationProvider(array $meta): array
     {
@@ -850,6 +858,13 @@ class RegistrarProvisioningService
             return [
                 'ok' => false,
                 'message' => 'The trusted registrar provider is missing or inactive.',
+            ];
+        }
+
+        if (strtolower((string) $provider->mode) !== 'live') {
+            return [
+                'ok' => false,
+                'message' => 'The trusted registrar provider is not in live mode.',
             ];
         }
 
