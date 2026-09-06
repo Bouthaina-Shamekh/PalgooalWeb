@@ -29,7 +29,9 @@ class DomainController extends Controller
     public function index()
     {
         $this->authorize('viewAny', Domain::class);
-        $domains = Domain::latest()->paginate(10);
+        // TLD-3G.2B — eager-load provider so the index view's per-row Register-eligibility
+        // check (identical rule to isManagedEnomDomain() below) doesn't issue one query per row.
+        $domains = Domain::with('provider')->latest()->paginate(10);
         return view('dashboard.management.domains.index', compact('domains'));
     }
 
@@ -194,6 +196,21 @@ class DomainController extends Controller
     {
         $this->authorize('update', $domain);
 
+        // TLD-3G.2B — GET Register Defense-in-Depth: a managed Enom domain is never eligible
+        // for (re-)registration through this screen — TLD-3G.2A's backend guard already
+        // unconditionally rejects every such submission (whether confirmed-registered or
+        // merely ambiguous/unverifiable), so this form could never produce a legitimate outcome
+        // for it. This is a pure LOCAL state check (isManagedEnomDomain() below) — no Enom/
+        // GetDomainInfo call is made merely to decide whether to render this page. A managed
+        // domain under any other provider type (e.g. Namecheap) and an external/unmanaged
+        // domain (provider_id null) are unaffected and reach the form exactly as before. The
+        // existing TLD-3G.2A PUT/backend guard remains authoritative and is unchanged by this.
+        if ($this->isManagedEnomDomain($domain)) {
+            return redirect()
+                ->route('dashboard.domains.index')
+                ->with('error', __('This domain is already registered and managed with its provider. Please use Renew or manage it directly instead of registering it again.'));
+        }
+
         // TLD-3E.2 — Admin Register Exact Provider Selection: pass the exact active
         // DomainProvider rows (id/name/type/mode) so the view can offer an unambiguous
         // provider_id select instead of a bare registrar-type string.
@@ -207,6 +224,24 @@ class DomainController extends Controller
             'domain' => $domain,
             'providers' => $providers,
         ]);
+    }
+
+    /**
+     * TLD-3G.2B — Local-only Register eligibility check: true when this domain is already
+     * Managed (provider_id set) AND its resolved provider's type is exactly 'enom'. Keep this
+     * condition identical to resources/views/dashboard/management/domains/index.blade.php's
+     * inline $canRegister computation (Blade cannot call a controller method directly). Never
+     * issues an Enom/registrar API call — provider identity only, no live verification.
+     */
+    protected function isManagedEnomDomain(Domain $domain): bool
+    {
+        if ($domain->provider_id === null) {
+            return false;
+        }
+
+        $provider = $domain->provider;
+
+        return $provider !== null && strtolower((string) $provider->type) === 'enom';
     }
 
     /** تنفيذ التسجيل مع المزود */

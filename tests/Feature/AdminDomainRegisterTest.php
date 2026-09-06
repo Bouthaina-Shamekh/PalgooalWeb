@@ -587,6 +587,63 @@ class AdminDomainRegisterTest extends TestCase
 XML;
     }
 
+
+    /* ====================== TLD-3G.2B — GET Register Defense-in-Depth ====================== */
+
+    public function test_get_register_edit_blocked_for_managed_enom_domain_redirects_to_index_with_message(): void
+    {
+        // Proves the GET guard is a pure LOCAL decision: Http::fake() with no stubs registered
+        // at all, plus Http::assertNothingSent(), shows zero network traffic of any kind is
+        // generated merely by requesting this page for an ineligible domain.
+        Http::fake();
+
+        $admin = $this->makeAdmin();
+        $provider = $this->makeProvider('enom', true, 'live');
+        $client = $this->makeClient();
+        $domain = $this->makeDomain($client, $provider);
+
+        $response = $this->actingAs($admin)->get(route('dashboard.domains.register.edit', $domain));
+
+        $response->assertRedirect(route('dashboard.domains.index'));
+        $response->assertSessionHas('error');
+        Http::assertNothingSent();
+    }
+
+    public function test_get_register_edit_still_accessible_for_external_domain(): void
+    {
+        Http::fake();
+
+        $admin = $this->makeAdmin();
+        $client = $this->makeClient();
+        $domain = $this->makeDomain($client);
+        $this->assertNull($domain->provider_id);
+
+        $response = $this->actingAs($admin)->get(route('dashboard.domains.register.edit', $domain));
+
+        $response->assertOk();
+        $response->assertSee('name="provider_id"', false);
+        Http::assertNothingSent();
+    }
+
+    public function test_get_register_edit_still_accessible_for_managed_namecheap_domain(): void
+    {
+        // E — a Namecheap managed domain is a legitimate same-provider retry candidate (the
+        // existing POST/PUT behavior for it is completely unaffected by TLD-3G.2A/2B), so the
+        // GET form must remain reachable exactly as before.
+        Http::fake();
+
+        $admin = $this->makeAdmin();
+        $provider = $this->makeProvider('namecheap', true, 'live');
+        $client = $this->makeClient();
+        $domain = $this->makeDomain($client, $provider);
+
+        $response = $this->actingAs($admin)->get(route('dashboard.domains.register.edit', $domain));
+
+        $response->assertOk();
+        $response->assertSee('name="provider_id"', false);
+        Http::assertNothingSent();
+    }
+
     /* ================================ Helpers ================================ */
 
     private function makeAdmin(): User

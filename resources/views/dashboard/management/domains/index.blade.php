@@ -34,6 +34,12 @@
             </div>
         @endif
 
+        @if (session('error'))
+            <div class="bg-red-100 text-red-800 p-4 rounded mb-4">
+                {{ session('error') }}
+            </div>
+        @endif
+
         <div class="table-responsive dt-responsive">
             <table class="table table-striped table-bordered nowrap">
                 <thead>
@@ -53,6 +59,22 @@
                         @php
                             $statusKey = strtolower((string) $domain->status);
                             $statusClass = $statusStyles[$statusKey] ?? 'bg-slate-100 text-slate-700';
+                            // TLD-3G.2B — Register is not offered for a managed Enom domain
+                            // (provider_id set AND its resolved provider's type is exactly
+                            // 'enom'). TLD-3G.2A's backend guard already unconditionally
+                            // rejects every such (re-)registration submission — whether the
+                            // domain is confirmed already registered or merely ambiguous —
+                            // so there is no legitimate outcome this action could ever produce
+                            // for it. A managed domain under any OTHER provider type (e.g.
+                            // Namecheap) and an external/unmanaged domain (provider_id null)
+                            // are both unaffected and keep showing Register exactly as before.
+                            // Keep this condition identical to
+                            // DomainController::isManagedEnomDomain().
+                            $canRegister = !(
+                                $domain->provider_id !== null
+                                && $domain->provider
+                                && strtolower((string) $domain->provider->type) === 'enom'
+                            );
                         @endphp
                         <tr>
                             <td>{{ $loop->iteration }}</td>
@@ -74,10 +96,12 @@
                             <td>
                                 <div class="flex flex-wrap items-center gap-2">
                                     @can('update', $domain)
-                                        <a href="{{ route('dashboard.domains.register.edit', $domain->id) }}"
-                                            class="inline-flex items-center justify-center px-3 py-1 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                                            Register
-                                        </a>
+                                        @if ($canRegister)
+                                            <a href="{{ route('dashboard.domains.register.edit', $domain->id) }}"
+                                                class="inline-flex items-center justify-center px-3 py-1 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                                Register
+                                            </a>
+                                        @endif
                                         <a href="{{ route('dashboard.domains.renew.edit', $domain->id) }}"
                                             class="inline-flex items-center justify-center px-3 py-1 text-sm font-medium text-white bg-emerald-600 rounded hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400">
                                             Renew
