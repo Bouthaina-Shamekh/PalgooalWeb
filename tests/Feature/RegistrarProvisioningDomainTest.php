@@ -430,6 +430,16 @@ class RegistrarProvisioningDomainTest extends TestCase
         $this->assertTrue($result['ok']);
         $this->assertSame(1, $service->renewCalls);
         $this->assertSame(0, $service->registerCalls);
-        $this->assertSame(0, DomainProvisioningAttempt::query()->count());
+        // TLD-3H.2A — renewal now creates its own durable attempt row (operation=renew); this
+        // test's actual, original intent is that it must never create a REGISTER attempt, not
+        // that it creates zero attempts of any kind.
+        $this->assertSame(
+            0,
+            DomainProvisioningAttempt::query()->where('operation', DomainProvisioningAttempt::OPERATION_REGISTER)->count()
+        );
+        $this->assertSame(
+            1,
+            DomainProvisioningAttempt::query()->where('operation', DomainProvisioningAttempt::OPERATION_RENEW)->count()
+        );
     }
 }

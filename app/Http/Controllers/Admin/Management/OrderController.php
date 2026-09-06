@@ -68,11 +68,31 @@ class OrderController extends Controller
             // Soft delete — recoverable via restore()
             $affected = Order::whereIn('id', $ids)->delete();
         } elseif (in_array($action, ['pending', 'active', 'cancelled', 'fraud'], true)) {
+            // TLD-3H.2C — Defense-in-depth: capture each selected order's status BEFORE the
+            // mass update below overwrites it. Without this, every order fetched afterward for
+            // the activation loop would already read status='active' (the update already ran),
+            // making it impossible to tell which ones were genuinely transitioning into active
+            // versus already active and merely re-selected. The provisioning layer (3H.2A) is
+            // already at-most-once for domains, but OrderActivationService unconditionally
+            // re-extends subscription end dates and re-dispatches provisioning on every call —
+            // so re-running it for an already-active order is a real, distinct hazard this
+            // guard exists to prevent. Non-'active' actions are entirely unaffected.
+            $originalStatuses = $action === 'active'
+                ? Order::whereIn('id', $ids)->pluck('status', 'id')
+                : collect();
+
             $affected = Order::whereIn('id', $ids)->update(['status' => $action]);
 
             if ($action === 'active') {
                 $orders = Order::with(['invoices.items', 'items'])->whereIn('id', $ids)->get();
                 foreach ($orders as $order) {
+                    if (($originalStatuses[$order->id] ?? null) === Order::STATUS_ACTIVE) {
+                        // Already active before this bulk action — never re-run activation.
+                        // Processed independently: this never prevents any other selected
+                        // (non-active) order from being activated below.
+                        continue;
+                    }
+
                     // Each order activation is wrapped in its own transaction so one failure
                     // doesn't prevent the others from being processed.
                     try {
@@ -118,10 +138,19 @@ class OrderController extends Controller
         $newStatus = $request->status;
 
         DB::transaction(function () use ($order, $newStatus) {
+            // TLD-3H.2C — Defense-in-depth: capture the ORIGINAL status before mutating it.
+            // An active->active "transition" (re-saving the same status, e.g. re-submitting the
+            // same status form) must never re-invoke OrderActivationService::activate() — the
+            // provisioning layer is already the real at-most-once guard for domains, but
+            // activate() itself unconditionally re-extends subscription end dates and
+            // re-dispatches provisioning on every call. A genuine transition INTO active from
+            // any other status is completely unaffected.
+            $originalStatus = $order->status;
+
             $order->status = $newStatus;
             $order->save();
 
-            if ($newStatus === Order::STATUS_ACTIVE) {
+            if ($newStatus === Order::STATUS_ACTIVE && $originalStatus !== Order::STATUS_ACTIVE) {
                 // Load relations before activation to avoid lazy-loading inside the service.
                 $order->loadMissing(['invoices.items', 'items']);
                 $this->activationService->activate($order);

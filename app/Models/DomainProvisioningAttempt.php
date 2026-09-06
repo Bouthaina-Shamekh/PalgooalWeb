@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class DomainProvisioningAttempt extends Model
 {
     public const OPERATION_REGISTER = 'register';
+    public const OPERATION_RENEW = 'renew';
 
     public const STATUS_INITIATED = 'initiated';
     public const STATUS_COMPLETED = 'completed';

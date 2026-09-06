@@ -88,7 +88,37 @@ class RegistrarProvisioningService
     {
         $action = strtolower((string) $orderItem->item_option);
 
+        // ADR — TLD-3H.2A: Renewal Provisioning Idempotency. Mirrors the register guard
+        // immediately below: OrderItem.provisioning_status is the source of truth preventing a
+        // duplicate Enom/Namecheap Extend for the same renewal order item (retry, webhook
+        // replay, worker restart, duplicate admin action). The real registrar call must also
+        // never run inside the caller's own transaction (checkout/webhook/admin markPaid all
+        // wrap activation in DB::transaction()) — deferring it after commit, exactly like
+        // register, means a rollback can never occur after a real, possibly-successful Extend.
         if ($action === 'renew') {
+            $provisioningStatus = $orderItem->provisioning_status ?: OrderItem::PROVISIONING_NOT_STARTED;
+
+            if ($provisioningStatus === OrderItem::PROVISIONING_COMPLETED) {
+                return [
+                    'ok' => true,
+                    'skipped' => true,
+                    'message' => 'Domain renewal was already completed for this order item.',
+                ];
+            }
+
+            if ($provisioningStatus === OrderItem::PROVISIONING_IN_PROGRESS) {
+                return [
+                    'ok' => false,
+                    'message' => 'Domain renewal is already in progress for this order item.',
+                ];
+            }
+
+            // failed أو not_started → يُسمح بالمتابعة (بدء جديد أو إعادة محاولة متعمَّدة).
+
+            if (DB::transactionLevel() > 0) {
+                return $this->deferRegistrationUntilAfterCommit($order, $orderItem, $paymentMethod);
+            }
+
             return $this->renewOrderDomain($order, $orderItem, $paymentMethod);
         }
 
@@ -99,10 +129,10 @@ class RegistrarProvisioningService
             ];
         }
 
-        // ADR — Provisioning Idempotency Phase 1 (Register Domain فقط). OrderItem.provisioning_status
+        // ADR — Provisioning Idempotency Phase 1 (Register Domain). OrderItem.provisioning_status
         // هو مصدر الحقيقة الأساسي لمنع إعادة تنفيذ تسجيل الدومين لنفس عملية الشراء (retry، webhook
-        // مكرر، إعادة تشغيل worker، إجراء إداري مكرر). لا يُطبَّق هذا الحارس على renew/transfer/restore
-        // في هذه المرحلة — النطاق مقصور على "register" فقط.
+        // مكرر، إعادة تشغيل worker، إجراء إداري مكرر). renew اكتسب حارسًا مكافئًا خاصًا به أعلاه
+        // (TLD-3H.2A)؛ transfer/restore يبقيان خارج نطاق كلا الحارسين حتى الآن.
         $provisioningStatus = $orderItem->provisioning_status ?: OrderItem::PROVISIONING_NOT_STARTED;
 
         if ($provisioningStatus === OrderItem::PROVISIONING_COMPLETED) {
@@ -685,6 +715,37 @@ class RegistrarProvisioningService
 
         $provider = $providerResolution['provider'];
 
+        // ADR — TLD-3H.2A: Renewal Provisioning Idempotency Phase 1. Durably claims this
+        // renewal (OrderItem.provisioning_status + a DomainProvisioningAttempt row) inside its
+        // own committed transaction BEFORE the registrar is ever contacted — mirrors
+        // claimRegistration() exactly, without the cross-order DomainRegistrationClaim (a
+        // renewal always targets one already-owned Domain row, so there is no new-name race to
+        // guard against).
+        try {
+            $claim = $this->claimRenewal($orderItem, $domain, $provider);
+        } catch (\Throwable $e) {
+            Log::error('Unable to create the domain renewal provisioning attempt.', [
+                'order_item_id' => $orderItem->getKey(),
+                'domain_id' => $domain->getKey(),
+                'provider_id' => $provider->getKey(),
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'ok' => false,
+                'domain' => $domain,
+                'message' => 'Domain renewal did not start because its provisioning attempt could not be recorded.',
+            ];
+        }
+
+        if (!($claim['claimed'] ?? false)) {
+            return $claim['result'];
+        }
+
+        $orderItem = $claim['order_item'];
+        $attempt = $claim['attempt'];
+        $domain = $claim['domain'];
+
         $currentRenewalDate = Carbon::parse($meta['current_renewal_date'] ?? $domain->renewal_date ?? now()->toDateString());
         $renewalDate = Carbon::parse($meta['renewal_date'] ?? $currentRenewalDate->copy()->addYear()->toDateString());
         $years = max(1, (int) ($meta['term_years'] ?? ceil(max(1, $currentRenewalDate->diffInDays($renewalDate)) / 365)));
@@ -696,32 +757,47 @@ class RegistrarProvisioningService
         ]);
 
         if (!($renewal['ok'] ?? false)) {
-            // TLD-3D — never write provider_id/registrar here. $provider is already the exact,
-            // cross-checked identity Domain.provider_id already points to; re-stamping it on
-            // failure would silently "correct" a drift signal instead of surfacing it, and this
-            // path never reaches a mismatched provider in the first place (rejected above).
-            $domain->forceFill([
-                'status' => $domain->status ?: 'active',
-                'payment_method' => $paymentMethod ?: $domain->payment_method,
-                'dns_last_note' => $renewal['message'] ?? 'Automatic registrar renewal failed.',
-            ])->save();
+            // ADR — TLD-3H.2A: the same definitive/ambiguous convention already established for
+            // registration (registerDomainWithProvider()'s 'definitive' key) — never invented
+            // anew here. An ambiguous outcome (timeout, non-XML, HTTP error, thrown exception)
+            // must never automatically send another Extend, so the attempt/item are left
+            // recoverable (INDETERMINATE / still IN_PROGRESS) instead of being marked failed.
+            $definitive = ($renewal['definitive'] ?? true) === true;
+
+            $this->finalizeRenewal(
+                $orderItem,
+                $attempt,
+                $domain,
+                $definitive ? OrderItem::PROVISIONING_FAILED : null,
+                $definitive
+                    ? DomainProvisioningAttempt::STATUS_CONFIRMED_FAILED
+                    : DomainProvisioningAttempt::STATUS_INDETERMINATE,
+                $renewal,
+                $paymentMethod,
+                null
+            );
 
             return [
                 'ok' => false,
                 'provider' => $provider,
-                'domain' => $domain,
+                'domain' => $domain->fresh(),
                 'message' => $renewal['message'] ?? 'Automatic registrar renewal failed.',
                 'cid' => $renewal['cid'] ?? null,
             ];
         }
 
-        $domain->forceFill([
-            'status' => 'active',
-            'renewal_date' => $renewalDate->toDateString(),
-            'payment_method' => $paymentMethod ?: $domain->payment_method,
-            'dns_last_note' => null,
-        ])->save();
+        $this->finalizeRenewal(
+            $orderItem,
+            $attempt,
+            $domain,
+            OrderItem::PROVISIONING_COMPLETED,
+            DomainProvisioningAttempt::STATUS_COMPLETED,
+            $renewal,
+            $paymentMethod,
+            $renewalDate
+        );
 
+        $domain = $domain->fresh();
         $this->attachDomainToOrderInvoices($order, $domain);
 
         return [
@@ -734,14 +810,290 @@ class RegistrarProvisioningService
     }
 
     /**
+     * ADR — TLD-3H.2A: Renewal equivalent of claimRegistration(). Runs in its own committed
+     * transaction, locking the OrderItem (and the Domain, since a renewal's provider identity
+     * can drift against an already-existing row) before any registrar contact is made. No
+     * DomainRegistrationClaim is used — a renewal always targets one already-owned Domain row,
+     * so there is no cross-order "same new domain name" race to guard against.
+     */
+    protected function claimRenewal(OrderItem $orderItem, Domain $domain, DomainProvider $provider): array
+    {
+        return DB::transaction(function () use ($orderItem, $domain, $provider): array {
+            $lockedItem = OrderItem::query()
+                ->lockForUpdate()
+                ->find($orderItem->getKey());
+
+            if (!$lockedItem instanceof OrderItem) {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => false,
+                        'message' => 'The domain order item no longer exists.',
+                    ],
+                ];
+            }
+
+            if (strtolower((string) $lockedItem->item_option) !== 'renew') {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => false,
+                        'message' => 'This order item is no longer a renewal action.',
+                    ],
+                ];
+            }
+
+            $lockedDomain = Domain::query()
+                ->lockForUpdate()
+                ->find($domain->getKey());
+
+            if (!$lockedDomain instanceof Domain) {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => false,
+                        'message' => 'The domain could not be resolved for the renewal request.',
+                    ],
+                ];
+            }
+
+            $lockedMeta = is_array($lockedItem->meta) ? $lockedItem->meta : [];
+            $providerResolution = $this->trustedRenewalProvider($lockedDomain, $lockedMeta);
+
+            if (!($providerResolution['ok'] ?? false)
+                || (int) $providerResolution['provider']->getKey() !== (int) $provider->getKey()
+            ) {
+                return [
+                    'claimed' => false,
+                    'domain' => $lockedDomain,
+                    'result' => [
+                        'ok' => false,
+                        'domain' => $lockedDomain,
+                        'message' => $providerResolution['message']
+                            ?? "The renewal provider identity changed before renewal could start.",
+                        'reason' => $providerResolution['reason'] ?? null,
+                    ],
+                ];
+            }
+
+            $status = $lockedItem->provisioning_status ?: OrderItem::PROVISIONING_NOT_STARTED;
+
+            if ($status === OrderItem::PROVISIONING_COMPLETED) {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => true,
+                        'skipped' => true,
+                        'message' => 'Domain renewal was already completed for this order item.',
+                    ],
+                ];
+            }
+
+            if ($status === OrderItem::PROVISIONING_IN_PROGRESS) {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => false,
+                        'message' => 'Domain renewal is already in progress for this order item.',
+                    ],
+                ];
+            }
+
+            if (!in_array($status, [OrderItem::PROVISIONING_NOT_STARTED, OrderItem::PROVISIONING_FAILED], true)) {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => false,
+                        'message' => 'Domain renewal cannot start from the current provisioning state.',
+                    ],
+                ];
+            }
+
+            // Defense in depth (mirrors claimRegistration()'s $hasInitiatedAttempt guard),
+            // extended to INDETERMINATE too: a renewal that never resolved to a terminal state
+            // must never be allowed to send a second Extend, even if OrderItem.provisioning_status
+            // were ever found out of sync with the attempt table.
+            $hasUnsafeAttempt = DomainProvisioningAttempt::query()
+                ->where('order_item_id', $lockedItem->getKey())
+                ->where('operation', DomainProvisioningAttempt::OPERATION_RENEW)
+                ->whereIn('status', [
+                    DomainProvisioningAttempt::STATUS_INITIATED,
+                    DomainProvisioningAttempt::STATUS_INDETERMINATE,
+                ])
+                ->exists();
+
+            if ($hasUnsafeAttempt) {
+                return [
+                    'claimed' => false,
+                    'result' => [
+                        'ok' => false,
+                        'message' => 'A domain renewal attempt is already initiated or unresolved for this order item.',
+                    ],
+                ];
+            }
+
+            $startedAt = now();
+
+            $lockedItem->forceFill([
+                'provisioning_status' => OrderItem::PROVISIONING_IN_PROGRESS,
+                'provisioning_started_at' => $startedAt,
+                'provisioning_completed_at' => null,
+            ])->save();
+
+            $attempt = DomainProvisioningAttempt::query()->create([
+                'order_item_id' => $lockedItem->getKey(),
+                'domain_id' => $lockedDomain->getKey(),
+                'provider_id' => $provider->getKey(),
+                'attempt_uuid' => (string) Str::uuid(),
+                'operation' => DomainProvisioningAttempt::OPERATION_RENEW,
+                'provider_type' => strtolower((string) $provider->type),
+                'provider_mode' => strtolower((string) $provider->mode),
+                'status' => DomainProvisioningAttempt::STATUS_INITIATED,
+                'started_at' => $startedAt,
+            ]);
+
+            return [
+                'claimed' => true,
+                'order_item' => $lockedItem,
+                'attempt' => $attempt,
+                'domain' => $lockedDomain,
+            ];
+        });
+    }
+
+    /**
+     * ADR — TLD-3H.2A: Renewal equivalent of finalizeRegistration(), in its own committed
+     * transaction. Unlike finalizeRegistration() (which never touches Domain), this also
+     * re-locks and updates Domain atomically with the attempt/item transition — the task's
+     * explicit instruction for this phase, and strictly safer than applying the Domain mutation
+     * in a separate, unlocked statement afterward. On INDETERMINATE, Domain is left completely
+     * untouched and OrderItem is left at IN_PROGRESS, so nothing here can ever trigger another
+     * automatic Extend for this attempt.
+     */
+    protected function finalizeRenewal(
+        OrderItem $orderItem,
+        DomainProvisioningAttempt $attempt,
+        Domain $domain,
+        ?string $orderItemStatus,
+        string $attemptStatus,
+        array $renewal,
+        ?string $paymentMethod,
+        ?Carbon $renewalDate
+    ): void {
+        $responsePayload = $this->safeAttemptResponsePayload($renewal);
+
+        DB::transaction(function () use (
+            $orderItem,
+            $attempt,
+            $domain,
+            $orderItemStatus,
+            $attemptStatus,
+            $renewal,
+            $responsePayload,
+            $paymentMethod,
+            $renewalDate
+        ): void {
+            $lockedItem = OrderItem::query()
+                ->lockForUpdate()
+                ->find($orderItem->getKey());
+
+            $lockedAttempt = DomainProvisioningAttempt::query()
+                ->lockForUpdate()
+                ->find($attempt->getKey());
+
+            $lockedDomain = Domain::query()
+                ->lockForUpdate()
+                ->find($domain->getKey());
+
+            if (!$lockedItem instanceof OrderItem
+                || !$lockedAttempt instanceof DomainProvisioningAttempt
+                || !$lockedDomain instanceof Domain
+                || $lockedItem->provisioning_status !== OrderItem::PROVISIONING_IN_PROGRESS
+                || $lockedAttempt->status !== DomainProvisioningAttempt::STATUS_INITIATED) {
+                return;
+            }
+
+            $lockedAttempt->forceFill([
+                'status' => $attemptStatus,
+                'provider_reference' => $renewal['provider_reference']
+                    ?? $renewal['cid']
+                    ?? null,
+                'provider_domain_id' => $renewal['provider_domain_id'] ?? null,
+                'finished_at' => now(),
+                'response_payload' => $responsePayload,
+            ])->save();
+
+            if ($orderItemStatus !== null) {
+                $lockedItem->forceFill([
+                    'provisioning_status' => $orderItemStatus,
+                    'provisioning_completed_at' => $orderItemStatus === OrderItem::PROVISIONING_COMPLETED
+                        ? now()
+                        : null,
+                ])->save();
+            }
+
+            if ($attemptStatus === DomainProvisioningAttempt::STATUS_COMPLETED) {
+                // TLD-3D — never write provider_id/registrar here, exactly as the pre-existing
+                // renewal success path never did: $provider is already the exact, cross-checked
+                // identity Domain.provider_id points to.
+                // TLD-3H.2B — the actual field mutation is now the single shared helper below
+                // (applyConfirmedRenewalToDomain()) so the live Extend-success path here and
+                // DomainProvisioningReconciliationService's independent renewal-reconciliation
+                // apply path can never drift into two different definitions of "a renewal was
+                // applied" for the same Domain row.
+                $this->applyConfirmedRenewalToDomain(
+                    $lockedDomain,
+                    ($renewalDate ?? Carbon::parse($lockedDomain->renewal_date))->toDateString(),
+                    $paymentMethod
+                );
+            } elseif ($attemptStatus === DomainProvisioningAttempt::STATUS_CONFIRMED_FAILED) {
+                $lockedDomain->forceFill([
+                    'status' => $lockedDomain->status ?: 'active',
+                    'payment_method' => $paymentMethod ?: $lockedDomain->payment_method,
+                    'dns_last_note' => $renewal['message'] ?? 'Automatic registrar renewal failed.',
+                ])->save();
+            }
+            // INDETERMINATE → Domain intentionally left completely untouched.
+        });
+    }
+
+    /**
+     * ADR — TLD-3H.2B: Shared, single source of truth for the exact Domain field mutation that
+     * represents "a renewal has been confirmed as applied" for the registrar's own domain. Used
+     * by BOTH finalizeRenewal() (immediately after this service's own successful Extend call)
+     * and DomainProvisioningReconciliationService's renewal-reconciliation apply path (after
+     * independently confirming, via a read-only GetDomainInfo lookup, that the registrar's
+     * expiry already reflects the expected renewal). $renewalDate is the date string to persist
+     * as-is — callers decide whether that is the locally expected target date (the live Extend
+     * flow, which has no independent provider confirmation of the exact new expiry) or the
+     * registrar's own confirmed expiry (reconciliation, which does). Callers MUST already hold
+     * Domain::lockForUpdate() inside their own transaction — this method performs no locking of
+     * its own and must never be called outside one.
+     */
+    public function applyConfirmedRenewalToDomain(Domain $lockedDomain, string $renewalDate, ?string $paymentMethod = null): void
+    {
+        $lockedDomain->forceFill([
+            'status' => 'active',
+            'renewal_date' => $renewalDate,
+            'payment_method' => $paymentMethod ?: $lockedDomain->payment_method,
+            'dns_last_note' => null,
+        ])->save();
+    }
+
+    /**
      * TLD-3D — Hybrid Provider Identity: the sole, exact-identity resolver for renewal
      * provisioning. Mirrors trustedRegistrationProvider()'s "no fallback" contract, but adds
      * the one extra cross-check registration doesn't need: the OrderItem's provider_id snapshot
      * must still match the domain's OWN current Domain.provider_id (registration has no
      * equivalent concept to drift against). Any failure returns a distinct, non-generic reason
      * code — never a silent substitution.
+     *
+     * TLD-3H.2B — widened from protected to public (behavior otherwise byte-for-byte
+     * unchanged) so DomainProvisioningReconciliationService can reuse this exact, already-
+     * proven identity re-validation for renewal reconciliation instead of re-implementing an
+     * equivalent (and potentially divergent) rule of its own.
      */
-    protected function trustedRenewalProvider(Domain $domain, array $meta): array
+    public function trustedRenewalProvider(Domain $domain, array $meta): array
     {
         $snapshotProviderId = filter_var($meta['provider_id'] ?? null, FILTER_VALIDATE_INT);
         $snapshotType = strtolower(trim((string) ($meta['provider_type'] ?? '')));
@@ -1246,24 +1598,43 @@ class RegistrarProvisioningService
             if ($provider->type === 'enom') {
                 $client = new EnomClient();
                 $response = $client->renewDomain($provider, $domain->domain_name, (int) $context['years']);
+                $identifiers = $this->providerIdentifiersFromResponse($response);
 
                 if (!($response['ok'] ?? false)) {
                     return [
                         'ok' => false,
+                        'reason' => $response['reason'] ?? 'provider_error',
                         'message' => $response['message'] ?? 'Renewal failed with Enom.',
                         'cid' => $response['cid'] ?? null,
+                        'provider_reference' => $identifiers['provider_reference'],
+                        'provider_domain_id' => $identifiers['provider_domain_id'],
+                        'http_code' => $response['http_code'] ?? null,
+                        'code' => $response['code'] ?? null,
+                        // ADR — TLD-3H.2A: identical Enom definitive/ambiguous classification
+                        // already established by registerDomainWithProvider() — never invented
+                        // anew here. Everything outside this exact reason set (http_error,
+                        // non_xml, xml_parse_error, or a thrown exception below) is ambiguous
+                        // and must become INDETERMINATE, never an automatic-retry-safe failure.
+                        'definitive' => in_array(
+                            $response['reason'] ?? null,
+                            ['provider_error', 'provider_response', 'rrp_error'],
+                            true
+                        ),
                     ];
                 }
 
                 return [
                     'ok' => true,
                     'cid' => $response['cid'] ?? null,
+                    'provider_reference' => $identifiers['provider_reference'],
+                    'provider_domain_id' => $identifiers['provider_domain_id'],
                 ];
             }
 
             return [
                 'ok' => false,
                 'message' => 'Unsupported registrar integration: ' . $provider->type,
+                'definitive' => true,
             ];
         } catch (\Throwable $e) {
             Log::error('Registrar renewal failed', [
@@ -1275,7 +1646,9 @@ class RegistrarProvisioningService
 
             return [
                 'ok' => false,
+                'reason' => 'exception',
                 'message' => 'Registrar error: ' . $e->getMessage(),
+                'definitive' => false,
             ];
         }
     }

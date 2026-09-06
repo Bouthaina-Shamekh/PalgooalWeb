@@ -35,19 +35,38 @@ class ReconcileDomainProvisioning extends Command
         $olderThan = max(0, (int) $this->option('older-than'));
         $threshold = now()->subMinutes($olderThan);
 
+        // TLD-3H.2B — additive: now also matches durable renewal attempts (operation=renew),
+        // never cross-matching a register attempt against a renewal order item or vice versa.
+        // Each branch keeps its own independent operation <-> item_option correlation, exactly
+        // as strict as the original register-only query.
         $query = DomainProvisioningAttempt::query()
             ->with(['orderItem', 'domain', 'provider'])
-            ->where('operation', DomainProvisioningAttempt::OPERATION_REGISTER)
             ->whereIn('status', [
                 DomainProvisioningAttempt::STATUS_INITIATED,
                 DomainProvisioningAttempt::STATUS_INDETERMINATE,
             ])
-            ->whereHas('orderItem', function ($query) use ($threshold): void {
-                $query
-                    ->where('provisioning_status', OrderItem::PROVISIONING_IN_PROGRESS)
-                    ->where('item_option', DomainProvisioningAttempt::OPERATION_REGISTER)
-                    ->whereNotNull('provisioning_started_at')
-                    ->where('provisioning_started_at', '<=', $threshold);
+            ->where(function ($outer) use ($threshold): void {
+                $outer->where(function ($registerQuery) use ($threshold): void {
+                    $registerQuery
+                        ->where('operation', DomainProvisioningAttempt::OPERATION_REGISTER)
+                        ->whereHas('orderItem', function ($query) use ($threshold): void {
+                            $query
+                                ->where('provisioning_status', OrderItem::PROVISIONING_IN_PROGRESS)
+                                ->where('item_option', DomainProvisioningAttempt::OPERATION_REGISTER)
+                                ->whereNotNull('provisioning_started_at')
+                                ->where('provisioning_started_at', '<=', $threshold);
+                        });
+                })->orWhere(function ($renewQuery) use ($threshold): void {
+                    $renewQuery
+                        ->where('operation', DomainProvisioningAttempt::OPERATION_RENEW)
+                        ->whereHas('orderItem', function ($query) use ($threshold): void {
+                            $query
+                                ->where('provisioning_status', OrderItem::PROVISIONING_IN_PROGRESS)
+                                ->where('item_option', DomainProvisioningAttempt::OPERATION_RENEW)
+                                ->whereNotNull('provisioning_started_at')
+                                ->where('provisioning_started_at', '<=', $threshold);
+                        });
+                });
             })
             ->orderBy('id');
 
@@ -64,7 +83,11 @@ class ReconcileDomainProvisioning extends Command
 
         foreach ($attempts as $attempt) {
             try {
-                $result = $service->reconcileAttempt($attempt, $apply);
+                // TLD-3H.2B — dispatch by the attempt's own durable operation; never inferred
+                // from item_option or any other secondary signal.
+                $result = $attempt->operation === DomainProvisioningAttempt::OPERATION_RENEW
+                    ? $service->reconcileRenewalAttempt($attempt, $apply)
+                    : $service->reconcileAttempt($attempt, $apply);
             } catch (\Throwable $e) {
                 $result = [
                     'status' => DomainProvisioningReconciliationService::STATUS_INDETERMINATE,
