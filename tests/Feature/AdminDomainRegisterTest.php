@@ -9,6 +9,7 @@ use App\Models\DomainProvider;
 use App\Models\User;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 /**
@@ -297,6 +298,293 @@ class AdminDomainRegisterTest extends TestCase
         $this->assertSame($originalProvider->type, $fresh->registrar);
         // The API call did happen (same-provider re-registration is allowed) — it just failed.
         $this->assertSame([$originalProvider->id], $this->registerCalls);
+    }
+
+
+    /* ====================== TLD-3G.2A — Enom Re-Registration Safety Guard ====================== */
+
+    public function test_enom_managed_domain_confirmed_registered_blocks_purchase_and_preserves_domain_fields(): void
+    {
+        Http::fake([
+            'reseller.enom.com/*' => Http::response($this->fakeGetDomainInfoXml(), 200, ['Content-Type' => 'application/xml']),
+        ]);
+
+        $admin = $this->makeAdmin();
+        $provider = $this->makeProvider('enom', true, 'live');
+        $client = $this->makeClient();
+        $domain = $this->makeDomain($client, $provider);
+        $before = $domain->fresh();
+        $this->bindFakeRegistrar(true);
+
+        $response = $this->actingAs($admin)->put(route('dashboard.domains.register.update', $domain), [
+            'provider_id' => $provider->id,
+            'registration_date' => now()->toDateString(),
+            'renewal_date' => now()->addYear()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHasErrors('provider_id');
+        $this->assertSame([], $this->registerCalls, 'zero Purchase-equivalent calls when Enom confirms the domain is already registered and paid');
+
+        // J — blocked scenario must not mutate any Domain field.
+        $after = $domain->fresh();
+        $this->assertSame($before->provider_id, $after->provider_id);
+        $this->assertSame($before->registrar, $after->registrar);
+        $this->assertSame($before->status, $after->status);
+        $this->assertSame($before->registration_date, $after->registration_date);
+        $this->assertSame($before->renewal_date, $after->renewal_date);
+    }
+
+    public function test_enom_reregistration_guard_enforced_without_ui_via_direct_put(): void
+    {
+        // B — proves this is a true backend gate, not merely a hidden/disabled UI control: the
+        // request below never visits editRegister()'s GET form (no view is ever rendered), it
+        // goes straight to a raw PUT — exactly what a forged/direct submission would look like.
+        Http::fake([
+            'reseller.enom.com/*' => Http::response($this->fakeGetDomainInfoXml(), 200, ['Content-Type' => 'application/xml']),
+        ]);
+
+        $admin = $this->makeAdmin();
+        $provider = $this->makeProvider('enom', true, 'live');
+        $client = $this->makeClient();
+        $domain = $this->makeDomain($client, $provider);
+        $this->bindFakeRegistrar(true);
+
+        $response = $this->actingAs($admin)->from('/some/unrelated/page')->put(route('dashboard.domains.register.update', $domain), [
+            'provider_id' => $provider->id,
+            'registration_date' => now()->toDateString(),
+            'renewal_date' => now()->addYear()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $response->assertSessionHasErrors('provider_id');
+        $this->assertSame([], $this->registerCalls);
+        $this->assertSame($provider->id, $domain->fresh()->provider_id, 'domain remains exactly as it was — no partial mutation');
+    }
+
+    public function test_enom_verification_api_failure_fails_closed(): void
+    {
+        // C — a hard HTTP-level failure talking to Enom (not an ambiguous-but-successful
+        // response — see the ambiguous test below for that distinct case).
+        Http::fake([
+            'reseller.enom.com/*' => Http::response('Internal Server Error', 500),
+        ]);
+
+        $admin = $this->makeAdmin();
+        $provider = $this->makeProvider('enom', true, 'live');
+        $client = $this->makeClient();
+        $domain = $this->makeDomain($client, $provider);
+        $before = $domain->fresh();
+        $this->bindFakeRegistrar(true);
+
+        $response = $this->actingAs($admin)->put(route('dashboard.domains.register.update', $domain), [
+            'provider_id' => $provider->id,
+            'registration_date' => now()->toDateString(),
+            'renewal_date' => now()->addYear()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $response->assertSessionHasErrors('provider_id');
+        $this->assertSame([], $this->registerCalls, 'a verification API failure must never fall through to a live Purchase call');
+        $this->assertSame($before->provider_id, $domain->fresh()->provider_id);
+    }
+
+    public function test_enom_verification_ambiguous_result_fails_closed(): void
+    {
+        // D — Enom responds successfully but does NOT confirm registered+paid (e.g. a domain
+        // that is present in the account but only "pending") — this is the
+        // 'registration_not_confirmed' branch of ExistingDomainVerificationService, distinct
+        // from the hard API failure above. Ambiguous, therefore fails closed too.
+        Http::fake([
+            'reseller.enom.com/*' => Http::response(
+                $this->fakeGetDomainInfoXml(registrationStatus: 'Pending', purchaseStatus: 'Paid'),
+                200,
+                ['Content-Type' => 'application/xml']
+            ),
+        ]);
+
+        $admin = $this->makeAdmin();
+        $provider = $this->makeProvider('enom', true, 'live');
+        $client = $this->makeClient();
+        $domain = $this->makeDomain($client, $provider);
+        $before = $domain->fresh();
+        $this->bindFakeRegistrar(true);
+
+        $response = $this->actingAs($admin)->put(route('dashboard.domains.register.update', $domain), [
+            'provider_id' => $provider->id,
+            'registration_date' => now()->toDateString(),
+            'renewal_date' => now()->addYear()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $response->assertSessionHasErrors('provider_id');
+        $this->assertSame([], $this->registerCalls, 'an ambiguous/non-definitive verification result must never fall through to a live Purchase call');
+        $this->assertSame($before->provider_id, $domain->fresh()->provider_id);
+    }
+
+    public function test_enom_not_in_account_style_failure_still_fails_closed_under_current_contract(): void
+    {
+        // E — TLD-3G.2A report finding: ExistingDomainVerificationService::verify()'s reason
+        // contract collapses EVERY EnomClient-level failure (including a "domain not found in
+        // this account" response, which conceptually sounds like "safe to retry") into the
+        // single generic 'enom_api_failure' reason. This test proves, empirically, that today's
+        // contract does NOT let this guard distinguish that case from a truly ambiguous/unsafe
+        // failure — so even this "sounds like a retry" scenario still fails closed. This is the
+        // documented, intentional consequence of not weakening the service to manufacture a
+        // distinction it cannot currently support safely (see the TLD-3G.2A final report).
+        Http::fake([
+            'reseller.enom.com/*' => Http::response(
+                '<?xml version="1.0"?><interface-response><ErrCount>1</ErrCount><errors><Err1>Domain not found in your account</Err1></errors></interface-response>',
+                200,
+                ['Content-Type' => 'application/xml']
+            ),
+        ]);
+
+        $admin = $this->makeAdmin();
+        $provider = $this->makeProvider('enom', true, 'live');
+        $client = $this->makeClient();
+        $domain = $this->makeDomain($client, $provider);
+        $before = $domain->fresh();
+        $this->bindFakeRegistrar(true);
+
+        $response = $this->actingAs($admin)->put(route('dashboard.domains.register.update', $domain), [
+            'provider_id' => $provider->id,
+            'registration_date' => now()->toDateString(),
+            'renewal_date' => now()->addYear()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $response->assertSessionHasErrors('provider_id');
+        $this->assertSame([], $this->registerCalls, 'current contract cannot safely distinguish this from an ambiguous failure, so it fails closed too');
+        $this->assertSame($before->provider_id, $domain->fresh()->provider_id);
+    }
+
+    public function test_two_enom_providers_different_provider_still_hard_rejected_with_no_fallback(): void
+    {
+        // F/I — even when BOTH providers are exactly type 'enom', switching to a different
+        // provider_id on a managed domain is still hard-rejected by the pre-existing TLD-3E.2
+        // guard, and the new TLD-3G.2A verification guard is never reached at all (proven by
+        // Http::assertNothingSent() — zero Enom traffic of any kind). No provider-by-type
+        // fallback/resolution ever happens.
+        Http::fake();
+
+        $admin = $this->makeAdmin();
+        $originalEnom = $this->makeProvider('enom', true, 'live');
+        $otherEnom = $this->makeProvider('enom', true, 'live');
+        $client = $this->makeClient();
+        $domain = $this->makeDomain($client, $originalEnom);
+        $this->bindFakeRegistrar(true);
+
+        $response = $this->actingAs($admin)->put(route('dashboard.domains.register.update', $domain), [
+            'provider_id' => $otherEnom->id,
+            'registration_date' => now()->toDateString(),
+            'renewal_date' => now()->addYear()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $response->assertSessionHasErrors('provider_id');
+        $this->assertSame([], $this->registerCalls);
+        Http::assertNothingSent();
+
+        $fresh = $domain->fresh();
+        $this->assertSame($originalEnom->id, $fresh->provider_id);
+    }
+
+    public function test_external_domain_with_enom_provider_registers_normally_without_verification_gate(): void
+    {
+        // G — an external/unmanaged domain (provider_id null) selecting an Enom provider must
+        // NOT trigger the new verification gate at all — it is not a re-registration. Proven via
+        // Http::assertNothingSent(): zero Enom traffic occurs even though the provider is enom.
+        Http::fake();
+
+        $admin = $this->makeAdmin();
+        $provider = $this->makeProvider('enom', true, 'live');
+        $client = $this->makeClient();
+        $domain = $this->makeDomain($client);
+        $this->assertNull($domain->provider_id, 'domain starts external/unmanaged');
+        $this->bindFakeRegistrar(true);
+
+        $response = $this->actingAs($admin)->put(route('dashboard.domains.register.update', $domain), [
+            'provider_id' => $provider->id,
+            'registration_date' => now()->toDateString(),
+            'renewal_date' => now()->addYear()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $response->assertRedirect(route('dashboard.domains.index'));
+        $response->assertSessionDoesntHaveErrors();
+        Http::assertNothingSent();
+        $this->assertSame([$provider->id], $this->registerCalls);
+        $this->assertSame($provider->id, $domain->fresh()->provider_id);
+    }
+
+    public function test_namecheap_same_provider_retry_makes_zero_enom_calls(): void
+    {
+        // H — Namecheap protection is explicitly deferred scope for TLD-3G.2A. This test proves
+        // the existing same-provider retry behavior for a NON-enom provider is completely
+        // unaffected by the new guard, and that no Enom (or any) HTTP traffic is generated for
+        // it at all — the type==='enom' condition correctly excludes Namecheap entirely.
+        Http::fake();
+
+        $admin = $this->makeAdmin();
+        $provider = $this->makeProvider('namecheap', true, 'live');
+        $client = $this->makeClient();
+        $domain = $this->makeDomain($client, $provider);
+        $this->bindFakeRegistrar(true);
+
+        $response = $this->actingAs($admin)->put(route('dashboard.domains.register.update', $domain), [
+            'provider_id' => $provider->id,
+            'registration_date' => now()->toDateString(),
+            'renewal_date' => now()->addYear()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $response->assertRedirect(route('dashboard.domains.index'));
+        $response->assertSessionDoesntHaveErrors();
+        Http::assertNothingSent();
+        $this->assertSame([$provider->id], $this->registerCalls);
+    }
+
+    private function fakeGetDomainInfoXml(
+        ?string $providerDomainId = '12345',
+        ?string $registrationStatus = 'Registered',
+        ?string $purchaseStatus = 'Paid',
+        ?string $belongsToPartyId = '98765',
+        ?string $registeredAt = '01/01/2020',
+        ?string $expiresAt = '12/31/2027'
+    ): string {
+        $domainNameAttr = $providerDomainId !== null ? ' domainnameid="' . $providerDomainId . '"' : '';
+        $belongsTo = $belongsToPartyId !== null
+            ? '<belongs-to party-id="' . $belongsToPartyId . '"/>'
+            : '';
+        $registrationStatusEl = $registrationStatus !== null
+            ? '<registrationstatus>' . $registrationStatus . '</registrationstatus>'
+            : '';
+        $purchaseStatusEl = $purchaseStatus !== null
+            ? '<purchase-status>' . $purchaseStatus . '</purchase-status>'
+            : '';
+        $expirationEl = $expiresAt !== null ? '<expiration>' . $expiresAt . '</expiration>' : '';
+        $registryCreateDateEl = $registeredAt !== null
+            ? '<RegistryCreateDate>' . $registeredAt . '</RegistryCreateDate>'
+            : '';
+
+        return <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<interface-response>
+    <ErrCount>0</ErrCount>
+    <GetDomainInfo>
+        <domainname{$domainNameAttr}>example.com</domainname>
+        <status>
+            {$registrationStatusEl}
+            {$purchaseStatusEl}
+            {$expirationEl}
+            {$belongsTo}
+        </status>
+    </GetDomainInfo>
+    {$registryCreateDateEl}
+</interface-response>
+XML;
     }
 
     /* ================================ Helpers ================================ */

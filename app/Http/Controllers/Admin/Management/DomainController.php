@@ -210,7 +210,7 @@ class DomainController extends Controller
     }
 
     /** تنفيذ التسجيل مع المزود */
-    public function updateRegister(Request $request, Domain $domain)
+    public function updateRegister(Request $request, Domain $domain, ExistingDomainVerificationService $verifier)
     {
         $this->authorize('update', $domain);
         // TLD-3E.2 — Admin Register Exact Provider Selection: the admin now selects an exact
@@ -252,6 +252,49 @@ class DomainController extends Controller
         if ($domain->provider_id !== null && (int) $domain->provider_id !== (int) $provider->getKey()) {
             return back()->withInput()->withErrors([
                 'provider_id' => __('This domain is already managed by a different provider. Switching providers is not supported from this screen.'),
+            ]);
+        }
+
+        // TLD-3G.2A — Enom Re-Registration Safety Guard. Applies ONLY when the domain is already
+        // managed (provider_id set), the submitted provider_id is that EXACT same provider (not
+        // a switch — the different-provider case above already rejects that), and the provider's
+        // type is exactly 'enom'. An external/unmanaged domain (provider_id null) and a Namecheap
+        // (or any non-enom) provider are both completely unaffected by this block and fall
+        // through to today's unchanged behavior — no verification gate is introduced for them.
+        //
+        // Before this action can ever reach a live Purchase call, it reuses the exact same
+        // read-only ExistingDomainVerificationService already proven safe for adoption
+        // (TLD-3G.1A/TLD-3G.1B) — a single GetDomainInfo lookup, never a mutating command.
+        //
+        // Contract limitation (see the TLD-3G.2A report for the full analysis):
+        // ExistingDomainVerificationService::verify()'s reason contract does not currently
+        // expose a trustworthy, explicit "this domain is definitely NOT registered in this
+        // account" signal distinct from a generic/ambiguous verification failure — every
+        // EnomClient-level failure (including a genuine "domain not found in this account"
+        // response) is collapsed into the single 'enom_api_failure' reason. Rather than guess
+        // which verified=false cases are "safe" (explicitly forbidden — do not weaken the
+        // service to manufacture that distinction), this guard treats ONLY verified===true as
+        // the block signal and fails closed on every other outcome: Purchase is never reached
+        // unless verification comes back with a trustworthy, explicit "not registered" result,
+        // which the current contract cannot yet produce. This is the smallest safe guard that
+        // requires no changes to ExistingDomainVerificationService.
+        if ($domain->provider_id !== null
+            && (int) $domain->provider_id === (int) $provider->getKey()
+            && strtolower((string) $provider->type) === 'enom'
+        ) {
+            $reRegistrationCheck = $verifier->verify($provider, $domain->domain_name);
+
+            if ($reRegistrationCheck['verified'] ?? false) {
+                return back()->withInput()->withErrors([
+                    'provider_id' => __('This domain is already registered and paid for with this provider. Please use Renew or manage it directly instead of registering it again.'),
+                ]);
+            }
+
+            // FAIL CLOSED — see contract-limitation note above. Any non-"verified=true" result
+            // (API failure, malformed response, ownership ambiguity, provider ineligibility, or
+            // any other non-definitive outcome) is treated as unsafe to proceed automatically.
+            return back()->withInput()->withErrors([
+                'provider_id' => __('Registration cannot safely continue because the current registrar state for this domain could not be verified. Please check the provider and domain status before trying again.'),
             ]);
         }
 
