@@ -41,6 +41,68 @@ class OrderActivationServiceTest extends TestCase
     public function test_mark_paid_keeps_current_invoice_paid_and_only_opens_other_drafts(): void
     {
         [$order, $invoiceA, $invoiceB] = $this->makeOrderWithTwoDraftInvoices();
+
+        // TLD-3H.3C.1 -- only $invoiceA is actually settled below ($invoiceB stays
+        // draft/unpaid and is never checked by the new integrity validator), so only
+        // $invoiceA needs a matching item. Mirrors the exact Subscription + InvoiceItem
+        // shape already established by makeOrderWithSubscription() in this same file
+        // (Server + Plan + Subscription with price_cents 1000, then a subscription
+        // InvoiceItem with unit_price_cents/total_cents 1000 -- matching $invoiceA's
+        // existing subtotal_cents/total_cents of 1000 exactly, so no amount change needed).
+        // The shared makeOrderWithTwoDraftInvoices()/makeDraftInvoice() helpers are left
+        // untouched: test_preloaded_stale_invoice_relation_cannot_overwrite_paid_status also
+        // uses them but calls activate() directly, never markPaid(), so it never reaches the
+        // new check and must not be affected by this fixture change.
+        $server = Server::query()->create([
+            'name' => 'TLD3H3C1 WHM',
+            'type' => 'cpanel',
+            'hostname' => uniqid('whm-', false) . '.example.test',
+            'username' => 'root',
+            'api_token' => 'test-token',
+            'is_active' => true,
+        ]);
+        $plan = Plan::query()->create([
+            'name' => 'TLD3H3C1 Plan',
+            'slug' => uniqid('tld3h3c1-plan-', false),
+            'plan_type' => Plan::TYPE_HOSTING,
+            'server_id' => $server->id,
+            'server_package' => 'tld3h3c1_package',
+            'is_active' => true,
+        ]);
+        $subscription = Subscription::query()->create([
+            'client_id' => $order->client_id,
+            'plan_id' => $plan->id,
+            'status' => 'pending',
+            'provisioning_status' => Subscription::PROVISIONING_PENDING,
+            'price_cents' => 1000,
+            'billing_cycle' => 'monthly',
+            'username' => uniqid('tld3h3c1', false),
+            'server_id' => $server->id,
+            'server_package' => 'tld3h3c1_package',
+            'domain_option' => 'subdomain',
+            'domain_name' => uniqid('tld3h3c1-', false) . '.example.test',
+            'subdomain' => uniqid('tld3h3c1-', false),
+        ]);
+        InvoiceItem::query()->create([
+            'invoice_id' => $invoiceA->id,
+            'item_type' => 'subscription',
+            'reference_id' => $subscription->id,
+            'description' => 'Subscription #' . $subscription->id,
+            'qty' => 1,
+            'unit_price_cents' => 1000,
+            'total_cents' => 1000,
+        ]);
+
+        // QUEUE_CONNECTION=sync in tests (phpunit.xml), so activate() dispatching
+        // ProvisionSubscription::dispatch(...)->afterCommit() would otherwise run the job
+        // synchronously and reach the real TenantProvisioningService::provision() call. This
+        // test never asserted on provisioning before and isn't about it -- fake the queue so
+        // attaching a realistic InvoiceItem here doesn't introduce that unrelated live-call
+        // risk (mirrors test_subscription_provisioning_is_dispatched_only_after_commit's use
+        // of the same job, just faked instead of intercepted since provisioning isn't what
+        // this test is proving).
+        Queue::fake();
+
         $activation = $this->activationService();
         $settlement = new InvoiceSettlementService($activation);
 

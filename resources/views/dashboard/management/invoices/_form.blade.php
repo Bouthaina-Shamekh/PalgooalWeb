@@ -1,4 +1,9 @@
 @php
+    // TLD-3H.3C — order_id (not item_type) is the sole discriminator: an Order-backed invoice
+    // is a billing projection of its Order/OrderItems and its financial line items are never
+    // edited here (see TLD-3H.3B). This mirrors InvoiceController::update()'s own check exactly.
+    $isOrderBacked = isset($invoice) && $invoice->exists && !is_null($invoice->order_id);
+
     $itemTypes = config('invoices.item_types', [
         'subscription' => 'اشتراك استضافة',
         'domain' => 'نطاق',
@@ -102,6 +107,45 @@
 {{-- Items section --}}
 <div class="col-span-12">
     <div class="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white/80 p-6 shadow-sm">
+        @if ($isOrderBacked)
+            <div>
+                <h3 class="text-base font-semibold text-gray-900">تفاصيل البنود</h3>
+                <p class="mt-1 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    هذه البنود مولَّدة تلقائيًا من الطلب المرتبط بهذه الفاتورة ولا يمكن تعديلها أو حذفها أو
+                    إضافة بنود جديدة من هنا. أي تصحيح على السعر يجب أن يتم عبر الطلب (Order) نفسه.
+                </p>
+            </div>
+
+            {{-- Read-only projection of the stored InvoiceItems — no <input>/<select> fields are
+                 rendered at all, so there is nothing here for a normal form submission to send
+                 back for these values. This is a UX aid only: the real protection is server-side
+                 in InvoiceController::update(), which ignores any 'items' payload entirely for
+                 an Order-backed invoice regardless of what the request contains. --}}
+            <div class="overflow-x-auto rounded-xl border border-gray-200">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-start font-semibold text-gray-600">نوع البند</th>
+                            <th class="px-4 py-2 text-start font-semibold text-gray-600">الوصف</th>
+                            <th class="px-4 py-2 text-start font-semibold text-gray-600">الكمية</th>
+                            <th class="px-4 py-2 text-start font-semibold text-gray-600">سعر الوحدة (بالسنت)</th>
+                            <th class="px-4 py-2 text-start font-semibold text-gray-600">الإجمالي (بالسنت)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 bg-white">
+                        @foreach ($invoice->items as $item)
+                            <tr>
+                                <td class="px-4 py-2 text-gray-700">{{ $itemTypes[$item->item_type] ?? $item->item_type }}</td>
+                                <td class="px-4 py-2 text-gray-700">{{ $item->description }}</td>
+                                <td class="px-4 py-2 text-gray-700">{{ $item->qty }}</td>
+                                <td class="px-4 py-2 text-gray-700">{{ $item->unit_price_cents }}</td>
+                                <td class="px-4 py-2 text-gray-700">{{ $item->total_cents }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @else
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h3 class="text-base font-semibold text-gray-900">تفاصيل البنود</h3>
@@ -195,6 +239,7 @@
                 </div>
             @endforeach
         </div>
+        @endif
     </div>
 </div>
 
@@ -214,6 +259,7 @@
     </a>
 </div>
 
+@if (!$isOrderBacked)
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const itemsContainer = document.getElementById('invoice-items');
@@ -292,3 +338,4 @@
         });
     });
 </script>
+@endif

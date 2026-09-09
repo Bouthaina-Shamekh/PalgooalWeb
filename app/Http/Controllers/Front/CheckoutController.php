@@ -360,6 +360,33 @@ class CheckoutController extends Controller
 
         // معلومات القالب (إن وجد)
         $template    = $isNotTemplate ? null : \App\Models\Template::find($template_id);
+
+        // TLD-3H.3C.7 -- Fail-closed guard: any checkout that treats a Template as a
+        // subscription/template product (a real template_id was submitted) must have that
+        // Template resolve to a real Plan BEFORE any Order/OrderItem/Subscription/Invoice/
+        // InvoiceItem/PaymentAttempt is created or any hosted payment session is started.
+        // Without this, the subscription-line-config step further below unconditionally
+        // creates an item_type='subscription' InvoiceItem for the template line even when
+        // $template->plan is null, leaving InvoiceItem.reference_id = null -- an Order-backed
+        // invoice InvoiceSettlementService::assertOrderBackedFinancialIntegrity() can never
+        // legitimately settle (confirmed architectural defect; production data gate confirmed
+        // Template::whereNull('plan_id')->count() = 0, so this closes the gap before it can
+        // ever be reached again, rather than reacting to it after the fact at settlement time).
+        // Placed immediately after Template resolution -- the earliest point after trusted
+        // Template resolution and before any further use of $template, any DB::transaction, or
+        // PaymentSessionStarter::start() below. Deliberately does NOT require Plan.is_active:
+        // no other path in this method (the plan-only branch just below included) currently
+        // enforces that, so requiring it only here would invent a new, asymmetric business rule
+        // beyond this phase's scope -- "resolves to a real Plan" is the actual invariant being
+        // restored, nothing more.
+        if (!$isNotTemplate && (!$template instanceof \App\Models\Template || !$template->plan instanceof \App\Models\Plan)) {
+            $msg = t('site.Template_Missing_Plan', 'القالب المحدد غير مرتبط بخطة اشتراك صالحة. تعذر إتمام الطلب.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $msg], 422);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
         $translation = $template?->translations()->where('locale', app()->getLocale())->first();
         $template_name = $translation?->name ?? $template?->name ?? '';
 
@@ -515,16 +542,45 @@ class CheckoutController extends Controller
                     }, $items);
                     $createdDomainOrderItems = $order->items()->createMany($payload);
                 } else {
-                    // لو وصل دومين مع شراء القالب، خزّنه كبند واحد (اختياري لكنه مفيد للمراجعة/التتبع)
-                    $domainFromRequest = $request->input('domain');
-                    $optionFromRequest = $request->input('domain_option');
-                    if (!empty($domainFromRequest) || !empty($optionFromRequest)) {
-                        $order->items()->create([
-                            'domain'      => $domainFromRequest ? strtolower(trim($domainFromRequest)) : null,
-                            'item_option' => $optionFromRequest ?? null,
-                            'price_cents' => 0,
-                            'meta'        => null,
-                        ]);
+                    // TLD-3H.3C.3 -- a purchased domain bundled with a subscription/template
+                    // checkout must produce ONE logical OrderItem that represents the SAME
+                    // trusted, server-priced domain contract projected into the InvoiceItem
+                    // below (see TLD-3H.3C.2 audit) -- never a separate zero-price
+                    // "informational" row. $items is already the fully re-priced,
+                    // availability-checked, register-only domain cart built above (the exact
+                    // same trusted source the isDomainOnly branch's own OrderItem payload uses
+                    // at the top of this method) -- reuse it verbatim rather than re-deriving
+                    // anything from request('domain')/request('domain_option'), which are never
+                    // a price source and must never control OrderItem.price_cents.
+                    if (!empty($items)) {
+                        $payload = array_map(function ($it) {
+                            return [
+                                'domain'      => $it['domain'],
+                                'item_option' => 'register',
+                                'price_cents' => (int) ($it['price_cents'] ?? 0),
+                                'meta'        => $it['meta'],
+                            ];
+                        }, $items);
+                        $order->items()->createMany($payload);
+                    } else {
+                        // No priced domain-cart item was submitted (e.g. subdomain/transfer/
+                        // existing-domain selection, or no domain at all) -- preserve the
+                        // pre-existing informational-only OrderItem for these
+                        // non-provisionable-by-price cases. item_option is NOT forced to
+                        // 'register' here (unlike the branch above), so
+                        // OrderActivationService::activate()'s $hasProvisionableDomain gate
+                        // (register/renew only) correctly stays false for these -- e.g. a
+                        // subdomain selection remains $0 and non-provisionable exactly as today.
+                        $domainFromRequest = $request->input('domain');
+                        $optionFromRequest = $request->input('domain_option');
+                        if (!empty($domainFromRequest) || !empty($optionFromRequest)) {
+                            $order->items()->create([
+                                'domain'      => $domainFromRequest ? strtolower(trim($domainFromRequest)) : null,
+                                'item_option' => $optionFromRequest ?? null,
+                                'price_cents' => 0,
+                                'meta'        => null,
+                            ]);
+                        }
                     }
                 }
 
@@ -597,7 +653,6 @@ class CheckoutController extends Controller
                         $subscriptionLineConfigs[] = [
                             'description'   => $template_name ?: ($planTemplate?->name ?? ''),
                             'unit_cents'    => $unitCents,
-                            'base_cents'    => $basePriceCents,
                             'plan'          => $planTemplate,
                             'billing_cycle' => $planTemplate?->billing_cycle ?? 'annually',
                         ];
@@ -607,16 +662,25 @@ class CheckoutController extends Controller
                         $subscriptionLineConfigs[] = [
                             'description'   => $plan_name ?? '',
                             'unit_cents'    => $unitCentsPlan,
-                            'base_cents'    => (int) (($basePricePlan ?? 0) * 100),
                             'plan'          => $plan,
                             'billing_cycle' => null,
                         ];
                     }
 
-                    $subscriptionBaseSum = array_sum(array_map(
-                        fn ($config) => $config['base_cents'],
-                        $subscriptionLineConfigs
-                    ));
+                    // TLD-3H.3C.4B — Canonical sale-price invoice contract (approved in
+                    // TLD-3H.3C.4). Subscription.price_cents/InvoiceItem.unit_price_cents are
+                    // always the ACTUAL sale price ($unitCents/$unitCentsPlan above — unchanged
+                    // by this phase). Invoice.subtotal_cents must therefore equal the sum of
+                    // what is actually being invoiced (sale-price subscription lines + trusted
+                    // domain lines from $items), never the pre-discount list price — this is
+                    // what makes sum(InvoiceItems.total_cents) === Invoice.subtotal_cents by
+                    // construction, satisfying InvoiceSettlementService::
+                    // assertOrderBackedFinancialIntegrity() (TLD-3H.3C) without touching it.
+                    // The Template/Plan merchandising discount (list price vs sale price) is
+                    // NOT persisted into Invoice.discount_cents anymore — it remains checkout
+                    // page display data only (Template.price_cents/discount_price_cents, read
+                    // live by checkout.blade.php's own strike-through UI, untouched by this
+                    // phase). Invoice.discount_cents now represents the coupon discount only.
                     $subscriptionTotalSum = array_sum(array_map(
                         fn ($config) => $config['unit_cents'],
                         $subscriptionLineConfigs
@@ -626,27 +690,28 @@ class CheckoutController extends Controller
                         fn ($carry, $domainItem) => $carry + (int) ($domainItem['price_cents'] ?? 0),
                         0
                     );
-                    $baseSubtotal = $subscriptionBaseSum + $domainLineTotal;
 
-                    // Template/plan discount (price vs discount_price from DB)
-                    $templatePlanDiscount = max(0, $baseSubtotal - ($subscriptionTotalSum + $domainLineTotal));
+                    // Actual (sale-price) subtotal — exactly what the customer is being charged
+                    // for before any coupon, and exactly sum(InvoiceItems.total_cents) once the
+                    // items below are created from these same figures.
+                    $actualSubtotal = $subscriptionTotalSum + $domainLineTotal;
 
-                    // ADR-008 Phase 3 — coupon discount applied on top of plan discounts
-                    // Subtotal for coupon purposes = what the customer actually pays before coupon
-                    $preCouponTotal = $subscriptionTotalSum + $domainLineTotal;
-                    $couponDiscount = ($coupon && $coupon->isUsableForSubtotal($preCouponTotal))
-                        ? $coupon->computeDiscountCents($preCouponTotal)
+                    // ADR-008 Phase 3 — coupon discount. Unchanged by this phase: this was
+                    // already computed from the actual sale-price subtotal before TLD-3H.3C.4B
+                    // (previously named $preCouponTotal) — only the merchandising-discount term
+                    // that used to be added alongside it into discount_cents has been removed.
+                    $couponDiscount = ($coupon && $coupon->isUsableForSubtotal($actualSubtotal))
+                        ? $coupon->computeDiscountCents($actualSubtotal)
                         : 0;
 
-                    $discountCentsTotal = $templatePlanDiscount + $couponDiscount;
-                    $invoiceTotal       = max(0, $baseSubtotal - $discountCentsTotal);
+                    $invoiceTotal = max(0, $actualSubtotal - $couponDiscount);
 
                     $invoice = \App\Models\Invoice::create([
                         'client_id'      => $order->client_id,
                         'number'         => 'INV-' . $order->order_number,
                         'status'         => 'draft',
-                        'subtotal_cents' => $baseSubtotal,
-                        'discount_cents' => $discountCentsTotal,
+                        'subtotal_cents' => $actualSubtotal,
+                        'discount_cents' => $couponDiscount,
                         'tax_cents'      => 0,
                         'total_cents'    => $invoiceTotal,
                         'currency'       => 'USD',

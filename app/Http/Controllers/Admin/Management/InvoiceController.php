@@ -144,21 +144,35 @@ class InvoiceController extends Controller
     {
         $this->authorize('update', $invoice);
 
+        // TLD-3H.3C — order_id (not item_type) is the sole authoritative discriminator between
+        // a standalone invoice (freely editable, unchanged) and an Order-backed invoice (a
+        // billing projection of its Order/OrderItems — see TLD-3H.3B). Decided pre-lock so the
+        // correct validation ruleset applies; re-confirmed against the LOCKED row below before
+        // any mutation, since that is the only value that can ever authorize a write.
+        $isOrderBacked = $invoice->order_id !== null;
+
         $allowedItemTypes = $this->allowedItemTypes();
 
-        $data = $request->validate([
+        $rules = [
             'status'    => ['required', Rule::in(['draft', 'unpaid', 'paid', 'cancelled'])],
             'due_date'  => ['nullable', 'date'],
             'paid_date' => ['nullable', 'date'],
-            'items'     => ['required', 'array', 'min:1'],
-            'items.*.item_type'        => ['required', Rule::in($allowedItemTypes)],
-            'items.*.reference_id'     => ['required', 'integer'],
-            'items.*.description'      => ['required', 'string', 'max:255'],
-            'items.*.qty'              => ['required', 'integer', 'min:1'],
-            'items.*.unit_price_cents' => ['required', 'integer', 'min:0'],
-        ]);
+        ];
 
-        $this->validateReferenceIds($data['items']);
+        if (!$isOrderBacked) {
+            $rules['items']                    = ['required', 'array', 'min:1'];
+            $rules['items.*.item_type']        = ['required', Rule::in($allowedItemTypes)];
+            $rules['items.*.reference_id']     = ['required', 'integer'];
+            $rules['items.*.description']      = ['required', 'string', 'max:255'];
+            $rules['items.*.qty']              = ['required', 'integer', 'min:1'];
+            $rules['items.*.unit_price_cents'] = ['required', 'integer', 'min:0'];
+        }
+
+        $data = $request->validate($rules);
+
+        if (!$isOrderBacked) {
+            $this->validateReferenceIds($data['items']);
+        }
 
         $due      = $data['due_date'] ? Carbon::parse($data['due_date']) : null;
         $shouldMarkPaid = false;
@@ -187,17 +201,26 @@ class InvoiceController extends Controller
                 return;
             }
 
-            $totals = $this->computeTotals($data['items']);
+            // TLD-3H.3C — authoritative re-check against the LOCKED row. order_id never has an
+            // update path (not in this controller's validated fields, not settable via mass
+            // assignment edits elsewhere), so this cannot legitimately differ from the pre-lock
+            // value above, but the locked row is what actually authorizes the write.
+            $orderBacked = $lockedInvoice->order_id !== null;
+
             $requestedPaid = $data['status'] === 'paid';
             $shouldMarkPaid = $requestedPaid;
 
             $invoiceUpdate = [
-                'due_date'        => $due,
-                'subtotal_cents'  => $totals['subtotal_cents'],
-                'discount_cents'  => $totals['discount_cents'],
-                'tax_cents'       => $totals['tax_cents'],
-                'total_cents'     => $totals['total_cents'],
+                'due_date' => $due,
             ];
+
+            if (!$orderBacked) {
+                $totals = $this->computeTotals($data['items']);
+                $invoiceUpdate['subtotal_cents'] = $totals['subtotal_cents'];
+                $invoiceUpdate['discount_cents'] = $totals['discount_cents'];
+                $invoiceUpdate['tax_cents']      = $totals['tax_cents'];
+                $invoiceUpdate['total_cents']    = $totals['total_cents'];
+            }
 
             if (!$requestedPaid) {
                 $invoiceUpdate['status'] = $data['status'];
@@ -206,17 +229,26 @@ class InvoiceController extends Controller
 
             $lockedInvoice->update($invoiceUpdate);
 
-            // طھط­ط¯ظٹط« ط§ظ„ط¨ظ†ظˆط¯ (ط¥ط¹ط§ط¯ط© ط¥ط¯ط®ط§ظ„ ط¨ط³ظٹط·ط© ظˆط¢ظ…ظ†ط©)
-            $lockedInvoice->items()->delete();
-            foreach ($data['items'] as $item) {
-                $lockedInvoice->items()->create([
-                    'item_type'         => $item['item_type'],
-                    'reference_id'      => $item['reference_id'],
-                    'description'       => $item['description'],
-                    'qty'               => $item['qty'],
-                    'unit_price_cents'  => $item['unit_price_cents'],
-                    'total_cents'       => $item['unit_price_cents'] * $item['qty'],
-                ]);
+            if ($orderBacked) {
+                // TLD-3H.3C — Order-backed invoice: financial line items are a projection of
+                // the Order/OrderItems and are never independently editable here. Any 'items'
+                // payload the request submitted (forged or not — none is even rendered for
+                // this invoice type per the Blade form) is ignored entirely; the stored
+                // InvoiceItems are preserved exactly as created. Direction stays
+                // Order/OrderItem -> Invoice/InvoiceItem, never the reverse.
+            } else {
+                // طھط­ط¯ظٹط« ط§ظ„ط¨ظ†ظˆط¯ (ط¥ط¹ط§ط¯ط© ط¥ط¯ط®ط§ظ„ ط¨ط³ظٹط·ط© ظˆط¢ظ…ظ†ط©) — standalone invoices only.
+                $lockedInvoice->items()->delete();
+                foreach ($data['items'] as $item) {
+                    $lockedInvoice->items()->create([
+                        'item_type'         => $item['item_type'],
+                        'reference_id'      => $item['reference_id'],
+                        'description'       => $item['description'],
+                        'qty'               => $item['qty'],
+                        'unit_price_cents'  => $item['unit_price_cents'],
+                        'total_cents'       => $item['unit_price_cents'] * $item['qty'],
+                    ]);
+                }
             }
 
         });

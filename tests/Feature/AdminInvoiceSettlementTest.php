@@ -379,7 +379,20 @@ class AdminInvoiceSettlementTest extends TestCase
 
     public function test_idle_unpaid_invoice_remains_editable(): void
     {
-        [, $invoice, $subscription] = $this->makeSubscriptionInvoice();
+        // TLD-3H.3C.8 -- this test's own name/intent/assertions (item replaced, description and
+        // unit_price_cents overwritten, subtotal/total recomputed from the submitted items) prove
+        // it is meant to exercise a STANDALONE invoice (order_id === null), whose InvoiceItems
+        // InvoiceController::update() has always allowed to be freely edited. makeSubscriptionInvoice()
+        // links a real Order (order_id !== null) -- correct for the OTHER tests in this file that
+        // exercise settlement/duplication, but since the TLD-3H.3C Order-backed-invoice financial
+        // immutability guard was added to InvoiceController::update() (see its own inline comment
+        // there), reusing that shared, Order-backed fixture here made this test silently exercise
+        // the immutable branch instead: the request still succeeds (redirect + session 'ok', status
+        // still updates) because an Order-backed invoice's submitted 'items' payload is intentionally
+        // ignored rather than rejected -- but the stored items/subtotal/total never change, which is
+        // exactly the "still edits" contract this test asserts. Use a dedicated, genuinely standalone
+        // fixture instead so this test again proves what it always intended to.
+        [$invoice, $subscription] = $this->makeStandaloneSubscriptionInvoice();
         $originalItemId = $invoice->items()->sole()->id;
         $payload = $this->invoicePayload($subscription);
         $payload['status'] = 'draft';
@@ -592,6 +605,25 @@ class AdminInvoiceSettlementTest extends TestCase
             'meta' => [],
         ]);
 
+        // TLD-3H.3C.1 -- the settled invoice must be a valid financial projection of its
+        // Order (see TLD-3H.3C). This domain OrderItem needs a matching domain InvoiceItem,
+        // shaped per the real production contract in DomainInvoiceItemBuilder (item_type
+        // 'domain', reference_id null, qty 1, unit_price_cents == total_cents == the
+        // OrderItem's price_cents), and the invoice's own totals must reconcile with the
+        // sum of ALL its items (the pre-existing subscription item plus this one).
+        $invoice->items()->create([
+            'item_type' => 'domain',
+            'reference_id' => null,
+            'description' => 'Domain Registration: admin-settlement.example',
+            'qty' => 1,
+            'unit_price_cents' => 1000,
+            'total_cents' => 1000,
+        ]);
+        $invoice->update([
+            'subtotal_cents' => 2000,
+            'total_cents' => 2000,
+        ]);
+
         $registrar = Mockery::mock(RegistrarProvisioningService::class);
         $registrar->shouldReceive('provisionOrderDomain')
             ->once()
@@ -666,6 +698,42 @@ class AdminInvoiceSettlementTest extends TestCase
         ]);
 
         return [$order, $invoice, $subscription];
+    }
+
+    /**
+     * TLD-3H.3C.8 -- genuinely standalone (order_id === null) counterpart to
+     * makeSubscriptionInvoice(), for tests that specifically need to prove standalone
+     * InvoiceItem editability rather than Order-backed settlement/activation behavior.
+     */
+    private function makeStandaloneSubscriptionInvoice(): array
+    {
+        $client = $this->makeClient();
+        $subscription = $this->makeSubscription($client);
+
+        $invoice = Invoice::query()->create([
+            'client_id' => $client->id,
+            'order_id' => null,
+            'number' => 'INV-' . strtoupper(uniqid()),
+            'status' => 'unpaid',
+            'subtotal_cents' => 1000,
+            'discount_cents' => 0,
+            'tax_cents' => 0,
+            'total_cents' => 1000,
+            'currency' => 'USD',
+            'payment_session_status' => Invoice::PAYMENT_SESSION_IDLE,
+        ]);
+
+        InvoiceItem::query()->create([
+            'invoice_id' => $invoice->id,
+            'item_type' => 'subscription',
+            'reference_id' => $subscription->id,
+            'description' => 'Admin manual settlement subscription',
+            'qty' => 1,
+            'unit_price_cents' => 1000,
+            'total_cents' => 1000,
+        ]);
+
+        return [$invoice, $subscription];
     }
 
     private function claimHostedSession(Invoice $invoice, string $status): PaymentAttempt

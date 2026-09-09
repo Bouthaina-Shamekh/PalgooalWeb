@@ -1,6 +1,6 @@
 # Billing System
 
-> **Last Updated:** 2026-08-26
+> **Last Updated:** 2026-09-09
 >
 > **Status:** Verified
 >
@@ -100,7 +100,7 @@ This state machine does not currently govern `renew`.
 | `number` | Unique invoice number |
 | `status` | `draft`, `unpaid`, `paid`, or `cancelled` |
 | `subtotal_cents` | Sum before discount and tax |
-| `discount_cents` | Server-computed plan/template and/or coupon discount |
+| `discount_cents` | Coupon/invoice-level discount only. A Template/Plan's list-vs-sale price difference is checkout display/merchandising data and is not persisted here — see [Canonical Discount Contract](#canonical-discount-contract). |
 | `tax_cents` | Tax in cents; current checkout calculation uses zero |
 | `total_cents` | `max(0, subtotal - discount + tax)` |
 | `currency` | Three-letter invoice currency |
@@ -138,6 +138,15 @@ Domain invoice lines start with `reference_id = null`. When the matching `Domain
 Coupon codes are resolved and recalculated server-side during checkout. A usable coupon may populate `invoice.coupon_id` and `discount_cents`. Usage is not consumed when a draft invoice is created. During `InvoiceSettlementService::markPaid()`, the coupon row is locked, `used_count` is incremented once, and referenced subscriptions are attached with `syncWithoutDetaching()`. The invoice's paid-state early return prevents a duplicate webhook from consuming the coupon twice.
 
 The settlement step intentionally honors a coupon already attached to an invoice and does not re-check `max_uses` after payment has occurred.
+
+## Canonical Discount Contract
+
+- `Invoice.subtotal_cents` is the sum of its `InvoiceItem.total_cents` — the actual sale-price line totals the client is charged, not a pre-discount list price.
+- `Invoice.discount_cents` is the coupon/invoice-level discount only.
+- A Template or Plan's list-vs-sale price difference (its own merchandising discount, e.g. a struck-through list price shown on the checkout page) is display/merchandising data only. It is not persisted as `Invoice.discount_cents` and does not participate in the invoice-level discount calculation. `Template.price_cents`/`discount_price_cents` remain the checkout page's own display fields, read live by the checkout view.
+- `Invoice.total_cents = max(0, subtotal_cents - discount_cents + tax_cents)`, matching the general Invoice fields contract above.
+
+This keeps `sum(InvoiceItem.total_cents) === Invoice.subtotal_cents` true by construction, which is what [Order-backed invoice financial integrity](#order-backed-invoice-financial-integrity)'s invoice-level aggregate check (and the domain-only checkout invariant earlier in this document) both rely on.
 
 ## Currency Contract
 
@@ -199,6 +208,20 @@ Renewal is a different internal path: it primarily follows the existing domain r
 8. On verified payment, settle the invoice, activate the order locally, then execute registrar work after commit.
 
 Every domain item is processed independently by `RegistrarProvisioningService::provisionOrderDomain()`. One item crashing or failing does not prevent the loop from attempting later items. Each registration has its own item state, durable attempt, and global claim.
+
+## Combined and Template Checkout
+
+`Front\CheckoutController::process()` handles template checkout, non-template plan checkout, and either combined with an optional purchased domain. This is the single method that creates financial records for a template-driven checkout, whether or not a domain is bundled with it.
+
+### Template/Plan requirement
+
+A `Template` has a nullable `plan_id` (added to an already-existing table by a later migration, so a plan-less `Template` row is a schema-reachable state even though the Admin `TemplateController` has required `plan_id` on create/update since that migration). Checkout fails closed on this: any checkout path where a real `template_id` was submitted requires that `Template` to resolve to a real linked `Plan` *before* any `Order`, `OrderItem`, `Subscription`, `Invoice`, `InvoiceItem`, or `PaymentAttempt` is created and before any hosted payment session is started. A plan-less `Template` returns a `422` JSON response (`success: false`) for AJAX/JSON requests, or a redirect back with an error for a normal form submit, and creates none of the records above. This guard does not require `Plan.is_active`; no other checkout path currently enforces that column, so requiring it only here would add an asymmetric rule beyond the actual invariant being restored. A checkout with a valid Template+Plan still creates the `Subscription` exactly as before, and the resulting subscription `InvoiceItem.reference_id` equals that `Subscription.id`.
+
+Without this guard, a plan-less `Template` checkout would still create an `item_type = subscription` `InvoiceItem` (because that step does not itself check for a `Plan`) while `Subscription::create()` is skipped (because that step does), leaving an `InvoiceItem.reference_id` that can never resolve — exactly the shape [Order-backed invoice financial integrity](#order-backed-invoice-financial-integrity) rejects at settlement time. The checkout-time guard closes the gap earlier, before any financial record exists, rather than only reacting to it later.
+
+### Combined domain contract
+
+When a domain is bundled with a template/plan checkout, the same trusted-pricing rule as domain-only checkout applies: every billable (`register`/`renew`) domain gets its own `OrderItem` and matching `InvoiceItem`, priced from the same live `DomainPricingService` quote used by domain-only checkout — never from a client-submitted price. Multiple bundled domains are each represented as their own `OrderItem`/`InvoiceItem` pair, not merged into one row. A non-billable domain selection (subdomain, own, or any other non-`register`/`renew` option) is recorded as a `$0` informational `OrderItem` with no matching `InvoiceItem`, unchanged from the domain-only contract. A client-submitted price that no longer matches the live trusted quote is rejected with the same pre-existing `409` "price changed since added to cart" response domain-only checkout already used — it is never silently substituted with the trusted value.
 
 ## Hosted Payment Flow
 
@@ -308,15 +331,35 @@ Signature:
 markPaid(Invoice $invoice, ?string $paymentMethod = null, ?PaymentAttempt $paymentAttempt = null): void
 ```
 
-Inside one transaction it locks the invoice, rejects a non-owning hosted attempt, marks the invoice paid, records `paid_date` and winning attempt, finalizes the attempt, consumes coupon usage once, sets the order active, and calls `OrderActivationService` for local activation. A manual call without `PaymentAttempt` is accepted only when the invoice's session claim is `idle`.
+Inside one transaction it locks the invoice, rejects a non-owning hosted attempt, revalidates an order-linked invoice's stored financial contract (see below), marks the invoice paid, records `paid_date` and winning attempt, finalizes the attempt, consumes coupon usage once, sets the order active, and calls `OrderActivationService` for local activation. A manual call without `PaymentAttempt` is accepted only when the invoice's session claim is `idle`.
+
+Order activation is idempotent per Order: the pre-mutation status is captured before the invoice is marked paid, and `OrderActivationService::activate()` is invoked only on the genuine `pending -> active` transition. If the Order is already `active` — for example a second or later invoice on the same Order settling after a prior invoice already activated it — the invoice still settles normally (paid, coupon consumed, winning attempt recorded), but activation is not re-invoked: subscription billing dates are not extended a second time and provisioning/registrar calls are not redispatched. Gateway webhook settlement and administrative manual settlement share this same rule because both call `markPaid()`.
 
 Administrative invoice create-as-paid, update-to-paid, and bulk mark-paid actions use the same service with payment method `admin_manual` and no `PaymentAttempt`. Create-as-paid first persists the invoice as `unpaid` together with all invoice items, commits that local transaction, and then settles it. Update-to-paid likewise commits item/totals changes before settlement. Bulk settlement calls the service separately for each invoice, so one rejected invoice does not prevent the others from settling and no long controller transaction contains the batch. An invoice with a `creating` or `ready` hosted-session claim is rejected by the existing ownership guard and remains unpaid. Already-paid invoices are not resettled.
+
+Administrative manual settlement reaches this same authoritative `InvoiceSettlementService` path (`payment_method = admin_manual`), so it is bound by the same ownership, financial-integrity, and activation-idempotency rules as gateway settlement. It does not currently persist a dedicated accounting-grade manual-payment record (method, external reference, recording admin, notes) beyond the `Invoice`/`PaymentAttempt`-less state described above — see Technical Debt.
+
+### Order-backed invoice financial integrity
+
+`order_id` is the sole discriminator between two invoice kinds, checked both in `InvoiceController::update()` and inside `InvoiceSettlementService::markPaid()`:
+
+- **Standalone** (`order_id === null`): an independent financial record. Its `InvoiceItem` rows, totals, and status remain admin-editable through the existing CRUD contract exactly as before this invariant existed.
+- **Order-backed** (`order_id !== null`): a billing *projection* of its `Order`/`OrderItem` rows, never an independently editable financial record. `InvoiceController::update()` accepts no `items` payload for this kind — any `items` a request submits is ignored entirely, not merely rejected, and the stored `InvoiceItem` rows are preserved unchanged. This is checked once before validation (to select the right rule set) and re-checked against the row locked inside the update transaction, since the locked row is what actually authorizes the write. `due_date` and `status` remain editable on an Order-backed invoice; only its financial line items are frozen.
+
+Before `markPaid()` performs any financial mutation — `Invoice.status -> paid`, coupon consumption, Order activation, provisioning — an Order-backed invoice's stored `Invoice`/`InvoiceItem` projection is revalidated against its `Order`/`OrderItem` (and, for subscription lines, `Subscription`) contract. A mismatch throws and rolls back the entire settlement transaction: no paid state, no coupon increment, no Order activation, and no provisioning are ever persisted. The check is type-aware because domain and subscription Order-backed lines have different sources of truth:
+
+- **Domain lines**: `OrderItem` has no `qty` column and carries its frozen price in `price_cents`; there is no `order_item_id` FK on `InvoiceItem`, and a fresh registration's `InvoiceItem.reference_id` is still `null` at settlement time (the `Domain` row does not exist until provisioning runs, afterward). The check therefore compares aggregates: the *count* of billable (`item_option` in `register`/`renew` — the same predicate `OrderActivationService` uses to decide whether to provision) domain-bearing `OrderItem` rows against the count of `domain`-type `InvoiceItem` rows, plus their summed financial totals, plus a structural `qty === 1` check on each domain `InvoiceItem`. A `subdomain`/`own`/`transfer` `OrderItem`, or any other non-`register`/`renew` value, is excluded from this count by construction — those are created with `price_cents = 0` and no matching `InvoiceItem` on every current creation path, not exempted as a special case.
+- **Subscription lines**: a subscription-type Order-backed invoice has no `OrderItem` row for the subscription line itself (`CheckoutController` only ever creates an `OrderItem` for an optional bundled domain add-on). Each subscription `InvoiceItem` is checked per-row against the `Subscription` its `reference_id` points to: the `Subscription` must exist, belong to the same client, and its `price_cents` must equal the `InvoiceItem.unit_price_cents`; `qty` must be `1`.
+- Any `InvoiceItem.item_type` other than `domain` or `subscription` on an Order-backed invoice fails closed immediately — this codebase never programmatically creates any other item type on an Order-backed invoice, so an unrecognized shape is treated as tampering/corruption, never silently skipped.
+- The invoice-level aggregate is also checked: `subtotal_cents` must equal the sum of its items' `total_cents`, and `total_cents` must equal `subtotal - discount + tax`.
+
+Currency is explicitly **not** part of this check — see Technical Debt.
 
 ### Paid invoice immutability
 
 Paid invoices are immutable through the current Admin Invoice CRUD. `InvoiceController` re-reads and locks the persisted invoice before an update or deletion. If its current status is `paid`, the controller does not change the status, `paid_date`, totals, currency, relationships, or invoice items, and it does not delete the invoice. Bulk status changes and deletion lock the selected rows and skip paid invoices while reporting affected and skipped counts. Bulk mark-paid remains idempotent: an already-paid invoice is reported as skipped and does not repeat settlement side effects.
 
-Changing a paid amount or line item, or reverting paid status, requires a future explicit refund, credit-note, or accounting-adjustment workflow. No such reversal workflow is implemented.
+Changing a paid amount or line item, or reverting paid status, requires a future explicit refund, credit-note, or accounting-adjustment workflow. No such reversal workflow is implemented. The same absence applies more broadly to any Order-backed invoice's financial items regardless of paid status: they are immutable through the Admin Invoice CRUD by design (see [Order-backed invoice financial integrity](#order-backed-invoice-financial-integrity)), and there is no dedicated correction/credit-note/reissue path for them — a pricing correction currently has to happen through the Order/OrderItem contract itself, not through the invoice.
 
 Invoices whose `payment_session_status` is `creating` or `ready` are also immutable through Admin financial update, individual deletion, bulk status mutation, and bulk deletion while the hosted payment session is active. The controller evaluates this state from the locked database row before computing totals or replacing line items. This prevents local invoice amounts and items from diverging from the amount already sent to the gateway. Reminder remains available because it is read-only. Admin manual mark-paid still passes active sessions to the settlement ownership guard and is rejected; no hosted-session cancellation workflow exists.
 
@@ -495,6 +538,10 @@ For non-hosting plans, `TenantProvisioningService` atomically claims local provi
 | Renewal pricing | Renewal may fall back from a renewal price to a registration price and ultimately to a hard-coded amount; this is weaker than the strict registration quote contract. |
 | Registrar failure logging | In the exception handler around registration claim creation, the log context references `$domain` before that local variable is assigned, which may obscure the original failure. |
 | Legacy code comments | Several PHP docblocks still describe earlier phases (for example old payment-phase wording) even though executable code implements the newer flow. This document follows executable code and migrations. |
+| Generic Order-backed currency invariant | Neither `orders` nor `subscriptions` has a currency column, and `OrderItem.meta['currency']` exists only for domain items (and is `null` on at least one existing domain-adjacent creation path). [Order-backed invoice financial integrity](#order-backed-invoice-financial-integrity)'s settlement check is therefore deliberately silent on currency rather than inventing a weaker/inconsistent check. The existing gateway-path protection — `PaymentAttempt.currency` compared to `Invoice.currency` in `assertPaymentSessionOwnsSettlement()` and webhook reconciliation — is untouched and remains the only currency protection at settlement time. |
+| Admin manual/offline payment evidence | Administrative manual settlement (`payment_method = admin_manual`) reaches the authoritative `InvoiceSettlementService::markPaid()` and is bound by the same ownership/integrity/idempotency rules as gateway settlement, but it does not persist a dedicated accounting-grade manual-payment record — no stored payment method, external reference, recording admin, or notes beyond the `Invoice`/attempt state described above. |
+| Order-backed invoice correction workflow | Order-backed invoice financial items are immutable through the Admin Invoice CRUD by design (see [Order-backed invoice financial integrity](#order-backed-invoice-financial-integrity)), regardless of paid status. There is no dedicated credit-note/correction/reissue workflow for them; a pricing correction currently has to happen through the Order/OrderItem contract itself. |
+| Domain transfer billing/provisioning | `transfer` is not a complete public checkout operation in the current flow: `RegistrarProvisioningService` has no `OPERATION_TRANSFER` handling and returns an "unsupported domain provisioning action" result for it, and [Order-backed invoice financial integrity](#order-backed-invoice-financial-integrity)'s billable-domain predicate (`register`/`renew` only) treats it as non-billable by construction. Any front-end price/display affordance for `transfer` that implies otherwise was not re-verified as part of this audit and remains a separate gap to confirm if still present. |
 
 The following former debt statements are no longer accurate and are intentionally absent: missing payment/webhook infrastructure, lack of payment/checkout idempotency, first-domain-only provisioning, registrar calls inside financial transactions, automatic WHM username retries, and lack of scheduled renewal invoice creation.
 

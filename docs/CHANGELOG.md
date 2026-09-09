@@ -542,7 +542,11 @@ As of **2026-06-16** the platform consists of:
   drops deferred per ADR-005 closeout plan. `services.icon` is a permanent Pattern B
   exception by architectural decision.)
 - Billing (orders, invoices in integer cents; subscriptions and plans still in decimal
-  — see **ADR-003**)
+  — see **ADR-003**. Order-backed invoice financial-item immutability, settlement-time
+  financial-integrity revalidation, settlement/activation idempotency, the canonical
+  discount contract, and the Template/Plan checkout requirement are code-verified and
+  documented in `25-billing-system.md`; no schema migration accompanies these — they are
+  validation/control-flow invariants, not structural changes.)
 - WHM/cPanel provisioning (server API, `listpkgs`, account create/suspend/terminate)
 - Multi-language support (`t()` helper, `session('locale')` — documented in **ADR-004**)
 

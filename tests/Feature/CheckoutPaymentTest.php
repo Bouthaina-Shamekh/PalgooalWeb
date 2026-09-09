@@ -321,11 +321,32 @@ class CheckoutPaymentTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        // TLD-3H.3C.7 -- CheckoutController::process() now fail-closed rejects any
+        // template checkout whose Template does not resolve to a real Plan. Link a
+        // real Plan here (mirroring the proven CombinedCheckoutDiscountContractTest
+        // ::makePlanForTemplate() field set) so this fixture represents a
+        // production-valid template and this test continues to exercise the
+        // intended "successful template checkout" path rather than the new guard.
+        $plan = $this->makePlanForTemplate();
+
         return Template::query()->create([
             'category_template_id' => $categoryId,
+            'plan_id' => $plan->id,
             'price_cents' => 2500,
             'image' => 'template-test.jpg',
             'rating' => 0,
+        ]);
+    }
+
+    private function makePlanForTemplate(): Plan
+    {
+        return Plan::query()->create([
+            'name' => 'TLD3H3C7 Template Plan',
+            'slug' => 'tld3h3c7-template-plan-' . uniqid(),
+            'plan_type' => Plan::TYPE_HOSTING,
+            'monthly_price_cents' => 0,
+            'annual_price_cents' => 0,
+            'is_active' => true,
         ]);
     }
 
