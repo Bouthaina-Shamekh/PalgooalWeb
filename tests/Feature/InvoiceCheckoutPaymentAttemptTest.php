@@ -7,7 +7,7 @@ use App\Models\Invoice;
 use App\Models\PaymentAttempt;
 use App\Payments\Contracts\PaymentGatewayInterface;
 use App\Payments\DTOs\PaymentSession;
-use App\Payments\Exceptions\PaymentException;
+use App\Payments\Exceptions\ConfirmedPreSessionFailureException;
 use App\Payments\PaymentManager;
 use App\Services\Billing\InvoiceSettlementService;
 use App\Services\Billing\OrderActivationService;
@@ -103,7 +103,7 @@ class InvoiceCheckoutPaymentAttemptTest extends TestCase
     {
         [$client, $invoice] = $this->makeInvoice();
         $this->fakeGateway(
-            fn () => throw new PaymentException('LahzaGateway: secret_key is not configured.'),
+            fn () => throw new ConfirmedPreSessionFailureException('LahzaGateway: secret_key is not configured.'),
             1,
         );
 

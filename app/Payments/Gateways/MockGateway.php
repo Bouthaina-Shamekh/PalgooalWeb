@@ -8,6 +8,7 @@ use App\Payments\DTOs\PaymentSession;
 use App\Payments\DTOs\RefundResult;
 use App\Payments\DTOs\TransactionStatus;
 use App\Payments\DTOs\WebhookEvent;
+use App\Payments\Exceptions\ConfirmedPreSessionFailureException;
 use App\Payments\Exceptions\PaymentException;
 
 /**
@@ -61,7 +62,7 @@ class MockGateway implements PaymentGatewayInterface
      * MockGateway settles synchronously via InvoiceSettlementService::markPaid().
      * Hosted checkout session creation is introduced in ADR-007 Phase 4.
      *
-     * @throws \App\Payments\Exceptions\PaymentException Always.
+     * @throws \App\Payments\Exceptions\ConfirmedPreSessionFailureException Always.
      */
     public function createSession(
         Invoice $invoice,
@@ -69,7 +70,12 @@ class MockGateway implements PaymentGatewayInterface
         string $returnUrl,
         string $cancelUrl
     ): PaymentSession {
-        throw new PaymentException(
+        // Deterministic pre-session failure: this method never contacts any
+        // external provider, so no hosted session could possibly exist.
+        // ConfirmedPreSessionFailureException lets PaymentSessionStarter
+        // release the claim immediately instead of treating this as an
+        // ambiguous outcome (see isConfirmedPreSessionFailure()).
+        throw new ConfirmedPreSessionFailureException(
             'MockGateway does not support createSession(). ' .
             'Phase 1 checkout settles synchronously. ' .
             'Hosted checkout is introduced in ADR-007 Phase 4.'

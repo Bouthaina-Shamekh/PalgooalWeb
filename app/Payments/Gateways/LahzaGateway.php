@@ -9,6 +9,7 @@ use App\Payments\DTOs\PaymentSession;
 use App\Payments\DTOs\RefundResult;
 use App\Payments\DTOs\TransactionStatus;
 use App\Payments\DTOs\WebhookEvent;
+use App\Payments\Exceptions\ConfirmedPreSessionFailureException;
 use App\Payments\Exceptions\PaymentException;
 use App\Payments\Exceptions\WebhookVerificationException;
 use Illuminate\Http\Client\ConnectionException;
@@ -120,7 +121,12 @@ class LahzaGateway implements PaymentGatewayInterface
         $secretKey = $this->config->secret_key;
 
         if (empty($secretKey)) {
-            throw new PaymentException(
+            // Deterministic pre-session failure: this check runs strictly
+            // before any HTTP call to Lahza, so no hosted session could
+            // possibly have been created on the provider side. Use the
+            // semantic exception type so PaymentSessionStarter can release
+            // the claim immediately instead of treating this as ambiguous.
+            throw new ConfirmedPreSessionFailureException(
                 'LahzaGateway: secret_key is not configured. ' .
                 'Add it via Admin → Settings → بوابات الدفع → Lahza → تعديل.'
             );

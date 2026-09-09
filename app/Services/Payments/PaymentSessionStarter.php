@@ -5,7 +5,7 @@ namespace App\Services\Payments;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\PaymentAttempt;
-use App\Payments\Exceptions\PaymentException;
+use App\Payments\Exceptions\ConfirmedPreSessionFailureException;
 use App\Payments\PaymentManager;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -378,10 +378,25 @@ class PaymentSessionStarter
         });
     }
 
+    /**
+     * True only when the failure is provably a pre-session (pre-provider-contact)
+     * failure -- i.e. no external checkout session could possibly have been
+     * created, so it is safe to release the claim immediately and allow a
+     * later retry.
+     *
+     * Classification is type-based (ConfirmedPreSessionFailureException),
+     * not message-based: gateways signal this by throwing that specific
+     * subclass from createSession() only when the failure occurs strictly
+     * before any network call to the provider (e.g. missing local
+     * configuration, or a gateway that never supports hosted checkout at
+     * all). Any other \Throwable -- including a plain PaymentException from
+     * a failed/timed-out/ambiguous provider call -- is treated as
+     * indeterminate on purpose, so a duplicate external session is never
+     * risked.
+     */
     protected function isConfirmedPreSessionFailure(\Throwable $exception): bool
     {
-        return $exception instanceof PaymentException
-            && str_contains($exception->getMessage(), 'secret_key is not configured');
+        return $exception instanceof ConfirmedPreSessionFailureException;
     }
 
     protected function checkoutUrl(?PaymentAttempt $attempt): ?string

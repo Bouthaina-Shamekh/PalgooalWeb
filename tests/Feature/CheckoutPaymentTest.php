@@ -13,6 +13,7 @@ use App\Models\Tenancy\Subscription;
 use App\Payments\Contracts\PaymentGatewayInterface;
 use App\Payments\DTOs\PaymentSession;
 use App\Payments\DTOs\WebhookEvent;
+use App\Payments\Gateways\MockGateway;
 use App\Payments\PaymentManager;
 use App\Services\Payments\PaymentSessionStarter;
 use Illuminate\Contracts\Console\Kernel;
@@ -243,6 +244,115 @@ class CheckoutPaymentTest extends TestCase
         $this->assertSame('draft', $invoice->fresh()->status);
         $this->assertSame(Invoice::PAYMENT_SESSION_CREATING, $invoice->fresh()->payment_session_status);
         $this->assertSame(PaymentAttempt::STATUS_PENDING, PaymentAttempt::query()->sole()->status);
+        $this->assertSame(Order::STATUS_PENDING, $order->fresh()->status);
+    }
+
+    /**
+     * Regression for the production incident where a deterministic,
+     * pre-provider-contact MockGateway::createSession() failure was
+     * misclassified as an ambiguous/indeterminate outcome (it only matched
+     * PaymentException messages containing 'secret_key is not configured').
+     * That left the PaymentAttempt stuck pending and the invoice stuck in
+     * payment_session_status=creating forever, since MockGateway never
+     * contacts any external provider and so can never resolve the ambiguity.
+     *
+     * ConfirmedPreSessionFailureException now makes this a confirmed
+     * failure: the attempt is marked failed, the invoice claim is released
+     * back to idle, and a later legitimate retry is not permanently blocked.
+     */
+    public function test_mock_gateway_confirmed_pre_session_failure_releases_claim_and_permits_retry(): void
+    {
+        [$client, $invoice, $order] = $this->makeInvoice(withOrder: true);
+
+        $failingManager = Mockery::mock(PaymentManager::class);
+        $failingManager->shouldReceive('isEnabled')->andReturnTrue();
+        $failingManager->shouldReceive('gateway')->andReturn(new MockGateway());
+
+        $result = (new PaymentSessionStarter($failingManager))->start(
+            $invoice,
+            $client->id,
+            'https://app.test/return',
+            'https://app.test/cancel',
+        );
+
+        $this->assertFalse($result['ok']);
+        $this->assertSame('failed', $result['status']);
+        $this->assertSame(503, $result['http_status']);
+
+        $attempt = PaymentAttempt::query()->sole();
+        $this->assertSame(PaymentAttempt::STATUS_FAILED, $attempt->status);
+        $this->assertNull($attempt->gateway_session_id);
+        $this->assertSame('create_session_confirmed_failed', $attempt->gateway_status_raw);
+
+        $invoice->refresh();
+        $this->assertSame(Invoice::PAYMENT_SESSION_IDLE, $invoice->payment_session_status);
+        $this->assertNull($invoice->payment_session_attempt_id);
+        $this->assertSame(Order::STATUS_PENDING, $order->fresh()->status);
+
+        // The released claim must not permanently block a later legitimate retry.
+        $retryManager = $this->fakePaymentManager(
+            fn () => new PaymentSession('retry-session', 'https://pay.test/retry-session'),
+            1,
+        );
+
+        $retryResult = (new PaymentSessionStarter($retryManager))->start(
+            $invoice,
+            $client->id,
+            'https://app.test/return',
+            'https://app.test/cancel',
+        );
+
+        $this->assertTrue($retryResult['ok']);
+        $this->assertSame('ready', $retryResult['status']);
+        $this->assertSame(2, PaymentAttempt::query()->count());
+
+        $newAttempt = PaymentAttempt::query()->where('id', '!=', $attempt->id)->sole();
+        $this->assertSame(PaymentAttempt::STATUS_INITIATED, $newAttempt->status);
+        $this->assertSame($newAttempt->id, $invoice->fresh()->payment_session_attempt_id);
+    }
+
+    /**
+     * A genuinely ambiguous createSession() failure (any \Throwable that is
+     * not ConfirmedPreSessionFailureException -- e.g. a network error) must
+     * remain indeterminate: the attempt stays pending, the invoice stays
+     * claimed (payment_session_status=creating), and a second start() call
+     * while that claim is active must not call the gateway again or create
+     * another PaymentAttempt. This proves the fix does not weaken
+     * indeterminate-outcome safety for anything other than the new
+     * confirmed-pre-session-failure type.
+     */
+    public function test_ambiguous_create_session_failure_remains_indeterminate_and_blocks_duplicate_attempt(): void
+    {
+        [$client, $invoice, $order] = $this->makeInvoice(withOrder: true);
+        $manager = $this->fakePaymentManager(fn () => throw new \RuntimeException('connection reset'), 1);
+
+        $first = (new PaymentSessionStarter($manager))->start(
+            $invoice,
+            $client->id,
+            'https://app.test/return',
+            'https://app.test/cancel',
+        );
+
+        $this->assertSame('indeterminate', $first['status']);
+        $attempt = PaymentAttempt::query()->sole();
+        $this->assertSame(PaymentAttempt::STATUS_PENDING, $attempt->status);
+        $this->assertSame('session_creation_outcome_unknown', $attempt->gateway_status_raw);
+        $this->assertSame(Invoice::PAYMENT_SESSION_CREATING, $invoice->fresh()->payment_session_status);
+        $this->assertSame($attempt->id, $invoice->fresh()->payment_session_attempt_id);
+
+        // Second start() while the claim is still active: the manager mock's
+        // expectedCalls=1 (set above) already fails the test via Mockery if
+        // createSession() is invoked again; assert the invoice-level effect too.
+        $second = (new PaymentSessionStarter($manager))->start(
+            $invoice->fresh(),
+            $client->id,
+            'https://app.test/return',
+            'https://app.test/cancel',
+        );
+
+        $this->assertSame('creating', $second['status']);
+        $this->assertSame(409, $second['http_status']);
+        $this->assertSame(1, PaymentAttempt::query()->count());
         $this->assertSame(Order::STATUS_PENDING, $order->fresh()->status);
     }
 
