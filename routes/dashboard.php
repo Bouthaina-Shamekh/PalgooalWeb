@@ -511,9 +511,24 @@ Route::group([
     // -------------------------------------------------------------------------
     Route::resource('/invoices', InvoiceController::class)->names('invoices');
 
+    // Standalone A4-printable invoice document (read-only, no email/WhatsApp)
+    Route::get('/invoices/{invoice}/print', [InvoiceController::class, 'print'])
+        ->name('invoices.print');
+
+    // Server-side PDF download of the same approved invoice document (read-only, no email/WhatsApp)
+    Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])
+        ->name('invoices.pdf');
+
     // Bulk actions for invoices
     Route::post('/invoices/bulk', [InvoiceController::class, 'bulk'])
         ->name('invoices.bulk');
+
+    // Queue a WhatsApp delivery of the invoice's frozen PDF document.
+    // POST only (never GET) -- this has an external side effect, unlike
+    // print/pdf above. Authorization is enforced in the controller
+    // (InvoiceController::sendWhatsApp uses the 'update' ability).
+    Route::post('/invoices/{invoice}/whatsapp', [InvoiceController::class, 'sendWhatsApp'])
+        ->name('invoices.whatsapp');
 
     // -------------------------------------------------------------------------
     // Orders

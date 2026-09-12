@@ -298,6 +298,19 @@ The invoice's `payment_session_attempt_id` owns the claim. This prevents concurr
 - An indeterminate gateway result keeps `creating` and the owner attempt, preventing an unsafe second session.
 - External session creation occurs outside the claim transaction.
 
+### Confirmed pre-session failure classification
+
+`PaymentSessionStarter::isConfirmedPreSessionFailure()` decides which branch a thrown `\Throwable` from `$gateway->createSession()` takes. Classification is type-based, not message-based: only `App\Payments\Exceptions\ConfirmedPreSessionFailureException` (a `PaymentException` subclass) is treated as a confirmed pre-session failure. A gateway implementation throws it only from `createSession()`, and only when the failure is provably pre-provider-contact -- i.e. no external checkout session could possibly have been created. Any other `\Throwable`, including a plain `PaymentException` raised during or after an actual network call to the provider, is indeterminate.
+
+Two call sites currently throw it:
+
+- `MockGateway::createSession()` always throws it -- the method never contacts any provider, so its failure can never be ambiguous.
+- `LahzaGateway::createSession()` throws it only from its `secret_key` emptiness check, which runs strictly before the HTTP call to Lahza. Every other failure inside that method -- a connection error, a non-2xx response, a malformed response body, or a missing `authorization_url` -- happens during or after the provider contact and still throws a plain `PaymentException`, which remains indeterminate.
+
+This replaced an earlier, brittle implementation that matched `PaymentException` messages containing the literal string `'secret_key is not configured'`. That message match covered only the Lahza secret-key case; `MockGateway::createSession()`'s own failure -- thrown for an unrelated reason and with a different message -- was misclassified as indeterminate, so the attempt stayed `pending` and the invoice's claim stayed `creating` forever, since `MockGateway` can never contact a provider to resolve the ambiguity. The type-based classification fixes this for `MockGateway` while leaving Lahza's genuinely ambiguous provider-contact failures indeterminate, unchanged.
+
+A genuinely indeterminate outcome still has no automatic stale-claim recovery or reconciliation mechanism under this classification -- see [Current Technical Debt and Known Exceptions](#current-technical-debt-and-known-exceptions).
+
 ### Checkout controllers
 
 `Client\InvoiceCheckoutController` validates invoice ownership/state and delegates session creation to `PaymentSessionStarter`. It never calls `markPaid()` and a return/cancel URL is not proof of payment.
@@ -433,6 +446,22 @@ After the client starts a payment session and the verified webhook settles the r
 
 Renewal pricing first tries the enabled registrar/TLD `renew` price, then a registration-price fallback, and finally a hard-coded amount if neither catalog price exists. This fallback chain is current behavior and is listed as technical debt below.
 
+### Production Validation -- MockGateway Fix and wpgoals.com Renewal (2026-09-09)
+
+**Legacy stuck claim cleanup.** Before the classification fix in [Confirmed pre-session failure classification](#confirmed-pre-session-failure-classification) shipped, the earlier message-based misclassification had already produced one stuck production record: Invoice #3 / PaymentAttempt #1 (`gateway = mock_gateway`), left with attempt `status = pending`, `gateway_status_raw = session_creation_outcome_unknown`, `gateway_session_id = null`, and invoice `payment_session_status = creating` / `payment_session_attempt_id = 1`. A production audit confirmed this was the only matching legacy stuck `mock_gateway` attempt. A guarded transaction corrected both rows to exactly the state the fixed code would have produced on that same failure: `PaymentAttempt #1` -> `status = failed`, `gateway_status_raw = create_session_confirmed_failed`, `gateway_response.reason = confirmed_before_provider_session`, `gateway_session_id` unchanged (`null`); `Invoice #3` -> `payment_session_status = idle`, `payment_session_attempt_id = null`, `payment_attempt_id = null`, `status` unchanged (`unpaid`). No payment, order activation, provisioning, or registrar mutation occurred during this cleanup -- it corrected only the stuck-claim fields the fix itself would have released.
+
+**End-to-end renewal re-validation (wpgoals.com).** With the claim released, the same Invoice #3 / Order #7 (`type = domain_renewal`, `OrderItem #1` renewing `wpgoals.com`, `Domain #1`, frozen `current_renewal_date = 2026-09-29` / target `renewal_date = 2027-09-29`, `provider_id = 1`, Enom, live mode) was carried through the normal admin settlement path (`payment_method = admin_manual`, no `PaymentAttempt`) to confirm the full renewal flow still completes end-to-end after the fix. Production result:
+
+- `Invoice #3`: `status = paid`, `paid_date = 2026-09-09`, `payment_session_status = idle`.
+- `Order #7`: `status = active`; `OrderItem #1`: `provisioning_status = completed`.
+- `Domain #1`: `status = active`, `renewal_date = 2027-09-29`.
+- One `DomainProvisioningAttempt` created: `operation = renew`, `status = completed`, `provider_reference = 314257848`, `started_at = 2026-09-09T18:34:17Z`, `finished_at = 2026-09-09T18:34:29Z`.
+- The renewal was independently confirmed visible on the Enom side (matching expiry), and no duplicate `DomainProvisioningAttempt` or duplicate registrar call was observed.
+
+**Verdict.** Invoice settlement -> Order activation -> renewal provisioning -> Enom Extend -> local renewal-date update is confirmed end-to-end **PASS** on real production data. This validates that the `ConfirmedPreSessionFailureException` fix resolves the specific stuck-claim failure mode without weakening indeterminate-outcome safety, order activation idempotency, or registrar provisioning elsewhere in the same flow.
+
+**Known gap, unchanged by this validation.** A genuinely indeterminate `createSession()` outcome still has no automatic stale-claim recovery -- see [Confirmed pre-session failure classification](#confirmed-pre-session-failure-classification) and [Current Technical Debt and Known Exceptions](#current-technical-debt-and-known-exceptions). This production pass did not add, and does not imply, a reconciliation mechanism for that case; it remains operator-driven. It also does not extend to, and does not claim any change in, the separate admin manual/offline payment evidence, generic Order-backed currency invariant, or Order-backed invoice correction-workflow gaps documented elsewhere in this file, nor does it involve enabling or testing Lahza in production -- Lahza remains inactive.
+
 ## Subscription and Tenant Provisioning
 
 ### Subscription fields and states
@@ -498,7 +527,7 @@ For non-hosting plans, `TenantProvisioningService` atomically claims local provi
 
 | Failure | Persisted behavior |
 |---|---|
-| Gateway session creation conclusively fails | Attempt becomes `failed`; invoice session claim returns to `idle`; invoice remains unpaid |
+| Gateway session creation conclusively fails (`ConfirmedPreSessionFailureException`; see [Confirmed pre-session failure classification](#confirmed-pre-session-failure-classification)) | Attempt becomes `failed`; invoice session claim returns to `idle`; invoice remains unpaid |
 | Gateway session result is uncertain | Claim stays `creating`; no second session is issued automatically |
 | Invalid signature | Request is rejected with no attempt, invoice, or order mutation |
 | Amount/currency or transaction-reconciliation mismatch | Settlement is rejected; an unsettled attempt becomes `failed` under a row lock, while an already `succeeded` attempt is never downgraded; invoice/order remain unchanged |
@@ -536,6 +565,7 @@ For non-hosting plans, `TenantProvisioningService` atomically claims local provi
 | Gateway transaction identity | `payment_attempts.gateway_transaction_id` has a non-unique index. The current code does not establish a provider-independent uniqueness contract, so the transaction-identity audit does not add a constraint; repeated transaction IDs across attempts require separate identity analysis. |
 | Fixed coupon value/currency | `coupons.discount_value` is still `decimal(10,2)`. For `fixed`, `computeDiscountCents()` multiplies it by 100 and describes it as USD, but checkout can create domain invoices in `USD`, `ILS`, or `JOD`; there is no coupon currency field or FX policy. |
 | Renewal pricing | Renewal may fall back from a renewal price to a registration price and ultimately to a hard-coded amount; this is weaker than the strict registration quote contract. |
+| Indeterminate payment-session recovery | A genuinely indeterminate `createSession()` outcome (see [Confirmed pre-session failure classification](#confirmed-pre-session-failure-classification)) has no automatic stale-claim recovery or reconciliation mechanism. The invoice's hosted-session claim stays `creating` and the attempt stays `pending` until an operator/admin intervenes; this is an intentional scope boundary, not an oversight. |
 | Registrar failure logging | In the exception handler around registration claim creation, the log context references `$domain` before that local variable is assigned, which may obscure the original failure. |
 | Legacy code comments | Several PHP docblocks still describe earlier phases (for example old payment-phase wording) even though executable code implements the newer flow. This document follows executable code and migrations. |
 | Generic Order-backed currency invariant | Neither `orders` nor `subscriptions` has a currency column, and `OrderItem.meta['currency']` exists only for domain items (and is `null` on at least one existing domain-adjacent creation path). [Order-backed invoice financial integrity](#order-backed-invoice-financial-integrity)'s settlement check is therefore deliberately silent on currency rather than inventing a weaker/inconsistent check. The existing gateway-path protection — `PaymentAttempt.currency` compared to `Invoice.currency` in `assertPaymentSessionOwnsSettlement()` and webhook reconciliation — is untouched and remains the only currency protection at settlement time. |

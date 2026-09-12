@@ -6,6 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\{Invoice, Client, Domain};
 use App\Models\Tenancy\Subscription;
 use App\Services\Billing\InvoiceSettlementService;
+use App\Services\Billing\InvoicePdfService;
+use App\Services\WhatsApp\InvoiceWhatsAppDeliveryService;
+use App\Jobs\SendInvoiceWhatsAppDelivery;
+use App\WhatsApp\Exceptions\InvalidWhatsAppPhoneException;
+use App\WhatsApp\Exceptions\WhatsAppConfigurationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\{DB, Log, Mail};
 use Illuminate\Validation\Rule;
@@ -18,6 +23,8 @@ class InvoiceController extends Controller
 
     public function __construct(
         protected InvoiceSettlementService $settlementService,
+        protected InvoicePdfService $pdfService,
+        protected InvoiceWhatsAppDeliveryService $whatsAppDeliveryService,
     ) {}
 
     public function index(Request $request)
@@ -528,6 +535,137 @@ class InvoiceController extends Controller
         // ($item->subscription / $item->domain) will read from these loaded relations.
         $invoice->load(['items.subscriptionRelation.plan', 'items.domainRelation', 'client']);
         return view('dashboard.management.invoices.show', compact('invoice'));
+    }
+
+    /**
+     * Render the standalone A4-printable invoice document.
+     *
+     * Read-only: no mutation, no PDF generation, no financial recalculation.
+     * Reuses the same 'view' authorization ability as show().
+     */
+    public function print(Invoice $invoice)
+    {
+        $this->authorize('view', $invoice);
+
+        $invoice->load(['items.subscriptionRelation.plan', 'items.domainRelation', 'client', 'order', 'paymentAttempt']);
+        return view('dashboard.management.invoices.print', compact('invoice'));
+    }
+
+    /**
+     * Server-side PDF download of the same approved invoice document shown
+     * by print(). Read-only: does not settle the invoice, does not touch
+     * order/payment state, and does not send anything anywhere.
+     */
+    public function pdf(Invoice $invoice)
+    {
+        $this->authorize('view', $invoice);
+
+        $invoice->load(['items.subscriptionRelation.plan', 'items.domainRelation', 'client', 'order', 'paymentAttempt']);
+
+        $pdf      = $this->pdfService->render($invoice);
+        $filename = $this->pdfService->filename($invoice);
+
+        return response()->streamDownload(
+            function () use ($pdf) {
+                echo $pdf;
+            },
+            $filename,
+            ['Content-Type' => 'application/pdf']
+        );
+    }
+
+    /**
+     * Queue a WhatsApp delivery of the invoice's frozen PDF document.
+     *
+     * This method never calls the WhatsApp gateway and never renders a PDF
+     * itself -- it only delegates to InvoiceWhatsAppDeliveryService::claim()
+     * (which durably persists the pending attempt and its frozen artifact
+     * before returning) and then queues SendInvoiceWhatsAppDelivery to
+     * actually execute it. The Invoice row itself is never mutated here.
+     *
+     * Uses the 'update' authorization ability -- stronger than the 'view'
+     * ability print()/pdf() use -- because, unlike those two read-only
+     * document views, this action has a real external side effect (it
+     * queues an outbound message to a third-party provider).
+     *
+     * claim() already reuses any existing pending/processing attempt for
+     * the same (invoice, normalized recipient), so a repeated submission
+     * (double-click, refresh) is handled entirely by the service's own
+     * idempotency guard -- no separate deduplication is added here.
+     *
+     * The flash message always describes the request as queued/accepted,
+     * never as "sent": the actual provider call happens asynchronously on
+     * a queue worker, so an immediate "sent" claim would be false.
+     */
+    public function sendWhatsApp(Invoice $invoice)
+    {
+        $this->authorize('update', $invoice);
+
+        try {
+            $attempt = $this->whatsAppDeliveryService->claim($invoice, auth()->user());
+        } catch (InvalidWhatsAppPhoneException $e) {
+            $message = $invoice->client?->phone
+                ? t(
+                    'dashboard.Invoice_WhatsApp_Invalid_Phone',
+                    'رقم الهاتف المسجل غير صالح لإرسال واتساب. يجب أن يتضمن رمز الدولة الدولي.',
+                )
+                : t(
+                    'dashboard.Invoice_WhatsApp_Missing_Phone',
+                    'لا يوجد رقم هاتف مسجل لهذا العميل. أضف رقم الهاتف أولاً.',
+                );
+
+            return redirect()->back()->with('error', $message);
+        } catch (WhatsAppConfigurationException $e) {
+            Log::error('WhatsApp provider is not configured; cannot queue invoice delivery.', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->back()->with('error', $this->whatsAppUnavailableMessage());
+        } catch (\RuntimeException $e) {
+            Log::error('Failed to freeze the invoice WhatsApp delivery artifact.', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->back()->with('error', $this->whatsAppUnavailableMessage());
+        }
+
+        try {
+            SendInvoiceWhatsAppDelivery::dispatchForAttempt($attempt);
+        } catch (\Throwable $e) {
+            // The attempt row and its frozen artifact are already durably
+            // persisted by claim() above -- never delete them here. This
+            // only means queueing the job itself could not be confirmed,
+            // so the admin is told truthfully rather than either silently
+            // succeeding or looking like nothing happened.
+            Log::error('Failed to queue the WhatsApp delivery job for an already-claimed attempt.', [
+                'invoice_id' => $invoice->id,
+                'attempt_id' => $attempt->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->back()->with(
+                'error',
+                t(
+                    'dashboard.Invoice_WhatsApp_Queue_Dispatch_Uncertain',
+                    'تم تسجيل طلب الإرسال وتجهيز المستند، لكن تعذّر تأكيد إضافته لقائمة الانتظار. قد يتطلب الأمر إعادة المحاولة أو متابعة الدعم الفني.',
+                ),
+            );
+        }
+
+        return redirect()->back()->with(
+            'ok',
+            t('dashboard.Invoice_WhatsApp_Queued', 'تم إضافة الفاتورة إلى قائمة الإرسال عبر واتساب.'),
+        );
+    }
+
+    protected function whatsAppUnavailableMessage(): string
+    {
+        return t(
+            'dashboard.Invoice_WhatsApp_Unavailable',
+            'تعذر إرسال الفاتورة عبر واتساب حاليًا. يرجى التواصل مع الدعم الفني.',
+        );
     }
 
     protected function allowedItemTypes(): array

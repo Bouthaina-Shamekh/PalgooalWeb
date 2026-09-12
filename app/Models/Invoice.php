@@ -91,6 +91,15 @@ class Invoice extends Model
         return $this->belongsTo(Coupon::class);
     }
 
+    /**
+     * Phase 4 — WhatsApp delivery audit trail (includes failed/indeterminate
+     * attempts, not only successful sends). Mirrors paymentAttempts() above.
+     */
+    public function whatsAppDeliveryAttempts(): HasMany
+    {
+        return $this->hasMany(InvoiceWhatsAppDeliveryAttempt::class);
+    }
+
     // Scope: فواتير مدفوعة
     public function scopePaid($query)
     {

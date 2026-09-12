@@ -17,6 +17,7 @@
         "laravel/socialite": "^5.27",
         "laravel/tinker": "^2.10.1",
         "livewire/livewire": "^3.6",
+        "mpdf/mpdf": "^8.3",
         "simplepie/simplepie": "^1.8",
         "willvincent/feeds": "^2.7"
     },

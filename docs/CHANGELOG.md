@@ -413,6 +413,20 @@ All three waves of ADR-005 completed in a single session. See `docs/ADR_005_CLOS
 
 ---
 
+## 2026 Q3 -- Payment Session Failure Classification
+
+### 2026-09-09 -- Confirmed Pre-Session Failure Classification (`ConfirmedPreSessionFailureException`)
+
+`PaymentSessionStarter::isConfirmedPreSessionFailure()` previously classified a thrown `createSession()` exception as a confirmed pre-session failure only by matching a `PaymentException` message containing the literal string `'secret_key is not configured'`. `MockGateway::createSession()`'s own failure -- which never contacts any provider and so can never be genuinely ambiguous -- did not match that string and was misclassified as indeterminate, leaving the `PaymentAttempt` stuck `pending` and the invoice's `payment_session_status` stuck `creating` indefinitely. One production record (Invoice #3 / PaymentAttempt #1) reached this stuck state.
+
+Classification was changed to a type check: a new `App\Payments\Exceptions\ConfirmedPreSessionFailureException` (a `PaymentException` subclass) is thrown only when a gateway's `createSession()` fails strictly before any provider contact -- `MockGateway::createSession()` always, and `LahzaGateway::createSession()` only from its pre-HTTP-call `secret_key` check. Every other `createSession()` failure, including Lahza failures that occur during or after the HTTP call to the provider, remains a plain `PaymentException` and stays indeterminate, unchanged.
+
+The pre-existing stuck production record was corrected in a guarded transaction to the state the fixed code would have produced, and the full renewal settlement flow (Invoice #3 / Order #7, `wpgoals.com`) was re-validated end-to-end in production afterward: settlement, Order activation, registrar renewal provisioning (`DomainProvisioningAttempt`, `provider_reference = 314257848`), and the local renewal-date update all completed with no duplicate provisioning. See `25-billing-system.md` -> *Confirmed pre-session failure classification* and *Production Validation -- MockGateway Fix and wpgoals.com Renewal*.
+
+A genuinely indeterminate `createSession()` outcome still has no automatic stale-claim recovery; this remains operator-driven and is recorded as open technical debt. This entry does not claim Lahza was enabled or tested in production -- Lahza remains inactive.
+
+---
+
 ## ADR Timeline
 
 | ADR | Title | Status | Date |
