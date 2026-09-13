@@ -12,6 +12,7 @@ use App\Policies\SectionDefinitionFieldPolicy;
 use App\Policies\SectionDefinitionPolicy;
 use App\Support\AdminBrand\AdminBrandCssGenerator;
 use App\Support\Blocks\HeroBlock;
+use App\Support\Mail\MailSettingsManager;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
@@ -54,6 +55,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Mail Settings module (Phase 1) — apply admin-managed SMTP config
+        // over config/mail.php / .env, when enabled. Deliberately first in
+        // boot() so it runs before anything else has a chance to send mail
+        // (e.g. a password-reset notification triggered later in the same
+        // request). No-ops safely when the table/row don't exist yet or the
+        // row is disabled -- see MailSettingsManager for the fallback rules.
+        app(MailSettingsManager::class)->applyRuntimeConfig();
+
         Schema::defaultStringLength(191);
         Gate::policy(SectionDefinition::class, SectionDefinitionPolicy::class);
         Gate::policy(SectionDefinitionField::class, SectionDefinitionFieldPolicy::class);

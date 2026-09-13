@@ -23,6 +23,7 @@ use App\Http\Controllers\Admin\SectionDefinitionImportExportController;
 use App\Http\Controllers\Admin\AppearanceController;
 use App\Http\Controllers\Admin\MenuController;
 use App\Http\Controllers\Admin\ClientController as AdminClientController;
+use App\Http\Controllers\Admin\MailSettingsController;
 use App\Http\Controllers\Admin\PaymentGatewayController;
 
 // -----------------------------------------------------------------------------
@@ -576,6 +577,15 @@ Route::group([
         Route::post('/{paymentGateway}', [PaymentGatewayController::class, 'update'])->name('update');
         Route::post('/{paymentGateway}/activate', [PaymentGatewayController::class, 'activate'])->name('activate');
         Route::post('/{paymentGateway}/deactivate', [PaymentGatewayController::class, 'deactivate'])->name('deactivate');
+    });
+
+    // -------------------------------------------------------------------------
+    // Settings → Mail (Mail Settings module, Phase 1 — SMTP only; Phase 2 — Send Test Email)
+    // -------------------------------------------------------------------------
+    Route::prefix('settings/mail')->name('settings.mail.')->group(function () {
+        Route::get('/', [MailSettingsController::class, 'edit'])->name('edit');
+        Route::match(['put', 'patch'], '/', [MailSettingsController::class, 'update'])->name('update');
+        Route::post('/test', [MailSettingsController::class, 'sendTest'])->name('test');
     });
 
     // -------------------------------------------------------------------------

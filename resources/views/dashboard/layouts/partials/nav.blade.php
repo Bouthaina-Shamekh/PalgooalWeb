@@ -391,6 +391,16 @@
                     </a>
                 </li>
 
+                {{-- Mail Settings module (Phase 1) --}}
+                <li class="pc-item">
+                    <a href="{{ route('dashboard.settings.mail.edit') }}" class="pc-link">
+                        <span class="pc-micon">
+                            <i class="ti ti-mail"></i>
+                        </span>
+                        <span class="pc-mtext">{{ t('dashboard.Mail_Settings', 'إعدادات البريد') }}</span>
+                    </a>
+                </li>
+
             </ul>
         </div>
     </div>
