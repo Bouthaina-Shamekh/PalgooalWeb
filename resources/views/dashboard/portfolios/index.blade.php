@@ -37,15 +37,16 @@
                                 <i class="ti ti-search text-base"></i>
                             </span>
                             <input type="text" name="search"
+                                   aria-label="{{ t('dashboard.Search', 'Search') }}"
                                    value="{{ $search ?? '' }}"
                                    placeholder="{{ t('dashboard.Search_Portfolios', 'Search by title, type, client…') }}"
-                                   class="w-full border rounded-xl pr-9 pl-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                                   class="portfolio-placeholder w-full border rounded-xl pr-9 pl-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
                         </div>
 
                         {{-- Per page --}}
                         <div class="flex items-center gap-2 shrink-0">
-                            <span class="text-sm text-gray-500 whitespace-nowrap">{{ t('dashboard.Per_Page', 'Per page') }}</span>
-                            <select name="per_page" onchange="this.form.submit()"
+                            <label for="portfolio-per-page" class="text-sm text-gray-500 whitespace-nowrap">{{ t('dashboard.Per_Page', 'Per page') }}</label>
+                            <select id="portfolio-per-page" name="per_page" onchange="this.form.submit()"
                                     class="border rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
                                 @foreach([10, 25, 50] as $n)
                                     <option value="{{ $n }}" {{ ($perPage ?? 10) == $n ? 'selected' : '' }}>{{ $n }}</option>
@@ -104,7 +105,7 @@
                                     @endphp
                                     <tr>
                                         {{-- Row number --}}
-                                        <td class="text-sm text-gray-500">
+                                        <td class="portfolio-secondary text-sm text-gray-500">
                                             {{ ($portfolios->firstItem() ?? 1) + $loop->index }}
                                         </td>
 
@@ -136,7 +137,7 @@
                                                     {{ $trans->type }}
                                                 </span>
                                             @else
-                                                <span class="text-gray-300">—</span>
+                                                <span class="portfolio-secondary text-gray-300">—</span>
                                             @endif
                                         </td>
 
@@ -147,7 +148,7 @@
                                                     {{ $trans->status }}
                                                 </span>
                                             @else
-                                                <span class="text-gray-300">—</span>
+                                                <span class="portfolio-secondary text-gray-300">—</span>
                                             @endif
                                         </td>
 
@@ -204,7 +205,7 @@
                                                     <p class="text-base font-semibold text-gray-700 mb-1">
                                                         {{ t('dashboard.No_Search_Results', 'No results found') }}
                                                     </p>
-                                                    <p class="text-sm text-gray-400 mb-5">
+                                                    <p class="portfolio-secondary text-sm text-gray-400 mb-5">
                                                         {{ t('dashboard.Try_Different_Search', 'Try a different search term') }}
                                                     </p>
                                                     <a href="{{ route('dashboard.portfolios.index') }}" class="btn btn-light btn-sm">
@@ -214,7 +215,7 @@
                                                     <p class="text-base font-semibold text-gray-700 mb-1">
                                                         {{ t('dashboard.No_Portfolios', 'No portfolios yet') }}
                                                     </p>
-                                                    <p class="text-sm text-gray-400 mb-5">
+                                                    <p class="portfolio-secondary text-sm text-gray-400 mb-5">
                                                         {{ t('dashboard.No_Portfolios_Desc', 'Add your first portfolio to showcase your work') }}
                                                     </p>
                                                     @can('create', 'App\\Models\\Portfolio')

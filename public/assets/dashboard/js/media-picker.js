@@ -56,6 +56,51 @@ document.addEventListener('DOMContentLoaded', () => {
      * ----------------------------------------------------------------------
      */
     let pickerOpen = false;
+    let openingTrigger = null;
+    const isolatedElements = new Map();
+    const focusableSelector = 'a[href], button, input, select, textarea, [tabindex], [contenteditable="true"]';
+    const canFocus = (element) => element?.isConnected && !element.matches(':disabled') &&
+        !element.closest('[inert]') && element.getClientRects().length > 0 &&
+        getComputedStyle(element).visibility !== 'hidden';
+    const dialogControls = () => Array.from(modalEl.querySelectorAll(focusableSelector))
+        .filter(element => element.tabIndex >= 0 && canFocus(element));
+    const focusDialog = () => {
+        const target = canFocus(searchInputEl) ? searchInputEl : (dialogControls()[0] || modalEl);
+        target.focus();
+    };
+    const isolateBackground = () => {
+        // Walk ancestors so this works even when the partial is nested in a layout.
+        let branch = modalEl;
+        while (branch.parentElement) {
+            for (const sibling of branch.parentElement.children) {
+                if (sibling === branch || sibling === backdropEl || sibling.contains(backdropEl) || isolatedElements.has(sibling)) continue;
+                isolatedElements.set(sibling, {
+                    inert: sibling.getAttribute('inert'),
+                    ariaHidden: sibling.getAttribute('aria-hidden'),
+                    pointerEvents: sibling.style.pointerEvents,
+                });
+                sibling.setAttribute('inert', '');
+                sibling.setAttribute('aria-hidden', 'true');
+                if (!('inert' in sibling)) sibling.style.pointerEvents = 'none';
+            }
+            branch = branch.parentElement;
+            if (branch === document.body) break;
+        }
+    };
+    const backgroundObserver = new MutationObserver(() => {
+        if (pickerOpen) isolateBackground();
+    });
+    const restoreBackground = () => {
+        backgroundObserver.disconnect();
+        isolatedElements.forEach((state, element) => {
+            for (const [attribute, value] of [['inert', state.inert], ['aria-hidden', state.ariaHidden]]) {
+                if (value === null) element.removeAttribute(attribute);
+                else element.setAttribute(attribute, value);
+            }
+            element.style.pointerEvents = state.pointerEvents;
+        });
+        isolatedElements.clear();
+    };
     let currentPage = 1;
     let lastPage = 1;
     let currentFilterType = '';
@@ -155,6 +200,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * - multiple: whether multiple selection is allowed
      */
     const openPicker = (config) => {
+        if (pickerOpen) return;
+        openingTrigger = config.trigger || document.activeElement;
         currentTargetInputId = config.targetInputId;
         currentPreviewContainerId = config.previewContainerId;
         isMultiple = config.multiple;
@@ -180,6 +227,9 @@ document.addEventListener('DOMContentLoaded', () => {
         modalEl.classList.remove('hidden');
         modalEl.classList.add('flex');
         pickerOpen = true;
+        focusDialog();
+        isolateBackground();
+        backgroundObserver.observe(document.body, { childList: true, subtree: true });
 
         // Initial media load
         loadMedia(1, false);
@@ -190,10 +240,15 @@ document.addEventListener('DOMContentLoaded', () => {
      * Does not clear the form values; it only hides the UI.
      */
     const closePicker = () => {
+        if (!pickerOpen) return;
         pickerOpen = false;
         backdropEl.classList.add('hidden');
         modalEl.classList.add('hidden');
         modalEl.classList.remove('flex');
+        restoreBackground();
+        const trigger = openingTrigger;
+        openingTrigger = null;
+        if (canFocus(trigger)) trigger.focus();
     };
 
     /**
@@ -309,34 +364,32 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.className =
                 'media-picker-item group relative w-full aspect-square rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden bg-gray-50 dark:bg-gray-900 text-left';
             btn.dataset.id = item.id;
+            btn.setAttribute('aria-pressed', String(selectedItems.has(item.id)));
 
             if (selectedItems.has(item.id)) {
                 btn.classList.add('ring-2', 'ring-indigo-500');
             }
 
-            let inner = '';
             if (isImage) {
-                inner += `
-                    <img src="${imageUrl}" alt="${name}"
-                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200">
-                `;
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = name;
+                img.className = 'w-full h-full object-cover group-hover:scale-105 transition-transform duration-200';
+                btn.appendChild(img);
             } else {
-                inner += `
-                    <div class="w-full h-full flex items-center justify-center text-[11px] text-gray-500 dark:text-gray-300">
-                        <span class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                            ${(item.file_extension || '').toUpperCase() || 'FILE'}
-                        </span>
-                    </div>
-                `;
+                const placeholder = document.createElement('div');
+                placeholder.className = 'w-full h-full flex items-center justify-center text-[11px] text-gray-500 dark:text-gray-300';
+                const extension = document.createElement('span');
+                extension.className = 'px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700';
+                extension.textContent = (item.file_extension || '').toUpperCase() || 'FILE';
+                placeholder.appendChild(extension);
+                btn.appendChild(placeholder);
             }
 
-            inner += `
-                <div class="absolute inset-x-0 bottom-0 bg-black/40 text-[10px] text-white px-2 py-1 truncate">
-                    ${name}
-                </div>
-            `;
-
-            btn.innerHTML = inner;
+            const caption = document.createElement('div');
+            caption.className = 'absolute inset-x-0 bottom-0 bg-black/40 text-[10px] text-white px-2 py-1 truncate';
+            caption.textContent = name;
+            btn.appendChild(caption);
 
             // Click handler for selecting/deselecting this item
             btn.addEventListener('click', () => {
@@ -396,9 +449,12 @@ document.addEventListener('DOMContentLoaded', () => {
      * based on how many items are currently selected.
      */
     const updateSelectionUI = () => {
+        gridEl.querySelectorAll('.media-picker-item').forEach(button => {
+            button.setAttribute('aria-pressed', String(Array.from(selectedItems.keys()).some(id => String(id) === button.dataset.id)));
+        });
         const count = selectedItems.size;
         if (selectionCountEl) {
-            selectionCountEl.textContent = String(count);
+            if (selectionCountEl.textContent !== String(count)) selectionCountEl.textContent = String(count);
         }
 
         if (clearSelectionBtnEl) {
@@ -631,11 +687,38 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         openPicker({
+            trigger: btn,
             targetInputId,
             previewContainerId,
             multiple,
             storeValue,
         });
+    });
+
+    // Register once; all close actions share the same focus and isolation cleanup.
+    document.addEventListener('keydown', (event) => {
+        if (!pickerOpen) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            closePicker();
+        } else if (event.key === 'Tab') {
+            const controls = dialogControls();
+            const index = controls.indexOf(document.activeElement);
+            event.preventDefault();
+            if (!controls.length) modalEl.focus();
+            else {
+                const next = index < 0 ? (event.shiftKey ? controls.length - 1 : 0)
+                    : (index + (event.shiftKey ? -1 : 1) + controls.length) % controls.length;
+                controls[next].focus();
+            }
+        }
+    }, true);
+    document.addEventListener('focusin', (event) => {
+        if (pickerOpen && !modalEl.contains(event.target)) focusDialog();
+    });
+    modalEl.addEventListener('click', (event) => {
+        if (event.target === modalEl) closePicker();
     });
 
     // Close modal via "Cancel" button

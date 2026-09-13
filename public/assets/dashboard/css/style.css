@@ -635,6 +635,15 @@ body:is([data-pc-theme="dark"] *){
 b, strong{
   font-weight: 600;
 }
+/* Portfolio contrast only: existing gray-600 / gray-500 palette.
+   Keep shared utilities and existing dark-theme behavior unchanged. */
+:root:not([data-pc-theme="dark"]) .portfolio-secondary {
+  color: #4b5563;
+}
+:root:not([data-pc-theme="dark"]) .portfolio-placeholder:not(:disabled)::placeholder {
+  color: #6b7280;
+  opacity: 1;
+}
 .text-muted{
   color: rgba(33, 37, 41, 0.75);
 }

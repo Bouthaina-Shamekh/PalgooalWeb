@@ -19,7 +19,7 @@
                               ?? $portfolio->translations->first();
                     @endphp
                     @if ($trans?->title)
-                        <span class="text-gray-400 font-normal text-lg">— {{ $trans->title }}</span>
+                        <span class="portfolio-secondary text-gray-400 font-normal text-lg">— {{ $trans->title }}</span>
                     @endif
                 </h2>
             </div>

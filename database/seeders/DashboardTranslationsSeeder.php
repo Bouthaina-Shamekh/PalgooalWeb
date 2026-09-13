@@ -369,6 +369,7 @@ class DashboardTranslationsSeeder extends Seeder
             'dashboard.Portfolio_Choose_Image'      => 'اختر صورة من المكتبة',
             'dashboard.Portfolio_Images'            => 'الصور المتعددة',
             'dashboard.Portfolio_Choose_Images'     => 'اختر صوراً من المكتبة',
+            'dashboard.Portfolio_Gallery_Restore_Error' => 'تعذّرت استعادة المعرض المحفوظ كمعرّفات وسائط. اختر صور المعرض مجدداً قبل الحفظ.',
 
             'dashboard.Portfolio_Project_Info'      => 'بيانات المشروع',
             'dashboard.Portfolio_Display_Order'     => 'ترتيب الظهور',

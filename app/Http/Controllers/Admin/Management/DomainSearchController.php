@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Management;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Front\PageController;
 use App\Models\DomainProvider;
 use App\Services\Domains\DomainAvailabilityService;
 use App\Services\Domains\DomainPricingService;
@@ -22,10 +23,25 @@ class DomainSearchController extends Controller
         return app(DomainAvailabilityService::class);
     }
 
-    /** صفحة بسيطة (اختياري) */
+    /**
+     * صفحة البحث عن دومين الثابتة (/domains).
+     *
+     * This is a fixed, locale-independent public entry point (used by the
+     * footer links and the "domains showcase" builder section's default
+     * CTA). It does NOT own its own view: the authoritative domain-search
+     * UI lives in the Page Builder section template
+     * (resources/views/front/sections/templates/domain_search.blade.php).
+     *
+     * So this simply resolves the active marketing Page that currently
+     * contains that builder section and renders it in-process through the
+     * exact same pipeline used by the "/{slug}" catch-all
+     * (Front\PageController::show()), keeping the "/domains" URL and
+     * avoiding a self-redirect when the page's own current-locale slug
+     * happens to be "domains" itself.
+     */
     public function page()
     {
-        return view('domains.search');
+        return app(PageController::class)->showBySectionTemplate('domain_search', 'domains');
     }
 
     /** API: فحص توافر الدومينات + إرجاع أرخص سعر من كل المزوّدين (بدون كشف الأسماء) */

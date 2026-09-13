@@ -7,6 +7,7 @@ use App\Models\Language;
 use App\Models\Portfolio;
 use App\Models\PortfolioTranslation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -146,23 +147,18 @@ class PortfolioController extends Controller
     }
 
     /**
-     * Store gallery image IDs directly as a JSON array of integers.
+     * Return ordered, unique IDs; the model's array cast owns JSON serialization.
      * ADR-005 Wave 3: portfolios.images now stores IDs, not paths.
      */
-    private function resolveImagesToIds(mixed $input): ?string
+    private function resolveImagesToIds(mixed $input): array
     {
-        if (! $input) {
-            return null;
+        if (! is_string($input) || $input === '') {
+            return [];
         }
 
-        if (is_string($input)) {
-            $ids = array_values(array_filter(array_map('intval', explode(',', $input))));
-            if (! empty($ids)) {
-                return json_encode($ids);
-            }
-        }
+        $ids = array_filter(array_map('intval', explode(',', $input)), fn ($id) => $id > 0);
 
-        return null;
+        return array_values(array_unique($ids));
     }
 
     // -------------------------------------------------------------------------
@@ -288,7 +284,8 @@ class PortfolioController extends Controller
             DB::rollBack();
             // P12 fix: log internally, show generic message to user
             Log::error('Portfolio store failed: ' . $e->getMessage(), ['exception' => $e]);
-            return back()->with('error', t('dashboard.Portfolio_Error', 'An error occurred while saving. Please try again.'));
+            return back()->withInput($this->restorableFormInput($validated))
+                ->with('error', t('dashboard.Portfolio_Error', 'An error occurred while saving. Please try again.'));
         }
     }
 
@@ -352,17 +349,25 @@ class PortfolioController extends Controller
 
             // P11 fix: explicit field list from $validated
             $rawDefaultImageId = $validated['default_image'] ?? null;
+            // A legacy path-only image has no ID to submit. Keep it until a replacement is selected.
+            $preserveLegacyDefaultImage = ! $rawDefaultImageId && ! $portfolio->default_image_media_id;
             $portfolioData = [
                 'order'                      => $validated['order'],
                 'delivery_date'              => $validated['delivery_date'],
                 'implementation_period_days' => $validated['implementation_period_days'] ?? null,
                 'client'                     => $validated['client'] ?? null,
                 // ADR-005 Wave 1 dual-write: keep path for old column, save ID in new FK column
-                'default_image'              => $this->resolveMediaIdsToPaths($rawDefaultImageId),
+                'default_image'              => $preserveLegacyDefaultImage
+                    ? $portfolio->default_image : $this->resolveMediaIdsToPaths($rawDefaultImageId),
                 'default_image_media_id'     => $rawDefaultImageId ? (int) $rawDefaultImageId : null,
                 // ADR-005 Wave 3: store gallery IDs directly (no path conversion)
                 'images'                     => $this->resolveImagesToIds($validated['images'] ?? null),
             ];
+
+            // An unrelated update must not overwrite a gallery that was not submitted.
+            if (! array_key_exists('images', $validated)) {
+                unset($portfolioData['images']);
+            }
 
             // P8 fix: retry on rare concurrent slug collision (SQLSTATE 23000)
             for ($attempt = 0; $attempt < 3; $attempt++) {
@@ -402,8 +407,23 @@ class PortfolioController extends Controller
             DB::rollBack();
             // P12 fix: log internally, show generic message
             Log::error('Portfolio update failed for id=' . $id . ': ' . $e->getMessage(), ['exception' => $e]);
-            return back()->with('error', t('dashboard.Portfolio_Error', 'An error occurred while saving. Please try again.'));
+            return back()->withInput($this->restorableFormInput($validated))
+                ->with('error', t('dashboard.Portfolio_Error', 'An error occurred while saving. Please try again.'));
         }
+    }
+
+    private function restorableFormInput(array $validated): array
+    {
+        // Explicitly exclude tokens, uploads and unknown keys, including nested keys
+        // retained by Laravel's parent translations array validation rule.
+        $input = Arr::only($validated, [
+            'order', 'delivery_date', 'implementation_period_days', 'client', 'default_image', 'images',
+        ]);
+        $input['translations'] = array_map(fn (array $translation) => Arr::only($translation, [
+            'locale', 'title', 'type', 'materials', 'link', 'status', 'description',
+        ]), $validated['translations'] ?? []);
+
+        return $input;
     }
 
     public function destroy($id)

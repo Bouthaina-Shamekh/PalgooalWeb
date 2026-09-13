@@ -28,6 +28,34 @@ class Portfolio extends Model
         'delivery_date' => 'date',
     ];
 
+    /**
+     * Read gallery arrays, including historical arrays encoded twice.
+     * The array cast still serializes assignments; reading never rewrites the raw value.
+     * Unexpected values remain intact for the form's recovery guard, not silently emptied.
+     */
+    public function getImagesAttribute($value): mixed
+    {
+        if ($value === null || $value === '') {
+            return [];
+        }
+
+        $decoded = $this->fromJson($value);
+        if ($decoded === null) {
+            return trim($value) === 'null' ? [] : $value;
+        }
+        if (is_string($decoded)) {
+            if ($decoded === '') {
+                return [];
+            }
+            $legacyArray = $this->fromJson($decoded);
+            if (is_array($legacyArray) && array_is_list($legacyArray)) {
+                return $legacyArray;
+            }
+        }
+
+        return $decoded;
+    }
+
     // ── ADR-005 Wave 1 Media Relations ─────────────────────────────────────
 
     /** The portfolio's featured image as a Media record (Pattern A). */
@@ -49,7 +77,7 @@ class Portfolio extends Model
     /**
      * Return fully-resolved URLs for the gallery images.
      *
-     * Handles both storage formats:
+     * Handles gallery arrays after the read-compatibility accessor:
      *   • New (Wave 3): JSON array of integer Media IDs  → [7, 12, 15]
      *   • Old (pre-Wave 3): JSON array of path strings   → ["media/...", ...]
      *
@@ -102,4 +130,3 @@ class Portfolio extends Model
         return $this->translations->firstWhere('locale', $locale);
     }
 }
-

@@ -5,19 +5,19 @@
 </div>
 
 {{-- المودال --}}
-<div id="media-picker-modal" class="fixed inset-0 z-[9999] hidden items-center justify-center px-4">
+<div id="media-picker-modal" role="dialog" aria-modal="true" aria-labelledby="media-picker-title" tabindex="-1" class="fixed inset-0 z-[9999] hidden items-center justify-center px-4">
     <div
         class="relative w-full max-w-5xl rounded-2xl bg-white dark:bg-gray-950 shadow-2xl border border-gray-200 dark:border-gray-800 max-h-[80vh] flex flex-col overflow-hidden">
 
         {{-- الهيدر --}}
         <header class="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-800">
-            <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <h2 id="media-picker-title" class="text-sm font-semibold text-gray-900 dark:text-gray-100">
                 اختيار وسائط من المكتبة
             </h2>
 
             <div class="flex items-center gap-2">
                 {{-- زر رفع داخل الـ popup --}}
-                <button type="button" id="media-picker-upload-btn"
+                <button type="button" id="media-picker-upload-btn" aria-describedby="media-picker-upload-help"
                     class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
                     <span>رفع صورة جديدة</span>
                 </button>
@@ -63,7 +63,7 @@
 
                 {{-- البحث --}}
                 <div class="w-full sm:w-64">
-                    <input id="media-picker-search" type="text" placeholder="بحث بالاسم أو العنوان..."
+                    <input id="media-picker-search" type="text" aria-label="بحث بالاسم أو العنوان" placeholder="بحث بالاسم أو العنوان..."
                         class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-800
                                focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500
                                dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100">
@@ -82,7 +82,7 @@
                 <p class="text-xs font-medium">
                     اسحب الملفات هنا أو اضغط على زر "رفع صورة جديدة" في الأعلى
                 </p>
-                <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
+                <p id="media-picker-upload-help" class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
                     يدعم الصور حتى 10MB للصورة الواحدة (JPEG, PNG, WEBP, SVG...)
                 </p>
             </div>
@@ -92,11 +92,11 @@
                 {{-- يتم تعبئتها عبر JS --}}
             </div>
 
-            <div id="media-picker-loading" class="mt-2 text-center text-xs text-gray-500 dark:text-gray-400 hidden">
+            <div id="media-picker-loading" role="status" class="mt-2 text-center text-xs text-gray-500 dark:text-gray-400 hidden">
                 جاري التحميل...
             </div>
 
-            <div id="media-picker-empty" class="mt-2 text-center text-xs text-gray-400 dark:text-gray-500 hidden">
+            <div id="media-picker-empty" role="status" class="mt-2 text-center text-xs text-gray-400 dark:text-gray-500 hidden">
                 لا توجد وسائط مطابقة حاليًا.
             </div>
             {{-- زر تحميل المزيد --}}
@@ -110,7 +110,7 @@
         {{-- الفوتر --}}
         <footer
             class="px-5 py-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between gap-3 text-[11px]">
-            <div class="text-gray-500 dark:text-gray-400">
+            <div role="status" aria-atomic="true" class="text-gray-500 dark:text-gray-400">
                 العناصر المحددة:
                 <span id="media-picker-selection-count">0</span>
             </div>

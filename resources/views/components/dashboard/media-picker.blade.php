@@ -6,6 +6,8 @@
     'storeValue' => 'id',
     'value' => null,
     'previewUrls' => [],
+    'errorMessage' => null,
+    'helpId' => null,
 ])
 
 @php
@@ -86,6 +88,8 @@
 
     <button
         type="button"
+        @if ($errorMessage) aria-invalid="true" @endif
+        @if ($errorMessage || $helpId) aria-describedby="{{ trim(($errorMessage ? $inputId . '_error' : '') . ' ' . ($helpId ?? '')) }}" @endif
         class="btn-open-media-picker inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
         data-target-input="{{ $inputId }}"
         data-target-preview="{{ $previewId }}"
@@ -94,6 +98,9 @@
     >
         {{ $buttonText }}
     </button>
+    @if ($errorMessage)
+        <span id="{{ $inputId }}_error" class="text-danger text-sm">{{ $errorMessage }}</span>
+    @endif
 
     <div id="{{ $previewId }}" class="mt-2 flex flex-wrap gap-2">
         @foreach ($previewUrls as $url)
