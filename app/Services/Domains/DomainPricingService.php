@@ -162,7 +162,7 @@ class DomainPricingService
      * حصراً بمزوّد test/sandbox سيظهر "متاح" عبر مزوّد لا يجوز استخدامه لعميل حقيقي إطلاقاً.
      *
      * @param  array<int, string>  $tlds
-     * @return array<string, array{provider_id:int, provider_type:string, provider_mode:string}>
+     * @return array<string, array{provider_id:int, provider_type:string, provider_mode:string, domain_tld_id:int}>
      */
     public function providersForTlds(array $tlds): array
     {
@@ -177,6 +177,7 @@ class DomainPricingService
 
         $rows = DomainTld::query()
             ->select([
+                'domain_tlds.id as domain_tld_id',
                 'domain_tlds.tld',
                 'domain_tlds.enabled',
                 'domain_tlds.provider_id',
@@ -208,6 +209,7 @@ class DomainPricingService
                 'provider_id'   => (int) $row->provider_id,
                 'provider_type' => strtolower(trim((string) $row->provider_type)),
                 'provider_mode' => strtolower(trim((string) $row->provider_mode)),
+                'domain_tld_id' => (int) $row->domain_tld_id,
             ];
         }
 

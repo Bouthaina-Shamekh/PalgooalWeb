@@ -4,6 +4,10 @@
     </x-dashboard.alert>
 @endif
 
+@foreach (($returnContext ?? []) as $returnKey => $returnValue)
+    <input type="hidden" name="return_{{ $returnKey }}" value="{{ $returnValue }}">
+@endforeach
+
 @push('styles')
     <style>
         ul[id^="type_suggestions_"] {
@@ -41,6 +45,21 @@
             background-color: #f3f4f6;
             font-weight: 500;
         }
+
+        [data-pc-theme="dark"] ul[id^="type_suggestions_"] {
+            color: #f3f4f6;
+            background: #263240;
+            border-color: #475569;
+        }
+
+        [data-pc-theme="dark"] ul[id^="type_suggestions_"] li {
+            border-bottom-color: #374151;
+        }
+
+        [data-pc-theme="dark"] ul[id^="type_suggestions_"] li:hover,
+        [data-pc-theme="dark"] ul[id^="type_suggestions_"] li.highlighted {
+            background-color: #374151;
+        }
     </style>
 @endpush
 
@@ -63,21 +82,23 @@
             $defaultImagePreviewPath = null;
             $defaultImagePreviewUrls = [];
 
-            if ($defaultImageId && $defaultImageId === (int) $portfolio->default_image_media_id) {
-                $defaultImagePreviewPath = $portfolio->resolvedDefaultImagePath();
-            } elseif ($defaultImageId) {
-                $defaultImagePreviewPath = \App\Models\Media::find($defaultImageId)?->file_path;
-            } elseif (! $portfolio->default_image_media_id) {
-                $defaultImagePreviewPath = $portfolio->resolvedDefaultImagePath();
+            $portfolioMedia ??= collect();
+            if ($defaultImageId) {
+                $defaultImagePreviewPath = $portfolioMedia->get($defaultImageId)?->file_path;
+            } elseif (! $portfolio->default_image_media_id && !old('remove_default_image')) {
+                $defaultImagePreviewPath = $portfolio->getRawOriginal('default_image');
             }
 
             if ($defaultImagePreviewPath) {
                 $defaultImagePreviewUrls = [asset('storage/' . $defaultImagePreviewPath)];
             }
         @endphp
+        <input type="hidden" id="portfolio-remove-default-image" name="remove_default_image" value="{{ old('remove_default_image', '0') }}">
         <x-dashboard.media-picker
             id="default_image_picker"
             name="default_image"
+            acceptedType="image"
+            removeInputId="portfolio-remove-default-image"
             :errorMessage="$errors->first('default_image')"
             label="{{ t('dashboard.Portfolio_Default_Image', 'Default Image') }}"
             :value="$defaultImageId"
@@ -143,9 +164,8 @@
             $imagesPreviewUrls = [];
 
             if ($imagesArray !== []) {
-                $mediaRecords = \App\Models\Media::whereIn('id', $imagesArray)->get()->keyBy('id');
                 foreach ($imagesArray as $imageId) {
-                    $media = $mediaRecords->get($imageId);
+                    $media = $portfolioMedia->get($imageId);
                     if ($media?->file_path) {
                         $imagesPreviewUrls[] = asset('storage/' . $media->file_path);
                     }
@@ -163,6 +183,7 @@
         <x-dashboard.media-picker
             id="images_picker"
             name="images"
+            acceptedType="image"
             :errorMessage="$errors->first('images')"
             :helpId="$galleryRestoreBlocked ? 'portfolio-gallery-restore-error' : null"
             label="{{ t('dashboard.Portfolio_Images', 'Gallery Images') }}"
@@ -274,7 +295,7 @@
             $initialLanguage = $firstErrorLanguage ?? $languages->first()?->code;
         @endphp
         {{-- تبويبات اللغات --}}
-        <div class="flex flex-wrap gap-1 border-b border-gray-200 px-4 pt-4 overflow-x-auto"
+        <div class="portfolio-language-tabs flex flex-wrap gap-1 border-b border-gray-200 px-4 pt-4 overflow-x-auto"
              role="tablist" id="portfolioLanguageTabs">
             @foreach ($languages as $index => $lang)
                 <button type="button"
@@ -290,7 +311,7 @@
                                {{ $lang->code === $initialLanguage
                                    ? 'text-primary border-b-2 border-primary font-semibold bg-white'
                                    : 'text-gray-500 border-b-2 border-transparent hover:text-gray-700' }}">
-                    <span class="w-6 h-6 rounded-full bg-gray-100 text-gray-600 inline-flex items-center justify-center text-xs font-bold">
+                    <span class="portfolio-language-code w-6 h-6 rounded-full bg-gray-100 text-gray-600 inline-flex items-center justify-center text-xs font-bold">
                         {{ strtoupper(substr($lang->code, 0, 2)) }}
                     </span>
                     {{ $lang->native }}
@@ -307,12 +328,14 @@
         </div>
 
         {{-- Panels --}}
-        <div class="p-5 bg-gray-50/50">
+        <div class="portfolio-language-panels p-5 bg-gray-50/50">
             @foreach ($languages as $index => $lang)
                 @php $translation = $portfolioTranslations[$lang->code] ?? null; @endphp
                 <div id="lang-panel-{{ $lang->code }}"
                      role="tabpanel"
                      aria-labelledby="lang-tab-{{ $lang->code }}"
+                     lang="{{ $lang->code }}"
+                     dir="{{ $lang->is_rtl ? 'rtl' : 'ltr' }}"
                      class="lang-panel {{ $lang->code === $initialLanguage ? 'block' : 'hidden' }} transition-all duration-200">
 
                     <input type="hidden"
@@ -341,7 +364,7 @@
 
                         {{-- النوع مع autocomplete --}}
                         <div class="col-span-12 sm:col-span-6">
-                            <label class="form-label" for="type_input_{{ $lang->code }}">
+                            <label id="type_label_{{ $lang->code }}" class="form-label" for="type_input_{{ $lang->code }}">
                                 {{ t('dashboard.Portfolio_Type', 'Type') }}
                                 @if ($lang->is_active) <span class="text-red-500">*</span> @endif
                             </label>
@@ -359,7 +382,7 @@
                                        onkeydown="handleTypeKeydown(event, '{{ $lang->code }}')"
                                        autocomplete="off"
                                        @if ($lang->is_active) required @endif>
-                                <ul id="type_suggestions_{{ $lang->code }}" role="listbox" aria-labelledby="type_input_{{ $lang->code }}"></ul>
+                                <ul id="type_suggestions_{{ $lang->code }}" role="listbox" aria-labelledby="type_label_{{ $lang->code }}"></ul>
                             </div>
                            @error('translations.' . $index . '.type')
                                 <span id="type_{{ $lang->code }}_error" class="text-danger text-sm">{{ $message }}</span>
@@ -404,6 +427,13 @@
 
                         {{-- الحالة --}}
                         <div class="col-span-12 sm:col-span-6">
+                            @php
+                                $statusOptions = $statusSuggestions[$lang->code] ?? ($statusSuggestions['en'] ?? []);
+                                $storedStatus = (string) ($translation['status'] ?? '');
+                                $selectedStatus = (string) old('translations.' . $index . '.status', $storedStatus);
+                                $hasUnsupportedStatus = $selectedStatus !== '' && ! in_array($selectedStatus, $statusOptions, true);
+                                $isStoredLegacyStatus = $hasUnsupportedStatus && hash_equals($storedStatus, $selectedStatus);
+                            @endphp
                             <label class="form-label" for="status_{{ $lang->code }}">
                                 {{ t('dashboard.Portfolio_Status', 'Status') }}
                             </label>
@@ -412,9 +442,16 @@
                     @if ($errors->has('translations.' . $index . '.status')) aria-invalid="true" aria-describedby="status_{{ $lang->code }}_error" @endif
                                     class="form-control @error('translations.' . $index . '.status') is-invalid @enderror">
                                 <option value="">{{ t('dashboard.Portfolio_Select_Status', 'Select status') }}</option>
-                                @foreach ($statusSuggestions[$lang->code] ?? ($statusSuggestions['en'] ?? []) as $status)
+                                @if ($hasUnsupportedStatus)
+                                    <option value="{{ $selectedStatus }}" selected>
+                                        {{ $selectedStatus }} — {{ $isStoredLegacyStatus
+                                            ? t('dashboard.Portfolio_Legacy_Status', 'Legacy status')
+                                            : t('dashboard.Portfolio_Unsupported_Status', 'Unsupported status') }}
+                                    </option>
+                                @endif
+                                @foreach ($statusOptions as $status)
                                     <option value="{{ $status }}"
-                                        {{ old('translations.' . $index . '.status', $translation['status'] ?? '') === $status ? 'selected' : '' }}>
+                                        {{ $selectedStatus === $status ? 'selected' : '' }}>
                                         {{ $status }}
                                     </option>
                                 @endforeach
@@ -450,12 +487,13 @@
 {{-- ══════════════════════════════════════════════════════════════════════
      أزرار الحفظ والإلغاء
 ═══════════════════════════════════════════════════════════════════════ --}}
-<div class="flex items-center justify-end gap-3 mb-6">
-    <a href="{{ route('dashboard.portfolios.index') }}"
+<div class="portfolio-form-actions flex items-center justify-end gap-3 mb-6">
+    <a href="{{ route('dashboard.portfolios.index', $returnContext ?? []) }}"
        class="btn btn-light">
         {{ t('dashboard.Cancel', 'Cancel') }}
     </a>
-    <button type="submit" id="portfolio-save" class="btn btn-primary flex items-center gap-2" @disabled($galleryRestoreBlocked)>
+    <span id="portfolio-submit-status" role="status" class="sr-only"></span>
+    <button type="submit" id="portfolio-save" data-pending-label="{{ t('dashboard.Saving', 'Saving…') }}" class="btn btn-primary flex items-center gap-2" @disabled($galleryRestoreBlocked)>
         <i class="ti ti-device-floppy text-base"></i>
         {{ isset($portfolio->id)
             ? t('dashboard.Update_Portfolio', 'Update Portfolio')
@@ -466,6 +504,32 @@
 
 @push('scripts')
     <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const saveButton = document.getElementById('portfolio-save');
+            const form = saveButton?.form;
+            if (!form) return;
+            const ignored = new Set(['_token', '_method', 'return_search', 'return_page', 'return_per_page']);
+            const snapshot = () => Array.from(new FormData(form).entries())
+                .filter(([name]) => !ignored.has(name))
+                .map(([name, value]) => [name, typeof value === 'string' ? value : value.name])
+                .sort(([aName, aValue], [bName, bValue]) => aName.localeCompare(bName) || aValue.localeCompare(bValue))
+                .map(entry => JSON.stringify(entry)).join('\n');
+            const initialState = snapshot();
+            let submitting = false;
+
+            window.addEventListener('beforeunload', function (event) {
+                if (submitting || snapshot() === initialState) return;
+                event.preventDefault();
+                event.returnValue = '';
+            });
+            form.addEventListener('submit', function (event) {
+                queueMicrotask(function () {
+                    if (!event.defaultPrevented && form.checkValidity()) submitting = true;
+                });
+            });
+            window.addEventListener('pageshow', function () { submitting = false; });
+        });
+
         // An unresolvable stored gallery must not be silently replaced with an empty value.
         document.addEventListener('DOMContentLoaded', function () {
             const restoreError = document.getElementById('portfolio-gallery-restore-error');
@@ -478,14 +542,51 @@
                 if (restoreBlocked) event.preventDefault();
             });
             galleryInput.addEventListener('change', function () {
-                if (!/^[1-9]\d*(,[1-9]\d*)*$/.test(galleryInput.value)) return;
+                if (!/^[1-9]\d*(,[1-9]\d*)*$/.test(galleryInput.value)
+                    && !(galleryInput.value === '' && galleryInput.dataset.mediaPickerCleared === 'true')) return;
                 restoreBlocked = false;
                 saveButton.disabled = false;
                 restoreError.hidden = true;
+                const pickerButton = galleryInput.parentElement?.querySelector('.btn-open-media-picker');
+                if (pickerButton) {
+                    const remaining = (pickerButton.getAttribute('aria-describedby') || '').split(/\s+/)
+                        .filter(id => id && id !== restoreError.id).join(' ');
+                    if (remaining) pickerButton.setAttribute('aria-describedby', remaining);
+                    else pickerButton.removeAttribute('aria-describedby');
+                }
             });
         });
 
         // ────────────────────────────────────────────────
+        // Portfolio submit lifecycle: native validation happens before submit fires.
+        document.addEventListener('DOMContentLoaded', function () {
+            const button = document.getElementById('portfolio-save');
+            const form = button?.form;
+            if (!form) return;
+            const originalContent = Array.from(button.childNodes).map(node => node.cloneNode(true));
+            const status = document.getElementById('portfolio-submit-status');
+            let submitting = false;
+            let previousDisabled = false;
+            form.addEventListener('submit', function (event) {
+                if (event.defaultPrevented) return;
+                if (submitting) { event.preventDefault(); return; }
+                submitting = true;
+                previousDisabled = button.disabled;
+                button.disabled = true;
+                button.setAttribute('aria-busy', 'true');
+                button.textContent = button.dataset.pendingLabel;
+                if (status) status.textContent = button.dataset.pendingLabel;
+            });
+            window.addEventListener('pageshow', function () {
+                if (!submitting) return;
+                submitting = false;
+                button.disabled = previousDisabled;
+                button.removeAttribute('aria-busy');
+                button.replaceChildren(...originalContent.map(node => node.cloneNode(true)));
+                if (status) status.textContent = '';
+            });
+        });
+
         // Type suggestions autocomplete
         // ────────────────────────────────────────────────
         const _typeSuggestionsData = @json($typeSuggestions ?? []);
@@ -577,7 +678,6 @@
         // ────────────────────────────────────────────────
         document.addEventListener('DOMContentLoaded', function () {
             const tabIds = @json($languages->pluck('code'));
-            let focusTimer;
 
             function setTabActive(tabEl, isActive) {
                 if (!tabEl) return;
@@ -594,8 +694,7 @@
                 }
             }
 
-            window.portfolioSwitchLanguageTab = function (langCode, focusInput = true) {
-                clearTimeout(focusTimer);
+            window.portfolioSwitchLanguageTab = function (langCode) {
                 document.querySelectorAll('#portfolioLanguageTabs .lang-tab-btn').forEach(function (tab) {
                     setTabActive(tab, false);
                 });
@@ -611,9 +710,6 @@
                 if (panel) {
                     panel.classList.remove('hidden');
                     panel.classList.add('block');
-                    if (focusInput) focusTimer = setTimeout(function () {
-                        panel.querySelector('input[type="text"]')?.focus();
-                    }, 60);
                 }
                 try { localStorage.setItem('portfolioActiveLangTab', langCode); } catch (error) { /* Tab visibility does not depend on storage. */ }
             };
@@ -622,14 +718,15 @@
                 const tabs = document.querySelectorAll('#portfolioLanguageTabs .lang-tab-btn');
                 const idx  = Array.from(tabs).findIndex(function (t) { return t.id === 'lang-tab-' + langCode; });
                 if (idx < 0) return;
+                const isRtl = getComputedStyle(document.getElementById('portfolioLanguageTabs')).direction === 'rtl';
                 let next = null;
-                if (event.key === 'ArrowLeft')  { event.preventDefault(); next = (idx - 1 + tabs.length) % tabs.length; }
-                if (event.key === 'ArrowRight') { event.preventDefault(); next = (idx + 1) % tabs.length; }
+                if (event.key === 'ArrowLeft')  { event.preventDefault(); next = (idx + (isRtl ? 1 : -1) + tabs.length) % tabs.length; }
+                if (event.key === 'ArrowRight') { event.preventDefault(); next = (idx + (isRtl ? -1 : 1) + tabs.length) % tabs.length; }
                 if (event.key === 'Home')       { event.preventDefault(); next = 0; }
                 if (event.key === 'End')        { event.preventDefault(); next = tabs.length - 1; }
                 if (next != null) {
                     const code = tabs[next].id.replace('lang-tab-', '');
-                    window.portfolioSwitchLanguageTab(code, false);
+                    window.portfolioSwitchLanguageTab(code);
                     tabs[next].focus();
                 }
             };
@@ -645,16 +742,15 @@
                     event.preventDefault();
                     return;
                 }
-                clearTimeout(focusTimer);
                 const panel = event.target.closest('.lang-panel');
-                if (panel) window.portfolioSwitchLanguageTab(panel.id.replace('lang-panel-', ''), false);
+                if (panel) window.portfolioSwitchLanguageTab(panel.id.replace('lang-panel-', ''));
             }, true);
 
             let saved;
             try { saved = localStorage.getItem('portfolioActiveLangTab'); } catch (error) { /* Use the rendered default. */ }
             const errorTab = document.querySelector('#portfolioLanguageTabs [data-validation-error="true"]');
             const first = errorTab ? errorTab.id.replace('lang-tab-', '') : ((saved && tabIds.includes(saved)) ? saved : tabIds[0]);
-            if (first) window.portfolioSwitchLanguageTab(first, !errorTab);
+            if (first) window.portfolioSwitchLanguageTab(first);
         });
     </script>
 @endpush

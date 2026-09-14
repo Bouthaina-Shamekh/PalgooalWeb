@@ -8,6 +8,8 @@
     'previewUrls' => [],
     'errorMessage' => null,
     'helpId' => null,
+    'removeInputId' => null,
+    'acceptedType' => null,
 ])
 
 @php
@@ -16,7 +18,7 @@
     $previewId = $inputId . '_preview';
     $containerAttributes = $attributes->except('id');
     $isMultiple = (bool) $multiple;
-    $buttonText = $buttonText ?: __('Choose From Media Library');
+    $buttonText = $buttonText ?: t('dashboard.Media_Picker_Choose_From_Library', 'Choose From Media Library');
 
     $extractScalarValue = static function ($item): ?string {
         if (is_scalar($item)) {
@@ -72,7 +74,7 @@
     }
 @endphp
 
-<div {{ $containerAttributes->class('col-span-6') }}>
+<div {{ $containerAttributes->class('media-picker-field col-span-6') }}>
     @if ($label)
         <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
             {{ $label }}
@@ -90,11 +92,13 @@
         type="button"
         @if ($errorMessage) aria-invalid="true" @endif
         @if ($errorMessage || $helpId) aria-describedby="{{ trim(($errorMessage ? $inputId . '_error' : '') . ' ' . ($helpId ?? '')) }}" @endif
-        class="btn-open-media-picker inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
+        class="btn-open-media-picker inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
         data-target-input="{{ $inputId }}"
         data-target-preview="{{ $previewId }}"
         data-multiple="{{ $isMultiple ? 'true' : 'false' }}"
         data-store-value="{{ $storeValue }}"
+        @if ($acceptedType) data-accepted-type="{{ $acceptedType }}" @endif
+        @if ($removeInputId) data-remove-input="{{ $removeInputId }}" @endif
     >
         {{ $buttonText }}
     </button>
@@ -103,12 +107,21 @@
     @endif
 
     <div id="{{ $previewId }}" class="mt-2 flex flex-wrap gap-2">
-        @foreach ($previewUrls as $url)
+        @foreach ($previewUrls as $previewIndex => $url)
             @if ($url)
-                <div class="relative h-20 w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
-                    <img src="{{ $url }}" alt="" class="h-full w-full object-cover">
+                <div class="media-picker-preview-item relative h-20 w-20 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900"
+                    @if ($storeValue === 'id' && (!$isMultiple || count($idsArray) === count($previewUrls)))
+                        data-media-id="{{ $isMultiple ? ($idsArray[$previewIndex] ?? '') : $inputValue }}"
+                    @endif>
+                    <img src="{{ $url }}" alt="" class="h-full w-full object-cover" loading="lazy"
+                        @if ($storeValue === 'id' && (!$isMultiple || count($idsArray) === count($previewUrls)))
+                            data-media-id="{{ $isMultiple ? ($idsArray[$previewIndex] ?? '') : $inputValue }}"
+                        @endif>
                 </div>
             @endif
         @endforeach
     </div>
+    @if ($isMultiple && $storeValue === 'id')
+        <span id="{{ $previewId }}_reorder_status" class="sr-only" role="status" aria-live="polite"></span>
+    @endif
 </div>

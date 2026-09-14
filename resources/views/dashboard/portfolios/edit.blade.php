@@ -37,7 +37,7 @@
         </div>
     @endif
 
-    <div class="grid grid-cols-12 gap-6">
+    <div class="portfolio-editor grid grid-cols-12 gap-6">
 
         {{-- ═══ FORM (col-span-8) ═══════════════════════════════════════ --}}
         <div class="col-span-12 xl:col-span-8">
@@ -50,7 +50,7 @@
 
         {{-- ═══ HELP SIDEBAR (col-span-4) ══════════════════════════════ --}}
         <div class="col-span-12 xl:col-span-4">
-            <div class="card sticky top-6">
+            <div class="portfolio-help card sticky top-6">
                 <div class="card-header">
                     <h5 class="mb-0 flex items-center gap-2">
                         <i class="ti ti-info-circle text-primary"></i>

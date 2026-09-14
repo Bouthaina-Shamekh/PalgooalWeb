@@ -8,7 +8,7 @@ const view = fs.readFileSync(path.join(__dirname, '../resources/views/dashboard/
 const script = view.slice(view.indexOf('// Language tab switching (portfolio)'), view.lastIndexOf('</script>'))
     .replace('@json($languages->pluck(\'code\'))', '["ar","en","fr"]');
 
-function setup(saved = 'ar', errors = []) {
+function setup(saved = 'ar', errors = [], direction = 'ltr') {
     let focused;
     const timers = new Map();
     const nodes = {};
@@ -42,7 +42,7 @@ function setup(saved = 'ar', errors = []) {
         panel.querySelector = () => nodes['title_' + code];
     }
     nodes.portfolioLanguageTabs = { closest: () => form };
-    const context = { window: {}, document: {
+    const context = { getComputedStyle: () => ({ direction }), window: {}, document: {
         getElementById: id => nodes[id],
         querySelectorAll: selector => selector === '.lang-panel' ? panels : tabs,
         querySelector: () => tabs.find(tab => errors.includes(tab.id.replace('lang-tab-', ''))),
@@ -87,7 +87,7 @@ test('multiple invalid panels keep first field visible; later attempts advance a
     app.nodes.title_ar.validity.valid = true;
     assert.deepEqual(app.validate().map(field => field.id), ['title_en']);
 });
-test('general invalid field retains priority and cancels pending tab autofocus', () => {
+test('general invalid field retains priority without delayed tab autofocus', () => {
     const app = setup('en');
     app.nodes.delivery_date.validity.valid = false;
     app.nodes.title_ar.validity.valid = false;
@@ -115,3 +115,39 @@ test('valid controls including empty optional fields do not interrupt submission
     assert.deepEqual(app.validate(), []);
     assert.equal(app.nodes['lang-tab-ar'].attributes['aria-selected'], 'true');
 });
+
+for (const saved of [null, 'en', 'unknown']) {
+    test(`normal load with saved=${saved} activates intended tab without moving focus`, () => {
+        const app = setup(saved);
+        app.flush();
+        assert.equal(app.focus(), undefined);
+        assert.equal(app.nodes['lang-tab-' + (saved === 'en' ? 'en' : 'ar')].attributes['aria-selected'], 'true');
+        app.window.portfolioSwitchLanguageTab('fr');
+        app.flush();
+        assert.equal(app.focus(), undefined);
+    });
+}
+for (const direction of ['rtl', 'ltr']) {
+    test(`${direction} arrows follow visual order, Home/End and rapid switches preserve tab focus`, () => {
+        const app = setup('ar', [], direction);
+        const codes = ['ar', 'en', 'fr'];
+        let index = 0;
+        for (const key of ['ArrowLeft', 'ArrowRight', 'Home', 'End', ...Array(30).fill('ArrowLeft')]) {
+            let prevented = false;
+            app.window.portfolioHandleTabKeydown({ key, preventDefault() { prevented = true; } }, codes[index]);
+            index = key === 'Home' ? 0 : key === 'End' ? 2
+                : (index + ((key === 'ArrowLeft') === (direction === 'rtl') ? 1 : -1) + 3) % 3;
+            assert.equal(prevented, true);
+            app.flush();
+            assert.equal(app.focus(), app.nodes['lang-tab-' + codes[index]]);
+            app.tabs.forEach((tab, i) => {
+                assert.equal(tab.attributes['aria-selected'], i === index ? 'true' : 'false');
+                assert.equal(tab.attributes.tabindex, i === index ? '0' : '-1');
+                assert.equal(app.nodes['lang-panel-' + codes[i]].classList.contains('hidden'), i !== index);
+            });
+        }
+        for (const shiftKey of [false, true]) {
+            app.window.portfolioHandleTabKeydown({ key: 'Tab', shiftKey, preventDefault() { assert.fail('Tab must stay native'); } }, codes[index]);
+        }
+    });
+}

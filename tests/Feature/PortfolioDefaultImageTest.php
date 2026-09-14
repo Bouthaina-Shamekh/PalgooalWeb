@@ -41,6 +41,8 @@ class PortfolioDefaultImageTest extends TestCase
         Schema::create('media', function (Blueprint $table) {
             $table->id();
             $table->string('file_path');
+            $table->string('file_type')->default('image');
+            $table->string('mime_type')->nullable();
             $table->timestamps();
         });
         Schema::create('portfolios', function (Blueprint $table) {
@@ -69,6 +71,7 @@ class PortfolioDefaultImageTest extends TestCase
             $table->id();
             $table->string('code');
             $table->string('native');
+            $table->boolean('is_rtl')->default(false);
             $table->boolean('is_active');
             $table->timestamps();
         });
@@ -115,6 +118,149 @@ class PortfolioDefaultImageTest extends TestCase
         $this->assertSame($media->id, (int) $portfolio->default_image_media_id);
         $this->assertSame($media->file_path, $portfolio->default_image);
         $this->assertSame('Updated title', $portfolio->translations->sole()->title);
+    }
+
+    public function test_unrelated_edit_preserves_an_existing_legacy_status(): void
+    {
+        $portfolio = $this->portfolio('');
+        $portfolio->translations()->sole()->update(['status' => 'Archived legacy']);
+        $field = $this->statusField($portfolio->fresh(), 'Archived legacy');
+        $this->assertSame('Archived legacy', $field['value']);
+        $this->assertStringContainsString('Legacy', $field['label']);
+        $request = $this->request(null);
+        $translations = $request->input('translations');
+        $translations[0]['status'] = 'Archived legacy';
+        $request->merge(['translations' => $translations]);
+
+        $this->controller()->update($request, $portfolio->id);
+
+        $this->assertSame('Archived legacy', $portfolio->translations()->sole()->fresh()->status);
+    }
+
+    public function test_canonical_status_can_be_preserved_and_intentionally_changed(): void
+    {
+        $portfolio = $this->portfolio('');
+        $portfolio->translations()->sole()->update(['status' => 'Active']);
+
+        foreach (['Active', 'Completed'] as $status) {
+            $request = $this->request(null);
+            $translations = $request->input('translations');
+            $translations[0]['status'] = $status;
+            $request->merge(['translations' => $translations]);
+            $this->controller()->update($request, $portfolio->id);
+            $this->assertSame($status, $portfolio->translations()->sole()->fresh()->status);
+        }
+    }
+
+    public function test_legacy_status_can_be_replaced_with_a_supported_status(): void
+    {
+        $portfolio = $this->portfolio('');
+        $portfolio->translations()->sole()->update(['status' => 'Archived legacy']);
+        $request = $this->request(null);
+        $translations = $request->input('translations');
+        $translations[0]['status'] = 'Inactive';
+        $request->merge(['translations' => $translations]);
+
+        $this->controller()->update($request, $portfolio->id);
+
+        $this->assertSame('Inactive', $portfolio->translations()->sole()->fresh()->status);
+    }
+
+    public function test_forged_unsupported_status_is_rejected_on_create_and_update(): void
+    {
+        $portfolio = $this->portfolio('');
+        $portfolio->translations()->sole()->update(['status' => 'Archived legacy']);
+
+        foreach ([null, $portfolio] as $editing) {
+            $request = $this->request(null);
+            $translations = $request->input('translations');
+            $translations[0]['status'] = 'Forged new value';
+            $request->merge(['translations' => $translations]);
+            try {
+                $editing
+                    ? $this->controller()->update($request, $editing->id)
+                    : $this->controller()->store($request);
+                $this->fail('A new unsupported status must fail validation.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('translations.0.status', $exception->errors());
+            }
+        }
+        $this->assertSame('Archived legacy', $portfolio->translations()->sole()->fresh()->status);
+    }
+
+    public function test_status_old_input_and_legacy_value_survive_unrelated_validation_failure(): void
+    {
+        $portfolio = $this->portfolio('');
+        $portfolio->translations()->sole()->update(['status' => 'Archived legacy']);
+        $request = $this->request(null);
+        $translations = $request->input('translations');
+        $translations[0]['status'] = 'Archived legacy';
+        $request->merge(['translations' => $translations, 'delivery_date' => null]);
+
+        try {
+            $this->controller()->update($request, $portfolio->id);
+            $this->fail('Expected an unrelated validation error.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('delivery_date', $exception->errors());
+            $this->assertArrayNotHasKey('translations.0.status', $exception->errors());
+            $this->app[\Illuminate\Contracts\Debug\ExceptionHandler::class]->render($request, $exception);
+        }
+
+        $this->assertSame('Archived legacy', old('translations.0.status'));
+        $this->assertSame('Archived legacy', $this->statusField($portfolio->fresh(), 'Archived legacy')['value']);
+        $this->assertSame('Archived legacy', $portfolio->translations()->sole()->fresh()->status);
+    }
+
+    public function test_omitted_status_does_not_clear_a_legacy_value_during_update(): void
+    {
+        $portfolio = $this->portfolio('');
+        $portfolio->translations()->sole()->update(['status' => 'Archived legacy']);
+
+        $this->controller()->update($this->request(null), $portfolio->id);
+
+        $this->assertSame('Archived legacy', $portfolio->translations()->sole()->fresh()->status);
+    }
+
+    public function test_supported_status_old_input_is_restored_after_validation_failure(): void
+    {
+        $portfolio = $this->portfolio('');
+        $portfolio->translations()->sole()->update(['status' => 'Active']);
+        $request = $this->request(null);
+        $translations = $request->input('translations');
+        $translations[0]['status'] = 'Completed';
+        $request->merge(['translations' => $translations, 'delivery_date' => null]);
+
+        try {
+            $this->controller()->update($request, $portfolio->id);
+            $this->fail('Expected an unrelated validation error.');
+        } catch (ValidationException $exception) {
+            $this->app[\Illuminate\Contracts\Debug\ExceptionHandler::class]->render($request, $exception);
+        }
+
+        $this->assertSame('Completed', $this->statusField($portfolio->fresh(), 'Active')['value']);
+        $this->assertSame('Active', $portfolio->translations()->sole()->fresh()->status);
+    }
+
+    public function test_index_uses_semantic_status_styles_and_neutral_legacy_style(): void
+    {
+        $statuses = ['Active', 'Inactive', 'Completed', 'Archived legacy'];
+        foreach ($statuses as $index => $status) {
+            $portfolio = Portfolio::create([
+                'order' => $index, 'delivery_date' => '2026-09-13', 'slug' => 'status-'.$index,
+            ]);
+            $portfolio->translations()->create([
+                'locale' => 'en', 'title' => 'Portfolio '.$index, 'type' => 'Website', 'status' => $status,
+            ]);
+        }
+        $view = $this->controller()->index(Request::create('/admin/portfolios', 'GET'));
+        $data = $view->getData();
+        $template = str_replace(['<x-dashboard-layout>', '</x-dashboard-layout>'], '', file_get_contents(resource_path('views/dashboard/portfolios/index.blade.php')));
+        $html = \Illuminate\Support\Facades\Blade::render($template, $data);
+
+        $this->assertMatchesRegularExpression('/bg-emerald-50[^>]*>\s*Active/s', $html);
+        $this->assertMatchesRegularExpression('/bg-gray-100[^>]*>\s*Inactive/s', $html);
+        $this->assertMatchesRegularExpression('/bg-blue-50[^>]*>\s*Completed/s', $html);
+        $this->assertMatchesRegularExpression('/border-gray-200[^>]*title="[^"]+"[^>]*>\s*Archived legacy/s', $html);
     }
 
     #[DataProvider('legacyMediaMatches')]
@@ -296,6 +442,7 @@ class PortfolioDefaultImageTest extends TestCase
 
     public function test_gallery_persistence_keeps_unique_ids_in_selection_order(): void
     {
+        $this->seedGalleryMedia();
         $this->controller()->store($this->galleryRequest('12,7,12'));
         $portfolio = Portfolio::sole();
         $this->assertSame('[12,7]', $portfolio->getRawOriginal('images'));
@@ -424,6 +571,7 @@ class PortfolioDefaultImageTest extends TestCase
         $html = view('dashboard.portfolios._form', [
             'portfolio' => $portfolio, 'portfolioTranslations' => [],
             'languages' => Language::all(), 'typeSuggestions' => [], 'statusSuggestions' => [],
+            'portfolioMedia' => Media::query()->get()->keyBy('id'),
         ])->render();
         $this->assertStringContainsString('id="portfolio-save-error"', $html);
         $this->assertStringContainsString('role="alert"', $html);
@@ -463,6 +611,91 @@ class PortfolioDefaultImageTest extends TestCase
         $this->assertStringContainsString('tabindex="-1"', $html);
     }
 
+    public function test_language_panels_derive_direction_dynamically_for_any_language_count(): void
+    {
+        Language::query()->where('code', 'en')->update(['is_rtl' => false]);
+        Language::create(['code' => 'fa', 'native' => 'فارسی', 'is_rtl' => true, 'is_active' => true]);
+        Language::create(['code' => 'fr', 'native' => 'Français', 'is_rtl' => false, 'is_active' => true]);
+        $languages = Language::query()->orderBy('id')->get();
+
+        $html = view('dashboard.portfolios._form', [
+            'portfolio' => new Portfolio(), 'portfolioTranslations' => [],
+            'languages' => $languages, 'typeSuggestions' => [],
+            'statusSuggestions' => ['en' => [], 'fa' => [], 'fr' => []],
+        ])->render();
+        $document = new DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        try {
+            $document->loadHTML('<?xml encoding="UTF-8">'.$html);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+        $xpath = new DOMXPath($document);
+
+        $this->assertSame(3, $xpath->query('//*[@role="tab"]')->length);
+        $this->assertSame(3, $xpath->query('//*[@role="tabpanel"]')->length);
+        foreach (['en' => 'ltr', 'fa' => 'rtl', 'fr' => 'ltr'] as $code => $direction) {
+            $panel = $xpath->query('//*[@id="lang-panel-'.$code.'"]')->item(0);
+            $this->assertSame($code, $panel->getAttribute('lang'));
+            $this->assertSame($direction, $panel->getAttribute('dir'));
+            $this->assertSame('', $xpath->query('.//*[@id="title_'.$code.'"]', $panel)->item(0)->getAttribute('dir'));
+            $this->assertSame('ltr', $xpath->query('.//*[@id="link_'.$code.'"]', $panel)->item(0)->getAttribute('dir'));
+        }
+    }
+
+    #[DataProvider('dashboardLanguageDirections')]
+    public function test_media_picker_uses_dashboard_locale_direction_and_translated_runtime_data(string $locale, bool $isRtl): void
+    {
+        Language::create(['code' => $locale, 'native' => strtoupper($locale), 'is_rtl' => $isRtl, 'is_active' => true]);
+        $title = $locale.' picker title "quoted" <b>text</b>';
+        $loadMore = $locale.' load more';
+        DB::table('translation_values')->insert([
+            ['key' => 'dashboard.Media_Picker_Title', 'locale' => $locale, 'value' => $title],
+            ['key' => 'dashboard.Media_Picker_Load_More', 'locale' => $locale, 'value' => $loadMore],
+        ]);
+        app()->setLocale($locale);
+
+        $html = view('dashboard.partials.media-picker')->render();
+        $document = new DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        try {
+            $document->loadHTML('<?xml encoding="UTF-8">'.$html);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+        $xpath = new DOMXPath($document);
+        $modal = $xpath->query('//*[@id="media-picker-modal"]')->item(0);
+
+        $this->assertSame($locale, $modal->getAttribute('lang'));
+        $this->assertSame($isRtl ? 'rtl' : 'ltr', $modal->getAttribute('dir'));
+        $this->assertSame($loadMore, $modal->getAttribute('data-load-more-label'));
+        $this->assertSame($title, trim($xpath->query('//*[@id="media-picker-title"]')->item(0)->textContent));
+        $this->assertSame(0, $xpath->query('//*[@id="media-picker-title"]//b')->length);
+
+        $contentLanguage = Language::create([
+            'code' => $isRtl ? 'es' : 'fa',
+            'native' => $isRtl ? 'Español' : 'فارسی',
+            'is_rtl' => ! $isRtl,
+            'is_active' => true,
+        ]);
+        $formHtml = view('dashboard.portfolios._form', [
+            'portfolio' => new Portfolio(), 'portfolioTranslations' => [],
+            'languages' => collect([$contentLanguage]), 'typeSuggestions' => [],
+            'statusSuggestions' => [$contentLanguage->code => []],
+        ])->render();
+        $this->assertStringContainsString(
+            'lang="'.$contentLanguage->code.'" dir="'.($isRtl ? 'ltr' : 'rtl').'"',
+            preg_replace('/\s+/', ' ', $formHtml)
+        );
+    }
+
+    public static function dashboardLanguageDirections(): array
+    {
+        return ['RTL dashboard locale' => ['ur', true], 'LTR dashboard locale' => ['de', false]];
+    }
+
     public function test_shared_dashboard_head_renders_one_zoomable_viewport(): void
     {
         $this->withoutVite();
@@ -470,6 +703,207 @@ class PortfolioDefaultImageTest extends TestCase
         preg_match_all('/<meta\s+name="viewport"\s+content="([^"]*)"/i', $html, $matches);
         $this->assertSame(['width=device-width, initial-scale=1'], $matches[1]);
         $this->assertDoesNotMatchRegularExpression('/user-scalable|maximum-scale|minimum-scale/i', $html);
+    }
+
+    public function test_portfolio_error_relationships_are_unique_and_resolvable(): void
+    {
+        Language::create(['code' => 'ar', 'native' => 'العربية', 'is_active' => true]);
+        $messages = [];
+        foreach (['order', 'delivery_date', 'implementation_period_days', 'client', 'default_image', 'images'] as $field) {
+            $messages[$field] = 'Invalid '.$field;
+        }
+        foreach ([0, 1] as $index) {
+            foreach (['title', 'type', 'materials', 'link', 'status', 'description'] as $field) {
+                $messages['translations.'.$index.'.'.$field] = 'Invalid '.$field;
+            }
+        }
+        foreach ([true, false] as $withErrors) {
+            $bag = new ViewErrorBag();
+            $bag->put('default', new \Illuminate\Support\MessageBag($withErrors ? $messages : []));
+            $this->app['view']->share('errors', $bag);
+            $html = view('dashboard.portfolios._form', [
+                'portfolio' => new Portfolio(), 'portfolioTranslations' => [],
+                'languages' => Language::all(), 'typeSuggestions' => [], 'statusSuggestions' => [],
+            ])->render();
+            $html .= view('dashboard.partials.media-picker')->render();
+            $document = new DOMDocument();
+            $previous = libxml_use_internal_errors(true);
+            try { $document->loadHTML('<?xml encoding="UTF-8">'.$html); }
+            finally { libxml_clear_errors(); libxml_use_internal_errors($previous); }
+            $xpath = new DOMXPath($document);
+            $ids = [];
+            foreach ($xpath->query('//*[@id]') as $element) {
+                $id = $element->getAttribute('id');
+                $this->assertArrayNotHasKey($id, $ids);
+                $ids[$id] = true;
+            }
+            foreach (['aria-describedby', 'aria-controls', 'aria-labelledby'] as $attribute) {
+                foreach ($xpath->query('//*[@'.$attribute.']') as $element) {
+                    foreach (preg_split('/\s+/', trim($element->getAttribute($attribute))) as $id) {
+                        $this->assertArrayHasKey($id, $ids, $attribute.' must reference a rendered ID');
+                    }
+                }
+            }
+            $this->assertSame($withErrors ? 18 : 0, $xpath->query('//*[@aria-invalid="true"]')->length);
+            $this->assertSame(2, $xpath->query('//*[@role="combobox"][@aria-expanded="false"]')->length);
+            $this->assertSame(2, $xpath->query('//*[@role="listbox"]')->length);
+            $this->assertSame(5, $xpath->query('//*[@role="status"]')->length);
+        }
+    }
+
+    public function test_portfolio_index_controls_have_names_independent_of_placeholders(): void
+    {
+        // Render the actual page content without unrelated dashboard shell dependencies.
+        $template = str_replace(['<x-dashboard-layout>', '</x-dashboard-layout>'], '', file_get_contents(resource_path('views/dashboard/portfolios/index.blade.php')));
+        $html = \Illuminate\Support\Facades\Blade::render($template, [
+            'portfolios' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 10),
+            'search' => '', 'perPage' => 10,
+        ]);
+        $document = new DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        try { $document->loadHTML('<?xml encoding="UTF-8">'.$html); }
+        finally { libxml_clear_errors(); libxml_use_internal_errors($previous); }
+        $xpath = new DOMXPath($document);
+        $this->assertNotSame('', $xpath->query('//input[@name="search"]')->item(0)->getAttribute('aria-label'));
+        $select = $xpath->query('//select[@name="per_page"]')->item(0);
+        $this->assertSame('portfolio-per-page', $select->getAttribute('id'));
+        $this->assertSame(1, $xpath->query('//label[@for="portfolio-per-page"]')->length);
+    }
+
+    public function test_portfolio_delete_confirmation_is_rendered_as_escaped_data_for_each_form(): void
+    {
+        $message = <<<'TEXT'
+Don't delete "Alpha" <img src=x onerror=alert(1)> C:\portfolio\'quoted'
+TEXT;
+        DB::table('translation_values')->insert([
+            'key' => 'dashboard.Confirm_Delete_Portfolio',
+            'locale' => app()->getLocale(),
+            'value' => $message,
+        ]);
+        cache()->forget('translation.'.app()->getLocale().'.dashboard.Confirm_Delete_Portfolio');
+        $first = $this->portfolio('');
+        $second = Portfolio::create([
+            'default_image' => null, 'images' => [], 'order' => 1,
+            'delivery_date' => '2026-09-13', 'slug' => 'second-portfolio',
+        ]);
+        $second->translations()->create([
+            'locale' => 'en', 'title' => 'Second', 'type' => 'Website', 'materials' => 'Laravel',
+        ]);
+        $source = file_get_contents(resource_path('views/dashboard/portfolios/index.blade.php'));
+        preg_match('/@can\(\'delete\', \$portfolio\)([\s\S]*?)@endcan/', $source, $deleteBlock);
+        $this->assertArrayHasKey(1, $deleteBlock);
+        $html = collect([$first, $second])
+            ->map(fn (Portfolio $portfolio) => \Illuminate\Support\Facades\Blade::render($deleteBlock[1], compact('portfolio')))
+            ->implode('');
+
+        $this->assertStringNotContainsString('onsubmit=', $html);
+        $this->assertStringNotContainsString("confirm('{{", $html);
+        $this->assertStringContainsString('&lt;img', $html);
+        $document = new DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        try { $document->loadHTML('<?xml encoding="UTF-8">'.$html); }
+        finally { libxml_clear_errors(); libxml_use_internal_errors($previous); }
+        $xpath = new DOMXPath($document);
+        $forms = $xpath->query('//form[contains(concat(" ", normalize-space(@class), " "), " portfolio-delete-form ")]');
+        $this->assertCount(2, $forms);
+        foreach ([$first, $second] as $index => $portfolio) {
+            $form = $forms->item($index);
+            $this->assertSame($message, $form->getAttribute('data-confirm'));
+            $this->assertSame(route('dashboard.portfolios.destroy', $portfolio->id), $form->getAttribute('action'));
+            $this->assertSame('POST', $form->getAttribute('method'));
+            $this->assertSame('DELETE', $xpath->query('.//input[@name="_method"]', $form)->item(0)->getAttribute('value'));
+            $this->assertSame(1, $xpath->query('.//input[@name="_token"]', $form)->length);
+            $this->assertSame(1, $xpath->query('.//button[@type="submit"]', $form)->length);
+        }
+        $this->assertStringContainsString('@csrf', $deleteBlock[1]);
+    }
+
+    public function test_explicit_legacy_removal_survives_validation_and_clears_only_when_submitted(): void
+    {
+        $portfolio = $this->portfolio('legacy/image.png');
+        $request = $this->request(null);
+        $request->merge(['remove_default_image' => '1', 'delivery_date' => null]);
+        try {
+            $this->controller()->update($request, $portfolio->id);
+            $this->fail('Expected date validation error');
+        } catch (ValidationException $exception) {
+            $this->app[\Illuminate\Contracts\Debug\ExceptionHandler::class]->render($request, $exception);
+        }
+        $this->assertSame('1', old('remove_default_image'));
+        $this->assertSame('legacy/image.png', $portfolio->fresh()->default_image);
+        $html = view('dashboard.portfolios._form', [
+            'portfolio' => $portfolio, 'portfolioTranslations' => [],
+            'languages' => Language::all(), 'typeSuggestions' => [], 'statusSuggestions' => [],
+            'portfolioMedia' => Media::query()->get()->keyBy('id'),
+        ])->render();
+        $this->assertStringNotContainsString(asset('storage/legacy/image.png'), $html);
+        $this->assertStringContainsString('data-remove-input="portfolio-remove-default-image"', $html);
+        $request = $this->request(null);
+        $request->merge(['remove_default_image' => old('remove_default_image')]);
+        $this->controller()->update($request, $portfolio->id);
+        $this->assertNull($portfolio->fresh()->default_image);
+        $this->assertNull($portfolio->fresh()->default_image_media_id);
+    }
+
+    public function test_explicit_empty_gallery_can_replace_legacy_paths_with_single_encoded_empty_array(): void
+    {
+        $portfolio = $this->portfolio('legacy/default.png');
+        $portfolio->update(['images' => ['legacy/one.png', 'legacy/two.png']]);
+        $this->controller()->update($this->galleryRequest(''), $portfolio->id);
+        $this->assertSame('[]', $portfolio->fresh()->getRawOriginal('images'));
+        $this->assertSame([], $portfolio->fresh()->images);
+        $this->assertSame('legacy/default.png', $portfolio->fresh()->default_image);
+    }
+
+    #[DataProvider('invalidPortfolioMedia')]
+    public function test_non_image_or_missing_media_rejects_the_whole_submission(string $field, string $type, bool $editing): void
+    {
+        $this->seedGalleryMedia();
+        if ($type !== 'missing') {
+            Media::create(['id' => 19, 'file_path' => 'misleading.png', 'file_type' => $type, 'mime_type' => $type === 'video' ? 'video/mp4' : 'application/pdf']);
+            // ID is guarded by the model, so identify the newly created record explicitly.
+            $invalidId = Media::where('file_type', $type)->value('id');
+        } else {
+            $invalidId = 999;
+        }
+        $portfolio = $editing ? $this->portfolio('legacy/keep.png') : null;
+        if ($portfolio) $portfolio->update(['images' => [7, 12]]);
+        $request = $this->galleryRequest('7,12');
+        $value = $field === 'images' ? '7,12,'.$invalidId : (string) $invalidId;
+        $request->merge([$field => $value]);
+        try {
+            $editing ? $this->controller()->update($request, $portfolio->id) : $this->controller()->store($request);
+            $this->fail('Forged invalid media must fail server validation.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey($field, $exception->errors());
+            $this->app[\Illuminate\Contracts\Debug\ExceptionHandler::class]->render($request, $exception);
+            $this->assertSame($value, old($field));
+            $this->app['view']->share('errors', $this->app['session']->driver()->get('errors'));
+        }
+        $this->assertSame($editing ? 1 : 0, Portfolio::count());
+        if ($portfolio) {
+            $this->assertSame([7, 12], $portfolio->fresh()->images);
+            $this->assertSame('legacy/keep.png', $portfolio->fresh()->default_image);
+        }
+        $html = view('dashboard.portfolios._form', [
+            'portfolio' => $portfolio ?? new Portfolio(), 'portfolioTranslations' => [],
+            'languages' => Language::all(), 'typeSuggestions' => [], 'statusSuggestions' => [],
+        ])->render();
+        $this->assertStringContainsString('aria-invalid="true"', $html);
+        $this->assertStringContainsString('aria-describedby="'.$field.'_picker_error"', $html);
+        $this->assertStringContainsString('id="'.$field.'_picker_error"', $html);
+        $this->assertSame(2, substr_count($html, 'data-accepted-type="image"'));
+    }
+
+    public static function invalidPortfolioMedia(): array
+    {
+        $cases = [];
+        foreach (['default_image', 'images'] as $field) {
+            foreach (['missing', 'video', 'document', 'other'] as $type) {
+                foreach ([false, true] as $editing) $cases[$field.' '.$type.' '.($editing ? 'update' : 'create')] = [$field, $type, $editing];
+            }
+        }
+        return $cases;
     }
 
     private function controller(): PortfolioController
@@ -632,6 +1066,157 @@ class PortfolioDefaultImageTest extends TestCase
         $this->assertSame(0, Portfolio::count());
     }
 
+    public function test_gallery_preview_reconstructs_unordered_query_results_in_stored_id_order(): void
+    {
+        $this->seedOrderedGalleryMedia();
+        $requested = [12, 3, 9];
+        $this->assertSame([3, 9, 12], Media::whereIn('id', $requested)->get()->pluck('id')->all());
+
+        $portfolio = $this->portfolio('');
+        $portfolio->update(['images' => $requested]);
+
+        $expected = array_map(fn ($id) => asset("storage/media/$id.png"), $requested);
+        $this->assertSame($expected, $this->galleryField($portfolio)['previews']);
+        $this->assertSame($expected, $portfolio->fresh()->resolvedGalleryImages());
+    }
+
+    public function test_index_eager_loading_removes_default_media_n_plus_one_queries(): void
+    {
+        foreach ([3, 9, 12] as $id) {
+            $media = Media::create(['id' => $id, 'file_path' => "media/$id.png"]);
+            $portfolio = Portfolio::create([
+                'default_image_media_id' => $media->id, 'default_image' => $media->file_path,
+                'images' => [], 'order' => $id, 'delivery_date' => '2026-09-13', 'slug' => "portfolio-$id",
+            ]);
+            $portfolio->translations()->create(['locale' => 'en', 'title' => "Portfolio $id"]);
+        }
+
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        $before = Portfolio::with('translations')->paginate(10);
+        foreach ($before as $portfolio) {
+            $portfolio->resolvedDefaultImagePath();
+        }
+        $beforeCount = count(DB::getQueryLog());
+
+        DB::flushQueryLog();
+        $after = Portfolio::with(['translations', 'defaultImageMedia'])->paginate(10);
+        foreach ($after as $portfolio) {
+            $portfolio->resolvedDefaultImagePath();
+        }
+        $afterCount = count(DB::getQueryLog());
+
+        $this->assertSame(6, $beforeCount);
+        $this->assertSame(4, $afterCount);
+    }
+
+    public function test_edit_prepares_default_and_gallery_media_in_one_query_and_create_skips_it(): void
+    {
+        $this->seedGalleryMedia();
+        $portfolio = $this->portfolio('media/7.png', 7);
+        $portfolio->update(['images' => [12, 7]]);
+
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        $editView = $this->controller()->edit($portfolio->id);
+        $editQueries = DB::getQueryLog();
+
+        $this->assertCount(5, $editQueries);
+        $this->assertSame([7, 12], $editView->getData()['portfolioMedia']->keys()->sort()->values()->all());
+        $this->assertCount(1, array_filter($editQueries, fn ($query) => str_contains(strtolower($query['query']), 'from "media"')));
+
+        DB::flushQueryLog();
+        $createView = $this->controller()->create();
+        $createQueries = DB::getQueryLog();
+
+        $this->assertCount(2, $createQueries);
+        $this->assertTrue($createView->getData()['portfolioMedia']->isEmpty());
+        $this->assertCount(0, array_filter($createQueries, fn ($query) => str_contains(strtolower($query['query']), 'from "media"')));
+    }
+
+    public function test_gallery_preview_preserves_a_different_stored_order(): void
+    {
+        $this->seedOrderedGalleryMedia();
+        $portfolio = $this->portfolio('');
+        $portfolio->update(['images' => [9, 12, 3]]);
+
+        $expected = [9, 12, 3];
+        $this->assertSame(
+            array_map(fn ($id) => asset("storage/media/$id.png"), $expected),
+            $this->galleryField($portfolio)['previews']
+        );
+    }
+
+    public function test_gallery_preview_skips_missing_media_without_reordering_survivors(): void
+    {
+        DB::table('media')->insert([
+            ['id' => 9, 'file_path' => 'media/9.png'],
+            ['id' => 12, 'file_path' => 'media/12.png'],
+        ]);
+        $portfolio = $this->portfolio('');
+        $portfolio->update(['images' => [12, 3, 9]]);
+
+        $expected = [asset('storage/media/12.png'), asset('storage/media/9.png')];
+        $this->assertSame($expected, $this->galleryField($portfolio)['previews']);
+        $this->assertSame($expected, $portfolio->fresh()->resolvedGalleryImages());
+    }
+
+    public function test_gallery_preview_deduplicates_by_first_occurrence_and_restores_old_input_order(): void
+    {
+        $this->seedOrderedGalleryMedia();
+        $portfolio = $this->portfolio('');
+        $portfolio->update(['images' => [3, 9]]);
+
+        $this->app['session']->driver()->flashInput(['images' => '12,3,12,9']);
+        $form = $this->galleryField($portfolio);
+
+        $this->assertSame('12,3,9', $form['value']);
+        $this->assertSame([
+            asset('storage/media/12.png'),
+            asset('storage/media/3.png'),
+            asset('storage/media/9.png'),
+        ], $form['previews']);
+    }
+
+    public function test_create_and_update_success_preserve_whitelisted_list_context(): void
+    {
+        $create = $this->request(null);
+        $create->merge(['return_search' => 'website', 'return_page' => 3, 'return_per_page' => 25]);
+        $createdResponse = $this->controller()->store($create);
+        $this->assertSame(
+            route('dashboard.portfolios.index', ['search' => 'website', 'page' => 3, 'per_page' => 25]),
+            $createdResponse->getTargetUrl()
+        );
+
+        $portfolio = Portfolio::sole();
+        $update = $this->request(null);
+        $update->merge(['return_search' => 'website', 'return_page' => 4, 'return_per_page' => 50]);
+        $updatedResponse = $this->controller()->update($update, $portfolio->id);
+        $this->assertSame(
+            route('dashboard.portfolios.index', ['search' => 'website', 'page' => 4, 'per_page' => 50]),
+            $updatedResponse->getTargetUrl()
+        );
+    }
+
+    public function test_arbitrary_return_url_and_unsupported_context_are_not_propagated(): void
+    {
+        $request = $this->request(null);
+        $request->merge(['return_url' => 'https://evil.example', 'unexpected' => 'value']);
+        $response = $this->controller()->store($request);
+
+        $this->assertSame(route('dashboard.portfolios.index'), $response->getTargetUrl());
+        $this->assertStringNotContainsString('evil.example', $response->getTargetUrl());
+    }
+
+    private function seedOrderedGalleryMedia(): void
+    {
+        DB::table('media')->insert([
+            ['id' => 3, 'file_path' => 'media/3.png'],
+            ['id' => 9, 'file_path' => 'media/9.png'],
+            ['id' => 12, 'file_path' => 'media/12.png'],
+        ]);
+    }
+
     private function seedGalleryMedia(): void
     {
         DB::table('media')->insert([
@@ -670,6 +1255,7 @@ class PortfolioDefaultImageTest extends TestCase
         $html = view('dashboard.portfolios._form', [
             'portfolio' => $portfolio, 'portfolioTranslations' => [],
             'languages' => Language::all(), 'typeSuggestions' => [], 'statusSuggestions' => [],
+            'portfolioMedia' => Media::query()->get()->keyBy('id'),
         ])->render();
         $document = new DOMDocument();
         $previous = libxml_use_internal_errors(true);
@@ -692,6 +1278,35 @@ class PortfolioDefaultImageTest extends TestCase
             'value' => $input->getAttribute('value'),
             'previews' => $previews,
             'blocked' => $xpath->query('//button[@id="portfolio-save"]')->item(0)->hasAttribute('disabled'),
+        ];
+    }
+
+    private function statusField(Portfolio $portfolio, string $storedStatus): array
+    {
+        $html = view('dashboard.portfolios._form', [
+            'portfolio' => $portfolio,
+            'portfolioTranslations' => ['en' => [
+                'locale' => 'en', 'title' => 'Original title', 'type' => 'Website',
+                'materials' => 'Laravel', 'status' => $storedStatus,
+            ]],
+            'languages' => Language::all(),
+            'typeSuggestions' => [],
+            'statusSuggestions' => ['en' => ['Active', 'Inactive', 'Completed']],
+        ])->render();
+        $document = new DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        try {
+            $document->loadHTML('<?xml encoding="UTF-8">'.$html);
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+        $xpath = new DOMXPath($document);
+        $option = $xpath->query('//select[@id="status_en"]/option[@selected]')->item(0);
+
+        return [
+            'value' => $option?->getAttribute('value') ?? '',
+            'label' => trim($option?->textContent ?? ''),
         ];
     }
 
@@ -730,6 +1345,7 @@ class PortfolioDefaultImageTest extends TestCase
         $html = view('dashboard.portfolios._form', [
             'portfolio' => $portfolio, 'portfolioTranslations' => [],
             'languages' => Language::all(), 'typeSuggestions' => [], 'statusSuggestions' => [],
+            'portfolioMedia' => Media::query()->get()->keyBy('id'),
         ])->render();
         $document = new DOMDocument();
         $previous = libxml_use_internal_errors(true);

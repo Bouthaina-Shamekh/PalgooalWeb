@@ -7,7 +7,10 @@ use App\Http\Controllers\Front\PageController;
 use App\Models\DomainProvider;
 use App\Services\Domains\DomainAvailabilityService;
 use App\Services\Domains\DomainPricingService;
+use App\Services\Domains\Exceptions\InvalidPremiumQuoteException;
+use App\Services\Domains\PremiumQuoteManager;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class DomainSearchController extends Controller
 {
@@ -21,6 +24,12 @@ class DomainSearchController extends Controller
     protected function availability(): DomainAvailabilityService
     {
         return app(DomainAvailabilityService::class);
+    }
+
+    /** يحلّ مُصدِر Trusted Premium Quote الموثوق (Step 1) — لا يُستخدم إلا من هذا الController في هذه المرحلة */
+    protected function premiumQuotes(): PremiumQuoteManager
+    {
+        return app(PremiumQuoteManager::class);
     }
 
     /**
@@ -69,13 +78,27 @@ class DomainSearchController extends Controller
         // $bestPriceByTld يبقى المصدر الوحيد للسعر المعروض، كما هو دون أي تغيير.
         $providersByTld = $this->pricing()->providersForTlds($tlds);
         $providerGroups = [];
+        // Premium Trusted Quote (Step 2) — domain_tld_id الموثوق لكل دومين، مأخوذ حصرياً من نفس
+        // المصدر (best/fallback) الذي اختار فعلياً providerId هذا الدومين، بنفس
+        // أسبقية الاختيار أعلاه حرفياً. لا يُعاد اكتشافه لاحقاً بعد استجابة التوافر.
+        $domainTldIdByDomain = [];
 
         foreach ($domains as $domain) {
             $tld = strtolower(pathinfo($domain, PATHINFO_EXTENSION));
-            $providerId = (int) ($bestPriceByTld[$tld]['provider_id'] ?? $providersByTld[$tld]['provider_id'] ?? 0);
+            $bestForTld = $bestPriceByTld[$tld] ?? null;
+            $fallbackForTld = $providersByTld[$tld] ?? null;
+            $providerId = (int) ($bestForTld['provider_id'] ?? $fallbackForTld['provider_id'] ?? 0);
 
             if ($providerId > 0) {
                 $providerGroups[$providerId][] = $domain;
+
+                if ($bestForTld !== null && (int) $bestForTld['provider_id'] === $providerId) {
+                    $domainTldIdByDomain[strtolower($domain)] = (int) ($bestForTld['domain_tld_id'] ?? 0) ?: null;
+                } elseif ($fallbackForTld !== null && (int) $fallbackForTld['provider_id'] === $providerId) {
+                    $domainTldIdByDomain[strtolower($domain)] = (int) ($fallbackForTld['domain_tld_id'] ?? 0) ?: null;
+                } else {
+                    $domainTldIdByDomain[strtolower($domain)] = null;
+                }
             }
         }
 
@@ -86,6 +109,10 @@ class DomainSearchController extends Controller
             ->keyBy('id');
         $checkResults = [];
         $checkMessage = 'تم.';
+        // Premium Trusted Quote (Step 2) — سياق المزوّد الفعلي الذي أعاد كل نتيجة، مأخوذ من نفس
+        // مجموعة providerGroups (المصدر الوحيد الموثوق)، وليس بإعادة اكتشافه من استجابة
+        // التوافر. يُستخدم داخلياً فقط لإصدار Premium Quote — لا يُكشف إطلاقاً في استجابة JSON العامة.
+        $domainProviderContext = [];
 
         foreach ($providerGroups as $providerId => $providerDomains) {
             $provider = $providers->get($providerId);
@@ -94,6 +121,15 @@ class DomainSearchController extends Controller
                 $check = ['reason' => 'invalid_provider', 'message' => 'تعذّر استخدام مزوّد السعر المحدد.'];
             } else {
                 $check = $this->availability()->checkDomains($providerDomains, $provider);
+
+                foreach ($providerDomains as $d) {
+                    $domainProviderContext[strtolower($d)] = [
+                        'provider_id'   => $providerId,
+                        'provider_type' => strtolower((string) $provider->type),
+                        'provider_mode' => strtolower((string) $provider->mode),
+                        'domain_tld_id' => $domainTldIdByDomain[strtolower($d)] ?? null,
+                    ];
+                }
             }
 
             if (!($check['ok'] ?? false)) {
@@ -174,6 +210,25 @@ class DomainSearchController extends Controller
             $sellable = $isAvailable === true && $price !== null;
             $pricingStatus = $isAvailable === true ? ($price !== null ? 'ok' : 'missing_sale') : null;
 
+            // Premium Trusted Quote (Step 2) — يُصدر فقط لدومين بريميوم متاح فعلياً وموثوق المصدر
+            // بالكامل (سياق مزوّد + domain_tld_id من نفس مجموعة providerGroups، لا من الطلب ولا
+            // بإعادة اكتشاف لاحقة). فشل الإصدار (سياق ناقص/غير موثوق) لا يُسقط الطلب
+            // بالكامل ولا يُعيد سعر الكتالوج العادي (ممنوع fallback) — فقط يجعل هذا الدومين
+            // تحديداً غير قابل للبيع (sellable=false)، مع بقاء السعر المعروض كما هو (بيانات واجهة فقط).
+            $quoteToken = null;
+            if ($isAvailable === true && $availRow['is_premium'] && $availRow['premium_price'] !== null) {
+                $quoteToken = $this->issuePremiumQuoteToken(
+                    $domain,
+                    $availRow['premium_price'],
+                    $availRow['premium_currency'],
+                    $domainProviderContext[$key] ?? null
+                );
+
+                if ($quoteToken === null) {
+                    $sellable = false;
+                }
+            }
+
             $results[] = [
                 'domain'     => $domain,
                 'available'  => $isAvailable,
@@ -185,6 +240,7 @@ class DomainSearchController extends Controller
                 'currency'   => $price !== null ? ($currency ?? 'USD') : null,
                 'sellable'       => $sellable,
                 'pricing_status' => $pricingStatus,
+                'quote_token'    => $quoteToken,
             ];
         }
 
@@ -206,6 +262,73 @@ class DomainSearchController extends Controller
     /* ملاحظة: منطق اختيار المزوّد وفحص Namecheap/Enom (namecheapCheck/enomCheck/splitDomain)
        انتقل بالكامل إلى App\Services\Domains\DomainAvailabilityService ليكون قابلاً لإعادة
        الاستخدام من مسارات أخرى (Cart/Checkout/شراء العميل) دون تكرار أو استدعاء Controller من Controller. */
+
+    /**
+     * Premium Trusted Quote (Step 2) — يُصدر quote_token موثوق فقط عند اكتمال كل شروط السياق
+     * الموثوق من السيرفر (لا يُقرأ أي شيء من الطلب هنا إطلاقاً). فشل أي شرط أو رفض
+     * PremiumQuoteManager::issue() نفسه (سياق غير مطابق فعلياً لقاعدة البيانات) يُعيد null بهدوء —
+     * لا يُلقي الاستثناء للخارج، ولا يُسقط بقية نتائج نفس الطلب (Fail Closed لهذا الدومين فقط).
+     */
+    protected function issuePremiumQuoteToken(
+        string $domain,
+        mixed $premiumPrice,
+        ?string $premiumCurrency,
+        ?array $providerContext
+    ): ?string {
+        if ($providerContext === null) {
+            return null;
+        }
+
+        $providerId   = $providerContext['provider_id'] ?? null;
+        $providerType = $providerContext['provider_type'] ?? null;
+        $providerMode = $providerContext['provider_mode'] ?? null;
+        $domainTldId  = $providerContext['domain_tld_id'] ?? null;
+
+        if (!is_int($providerId) || $providerId <= 0
+            || $providerType !== 'namecheap'
+            || $providerMode !== 'live'
+            || !is_int($domainTldId) || $domainTldId <= 0
+        ) {
+            return null;
+        }
+
+        if (!is_numeric($premiumPrice)) {
+            return null;
+        }
+
+        $price = (float) $premiumPrice;
+        if (!is_finite($price) || $price <= 0) {
+            return null;
+        }
+
+        $currency = strtoupper(trim((string) $premiumCurrency));
+        if (!preg_match('/^[A-Z]{3}$/', $currency)) {
+            return null;
+        }
+
+        $trustedQuote = [
+            'domain'        => $domain,
+            'is_premium'    => true,
+            'provider_id'   => $providerId,
+            'provider_type' => $providerType,
+            'provider_mode' => $providerMode,
+            'domain_tld_id' => $domainTldId,
+            'price'         => $price,
+            'price_cents'   => (int) round($price * 100),
+            'currency'      => $currency,
+            'years'         => 1,
+        ];
+
+        try {
+            return $this->premiumQuotes()->issue($trustedQuote);
+        } catch (InvalidPremiumQuoteException $e) {
+            Log::warning('DomainSearchController: premium trusted quote could not be issued for an otherwise-premium result.', [
+                'domain' => $domain,
+            ]);
+
+            return null;
+        }
+    }
 
     /** يعيد قيمة معامل query كنص فقط؛ أي نوع آخر (مصفوفة مثلاً عبر q[]/domains[]) يُعامَل كسلسلة فارغة لمنع Array to string conversion */
     protected function queryScalar(Request $req, string $key): string

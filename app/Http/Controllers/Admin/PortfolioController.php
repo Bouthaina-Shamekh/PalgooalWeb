@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Language;
+use App\Models\Media;
 use App\Models\Portfolio;
 use App\Models\PortfolioTranslation;
 use Illuminate\Http\Request;
@@ -11,9 +12,21 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class PortfolioController extends Controller
 {
+    private const STATUS_SUGGESTIONS = [
+        'ar' => ['مفعل', 'غير مفعل', 'مكتمل'],
+        'en' => ['Active', 'Inactive', 'Completed'],
+    ];
+
+    private const STATUS_CLASSES = [
+        0 => 'portfolio-status-active bg-emerald-50 text-emerald-700',
+        1 => 'portfolio-status-inactive bg-gray-100 text-gray-600',
+        2 => 'portfolio-status-completed bg-blue-50 text-blue-700',
+    ];
+
     // -------------------------------------------------------------------------
     // Shared state — loaded lazily only when needed (P5 fix)
     // -------------------------------------------------------------------------
@@ -48,10 +61,7 @@ class PortfolioController extends Controller
             return [$lang->code => $types];
         })->toArray();
 
-        $this->statusSuggestions = [
-            'ar' => ['مفعل', 'غير مفعل', 'مكتمل'],
-            'en' => ['Active', 'Inactive', 'Completed'],
-        ];
+        $this->statusSuggestions = self::STATUS_SUGGESTIONS;
 
         foreach ($this->languages as $lang) {
             if (! isset($this->statusSuggestions[$lang->code])) {
@@ -68,7 +78,7 @@ class PortfolioController extends Controller
      * Build per-translation validation rules based on active languages.
      * P10 fix: uses already-loaded $this->languages instead of extra DB query.
      */
-    protected function buildTranslationRules(Request $request): array
+    protected function buildTranslationRules(Request $request, ?Portfolio $portfolio = null): array
     {
         // P10: reuse loaded collection — no extra DB round-trip
         $activeCodes = $this->languages->where('is_active', 1)->pluck('code')->all();
@@ -86,7 +96,16 @@ class PortfolioController extends Controller
             $rules["translations.$i.type"]        = "{$reqOrNull}|string|max:255";
             $rules["translations.$i.materials"]   = "{$reqOrNull}|string|max:500";
             $rules["translations.$i.link"]        = 'nullable|string|max:2048';
-            $rules["translations.$i.status"]      = 'nullable|string|max:100';
+            $allowedStatuses = $this->statusSuggestions[$locale]
+                ?? ($this->statusSuggestions['en'] ?? []);
+            $storedStatus = $portfolio?->translations
+                ->firstWhere('locale', $locale)?->status;
+            if (is_string($storedStatus) && $storedStatus !== '') {
+                $allowedStatuses[] = $storedStatus;
+            }
+            $rules["translations.$i.status"] = [
+                'nullable', 'string', 'max:100', Rule::in(array_values(array_unique($allowedStatuses))),
+            ];
             $rules["translations.$i.description"] = 'nullable|string';
         }
 
@@ -173,7 +192,7 @@ class PortfolioController extends Controller
         $perPage = in_array((int) $request->get('per_page'), [10, 25, 50])
             ? (int) $request->get('per_page') : 10;
 
-        $portfolios = Portfolio::with('translations')
+        $portfolios = Portfolio::with(['translations', 'defaultImageMedia'])
             ->when($search !== '', function ($q) use ($search) {
                 $q->whereHas('translations', function ($t) use ($search) {
                     $t->where('title', 'like', '%' . addcslashes($search, '%_\\') . '%')
@@ -184,7 +203,12 @@ class PortfolioController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        return view('dashboard.portfolios.index', compact('portfolios', 'search', 'perPage'));
+        $statusStyles = $this->statusStyles();
+
+        $returnContext = ['return_page' => $portfolios->currentPage(), 'return_per_page' => $perPage];
+        if ($search !== '') $returnContext['return_search'] = $search;
+
+        return view('dashboard.portfolios.index', compact('portfolios', 'search', 'perPage', 'statusStyles', 'returnContext'));
     }
 
     public function create()
@@ -198,9 +222,11 @@ class PortfolioController extends Controller
         $languages            = $this->languages;
         $typeSuggestions      = $this->typeSuggestions;
         $statusSuggestions    = $this->statusSuggestions;
+        $portfolioMedia       = $this->portfolioPreviewMedia($portfolio);
+        $returnContext        = $this->portfolioReturnContext(request());
 
         return view('dashboard.portfolios.create',
-            compact('portfolio', 'portfolioTranslations', 'languages', 'typeSuggestions', 'statusSuggestions'));
+            compact('portfolio', 'portfolioTranslations', 'languages', 'typeSuggestions', 'statusSuggestions', 'portfolioMedia', 'returnContext'));
     }
 
     public function store(Request $request)
@@ -215,8 +241,12 @@ class PortfolioController extends Controller
             'delivery_date'              => 'required|date',
             'implementation_period_days' => 'nullable|integer|min:0',
             'client'                     => 'nullable|string|max:255',
-            'default_image'              => 'nullable|integer|exists:media,id',
-            'images'                     => ['nullable', 'string', 'regex:/^(\d+)(,\d+)*$/'],
+            'default_image'              => ['bail', 'nullable', 'integer', $this->imageMediaRule()],
+            'remove_default_image'       => 'sometimes|boolean',
+            'images'                     => ['bail', 'nullable', 'string', 'regex:/^(\d+)(,\d+)*$/', $this->imageMediaRule(true)],
+            'return_search'              => 'nullable|string|max:255',
+            'return_page'                => 'nullable|integer|min:1',
+            'return_per_page'            => 'nullable|integer|in:10,25,50',
         ];
 
         $translationRules = $this->buildTranslationRules($request);
@@ -277,7 +307,7 @@ class PortfolioController extends Controller
 
             DB::commit();
 
-            return redirect()->route('dashboard.portfolios.index')
+            return redirect()->route('dashboard.portfolios.index', $this->portfolioReturnContext($request))
                 ->with('ok', t('dashboard.Portfolio_Created', 'Portfolio created successfully.'));
 
         } catch (\Exception $e) {
@@ -313,14 +343,16 @@ class PortfolioController extends Controller
         $languages         = $this->languages;
         $typeSuggestions   = $this->typeSuggestions;
         $statusSuggestions = $this->statusSuggestions;
+        $portfolioMedia     = $this->portfolioPreviewMedia($portfolio);
+        $returnContext      = $this->portfolioReturnContext(request());
 
         return view('dashboard.portfolios.edit',
-            compact('portfolio', 'portfolioTranslations', 'languages', 'typeSuggestions', 'statusSuggestions'));
+            compact('portfolio', 'portfolioTranslations', 'languages', 'typeSuggestions', 'statusSuggestions', 'portfolioMedia', 'returnContext'));
     }
 
     public function update(Request $request, $id)
     {
-        $portfolio = Portfolio::findOrFail($id);
+        $portfolio = Portfolio::with('translations')->findOrFail($id);
         $this->authorize('update', $portfolio);
 
         $this->loadLanguages();
@@ -330,11 +362,15 @@ class PortfolioController extends Controller
             'delivery_date'              => 'required|date',
             'implementation_period_days' => 'nullable|integer|min:0',
             'client'                     => 'nullable|string|max:255',
-            'default_image'              => 'nullable|integer|exists:media,id',
-            'images'                     => ['nullable', 'string', 'regex:/^(\d+)(,\d+)*$/'],
+            'default_image'              => ['bail', 'nullable', 'integer', $this->imageMediaRule()],
+            'remove_default_image'       => 'sometimes|boolean',
+            'images'                     => ['bail', 'nullable', 'string', 'regex:/^(\d+)(,\d+)*$/', $this->imageMediaRule(true)],
+            'return_search'              => 'nullable|string|max:255',
+            'return_page'                => 'nullable|integer|min:1',
+            'return_per_page'            => 'nullable|integer|in:10,25,50',
         ];
 
-        $translationRules = $this->buildTranslationRules($request);
+        $translationRules = $this->buildTranslationRules($request, $portfolio);
         $validated        = $request->validate($baseRules + $translationRules);
 
         DB::beginTransaction();
@@ -350,7 +386,8 @@ class PortfolioController extends Controller
             // P11 fix: explicit field list from $validated
             $rawDefaultImageId = $validated['default_image'] ?? null;
             // A legacy path-only image has no ID to submit. Keep it until a replacement is selected.
-            $preserveLegacyDefaultImage = ! $rawDefaultImageId && ! $portfolio->default_image_media_id;
+            $preserveLegacyDefaultImage = ! $rawDefaultImageId && ! $portfolio->default_image_media_id
+                && ! ($validated['remove_default_image'] ?? false);
             $portfolioData = [
                 'order'                      => $validated['order'],
                 'delivery_date'              => $validated['delivery_date'],
@@ -393,14 +430,16 @@ class PortfolioController extends Controller
                         'type'        => $translation['type']        ?? null,
                         'materials'   => $translation['materials']   ?? null,
                         'link'        => $translation['link']        ?? null,
-                        'status'      => $translation['status']      ?? null,
+                        'status'      => array_key_exists('status', $translation)
+                            ? $translation['status']
+                            : $portfolio->translations->firstWhere('locale', $translation['locale'] ?? '')?->status,
                     ]
                 );
             }
 
             DB::commit();
 
-            return redirect()->route('dashboard.portfolios.index')
+            return redirect()->route('dashboard.portfolios.index', $this->portfolioReturnContext($request))
                 ->with('ok', t('dashboard.Portfolio_Updated', 'Portfolio updated successfully.'));
 
         } catch (\Exception $e) {
@@ -412,12 +451,88 @@ class PortfolioController extends Controller
         }
     }
 
+    private function statusStyles(): array
+    {
+        $styles = [];
+        foreach (self::STATUS_SUGGESTIONS as $statuses) {
+            foreach ($statuses as $index => $status) {
+                $styles[$status] = self::STATUS_CLASSES[$index];
+            }
+        }
+
+        return $styles;
+    }
+
+    /** Whitelisted portfolio-list state; never accepts a return URL. */
+    private function portfolioReturnContext(Request $request): array
+    {
+        $context = [];
+        $returnValue = fn (string $key) => $request->input($key, $request->hasSession() ? $request->session()->getOldInput($key) : null);
+        $search = trim((string) $returnValue('return_search'));
+        if ($search !== '' && mb_strlen($search) <= 255) $context['search'] = $search;
+
+        $page = filter_var($returnValue('return_page'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($page !== false) $context['page'] = $page;
+
+        $perPage = filter_var($returnValue('return_per_page'), FILTER_VALIDATE_INT);
+        if (in_array($perPage, [10, 25, 50], true)) $context['per_page'] = $perPage;
+
+        return $context;
+    }
+
+    /** Fetch all media needed by the form once; the ordered ID list remains authoritative. */
+    private function portfolioPreviewMedia(Portfolio $portfolio)
+    {
+        $ids = [];
+        $default = old('default_image', $portfolio->default_image_media_id);
+        if (is_scalar($default) && ctype_digit((string) $default) && (int) $default > 0) {
+            $ids[] = (int) $default;
+        }
+
+        $gallery = old('images', $portfolio->images);
+        if (is_string($gallery)) {
+            $trimmed = trim($gallery);
+            $decoded = str_starts_with($trimmed, '[') ? json_decode($trimmed, true) : explode(',', $trimmed);
+            $gallery = is_array($decoded) ? $decoded : [];
+        }
+        if (is_array($gallery)) {
+            foreach ($gallery as $id) {
+                if ((is_int($id) || is_string($id)) && ctype_digit((string) $id) && (int) $id > 0) {
+                    $ids[] = (int) $id;
+                }
+            }
+        }
+
+        $ids = array_values(array_unique($ids));
+
+        return $ids === [] ? collect() : Media::whereIn('id', $ids)->get()->keyBy('id');
+    }
+
+    private function imageMediaRule(bool $multiple = false): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($multiple): void {
+            $ids = [];
+            foreach ($multiple ? explode(',', (string) $value) : [$value] as $rawId) {
+                $id = filter_var(ltrim((string) $rawId, '0'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                if ($id === false) {
+                    $fail(t('dashboard.Portfolio_Invalid_Image', 'Choose existing image media only.'));
+                    return;
+                }
+                $ids[$id] = $id;
+            }
+            if (Media::images()->whereIn('id', array_values($ids))->count() !== count($ids)) {
+                $fail(t('dashboard.Portfolio_Invalid_Image', 'Choose existing image media only.'));
+            }
+        };
+    }
+
     private function restorableFormInput(array $validated): array
     {
         // Explicitly exclude tokens, uploads and unknown keys, including nested keys
         // retained by Laravel's parent translations array validation rule.
         $input = Arr::only($validated, [
-            'order', 'delivery_date', 'implementation_period_days', 'client', 'default_image', 'images',
+            'order', 'delivery_date', 'implementation_period_days', 'client', 'default_image', 'images', 'remove_default_image',
+            'return_search', 'return_page', 'return_per_page',
         ]);
         $input['translations'] = array_map(fn (array $translation) => Arr::only($translation, [
             'locale', 'title', 'type', 'materials', 'link', 'status', 'description',

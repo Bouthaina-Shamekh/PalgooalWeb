@@ -22,14 +22,14 @@
         <div class="alert alert-danger mb-4">{{ session('error') }}</div>
     @endif
 
-    <div class="grid grid-cols-12 gap-x-6">
+    <div class="portfolio-index grid grid-cols-12 gap-x-6">
         <div class="col-span-12">
             <div class="card table-card">
 
                 {{-- Card toolbar --}}
                 <div class="card-header">
                     <form method="GET" action="{{ route('dashboard.portfolios.index') }}"
-                          class="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
+                          class="portfolio-toolbar flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
 
                         {{-- Search --}}
                         <div class="relative flex-1 min-w-[200px]">
@@ -72,7 +72,7 @@
 
                         {{-- Add --}}
                         @can('create', 'App\\Models\\Portfolio')
-                            <a href="{{ route('dashboard.portfolios.create') }}"
+                            <a href="{{ route('dashboard.portfolios.create', $returnContext) }}"
                                class="shrink-0 btn btn-primary flex items-center gap-2 whitespace-nowrap">
                                 <i class="ti ti-plus text-base"></i>
                                 {{ t('dashboard.Add_Portfolio', 'Add Portfolio') }}
@@ -84,7 +84,7 @@
 
                 <div class="card-body pt-3">
                     <div class="table-responsive">
-                        <table class="table table-hover w-full">
+                        <table class="portfolio-table table table-hover w-full">
                             <thead>
                                 <tr>
                                     <th class="text-right">#</th>
@@ -114,10 +114,11 @@
                                             @php $portfolioImagePath = $portfolio->resolvedDefaultImagePath(); @endphp
                                             @if ($portfolioImagePath)
                                                 <img src="{{ asset('storage/' . $portfolioImagePath) }}"
-                                                     class="w-12 h-10 object-cover rounded-lg border border-gray-200"
+                                                     class="portfolio-thumbnail w-12 h-10 object-cover rounded-lg border border-gray-200"
+                                                     @if (! $loop->first) loading="lazy" @endif
                                                      alt="" />
                                             @else
-                                                <span class="inline-flex items-center justify-center w-12 h-10 rounded-lg bg-gray-100 text-gray-300">
+                                                <span class="portfolio-image-empty inline-flex items-center justify-center w-12 h-10 rounded-lg bg-gray-100 text-gray-300">
                                                     <i class="ti ti-photo text-lg"></i>
                                                 </span>
                                             @endif
@@ -125,7 +126,7 @@
 
                                         {{-- Title --}}
                                         <td>
-                                            <span class="text-sm font-medium text-gray-800">
+                                            <span class="portfolio-title text-sm font-medium text-gray-800">
                                                 {{ $trans?->title ?? '—' }}
                                             </span>
                                         </td>
@@ -133,7 +134,7 @@
                                         {{-- Type --}}
                                         <td>
                                             @if ($trans?->type)
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                                                <span class="portfolio-type-badge inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
                                                     {{ $trans->type }}
                                                 </span>
                                             @else
@@ -144,7 +145,12 @@
                                         {{-- Status --}}
                                         <td>
                                             @if ($trans?->status)
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                                                @php
+                                                    $isCanonicalStatus = isset($statusStyles[$trans->status]);
+                                                    $statusClass = $statusStyles[$trans->status] ?? 'portfolio-status-unknown bg-gray-100 text-gray-600 border border-gray-200';
+                                                @endphp
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $statusClass }}"
+                                                      @unless ($isCanonicalStatus) title="{{ t('dashboard.Portfolio_Legacy_Status', 'Legacy status') }}" @endunless>
                                                     {{ $trans->status }}
                                                 </span>
                                             @else
@@ -153,25 +159,26 @@
                                         </td>
 
                                         {{-- Client --}}
-                                        <td class="text-sm text-gray-600">
+                                        <td class="portfolio-client text-sm text-gray-600">
                                             {{ $portfolio->client ?: '—' }}
                                         </td>
 
                                         {{-- Order --}}
                                         <td>
-                                            <span class="inline-flex items-center justify-center w-7 h-7 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                                            <span class="portfolio-order inline-flex items-center justify-center w-7 h-7 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
                                                 {{ $portfolio->order }}
                                             </span>
                                         </td>
 
                                         {{-- Actions --}}
                                         <td class="whitespace-nowrap">
-                                            <div class="flex items-center gap-0.5">
+                                            <div class="portfolio-row-actions flex items-center gap-0.5">
 
                                                 @can('update', $portfolio)
-                                                    <a href="{{ route('dashboard.portfolios.edit', $portfolio->id) }}"
+                                                    <a href="{{ route('dashboard.portfolios.edit', ['portfolio' => $portfolio->id] + $returnContext) }}"
                                                        title="{{ t('dashboard.Edit', 'Edit') }}"
-                                                       class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary hover:bg-yellow-50 hover:text-yellow-600 transition-colors">
+                                                       aria-label="{{ t('dashboard.Edit', 'Edit') }}"
+                                                       class="portfolio-edit-action w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary hover:bg-yellow-50 hover:text-yellow-600 transition-colors">
                                                         <i class="ti ti-edit text-base leading-none"></i>
                                                     </a>
                                                 @endcan
@@ -180,12 +187,14 @@
                                                     <form method="POST"
                                                           action="{{ route('dashboard.portfolios.destroy', $portfolio->id) }}"
                                                           style="display:inline-block"
-                                                          onsubmit="return confirm('{{ t('dashboard.Confirm_Delete_Portfolio', 'Are you sure you want to delete this portfolio?') }}')">
+                                                          class="portfolio-delete-form"
+                                                          data-confirm="{{ t('dashboard.Confirm_Delete_Portfolio', 'Are you sure you want to delete this portfolio?') }}">
                                                         @csrf
                                                         @method('DELETE')
                                                         <button type="submit"
                                                                 title="{{ t('dashboard.Delete', 'Delete') }}"
-                                                                class="w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary hover:bg-red-50 hover:text-red-600 transition-colors">
+                                                                aria-label="{{ t('dashboard.Delete', 'Delete') }}"
+                                                                class="portfolio-delete-action w-8 h-8 rounded-xl inline-flex items-center justify-center btn-link-secondary hover:bg-red-50 hover:text-red-600 transition-colors">
                                                             <i class="ti ti-trash text-base leading-none"></i>
                                                         </button>
                                                     </form>
@@ -198,11 +207,11 @@
                                     <tr>
                                         <td colspan="8">
                                             <div class="flex flex-col items-center justify-center py-16 text-center">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-16 h-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="portfolio-empty-icon w-16 h-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
                                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                                 </svg>
                                                 @if(!empty($search))
-                                                    <p class="text-base font-semibold text-gray-700 mb-1">
+                                                    <p class="portfolio-empty-title text-base font-semibold text-gray-700 mb-1">
                                                         {{ t('dashboard.No_Search_Results', 'No results found') }}
                                                     </p>
                                                     <p class="portfolio-secondary text-sm text-gray-400 mb-5">
@@ -212,7 +221,7 @@
                                                         {{ t('dashboard.Clear_Search', 'Clear search') }}
                                                     </a>
                                                 @else
-                                                    <p class="text-base font-semibold text-gray-700 mb-1">
+                                                    <p class="portfolio-empty-title text-base font-semibold text-gray-700 mb-1">
                                                         {{ t('dashboard.No_Portfolios', 'No portfolios yet') }}
                                                     </p>
                                                     <p class="portfolio-secondary text-sm text-gray-400 mb-5">
@@ -235,7 +244,7 @@
                     </div>
 
                     @if ($portfolios->hasPages())
-                        <div class="mt-4">
+                        <div class="portfolio-pagination mt-4">
                             {{ $portfolios->links() }}
                         </div>
                     @endif
@@ -244,4 +253,14 @@
             </div>
         </div>
     </div>
+
+@push('scripts')
+    <script>
+        document.addEventListener('submit', function (event) {
+            const form = event.target.closest('.portfolio-delete-form[data-confirm]');
+            if (!form) return;
+            if (!window.confirm(form.dataset.confirm)) event.preventDefault();
+        });
+    </script>
+@endpush
 </x-dashboard-layout>

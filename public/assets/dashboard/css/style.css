@@ -644,6 +644,264 @@ b, strong{
   color: #6b7280;
   opacity: 1;
 }
+[data-pc-theme="dark"] .portfolio-secondary,
+[data-pc-theme="dark"] .portfolio-help .text-muted {
+  color: #9ca3af;
+}
+[data-pc-theme="dark"] .portfolio-help {
+  color: #d1d5db;
+}
+[data-pc-theme="dark"] .portfolio-placeholder:not(:disabled)::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+[data-pc-theme="dark"] .portfolio-editor .form-control {
+  color: #f3f4f6;
+}
+[data-pc-theme="dark"] .portfolio-help .text-gray-800,
+[data-pc-theme="dark"] .portfolio-index .portfolio-title,
+[data-pc-theme="dark"] .portfolio-index .portfolio-empty-title {
+  color: #e5e7eb;
+}
+[data-pc-theme="dark"] .portfolio-help .border-t,
+[data-pc-theme="dark"] .portfolio-language-tabs,
+[data-pc-theme="dark"] .portfolio-index .portfolio-thumbnail {
+  border-color: #475569;
+}
+[data-pc-theme="dark"] .portfolio-language-panels {
+  background-color: rgba(19, 25, 32, 0.5);
+}
+[data-pc-theme="dark"] .portfolio-language-tabs .lang-tab-btn {
+  color: #9ca3af;
+  background-color: transparent;
+}
+[data-pc-theme="dark"] .portfolio-language-tabs .lang-tab-btn[aria-selected="true"] {
+  color: #a5b4fc;
+  background-color: #1b232d;
+}
+[data-pc-theme="dark"] .portfolio-language-tabs .lang-tab-btn:hover,
+[data-pc-theme="dark"] .portfolio-language-tabs .lang-tab-btn:focus-visible {
+  color: #e5e7eb;
+}
+[data-pc-theme="dark"] .portfolio-language-code,
+[data-pc-theme="dark"] .portfolio-index .portfolio-image-empty,
+[data-pc-theme="dark"] .portfolio-index .portfolio-order {
+  color: #d1d5db;
+  background-color: #374151;
+}
+[data-pc-theme="dark"] .portfolio-index input,
+[data-pc-theme="dark"] .portfolio-index select {
+  color: #f3f4f6;
+  background-color: #263240;
+  border-color: #475569;
+}
+[data-pc-theme="dark"] .portfolio-index .portfolio-client {
+  color: #d1d5db;
+}
+[data-pc-theme="dark"] .portfolio-index label,
+[data-pc-theme="dark"] .portfolio-index .relative > span {
+  color: #9ca3af;
+}
+[data-pc-theme="dark"] .portfolio-index .portfolio-type-badge,
+[data-pc-theme="dark"] .portfolio-index .portfolio-status-completed {
+  color: #93c5fd;
+  background-color: #172554;
+}
+[data-pc-theme="dark"] .portfolio-index .portfolio-status-active {
+  color: #6ee7b7;
+  background-color: #022c22;
+}
+[data-pc-theme="dark"] .portfolio-index .portfolio-status-inactive,
+[data-pc-theme="dark"] .portfolio-index .portfolio-status-unknown {
+  color: #d1d5db;
+  background-color: #1f2937;
+  border-color: #475569;
+}
+[data-pc-theme="dark"] .portfolio-index .portfolio-empty-icon {
+  color: #9ca3af;
+}
+[data-pc-theme="dark"] .portfolio-index .portfolio-table.table-hover tbody tr:hover {
+  background-color: #263240;
+}
+[data-pc-theme="dark"] .portfolio-index .portfolio-edit-action:hover {
+  color: #fcd34d;
+  background-color: #422006;
+}
+[data-pc-theme="dark"] .portfolio-index .portfolio-delete-action:hover {
+  color: #fca5a5;
+  background-color: #450a0a;
+}
+[data-pc-theme="dark"] .btn-open-media-picker {
+  color: #e5e7eb;
+  background-color: #111827;
+  border-color: #374151;
+}
+[data-pc-theme="dark"] .btn-open-media-picker:hover {
+  background-color: #1f2937;
+}
+[data-pc-theme="dark"] .media-picker-field > label {
+  color: #e5e7eb;
+}
+[data-pc-theme="dark"] .media-picker-preview-item,
+[data-pc-theme="dark"] .media-picker-item {
+  color: #d1d5db;
+  background-color: #111827;
+  border-color: #374151;
+}
+[data-pc-theme="dark"] .media-picker-item > div:not(:last-child) {
+  color: #d1d5db;
+}
+[data-pc-theme="dark"] .media-picker-item > div:not(:last-child) span {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+[data-pc-theme="dark"] #media-picker-modal > div {
+  color: #d1d5db;
+  background-color: #030712;
+  border-color: #1f2937;
+}
+[data-pc-theme="dark"] #media-picker-modal header,
+[data-pc-theme="dark"] #media-picker-modal > div > section,
+[data-pc-theme="dark"] #media-picker-modal footer {
+  border-color: #1f2937;
+}
+[data-pc-theme="dark"] #media-picker-title {
+  color: #f3f4f6;
+}
+[data-pc-theme="dark"] #media-picker-upload-btn,
+[data-pc-theme="dark"] #media-picker-load-more {
+  color: #e5e7eb;
+  background-color: #111827;
+  border-color: #374151;
+}
+[data-pc-theme="dark"] #media-picker-upload-btn:hover,
+[data-pc-theme="dark"] #media-picker-load-more:hover {
+  background-color: #1f2937;
+}
+[data-pc-theme="dark"] #media-picker-close,
+[data-pc-theme="dark"] #media-picker-clear,
+[data-pc-theme="dark"] #media-picker-loading,
+[data-pc-theme="dark"] #media-picker-empty,
+[data-pc-theme="dark"] #media-picker-upload-help,
+[data-pc-theme="dark"] #media-picker-modal footer [role="status"] {
+  color: #9ca3af;
+}
+[data-pc-theme="dark"] #media-picker-close:hover,
+[data-pc-theme="dark"] #media-picker-clear:hover {
+  color: #e5e7eb;
+  background-color: #1f2937;
+}
+[data-pc-theme="dark"] .media-picker-filter-btn,
+[data-pc-theme="dark"] #media-picker-cancel {
+  color: #d1d5db;
+  border-color: #374151;
+}
+[data-pc-theme="dark"] .media-picker-filter-btn:hover,
+[data-pc-theme="dark"] #media-picker-cancel:hover {
+  background-color: #1f2937;
+}
+[data-pc-theme="dark"] .media-picker-filter-btn.bg-indigo-50 {
+  color: #a5b4fc;
+  background-color: #1e1b4b;
+  border-color: #6366f1;
+}
+[data-pc-theme="dark"] #media-picker-search,
+[data-pc-theme="dark"] #media-picker-dropzone {
+  color: #f3f4f6;
+  background-color: #111827;
+  border-color: #374151;
+}
+[data-pc-theme="dark"] #media-picker-search::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+[data-pc-theme="dark"] #media-picker-dropzone {
+  color: #9ca3af;
+}
+[data-pc-theme="dark"] #media-picker-dropzone:hover,
+[data-pc-theme="dark"] #media-picker-dropzone.bg-indigo-50 {
+  background-color: #1e293b;
+  border-color: #818cf8;
+}
+[data-pc-theme="dark"] #media-picker-upload-status {
+  color: #d1d5db;
+}
+@media (max-width: 767px) {
+  .portfolio-toolbar input,
+  .portfolio-toolbar select,
+  .portfolio-toolbar .btn,
+  .portfolio-row-actions > a,
+  .portfolio-row-actions button,
+  .portfolio-form-actions .btn,
+  .portfolio-language-tabs .lang-tab-btn,
+  .portfolio-pagination a,
+  .portfolio-pagination button,
+  .btn-open-media-picker,
+  #media-picker-upload-btn,
+  #media-picker-close,
+  #media-picker-search,
+  .media-picker-filter-btn,
+  #media-picker-load-more,
+  #media-picker-clear,
+  #media-picker-cancel,
+  #media-picker-confirm,
+  .media-picker-toast-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .media-picker-reorder-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .portfolio-row-actions {
+    gap: 0.5rem;
+  }
+  #media-picker-modal header > div,
+  #media-picker-modal footer > div {
+    gap: 0.5rem;
+  }
+  #media-picker-clear,
+  .media-picker-filter-btn {
+    padding-inline: 0.75rem;
+  }
+  .portfolio-row-actions > a:focus-visible,
+  .portfolio-row-actions button:focus-visible,
+  #media-picker-close:focus-visible,
+  .media-picker-filter-btn:focus-visible,
+  #media-picker-clear:focus-visible,
+  #media-picker-cancel:focus-visible,
+  #media-picker-confirm:focus-visible,
+  .media-picker-toast-close:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
+  }
+}
+.media-picker-reorder-controls {
+  direction: ltr;
+}
+[data-pc-theme="dark"] .media-picker-reorder-btn {
+  color: #e5e7eb;
+  background-color: #1f2937;
+}
+@media (prefers-reduced-motion: reduce) {
+  .portfolio-index *,
+  .portfolio-editor *,
+  .portfolio-language-tabs .lang-tab-btn,
+  .portfolio-language-panels .lang-panel,
+  ul[id^="type_suggestions_"] li,
+  #media-picker-modal *,
+  #toastContainer > div,
+  #toastContainer > div * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  #media-picker-modal .media-picker-item img,
+  #toastContainer > div {
+    transform: none !important;
+  }
+}
 .text-muted{
   color: rgba(33, 37, 41, 0.75);
 }
