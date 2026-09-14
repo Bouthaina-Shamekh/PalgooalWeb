@@ -496,7 +496,8 @@ class PortfolioDefaultImageTest extends TestCase
             $this->assertSame($code !== $activeLocale, in_array('hidden', explode(' ', $panel->getAttribute('class'))));
             foreach (['title_', 'type_input_', 'materials_'] as $prefix) {
                 $field = $xpath->query('//*[@id="'.$prefix.$code.'"]')->item(0);
-                $this->assertSame((bool) $language->is_active, $field->hasAttribute('required'));
+                $this->assertFalse($field->hasAttribute('required'));
+                $this->assertTrue($field->hasAttribute('data-translation-required'));
             }
             if ($invalidLocales) {
                 $this->assertSame($translations[$index]['title'] ?? '', $xpath->query('//*[@id="title_'.$code.'"]')->item(0)->getAttribute('value'));
@@ -513,6 +514,100 @@ class PortfolioDefaultImageTest extends TestCase
             'both errors follow language order' => [['en', 'ar'], 'ar'],
             'valid with empty inactive language' => [[], 'ar'],
         ];
+    }
+
+    public function test_one_complete_active_language_allows_other_active_languages_to_remain_empty(): void
+    {
+        Language::create(['code' => 'ar', 'native' => 'Arabic', 'is_active' => true, 'is_rtl' => true]);
+
+        foreach ([
+            [
+                ['locale' => 'en', 'title' => 'English one', 'type' => 'Website', 'materials' => 'Laravel'],
+                ['locale' => 'ar', 'title' => '', 'type' => '', 'materials' => ''],
+            ],
+            [
+                ['locale' => 'en', 'title' => '', 'type' => '', 'materials' => ''],
+                ['locale' => 'ar', 'title' => 'Arabic two', 'type' => 'Website', 'materials' => 'Laravel'],
+            ],
+            [
+                ['locale' => 'en', 'title' => 'English three', 'type' => 'Website', 'materials' => 'Laravel'],
+                ['locale' => 'ar', 'title' => 'Arabic three', 'type' => 'Website', 'materials' => 'Laravel'],
+            ],
+        ] as $translations) {
+            $request = $this->request(null);
+            $request->merge(['translations' => $translations]);
+            $this->controller()->store($request);
+            $this->assertSame(
+                count(array_filter($translations, fn ($translation) => $translation['title'] !== '')),
+                Portfolio::query()->latest('id')->firstOrFail()->translations()->count()
+            );
+        }
+    }
+
+    public function test_empty_and_partially_used_active_languages_are_rejected_predictably(): void
+    {
+        Language::create(['code' => 'ar', 'native' => 'Arabic', 'is_active' => true, 'is_rtl' => true]);
+        $cases = [
+            'both empty' => [
+                [['locale' => 'en'], ['locale' => 'ar']],
+                ['translations', 'translations.0.title'],
+            ],
+            'English partial' => [
+                [['locale' => 'en', 'title' => 'English'], ['locale' => 'ar']],
+                ['translations.0.type', 'translations.0.materials'],
+            ],
+            'Arabic partial' => [
+                [['locale' => 'en'], ['locale' => 'ar', 'description' => 'Started']],
+                ['translations.1.title', 'translations.1.type', 'translations.1.materials'],
+            ],
+        ];
+
+        foreach ($cases as [$translations, $expectedErrors]) {
+            $request = $this->request(null);
+            $request->merge(['translations' => $translations]);
+            try {
+                $this->controller()->store($request);
+                $this->fail('Expected multilingual validation to fail.');
+            } catch (ValidationException $exception) {
+                foreach ($expectedErrors as $field) {
+                    $this->assertArrayHasKey($field, $exception->errors());
+                }
+            }
+        }
+    }
+
+    public function test_dynamic_active_language_contract_supports_three_languages_and_ignores_inactive_language(): void
+    {
+        Language::create(['code' => 'ar', 'native' => 'Arabic', 'is_active' => true, 'is_rtl' => true]);
+        Language::create(['code' => 'fr', 'native' => 'French', 'is_active' => true]);
+        Language::create(['code' => 'de', 'native' => 'German', 'is_active' => false]);
+        $request = $this->request(null);
+        $request->merge(['translations' => [
+            ['locale' => 'en'],
+            ['locale' => 'ar'],
+            ['locale' => 'fr', 'title' => 'Français', 'type' => 'Site', 'materials' => 'Laravel'],
+            ['locale' => 'de', 'description' => 'Inactive language does not satisfy the active-language requirement'],
+        ]]);
+
+        $this->controller()->store($request);
+
+        $this->assertSame(['de', 'fr'], Portfolio::sole()->translations()->orderBy('locale')->pluck('locale')->all());
+    }
+
+    public function test_edit_with_one_translation_preserves_it_and_blank_languages_do_not_delete_data(): void
+    {
+        Language::create(['code' => 'ar', 'native' => 'Arabic', 'is_active' => true, 'is_rtl' => true]);
+        $portfolio = $this->portfolio('');
+        $request = $this->request(null);
+        $request->merge(['translations' => [
+            ['locale' => 'en', 'title' => 'Updated title', 'type' => 'Website', 'materials' => 'Laravel'],
+            ['locale' => 'ar', 'title' => '', 'type' => '', 'materials' => ''],
+        ]]);
+
+        $this->controller()->update($request, $portfolio->id);
+
+        $this->assertSame(['en'], $portfolio->fresh()->translations()->pluck('locale')->all());
+        $this->assertSame('Updated title', $portfolio->translations()->sole()->title);
     }
 
     #[DataProvider('saveFailureContexts')]

@@ -17,7 +17,8 @@ function setup(saved = 'ar', errors = [], direction = 'ltr') {
     const fields = [];
     const listeners = {};
     const form = { elements: fields, addEventListener(type, callback, capture) {
-        assert.equal(type, 'invalid'); assert.equal(capture, true); listeners[type] = callback;
+        if (type === 'invalid') assert.equal(capture, true);
+        listeners[type] = callback;
     }};
     function node(id, classes = []) {
         const set = new Set(classes);
@@ -33,18 +34,28 @@ function setup(saved = 'ar', errors = [], direction = 'ltr') {
     for (const code of ['ar', 'en', 'fr']) {
         tabs.push(node('lang-tab-' + code));
         const panel = node('lang-panel-' + code, ['hidden']);
+        panel.activeLanguage = code !== 'fr';
         panels.push(panel);
         for (const fieldName of ['title', 'type', 'materials', 'link']) {
             const field = node(fieldName + '_' + code);
-            Object.assign(field, { willValidate: true, validity: { valid: true }, closest: () => panel });
+            Object.assign(field, {
+                value: '', required: false, translationField: true,
+                translationRequired: ['title', 'type', 'materials'].includes(fieldName),
+                willValidate: true, validity: { valid: true }, closest: () => panel,
+            });
             fields.push(field);
         }
         panel.querySelector = () => nodes['title_' + code];
+        panel.querySelectorAll = selector => fields.filter(field => field.closest?.() === panel && (
+            selector === '[data-translation-field]' ? field.translationField : field.translationRequired
+        ));
     }
     nodes.portfolioLanguageTabs = { closest: () => form };
     const context = { getComputedStyle: () => ({ direction }), window: {}, document: {
         getElementById: id => nodes[id],
-        querySelectorAll: selector => selector === '.lang-panel' ? panels : tabs,
+        querySelectorAll: selector => selector === '.lang-panel' ? panels
+            : selector === '.lang-panel[data-active-language="true"]' ? panels.filter(panel => panel.activeLanguage)
+            : tabs,
         querySelector: () => tabs.find(tab => errors.includes(tab.id.replace('lang-tab-', ''))),
         addEventListener: (type, callback) => callback(),
     }, localStorage: { getItem: () => saved, setItem() {} },
@@ -66,6 +77,10 @@ function setup(saved = 'ar', errors = [], direction = 'ltr') {
             }
             reports[0]?.focus();
             return reports;
+        },
+        input(field, value) {
+            field.value = value;
+            listeners.input?.({ target: field });
         },
     };
 }
@@ -114,6 +129,23 @@ test('valid controls including empty optional fields do not interrupt submission
     const app = setup();
     assert.deepEqual(app.validate(), []);
     assert.equal(app.nodes['lang-tab-ar'].attributes['aria-selected'], 'true');
+});
+test('native required state follows used active languages without requiring every language', () => {
+    const app = setup();
+    assert.equal(app.nodes.title_ar.required, true);
+    assert.equal(app.nodes.type_ar.required, false);
+    assert.equal(app.nodes.title_en.required, false);
+
+    app.input(app.nodes.title_en, 'English title');
+    assert.equal(app.nodes.title_ar.required, false);
+    assert.equal(app.nodes.title_en.required, true);
+    assert.equal(app.nodes.type_en.required, true);
+    assert.equal(app.nodes.materials_en.required, true);
+
+    app.input(app.nodes.link_ar, 'https://example.test');
+    assert.equal(app.nodes.title_ar.required, true);
+    assert.equal(app.nodes.type_ar.required, true);
+    assert.equal(app.nodes.materials_ar.required, true);
 });
 
 for (const saved of [null, 'en', 'unknown']) {

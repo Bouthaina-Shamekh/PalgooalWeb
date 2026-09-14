@@ -84,17 +84,42 @@ class PortfolioController extends Controller
         $activeCodes = $this->languages->where('is_active', 1)->pluck('code')->all();
         $allCodes    = $this->languages->pluck('code')->all();
 
-        $rules = ['translations' => 'required|array'];
+        $translations = $request->input('translations', []);
+        $translations = is_array($translations) ? $translations : [];
+        $usedActiveCodes = collect($translations)
+            ->filter(fn ($translation) => is_array($translation)
+                && in_array($translation['locale'] ?? null, $activeCodes, true)
+                && $this->translationHasMeaningfulContent($translation))
+            ->pluck('locale')
+            ->all();
+        $hasUsedActiveLanguage = $usedActiveCodes !== [];
+        $firstActiveCode = $activeCodes[0] ?? null;
 
-        foreach ($request->input('translations', []) as $i => $t) {
-            $locale    = $t['locale'] ?? null;
+        $rules = [
+            'translations' => [
+                'required',
+                'array',
+                function (string $attribute, mixed $value, \Closure $fail) use ($hasUsedActiveLanguage): void {
+                    if (! $hasUsedActiveLanguage) {
+                        $fail(t(
+                            'dashboard.Portfolio_At_Least_One_Language',
+                            'Complete the required fields in at least one active language.'
+                        ));
+                    }
+                },
+            ],
+        ];
+
+        foreach ($translations as $i => $t) {
+            $locale    = is_array($t) ? ($t['locale'] ?? null) : null;
             $isActive  = in_array($locale, $activeCodes, true);
-            $reqOrNull = $isActive ? 'required' : 'nullable';
+            $isUsed    = $isActive && $this->translationHasMeaningfulContent(is_array($t) ? $t : []);
+            $requireTitle = $isUsed || (! $hasUsedActiveLanguage && $locale === $firstActiveCode);
 
             $rules["translations.$i.locale"]      = 'required|string|in:' . implode(',', $allCodes);
-            $rules["translations.$i.title"]       = "{$reqOrNull}|string|max:500";
-            $rules["translations.$i.type"]        = "{$reqOrNull}|string|max:255";
-            $rules["translations.$i.materials"]   = "{$reqOrNull}|string|max:500";
+            $rules["translations.$i.title"]       = ($requireTitle ? 'required' : 'nullable') . '|string|max:500';
+            $rules["translations.$i.type"]        = ($isUsed ? 'required' : 'nullable') . '|string|max:255';
+            $rules["translations.$i.materials"]   = ($isUsed ? 'required' : 'nullable') . '|string|max:500';
             $rules["translations.$i.link"]        = 'nullable|string|max:2048';
             $allowedStatuses = $this->statusSuggestions[$locale]
                 ?? ($this->statusSuggestions['en'] ?? []);
@@ -110,6 +135,19 @@ class PortfolioController extends Controller
         }
 
         return $rules;
+    }
+
+    /** A language is used when any user-editable translation value is non-empty. */
+    private function translationHasMeaningfulContent(array $translation): bool
+    {
+        foreach (['title', 'type', 'materials', 'link', 'status', 'description'] as $field) {
+            $value = $translation[$field] ?? null;
+            if (is_scalar($value) && trim((string) $value) !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -293,6 +331,9 @@ class PortfolioController extends Controller
 
             // P6 fix: use null-safe access on every translation key
             foreach ($translations as $translation) {
+                if (! is_array($translation) || ! $this->translationHasMeaningfulContent($translation)) {
+                    continue;
+                }
                 PortfolioTranslation::create([
                     'portfolio_id' => $portfolio->id,
                     'locale'       => $translation['locale']       ?? '',
@@ -422,6 +463,10 @@ class PortfolioController extends Controller
 
             // P6 fix: null-safe on every translation key
             foreach ($translations as $translation) {
+                // A blank language means "unused", not "delete this translation".
+                if (! is_array($translation) || ! $this->translationHasMeaningfulContent($translation)) {
+                    continue;
+                }
                 PortfolioTranslation::updateOrCreate(
                     ['portfolio_id' => $portfolio->id, 'locale' => $translation['locale'] ?? ''],
                     [

@@ -333,6 +333,7 @@
                 @php $translation = $portfolioTranslations[$lang->code] ?? null; @endphp
                 <div id="lang-panel-{{ $lang->code }}"
                      role="tabpanel"
+                     data-active-language="{{ $lang->is_active ? 'true' : 'false' }}"
                      aria-labelledby="lang-tab-{{ $lang->code }}"
                      lang="{{ $lang->code }}"
                      dir="{{ $lang->is_rtl ? 'rtl' : 'ltr' }}"
@@ -353,10 +354,10 @@
                             <input type="text"
                                    id="title_{{ $lang->code }}"
                                    name="translations[{{ $index }}][title]"
+                                   data-translation-field data-translation-required
                     @if ($errors->has('translations.' . $index . '.title')) aria-invalid="true" aria-describedby="title_{{ $lang->code }}_error" @endif
                                    class="form-control @error('translations.' . $index . '.title') is-invalid @enderror"
-                                   value="{{ old('translations.' . $index . '.title', $translation['title'] ?? '') }}"
-                                   @if ($lang->is_active) required @endif>
+                                   value="{{ old('translations.' . $index . '.title', $translation['title'] ?? '') }}">
                            @error('translations.' . $index . '.title')
                                 <span id="title_{{ $lang->code }}_error" class="text-danger text-sm">{{ $message }}</span>
                             @enderror
@@ -374,14 +375,14 @@
                                        role="combobox" aria-autocomplete="list" aria-expanded="false"
                                        aria-controls="type_suggestions_{{ $lang->code }}"
                                    name="translations[{{ $index }}][type]"
+                                       data-translation-field data-translation-required
                     @if ($errors->has('translations.' . $index . '.type')) aria-invalid="true" aria-describedby="type_{{ $lang->code }}_error" @endif
                                        class="form-control @error('translations.' . $index . '.type') is-invalid @enderror"
                                        value="{{ old('translations.' . $index . '.type', $translation['type'] ?? '') }}"
                                        oninput="showSuggestions('{{ $lang->code }}')"
                                        onfocus="showSuggestions('{{ $lang->code }}')"
                                        onkeydown="handleTypeKeydown(event, '{{ $lang->code }}')"
-                                       autocomplete="off"
-                                       @if ($lang->is_active) required @endif>
+                                       autocomplete="off">
                                 <ul id="type_suggestions_{{ $lang->code }}" role="listbox" aria-labelledby="type_label_{{ $lang->code }}"></ul>
                             </div>
                            @error('translations.' . $index . '.type')
@@ -398,10 +399,10 @@
                             <input type="text"
                                    id="materials_{{ $lang->code }}"
                                    name="translations[{{ $index }}][materials]"
+                                   data-translation-field data-translation-required
                     @if ($errors->has('translations.' . $index . '.materials')) aria-invalid="true" aria-describedby="materials_{{ $lang->code }}_error" @endif
                                    class="form-control @error('translations.' . $index . '.materials') is-invalid @enderror"
-                                   value="{{ old('translations.' . $index . '.materials', $translation['materials'] ?? '') }}"
-                                   @if ($lang->is_active) required @endif>
+                                   value="{{ old('translations.' . $index . '.materials', $translation['materials'] ?? '') }}">
                            @error('translations.' . $index . '.materials')
                                 <span id="materials_{{ $lang->code }}_error" class="text-danger text-sm">{{ $message }}</span>
                             @enderror
@@ -415,6 +416,7 @@
                             <input type="text"
                                    id="link_{{ $lang->code }}"
                                    name="translations[{{ $index }}][link]"
+                                   data-translation-field
                     @if ($errors->has('translations.' . $index . '.link')) aria-invalid="true" aria-describedby="link_{{ $lang->code }}_error" @endif
                                    class="portfolio-placeholder form-control font-mono @error('translations.' . $index . '.link') is-invalid @enderror"
                                    dir="ltr"
@@ -439,6 +441,7 @@
                             </label>
                             <select id="status_{{ $lang->code }}"
                                    name="translations[{{ $index }}][status]"
+                                   data-translation-field
                     @if ($errors->has('translations.' . $index . '.status')) aria-invalid="true" aria-describedby="status_{{ $lang->code }}_error" @endif
                                     class="form-control @error('translations.' . $index . '.status') is-invalid @enderror">
                                 <option value="">{{ t('dashboard.Portfolio_Select_Status', 'Select status') }}</option>
@@ -468,6 +471,7 @@
                             </label>
                             <textarea id="description_{{ $lang->code }}"
                                    name="translations[{{ $index }}][description]"
+                                   data-translation-field
                     @if ($errors->has('translations.' . $index . '.description')) aria-invalid="true" aria-describedby="description_{{ $lang->code }}_error" @endif
                                       rows="4"
                                       class="form-control @error('translations.' . $index . '.description') is-invalid @enderror">{{ old('translations.' . $index . '.description', $translation['description'] ?? '') }}</textarea>
@@ -733,6 +737,30 @@
 
             // استعادة آخر لسان تم اختياره
             const form = document.getElementById('portfolioLanguageTabs').closest('form');
+            const activeLanguagePanels = Array.from(document.querySelectorAll('.lang-panel[data-active-language="true"]'));
+
+            function updateTranslationRequiredState() {
+                const usedPanels = activeLanguagePanels.filter(function (panel) {
+                    return Array.from(panel.querySelectorAll('[data-translation-field]')).some(function (field) {
+                        return String(field.value ?? '').trim() !== '';
+                    });
+                });
+
+                activeLanguagePanels.forEach(function (panel) {
+                    const isUsed = usedPanels.includes(panel);
+                    panel.querySelectorAll('[data-translation-required]').forEach(function (field, index) {
+                        const isEmptyFormAnchor = usedPanels.length === 0
+                            && panel === activeLanguagePanels[0]
+                            && index === 0;
+                        field.required = isUsed || isEmptyFormAnchor;
+                    });
+                });
+            }
+
+            form?.addEventListener('input', updateTranslationRequiredState);
+            form?.addEventListener('change', updateTranslationRequiredState);
+            updateTranslationRequiredState();
+
             form?.addEventListener('invalid', function (event) {
                 // Native validation fires for every invalid control before focusing one.
                 // Keep only the first eligible control's native report/focus, so later
